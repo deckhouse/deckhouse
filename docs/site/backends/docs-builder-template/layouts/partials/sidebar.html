@@ -1,55 +1,55 @@
-{{ $modulesList := .Site.Data.modules.channels }}
-{{ $channelsInfo := .Site.Data.channels.info }}
-{{ $sidebarRootMenu := slice }}
-{{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
-{{ $ctx := $ }}
+{{- $modulesList := .Site.Data.modules.channels }}
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $sidebarRootMenu := slice }}
+{{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{- $ctx := $ }}
 
-{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
-{{ $currentModuleName := index $_pathElements 1 }}
-{{ $currentModuleChannel := index $_pathElements 2 }}
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
 
-{{ range $module, $data := $modulesList }}
-  {{ $moduleTitle := "" }}
-  {{ $moduleChannel := "" }}
-  {{ $isActiveItem := false }}
-  {{ $d8Edition := "" }}
-  {{ $moduleStatus := "" }}
+{{- range $module, $data := $modulesList }}
+  {{- $moduleTitle := "" }}
+  {{- $moduleChannel := "" }}
+  {{- $isActiveItem := false }}
+  {{- $d8Edition := "" }}
+  {{- $moduleStatus := "" }}
 
-  {{ if eq $currentModuleName $module }}
-    {{ $moduleChannel = $currentModuleChannel }}
-    {{ $isActiveItem = true }}
-  {{ end}}
+  {{- if eq $currentModuleName $module }}
+    {{- $moduleChannel = $currentModuleChannel }}
+    {{- $isActiveItem = true }}
+  {{- end }}
 
-  {{ range sort $channelsInfo "stability" "desc" }}
-    {{ $code := .code }}
-    {{ if eq $code "rock-solid" }}{{ continue }}{{ end }}
-    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
-      {{ if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
-      {{ if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
-      {{ if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
-      {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
-    {{ end}}
-  {{ end}}
-  {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
-  {{ if not $d8Edition }}{{ $d8Edition = "ce" }}{{ end }}
-  {{ if $moduleChannel }}
-    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "d8Edition" $d8Edition "moduleStatus" $moduleStatus) }}
-  {{ end }}
-{{ end}}
+  {{- range sort $channelsInfo "stability" "desc" }}
+    {{- $code := .code }}
+    {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}
+    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
+      {{- if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{- if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+      {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
+      {{- if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+    {{- end }}
+  {{- end }}
+  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{- if not $d8Edition }}{{ $d8Edition = "ce" }}{{ end }}
+  {{- if $moduleChannel }}
+    {{- $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "d8Edition" $d8Edition "moduleStatus" $moduleStatus) }}
+  {{- end }}
+{{- end}}
 
-{{ $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
+{{- $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
 
   <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
     <div class="channel-menu submenu-parent">
-      {{ partial "documentation-section-badge" }}
+      {{- partial "documentation-section-badge" }}
     </div>
 
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
-      {{ if $.IsPage }}
-      {{ if and $currentModuleName $currentModuleChannel }}
-        {{ partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
-      {{ end }}
-      {{ end }}
+      {{- if $.IsPage }}
+      {{- if and $currentModuleName $currentModuleChannel }}
+        {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+      {{- end }}
+      {{- end }}
     </div>
 
   </div>
@@ -59,36 +59,36 @@
 
       <ul class="sidebar" id="mysidebar">
 
-          {{ $overviewItem := $.GetPage "modules/" }}
+          {{- $overviewItem := $.GetPage "modules/" }}
 
           <li class="sidebar__item {{ if eq $overviewItem $.Page }}active{{ end }}">
               <a href='{{ relURL "" }}modules/'>{{ $overviewItem.LinkTitle }}</a>
           </li>
 
-        {{ range $sidebarItem := $sidebarRootMenu }}
+        {{- range $sidebarItem := $sidebarRootMenu }}
             <li class="sidebar__item sidebar__item_parent{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>
-                  {{ $sidebarItem.title }}
+                  {{- $sidebarItem.title }}
                   {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
                   {{- if eq $sidebarItem.moduleStatus "experimental" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.moduleStatus }}">Experimental</span>{{ end }}
                 </a>
-                  {{ template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
+                  {{- template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
             </li>
-        {{ end }}
+        {{- end }}
       </ul>
     </nav>
   </div>
 
 {{/* --- subpages --- */}}
-{{ define "subpages" }}
+{{- define "subpages" }}
 
-{{ $sidebarItem := .parent }}
-{{ $pages := .pages }}
-{{ $ctx := .ctx }}
+{{- $sidebarItem := .parent }}
+{{- $pages := .pages }}
+{{- $ctx := .ctx }}
 
 <ul class="sidebar__submenu">
 
- {{ with $ctx.GetPage ( printf "modules/%s/%s/README.md" $sidebarItem.module $sidebarItem.channel  ) }}
+ {{- with $ctx.GetPage ( printf "modules/%s/%s/README.md" $sidebarItem.module $sidebarItem.channel  ) }}
   <li class="sidebar__submenu-item {{ if or ($ctx.Page.IsAncestor .) (eq $ctx.Page .) }}active{{ end }}">
      <a href="{{ replaceRE "/readme.html$" "/" .RelPermalink }}">
      {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
@@ -100,13 +100,13 @@
      {{- end }}
      </a>
  </li>
- {{ end }}
+ {{- end }}
 
-{{ range $pages }}
-  {{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
-  {{ $moduleName := index $_pathElements 1 }}
-  {{ $moduleChannel := index $_pathElements 2 }}
-  {{ if or ( ne $moduleName $sidebarItem.module ) ( ne $moduleChannel $sidebarItem.channel ) ( eq .File.TranslationBaseName "README" ) }}{{ continue }}{{ end }}
+{{- range $pages }}
+  {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+  {{- $moduleName := index $_pathElements 1 }}
+  {{- $moduleChannel := index $_pathElements 2 }}
+  {{- if or ( ne $moduleName $sidebarItem.module ) ( ne $moduleChannel $sidebarItem.channel ) ( eq .File.TranslationBaseName "README" ) }}{{ continue }}{{ end }}
 
        <li class="sidebar__submenu-item {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
           <a href="{{ if .IsPage }}{{ replaceRE "/readme.html$" "/" .RelPermalink }}{{ else }}#{{ end }}">
@@ -119,7 +119,7 @@
           {{- end }}
           </a>
       </li>
-  {{ end }}
+  {{- end }}
   </ul>
-{{ end }}
+{{- end }}
 {{/* END --- subpages --- */}}

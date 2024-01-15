@@ -51,15 +51,17 @@ spec:
             subPath: nginx.conf
           - name: tmp
             mountPath: /tmp
-          - mountPath: /app/en/others/modules
+          - mountPath: /app/modules/en
             name: modules-docs-en
-          - mountPath: /app/ru/others/modules
+          - mountPath: /app/modules/ru
             name: modules-docs-ru
       - name: builder
         image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
         command:
           - "/app/server"
         env:
+          - name: HUGO_ENVIRONMENT
+            value: production
           - name: POD_IP
             valueFrom:
               fieldRef:

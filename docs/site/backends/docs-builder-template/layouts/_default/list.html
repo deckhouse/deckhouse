@@ -8,7 +8,7 @@
 <body>
 <h1>Kind - {{.Kind}}</h1>
      {{.Content}}
-     {{ range .Pages }}
+     {{- range .Pages }}
           <div style="border: 1px solid black; margin:10px; padding:10px; ">
                <div style="font-size:20px;">
                     <a href=".URL">{{.Title}}</a>
@@ -20,6 +20,6 @@
 
                <p style="font-size:18px;">{{.Summary}}</p>
           </div>
-     {{ end }}
+     {{- end }}
 </body>
 </html>

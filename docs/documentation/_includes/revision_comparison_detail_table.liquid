@@ -3,7 +3,7 @@
 {%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
 {%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
 {%- assign revision = 'fe' %}
-{%- if site.mode == 'local' and site.d8Revision %}
+{%- if site.mode == 'module' and site.d8Revision %}
 {%- assign revision = site.d8Revision | downcase %}
 {%- endif %}
 

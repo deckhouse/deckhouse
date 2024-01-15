@@ -5,7 +5,7 @@ fromImage: common/nginx-static
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
-  to: /app
+  to: /app/platform
   before: setup
   excludePaths:
   - '*/gs/'
@@ -135,6 +135,10 @@ ansible:
         dest: /srv/jekyll-data/documentation/_data/topnav.yml
     - copy:
         content: |
+          {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 10 }}
+        dest: /srv/jekyll-data/site/_data/topnav.yml
+    - copy:
+        content: |
           {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 10 }}
         dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Creating additional config..."
@@ -183,6 +187,8 @@ git:
     - documentation/config
     - site/pages/*.html
     - site/_includes/footer.html
+    - site/_data/topnav.*
+    - site/backends
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
@@ -204,4 +210,4 @@ git:
   includePaths:
   - modules/**/docs/README.md
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
-{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) (dict "ctx" . "mode" "module") }}

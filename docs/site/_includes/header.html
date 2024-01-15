@@ -12,11 +12,11 @@
         <ul id="top-header-nav" class="nav header__nav">
           {% for entry in topnav %}
             {% for item in entry.items %}
-              {%- if site.mode == 'local' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
+              {%- if site.mode == 'module' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
               {%- assign item_url_parts = item.url | split: '/' -%}
               {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
               <li class="header__navigation-item
-                {%- if page.mode == 'ssi' and site.mode != 'local' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+                {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
                 {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}
                 {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
                 {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
@@ -24,7 +24,7 @@
                 {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
                 {%- if item.items %} data-proofer-ignore{% endif %}
               >
-                <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}</a>
+                <a {% if item.url %}href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}</a>
 
                 {% if item.items %}
                   <div class="sub-menu-container">
@@ -36,7 +36,7 @@
                             {%- if subitem.external_url %}
                               href="{{ subitem.external_url }}"
                             {%- elsif subitem.url %}
-                              href="{{ subitem.url }}"
+                              href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ subitem.url }}"
                             {%- else %}
                               href="#"
                             {% endif %}
@@ -55,7 +55,7 @@
         </ul>
       </div>
       <div class="header__right-box">
-        {%- if site.mode == 'local' %}
+        {%- if site.mode == 'module' %}
         <span class='updatechannel__content disable'>&nbsp;</span>
         {%- else %}
         <div class="socials">
@@ -66,7 +66,7 @@
         {%- endif %}
         {%- if page.lang == "ru" %}
           <a class="language-button" href="
-            {%- if site.mode == 'local' %}/en
+            {%- if site.mode == 'module' %}/en
               {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
             {%- else -%}
               {%- if page.mode == 'ssi' -%}
@@ -79,7 +79,7 @@
             En
         {%- else %}
           <a class="language-button" href="
-            {%- if site.mode == 'local' %}/ru
+            {%- if site.mode == 'module' %}/ru
               {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
             {%- else -%}
               {%- if page.mode == 'ssi' -%}

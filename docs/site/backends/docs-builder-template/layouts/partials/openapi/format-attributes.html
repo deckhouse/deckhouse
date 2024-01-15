@@ -1,152 +1,152 @@
 {{/* Renders attributes of a parameter or s CRD field. */}}
 
-{{ $name := .name }}
-{{ $attributes := .attributes }}
-{{ $parent := .parent }}
-{{ $langData := .langData }}
-{{ $linkAnchor := .linkAnchor }}
+{{- $name := .name }}
+{{- $attributes := .attributes }}
+{{- $parent := .parent }}
+{{- $langData := .langData }}
+{{- $linkAnchor := .linkAnchor }}
 
-{{ $description :=  "" }}
-{{ if $langData.description }}
-  {{ $description = $langData.description }}
-{{ else }}
-  {{ $description =  $attributes.description }}
-{{ end }}
+{{- $description :=  "" }}
+{{- if $langData.description }}
+  {{- $description = $langData.description }}
+{{- else }}
+  {{- $description =  $attributes.description }}
+{{- end }}
 
 <div class="resources__prop_description">{{ $description | markdownify }}</div>
 
-{{ if isset $attributes "x-doc-default" }}
-  {{ template "format-default" (index $attributes "x-doc-default") }}
-{{ else if isset $attributes "default" }}
-  {{ template "format-default" (index $attributes "default") }}
-{{ end }}
+{{- if isset $attributes "x-doc-default" }}
+  {{- template "format-default" (index $attributes "x-doc-default") }}
+{{- else if isset $attributes "default" }}
+  {{- template "format-default" (index $attributes "default") }}
+{{- end }}
 
-{{ if or (isset $attributes "minimum") (isset $attributes "exclusiveMinimum") (isset $attributes "maximum") (isset $attributes "exclusiveMaximum") }}
-  {{ template "format-minmax" $attributes }}
-{{ end }}
+{{- if or (isset $attributes "minimum") (isset $attributes "exclusiveMinimum") (isset $attributes "maximum") (isset $attributes "exclusiveMaximum") }}
+  {{- template "format-minmax" $attributes }}
+{{- end }}
 
-{{ if or (isset $attributes "minLength") (isset $attributes "maxLength") }}
-  {{ template "format-minmax-length" $attributes }}
-{{ end }}
+{{- if or (isset $attributes "minLength") (isset $attributes "maxLength") }}
+  {{- template "format-minmax-length" $attributes }}
+{{- end }}
 
-{{ if or (isset $attributes "enum") }}
+{{- if or (isset $attributes "enum") }}
 <p class="resources__attrs">
   <span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> <span class="resources__attrs_content"><code>{{ delimit $attributes.enum "</code>, <code>" | safeHTML }}</code></span>
 </p>
-{{ end }}
+{{- end }}
 
-{{ if or (isset $attributes "pattern") }}
+{{- if or (isset $attributes "pattern") }}
 <p class="resources__attrs">
   <span class="resources__attrs_name">{{ T "pattern" | humanize }}:</span> <code class="resources__attrs_content">{{ $attributes.pattern }}</code>
 </p>
-{{ end }}
+{{- end }}
 
-{{ if or (isset $attributes "x-doc-examples") (isset $attributes "x-doc-example") (isset $attributes "example") (isset $attributes "x-examples") }}
-  {{ template "format-example" ( dict "attributes" $attributes "linkAnchor" $linkAnchor "name" .name ) }}
-{{ end }}
+{{- if or (isset $attributes "x-doc-examples") (isset $attributes "x-doc-example") (isset $attributes "example") (isset $attributes "x-examples") }}
+  {{- template "format-example" ( dict "attributes" $attributes "linkAnchor" $linkAnchor "name" .name ) }}
+{{- end }}
 
-{{ define "format-default" }}
+{{- define "format-default" }}
   <p class="resources__attrs"><span class="resources__attrs_name">{{ T "default_value" | humanize }}:</span> <span class="resources__attrs_content"><code>
-  {{ if or (reflect.IsMap .) (reflect.IsSlice .) }}
-  {{ . | jsonify (dict "prefix" "" "indent" " " "noHTMLEscape" "false") | plainify }}
-  {{ else }}
-  {{ . | plainify }}
-  {{ end }}
+  {{- if or (reflect.IsMap .) (reflect.IsSlice .) }}
+  {{- . | jsonify (dict "prefix" "" "indent" " " "noHTMLEscape" "false") | plainify }}
+  {{- else }}
+  {{- . | plainify }}
+  {{- end }}
   </code></span></p>
-{{ end }}
+{{- end }}
 
-{{ define "format-minmax" }}
+{{- define "format-minmax" }}
   <p class="resources__attrs"><span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> <span class="resources__attrs_content">
     <code>
-    {{ $rangeString := "" }}
-    {{ if isset . "minimum" }}
-      {{ $rangeString = printf "%s <= " (string (index . "minimum"))  }}
-    {{ else if isset . "exclusiveMinimum" }}
-      {{ $rangeString = printf "%s < " (string (index . "exclusiveMinimum"))  }}
-    {{ end }}
-    {{ $rangeString = printf "%sX " $rangeString }}
-    {{ if isset . "maximum" }}
-      {{ $rangeString = printf "%s<= %s" $rangeString (string (index . "maximum"))  }}
-    {{ else if isset . "exclusiveMaximum" }}
-      {{ $rangeString = printf "%s< %s" $rangeString (string (index . "exclusiveMaximum"))  }}
-    {{ end }}
-    {{ $rangeString }}
+    {{- $rangeString := "" }}
+    {{- if isset . "minimum" }}
+      {{- $rangeString = printf "%s <= " (string (index . "minimum"))  }}
+    {{- else if isset . "exclusiveMinimum" }}
+      {{- $rangeString = printf "%s < " (string (index . "exclusiveMinimum"))  }}
+    {{- end }}
+    {{- $rangeString = printf "%sX " $rangeString }}
+    {{- if isset . "maximum" }}
+      {{- $rangeString = printf "%s<= %s" $rangeString (string (index . "maximum"))  }}
+    {{- else if isset . "exclusiveMaximum" }}
+      {{- $rangeString = printf "%s< %s" $rangeString (string (index . "exclusiveMaximum"))  }}
+    {{- end }}
+    {{- $rangeString }}
     </code></span>
   </p>
-{{ end }}
+{{- end }}
 
-{{ define "format-minmax-length" }}
-{{ $caption := "length" }}
-{{ $lengthValue := "" }}
-{{ if and (isset . "minLength" ) ( isset . "maxLength" ) }}
-  {{ $lengthValue = printf "%s..%s" (.minLength | jsonify) (.maxLength | jsonify) }}
-{{ else if isset . "minLength" }}
-  {{ $caption = "min_length" }}
-  {{ $lengthValue = ( .minLength | jsonify ) }}
-{{ else if isset . "maxLength" }}
-  {{ $caption = "max_length" }}
-  {{ $lengthValue = ( .maxLength | jsonify ) }}
-{{ end }}
+{{- define "format-minmax-length" }}
+{{- $caption := "length" }}
+{{- $lengthValue := "" }}
+{{- if and (isset . "minLength" ) ( isset . "maxLength" ) }}
+  {{- $lengthValue = printf "%s..%s" (.minLength | jsonify) (.maxLength | jsonify) }}
+{{- else if isset . "minLength" }}
+  {{- $caption = "min_length" }}
+  {{- $lengthValue = ( .minLength | jsonify ) }}
+{{- else if isset . "maxLength" }}
+  {{- $caption = "max_length" }}
+  {{- $lengthValue = ( .maxLength | jsonify ) }}
+{{- end }}
 <p class="resources__attrs">
   <span class="resources__attrs_name">{{ T $caption | humanize }}:</span> <span class="resources__attrs_content"><code>{{ $lengthValue }}</code></span>
 </p>
-{{ end }}
+{{- end }}
 
-{{ define "format-example" }}
-  {{ $name := .name }}
-  {{ $attributes := .attributes }}
-  {{ $linkAnchor := printf "%sL" .linkAnchor }}
-  {{ $isArray := false }}
-  {{ $keyToUse := "" }}
-  {{ $title := T "example" | humanize }}
-  {{ $hl_opts := dict "lineNos" "false" "anchorLineNos" "true" "lineAnchors" $linkAnchor "guessSyntax" "true" "style" "native" }}
+{{- define "format-example" }}
+  {{- $name := .name }}
+  {{- $attributes := .attributes }}
+  {{- $linkAnchor := printf "%sL" .linkAnchor }}
+  {{- $isArray := false }}
+  {{- $keyToUse := "" }}
+  {{- $title := T "example" | humanize }}
+  {{- $hl_opts := dict "lineNos" "false" "anchorLineNos" "true" "lineAnchors" $linkAnchor "guessSyntax" "true" "style" "native" }}
 
-  {{ if isset $attributes "x-doc-examples" }}
-    {{ $keyToUse = "x-doc-examples" }}
-    {{ $isArray = true }}
-  {{ else if isset $attributes "x-doc-example" }}
-    {{ $keyToUse = "x-doc-example" }}
-  {{ else if isset $attributes "example" }}
-    {{ $keyToUse = "example" }}
-  {{ else if isset $attributes "x-examples" }}
-    {{ $keyToUse = "x-examples" }}
-    {{ $isArray = true }}
-  {{ end }}
+  {{- if isset $attributes "x-doc-examples" }}
+    {{- $keyToUse = "x-doc-examples" }}
+    {{- $isArray = true }}
+  {{- else if isset $attributes "x-doc-example" }}
+    {{- $keyToUse = "x-doc-example" }}
+  {{- else if isset $attributes "example" }}
+    {{- $keyToUse = "example" }}
+  {{- else if isset $attributes "x-examples" }}
+    {{- $keyToUse = "x-examples" }}
+    {{- $isArray = true }}
+  {{- end }}
 
-  {{ $example := index $attributes $keyToUse }}
+  {{- $example := index $attributes $keyToUse }}
 
   <!-- $example ({{ reflect.IsMap $example }})- {{ $example }} -->
 
-  {{ if and $isArray ( gt ($example | len) 1) }}
-    {{ $title = T "examples" | humanize }}
-  {{ end }}
+  {{- if and $isArray ( gt ($example | len) 1) }}
+    {{- $title = T "examples" | humanize }}
+  {{- end }}
 
 <p class="resources__attrs"><span class="resources__attrs_name">{{ $title }}:</span>
 
-  {{ if and $isArray }}<br>
-    {{ range $example }}
-      {{ if reflect.IsMap . }}
-         {{ transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
-      {{ else if reflect.IsSlice . }}
-         {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
-      {{ else }}
-         {{ if hasPrefix . "```" }}
-           {{ . | markdownify }}
-         {{ else }}
-           {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
-         {{ end }}
-      {{ end }}
-    {{ end }}
-  {{ else if reflect.IsMap $example }}
-     {{ transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
-  {{ else if reflect.IsSlice $example }}
-     {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
-  {{ else }}
-     {{ if hasPrefix $example "```" }}
-       {{ $example | markdownify }}
-     {{ else }}
-       {{ transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
-     {{ end }}
-  {{ end }}
-{{ end }}
+  {{- if and $isArray }}<br>
+    {{- range $example }}
+      {{- if reflect.IsMap . }}
+         {{- transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
+      {{- else if reflect.IsSlice . }}
+         {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+      {{- else }}
+         {{- if hasPrefix . "```" }}
+           {{- . | markdownify }}
+         {{- else }}
+           {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+         {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- else if reflect.IsMap $example }}
+     {{- transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
+  {{- else if reflect.IsSlice $example }}
+     {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+  {{- else }}
+     {{- if hasPrefix $example "```" }}
+       {{- $example | markdownify }}
+     {{- else }}
+       {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+     {{- end }}
+  {{- end }}
+{{- end }}
 

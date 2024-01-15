@@ -1,6 +1,6 @@
 ---
 image: docs-builder-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .ctx.Images.BASE_GOLANG_20_ALPINE }}
 ansible:
   install:
     - name: Download dependencies
@@ -24,7 +24,7 @@ git:
       setup: '**/*'
 ---
 image: docs-builder
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .ctx.Images.BASE_ALPINE }}
 docker:
   WORKDIR: /app
 import:
@@ -35,3 +35,9 @@ import:
 git:
   - add: /docs/site/backends/docs-builder-template
     to: /app/hugo
+{{ if eq .mode "module" }}
+    excludePaths:
+    - config/production/
+  - add: /{{ .ctx.ModulePath }}modules/810-documentation/images/web/modules-docs/hugo.yaml
+    to: /app/hugo/config/production/hugo.yaml
+{{ end }}

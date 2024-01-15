@@ -45,9 +45,9 @@ spec:
               path: /healthz
               port: 8080
           volumeMounts:
-            - mountPath: /app/en/others/modules
+            - mountPath: /app/en/modules
               name: modules-docs-en
-            - mountPath: /app/ru/others/modules
+            - mountPath: /app/ru/modules
               name: modules-docs-ru
         - name: builder
           command:
@@ -56,6 +56,8 @@ spec:
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
+            - name: HUGO_ENVIRONMENT
+              value: production
             - name: POD_IP
               valueFrom:
                 fieldRef:
