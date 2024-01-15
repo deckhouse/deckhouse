@@ -84,6 +84,14 @@ shell:
   - rm -rf /iptables
   - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact-distroless
+from: common/distroless
+import:
+- image: {{ $.ModuleName }}/builder-runtime-artifact
+  add: /
+  to: /
+  before: install
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:

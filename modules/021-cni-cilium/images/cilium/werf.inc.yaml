@@ -57,12 +57,8 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
-from: common/distroless
+fromImage: {{ $.ModuleName }}/builder-runtime-artifact-distroless
 import:
-- artifact: {{ $.ModuleName }}/builder-runtime-artifact
-  add: /
-  to: /
-  before: beforeInstall
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
   add: /tmp/install
   to: /
@@ -73,7 +69,6 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/builder-envoy-artifact
   add: /usr/bin/cilium-envoy
-# ??? dst /usr/bin/cilium-envoy or /usr/bin
   to: /usr/bin
   before: install
 - artifact: {{ $.ModuleName }}/builder-hubble-artifact
@@ -81,7 +76,6 @@ import:
   to: /usr/bin/hubble
   before: install
 shell:
-# ?? why
   install:
   - groupadd -f cilium
   - rm -rf /go
