@@ -1,5 +1,5 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index 06d60ae54..be1280bfe 100755
+index dc1d12547..772048450 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
 @@ -14,6 +14,9 @@
@@ -7,21 +7,29 @@ index 06d60ae54..be1280bfe 100755
  # limitations under the License.
  
 +SOURCE_REPO="${SOURCE_REPO}"
-+CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
++CONTROLLER_BRANCH="controller-v1.9.4"
 +
  set -o errexit
  set -o nounset
  set -o pipefail
-@@ -127,6 +130,8 @@ export MIMALOC_VERSION=1.7.6
+@@ -78,7 +81,7 @@ export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
+ export LUA_CJSON_VERSION=2.1.0.11
+ 
+ # Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.3...master
+-export GEOIP2_VERSION=a26c6beed77e81553686852dceb6c7fdacc5970d
++export GEOIP2_VERSION=a607a41a8115fecfc05b5c283c81532a3d605425
+ 
+ # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20230410...v2.1-agentzh
+ export LUAJIT_VERSION=2.1-20230410
+@@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
+ export MIMALOC_VERSION=1.7.6
  
  export BUILD_PATH=/tmp/build
- 
 +export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
-+
+ 
  ARCH=$(uname -m)
  
- if [[ ${ARCH} == "s390x" ]]; then
-@@ -136,184 +141,13 @@ if [[ ${ARCH} == "s390x" ]]; then
+@@ -136,185 +140,12 @@ if [[ ${ARCH} == "s390x" ]]; then
    export LUA_STREAM_NGX_VERSION=0.0.7
  fi
  
@@ -53,6 +61,7 @@ index 06d60ae54..be1280bfe 100755
 -  linux-headers \
 -  libxslt-dev \
 -  gd-dev \
+-  geoip-dev \
 -  perl-dev \
 -  libedit-dev \
 -  mercurial \
@@ -83,7 +92,7 @@ index 06d60ae54..be1280bfe 100755
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
  
- # download, verify and extract the source files
+-# download, verify and extract the source files
 -get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
 -        "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
 -
@@ -151,7 +160,7 @@ index 06d60ae54..be1280bfe 100755
 -get_src 8d39c6b23f941a2d11571daaccc04e69539a3fcbcc50a631837560d5861a7b96 \
 -        "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 -
--get_src b6c9c09fd43eb34a71e706ad780b2ead26549a9a9f59280fe558f5b7b980b7c6 \
+-get_src 4c1933434572226942c65b2f2b26c8a536ab76aa771a3c7f6c2629faa764976b \
 -        "https://github.com/leev/ngx_http_geoip2_module/archive/$GEOIP2_VERSION.tar.gz"
 -
 -get_src deb4ab1ffb9f3d962c4b4a2c4bdff692b86a209e3835ae71ebdf3b97189e40a9 \
@@ -203,54 +212,54 @@ index 06d60ae54..be1280bfe 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/refs/tags/v${MIMALOC_VERSION}.tar.gz"
-+git clone -b "$CONTROLLER_BRANCH" ${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git .
++git clone -b "$CONTROLLER_BRANCH" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -465,15 +299,16 @@ make install
+@@ -466,15 +297,16 @@ make install
  
  # Get Brotli source and deps
  cd "$BUILD_PATH"
 -git clone --depth=100 https://github.com/google/ngx_brotli.git
-+git clone --depth=100 ${SOURCE_REPO}/google/ngx_brotli.git
++git clone --depth=100 "${SOURCE_REPO}/google/ngx_brotli.git"
  cd ngx_brotli
  # https://github.com/google/ngx_brotli/issues/156
  git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
  git submodule init
-+git submodule set-url deps/brotli ${SOURCE_REPO}/google/brotli.git
++git submodule set-url deps/brotli "${SOURCE_REPO}/google/brotli.git"
  git submodule update
  
  cd "$BUILD_PATH"
 -git clone --depth=1 https://github.com/ssdeep-project/ssdeep
-+git clone --depth=1 ${SOURCE_REPO}/ssdeep-project/ssdeep
++git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
  cd ssdeep/
  
  ./bootstrap
-@@ -484,10 +319,13 @@ make install
+@@ -485,10 +317,13 @@ make install
  
  # build modsecurity library
  cd "$BUILD_PATH"
 -git clone -n https://github.com/SpiderLabs/ModSecurity
-+git clone -n ${SOURCE_REPO}/SpiderLabs/ModSecurity
++git clone -n "${SOURCE_REPO}/SpiderLabs/ModSecurity"
  cd ModSecurity/
  git checkout $MODSECURITY_LIB_VERSION
  git submodule init
-+git submodule set-url test/test-cases/secrules-language-tests ${SOURCE_REPO}/SpiderLabs/secrules-language-tests
-+git submodule set-url others/libinjection ${SOURCE_REPO}/libinjection/libinjection.git
-+git submodule set-url bindings/python ${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git
++git submodule set-url test/test-cases/secrules-language-tests "${SOURCE_REPO}/SpiderLabs/secrules-language-tests"
++git submodule set-url others/libinjection "${SOURCE_REPO}/libinjection/libinjection.git"
++git submodule set-url bindings/python "${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git"
  git submodule update
  
  sh build.sh
-@@ -517,7 +355,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -518,7 +353,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
  
 -git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
-+git clone -b $OWASP_MODSECURITY_CRS_VERSION ${SOURCE_REPO}/coreruleset/coreruleset
++git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
-@@ -729,7 +567,7 @@ writeDirs=( \
+@@ -731,7 +566,7 @@ writeDirs=( \
    /var/log/nginx \
  );
  
