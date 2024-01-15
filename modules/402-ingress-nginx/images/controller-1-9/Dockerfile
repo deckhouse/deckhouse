@@ -156,7 +156,6 @@ RUN bash -eu -c ' \
     /chroot/etc/ingress-controller/ssl \
     /chroot/etc/ingress-controller/auth \
     /chroot/etc/ingress-controller/telemetry \
-    /chroot/etc/ingress-controller/geoip \
     /chroot/opt/modsecurity/var/log \
     /chroot/opt/modsecurity/var/upload \
     /chroot/opt/modsecurity/var/audit \
@@ -179,8 +178,9 @@ RUN bash -eu -c ' \
   && cp -a /usr/* /chroot/usr/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
-  && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml \
+  && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
+  && ln -s /chroot/etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /lib/* /chroot/lib/ \
   && cp -a /lib64/* /chroot/lib64/
