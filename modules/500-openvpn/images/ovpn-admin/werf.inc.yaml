@@ -27,6 +27,7 @@ shell:
     - cd /src
     - git clone https://github.com/flant/ovpn-admin.git .
     - git checkout {{ $gitCommit }}
+    - echo {{ $gitCommit }} > version
     - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
