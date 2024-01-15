@@ -88,10 +88,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cniCilium": map[string]interface{}{
-		"builderArtifact":        "imageHash-cniCilium-builderArtifact",
-		"builderRuntimeArtifact": "imageHash-cniCilium-builderRuntimeArtifact",
-		"cilium":                 "imageHash-cniCilium-cilium",
-		"operator":               "imageHash-cniCilium-operator",
+		"builderArtifact":                  "imageHash-cniCilium-builderArtifact",
+		"builderRuntimeArtifact":           "imageHash-cniCilium-builderRuntimeArtifact",
+		"builderRuntimeArtifactDistroless": "imageHash-cniCilium-builderRuntimeArtifactDistroless",
+		"cilium":                           "imageHash-cniCilium-cilium",
+		"ciliumDistroless":                 "imageHash-cniCilium-ciliumDistroless",
+		"operator":                         "imageHash-cniCilium-operator",
+		"operatorDistroless":               "imageHash-cniCilium-operatorDistroless",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
