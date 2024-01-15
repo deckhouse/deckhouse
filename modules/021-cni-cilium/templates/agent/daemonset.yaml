@@ -46,7 +46,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list . "cilium-distroless") }}
         command:
         - cilium-agent
         args:

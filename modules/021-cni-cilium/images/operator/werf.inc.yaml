@@ -17,3 +17,25 @@ import:
 docker:
   USER: nobody
   ENTRYPOINT: ["/usr/bin/cilium-operator"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
+from: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/builder-cert-artifact
+  add: /etc/ssl/certs/ca-certificates.crt
+  to: /etc/ssl/certs/ca-certificates.crt
+  before: install
+- artifact: {{ $.ModuleName }}/builder-gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/bin/cilium-operator
+  to: /usr/bin/cilium-operator
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /LICENSE.all
+  to: /LICENSE.all
+  before: install
+docker:
+  ENTRYPOINT: ["/usr/bin/cilium-operator"]

@@ -1,5 +1,5 @@
 {{- $ciliumVersion := "1.14.5" }}
-# https://github.com/cilium/cilium/blob/83f313918cd97dc48c63fda7a0e15b8821a6f0d2/images/runtime/Dockerfile#L8-L10
+# https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
@@ -12,7 +12,7 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 ---
 # https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
-from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
+from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
 from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
@@ -23,6 +23,25 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
+  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  install:
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./build-gops.sh
+  - ./download-cni.sh
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 import:
@@ -32,7 +51,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/
-  to: /bin
+  to: /usr/local/bin/
   before: install
   includePaths:
   - clang
@@ -114,25 +133,6 @@ shell:
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
   - ./install-protoplugins.sh
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
-  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  install:
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./build-gops.sh
-  - ./download-cni.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
