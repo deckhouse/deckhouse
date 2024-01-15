@@ -1,5 +1,5 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index dc1d12547..772048450 100755
+index 8bf372f21..fad97e00e 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
 @@ -14,6 +14,9 @@
@@ -7,20 +7,11 @@ index dc1d12547..772048450 100755
  # limitations under the License.
  
 +SOURCE_REPO="${SOURCE_REPO}"
-+CONTROLLER_BRANCH="controller-v1.9.4"
++CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
 +
  set -o errexit
  set -o nounset
  set -o pipefail
-@@ -78,7 +81,7 @@ export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
- export LUA_CJSON_VERSION=2.1.0.11
- 
- # Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.3...master
--export GEOIP2_VERSION=a26c6beed77e81553686852dceb6c7fdacc5970d
-+export GEOIP2_VERSION=a607a41a8115fecfc05b5c283c81532a3d605425
- 
- # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20230410...v2.1-agentzh
- export LUAJIT_VERSION=2.1-20230410
 @@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
  export MIMALOC_VERSION=1.7.6
  
@@ -29,24 +20,10 @@ index dc1d12547..772048450 100755
  
  ARCH=$(uname -m)
  
-@@ -136,185 +140,12 @@ if [[ ${ARCH} == "s390x" ]]; then
-   export LUA_STREAM_NGX_VERSION=0.0.7
- fi
+@@ -150,170 +154,12 @@ get_src()
+   rm -rf "$f"
+ }
  
--get_src()
--{
--  hash="$1"
--  url="$2"
--  f=$(basename "$url")
--
--  echo "Downloading $url"
--
--  curl -sSL "$url" -o "$f"
--  echo "$hash  $f" | sha256sum -c - || exit 10
--  tar xzf "$f"
--  rm -rf "$f"
--}
--
 -# install required packages to build
 -apk add \
 -  bash \
@@ -61,7 +38,6 @@ index dc1d12547..772048450 100755
 -  linux-headers \
 -  libxslt-dev \
 -  gd-dev \
--  geoip-dev \
 -  perl-dev \
 -  libedit-dev \
 -  mercurial \
@@ -160,7 +136,7 @@ index dc1d12547..772048450 100755
 -get_src 8d39c6b23f941a2d11571daaccc04e69539a3fcbcc50a631837560d5861a7b96 \
 -        "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 -
--get_src 4c1933434572226942c65b2f2b26c8a536ab76aa771a3c7f6c2629faa764976b \
+-get_src b6c9c09fd43eb34a71e706ad780b2ead26549a9a9f59280fe558f5b7b980b7c6 \
 -        "https://github.com/leev/ngx_http_geoip2_module/archive/$GEOIP2_VERSION.tar.gz"
 -
 -get_src deb4ab1ffb9f3d962c4b4a2c4bdff692b86a209e3835ae71ebdf3b97189e40a9 \
@@ -183,8 +159,8 @@ index dc1d12547..772048450 100755
 -get_src a77b9de160d81712f2f442e1de8b78a5a7ef0d08f13430ff619f79235db974d4 \
 -        "https://github.com/openresty/lua-cjson/archive/$LUA_CJSON_VERSION.tar.gz"
 -
--get_src 5ed48c36231e2622b001308622d46a0077525ac2f751e8cc0c9905914254baa4 \
--        "https://github.com/cloudflare/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
+-get_src a404c790553617424d743b82a9f01feccd0d2930b306b370c665ca3b7c09ccb6 \
+-        "https://github.com/utix/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
 -
 -get_src 573184006b98ccee2594b0d134fa4d05e5d2afd5141cbad315051ccf7e9b6403 \
 -        "https://github.com/openresty/lua-resty-lrucache/archive/v$LUA_RESTY_CACHE.tar.gz"
@@ -216,7 +192,7 @@ index dc1d12547..772048450 100755
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -466,15 +297,16 @@ make install
+@@ -465,15 +311,16 @@ make install
  
  # Get Brotli source and deps
  cd "$BUILD_PATH"
@@ -235,7 +211,7 @@ index dc1d12547..772048450 100755
  cd ssdeep/
  
  ./bootstrap
-@@ -485,10 +317,13 @@ make install
+@@ -484,10 +331,13 @@ make install
  
  # build modsecurity library
  cd "$BUILD_PATH"
@@ -250,7 +226,7 @@ index dc1d12547..772048450 100755
  git submodule update
  
  sh build.sh
-@@ -518,7 +353,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -517,7 +367,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
  
@@ -259,7 +235,15 @@ index dc1d12547..772048450 100755
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
-@@ -731,7 +566,7 @@ writeDirs=( \
+@@ -582,6 +432,7 @@ WITH_FLAGS="--with-debug \
+   --with-http_realip_module \
+   --with-http_auth_request_module \
+   --with-http_addition_module \
++  --with-http_geoip_module \
+   --with-http_gzip_static_module \
+   --with-http_sub_module \
+   --with-http_v2_module \
+@@ -729,7 +580,7 @@ writeDirs=( \
    /var/log/nginx \
  );
  

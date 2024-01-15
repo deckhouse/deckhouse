@@ -1,7 +1,7 @@
 ARG BASE_ALT_P101
 ARG BASE_GOLANG_21_BULLSEYE
 ARG BASE_DISTROLESS
-ARG CONTROLLER_BRANCH=release-1.9
+ARG CONTROLLER_BRANCH=controller-v1.9.5
 
 
 # Build dumb-init binary
@@ -105,9 +105,12 @@ RUN patch build.sh < nginx-build.patch
 RUN /build.sh
 
 
-# Based on branch "release-1.9":
-# https://github.com/kubernetes/ingress-nginx/blob/4664b741ff789817ed32923cf0391cb0a4bc77df/images/nginx/rootfs/Dockerfile
-FROM $BASE_ALT_P101 as base-nginx
+# This intermediary image will be used only to copy all the required files to the chroot
+# Based on tag "controller-v1.9.5":
+# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/images/nginx/rootfs/Dockerfile
+# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
+# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/chroot.sh
+FROM $BASE_ALT_P101 as chroot
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 ENV LUA_PATH="/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
@@ -143,12 +146,7 @@ RUN apt-get update \
   chown -R www-data.www-data ${dir}; \
   done'
 
-
-# This intermediary image will be used only to copy all the required files to the chroot
-# Based on branch "release-1.9":
-# - https://github.com/kubernetes/ingress-nginx/blob/3916f7b8b72ce5da7e3ba2377adfb1d06d4bcae8/rootfs/chroot.sh
-# - https://github.com/kubernetes/ingress-nginx/blob/4664b741ff789817ed32923cf0391cb0a4bc77df/rootfs/Dockerfile-chroot
-FROM base-nginx as chroot
+# chroot.sh
 RUN bash -eu -c ' \
   writeDirs=( \
     /chroot/etc/nginx \
@@ -156,6 +154,8 @@ RUN bash -eu -c ' \
     /chroot/etc/ingress-controller \
     /chroot/etc/ingress-controller/ssl \
     /chroot/etc/ingress-controller/auth \
+    /chroot/etc/ingress-controller/telemetry \
+    /chroot/etc/ingress-controller/geoip \
     /chroot/opt/modsecurity/var/log \
     /chroot/opt/modsecurity/var/upload \
     /chroot/opt/modsecurity/var/audit \
@@ -174,10 +174,10 @@ RUN bash -eu -c ' \
     chown -R www-data.www-data ${dir}; \
   done' \
   && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run \
-  && cp /etc/passwd /etc/group /chroot/etc/ \
+  && cp /etc/passwd /etc/group /etc/hosts /chroot/etc/ \
   && cp -a /usr/* /chroot/usr/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
-  && touch /chroot/etc/nginx/opentelemetry.toml \
+  && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
@@ -186,8 +186,8 @@ RUN bash -eu -c ' \
 
 
 # Final image
-# - https://github.com/kubernetes/ingress-nginx/blob/3916f7b8b72ce5da7e3ba2377adfb1d06d4bcae8/rootfs/chroot.sh
-# - https://github.com/kubernetes/ingress-nginx/blob/4664b741ff789817ed32923cf0391cb0a4bc77df/rootfs/Dockerfile-chroot
+# Based on tag "controller-v1.9.5":
+# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
 FROM $BASE_ALT_P101
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
