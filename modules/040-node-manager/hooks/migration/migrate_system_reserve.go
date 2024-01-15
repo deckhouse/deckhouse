@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	systemReserveMigrationCM = "system-reserve-config-migration"
-	systemReserveMigrationNS = "d8-system"
+	systemReserveMigrationCM    = "system-reserve-config-migration"
+	systemReserveMigrationCMNew = "kubelet-resource-reservation-migration"
+	systemReserveMigrationNS    = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -51,6 +52,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "v1",
 			Kind:                         "ConfigMap",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{systemReserveMigrationCM}},
+			FilterFunc:                   configMapName,
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+		},
+		{
+			Name:                         "cmNew",
+			ApiVersion:                   "v1",
+			Kind:                         "ConfigMap",
+			NameSelector:                 &types.NameSelector{MatchNames: []string{systemReserveMigrationCMNew}},
 			FilterFunc:                   configMapName,
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
@@ -89,7 +99,7 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func systemReserve(input *go_hook.HookInput) error {
-	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
+	if cmSnapshot := input.Snapshots["cmNew"]; len(cmSnapshot) > 0 {
 		log.Debug("System reserved Nodes are already migrated, skipping...")
 		return nil
 	}
@@ -113,11 +123,16 @@ func systemReserve(input *go_hook.HookInput) error {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      systemReserveMigrationCM,
+			Name:      systemReserveMigrationCMNew,
 			Namespace: systemReserveMigrationNS,
 			Labels:    map[string]string{"heritage": "deckhouse"},
 		},
 	}, object_patch.IgnoreIfExists())
+
+	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
+		log.Debugf("Delete old migration configmap (d8-system/%s).", systemReserveMigrationCM)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
+	}
 
 	return nil
 }
