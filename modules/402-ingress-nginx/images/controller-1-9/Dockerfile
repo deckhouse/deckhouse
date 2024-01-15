@@ -245,8 +245,10 @@ RUN setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   && ln -s /modules_mount /chroot/modules_mount \
   && echo -e "/usr/local/lib\n/usr/local/lib64\n/modules_mount/etc/nginx/modules/otel" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
-  # Create ld.so.cache inside chroot
-  && cp -a /etc/ld.so.conf* /chroot/etc/ && cp /sbin/ldconfig /chroot/bin/ && unshare -R /chroot ldconfig && rm -f /chroot/bin/ldconfig
+  && cp -a /etc/ld.so.conf* /chroot/etc/
+
+# Create ld.so.cache inside chroot
+RUN cp /sbin/ldconfig /chroot/bin/ && unshare -R /chroot ldconfig && rm -f /chroot/bin/ldconfig
 
 RUN cd / \
   && patch -p1 < /balancer-lua.patch \
