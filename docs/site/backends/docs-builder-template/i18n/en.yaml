@@ -42,3 +42,5 @@ boolean: boolean
 of_boolean: of booleans
 version: version
 version_of_schema: Schema version
+required_value_sentence: Required value
+
