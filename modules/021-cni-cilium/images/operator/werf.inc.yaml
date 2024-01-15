@@ -19,7 +19,7 @@ docker:
   ENTRYPOINT: ["/usr/bin/cilium-operator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
-from: common/distroless
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/builder-cert-artifact
   add: /etc/ssl/certs/ca-certificates.crt
