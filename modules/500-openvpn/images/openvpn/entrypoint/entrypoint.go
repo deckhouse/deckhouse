@@ -47,7 +47,7 @@ func main() {
 
 	protocol, ok := os.LookupEnv("OPENVPN_PROTO")
 	if !ok {
-		log.Fatal("The TUNNEL_NETWORK environment variable does not exist.")
+		log.Fatal("The OPENVPN_PROTO environment variable does not exist.")
 	}
 
 	var mgmtport string
@@ -61,57 +61,59 @@ func main() {
 		mgmtport = "9090"
 		routeTable = 11
 	default:
-		log.Fatalf("OPENVPN_PROTO env value must be tcp or udp: %s", protocol)
+		log.Fatalf("OPENVPN_PROTO env value must be set to 'tcp' or 'udp': %s", protocol)
 	}
+
+	devTunName := fmt.Sprintf("tun-%s", protocol)
 
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	nat := iptablesRule{
+	nat := &iptablesRule{
 		Table: "nat",
 		Chain: "POSTROUTING",
 		Rule:  strings.Fields(fmt.Sprintf("-s %s ! -d %s -j MASQUERADE", network, network)),
 		Pos:   1,
 	}
 
-	manglePreroutingSetMark := iptablesRule{
+	manglePreroutingSetMark := &iptablesRule{
 		Table: "mangle",
 		Chain: "PREROUTING",
-		Rule:  strings.Fields(fmt.Sprintf("-i tun-%s -j CONNMARK --set-mark %d", protocol, routeTable)),
+		Rule:  strings.Fields(fmt.Sprintf("-i %s -j CONNMARK --set-mark %d", devTunName, routeTable)),
 		Pos:   1,
 	}
 
-	manglePreroutingRestoreMark := iptablesRule{
+	manglePreroutingRestoreMark := &iptablesRule{
 		Table: "mangle",
 		Chain: "PREROUTING",
 		Rule:  strings.Fields("! -i tun+ -j CONNMARK --restore-mark"),
 		Pos:   2,
 	}
-	mangleOutputRestoreMark := iptablesRule{
+	mangleOutputRestoreMark := &iptablesRule{
 		Table: "mangle",
 		Chain: "OUTPUT",
 		Rule:  strings.Fields("-j CONNMARK --restore-mark"),
 		Pos:   1,
 	}
 
-	err = insertUnique(iptablesMgr, nat.Table, nat.Chain, nat.Rule, nat.Pos)
+	err = insertUnique(iptablesMgr, nat)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = insertUnique(iptablesMgr, manglePreroutingSetMark.Table, manglePreroutingSetMark.Chain, manglePreroutingSetMark.Rule, manglePreroutingSetMark.Pos)
+	err = insertUnique(iptablesMgr, manglePreroutingSetMark)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = insertUnique(iptablesMgr, manglePreroutingRestoreMark.Table, manglePreroutingRestoreMark.Chain, manglePreroutingRestoreMark.Rule, manglePreroutingRestoreMark.Pos)
+	err = insertUnique(iptablesMgr, manglePreroutingRestoreMark)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = insertUnique(iptablesMgr, mangleOutputRestoreMark.Table, mangleOutputRestoreMark.Chain, mangleOutputRestoreMark.Rule, mangleOutputRestoreMark.Pos)
+	err = insertUnique(iptablesMgr, mangleOutputRestoreMark)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,12 +135,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = netLinkCreateTuntap(fmt.Sprintf("tun-%s", protocol), 1400)
+	err = netLinkCreateTuntap(devTunName, 1400)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	routeAdd(network, fmt.Sprintf("tun-%s", protocol), routeTable)
+	routeAdd(network, devTunName, routeTable)
 
 	requiredFiles := []string{
 		"/etc/openvpn/certs/pki/ca.crt",
@@ -152,17 +154,19 @@ func main() {
 		waitingForFile(path)
 	}
 
-	var args []string
-	args = append(args, "--config")
-	args = append(args, "/etc/openvpn/openvpn.conf")
-	args = append(args, "--proto")
-	args = append(args, protocol)
-	args = append(args, "--management")
-	args = append(args, "127.0.0.1")
-	args = append(args, mgmtport)
-	args = append(args, "--dev")
-	args = append(args, fmt.Sprintf("tun-%s", protocol))
-	log.Println(args)
+	args := []string{
+		"--config",
+		"/etc/openvpn/openvpn.conf",
+		"--proto",
+		protocol,
+		"--management",
+		"127.0.0.1",
+		mgmtport,
+		"--dev",
+		devTunName,
+	}
+
+	log.Println("OpenVPN args: ", args)
 
 	cmd := exec.Command("/usr/sbin/openvpn", args...)
 	cmdReader, err := cmd.StdoutPipe()
@@ -183,19 +187,17 @@ func main() {
 	}
 }
 
-func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {
-	ok, err := iptablesMgr.Exists(table, chain, rule...)
+func insertUnique(iptablesMgr *iptables.IPTables, rule *iptablesRule) error {
+	ok, err := iptablesMgr.Exists(rule.Table, rule.Chain, rule.Rule...)
 	if err != nil {
 		return err
 	}
-	if !ok {
-		err := iptablesMgr.Insert(table, chain, pos, rule...)
-		if err != nil {
-			return err
-		}
+
+	if ok {
+		return nil
 	}
 
-	return nil
+	return iptablesMgr.Insert(rule.Table, rule.Chain, rule.Pos, rule.Rule...)
 }
 
 func mknodDevNetTun() error {
@@ -215,13 +217,14 @@ func mknodDevNetTun() error {
 	}
 
 	command := fmt.Sprintf("/bin/mknod")
-	var args []string
-	args = append(args, "/dev/net/tun")
-	args = append(args, "c")
-	args = append(args, "10")
-	args = append(args, "200")
+	args := []string{
+		"/dev/net/tun",
+		"c",
+		"10",
+		"200",
+	}
 	cmd := exec.Command(command, args...)
-	_, err = cmd.CombinedOutput()
+	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("error create /dev/net/tun: %v", err)
 	}
@@ -244,11 +247,7 @@ func netLinkCreateTuntap(name string, mtu int) error {
 	}
 
 	link, _ := netlink.LinkByName(linkAttrs.Name)
-	err = netlink.LinkSetUp(link)
-	if err != nil {
-		return err
-	}
-	return nil
+	return netlink.LinkSetUp(link)
 }
 
 func routeAdd(dstNet string, linkName string, table int) {
@@ -259,7 +258,7 @@ func routeAdd(dstNet string, linkName string, table int) {
 
 	link, _ := netlink.LinkByName(linkName)
 	if err != nil {
-		log.Fatal("error parse IPNet: ", err)
+		log.Fatal("error find LinkByName: ", err)
 	}
 	route := netlink.Route{Dst: dstIPNet, Table: table, LinkIndex: link.Attrs().Index}
 	err = netlink.RouteAdd(&route)
