@@ -197,7 +197,7 @@ ENV LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64/:/modules_mount/etc/nginx/modules/otel
 
 RUN apt-get update \
-  && apt-get install -y openssl curl ca-certificates nano tzdata diffutils util-linux \
+  && apt-get install -y openssl curl ca-certificates nano tzdata diffutils util-linux patch \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
     -s /sbin/nologin -c www-data www-data
