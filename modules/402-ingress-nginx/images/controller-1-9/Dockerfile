@@ -100,7 +100,7 @@ RUN apt-get update && apt-get install -y \
   libbrotli-devel \
   patch
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
-COPY rootfs/etc /
+COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN patch build.sh < nginx-build.patch
 RUN /build.sh
