@@ -17,6 +17,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
@@ -74,7 +75,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		statistic, err := converge.CheckState(kubeCl, metaConfig)
+		statistic, err := converge.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), converge.CheckStateOptions{})
 		if err != nil {
 			return err
 		}
