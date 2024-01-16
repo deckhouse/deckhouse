@@ -64,7 +64,7 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 
 			runner := newTestRunner().withTerraformExecutor(executor)
 
-			code, err := runner.checkPlanDestructiveChanges("")
+			code, err := runner.getPlanDestructiveChanges("")
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {

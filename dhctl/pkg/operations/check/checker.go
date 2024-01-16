@@ -18,14 +18,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	
+
+	"github.com/google/uuid"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
@@ -34,6 +37,8 @@ type Params struct {
 
 	CommanderMode bool
 	*commander.CommanderModeParams
+
+	TerraformContext *terraform.TerraformContext
 }
 
 type Checker struct {
@@ -48,16 +53,6 @@ func NewChecker(params *Params) *Checker {
 	return &Checker{
 		Params: params,
 	}
-}
-
-type CheckResult struct {
-	Status CheckStatus
-
-	ConfigurationStatus CheckStatus
-
-	InfraStatus        CheckStatus
-	InfraStatusDetails *converge.Statistics
-	InfraStatusMessage string
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
@@ -75,21 +70,26 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		Status: CheckStatusInSync,
 	}
 
-	infraStatus, infraStatusDetails, infraStatusMessage, err := c.checkInfra(ctx, kubeCl, metaConfig)
+	status, statusDetails, _, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check infra state: %w", err)
 	}
-	res.Status = res.Status.CombineStatus(infraStatus)
-	res.InfraStatus = infraStatus
-	res.InfraStatusDetails = infraStatusDetails
-	res.InfraStatusMessage = infraStatusMessage
+	res.Status = res.Status.CombineStatus(status)
+
+	if status == CheckStatusDestructiveOutOfSync {
+		res.DestructiveChangeID = uuid.New().String()
+	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
-	res.ConfigurationStatus = configurationStatus
+
+	res.StatusDetails = StatusDetails{
+		Statistics:          *statusDetails,
+		ConfigurationStatus: configurationStatus,
+	}
 
 	return res, nil
 }
@@ -123,10 +123,13 @@ func (c *Checker) checkConfiguration(_ context.Context, kubeCl *client.Kubernete
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, *converge.Statistics, string, error) {
+func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, string, error) {
 	var message string
 
-	stat, err := converge.CheckState(kubeCl, metaConfig)
+	stat, err := converge.CheckState(
+		kubeCl, metaConfig, terraformContext,
+		converge.CheckStateOptions{CommanderMode: c.CommanderMode},
+	)
 
 	// NOTE: According to the current converge.CheckState implementation
 	//       err actually not always an internal-error, but may be a message closely related to the stat
