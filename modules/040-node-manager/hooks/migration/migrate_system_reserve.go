@@ -99,7 +99,7 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func systemReserve(input *go_hook.HookInput) error {
-	if cmSnapshot := input.Snapshots["cmNew"]; len(cmSnapshot) > 0 {
+	if cmSnapshotNew := input.Snapshots["cmNew"]; len(cmSnapshotNew) > 0 {
 		log.Debug("System reserved Nodes are already migrated, skipping...")
 		return nil
 	}
