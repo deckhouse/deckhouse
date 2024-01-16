@@ -434,6 +434,7 @@ apiVersions:
           List containing an additional policies actions for IAM roles.
           * Additional policies actions would be attached to default IAM role policies.
           * Parameter is optional. If ommitted, only default IAM role policies are used.
+          * Example of policy actions: `ecr:ListImages`, `s3:GetObject`, etc.
 
           Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
