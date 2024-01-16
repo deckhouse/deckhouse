@@ -564,6 +564,12 @@ ENDSSH
     return 1
   fi
 
+  # Prepare resources.yaml for starting working node with CAPS
+  # shellcheck disable=SC2016
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
+      envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
+      <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
@@ -597,23 +603,6 @@ ENDSSH
     return 1
   fi
 
-  for ((i=0; i<10; i++)); do
-    bootstrap_worker="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq -r '.data."bootstrap.sh"'
-ENDSSH
-)" && break
-    >&2 echo "Attempt to get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace #$i failed. Sleeping 30 seconds..."
-    sleep 30
-  done
-
-  if [[ -z "$bootstrap_worker" ]]; then
-    >&2 echo "Couldn't get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace."
-    return 1
-  fi
-
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
@@ -621,13 +610,6 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
-ENDSSH
-
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH || true
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-base64 -d <<< "$bootstrap_worker" | bash
 ENDSSH
 
   registration_failed=
