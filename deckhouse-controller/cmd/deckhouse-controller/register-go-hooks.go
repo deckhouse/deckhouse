@@ -42,7 +42,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/010-user-authn-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-vertical-pod-autoscaler-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/011-flow-schema/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/013-helm/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-kube-proxy/hooks"

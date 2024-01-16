@@ -2,8 +2,7 @@
   rules:
   - alert: HelmReleasesHasResourcesWithDeprecatedVersions
     expr: |
-      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1)) > 0
-    for: "10m"
+      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (max_over_time (resource_versions_compatibility[10m])) == 1)) > 0
     labels:
       tier: cluster
       severity_level: "5"
@@ -20,8 +19,7 @@
 
   - alert: HelmReleasesHasResourcesWithUnsupportedVersions
     expr: |
-      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2)) > 0
-    for: "5m"
+      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (max_over_time (resource_versions_compatibility[10m])) == 2)) > 0
     labels:
       tier: cluster
       severity_level: "4"
