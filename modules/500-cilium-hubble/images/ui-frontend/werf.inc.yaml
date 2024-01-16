@@ -15,3 +15,17 @@ import:
   before: install
 docker:
   ENTRYPOINT: ["nginx", "-g", "daemon off;"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
+fromImage: common/nginx-static
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /etc/nginx/conf.d/default.conf
+  to: /opt/nginx-static/conf/nginx.conf
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /app
+  to: /app
+  before: install
+docker:
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]

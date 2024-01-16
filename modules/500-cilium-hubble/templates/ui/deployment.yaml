@@ -73,10 +73,14 @@ spec:
       containers:
       - name: frontend
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "uiFrontend") }}
+        image: {{ include "helm_lib_module_image" (list . "uiFrontendDistroless") }}
         ports:
         - name: http
           containerPort: 8081
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -85,17 +89,15 @@ spec:
 {{- end }}
         volumeMounts:
         - name: hubble-ui-nginx-conf
-          mountPath: /etc/nginx/conf.d/default.conf
+          mountPath: /opt/nginx-static/conf/nginx.conf
           subPath: nginx.conf
         - name: tmp
           mountPath: /tmp
-        - name: cache
-          mountPath: /var/cache/nginx
         - name: run
           mountPath: /var/run
       - name: backend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "uiBackend") }}
+        image: {{ include "helm_lib_module_image" (list . "uiBackendDistroless") }}
         env:
         - name: EVENTS_SERVER_PORT
           value: "8090"
@@ -132,9 +134,6 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
-      - emptyDir:
-          medium: Memory
-        name: cache
       - emptyDir:
           medium: Memory
         name: run
