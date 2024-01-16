@@ -1,6 +1,13 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-pull-artifact
 from: quay.io/cilium/hubble-relay:v1.14.5@sha256:faf8e9c24b94fd5c4e0e52bd72bae30913dd92cd2271bf4db5c974e56e405a1d
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALPINE }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-pull-artifact
+  add: /usr/bin/hubble-relay
+  to: /usr/local/bin/hubble-relay
+  before: install
 shell:
   install:
   - chown 64535:64535 /usr/local/bin/hubble-relay
