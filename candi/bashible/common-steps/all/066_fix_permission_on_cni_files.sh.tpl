@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-cd /opt/cni/bin
-rm -f bandwidth bridge dhcp dummy firewall host-device host-local ipvlan loopback macvlan portmap ptp sbr static tap tuning vlan vrf flannel
+# CIS becnhmark purposes (1.1.9 and 1.1.10)
+if [ -d /etc/cni/net.d ]; then
+  find /etc/cni/net.d -type f -exec chmod 600 -- {} +
+fi
+if [ -d /var/lib/cni/networks ]; then
+  find /var/lib/cni/networks -type f -exec chmod 600 -- {} +
+fi

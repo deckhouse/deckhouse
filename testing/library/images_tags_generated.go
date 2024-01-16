@@ -364,7 +364,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet12612":     "imageHash-registrypackages-kubelet12612",
 		"kubelet1279":      "imageHash-registrypackages-kubelet1279",
 		"kubelet1285":      "imageHash-registrypackages-kubelet1285",
-		"kubernetesCni120": "imageHash-registrypackages-kubernetesCni120",
+		"kubernetesCni140": "imageHash-registrypackages-kubernetesCni140",
 		"tomlMerge01":      "imageHash-registrypackages-tomlMerge01",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
