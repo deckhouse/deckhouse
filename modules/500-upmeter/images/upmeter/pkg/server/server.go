@@ -64,7 +64,7 @@ type Config struct {
 	ListenPort string
 	UserAgent  string
 
-	DatabasePath string
+	DatabasePath      string
 	DatabaseRetention int
 
 	OriginsCount int
@@ -120,7 +120,7 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	go cleanOld30sEpisodes(ctx, dbctx)
-	go cleanOld5mEpisodes(ctx, dbctx)
+	go cleanOld5mEpisodes(ctx, dbctx, s.config.DatabaseRetention)
 
 	// Probe lister that can only list groups and probes
 	probeLister := newProbeLister(s.config.DisabledProbes, s.config.DynamicProbes)
@@ -175,10 +175,10 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 	}
 }
 
-func cleanOld5mEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
-	dayBack := -24 * time.Hour * ctx.config.DatabaseRetention
+func cleanOld5mEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext, retDays int) {
+	dayBack := -24 * time.Hour * time.Duration(retDays)
 	period := 300 * time.Second
-	tickerPeriod := 24 * 60 * 60 * time.Second
+	tickerPeriod := 24 * time.Hour
 
 	conn := dbCtx.Start()
 	defer conn.Stop()
