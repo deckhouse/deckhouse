@@ -65,6 +65,7 @@ type Config struct {
 	UserAgent  string
 
 	DatabasePath string
+	DatabaseRetention int
 
 	OriginsCount int
 
@@ -119,6 +120,7 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	go cleanOld30sEpisodes(ctx, dbctx)
+	go cleanOld5mEpisodes(ctx, dbctx)
 
 	// Probe lister that can only list groups and probes
 	probeLister := newProbeLister(s.config.DisabledProbes, s.config.DynamicProbes)
@@ -164,7 +166,34 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 			deadline := time.Now().Truncate(period).Add(dayBack)
 			err := storage.DeleteUpTo(deadline)
 			if err != nil {
-				log.Errorf("cannot clean old episodes: %v", err)
+				log.Errorf("cannot clean old 30s episodes: %v", err)
+			}
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+func cleanOld5mEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
+	dayBack := -24 * time.Hour * ctx.config.DatabaseRetention
+	period := 300 * time.Second
+	tickerPeriod := 24 * 60 * 60 * time.Second
+
+	conn := dbCtx.Start()
+	defer conn.Stop()
+
+	storage := dao.NewEpisodeDao5m(conn)
+
+	ticker := time.NewTicker(tickerPeriod)
+
+	for {
+		select {
+		case <-ticker.C:
+			deadline := time.Now().Truncate(period).Add(dayBack)
+			err := storage.DeleteUpTo(deadline)
+			if err != nil {
+				log.Errorf("cannot clean old 5m episodes: %v", err)
 			}
 		case <-ctx.Done():
 			ticker.Stop()
