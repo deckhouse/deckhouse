@@ -949,7 +949,7 @@ entries:
                   url: /modules/160-multitenancy-manager/cr.html
         - title:
             en: Admission Policy
-            ru: Политики контроля допуска
+            ru: Политики безопасности
           folders:
             - title:
                 en: Description
