@@ -17,7 +17,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /usr/bin/hubble-relay
-  to: /usr/bin/hubble-relay
+  to: /usr/local/bin/hubble-relay
   before: install
 shell:
   install:
