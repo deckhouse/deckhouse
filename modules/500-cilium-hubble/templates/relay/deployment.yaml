@@ -47,13 +47,13 @@ spec:
       labels:
         app: hubble-relay
     spec:
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
         - name: hubble-relay
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
-          image: {{ include "helm_lib_module_image" (list . "relay") }}
+          image: {{ include "helm_lib_module_image" (list . "relayDistroless") }}
           command:
             - hubble-relay
           args:

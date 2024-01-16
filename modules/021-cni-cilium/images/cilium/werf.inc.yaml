@@ -57,7 +57,7 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
-fromImage: {{ $.ModuleName }}/builder-runtime-artifact-distroless
+fromImage: {{ $.ModuleName }}/builder-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
   add: /tmp/install

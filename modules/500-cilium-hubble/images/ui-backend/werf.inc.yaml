@@ -1,0 +1,27 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: quay.io/cilium/hubble-ui-backend:v0.12.1@sha256:f88a73a120521eeafbcdbd908f517117f6557bf61e115847853fac371f0d774c
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache ca-certificates
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+  add: /etc/ssl/certs/ca-certificates.crt
+  to: /etc/ssl/certs/ca-certificates.crt
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/bin/backend
+  to: /usr/local/bin/hubble-ui-backend
+  before: install
+shell:
+  install:
+  - chown 64535:64535 /usr/local/bin/hubble-ui-backend
+  - chmod 0700 /usr/local/bin/hubble-ui-backend
+docker:
+  ENTRYPOINT: ["hubble-ui-backend"]
