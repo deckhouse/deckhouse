@@ -3,8 +3,8 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: quay.io/cilium/hubble-ui-backend:v0.12.1@sha256:f88a73a120521eeafbcdbd908f517117f6557bf61e115847853fac371f0d774c
 shell:
   install:
-  - chown 64535:64535 /usr/local/bin/hubble-ui-backend
-  - chmod 0700 /usr/local/bin/hubble-ui-backend
+  - chown 64535:64535 /usr/bin/backend
+  - chmod 0700 /usr/bin/backend
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
