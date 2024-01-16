@@ -1,10 +1,11 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-pull-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
 from: quay.io/cilium/hubble-relay:v1.14.5@sha256:faf8e9c24b94fd5c4e0e52bd72bae30913dd92cd2271bf4db5c974e56e405a1d
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-pull-artifact
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
   add: /usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
@@ -27,7 +28,7 @@ import:
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/bin/hubble-relay
+  add: /usr/local/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
 docker:
@@ -41,7 +42,7 @@ import:
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/bin/hubble-relay
+  add: /usr/local/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
 docker:
