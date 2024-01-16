@@ -100,23 +100,26 @@ const (
 )
 
 var (
-	storage unsupportedVersionsStore
+	helmStorage unsupportedVersionsStore
 )
 
 func init() {
-	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
+	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helmStorage)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/helm/helm_releases",
+	Queue: "/modules/monitoring-kubernetes/helm_releases",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
 			Crontab: "0 * * * *", // every hour
 		},
+	},
+	OnStartup: &go_hook.OrderedConfig{
+		Order: 1,
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
@@ -296,7 +299,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				continue
 			}
 
-			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			incompatibility, k8sCompatibilityVersion := helmStorage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
