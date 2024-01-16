@@ -30,7 +30,7 @@ import (
 
 var (
 	serviceInstance     *ConfigService
-	serviceInstanceLock sync.RWMutex
+	serviceInstanceLock sync.Mutex
 )
 
 func InitService(mm ModuleManager) {
@@ -50,9 +50,7 @@ func InitService(mm ModuleManager) {
 }
 
 func IsServiceInited() bool {
-	serviceInstanceLock.RLock()
-	defer serviceInstanceLock.RUnlock()
-	return serviceInstance.possibleNames != nil && serviceInstance.moduleNamesToSources != nil
+	return serviceInstance != nil
 }
 
 func Service() *ConfigService {
