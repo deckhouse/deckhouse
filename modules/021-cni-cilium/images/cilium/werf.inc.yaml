@@ -69,7 +69,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/builder-envoy-artifact
   add: /usr/bin/cilium-envoy
-  to: /usr/bin
+  to: /usr/bin/cilium-envoy
   before: install
 - artifact: {{ $.ModuleName }}/builder-hubble-artifact
   add: /out/linux/amd64/bin/hubble
