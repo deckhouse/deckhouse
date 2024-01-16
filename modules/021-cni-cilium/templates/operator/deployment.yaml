@@ -73,7 +73,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: {{ include "helm_lib_module_image" (list . "operator-distroless") }}
+        image: {{ include "helm_lib_module_image" (list . "operatorDistroless") }}
         name: operator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         ports:
