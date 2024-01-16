@@ -217,6 +217,16 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
+	// Check if controller's dependencies have been initialized
+	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+		func(context.Context) (bool, error) {
+			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			if deckhouseconfig.IsServiceInited() {
+				return true, nil
+			}
+			return false, nil
+		})
+
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting ModuleRelease controller")
 
