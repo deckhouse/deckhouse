@@ -15,6 +15,8 @@
 package commands
 
 import (
+	"context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -35,9 +37,12 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHClient:        sshClient,
+			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return converger.Converge()
+		_, err = converger.Converge(context.Background())
+
+		return err
 	})
 	return cmd
 }
@@ -50,7 +55,11 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		converger := converge.NewConverger(&converge.Params{AutoDismissDestructive: true, AutoApprove: true})
+		converger := converge.NewConverger(&converge.Params{
+			AutoDismissDestructive: true,
+			AutoApprove:            true,
+			TerraformContext:       terraform.NewTerraformContext(),
+		})
 		return converger.AutoConverge()
 	})
 	return cmd
