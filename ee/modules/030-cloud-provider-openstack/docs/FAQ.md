@@ -33,7 +33,8 @@ spec:
 
 ## How do I set up security policies on cluster nodes?
 
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
+There are several options to limit or expand incoming and outgoing traffic on cluster VMs in OpenStack.
+For example:
 
 * Allow VMs on a different subnet to connect to cluster nodes.
 * Allow connecting to the ports of the static node so that the application can work.
@@ -43,10 +44,16 @@ For all this, additional security groups should be used. You can only use securi
 
 ### Enabling additional security groups on static and master nodes
 
-This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
+The installation of additional security groups can be set:
 
-* for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
-* for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
+* when creating a cluster;
+
+* in an existing cluster.
+
+In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
+
+* for `master nodes` in the `additionalSecurityGroups` of the `masterNodeGroup` section;
+* for `static nodes` in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
 
 The `additionalSecurityGroups` field contains an array of strings with security group names.
 
@@ -96,7 +103,7 @@ volumeBindingMode: WaitForFirstConsumer
 
    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
 
-3. Otherwise, install the OpenStack client using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
+Otherwise, install the OpenStack client using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
    Also, you can run the container and mount an openrc file and a downloaded Ubuntu image in it:
 
@@ -104,13 +111,13 @@ volumeBindingMode: WaitForFirstConsumer
    docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.openrc:/openrc jmcvea/openstack-client
    ```
 
-4. Initialize the environment variables from the openrc file:
+3. Initialize the environment variables from the openrc file:
 
    ```shell
    source /openrc
    ```
 
-5. Get a list of available disk types:
+4. Get a list of available disk types:
 
    ```shell
    / # openstack volume type list
@@ -128,14 +135,14 @@ volumeBindingMode: WaitForFirstConsumer
    +--------------------------------------+---------------+-----------+
    ```
 
-6. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
+5. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
 
    ```shell
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
 
-7. Check that the image was created successfully:
+6. Check that the image was created successfully:
 
    ```text
    / # openstack image show ubuntu-18-04-cloud-amd64
@@ -198,7 +205,10 @@ username = {{ nova_service_user_name }}
 
 ### Disks in OpenStack
 
-The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). The first one is deleted along with the VM, and the second one remains in the cloud when the VM is deleted.
+The node's disk can be local or network.
+
+A local disk is an ephemeral disk. It is deleted along with the VM.
+A network drive is a persistent disk (cinder storage). It remains in the cloud when the VM is deleted.
 
 * A network disk is preferred for the master node so that the node can migrate between hypervisors.
 * A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
@@ -232,6 +242,13 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 ### How do I check the disk volume in a flavor?
 
+
+Perform a disk volume check in flavor.
+
+In the example, the `openstack flavor show` command will take the name `flavor` as an argument and output information about flavorwave.
+
+The `-c disk` parameter will specify information about the disk.
+
 ```shell
 # openstack flavor show m1.medium-50g -c disk
 +-------+-------+
@@ -245,9 +262,9 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 If there are several types of disks in a *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type. To do this, specify the name of a disk type in the image metadata.
 
-Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](#how-do-i-create-an-image-in-openstack) section describes how to do it
+Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](#how-do-i-create-an-image-in-openstack) section describes how to do it.
 
-Example:
+For example:
 
 ```shell
 openstack volume type list
@@ -256,8 +273,8 @@ openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=V
 
 ## OFFLINE disk resize
 
-Some cloud providers may not support ONLINE disk resizing.
-If you get the following error, then you need to reduce the number of StatefulSet replicas to 0, wait for disk resizing
+Some cloud providers (for example, Google Cloud) may not support online disk modification.
+If the get error is displayed when changing the disk size (see the example below), you need to reduce the number of `StatefulSet` replicas to 0, wait for disk resizing
 and return the number of replicas that was before the start of the operation.
 
 ```text
