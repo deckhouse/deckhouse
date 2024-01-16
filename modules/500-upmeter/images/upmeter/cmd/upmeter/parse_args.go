@@ -46,10 +46,10 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		StringVar(&config.DatabasePath)
 
 	// Database retention
-	cmd.Flag("db-retention", "Database episodes 5m retention").
-		Envar("UPMETER_RETENTION").
+	cmd.Flag("db-retention", "Database episodes 5m retention days").
+		Envar("UPMETER_RETENTION_DAYS").
 		Default("548").
-		IntVar(&config.DatabaseRetention)
+		IntVar(&config.DatabaseRetentionDays)
 
 	// Origins count
 	cmd.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
