@@ -431,11 +431,11 @@ apiVersions:
           pattern: '^(\w+):(\w+)$'
         minItems: 1
         description: |
-          List containing an additional policies for IAM roles.
-          * Additional policies would be attached to default IAM role policies.
+          List containing an additional policies actions for IAM roles.
+          * Additional policies actions would be attached to default IAM role policies.
           * Parameter is optional. If ommitted, only default IAM role policies are used.
 
-          Default IAM role policies contain the following roles:
+          Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
     allOf:
