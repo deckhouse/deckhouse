@@ -1,22 +1,37 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_SHELL_OPERATOR }}
-fromCacheVersion: "2023-12-21.0"
+fromImage: common/shell-operator
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /
+    to: /
+    includePaths:
+      - usr/local/lib/python3
+      - usr/local/lib64/python3
+    before: setup
+git:
+  - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+    to: /hooks
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache python3 py3-pip
-  install:
-  - pip3 install --break-system-packages -r /tmp/requirements.txt
-  - apk del py3-pip
-  - rm -rf /var/cache/apk/*
-  - rm -f /tmp/requirements.txt
+    - apt-get update
+    - apt-get install -y python3
+    - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: common/alt
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /tmp/requirements.txt
-  stageDependencies:
-    install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
-  to: /hooks
-  stageDependencies:
-    install:
-      - '**/*'
+  - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+    to: /tmp/requirements.txt
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install -y python3 pip git
+  install:
+    - export SOURCE_REPO={{ .SOURCE_REPO }}
+    - pip3 install -r /tmp/requirements.txt

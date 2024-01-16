@@ -1,2 +1,2 @@
-deckhouse==0.4.7
-python-slugify==8.0.1
+git+${SOURCE_REPO}/python-modules/deckhouse.git@v0.4.9
+git+${SOURCE_REPO}/python-modules/python-slugify.git@v8.0.1
