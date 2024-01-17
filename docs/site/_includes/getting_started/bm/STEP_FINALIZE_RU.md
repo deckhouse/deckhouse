@@ -41,6 +41,8 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
     path: "/opt/local-path-provisioner"
   EOF
   ```
+  </li>
+  <li>
   {% endsnippetcut %}
   Сделайте созданный StorageClass по-умолчанию, добавив аннотацию:
   {% snippetcut %}
