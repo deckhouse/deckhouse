@@ -17,10 +17,10 @@ index 921bcef..f508dcf 100644
 +}()
 diff --git a/pkg/frontend/kube_transport.go b/pkg/frontend/kube_transport.go
 new file mode 100644
-index 0000000..d8ad0db
+index 0000000..d30e63f
 --- /dev/null
 +++ b/pkg/frontend/kube_transport.go
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,79 @@
 +package frontend
 +
 +// Update token periodically because BoundServiceAccountToken feature is enabled for Kubernetes >=1.21
@@ -32,6 +32,9 @@ index 0000000..d8ad0db
 +	"os"
 +	"sync"
 +	"time"
++
++	"github.com/go-kit/log/level"
++	util_log "github.com/grafana/mimir/pkg/util/log"
 +)
 +
 +const (
@@ -48,28 +51,11 @@ index 0000000..d8ad0db
 +
 +	// base is a transport to wrap
 +	base http.RoundTripper
-+
-+	// onReadTokenError is a read ServiceAccount token error callback
-+	onReadTokenError func(error)
-+}
-+
-+type Option func(*kubeTransport)
-+
-+func WithReadTokenErrorCallback(callback func(error)) func(*kubeTransport) {
-+	return func(transport *kubeTransport) {
-+		transport.onReadTokenError = callback
-+	}
 +}
 +
 +// WrapWithKubeServiceAccountTransport wraps any transport with the feature of periodical token updates
-+func WrapWithKubeServiceAccountTransport(base http.RoundTripper, options ...Option) http.RoundTripper {
-+	t := &kubeTransport{
-+		base:             base,
-+		onReadTokenError: func(error) {},
-+	}
-+	for _, option := range options {
-+		option(t)
-+	}
++func WrapWithKubeServiceAccountTransport(base http.RoundTripper) http.RoundTripper {
++	t := &kubeTransport{base: base}
 +	t.updateToken()
 +	return t
 +}
@@ -98,7 +84,7 @@ index 0000000..d8ad0db
 +
 +	token, err := os.ReadFile(tokenPath)
 +	if err != nil {
-+		t.onReadTokenError(err)
++		_ = level.Error(util_log.Logger).Log("msg", "failed to read k8s token", "err", err.Error())
 +		return
 +	}
 +
