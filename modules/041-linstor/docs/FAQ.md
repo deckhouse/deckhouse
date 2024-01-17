@@ -4,7 +4,7 @@ description: LINSTOR Troubleshooting. What is difference between LVM and LVMThin
 ---
 
 {% alert level="danger" %}
-The current version of the module is outdated and is no longer supported. Switch to using the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module.
+This version of the module is deprecated and is no longer supported. Use the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module instead.
 {% endalert %}
 
 {% alert level="warning" %}
