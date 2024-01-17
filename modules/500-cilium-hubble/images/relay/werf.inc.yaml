@@ -23,6 +23,21 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
+  add: /usr/bin/hubble-relay
+  to: /usr/local/bin/hubble-relay
+  before: install
+shell:
+  install:
+  - chown nobody /usr/local/bin/hubble-relay
+  - chmod +x /usr/local/bin/hubble-relay
+docker:
+  USER: nobody
+  ENTRYPOINT: ["hubble-relay", "serve"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-finish
+from: {{ $.Images.BASE_ALPINE }}
+import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
   add: /etc/ssl/certs/ca-certificates.crt
   to: /etc/ssl/certs/ca-certificates.crt
@@ -32,6 +47,7 @@ import:
   to: /usr/local/bin/hubble-relay
   before: install
 docker:
+  USER: 64535
   ENTRYPOINT: ["hubble-relay", "serve"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
@@ -46,4 +62,5 @@ import:
   to: /usr/local/bin/hubble-relay
   before: install
 docker:
+  USER: 64535
   ENTRYPOINT: ["hubble-relay", "serve"]
