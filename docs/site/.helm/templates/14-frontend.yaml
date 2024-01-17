@@ -72,6 +72,8 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+            - name: CLUSTER_DOMAIN
+              value: "cluster.local"
           ports:
           - containerPort: 8081
             name: http
