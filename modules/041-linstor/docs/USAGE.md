@@ -4,7 +4,7 @@ description: Example of configuring the linstor Deckhouse module. LINSTOR storag
 ---
 
 {% alert level="danger" %}
-The current version of the module is outdated and is no longer supported. Switch to using the [sds-drbd]() module.
+The current version of the module is outdated and is no longer supported. Switch to using the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module.
 {% endalert %}
 
 {% alert level="warning" %}

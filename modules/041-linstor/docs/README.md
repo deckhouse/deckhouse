@@ -4,7 +4,7 @@ description: Deckhouse uses the linstor module to manage a replicated block stor
 ---
 
 {% alert level="danger" %}
-The current version of the module is outdated and is no longer supported. Switch to using the [sds-drbd]() module.
+The current version of the module is outdated and is no longer supported. Switch to using the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module.
 {% endalert %}
 
 {% alert level="warning" %}

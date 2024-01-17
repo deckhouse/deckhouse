@@ -4,7 +4,7 @@ description: Deckhouse с помощью модуля linstor управляет
 ---
 
 {% alert level="danger" %}
-Текущая версия модуля устарела и больше не поддерживается. Переключитесь на использование модуля [sds-drbd]().
+Текущая версия модуля устарела и больше не поддерживается. Переключитесь на использование модуля [sds-drbd](https://deckhouse.ru/modules/sds-drbd/beta/).
 {% endalert %}
 
 {% alert level="warning" %}
