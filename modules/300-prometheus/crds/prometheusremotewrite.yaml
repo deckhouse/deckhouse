@@ -110,7 +110,7 @@ spec:
                       type: boolean
                       x-doc-default: false
                     ca:
-                      description: CA certificate to validate API server certificate with.
+                      description: The CA certificate used when verifying the API server certificate.
                       type: string
                       x-doc-default: ""
       additionalPrinterColumns: &additionalPrinterColumns
