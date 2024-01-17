@@ -28,31 +28,33 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
   </li>
   <li>
   Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:
-  {% snippetcut %}
-  ```shell
-  sudo /opt/deckhouse/bin/kubectl create -f - << EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: LocalPathProvisioner
-  metadata:
-    name: localpath-deckhouse
-  spec:
-    nodeGroups:
-    - worker
-    path: "/opt/local-path-provisioner"
-  EOF
-  ```
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-deckhouse
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
   </li>
   <li>
-  {% endsnippetcut %}
-  Сделайте созданный StorageClass по-умолчанию, добавив аннотацию:
-  {% snippetcut %}
-  sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
-  {% endsnippetcut %}
+  Укажите что созданный StorageClass должен использоваться как StorageClass по умолчанию, добавив аннотацию `storageclass.kubernetes.io/is-default-class='true'`:
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
   </li>
   <li>
     Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
-    {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -61,24 +63,24 @@ metadata:
 spec:
   nodeType: Static
 EOF
-  ```
-    {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
   <li>
     Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):
-    {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
-  ```
-  {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
   <li>
     <strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:
-  {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
-  ```
-  {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
 </ul>
 

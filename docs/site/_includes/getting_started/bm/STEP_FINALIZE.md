@@ -28,31 +28,33 @@ Add a new node to the cluster:
   </li>
   <li>
   Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
-  {% snippetcut %}
-  ```shell
-  sudo /opt/deckhouse/bin/kubectl create -f - << EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: LocalPathProvisioner
-  metadata:
-    name: localpath-deckhouse
-  spec:
-    nodeGroups:
-    - worker
-    path: "/opt/local-path-provisioner"
-  EOF
-  ```
-  {% endsnippetcut %}
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-deckhouse
+spec:
+  nodeGroups:
+  - worker
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
   </li>
   <li>
-  Make created StorageClass default by adding the annotation:
-  {% snippetcut %}
-  sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
-  {% endsnippetcut %}
+  Make the created StorageClass as the default one by adding the `storageclass.kubernetes.io/is-default-class='true'` annotation:
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
   </li>
   <li>
     Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:
-    {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -61,24 +63,24 @@ metadata:
 spec:
   nodeType: Static
 EOF
-  ```
-    {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
   <li>
     Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
-    {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
-  ```
-  {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
   <li>
     On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:    
-  {% snippetcut %}
-  ```bash
+{% snippetcut %}
+```bash
 echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
-  ```
-  {% endsnippetcut %}
+```
+{% endsnippetcut %}
   </li>
 </ul>
 
