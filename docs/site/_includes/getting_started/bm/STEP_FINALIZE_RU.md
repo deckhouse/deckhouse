@@ -27,6 +27,23 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
+  Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:
+  {% snippetcut %}
+  ```shell
+  sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: LocalPathProvisioner
+  metadata:
+    name: localpath-deckhouse-system
+  spec:
+    nodeGroups:
+    - worker
+    path: "/opt/local-path-provisioner"
+  EOF
+  ```
+  {% endsnippetcut %}
+  </li>
+  <li>
     Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:
     {% snippetcut %}
   ```bash
@@ -128,23 +145,6 @@ NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {%- endofftopic %}
-</li>
-<li><p><strong>Создание StorageClass</strong></p>
-<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
-```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: LocalPathProvisioner
-metadata:
-  name: localpath-deckhouse-system
-spec:
-  nodeGroups:
-  - worker
-  path: "/opt/local-path-provisioner"
-EOF
-```
-{% endsnippetcut %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
