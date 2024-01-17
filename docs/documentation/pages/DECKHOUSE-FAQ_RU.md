@@ -210,7 +210,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
 
-После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по-умолчанию — автоматически, в любое время).
+После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
 
 Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
 

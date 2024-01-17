@@ -107,7 +107,7 @@ spec:
   enabled: true
   settings:
     # [<en>] Default Storage Class.
-    # [<ru>] Storage Class по-умолчанию.
+    # [<ru>] Storage Class по умолчанию.
     storageClass:
       default: fast.ru-3a
 ---
@@ -131,7 +131,7 @@ standard:
       imageName: ubuntu-22-04
       rootDiskSize: 20
   # [<en>] Network name for external communication. Default is external-network
-  # [<ru>] Имя сети для внешнего взаимодействия. Значение по-умолчанию: external-network
+  # [<ru>] Имя сети для внешнего взаимодействия. Значение по умолчанию: external-network
   externalNetworkName: external-network
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.
