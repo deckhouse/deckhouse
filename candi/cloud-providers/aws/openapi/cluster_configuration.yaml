@@ -431,11 +431,12 @@ apiVersions:
           pattern: '^(\w+):(\w+)$'
         minItems: 1
         description: |
-          List containing an additional policies for IAM roles.
-          * Additional policies would be attached to default IAM role policies.
-          * Parameter is optional. If ommitted, only default IAM role policies are used.
+          A list containing additional policy actions for IAM roles.
+          * Additional policy actions would be attached to the default IAM role policy actions.
+          * Parameter is optional. If omitted, only default IAM role policy actions are used.
+          * Example of policy actions: `ecr:ListImages`, `s3:GetObject`, etc.
 
-          Default IAM role policies contain the following roles:
+          Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
     allOf:
