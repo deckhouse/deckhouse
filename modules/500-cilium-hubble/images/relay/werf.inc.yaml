@@ -23,6 +23,10 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+  add: /etc/ssl/certs/ca-certificates.crt
+  to: /etc/ssl/certs/ca-certificates.crt
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
   add: /usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
