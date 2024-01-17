@@ -107,7 +107,7 @@ spec:
   enabled: true
   settings:
     # [<en>] Default Storage Class.
-    # [<ru>] Storage Class по-умолчанию.
+    # [<ru>] Storage Class по умолчанию.
     storageClass:
       default: fast.ru-3a
 ---

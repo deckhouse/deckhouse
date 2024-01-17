@@ -579,7 +579,7 @@ spec:
                                           description: |
                                             Устанавливает тип аутентификации.
 
-                                            По-умолчанию Bearer, Basic будет вызывать ошибку.
+                                            По умолчанию — Bearer. Basic будет вызывать ошибку.
                                           type: string
                                       type: object
                                     basicAuth:

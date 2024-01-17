@@ -10,7 +10,7 @@ spec:
             spec:
               properties:
                 releaseChannel:
-                  description: Желаемый канал обновлений по-умолчанию для модулей данного container registry.
+                  description: Желаемый канал обновлений по умолчанию для модулей данного container registry.
                   x-doc-deprecated: true
                 registry:
                   properties:
@@ -57,7 +57,7 @@ spec:
         - name: "release channel"
           type: string
           jsonPath: .spec.releaseChannel
-          description: "Канал обновлений по-умолчанию для модулей в данном репоизтории."
+          description: "Канал обновлений по умолчанию для модулей в данном репозитории."
         - name: count
           type: integer
           jsonPath: .status.modulesCount
