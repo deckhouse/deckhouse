@@ -1,5 +1,5 @@
 diff --git a/chroot/etc/nginx/template/nginx.tmpl b/chroot/etc/nginx/template/nginx.tmpl
-index 94dc12412..00f632b17 100644
+index 94dc12412..93b7d2efc 100644
 --- a/chroot/etc/nginx/template/nginx.tmpl
 +++ b/chroot/etc/nginx/template/nginx.tmpl
 @@ -12,6 +12,9 @@
@@ -39,7 +39,24 @@ index 94dc12412..00f632b17 100644
      }
  
      {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
-@@ -928,9 +929,7 @@ stream {
+@@ -166,6 +167,16 @@ http {
+ 
+     {{ end }}
+ 
++    {{ if $cfg.UseGeoIP }}
++    {{/* databases used to determine the country depending on the client IP address */}}
++    {{/* http://nginx.org/en/docs/http/ngx_http_geoip_module.html */}}
++    {{/* this is require to calculate traffic for individual country using GeoIP in the status page */}}
++    geoip_country       /etc/nginx/geoip/GeoIP.dat;
++    geoip_city          /etc/nginx/geoip/GeoLiteCity.dat;
++    geoip_org           /etc/nginx/geoip/GeoIPASNum.dat;
++    geoip_proxy_recursive on;
++    {{ end }}
++
+     {{ if $cfg.UseGeoIP2 }}
+     # https://github.com/leev/ngx_http_geoip2_module#example-usage
+ 
+@@ -928,9 +939,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -50,7 +67,7 @@ index 94dc12412..00f632b17 100644
              }
          }
          {{ end }}
-@@ -1223,6 +1222,10 @@ stream {
+@@ -1223,6 +1232,10 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -61,7 +78,7 @@ index 94dc12412..00f632b17 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1253,11 +1256,9 @@ stream {
+@@ -1253,11 +1266,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -74,7 +91,7 @@ index 94dc12412..00f632b17 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1531,14 +1532,15 @@ stream {
+@@ -1531,14 +1542,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}

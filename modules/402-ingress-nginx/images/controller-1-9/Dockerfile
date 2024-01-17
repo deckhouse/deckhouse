@@ -39,6 +39,7 @@ COPY patches/healthcheck.patch /
 COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
+COPY patches/geoip.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
@@ -48,6 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /metrics-SetSSLExpireTime.patch && \
     patch -p1 < /util.patch && \
     patch -p1 < /fix-cleanup.patch && \
+    patch -p1 < /geoip.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 

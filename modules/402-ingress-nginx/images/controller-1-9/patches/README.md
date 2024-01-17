@@ -54,3 +54,7 @@ https://github.com/kubernetes/ingress-nginx/pull/10797
 ### nginx-build
 
 Build nginx for controller on ALT Linux.
+
+### GeoIP
+
+https://github.com/kubernetes/ingress-nginx/pull/10495
