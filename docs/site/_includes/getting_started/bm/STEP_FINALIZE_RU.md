@@ -34,13 +34,17 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
   metadata:
-    name: localpath-deckhouse-system
+    name: localpath-deckhouse
   spec:
     nodeGroups:
     - worker
     path: "/opt/local-path-provisioner"
   EOF
   ```
+  {% endsnippetcut %}
+  Сделайте созданный StorageClass по-умолчанию, добавив аннотацию:
+  {% snippetcut %}
+  sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
   {% endsnippetcut %}
   </li>
   <li>

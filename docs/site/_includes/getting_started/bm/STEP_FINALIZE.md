@@ -34,13 +34,19 @@ Add a new node to the cluster:
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
   metadata:
-    name: localpath-deckhouse-system
+    name: localpath-deckhouse
   spec:
     nodeGroups:
     - worker
     path: "/opt/local-path-provisioner"
   EOF
   ```
+  {% endsnippetcut %}
+  </li>
+  <li>
+  Make created StorageClass default by adding the annotation:
+  {% snippetcut %}
+  sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
   {% endsnippetcut %}
   </li>
   <li>

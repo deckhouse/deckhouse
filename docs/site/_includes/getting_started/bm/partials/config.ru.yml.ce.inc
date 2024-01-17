@@ -67,8 +67,6 @@ spec:
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-    # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-    # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html
