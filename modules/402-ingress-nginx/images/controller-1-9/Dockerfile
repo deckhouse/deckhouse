@@ -130,7 +130,7 @@ COPY --from=luarocks-builder /usr/lib64/lua/5.1/pb.so /usr/local/lib/lua/5.1/
 COPY --from=luarocks-builder /usr/share/lua/5.1/protoc.lua /usr/local/share/lua/5.1/
 
 RUN apt-get update \
-  && apt-get install -y openssl pcre zlib libGeoIP ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 tzdata \
+  && apt-get install -y openssl pcre zlib libGeoIP ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 tzdata glibc-gconv-modules \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
     -s /sbin/nologin -c www-data www-data \

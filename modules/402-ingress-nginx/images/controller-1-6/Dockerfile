@@ -138,7 +138,7 @@ COPY patches/auth-cookie-always.patch /
 COPY rootfs /
 
 RUN apt-get update \
-  && apt-get install -y openssl pcre zlib libGeoIP curl ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 nano tzdata diffutils libcap \
+  && apt-get install -y openssl pcre zlib libGeoIP curl ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 nano tzdata diffutils libcap glibc-gconv-modules \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
