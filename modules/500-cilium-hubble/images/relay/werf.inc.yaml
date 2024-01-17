@@ -33,10 +33,10 @@ import:
   before: install
 shell:
   install:
-  - chown nobody /usr/local/bin/hubble-relay
-  - chmod +x /usr/local/bin/hubble-relay
+  - chown 64535:64535 /usr/local/bin/hubble-relay
+  - chmod 0700 /usr/local/bin/hubble-relay
 docker:
-  USER: nobody
+  USER: 64535
   ENTRYPOINT: ["hubble-relay", "serve"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-finish
