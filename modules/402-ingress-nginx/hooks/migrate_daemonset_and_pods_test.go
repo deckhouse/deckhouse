@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Global hooks :: discovery :: migrate_daemonset ", func() {
-	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "1.6", "internal": {}}}`
+	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`
 	globalValuesString := `{}`
 	f := HookExecutionConfigInit(initValuesString, globalValuesString)
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
@@ -36,7 +36,7 @@ kind: IngressNginxController
 metadata:
   name: test
 spec:
-  controllerVersion: "1.6"
+  controllerVersion: "1.1"
   ingressClass: "test"
   inlet: "HostWithFailover"
 ---
