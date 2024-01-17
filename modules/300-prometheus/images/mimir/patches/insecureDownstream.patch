@@ -1,44 +1,116 @@
 diff --git a/pkg/frontend/downstream_roundtripper.go b/pkg/frontend/downstream_roundtripper.go
-index 921bceff5..c57189994 100644
+index 921bcef..f508dcf 100644
 --- a/pkg/frontend/downstream_roundtripper.go
 +++ b/pkg/frontend/downstream_roundtripper.go
-@@ -6,9 +6,12 @@
- package frontend
- 
- import (
-+	"fmt"
- 	"net/http"
- 	"net/url"
-+	"os"
- 	"path"
-+	"strings"
- 
- 	"github.com/grafana/mimir/pkg/util/instrumentation"
- )
-@@ -18,6 +21,8 @@ type downstreamRoundTripper struct {
- 	downstreamURL *url.URL
- }
- 
-+const authCredentialsFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-+
- func NewDownstreamRoundTripper(downstreamURL string) (http.RoundTripper, error) {
- 	u, err := url.Parse(downstreamURL)
- 	if err != nil {
-@@ -32,5 +37,16 @@ func (d downstreamRoundTripper) RoundTrip(r *http.Request) (*http.Response, erro
+@@ -32,5 +32,11 @@ func (d downstreamRoundTripper) RoundTrip(r *http.Request) (*http.Response, erro
  	r.URL.Host = d.downstreamURL.Host
  	r.URL.Path = path.Join(d.downstreamURL.Path, r.URL.Path)
  	r.Host = ""
 -	return http.DefaultTransport.RoundTrip(r)
++	return defaultTransport.RoundTrip(r)
+ }
 +
++var defaultTransport = func() http.RoundTripper {
 +	tr := http.DefaultTransport.(*http.Transport).Clone()
 +	tr.TLSClientConfig.InsecureSkipVerify = true
++	return WrapWithKubeServiceAccountTransport(tr)
++}()
+diff --git a/pkg/frontend/kube_transport.go b/pkg/frontend/kube_transport.go
+new file mode 100644
+index 0000000..d8ad0db
+--- /dev/null
++++ b/pkg/frontend/kube_transport.go
+@@ -0,0 +1,93 @@
++package frontend
 +
-+	b, err := os.ReadFile(authCredentialsFile)
-+	if err != nil {
-+		return nil, fmt.Errorf("unable to read authorization credentials file %s: %w", authCredentialsFile, err)
++// Update token periodically because BoundServiceAccountToken feature is enabled for Kubernetes >=1.21
++// https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
++// The behavior is the same as what Kubernetes clien-go does.
++
++import (
++	"net/http"
++	"os"
++	"sync"
++	"time"
++)
++
++const (
++	renewTokenPeriod = 30 * time.Second
++	tokenPath        = "/var/run/secrets/kubernetes.io/serviceaccount/token"
++)
++
++type kubeTransport struct {
++	mu sync.RWMutex
++	// Kubernetes ServiceAccount token
++	token string
++	// The time when the token will be considered as expired
++	expiry time.Time
++
++	// base is a transport to wrap
++	base http.RoundTripper
++
++	// onReadTokenError is a read ServiceAccount token error callback
++	onReadTokenError func(error)
++}
++
++type Option func(*kubeTransport)
++
++func WithReadTokenErrorCallback(callback func(error)) func(*kubeTransport) {
++	return func(transport *kubeTransport) {
++		transport.onReadTokenError = callback
 +	}
-+	authCredentials := strings.TrimSpace(string(b))
-+	r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authCredentials))
++}
 +
-+	return tr.RoundTrip(r)
- }
++// WrapWithKubeServiceAccountTransport wraps any transport with the feature of periodical token updates
++func WrapWithKubeServiceAccountTransport(base http.RoundTripper, options ...Option) http.RoundTripper {
++	t := &kubeTransport{
++		base:             base,
++		onReadTokenError: func(error) {},
++	}
++	for _, option := range options {
++		option(t)
++	}
++	t.updateToken()
++	return t
++}
++
++// RoundTrip adds the last token read from the disk as a header
++func (t *kubeTransport) RoundTrip(r *http.Request) (*http.Response, error) {
++	t.updateToken()
++
++	r2 := r.Clone(r.Context())
++	r2.Header.Set("Authorization", "Bearer "+t.GetToken())
++
++	return t.base.RoundTrip(r2)
++}
++
++// updateToken reads token from the disk if necessary
++func (t *kubeTransport) updateToken() {
++	t.mu.RLock()
++	exp := t.expiry
++	t.mu.RUnlock()
++
++	now := time.Now()
++	if now.Before(exp) {
++		// Do not need to update token yet
++		return
++	}
++
++	token, err := os.ReadFile(tokenPath)
++	if err != nil {
++		t.onReadTokenError(err)
++		return
++	}
++
++	t.mu.Lock()
++	defer t.mu.Unlock()
++	t.token = string(token)
++	t.expiry = now.Add(renewTokenPeriod)
++}
++
++// GetToken safely returns token
++func (t *kubeTransport) GetToken() string {
++	t.mu.RLock()
++	defer t.mu.RUnlock()
++	return t.token
++}
