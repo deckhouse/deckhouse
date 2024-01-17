@@ -50,6 +50,7 @@ env:
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
   CRATESPROXY: "${{secrets.CRATESPROXY}}"
+  NPMPROXY: "${{secrets.NPMPROXY}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same tag/branch.
