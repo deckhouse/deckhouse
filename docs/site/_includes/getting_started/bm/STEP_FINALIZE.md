@@ -44,7 +44,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-  Make the created StorageClass as the default one by adding the `storageclass.kubernetes.io/is-default-class='true'` annotation:
+  Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
