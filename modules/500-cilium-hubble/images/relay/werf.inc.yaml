@@ -21,13 +21,9 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24 30) }}
+fromCacheVersion: 10
 from: {{ $.Images.BASE_ALPINE }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
   add: /usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
