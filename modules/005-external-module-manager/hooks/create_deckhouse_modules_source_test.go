@@ -363,4 +363,37 @@ data:
 			Expect(mup.Field("spec.update.windows").String()).To(Equal("[{\"days\":null,\"from\":\"08:00\",\"to\":\"10:00\"}]"))
 		})
 	})
+
+	Context("With no update settings", func() {
+		existingResources := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-discovery
+  namespace: d8-system
+data:
+  releaseChannel: QWxwaGE= # Alpha
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(existingResources))
+			f.RunHook()
+		})
+
+		It("Should update the module update policy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
+
+			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
+			Expect(mup.Field("spec.moduleReleaseSelector").String()).To(Equal("{\"labelSelector\":{\"matchLabels\":{\"source\":\"deckhouse\"}}}"))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Alpha"))
+			Expect(mup.Field("spec.update.mode").String()).To(Equal("Auto"))
+			Expect(mup.Field("spec.update.windows").String()).To(Equal(""))
+		})
+	})
 })

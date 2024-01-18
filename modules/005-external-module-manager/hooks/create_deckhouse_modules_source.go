@@ -61,7 +61,7 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 
 type deckhouseDiscoveryData struct {
 	ReleaseChannel string
-	UpdateSettings v1alpha1.ModuleUpdatePolicySpecUpdate
+	UpdateSettings *v1alpha1.ModuleUpdatePolicySpecUpdate
 }
 
 func filterDiscovery(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -80,15 +80,17 @@ func filterDiscovery(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}
 	ddd.ReleaseChannel = string(res)
 
-	res, err = base64.StdEncoding.DecodeString(cm.Data["updateSettings.json"])
-	if err != nil {
-		return nil, err
-	}
+	if rawSettings, ok := cm.Data["updateSettings.json"]; ok {
+		res, err = base64.StdEncoding.DecodeString(rawSettings)
+		if err != nil {
+			return nil, err
+		}
 
-	ddd.UpdateSettings = v1alpha1.ModuleUpdatePolicySpecUpdate{}
-	err = json.Unmarshal(res, &ddd.UpdateSettings)
-	if err != nil {
-		return nil, err
+		ddd.UpdateSettings = &v1alpha1.ModuleUpdatePolicySpecUpdate{}
+		err = json.Unmarshal(res, ddd.UpdateSettings)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return ddd, nil
@@ -142,7 +144,9 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		if ddd.ReleaseChannel != "Unknown" {
 			releaseChannel = ddd.ReleaseChannel
 		}
-		us = ddd.UpdateSettings
+		if ddd.UpdateSettings != nil {
+			us = *ddd.UpdateSettings
+		}
 	}
 
 	// get scheme from values
