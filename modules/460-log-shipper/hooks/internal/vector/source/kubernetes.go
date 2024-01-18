@@ -81,7 +81,7 @@ type rawKubernetesLogs struct {
 	Fields               string                     `json:"extra_field_selector,omitempty"`
 	NamespaceLabels      string                     `json:"extra_namespace_label_selector,omitempty"`
 	AnnotationFields     KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
-	NodeAnnotationFields NodeAnnotationFields       `json:"node_annotation_fields"`
+	NodeAnnotationFields NodeAnnotationFields       `json:"node_annotation_fields,omitempty"`
 	GlobCooldownMs       int                        `json:"glob_minimum_cooldown_ms,omitempty"`
 	UserAPIServerCache   bool                       `json:"use_apiserver_cache,omitempty"`
 }
