@@ -68,6 +68,10 @@ dhctl:
     - summary: ModuleSource mirroring via `dhctl`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6603
   fixes:
+    - summary: mirror will validate tar bundle path more strictly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6981
+    - summary: Fix for pulling older Deckhouse versions with tags instead of digests in installers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6932
     - summary: Allow missing module release channels.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6848
     - summary: Fix mirror not adding module-named tags at modules repo root.
@@ -105,6 +109,10 @@ flant-integration:
       pull_request: https://github.com/deckhouse/deckhouse/pull/6750
 go_lib:
   fixes:
+    - summary: Fix modules order on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6952
+    - summary: Restore `.global.enabledModules` values field for source modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6935
     - summary: Limit registry client operations with 30 seconds timeout.
       pull_request: https://github.com/deckhouse/deckhouse/pull/6701
 istio:
@@ -114,6 +122,11 @@ istio:
       impact: >-
         In environments where legacy versions of istio are used, the D8 update will be blocked, and
         the `D8IstioDeprecatedIstioVersionInstalled` alert will be fired.
+  fixes:
+    - summary: Adding alert about istio and K8s versions incompatibility.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6919
+    - summary: Remove istio/k8s compatibility check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6914
 linstor:
   fixes:
     - summary: Fix the `D8DrbdPeerDeviceIsOutOfSync` alert.
@@ -188,4 +201,8 @@ tools:
   fixes:
     - summary: Fix remove module script location
       pull_request: https://github.com/deckhouse/deckhouse/pull/6875
+user-authn:
+  fixes:
+    - summary: OIDC allows unverified email.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6964
 

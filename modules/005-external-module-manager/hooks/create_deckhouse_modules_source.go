@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -87,6 +89,16 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	// get scheme from values
+	scheme := strings.ToUpper(input.Values.Get("global.modulesImages.registry.scheme").String())
+	switch scheme {
+	case "HTTP", "HTTPS":
+	// pass
+
+	default:
+		scheme = "HTTPS"
+	}
+
 	newms := v1alpha1.ModuleSource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleSource",
@@ -101,7 +113,7 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		Spec: v1alpha1.ModuleSourceSpec{
 			ReleaseChannel: ms.Spec.ReleaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
-				Scheme:    "HTTPS",
+				Scheme:    scheme,
 				Repo:      deckhouseRepo,
 				DockerCFG: deckhouseDockerCfg,
 				CA:        deckhouseCA,

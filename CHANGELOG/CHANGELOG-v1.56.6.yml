@@ -1,0 +1,13 @@
+deckhouse-controller:
+  fixes:
+    - summary: Fix modules registration on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7129
+docs:
+  fixes:
+    - summary: Fixed typo in istio federation presentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7124
+user-authz:
+  fixes:
+    - summary: Make the documentation for creating a ServiceAccount more understandable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7029
+

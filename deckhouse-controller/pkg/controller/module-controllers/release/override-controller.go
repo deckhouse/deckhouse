@@ -41,6 +41,7 @@ import (
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
 // ModulePullOverrideController is the controller implementation for ModulePullOverride resources
@@ -128,6 +129,13 @@ func (c *ModulePullOverrideController) Run(ctx context.Context, workers int) {
 
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+
+	// Check if controller's dependencies have been initialized
+	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+		func(context.Context) (bool, error) {
+			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			return deckhouseconfig.IsServiceInited(), nil
+		})
 
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting controller")
@@ -264,6 +272,13 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 	if newChecksum == "" {
 		// module is up-to-date
+		if mo.Status.Message != "" {
+			// drop error message, if exists
+			mo.Status.Message = ""
+			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+		}
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 

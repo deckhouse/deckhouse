@@ -1,0 +1,54 @@
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-id
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static
+spec:
+  address: '${WORKER_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-id
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      dedicated.worker: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated
+      value: worker

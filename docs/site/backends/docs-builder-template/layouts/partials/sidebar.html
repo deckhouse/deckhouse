@@ -13,6 +13,7 @@
   {{ $moduleChannel := "" }}
   {{ $isActiveItem := false }}
   {{ $d8Edition := "" }}
+  {{ $moduleStatus := "" }}
 
   {{ if eq $currentModuleName $module }}
     {{ $moduleChannel = $currentModuleChannel }}
@@ -22,17 +23,17 @@
   {{ range sort $channelsInfo "stability" "desc" }}
     {{ $code := .code }}
     {{ if eq $code "rock-solid" }}{{ continue }}{{ end }}
-    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
-    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
-      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
-      {{ if .Params.d8Edition }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
+      {{ if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{ if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+      {{ if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
       {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
     {{ end}}
   {{ end}}
   {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
   {{ if not $d8Edition }}{{ $d8Edition = "ce" }}{{ end }}
   {{ if $moduleChannel }}
-    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "d8Edition" $d8Edition) }}
+    {{ $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "d8Edition" $d8Edition "moduleStatus" $moduleStatus) }}
   {{ end }}
 {{ end}}
 
@@ -69,6 +70,7 @@
                 <a href='#'>
                   {{ $sidebarItem.title }}
                   {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
+                  {{- if eq $sidebarItem.moduleStatus "experimental" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.moduleStatus }}">Experimental</span>{{ end }}
                 </a>
                   {{ template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
             </li>

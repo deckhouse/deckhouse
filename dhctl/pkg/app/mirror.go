@@ -47,6 +47,7 @@ var (
 	MirrorRegistryPassword = ""
 
 	MirrorInsecure       = false
+	MirrorTLSSkipVerify  = false
 	MirrorDHLicenseToken = ""
 	MirrorTarBundlePath  = ""
 
@@ -58,8 +59,8 @@ var (
 	MirrorSourceRegistryPassword = ""
 
 	MirrorValidationMode = ""
-	
-	MirrorDoGOSTDigest = false
+
+	MirrorDoGOSTDigest            = false
 	MirrorDontContinuePartialPull = false
 )
 
@@ -117,6 +118,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
 		BoolVar(&MirrorDontContinuePartialPull)
+	cmd.Flag("tls-skip-verify", "Disable TLS certificate validation.").
+		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 
@@ -148,9 +151,14 @@ func validateImagesBundlePathFlag() error {
 	stats, err := os.Stat(MirrorTarBundlePath)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
+		// If only the file is not there it is fine, it will be created, but if directories on the path are also missing, this is bad.
+		tarBundleDir := filepath.Dir(MirrorTarBundlePath)
+		if _, err = os.Stat(tarBundleDir); err != nil {
+			return err
+		}
 		break
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
-		return fmt.Errorf("stat %s: %w", MirrorTarBundlePath, err)
+		return err
 	case stats.IsDir() || filepath.Ext(MirrorTarBundlePath) != ".tar":
 		return fmt.Errorf("%s should be a tar archive", MirrorTarBundlePath)
 	}

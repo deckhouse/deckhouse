@@ -86,6 +86,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 1. For [CloudStatic nodes](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
    - [For AWS](../030-cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For GCP](../030-cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For YC](../030-cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
 1. Use the existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource (see the [example](#static-nodes) for the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 1. Get the Base64-encoded script code to add and configure the node.
 
@@ -291,8 +292,9 @@ kind: NodeUser
 metadata:
   name: testuser
 spec:
-  uid: 1001
-  sshPublicKey: "<SSH_PUBLIC_KEY>"
+  uid: 1100
+  sshPublicKeys:
+    - "<SSH_PUBLIC_KEY>"
   passwordHash: <PASSWORD_HASH>
   isSudoer: true
 ```
@@ -324,7 +326,8 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfigurationmetadata:
+kind: NodeGroupConfiguration
+metadata:
   name: sysctl-tune.sh
 spec:
   weight: 100

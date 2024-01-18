@@ -1,0 +1,40 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- artifact: prometheus/prometheus-promu-artifact
+  add: /promu/promu
+  to: /bin/promu
+  before: install
+shell:
+  install:
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - mkdir /prometheus && cd /prometheus
+  - git clone -b v1.6.2 --single-branch {{ $.SOURCE_REPO }}/prometheus/pushgateway.git
+  - cd /prometheus/pushgateway
+  - /bin/promu build --prefix /prometheus/pushgateway
+  - mkdir /empty
+  - chown -R 64535:64535 /empty
+  - chown -R 64535:64535 /prometheus/
+  - chmod 0700 /prometheus/pushgateway/pushgateway
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /prometheus/pushgateway/pushgateway
+  to: /bin/pushgateway
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /empty/
+  to: /pushgateway/
+  before: setup
+docker:
+  EXPOSE:
+  - "9091"
+  WORKDIR: "/pushgateway"
+  ENTRYPOINT:
+  - "/bin/pushgateway"

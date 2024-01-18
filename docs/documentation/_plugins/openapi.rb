@@ -370,7 +370,7 @@ module Jekyll
                 lengthValue = "#{attributes['maxLength'].to_json}"
             end
             unless attributes['type'] == 'string' && caption == 'min_length'
-                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}</span>: <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
+                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}:</span> <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
                 result.push(CONVERTER.convert(description.to_s))
             end
         end
@@ -674,6 +674,14 @@ module Jekyll
                                           item['name'],
                                           searchKeywords)
 
+                    if item["schema"]["openAPIV3Schema"].has_key?('x-doc-examples') or item["schema"]["openAPIV3Schema"].has_key?('x-doc-example') or
+                       item["schema"]["openAPIV3Schema"].has_key?('example') or item["schema"]["openAPIV3Schema"].has_key?('x-examples')
+                    then
+                        result.push('<div markdown="0">')
+                        result.push(format_examples(nil, item["schema"]["openAPIV3Schema"]))
+                        result.push('</div>')
+                    end
+
                     if get_hash_value(item,'schema','openAPIV3Schema','properties')
                         header = '<ul class="resources">'
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
@@ -755,12 +763,17 @@ module Jekyll
             result.push('</font></p>')
         end
 
-        result.push('<div markdown="0">')
-        result.push(format_examples(nil, input))
-        result.push('</div>')
+        if input.has_key?('x-doc-examples') or input.has_key?('x-doc-example') or
+           input.has_key?('example') or input.has_key?('x-examples')
+        then
+            result.push('<div markdown="0">')
+            result.push(format_examples(nil, input))
+            result.push('</div>')
+        end
+
 
         if ( get_hash_value(input, "properties") )
-           then
+        then
             result.push('<ul class="resources">')
             input['properties'].sort.to_h.each do |key, value|
                 _primaryLanguage = nil

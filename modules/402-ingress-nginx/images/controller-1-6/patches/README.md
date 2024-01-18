@@ -43,6 +43,13 @@ https://github.com/kubernetes/ingress-nginx/pull/8213
 
 ### Endpointslice missing ready conditions
 
-Ingress controller panics if there is an ingress, pointing to a service with the endpointslice lacking 'condtitions.ready' field. Fixex in 1.7.
+Ingress controller panics if there is an ingress, pointing to a service with the endpointslice lacking 'condtitions.ready' field. Fixed in 1.7.
 
 https://github.com/kubernetes/ingress-nginx/pull/9550/files
+
+
+### Fix cleanup
+
+Fix tmpDir path for the cleanup procedure.
+
+https://github.com/kubernetes/ingress-nginx/pull/10797

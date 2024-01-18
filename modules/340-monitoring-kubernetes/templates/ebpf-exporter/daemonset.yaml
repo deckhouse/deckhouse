@@ -47,8 +47,6 @@ spec:
     metadata:
       labels:
         app: ebpf-exporter
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/ebpf-exporter/configmap.yaml") . | sha256sum }}
       name: ebpf-exporter
     spec:
       hostNetwork: true
@@ -63,20 +61,15 @@ spec:
         name: ebpf-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         args:
-        - --config.file=/config/programs.yaml
+        - --config.dir=/metrics
+        - --config.names=oomkill
         - --web.listen-address=127.0.0.1:9435
         volumeMounts:
-        - name: config
-          mountPath: /config
-          readOnly:  true
-        - name: host-modules
-          mountPath: /lib/modules
-          readOnly: true
         - name: host-sys
           mountPath: /sys
           readOnly: true
-        - name: host-usr-src
-          mountPath: /usr/src
+        - name: host-usr-share-misc
+          mountPath: /usr/share/misc
           readOnly: true
         resources:
           requests:
@@ -120,20 +113,13 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
-      - name: config
-        configMap:
-          name: ebpf-exporter-config
-      - name: host-modules
-        hostPath:
-          path: /lib/modules
-          type: Directory
       - name: host-sys
         hostPath:
           path: /sys
           type: Directory
-      - name: host-usr-src
+      - name: host-usr-share-misc
         hostPath:
-          path: /usr/src
+          path: /usr/share/misc/
           type: Directory
       imagePullSecrets:
       - name: deckhouse-registry

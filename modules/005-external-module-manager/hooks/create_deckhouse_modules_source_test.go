@@ -37,23 +37,6 @@ global:
 	var msResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "modulesources"}
 	f.RegisterCRD(msResource.Group, msResource.Version, "ModuleSource", false)
 
-	const (
-		discoverySecret = `
----
-apiVersion: v1
-data:
-  bundle: RGVmYXVsdA==
-  releaseChannel: QWxwaGE=
-kind: Secret
-metadata:
-  labels:
-    heritage: deckhouse
-  name: deckhouse-discovery
-  namespace: d8-system
-type: Opaque
-`
-	)
-
 	Context("Without deckhouse-discovery secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -68,24 +51,7 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.CA").String()).To(Equal(""))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
-			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
-		})
-	})
-
-	Context("With deckhouse-discovery secret", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret))
-			f.RunHook()
-		})
-
-		It("Should deploy the module source", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
-			Expect(ms.Exists()).To(BeTrue())
-			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
-			Expect(ms.Field("spec.registry.CA").String()).To(Equal(""))
-			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.registry.scheme").String()).To(Equal("HTTPS"))
 			Expect(ms.Field("spec.releaseChannel").String()).To(Equal(""))
 		})
 	})
@@ -93,7 +59,7 @@ type: Opaque
 	Context("With different registry than registry.deckhouse.io", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.modulesImages.registry.address", "registry.my-company.com")
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret))
+			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
@@ -108,7 +74,7 @@ type: Opaque
 	Context("With CE", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.modulesImages.registry.path", "/deckhouse/ce")
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret))
+			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
@@ -123,7 +89,7 @@ type: Opaque
 	Context("With CA", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.modulesImages.registry.CA", "--- BEGIN ...")
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret))
+			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
@@ -134,6 +100,23 @@ type: Opaque
 			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
 			Expect(ms.Field("spec.registry.ca").String()).To(Equal("--- BEGIN ..."))
 			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+		})
+	})
+
+	Context("With HTTP scheme", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.modulesImages.registry.scheme", "http")
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("Should deploy the module source with HTTP scheme", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ms := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(ms.Field("spec.registry.repo").String()).To(Equal("registry.deckhouse.io/deckhouse/fe/modules"))
+			Expect(ms.Field("spec.registry.dockerCfg").String()).To(Equal("PGI2ND4K"))
+			Expect(ms.Field("spec.registry.scheme").String()).To(Equal("HTTP"))
 		})
 	})
 
@@ -154,7 +137,7 @@ spec:
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
+			f.BindingContexts.Set(f.KubeStateSet(existingModuleSource))
 			f.RunHook()
 		})
 
@@ -184,7 +167,7 @@ spec:
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingModuleSource))
+			f.BindingContexts.Set(f.KubeStateSet(existingModuleSource))
 			f.RunHook()
 		})
 
@@ -215,7 +198,7 @@ spec:
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.BindingContexts.Set(f.KubeStateSet(existingResources))
 			f.RunHook()
 		})
 
@@ -245,7 +228,7 @@ spec:
 `
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(discoverySecret + existingResources))
+			f.BindingContexts.Set(f.KubeStateSet(existingResources))
 			f.RunHook()
 		})
 

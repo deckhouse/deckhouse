@@ -25,5 +25,5 @@
 function validation_go_run() {
   validationDir="$1"
   shift
-  go run ${validationDir}/{main,messages,diff,copyright,no_cyrillic,doc_changes}.go "$@"
+  go run ${validationDir}/{main,messages,diff,copyright,no_cyrillic,doc_changes,grafana_dashboard}.go "$@"
 }
