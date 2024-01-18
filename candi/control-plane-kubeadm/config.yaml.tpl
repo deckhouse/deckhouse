@@ -51,7 +51,7 @@ apiServer:
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
-    enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration,NodeRestriction{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
+    enable-admission-plugins: "PodNodeSelector,PodTolerationRestriction,EventRateLimit,ExtendedResourceToleration,NodeRestriction{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.

@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
@@ -22,9 +24,14 @@ import (
 )
 
 const (
-	userResourcesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 	// Alternative path is needed to run tests in ci\cd pipeline
+	userResourcesTemplatePath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 	alternativeUserResourcesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+)
+
+const (
+	defaultTolerations = "scheduler.alpha.kubernetes.io/defaultTolerations"
+	nodeSelector       = "scheduler.alpha.kubernetes.io/node-selector"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -75,7 +82,9 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 			existProjects.Delete(projectName)
 		}
 
-		values := concatValues(projectValues, projectTemplateValuesSnap[projectValues.TemplateName])
+		projectTemplateSnap := projectTemplateValuesSnap[projectValues.TemplateName]
+		addAnnotations(&projectValues, &projectTemplateSnap)
+		values := concatValues(projectValues, projectTemplateSnap)
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
@@ -98,12 +107,42 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func concatValues(pv internal.ProjectSnapshot, ptv internal.ProjectTemplateSnapshot) map[string]interface{} {
+func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnapshot) map[string]interface{} {
 	structs.DefaultTagName = "yaml"
 
 	return map[string]interface{}{
-		"projectTemplate": structs.Map(ptv.Spec),
-		"project":         structs.Map(pv),
+		"projectTemplate": structs.Map(pts.Spec),
+		"project":         structs.Map(ps),
+	}
+}
+
+func addAnnotations(ps *internal.ProjectSnapshot, pts *internal.ProjectTemplateSnapshot) {
+	labelSelector, err := metav1.LabelSelectorAsSelector(ps.DedicatedNodes.LabelSelector)
+	if err == nil {
+		pts.Spec.NamespaceMetadata.Annotations[nodeSelector] = labelSelector.String()
+	}
+
+	if len(ps.DedicatedNodes.Tolerations) > 0 {
+		var tolerations []string
+		for _, toleration := range ps.DedicatedNodes.Tolerations {
+			if toleration.Operator != "" {
+				var buf string
+				if toleration.Key != "" {
+					buf = fmt.Sprintf(`%s, "key": "%s"`, buf, toleration.Key)
+				}
+				if toleration.Value != "" {
+					buf = fmt.Sprintf(`%s, "value": "%s"`, buf, toleration.Value)
+				}
+				if toleration.Effect != "" {
+					buf = fmt.Sprintf(`%s, "effect": "%s"`, buf, toleration.Effect)
+				}
+
+				tolerations = append(tolerations, fmt.Sprintf(`{"operator": "%s"%s}`, toleration.Operator, buf))
+			}
+		}
+		pts.Spec.NamespaceMetadata.Annotations[defaultTolerations] = fmt.Sprintf(`[%s]`, strings.Join(tolerations, ","))
+	} else {
+		delete(pts.Spec.NamespaceMetadata.Annotations, defaultTolerations)
 	}
 }
 

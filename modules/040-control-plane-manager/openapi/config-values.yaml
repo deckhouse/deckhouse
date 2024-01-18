@@ -27,6 +27,8 @@ properties:
           List of enabled additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 
           **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
+          - `PodNodeSelector`;
+          - `PodTolerationRestriction`;
           - `ExtendedResourceToleration`
           - `EventRateLimit` with the following config:
 
@@ -49,8 +51,6 @@ properties:
             - AlwaysPullImages
             - NamespaceAutoProvision
             - OwnerReferencesPermissionEnforcement
-            - PodNodeSelector
-            - PodTolerationRestriction
       bindToWildcard:
         type: boolean
         default: false

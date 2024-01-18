@@ -14,6 +14,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -70,6 +71,12 @@ type ProjectSnapshot struct {
 	TemplateName       string                       `json:"templateName" yaml:"templateName"`
 	TemplateValues     map[string]interface{}       `json:"templateValues" yaml:"templateValues"`
 	AuthorizationRules []v1alpha2.AuthorizationRule `json:"authorizationRules" yaml:"authorizationRules"`
+	DedicatedNodes     DedicatedNode                `json:"dedicatedNodes" yaml:"dedicatedNodes"`
+}
+
+type DedicatedNode struct {
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+	Tolerations   []apiv1.Toleration    `json:"tolerations,omitempty"`
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -98,15 +105,32 @@ func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnap
 		return nil, err
 	}
 
-	return &ProjectSnapshotWithStatus{
+	var tolerations []apiv1.Toleration
+	for _, toleration := range project.Spec.DedicatedNodes.Tolerations {
+		tolerations = append(tolerations, apiv1.Toleration{
+			Key:               toleration.Key,
+			Operator:          toleration.Operator,
+			Value:             toleration.Value,
+			Effect:            toleration.Effect,
+			TolerationSeconds: toleration.TolerationSeconds,
+		})
+	}
+
+	projectSnapshotWithStatus := ProjectSnapshotWithStatus{
 		Snapshot: ProjectSnapshot{
 			ProjectName:        project.Name,
 			TemplateName:       project.Spec.TemplateName,
 			TemplateValues:     project.Spec.TemplateValues,
 			AuthorizationRules: project.Spec.AuthorizationRules,
+			DedicatedNodes: DedicatedNode{
+				Tolerations:   tolerations,
+				LabelSelector: project.Spec.DedicatedNodes.LabelSelector,
+			},
 		},
 		Status: project.Status,
-	}, nil
+	}
+
+	return &projectSnapshotWithStatus, nil
 }
 
 func validateProject(project ProjectSnapshot, projectTemplates map[string]ProjectTemplateSnapshot) error {

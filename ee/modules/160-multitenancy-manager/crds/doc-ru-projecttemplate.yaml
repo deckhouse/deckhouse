@@ -36,25 +36,6 @@ spec:
 
                     > **Внимание!** Указывать поля `.metadata.namespace` для объектов необязательно,
                     > так как они автоматически проставятся из названия проекта.
-                subjects:
-                  description:
-                    Пользователи и их доступ к созданному проекту.
-                  items:
-                    description: ""
-                    properties:
-                      kind:
-                        description: Тип субъекта.
-                      name:
-                        description: Имя субъекта.
-                      namespace:
-                        description: |
-                          Пространство имен (`namespace`) субъекта.
-
-                          Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
-                      role:
-                        description:
-                          Уровень доступа из [модуля user-authz](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
-                          который выдается субъекту в проекте.
             status:
               description: ""
               properties:

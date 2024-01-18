@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package v1alpha2
 
 import (
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,6 +24,9 @@ type ProjectSpec struct {
 
 	// 	List of ServiceAccounts, Groups and Users to provide access to the created project (isolated environment).
 	AuthorizationRules []AuthorizationRule `json:"authorizationRules,omitempty" yaml:"authorizationRules,omitempty"`
+
+	// DedicatedNodes
+	DedicatedNodes DedicatedNode `json:"dedicatedNodes,omitempty"`
 }
 
 type AuthorizationRule struct {
@@ -38,6 +42,11 @@ type AuthorizationRule struct {
 
 	// Role name from [user-authz module](../../modules/140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel)
 	Role string `json:"role,omitempty" yaml:"role,omitempty"`
+}
+
+type DedicatedNode struct {
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+	Tolerations   []apiv1.Toleration    `json:"tolerations,omitempty"`
 }
 
 type ProjectStatus struct {

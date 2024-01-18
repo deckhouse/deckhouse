@@ -46,6 +46,60 @@ spec:
                   description: |
                     Входные параметры [шаблона ресурсов](cr.html#projecttemplate-v1alpha2-spec-template) из [шаблона проекта](cr.html#projecttemplate)
                     в формате helm values, согласованные со  [схемой](cr.html#projecttemplate-v1alpha2-spec-ValuesSchema).
+                authorizationRules:
+                  description:
+                    Список ServiceAccount'ов, групп (`Group`) и пользователей
+                    (`User`) для предоставления доступа к созданному окружению.
+                  items:
+                    description: ""
+                    properties:
+                      kind:
+                        description:
+                          Kind целевого ресурса для применения доступа к
+                          окружению (`ServiceAccount`, `Group` или `User`).
+                      name:
+                        description: Имя целевого ресурса для применения доступа к окружению.
+                      namespace:
+                        description: |
+                          Пространство имен (`namespace`) целевого ресурса для применения доступа к окружению.
+
+                          Требуется только при использовании ServiceAccount'а из другого пространства имен (`namespace`).
+                      role:
+                        description:
+                          Уровень доступа из [модуля user-authz](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel),
+                          который выдается на окружение для целевого ресурса.
+                dedicatedNodes:
+                   description: ""
+                   properties:
+                     labelSelector:
+                       description: |
+                         Настройка фильтра меток (label) по ресурсам.
+
+                         Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
+
+                          Пустое значение `labelSelector` соответствует всем объектам. Нулевое — никаким.
+                       properties:
+                         matchExpressions:
+                           description: |
+                             Список фильтров на основе выражений.
+
+                             Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                           items:
+                             properties:
+                               key:
+                                 description: Имя метки.
+                               operator:
+                                 description: Оператор сравнения.
+                               values:
+                                 description: Значение метки.
+                         matchLabels:
+                           description: |
+                             Фильтр на основе совпадения/несовпадения меток.
+                     tolerations:
+                       description: |
+                         Структура, аналогичная параметру `spec.tolerations` пода Kubernetes для главного контроллера.
+
+                         Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).  
             status:
               description: ""
               properties:
