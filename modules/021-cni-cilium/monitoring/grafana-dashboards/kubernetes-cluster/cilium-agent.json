@@ -23,7 +23,7 @@
   },
   "description": "Dashboard for Cilium (https://cilium.io/) metrics",
   "editable": true,
-  "gnetId": null,
+  "gnetId": 15513,
   "graphTooltip": 1,
   "iteration": 1606309591568,
   "links": [],
