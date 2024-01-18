@@ -1,0 +1,9 @@
+flant-integration:
+  fixes:
+    - summary: Correct `metrics_path`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7198
+istio:
+  fixes:
+    - summary: Fix diagnostic instructions in istio federation/multicluster alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7197
+
