@@ -66,9 +66,10 @@ type ProjectSnapshotWithStatus struct {
 }
 
 type ProjectSnapshot struct {
-	ProjectName    string                 `json:"projectName" yaml:"projectName"`
-	TemplateName   string                 `json:"templateName" yaml:"templateName"`
-	TemplateValues map[string]interface{} `json:"templateValues" yaml:"templateValues"`
+	ProjectName        string                       `json:"projectName" yaml:"projectName"`
+	TemplateName       string                       `json:"templateName" yaml:"templateName"`
+	TemplateValues     map[string]interface{}       `json:"templateValues" yaml:"templateValues"`
+	AuthorizationRules []v1alpha2.AuthorizationRule `json:"authorizationRules" yaml:"authorizationRules"`
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -99,9 +100,10 @@ func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnap
 
 	return &ProjectSnapshotWithStatus{
 		Snapshot: ProjectSnapshot{
-			ProjectName:    project.Name,
-			TemplateName:   project.Spec.TemplateName,
-			TemplateValues: project.Spec.TemplateValues,
+			ProjectName:        project.Name,
+			TemplateName:       project.Spec.TemplateName,
+			TemplateValues:     project.Spec.TemplateValues,
+			AuthorizationRules: project.Spec.AuthorizationRules,
 		},
 		Status: project.Status,
 	}, nil
@@ -148,30 +150,6 @@ func GetProjectSnapshots(input *go_hook.HookInput, projectTemplates map[string]P
 		projectSnapshots[project.ProjectName] = project
 
 		SetProjectStatusDeploying(input.PatchCollector, project.ProjectName)
-	}
-
-	return projectSnapshots
-}
-
-func GetProjectSnapshotsWithStatus(input *go_hook.HookInput, projectTemplates map[string]ProjectTemplateSnapshot) map[string]*ProjectSnapshotWithStatus {
-	projectSnapshots := make(map[string]*ProjectSnapshotWithStatus)
-
-	for _, projectSnap := range input.Snapshots[ProjectsQueue] {
-		project, ok := projectSnap.(*ProjectSnapshotWithStatus)
-		if !ok {
-			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
-			continue
-		}
-
-		if err := validateProject(project.Snapshot, projectTemplates); err != nil {
-			input.LogEntry.Errorf("validation project: %v, error: %v", project.Snapshot.ProjectName, err)
-			SetProjectStatusError(input.PatchCollector, project.Snapshot.ProjectName, err.Error())
-			continue
-		}
-
-		projectSnapshots[project.Snapshot.ProjectName] = project
-
-		SetProjectStatusDeploying(input.PatchCollector, project.Snapshot.ProjectName)
 	}
 
 	return projectSnapshots

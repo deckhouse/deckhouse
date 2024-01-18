@@ -63,68 +63,6 @@ spec:
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
                     > as they are automatically set with the name of the created project.
                   type: string
-                subjects:
-                  description:
-                    List of ServiceAccounts, Groups and Users to provide
-                    access to the created project.
-                  items:
-                    oneOf:
-                      - properties:
-                          kind:
-                            enum:
-                              - ServiceAccount
-                          name: {}
-                          namespace: {}
-                          role: {}
-                        required:
-                          - kind
-                          - name
-                          - namespace
-                          - role
-                      - properties:
-                          kind:
-                            enum:
-                              - User
-                              - Group
-                          name: {}
-                          role: {}
-                        required:
-                          - kind
-                          - name
-                          - role
-                    properties:
-                      kind:
-                        description:
-                          Kind of the target resource to apply access to the
-                          project (`ServiceAccount`, `Group` or `User`).
-                        enum:
-                          - ServiceAccount
-                          - User
-                          - Group
-                        type: string
-                      name:
-                        description:
-                          The name of the target resource to apply access
-                          to the project.
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description:
-                          The namespace of the target resource to apply project access to.
-
-                          Required only when using `ServiceAccount` from another namespace.
-                        pattern: "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-                        type: string
-                      role:
-                        description: Role name from [user-authz module](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel)
-                        enum:
-                          - User
-                          - PrivilegedUser
-                          - Editor
-                          - Admin
-                        type: string
-                    type: object
-                  type: array
               type: object
             status:
               properties:

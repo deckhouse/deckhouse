@@ -110,9 +110,9 @@ spec:
 
 {{- define "authorization.rules" }}
   {{- $projectName := index . 0 }}
-  {{- $subjects := index . 1 }}
+  {{- $authorizationRules := index . 1 }}
   {{- $rootContext := index . 2 }}
-  {{- range $ruleValues := $subjects }}
+  {{- range $ruleValues := $authorizationRules }}
     {{- include "authorization.rule" (list $projectName $ruleValues $rootContext) }}
   {{- end }}
 {{- end }}
@@ -127,4 +127,9 @@ spec:
 {{- $templates := include "prepare.templates" ( list $projectTemplateValues.template $projectValues.projectName $) }}
 {{- tpl $templates $projectValues }}
 
-{{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
+{{- if $projectValues.authorizationRules }}
+  {{- include "authorization.rules" (list $projectValues.projectName $projectValues.authorizationRules $)}}
+{{- else if $projectTemplateValues.subjects }}
+  {{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
+{{- end }}
+
