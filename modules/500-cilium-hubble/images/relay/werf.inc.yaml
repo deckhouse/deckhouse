@@ -36,21 +36,6 @@ docker:
   USER: 64535
   ENTRYPOINT: ["hubble-relay", "serve"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-finish
-from: {{ $.Images.BASE_ALPINE }}
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/local/bin/hubble-relay
-  to: /usr/local/bin/hubble-relay
-  before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["hubble-relay", "serve"]
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
 fromImage: common/distroless
 import:

@@ -26,7 +26,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"ciliumHubble": map[string]interface{}{
 		"relay":           "imageHash-ciliumHubble-relay",
 		"relayDistroless": "imageHash-ciliumHubble-relayDistroless",
-		"relayFinish":     "imageHash-ciliumHubble-relayFinish",
 		"uiBackend":       "imageHash-ciliumHubble-uiBackend",
 		"uiFrontend":      "imageHash-ciliumHubble-uiFrontend",
 	},
