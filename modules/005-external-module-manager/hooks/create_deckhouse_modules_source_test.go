@@ -358,7 +358,7 @@ data:
 
 			mup := f.KubernetesGlobalResource("ModuleUpdatePolicy", "deckhouse")
 			Expect(mup.Field("spec.moduleReleaseSelector").String()).To(Equal("{\"labelSelector\":{\"matchLabels\":{\"source\":\"deckhouse\"}}}"))
-			Expect(mup.Field("spec.releaseChannel").String()).To(Equal(""))
+			Expect(mup.Field("spec.releaseChannel").String()).To(Equal("Stable"))
 			Expect(mup.Field("spec.update.mode").String()).To(Equal("Manual"))
 			Expect(mup.Field("spec.update.windows").String()).To(Equal("[{\"days\":null,\"from\":\"08:00\",\"to\":\"10:00\"}]"))
 		})

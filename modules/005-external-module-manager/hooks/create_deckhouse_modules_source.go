@@ -141,8 +141,6 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		ddd := input.Snapshots["deckhouse-secret"][0].(deckhouseDiscoveryData)
 		if ddd.ReleaseChannel != "Unknown" {
 			releaseChannel = ddd.ReleaseChannel
-		} else {
-			releaseChannel = ""
 		}
 		us = ddd.UpdateSettings
 	}
