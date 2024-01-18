@@ -1,8 +1,0 @@
-redactions:
-- name: CE
-  versionMapFile: "candi/version_map.yml"
-  modulesDir: "modules"
-- name: BE
-  versionMapFile: "ee/be/candi/version_map.yml"
-- name: EE
-- name: FE

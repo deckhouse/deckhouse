@@ -1,0 +1,9 @@
+# file contains setting for werf render for different editions
+editions:
+- name: CE
+  # path to version map file. Can be empty if version map does not exist
+  versionMapFile: "candi/version_map.yml"
+- name: BE
+  versionMapFile: "ee/be/candi/version_map.yml"
+- name: EE
+- name: FE

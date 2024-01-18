@@ -5,24 +5,24 @@ gitWorktree:
   forceShallowClone: true
 ---
 # revisions settings
-{{- $redactionsSettings := (.Files.Get "redactions.yaml" | fromYaml) }}
-{{- $_ := set . "Redactions" $redactionsSettings.redactions }}
+{{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
+{{- $_ := set . "Editions" $editionsSettings.editions }}
 
 # checks redactions list
-{{- if not $.Redactions }}
-  {{ fail "Redactions list is empty" }}
+{{- if not $.Editions }}
+  {{ fail "Editions list is empty" }}
 {{- end }}
 
-{{- $redactionsDict := dict }}
-{{- range $_, $rev := $.Redactions }}
-  {{- if not $rev.name }}
-     {{ fail printf "Redactions name is empty" }}
+{{- $editionsDict := dict }}
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.name }}
+     {{ fail printf "Editions name is empty" }}
   {{- end }}
-  {{- $_ := set $redactionsDict $rev.name "" }}
+  {{- $_ := set $editionsDict $edition.name "" }}
 {{- end }}
 
-{{- if not (hasKey $redactionsDict .Env) }}
-  {{ fail (printf "Redactions name not found %v" .Env) }}
+{{- if not (hasKey $editionsDict .Env) }}
+  {{ fail (printf "Editions name not found %v" .Env) }}
 {{- end }}
 
 ---
@@ -37,11 +37,11 @@ gitWorktree:
 ---
 # Version Map
 {{- $versionMap := dict }}
-{{- range $_, $rev := $.Redactions }}
- {{- if $rev.versionMapFile }}
-   {{- $versionMap = (merge $versionMap ($.Files.Get $rev.versionMapFile | fromYaml) )}}
+{{- range $_, $edition := $.Editions }}
+ {{- if $edition.versionMapFile }}
+   {{- $versionMap = (merge $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
  {{- end }}
- {{- if eq $.Env $rev.name }}
+ {{- if eq $.Env $edition.name }}
    {{- break -}}
  {{- end }}
 {{- end }}
