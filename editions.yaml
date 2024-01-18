@@ -16,6 +16,8 @@ editions:
     - azure
     - gcp
     - yandex
+  # skip adding fix imports for release. need only for CE edition in general case
+  skipFixingImports: true
 
 - name: BE
   versionMapFile: "ee/be/candi/version_map.yml"
