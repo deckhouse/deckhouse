@@ -20,7 +20,7 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-v1
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24 30) }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
