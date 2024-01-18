@@ -4,6 +4,28 @@ configVersion: 1
 gitWorktree:
   forceShallowClone: true
 ---
+# revisions settings
+{{- $redactionsSettings := (.Files.Get "redactions.yaml" | fromYaml) }}
+{{- $_ := set . "Redactions" $redactionsSettings.redactions }}
+
+# checks redactions list
+{{- if not $.Redactions }}
+  {{ fail "Redactions list is empty" }}
+{{- end }}
+
+{{- $redactionsDict := dict }}
+{{- range $_, $rev := $.Redactions }}
+  {{- if not $rev.name }}
+     {{ fail printf "Redactions name is empty" }}
+  {{- end }}
+  {{- $_ := set $redactionsDict $rev.name "" }}
+{{- end }}
+
+{{- if not (hasKey $redactionsDict .Env) }}
+  {{ fail (printf "Redactions name not found %v" .Env) }}
+{{- end }}
+
+---
 # Base Images
 {{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
@@ -14,11 +36,17 @@ gitWorktree:
   {{- end }}
 ---
 # Version Map
-{{- if or (eq $.Env "EE") (eq $.Env "FE") }}
-  {{- $_ := set . "CandiVersionMap" (merge (.Files.Get "candi/version_map.yml" | fromYaml) (.Files.Get "ee/candi/version_map.yml" | fromYaml)) }}
-{{- else }}
-  {{- $_ := set . "CandiVersionMap" ( .Files.Get "candi/version_map.yml" | fromYaml ) }}
+{{- $versionMap := dict }}
+{{- range $_, $rev := $.Redactions }}
+ {{- if $rev.versionMapFile }}
+   {{- $versionMap = (merge $versionMap ($.Files.Get $rev.versionMapFile | fromYaml) )}}
+ {{- end }}
+ {{- if eq $.Env $rev.name }}
+   {{- break -}}
+ {{- end }}
 {{- end }}
+
+{{- $_ := set . "CandiVersionMap" $versionMap }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
