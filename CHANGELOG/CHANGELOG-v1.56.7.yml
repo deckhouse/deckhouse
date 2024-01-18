@@ -1,0 +1,5 @@
+ingress-nginx:
+  fixes:
+    - summary: Fix `HostWithFailover` inlet proxy filter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7183
+
