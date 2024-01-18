@@ -2074,6 +2074,31 @@ spec:
                                 - type: integer
                                 - type: string
                               pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                    topologyManager:
+                      type: object
+                      oneOf:
+                      description: |
+                        Control Topology Management Policies on a node.
+
+                        More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                      properties:
+                        enable:
+                        scope:
+                          type: string
+                          x-doc-default: container
+                          enum:
+                            - container
+                            - pod
+                        policy:
+                          oneOf:
+                          type: string
+                          x-doc-default: none
+                          enum:
+                            - none
+                            - best-effort
+                            - restricted
+                            - single-numa-node
+
                 update:
                   type: object
                   properties:
