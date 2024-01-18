@@ -49,6 +49,10 @@ func InitService(mm ModuleManager) {
 	}
 }
 
+func IsServiceInited() bool {
+	return serviceInstance != nil
+}
+
 func Service() *ConfigService {
 	if serviceInstance == nil {
 		panic("deckhouse-config Service is not initialized")
