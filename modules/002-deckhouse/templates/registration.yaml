@@ -11,4 +11,5 @@ type: Opaque
 data:
   bundle: {{ b64enc .Values.deckhouse.bundle }}
   releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
+  updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
 {{- end }}
