@@ -21,20 +21,23 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromCacheVersion: 10
+fromCacheVersion: 11
 from: {{ $.Images.BASE_ALPINE }}
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+  add: /etc/ssl/certs/ca-certificates.crt
+  to: /etc/ssl/certs/ca-certificates.crt
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
   add: /usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
 shell:
   install:
-  - touch /tmp/rebuild_me_pls
-  - chown nobody /usr/local/bin/hubble-relay
+  - chown 64535:64535 /usr/local/bin/hubble-relay
   - chmod +x /usr/local/bin/hubble-relay
 docker:
-  USER: nobody
+  USER: 64535
   ENTRYPOINT: ["hubble-relay", "serve"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-finish
