@@ -45,7 +45,7 @@ shell:
   - echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
   - apt-get update && apt-get install -y yarn
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.44.0
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.0
   - mkdir /prometheus && cd /prometheus
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
   - cd /prometheus/prometheus/web/ui
