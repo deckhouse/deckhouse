@@ -20,7 +20,7 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-v1
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24 30) }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
@@ -34,6 +34,7 @@ import:
   before: install
 shell:
   install:
+  - touch /tmp/rebuild_me_pls
   - chown nobody /usr/local/bin/hubble-relay
   - chmod +x /usr/local/bin/hubble-relay
 docker:
