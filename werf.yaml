@@ -283,14 +283,12 @@ ansible:
   - name: "Add bundle {{ $key }}"
     copy:
       content: |
-        {{- $.Files.Get (printf "modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- if eq $.Env "EE" }}
-        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- end }}
-{{- if eq $.Env "FE" }}
-        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
-        {{- $.Files.Get (printf "ee/fe/modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- end }}
+      {{- range $_, $edition := $.Editions }}
+        {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 8 }}
+        {{- if eq $.Env $edition.name }}
+           {{- break -}}
+        {{- end }}
+     {{- end }}
       dest: /deckhouse/modules/values-{{ $key }}.yaml
 {{- end }}
 
@@ -591,31 +589,21 @@ import:
   add: /root/.terraformrc
   to: /etc/terraformrc
   before: setup
-- artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
-  add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
+{{- range $_, $edition := $.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $.TF $tfProvider }}
+
+- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
-- artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
-  add: /terraform-provider-azurerm
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
-  before: setup
-- artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
-  add: /terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
-  after: setup
-- artifact: terraform-provider-yandex # from modules/040-terraform-manager/images/terraform-manager-yandex/werf.inc.yaml
-  add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
-  before: setup
-{{- if ne .Env "CE" }}
-- artifact: terraform-provider-openstack # from ee/modules/040-terraform-manager/images/terraform-manager-openstack/werf.inc.yaml
-  add: /terraform-provider-openstack
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
-  before: setup
-- artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
-  add: /terraform-provider-vsphere
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
-  after: setup
+
+    {{- end }}
+  {{- end }}
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
 {{- end }}
 - image: images-digests
   add: /images_digests.json

@@ -3,7 +3,28 @@ editions:
 - name: CE
   # path to version map file. Can be empty if version map does not exist
   versionMapFile: "candi/version_map.yml"
+  # path to dir with modules
+  # path should contain next files:
+  #   values-default.yaml
+  #   values-managed.yaml
+  #   values-minimal.yaml
+  modulesDir: "modules"
+  # available terraform providers for edition. Can be empty for edition
+  terraformProviders:
+      # key in terraform_versions.yaml file
+    - aws
+    - azure
+    - gcp
+    - yandex
+
 - name: BE
   versionMapFile: "ee/be/candi/version_map.yml"
+  modulesDir: "ee/be/modules"
 - name: EE
+  modulesDir: "ee/modules"
+  terraformProviders:
+    - openstack
+    - vsphere
+
 - name: FE
+  modulesDir: "ee/fe/modules"
