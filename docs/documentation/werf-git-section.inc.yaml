@@ -9,6 +9,7 @@
   - '*/openapi/*-tests.yaml'
   - '*/docs/internal/'
   - '005-external-module-manager/crds/external-module-*'
+  - '040-node-manager/crds/deckhousecontrolplane.yaml'
   - '040-node-manager/crds/mcm.yaml'
   - '040-node-manager/crds/cluster.yaml'
   - '040-node-manager/crds/extension-config.yaml'
