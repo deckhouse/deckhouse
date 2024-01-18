@@ -16,7 +16,9 @@ properties:
             description: |
               Режим выдачи сертификатов для данного Ingress-ресурса.
 
-              В случае использования режима `SelfSigned` для Ingress-ресурса будет выпущен сертификат подписанный CA `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+              В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
+              
+              Получить выпущенный сертификат можно следующей командой: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
           global:
