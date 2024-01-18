@@ -1318,9 +1318,7 @@ spec:
                 nodeTemplate:
                   labels:
                     tier: test
-              ```
-          - |
-              ```yaml
+              ---
               # NodeGroup for static nodes on bare metal servers (or VMs).
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
