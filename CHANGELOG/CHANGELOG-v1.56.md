@@ -58,6 +58,7 @@
  - **[flant-integration]** Run hook envs_from_nodes OnBeforeHelm to prevent main queue stuck. [#6750](https://github.com/deckhouse/deckhouse/pull/6750)
  - **[go_lib]** Restore `.global.enabledModules` values field for source modules. [#6935](https://github.com/deckhouse/deckhouse/pull/6935)
  - **[go_lib]** Limit registry client operations with 30 seconds timeout. [#6701](https://github.com/deckhouse/deckhouse/pull/6701)
+ - **[ingress-nginx]** Fix `HostWithFailover` inlet proxy filter. [#7183](https://github.com/deckhouse/deckhouse/pull/7183)
  - **[istio]** Adding alert about istio and K8s versions incompatibility. [#6919](https://github.com/deckhouse/deckhouse/pull/6919)
  - **[istio]** Remove istio/k8s compatibility check. [#6914](https://github.com/deckhouse/deckhouse/pull/6914)
  - **[linstor]** Fix the `D8DrbdPeerDeviceIsOutOfSync` alert. [#6778](https://github.com/deckhouse/deckhouse/pull/6778)
@@ -93,6 +94,7 @@
  - **[ingress-nginx]** Add validation for httpsPort field of the IngressNginxController CRD. [#6631](https://github.com/deckhouse/deckhouse/pull/6631)
     Ingress controller pods will restart.
  - **[linstor]** Simultaneously enabling the Linstor and SDS-DRBD modules is prohibited. [#6776](https://github.com/deckhouse/deckhouse/pull/6776)
+ - **[monitoring-kubernetes]** Correct the `LoadBalancerServiceWithoutExternalIP` alert. [#7150](https://github.com/deckhouse/deckhouse/pull/7150)
  - **[prometheus]** Add examples of CustomAlertmanager for Slack and Opsgenie. [#7030](https://github.com/deckhouse/deckhouse/pull/7030)
  - **[terraform-manager]** Build distroless-based terraform-manager images. [#6639](https://github.com/deckhouse/deckhouse/pull/6639)
 
