@@ -24,6 +24,7 @@ allow_alerts=(
 "CertmanagerCertificateExpired" # On some system do not have DNS
 "CertmanagerCertificateExpiredSoon" # Same as above
 "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
+"KubernetesDaemonSetReplicasUnavailable" # TODO In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not run
 )
 
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
