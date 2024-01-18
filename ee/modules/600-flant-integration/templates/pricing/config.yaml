@@ -31,6 +31,7 @@ prometheus:
     - job_name: 'flant-pricing'
       params:
         module: [http_2xx]  # Look for a HTTP 200 response.
+      metrics_path: /metrics/hooks
       static_configs:
       - targets:
         - 127.0.0.1:9115
