@@ -1,11 +1,12 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
 from: quay.io/cilium/hubble-relay:v1.14.5@sha256:faf8e9c24b94fd5c4e0e52bd72bae30913dd92cd2271bf4db5c974e56e405a1d
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromCacheVersion: 5
 from: {{ $.Images.BASE_ALPINE }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
   add: /usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
@@ -21,6 +22,7 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromCacheVersion: 15
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
