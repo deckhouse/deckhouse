@@ -139,7 +139,11 @@ ansible:
         chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
-        JEKYLL_ENV=development jekyll build -d /app/_site/{{ if eq $.Env "development" }} --profile -t{{- end }}
+        {{- if eq $.Env "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
+        {{- else }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/
+        {{- end }}
       args:
         warn: false
         executable: /bin/bash
