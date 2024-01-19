@@ -159,12 +159,13 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 			Type: k.Type,
 			Name: name,
 		},
-		Fields:             strings.Join(fields, ","),
-		Labels:             k.labelSelector,
-		NamespaceLabels:    k.namespaceLabelSelector,
-		AnnotationFields:   k.annotationFields,
-		GlobCooldownMs:     k.globCooldownMs,
-		UserAPIServerCache: true,
+		Fields:               strings.Join(fields, ","),
+		Labels:               k.labelSelector,
+		NamespaceLabels:      k.namespaceLabelSelector,
+		AnnotationFields:     k.annotationFields,
+		NodeAnnotationFields: k.nodeAnnotationFields,
+		GlobCooldownMs:       k.globCooldownMs,
+		UserAPIServerCache:   true,
 	}
 }
 
