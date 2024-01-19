@@ -490,7 +490,7 @@ shell:
   {{- end }}
 {{- end }}
   - cd /deckhouse
-  # Generate hooks imports for particular edition (CE/EE/FE)
+  # Generate hooks imports for particular edition
   - go generate ./tools/register.go
   # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
   # into separate phases.
@@ -754,14 +754,16 @@ dependencies:
 {{- $Root := . }}
 {{- $ModulesImagesDigestList := list }}
 
-# Collect EE and FE images if desired
-{{ $ModulesImagesBuildFiles := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}" }}
-{{- if eq .Env "EE" }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
-{{- end }}
-{{- if eq .Env "FE" }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/fe/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
+# Collect images if desired for editions
+{{- $ModulesImagesBuildFiles := dict }}
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipCollectImages }}
+    {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
+  {{- end }}
+
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
 {{- end }}
 
 {{- range $path, $content := $ModulesImagesBuildFiles  }}

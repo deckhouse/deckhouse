@@ -22,6 +22,10 @@ editions:
 - name: BE
   versionMapFile: "ee/be/candi/version_map.yml"
   modulesDir: "ee/be/modules"
+  # skip collect images. Unfortunately we cannot handle error from .Files.Glob
+  # BE edition does not have any images
+  skipCollectImages: true
+
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:
