@@ -1,7 +1,19 @@
 {{- $ciliumVersion := "1.14.5" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
 from: quay.io/cilium/operator:v{{- $ciliumVersion }}@sha256:56cc1822109c4b34d192784a3106150cfb645252ce0b34aab67e9c820ac41bab
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
+  add: /usr/bin/cilium-operator
+  to: /usr/bin/cilium-operator
+  before: install
+shell:
+  install:
+  - chown 64535:64535 /usr/bin/cilium-operator
+  - chmod 0700 /usr/local/bin/hubble-relay
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -10,17 +22,9 @@ import:
   add: /etc/ssl/certs/ca-certificates.crt
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
-- artifact: {{ $.ModuleName }}/builder-gops-artifact
-  add: /out/linux/amd64/bin/gops
-  to: /bin/gops
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /LICENSE.all
-  to: /LICENSE.all
   before: install
 docker:
   USER: 64535
