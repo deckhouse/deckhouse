@@ -161,7 +161,6 @@ import:
 shell:
   install:
     - apt-get update
-    - apt-get upgrade -y
     - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
     - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
     - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends jq curl iproute2 iptables ipset kmod
