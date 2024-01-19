@@ -13,7 +13,7 @@ import:
 shell:
   install:
   - chown 64535:64535 /usr/bin/cilium-operator
-  - chmod 0700 /usr/local/bin/hubble-relay
+  - chmod 0700 /usr/bin/cilium-operator
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
