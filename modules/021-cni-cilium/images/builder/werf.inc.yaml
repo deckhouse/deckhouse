@@ -163,7 +163,7 @@ shell:
     - apt-get update
     - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
     - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends jq curl iproute2 iptables ipset kmod
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y jq curl iproute2 iptables ipset kmod ca-certificates
     - dpkg -i /iptables/*.deb
     - rm -rf /iptables
 
