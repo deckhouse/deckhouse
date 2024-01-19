@@ -72,7 +72,7 @@ shell:
   beforeInstall:
   - apt-get update
   - apt-get upgrade -y
-  - apt-get install -y jq curl
+  - apt-get install -y jq curl tzdata
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
@@ -197,7 +197,7 @@ import:
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr/share/zoneinfo/UTC
+  add: /usr/share/zoneinfo/Etc/UTC
   to: /etc/localtime
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
