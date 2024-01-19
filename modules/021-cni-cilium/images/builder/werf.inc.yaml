@@ -205,10 +205,6 @@ import:
   to: /
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib64/iptables
-  to: /lib64/iptables
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: install
