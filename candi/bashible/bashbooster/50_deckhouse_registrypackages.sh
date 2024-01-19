@@ -64,6 +64,11 @@ bb-rp-is-fetched?() {
   local AUTH_REALM=""
   local AUTH_SERVICE=""
 
+  SCHEME=${1:-$SCHEME}
+  REGISTRY_ADDRESS=${2:-$REGISTRY_ADDRESS}
+  REGISTRY_PATH=${3:-$REGISTRY_PATH}
+  REGISTRY_AUTH=${4:-$REGISTRY_AUTH}
+
   if [[ -n ${REGISTRY_AUTH} ]]; then
     AUTH="-u ${REGISTRY_AUTH}"
   fi
@@ -87,7 +92,13 @@ bb-rp-is-fetched?() {
 # DO NOT CALL THIS FUNCTION DIRECTLY!
 bb-rp-fetch-manifests() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token)"
+
+  SCHEME=${2:-$SCHEME}
+  REGISTRY_ADDRESS=${3:-$REGISTRY_ADDRESS}
+  REGISTRY_PATH=${4:-$REGISTRY_PATH}
+  REGISTRY_AUTH=${5:-$REGISTRY_AUTH}
+
+  TOKEN="$(bb-rp-get-token $SCHEME $REGISTRY_ADDRESS $REGISTRY_PATH $REGISTRY_AUTH)"
 
   local URLs=()
   # key - digest to fetch, value - package name
@@ -114,7 +125,13 @@ bb-rp-fetch-manifests() {
 # DO NOT CALL THIS FUNCTION DIRECTLY!
 bb-rp-fetch-blobs() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token)"
+
+  SCHEME=${2:-$SCHEME}
+  REGISTRY_ADDRESS=${3:-$REGISTRY_ADDRESS}
+  REGISTRY_PATH=${4:-$REGISTRY_PATH}
+  REGISTRY_AUTH=${5:-$REGISTRY_AUTH}
+
+  TOKEN="$(bb-rp-get-token $SCHEME $REGISTRY_ADDRESS $REGISTRY_PATH $REGISTRY_AUTH)"
 
   local URLs=()
   # key - digest to fetch, value - output file path
@@ -132,35 +149,38 @@ bb-rp-fetch-blobs() {
 # Fetch packages by digest
 # bb-rp-fetch package1:digest1 [package2:digest2 ...]
 bb-rp-fetch() {
+  SCHEME=${2:-$SCHEME}
+  REGISTRY_ADDRESS=${3:-$REGISTRY_ADDRESS}
+  REGISTRY_PATH=${4:-$REGISTRY_PATH}
+  REGISTRY_AUTH=${5:-$REGISTRY_AUTH}
+
   mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP
-  local PACKAGE_WITH_DIGEST
-  for PACKAGE_WITH_DIGEST in "$@"; do
-    local PACKAGE=""
-    local DIGEST=""
-    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
-    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+  local PACKAGE_WITH_DIGEST=$1
+  local PACKAGE=""
+  local DIGEST=""
+  PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+  DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
-      bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
-      continue
-    fi
+  if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+    bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
+    return 0
+  fi
 
-    if bb-rp-is-fetched? "${PACKAGE}" "${DIGEST}"; then
-      bb-log-info "'${PACKAGE_WITH_DIGEST}' package already fetched"
-      continue
-    fi
+  if bb-rp-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    bb-log-info "'${PACKAGE_WITH_DIGEST}' package already fetched"
+    return 0
+  fi
 
-    PACKAGES_MAP[$DIGEST]="${PACKAGE}"
-  done
+  PACKAGES_MAP[$DIGEST]="${PACKAGE}"
 
   if [ "${#PACKAGES_MAP[@]}" -eq 0 ]; then
     return 0
   fi
 
   bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
-  bb-rp-fetch-manifests PACKAGES_MAP
+  bb-rp-fetch-manifests PACKAGES_MAP $SCHEME $REGISTRY_ADDRESS $REGISTRY_PATH $REGISTRY_AUTH
   if bb-error?; then
     bb-log-error "Failed to fetch manifests"
     return $BB_ERROR
@@ -175,7 +195,7 @@ bb-rp-fetch() {
   done
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
-  bb-rp-fetch-blobs BLOB_FILES_MAP
+  bb-rp-fetch-blobs BLOB_FILES_MAP $SCHEME $REGISTRY_ADDRESS $REGISTRY_PATH $REGISTRY_AUTH
   if bb-error?; then
     bb-log-error "Failed to fetch packages"
     return "${BB_ERROR}"
@@ -188,6 +208,7 @@ bb-rp-fetch() {
 # bb-rp-install package:digest
 bb-rp-install() {
   local PACKAGE_WITH_DIGEST
+
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
     local DIGEST=""
@@ -240,6 +261,69 @@ bb-rp-install() {
     bb-event-fire "bb-package-installed" "${PACKAGE}"
     trap - ERR
   done
+}
+
+# Unpack package from custom registry and run install script
+# bb-rp-module-install package:digest
+bb-rp-module-install() {
+  local PACKAGE_WITH_DIGEST
+
+  PACKAGE_WITH_DIGEST=${1}
+  SCHEME=${2:-$SCHEME}
+  REGISTRY_ADDRESS=${3:-$REGISTRY_ADDRESS}
+  REGISTRY_PATH=${4:-$REGISTRY_PATH}
+  REGISTRY_AUTH=${5:-$REGISTRY_AUTH}
+
+  local PACKAGE=""
+  local DIGEST=""
+  PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+  DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+
+  if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
+    bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
+    return 0
+  fi
+
+  if ! bb-rp-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    bb-log-info "'${PACKAGE_WITH_DIGEST}' package not found locally"
+    bb-rp-fetch "${PACKAGE_WITH_DIGEST}" $SCHEME $REGISTRY_ADDRESS $REGISTRY_PATH $REGISTRY_AUTH
+  fi
+
+  bb-log-info "Unpacking package '${PACKAGE}'"
+  local TMP_DIR=""
+  TMP_DIR="$(mktemp -d)"
+  tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
+  if bb-error?
+  then
+      rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+      bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
+      return $BB_ERROR
+  fi
+
+  bb-log-info "Installing package '${PACKAGE}'"
+  # shellcheck disable=SC2164
+  pushd "${TMP_DIR}" >/dev/null
+  ./install
+  if bb-error?
+  then
+      popd >/dev/null
+      rm -rf "${TMP_DIR}"
+      bb-log-error "Failed to install package '${PACKAGE}'"
+      return $BB_ERROR
+  fi
+  popd >/dev/null
+
+  # Write digest to hold file
+  mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+  echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
+  # Copy install/uninstall scripts to hold dir
+  cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+  # Cleanup
+  rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+
+  bb-log-info "'${PACKAGE}' package successfully installed"
+  bb-event-fire "bb-package-installed" "${PACKAGE}"
+  trap - ERR
 }
 
 # run uninstall script from hold dir
