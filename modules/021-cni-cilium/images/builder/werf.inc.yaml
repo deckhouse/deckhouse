@@ -197,7 +197,7 @@ import:
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /etc/localtime
+  add: /usr/share/zoneinfo/UTC
   to: /etc/localtime
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
