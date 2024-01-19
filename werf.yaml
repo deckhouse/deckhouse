@@ -895,9 +895,31 @@ shell:
   - curl -sfL https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64 --output /usr/local/bin/yq
   - chmod +x /usr/local/bin/yq
   setup:
-  - cp candi/version_map.yml /version_map_CE.yml
-  - yq m candi/version_map.yml ee/candi/version_map.yml > /version_map_EE.yml
-  - cp /version_map_EE.yml /version_map_FE.yml
+{{- $previousEditionFile := "" }}
+{{- range $_, $edition := $.Editions }}
+  {{- $curEditionFile := printf "/version_map_%s.yml" $edition.name }}
+  {{- if $edition.versionMapFile }}
+    {{- $tmpEditionFile := printf "%s.tmp" $curEditionFile }}
+
+     {{- if $previousEditionFile }}
+  - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
+  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+
+      {{- else }}
+
+  - cp {{ $edition.versionMapFile }} {{ $curEditionFile }}
+
+      {{- end }}
+
+  {{- else }}
+
+  - cp {{ $previousEditionFile }} {{ $curEditionFile }}
+
+  {{- end }}
+
+  {{- $previousEditionFile = $curEditionFile }}
+{{- end }}
+
 ---
 # use image for actual terraform version for infra deployment in e2e
 image: e2e-terraform
