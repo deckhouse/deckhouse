@@ -36,6 +36,6 @@ spec:
       minAllowed:
         {{- include "builder_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: "1"
+        cpu: 200m
         memory: 500Mi
 {{- end }}

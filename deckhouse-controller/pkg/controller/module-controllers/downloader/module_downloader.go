@@ -138,11 +138,6 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	return res, nil
 }
 
-func (md *ModuleDownloader) FetchModuleVersionFromReleaseChannel(moduleName string, releaseChannel string) (moduleVersion string, err error) {
-	moduleVersion, _, err = md.fetchModuleVersionFromReleaseChannel(moduleName, releaseChannel, "")
-	return
-}
-
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
