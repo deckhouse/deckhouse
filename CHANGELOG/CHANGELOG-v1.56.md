@@ -87,6 +87,7 @@
     cillium-agent pods will restart.
  - **[cni-simple-bridge]** Use distroless based image. [#6469](https://github.com/deckhouse/deckhouse/pull/6469)
     `simple-bridge` pods will restart; affected clouds are AWS, Azure, GCP, Yandex.Cloud.
+ - **[deckhouse-controller]** Use uniform method to install CRDs for hooks and `deckhouse-controller`. [#6960](https://github.com/deckhouse/deckhouse/pull/6960)
  - **[deckhouse-controller]** Bump Go and Kubernetes client versions. [#6698](https://github.com/deckhouse/deckhouse/pull/6698)
  - **[deckhouse-controller]** Remove virtualization embedded module [#5554](https://github.com/deckhouse/deckhouse/pull/5554)
     Uninstalling the virtualization module will destroy all the virtual machines created with the module. Take care to save virtual machine data if necessary.
