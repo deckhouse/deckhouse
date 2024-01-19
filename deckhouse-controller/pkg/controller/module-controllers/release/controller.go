@@ -877,7 +877,6 @@ func (c *Controller) restoreAbsentSourceModules() error {
 				if err := os.Remove(moduleDir); err != nil {
 					c.logger.Warnf("Couldn't delete stale symlink %s for module %s: err", moduleDir, moduleName, err)
 					continue
-
 				}
 				if err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight); err != nil {
 					c.logger.Warnf("Couldn't create module symlink: %s", err)
