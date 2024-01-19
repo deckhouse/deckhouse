@@ -195,7 +195,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 
 		existModule.Properties = newModule.Properties
 		if len(existModule.Labels) == 0 {
-			existModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
+			newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 		} else {
 			existModule.Labels[epochLabelKey] = epochLabelValue
 		}
