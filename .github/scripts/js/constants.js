@@ -22,6 +22,7 @@ const labels = {
   'skip/no-cyrillic-validation': { type: 'skip-validation', validation_name: 'no_cyrillic' },
   'skip/documentation-validation': { type: 'skip-validation', validation_name: 'doc_changes' },
   'skip/copyright-validation': { type: 'skip-validation', validation_name: 'copyright' },
+  'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
 

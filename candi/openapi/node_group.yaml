@@ -1318,9 +1318,7 @@ spec:
                 nodeTemplate:
                   labels:
                     tier: test
-              ```
-          - |
-              ```yaml
+              ---
               # NodeGroup for static nodes on bare metal servers (or VMs).
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
@@ -1566,12 +1564,24 @@ spec:
                         A null label selector matches no objects.
                       properties:
                         matchExpressions:
+                          type: array
                           description: matchExpressions is a list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: A label selector requirement is a selector
                               that contains values, a key, and an operator that
                               relates the key and values.
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [Exists, DoesNotExist]
+                                required: [key, operator]
+                                not:
+                                  required: [values]
+                              - properties:
+                                  operator:
+                                    enum: [In, NotIn]
+                                required: [key, operator, values]
                             properties:
                               key:
                                 description: key is the label key that the selector
@@ -1589,14 +1599,13 @@ spec:
                                   DoesNotExist, the values array must be empty.
                                   This array is replaced during a strategic merge
                                   patch.
+                                type: array
                                 items:
                                   type: string
-                                type: array
-                            required:
-                              - key
-                              - operator
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
                             type: object
-                          type: array
                         matchLabels:
                           additionalProperties:
                             type: string

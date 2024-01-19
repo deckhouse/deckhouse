@@ -105,13 +105,6 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generating sidebars..."
-      shell: |
-        export MODULES_DIR=modules_ru
-        /bin/bash ./modules_make_data > _data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> _data/sidebars/modules.yml2  && mv -f _data/sidebars/modules.yml2 _data/sidebars/modules.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
     - name: "Extracting the default Kubernetes version..."
       shell: |
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml

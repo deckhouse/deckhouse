@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -189,7 +188,12 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:rock-solid":   {},
 		}
 
-		channelVersions, err := fetchVersionsFromModuleReleaseChannels(moduleData.ReleaseImages, mirrorCtx.RegistryAuth, mirrorCtx.Insecure)
+		channelVersions, err := fetchVersionsFromModuleReleaseChannels(
+			moduleData.ReleaseImages,
+			mirrorCtx.RegistryAuth,
+			mirrorCtx.Insecure,
+			mirrorCtx.SkipTLSVerification,
+		)
 		if err != nil {
 			return fmt.Errorf("fetch versions from %q release channels: %w", moduleName, err)
 		}
@@ -232,9 +236,9 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 func fetchVersionsFromModuleReleaseChannels(
 	releaseChannelImages map[string]struct{},
 	authProvider authn.Authenticator,
-	insecure bool,
+	insecure, skipVerifyTLS bool,
 ) (map[string]string, error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
 
@@ -267,13 +271,4 @@ func fetchVersionsFromModuleReleaseChannels(
 	}
 
 	return channelVersions, nil
-}
-
-func isImageNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "MANIFEST_UNKNOWN") || strings.Contains(errMsg, "404 Not Found")
 }

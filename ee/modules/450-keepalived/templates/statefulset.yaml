@@ -70,7 +70,7 @@ spec:
       initContainers:
       - name: init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 8 }}
-        command: ['/prepare-config.py']
+        command: ['/usr/bin/python3', '/prepare-config.py']
         image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
         env:
         - name: POD_NAME

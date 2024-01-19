@@ -120,6 +120,8 @@ spec:
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"
+          - name: UPMETER_RETENTION_DAYS
+            value: "548"
           - name: UPMETER_LISTEN_HOST
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT

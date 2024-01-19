@@ -3,6 +3,10 @@ title: "The linstor module"
 description: Deckhouse uses the linstor module to manage a replicated block storage in the Kubernetes cluster.
 ---
 
+{% alert level="danger" %}
+This version of the module is deprecated and is no longer supported. Use the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module instead.
+{% endalert %}
+
 {% alert level="warning" %}
 The module is guaranteed to work only in the following cases:
 - when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);

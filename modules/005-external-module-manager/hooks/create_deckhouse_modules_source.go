@@ -15,10 +15,15 @@
 package hooks
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -54,6 +59,43 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return newms, nil
 }
 
+type deckhouseDiscoveryData struct {
+	ReleaseChannel string
+	UpdateSettings *v1alpha1.ModuleUpdatePolicySpecUpdate
+}
+
+func filterDiscovery(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm corev1.ConfigMap
+
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	ddd := deckhouseDiscoveryData{}
+
+	res, err := base64.StdEncoding.DecodeString(cm.Data["releaseChannel"])
+	if err != nil {
+		return nil, err
+	}
+	ddd.ReleaseChannel = string(res)
+
+	if rawSettings, ok := cm.Data["updateSettings.json"]; ok {
+		res, err = base64.StdEncoding.DecodeString(rawSettings)
+		if err != nil {
+			return nil, err
+		}
+
+		ddd.UpdateSettings = &v1alpha1.ModuleUpdatePolicySpecUpdate{}
+		err = json.Unmarshal(res, ddd.UpdateSettings)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ddd, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// ensure crds hook has order 5, for creating a module source we should use greater number
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
@@ -69,6 +111,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterSource,
 		},
+		{
+			Name:       "deckhouse-secret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"deckhouse-discovery"},
+			},
+			FilterFunc: filterDiscovery,
+		},
 	},
 }, createDeckhouseModuleSourceAndPolicy)
 
@@ -82,9 +136,27 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 	}
 
-	if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
-		// return if ModuleSource deckhouse already exists and all params are equal
-		return nil
+	releaseChannel := "Stable"
+	us := v1alpha1.ModuleUpdatePolicySpecUpdate{Mode: "Auto"}
+
+	if len(input.Snapshots["deckhouse-secret"]) > 0 {
+		ddd := input.Snapshots["deckhouse-secret"][0].(deckhouseDiscoveryData)
+		if ddd.ReleaseChannel != "Unknown" {
+			releaseChannel = ddd.ReleaseChannel
+		}
+		if ddd.UpdateSettings != nil {
+			us = *ddd.UpdateSettings
+		}
+	}
+
+	// get scheme from values
+	scheme := strings.ToUpper(input.Values.Get("global.modulesImages.registry.scheme").String())
+	switch scheme {
+	case "HTTP", "HTTPS":
+	// pass
+
+	default:
+		scheme = "HTTPS"
 	}
 
 	newms := v1alpha1.ModuleSource{
@@ -99,21 +171,47 @@ func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 			},
 		},
 		Spec: v1alpha1.ModuleSourceSpec{
-			ReleaseChannel: ms.Spec.ReleaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
-				Scheme:    "HTTPS",
+				Scheme:    scheme,
 				Repo:      deckhouseRepo,
 				DockerCFG: deckhouseDockerCfg,
 				CA:        deckhouseCA,
 			},
 		},
 	}
+	if !moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
+		o, err := sdk.ToUnstructured(&newms)
+		if err != nil {
+			return err
+		}
+		input.PatchCollector.Create(o, object_patch.UpdateIfExists())
+	}
 
-	o, err := sdk.ToUnstructured(&newms)
+	newmup := v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleUpdatePolicy",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: newms.ObjectMeta.Name,
+		},
+		Spec: v1alpha1.ModuleUpdatePolicySpec{
+			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"source": newms.ObjectMeta.Name,
+					},
+				},
+			},
+			ReleaseChannel: releaseChannel,
+			Update:         us, // Use deckhouse update settings by default
+		},
+	}
+
+	o, err := sdk.ToUnstructured(&newmup)
 	if err != nil {
 		return err
 	}
-
 	input.PatchCollector.Create(o, object_patch.UpdateIfExists())
 
 	return nil

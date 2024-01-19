@@ -430,6 +430,7 @@
 .sidebar .sidebar__item_ee > a::after,
 .sidebar .sidebar__item_proprietaryOkmeter > a::after,
 .sidebar .sidebar__item_experimental > a::after,
+.sidebar .sidebar__item_deprecated > a::after,
 .sidebar .sidebar__item_temporaryDeprecated > a::after,
 a.comparison-table__module::after {
     display: inline-block;
@@ -478,6 +479,11 @@ a.comparison-table__module {
 .sidebar .sidebar__item_experimental > a::after,
 a.comparison-table__module-experimental::after {
     content: 'Experimental';
+}
+
+.sidebar .sidebar__item_deprecated > a::after,
+a.comparison-table__module-deprecated::after {
+    content: 'Temporary deprecated';
 }
 
 .sidebar .sidebar__item_temporaryDeprecated > a::after,

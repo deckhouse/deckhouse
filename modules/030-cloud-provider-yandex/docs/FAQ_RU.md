@@ -60,3 +60,13 @@ reserved: true
    ```shell
    kubectl edit mc cloud-provider-yandex
    ```
+
+## Добавление CloudStatic-узлов в кластер
+
+В метаданные виртуальных машин, которые вы хотите включить в кластер в качестве узлов, добавьте (Изменить ВМ -> Метадата) ключ `node-network-cidr` со значением `nodeNetworkCIDR` для кластера.
+
+`nodeNetworkCIDR` кластера можно узнать, воспользовавшись следующей командой:
+
+```shell
+kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+```

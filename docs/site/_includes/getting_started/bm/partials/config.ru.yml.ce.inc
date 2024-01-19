@@ -58,7 +58,7 @@ metadata:
   name: global
 spec:
   version: 1
-  settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+  settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
@@ -67,9 +67,6 @@ spec:
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-    # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-    # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-    storageClass: localpath-deckhouse-system
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html

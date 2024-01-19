@@ -15,7 +15,7 @@ properties:
 
           By default:
           - `Baseline` — if a Deckhouse version starting with v1.55 is being installed;
-          - `Privilged` — if a Deckhouse version lower than v1.55 is being installed (upgrading Deckhouse in a cluster to v1.55+ does not automatically result in a default policy change).
+          - `Privileged` — if a Deckhouse version lower than v1.55 is being installed (upgrading Deckhouse in a cluster to v1.55+ does not automatically result in a default policy change).
         enum:
           - Privileged
           - Baseline

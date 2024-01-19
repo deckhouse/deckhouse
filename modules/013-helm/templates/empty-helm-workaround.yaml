@@ -1,8 +1,0 @@
-{{- if not (.Values.global.enabledModules | has "operator-prometheus-crd") }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Chart.Name }}-empty-helm-workaround
-  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
-{{- end }}

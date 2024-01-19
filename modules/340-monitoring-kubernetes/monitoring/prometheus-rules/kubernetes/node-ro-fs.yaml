@@ -14,7 +14,7 @@
       plk_create_group_if_not_exists__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
-        The file system has entered read-only mode.
+        The file system on the node has switched to read-only mode.
 
-        You need to find out the cause and fix it.
-      summary: The file system has entered read-only mode.
+        See the node logs to find out the cause and fix it.
+      summary: The file system of the node is in read-only mode.

@@ -16,5 +16,6 @@ GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
 GOPROXY: "${{secrets.GOPROXY}}"
 CRATESPROXY: "${{secrets.CRATESPROXY}}"
+NPMPROXY: "${{secrets.NPMPROXY}}"
 # </template: git_source_envs>
 {!{- end -}!}

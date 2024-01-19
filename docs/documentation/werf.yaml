@@ -1,5 +1,5 @@
 {{- if ne $.Env "development" -}}
-{{- $_ := set . "Env" "FE" }}
+{{- $_ := set . "Env" "EE" }}
 {{- end }}
 ---
 project: deckhouse-web
@@ -124,13 +124,6 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate sidebars"
-      shell: |
-        export MODULES_DIR=modules_en
-        /bin/bash ./modules_make_data > _data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> _data/sidebars/modules.yml2  && mv -f _data/sidebars/modules.yml2 _data/sidebars/modules.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
     - name: "Extract the default Kubernetes version"
       shell: |
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -146,11 +139,7 @@ ansible:
         chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
-        {{- if eq $.Env "development" }}
-        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
-        {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/
-        {{- end }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/{{ if eq $.Env "development" }} --profile -t{{- end }}
       args:
         warn: false
         executable: /bin/bash

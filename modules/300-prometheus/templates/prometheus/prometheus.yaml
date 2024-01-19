@@ -167,6 +167,9 @@ spec:
   ruleNamespaceSelector:
     matchLabels:
       prometheus.deckhouse.io/rules-watcher-enabled: "true"
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
       heritage: deckhouse
@@ -183,6 +186,9 @@ spec:
     matchLabels:
       prometheus: main
   probeSelector:
+    matchLabels:
+      prometheus: main
+  scrapeConfigSelector:
     matchLabels:
       prometheus: main
   secrets:
@@ -218,8 +224,13 @@ spec:
     {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
     {{- end }}
     {{- if .spec.tlsConfig }}
+      {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
+      {{- if .spec.tlsConfig.ca }}
+        {{- $_ := unset $tlsConfig "ca" }}
+        {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-remote-write-ca-%s" .name) "key" "ca.crt")) }}
+      {{- end }}
     tlsConfig:
-      {{- .spec.tlsConfig | toYaml | nindent 6 }}
+      {{- $tlsConfig | toYaml | nindent 6 }}
     {{- end }}
   {{- end }}
 {{- end }}

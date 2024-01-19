@@ -949,7 +949,7 @@ entries:
                   url: /modules/160-multitenancy-manager/cr.html
         - title:
             en: Admission Policy
-            ru: Политики контроля доступа
+            ru: Политики безопасности
           folders:
             - title:
                 en: Description
@@ -1079,7 +1079,7 @@ entries:
             - title: FAQ
               url: /modules/031-ceph-csi/faq.html
         - title: linstor
-          featureStatus: experimental
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description

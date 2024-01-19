@@ -159,6 +159,8 @@ spec:
           type: object
           description: |
             This object manages RBAC and namespace-based authorization.
+
+            The settings determine which access level is assigned to the user and/or group.
           required:
           - spec
           properties:
@@ -240,11 +242,28 @@ spec:
                         matchExpressions:
                           type: array
                           description: An array of set-based expressions.
+                          x-doc-examples:
+                            - - key: tier
+                                operator: In
+                                values:
+                                  - production
+                                  - staging
+                              - key: tier
+                                operator: NotIn
+                                values: [production]
                           items:
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [ Exists, DoesNotExist ]
+                                required: [ key, operator ]
+                                not:
+                                  required: [ values ]
+                              - properties:
+                                  operator:
+                                    enum: [ In, NotIn ]
+                                required: [ key, operator, values ]
                             type: object
-                            required:
-                              - key
-                              - operator
                             properties:
                               key:
                                 description: A label name.
@@ -252,10 +271,14 @@ spec:
                               operator:
                                 description: A comparison operator.
                                 type: string
-                                enum: [In,NotIn,Exists,DoesNotExist]
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
                               values:
-                                type: array
                                 description: A label value.
+                                type: array
                                 items:
                                   type: string
                                   pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
