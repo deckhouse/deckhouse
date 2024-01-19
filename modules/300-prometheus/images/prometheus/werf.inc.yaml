@@ -14,7 +14,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -45,7 +45,7 @@ shell:
   - echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
   - apt-get update && apt-get install -y yarn
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.44.0
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
   - mkdir /prometheus && cd /prometheus
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
   - cd /prometheus/prometheus/web/ui
@@ -58,9 +58,6 @@ shell:
   - npm run build
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
-  - go get -u golang.org/x/net@v0.17.0
-  - go get -u github.com/docker/distribution@v2.8.3
-  - go get -u google.golang.org/grpc@v1.58.3
   - go mod tidy
   - find /patches -name '*.patch' -exec git apply {} \;
   - go generate -tags plugins ./plugins
