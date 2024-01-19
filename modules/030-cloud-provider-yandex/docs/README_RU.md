@@ -185,3 +185,68 @@ title: "Cloud provider — Yandex Cloud"
     ```sh
     p@$$w0rd
     ```
+
+### Интеграция с Yandex Managed Service for Prometheus
+
+С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
+
+#### Запись метрик
+
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
+1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
+1. Создайте ресурс `PrometheusRemoteWrite`:
+
+    ```sh
+    kubectl apply -f - <<< '
+    apiVersion: deckhouse.io/v1
+    kind: PrometheusRemoteWrite
+    metadata:
+      name: yc-remote-write
+    spec:
+      url: <url_запись_метрик>
+      bearerToken: <API_ключ>
+    '
+    ```
+
+    Где:
+
+    - `<url_запись_метрик>` - url со страницы Yandex Monitoring/Prometheus/Запись метрик.
+    - `<API_ключ>` - API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+
+    Также вы можете указать дополнительные параметры в соответствии с [документацией](../modules/300-prometheus/cr.html#prometheusremotewrite).
+
+Подробнее с данной функциональностью можно ознакомится в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
+
+#### Чтение метрик через Grafana
+
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
+1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
+1. Создайте ресурс `GrafanaAdditionalDatasource`:
+
+    ```sh
+    kubectl apply -f - <<< '
+    apiVersion: deckhouse.io/v1
+    kind: GrafanaAdditionalDatasource
+    metadata:
+      name: managed-prometheus
+    spec:
+      type: prometheus
+      access: Proxy
+      url: <url_чтение_метрик_через_Grafana>
+      basicAuth: false
+      jsonData:
+        timeInterval: 30s
+        httpMethod: POST
+        httpHeaderName1: Authorization
+      secureJsonData:
+        httpHeaderValue1: Bearer <API_ключ>
+    ```
+
+    Где:
+
+    - `<url_чтение_метрик_через_Grafana>` - url со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
+    - `<API_ключ>` - API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+
+    Также вы можете указать дополнительные параметры в соответствии с [документацией](../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+
+Подробнее с данной функциональностью можно ознакомится в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
