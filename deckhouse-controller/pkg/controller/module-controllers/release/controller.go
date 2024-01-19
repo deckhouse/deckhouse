@@ -874,8 +874,12 @@ func (c *Controller) restoreAbsentSourceModules() error {
 
 			// module version on file system doesn't equal to the deployed module release
 			if filepath.Base(dstDir) != moduleVersion {
-				err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight)
-				if err != nil {
+				if err := os.Remove(moduleDir); err != nil {
+					c.logger.Warnf("Couldn't delete stale symlink %s for module %s: err", moduleDir, moduleName, err)
+					continue
+
+				}
+				if err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight); err != nil {
 					c.logger.Warnf("Couldn't create module symlink: %s", err)
 					continue
 				}
