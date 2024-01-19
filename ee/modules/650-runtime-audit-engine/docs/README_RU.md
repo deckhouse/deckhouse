@@ -72,6 +72,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Однако у драйвера eBPF есть и ограничения:
 * на некоторых системах пробы (probe) eBPF могут не работать;
 * минимальная необходимая версия ядра Linux — 5.8.
+* включённый [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). проверить можно `ls -lah /sys/kernel/btf/vmlinux` либо в параметрах сборки ядра `CONFIG_DEBUG_INFO_BTF=y`
 
 ### Процессор / Память
 

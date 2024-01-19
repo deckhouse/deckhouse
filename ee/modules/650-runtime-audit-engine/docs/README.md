@@ -73,7 +73,8 @@ Such a schema allows the IaC approach to be used to maintain Falco rules.
 The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
 However, there are known limitations to the eBPF driver:
 * The eBPF probe may not work for every system.
-* At least a Linux kernel version 4.14 is required, although the Falco project suggests an LTS kernel version 4.14/4.19 or higher.
+* The minimum required Linux kernel version is 5.8.
+* enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). check `ls -lah /sys/kernel/btf/vmlinux` or in the kernel build parameters `CONFIG_DEBUG_INFO_BTF=y`.
 
 ### CPU / Memory
 
