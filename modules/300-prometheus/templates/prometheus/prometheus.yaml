@@ -51,7 +51,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.44.0
+  version: v2.45.2
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
