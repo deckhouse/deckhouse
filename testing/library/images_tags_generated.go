@@ -104,12 +104,15 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"cniCilium": map[string]interface{}{
 		"builderArtifact":        "imageHash-cniCilium-builderArtifact",
+		"builderDistrolessRuntimeArtifact": "imageHash-cniCilium-builderDistrolessRuntimeArtifact",
 		"builderRuntimeArtifact": "imageHash-cniCilium-builderRuntimeArtifact",
 		"checkKernelVersion":     "imageHash-cniCilium-checkKernelVersion",
 		"cilium":                 "imageHash-cniCilium-cilium",
+		"ciliumDistroless":                 "imageHash-cniCilium-ciliumDistroless",
 		"kubeRbacProxy":          "imageHash-cniCilium-kubeRbacProxy",
 		"operator":               "imageHash-cniCilium-operator",
 		"safeAgentUpdater":       "imageHash-cniCilium-safeAgentUpdater",
+
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
