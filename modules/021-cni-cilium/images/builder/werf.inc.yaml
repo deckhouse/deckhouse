@@ -175,7 +175,7 @@ fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/
-  to: /usr/local/bin
+  to: /bin
   before: install
   includePaths:
   - clang
