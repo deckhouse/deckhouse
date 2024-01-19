@@ -18,6 +18,8 @@ title: "Cloud provider — Yandex Cloud"
 
 При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех сетей, в том числе и для сети кластера Deckhouse Kubernetes Platform. Группа безопасности по умолчанию содержит правила разрешающие любой трафик в любом направлении (входящий и исходящий) и применяется для всех подсетей в рамках облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности. Вы можете изменить правила группы безопасности по умолчанию, если вам необходимо контролировать трафик в вашем кластере.
 
+Здесь приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+
 {% alert level="danger" %}
 Не удаляйте правило, разрешающее любой трафик, до того как закончите настройку всех остальных правил для группы безопасности. Это может нарушить работоспособность кластера.
 {% endalert %}
@@ -40,6 +42,146 @@ title: "Cloud provider — Yandex Cloud"
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 
-{% alert level="warning" %}
-Здесь приведены общие рекомендации по настройке группы безопасности. Для более тонкой настройки/ограничения доступа обратитесь в поддержку Deckhouse.
-{% endalert %}
+### Интеграция с Yandex Lockbox
+
+С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
+
+Приведенную инструкцию следует рассматривать как "Быстрый старт". Для использования интеграции в продуктивных средах ознакомьтесь с документацией:
+
+- [Yandex Lockbox](https://cloud.yandex.ru/ru/docs/lockbox/)
+- [Синхронизация с секретами Yandex Lockbox](https://cloud.yandex.ru/ru/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
+- [External Secret Operator](https://external-secrets.io/latest/)
+
+#### Инструкция по развертыванию
+
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create), необходимый для работы External Secrets Operator:
+
+    ```sh
+    yc iam service-account create --name eso-service-account
+    ```
+
+1. [Создайте авторизованный ключ](https://cloud.yandex.ru/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и сохраните его в файл:
+
+    ```sh
+    yc iam key create --service-account-name eso-service-account --output authorized-key.json
+    ```
+
+1. [Назначьте](https://cloud.yandex.ru/ru/docs/iam/operations/sa/assign-role-for-sa) сервисному аккаунту [роли](https://cloud.yandex.com/ru/docs/lockbox/security/#service-roles) `lockbox.editor`, `lockbox.payloadViewer` и `kms.keys.encrypterDecrypter` для доступа ко всем секретам каталога:
+
+    ```sh
+    folder_id=<идентификатор каталога>
+    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.editor
+    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.payloadViewer
+    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
+    ```
+
+    Для более тонкой настройки ознакомьтесь с [управлением доступом в Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
+
+1. Установите External Secrets Operator с помощью Helm-чарта согласно [инструкции](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install)
+
+    Обратите внимание, что вам может понадобится задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
+
+    Скачайте и распакуйте чарт:
+
+    ```sh
+    helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
+      --version 0.5.5 \
+      --untar
+    ```
+
+    Установите Helm-чарт:
+
+    ```sh
+    helm install -n external-secrets --create-namespace \
+      --set-file auth.json=authorized-key.json \
+      external-secrets ./external-secrets/
+    ```
+
+    Где:
+    - `authorized-key.json` - название файла с авторизованным ключом из шага 2
+
+1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
+
+    ```sh
+    kubectl -n external-secrets apply -f - <<< '
+    apiVersion: external-secrets.io/v1alpha1
+    kind: SecretStore
+    metadata:
+      name: secret-store
+    spec:
+      provider:
+        yandexlockbox:
+          auth:
+            authorizedKeySecretRef:
+              name: sa-creds
+              key: key'
+    ```
+
+    Где:
+    - `sa-creds` - название `Secret`, содержащий авторизованный ключ. Этот секрет должен появится после установки Helm-чарта.
+    - `key` - название ключа в поле `.data` секрета выше.
+
+На данном этапе интеграция завершена.
+
+#### Проверка работоспособности
+
+1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
+
+    ```sh
+    $ kubectl -n external-secrets get po
+    NAME                                                READY   STATUS    RESTARTS   AGE
+    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
+    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
+    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
+
+    $ kubectl -n external-secrets get secretstores.external-secrets.io 
+    NAME           AGE   STATUS
+    secret-store   69m   Valid
+    ```
+
+1. [Создайте секрет](https://cloud.yandex.ru/ru/docs/lockbox/operations/secret-create) Yandex Lockbox со следующими параметрами:
+
+    - **Имя** - `lockbox-secret`.
+    - **Ключ** - введите неконфиденциальный идентификатор `password`.
+    - **Значение** - введите конфиденциальные данные для хранения `p@$$w0rd`.
+
+1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
+
+    ```sh
+    kubectl -n external-secrets apply -f - <<< '
+    apiVersion: external-secrets.io/v1alpha1
+    kind: ExternalSecret
+    metadata:
+      name: external-secret
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: secret-store
+        kind: SecretStore
+      target:
+        name: k8s-secret
+      data:
+      - secretKey: password
+        remoteRef:
+          key: <идентификатор_секрета>
+          property: password'
+    ```
+
+    Где:
+
+    - `spec.target.name` - имя нового Secret: `k8s-secret`. External Secret Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
+    - `spec.data[].secretKey` - название ключа в поле `.data` секрета, который создаст External Secret Operator.
+    - `spec.data[].remoteRef.key` - идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
+    - `spec.data[].remoteRef.property` - **ключ**, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.
+
+1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
+
+    ```sh
+    kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+    ```
+
+    В выводе команды будет содержаться **значение** ключа `password` секрета `lockbox-secret`, созданного ранее:
+
+    ```sh
+    p@$$w0rd
+    ```
