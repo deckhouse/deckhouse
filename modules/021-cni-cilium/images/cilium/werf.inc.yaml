@@ -59,3 +59,35 @@ docker:
     HUBBLE_COMPAT: legacy-json-output
   WORKDIR: "/home/cilium"
   CMD: ["/usr/bin/cilium"]
+---
+# #####################################################################
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-distroless-runtime-artifact
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+  add: /tmp/install
+  to: /
+  before: install
+- artifact: {{ $.ModuleName }}/builder-envoy-artifact
+  add: /usr/bin/cilium-envoy
+  to: /usr/bin/cilium-envoy
+  before: install
+- artifact: {{ $.ModuleName }}/builder-hubble-artifact
+  add: /out/linux/amd64/bin/hubble
+  to: /usr/bin/hubble
+  before: install
+- artifact: {{ $.ModuleName }}/builder-hubble-artifact
+  add: /out/linux/bash_completion
+  to: /etc/bash_completion.d/hubble
+  before: install
+docker:
+  ENV:
+    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+    INITSYSTEM: SYSTEMD
+    HUBBLE_COMPAT: legacy-json-output
+  WORKDIR: "/home/cilium"
+  CMD: ["/usr/bin/cilium"]
+
+
+

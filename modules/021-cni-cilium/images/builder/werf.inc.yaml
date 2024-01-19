@@ -23,6 +23,25 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
+  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  install:
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./build-gops.sh
+  - ./download-cni.sh
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 import:
@@ -115,25 +134,6 @@ shell:
   - ./install-protoc.sh
   - ./install-protoplugins.sh
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
-  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  install:
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./build-gops.sh
-  - ./download-cni.sh
----
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 shell:
@@ -146,3 +146,82 @@ shell:
   install:
   - /tmp/download-hubble.sh
   - /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
+---
+# #####################################################################
+---
+{{ $binaries := "/usr/bin/jq /usr/bin/curl /bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod /bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat /usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr sbin/arpd /usr/sbin/genl /usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml /usr/sbin/nfnl_osf" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/alt
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+shell:
+  install:
+    - apt-get update
+    - apt-get upgrade -y
+    - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+    - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends jq curl iproute2 iptables ipset kmod
+    - dpkg -i /iptables/*.deb
+    - rm -rf /iptables
+
+    - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
+    - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+    - cd /go/src/github.com/cilium/cilium/images/runtime
+    - ./iptables-wrapper-installer.sh --no-sanity-check
+
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+        rm -f "/relocate/sbin/${cmd}"
+        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+      done
+      # broken symlinks are not imported from the artifact
+      touch /iptables-wrapper
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless-runtime-artifact
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+  add: /etc/ssl/certs/ca-certificates.crt
+  to: /etc/ssl/certs/ca-certificates.crt
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /etc/localtime
+  to: /etc/localtime
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64/iptables
+  to: /lib64/iptables
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: install
+---
