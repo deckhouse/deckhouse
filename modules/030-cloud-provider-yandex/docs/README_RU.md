@@ -213,7 +213,7 @@ title: "Cloud provider — Yandex Cloud"
     - `<url_запись_метрик>` - url со страницы Yandex Monitoring/Prometheus/Запись метрик.
     - `<API_ключ>` - API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-    Также вы можете указать дополнительные параметры в соответствии с [документацией](../modules/300-prometheus/cr.html#prometheusremotewrite).
+    Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#prometheusremotewrite).
 
 Подробнее с данной функциональностью можно ознакомится в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -247,6 +247,6 @@ title: "Cloud provider — Yandex Cloud"
     - `<url_чтение_метрик_через_Grafana>` - url со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
     - `<API_ключ>` - API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-    Также вы можете указать дополнительные параметры в соответствии с [документацией](../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+    Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
 
 Подробнее с данной функциональностью можно ознакомится в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
