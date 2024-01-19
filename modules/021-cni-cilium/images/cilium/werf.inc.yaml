@@ -62,7 +62,7 @@ docker:
 ---
 # #####################################################################
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-distroless-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
