@@ -111,7 +111,7 @@ func (c *Client) httpGet(ctx context.Context, url string) ([]byte, int, error) {
 
 	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, 0, err
+		return nil, res.StatusCode, err
 	}
 
 	return dataBytes, res.StatusCode, nil
