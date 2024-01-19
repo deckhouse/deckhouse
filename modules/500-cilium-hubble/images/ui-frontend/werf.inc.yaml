@@ -6,10 +6,6 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
-  add: /etc/nginx/conf.d/default.conf
-  to: /opt/nginx-static/conf/nginx.conf
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
   add: /app
   to: /app
   before: install
