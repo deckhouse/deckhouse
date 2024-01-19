@@ -15,6 +15,9 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
       "glob_minimum_cooldown_ms": 1000,
       "use_apiserver_cache": true
     }
