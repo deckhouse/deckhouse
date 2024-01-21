@@ -892,6 +892,14 @@ func (c *Controller) restoreAbsentSourceModules() error {
 func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource string, moduleWeight uint32) error {
 	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
 
+	// check if there is a symlink for the module with different weight in the symlink folder
+	anotherModuleSymlink, _ := findExistingModuleSymlink(c.symlinksDir, moduleName)
+	if len(anotherModuleSymlink) > 0 {
+		if err := os.Remove(filepath.Join(c.symlinksDir, anotherModuleSymlink)); err != nil {
+			return errors.Errorf("Couldn't delete stale symlink %s for module %s: err", anotherModuleSymlink, moduleName, err)
+		}
+	}
+
 	ms, err := c.moduleSourcesLister.Get(moduleSource)
 	if err != nil {
 		return errors.Errorf("ModuleSource %q is absent. Skipping restoration of the module %q", moduleSource, moduleName)
