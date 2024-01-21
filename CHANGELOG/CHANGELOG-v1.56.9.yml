@@ -1,0 +1,5 @@
+external-module-manager:
+  fixes:
+    - summary: Fix outdated module versions in multi-master environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7222
+
