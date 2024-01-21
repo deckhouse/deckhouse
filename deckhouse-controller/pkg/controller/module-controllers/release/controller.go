@@ -893,7 +893,10 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
 
 	// check if there is a symlink for the module with different weight in the symlink folder
-	anotherModuleSymlink, _ := findExistingModuleSymlink(c.symlinksDir, moduleName)
+	anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
+	if err != nil {
+		return errors.Errorf("Couldn't check if there are any other symlinks for module %s: err", moduleName, err)
+	}
 	if len(anotherModuleSymlink) > 0 {
 		if err := os.Remove(filepath.Join(c.symlinksDir, anotherModuleSymlink)); err != nil {
 			return errors.Errorf("Couldn't delete stale symlink %s for module %s: err", anotherModuleSymlink, moduleName, err)
