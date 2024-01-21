@@ -892,15 +892,26 @@ func (c *Controller) restoreAbsentSourceModules() error {
 func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource string, moduleWeight uint32) error {
 	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
 
+	// check if there is a symlink for the module with different weight in the symlink folder
+	anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
+	if err != nil {
+		return fmt.Errorf("Couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
+	}
+	if len(anotherModuleSymlink) > 0 {
+		if err := os.Remove(anotherModuleSymlink); err != nil {
+			return fmt.Errorf("Couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
+		}
+	}
+
 	ms, err := c.moduleSourcesLister.Get(moduleSource)
 	if err != nil {
-		return errors.Errorf("ModuleSource %q is absent. Skipping restoration of the module %q", moduleSource, moduleName)
+		return fmt.Errorf("ModuleSource %v is absent. Skipping restoration of the module %v", moduleSource, moduleName)
 	}
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 	if err != nil {
-		return errors.Errorf("Download module %q with version %s failed: %s. Skipping", moduleName, moduleVersion, err)
+		return fmt.Errorf("Download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
 	}
 
 	// restore symlink
@@ -908,7 +919,7 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
 	err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
 	if err != nil {
-		return errors.Errorf("Create symlink for module %q failed: %s", moduleName, err)
+		return fmt.Errorf("Create symlink for module %v failed: %w", moduleName, err)
 	}
 	log.Infof("Module %s:%s restored", moduleName, moduleVersion)
 
