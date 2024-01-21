@@ -51,6 +51,7 @@
  - **[dhctl]** Fix mirror not adding module-named tags at modules repo root. [#6782](https://github.com/deckhouse/deckhouse/pull/6782)
  - **[dhctl]** Validate passed credentials against registry prior to mirroring. [#6629](https://github.com/deckhouse/deckhouse/pull/6629)
  - **[extended-monitoring]** Fix wrong permissions for `k8s-image-availability-exporter`. [#6754](https://github.com/deckhouse/deckhouse/pull/6754)
+ - **[external-module-manager]** Fix multiple symlinks for a single module in the symlink folder. [#7228](https://github.com/deckhouse/deckhouse/pull/7228)
  - **[external-module-manager]** Fix outdated module versions in multi-master environment. [#7222](https://github.com/deckhouse/deckhouse/pull/7222)
  - **[external-module-manager]** Fix ModuleRelease nightly cleanup. [#7108](https://github.com/deckhouse/deckhouse/pull/7108)
  - **[external-module-manager]** Get scheme for `deckhouse` ModuleSource from the deckhouse values. [#7105](https://github.com/deckhouse/deckhouse/pull/7105)
