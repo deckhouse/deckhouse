@@ -199,7 +199,7 @@ jobs:
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
             const hasBE = pr.labels.some((l) => l.name === 'edition/be');
-            const edition = defaultEdition;
+            let edition = defaultEdition;
             if (hasCE) {
               edition = 'CE';
             } else if (hasEE) {
