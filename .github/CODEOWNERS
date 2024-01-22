@@ -3,7 +3,7 @@
 010-operator-prometheus-crd/ @nabokihms
 010-prometheus-crd/         @nabokihms
 015-admission-policy-engine/ @yalosev
-021-cni-cilium/             @RomanenkoDenys @apolovov
+021-cni-cilium/             @apolovov
 030-cloud-provider-openstack/ @RomanenkoDenys @name212
 030-cloud-provider-vsphere/ @RomanenkoDenys
 041-linstor/                @AleksZimin
