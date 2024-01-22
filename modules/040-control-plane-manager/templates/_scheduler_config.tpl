@@ -7,9 +7,7 @@ profiles:
 - pluginConfig:
   - name: PodTopologySpread
     args:
-      {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
       defaultingType: List
-      {{- end }}
       defaultConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone

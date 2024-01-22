@@ -66,11 +66,6 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
     --node-labels=node.deckhouse.io/type={{ .nodeGroup.nodeType }} \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
-{{- if semverCompare "<1.24" .kubernetesVersion }}
-    --cni-bin-dir=/opt/cni/bin/ \\
-    --cni-conf-dir=/etc/cni/net.d/ \\
-    --network-plugin=cni \\
-{{- end }}
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
     --address=${discovered_node_ip:-0.0.0.0} \\
 {{- /* During the first multi-network Node bootstrap `kubelet` discovers external IP getting it by Node's hostname. */ -}}

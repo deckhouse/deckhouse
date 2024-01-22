@@ -19,10 +19,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	sprig "github.com/go-task/slim-sprig"
 	"testing"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -71,7 +71,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.24"
+kubernetesVersion: "1.29"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:

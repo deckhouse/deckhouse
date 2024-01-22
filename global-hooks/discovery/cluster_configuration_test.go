@@ -41,7 +41,7 @@ cloud:
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.24"
+kubernetesVersion: "1.29"
 clusterDomain: "test.local"
 `
 		stateA = `

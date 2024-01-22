@@ -23,27 +23,6 @@ import (
 )
 
 const (
-	ngCriNotManagedKubeVer1_24 = `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ngNotManaged
-spec:
-  cri:
-    type: NotManaged
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ngNotManaged
-status:
-  nodeInfo:
-    containerRuntimeVersion: docker
-    kubeletVersion: v1.24.0
-`
-
 	ngCriNotManagedKubeVer1_25 = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -175,21 +154,6 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		})
 	})
 
-	Context("NodeGroup with CRI NotManaged, max kube ver 1.24.0", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
-			f.BindingContexts.Set(
-				f.KubeStateSetAndWaitForBindingContexts(ngCriNotManagedKubeVer1_24, 1),
-			)
-			f.RunHook()
-		})
-		It("Max kube version = "+notManagedCriMaxKubeVersion, func() {
-			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesWithDocker)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeTrue())
-		})
-	})
 	Context("NodeGroup with CRI NotManaged, max kube ver 1.25.0", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)

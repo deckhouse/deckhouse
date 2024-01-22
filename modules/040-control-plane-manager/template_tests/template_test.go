@@ -59,7 +59,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    effectiveKubernetesVersion: "1.24"
+    effectiveKubernetesVersion: "1.29"
     etcdServers:
       - https://192.168.199.186:2379
     pkiChecksum: checksum

@@ -28,7 +28,7 @@ func TestExecuteTemplate(t *testing.T) {
 nodeIP: "127.0.0.1"
 runType: "ClusterBootstrap"
 clusterConfiguration:
-  kubernetesVersion: "1.23"
+  kubernetesVersion: "1.29"
   clusterType: "Cloud"
   serviceSubnetCIDR: "127.0.0.1/24"
   podSubnetCIDR: "127.0.0.1/24"
