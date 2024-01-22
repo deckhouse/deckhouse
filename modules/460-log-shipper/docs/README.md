@@ -72,6 +72,10 @@ The following metadata fields will be exposed:
 | `node`       | spec.nodeName           |
 | `pod_owner`  | metadata.ownerRef[0]    |
 
+| Label        | Node spec path                            |
+|--------------|-------------------------------------------|
+| `node_group` | metadata.labels[].node.deckhouse.io/group |
+
 {% alert -%}
 Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.
 {%- endalert %}
