@@ -12,77 +12,77 @@ The `cloud-provider-yandex` module:
 - Registers with the [node-manager](../../modules/040-node-manager/) module so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
 - Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/)).
 
-## Интеграция с Yandex Cloud
+## Yandex Cloud integration
 
-### Настройка групп безопасности
+### Configuring security groups
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех сетей, в том числе и для сети кластера Deckhouse Kubernetes Platform. Группа безопасности по умолчанию содержит правила разрешающие любой трафик в любом направлении (входящий и исходящий) и применяется для всех подсетей в рамках облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности. Вы можете изменить правила группы безопасности по умолчанию, если вам необходимо контролировать трафик в вашем кластере.
+When creating a [cloud network](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud creates a default [security group](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Kubernetes Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
 
-Здесь приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
 
 {% alert level="danger" %}
-Не удаляйте правило, разрешающее любой трафик, до того как закончите настройку всех остальных правил для группы безопасности. Это может нарушить работоспособность кластера.
+Do not delete the rule that allows for traffic to pass in any direction before finishing configuring all the other rules for the security group. Doing so may disrupt the performance of the cluster.
 {% endalert %}
 
-1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
+1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
+   The network name matches the `prefix` field of the [ClusterConfiguration] resource(../../installing/configuration.html#clusterconfiguration). It can be retrieved using the following command:
 
    ```bash
    kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
+1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
 
-    ![Группа безопасности по умолчанию](../../images/030-cloud-provider-yandex/sg-ru-default.png)
+    ![The default security group](../../images/030-cloud-provider-yandex/sg-ru-default.png)
 
-1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
+1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-    ![Правила для группы безопасности](../../images/030-cloud-provider-yandex/sg-ru-rules.png)
+    ![Rules for the security group](../../images/030-cloud-provider-yandex/sg-ru-rules.png)
 
-1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
+1. Delete the rule that allows for any **inbound** traffic (in the screenshot above it has already been deleted), and save the changes.
 
-### Интеграция с Yandex Lockbox
+### Yandex Lockbox integration
 
-С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
+The [External Secrets Operator](https://github.com/external-secrets/external-secrets) allows you to synchronize [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) secrets with the Deckhouse Kubernetes Platform cluster secrets.
 
-Приведенную инструкцию следует рассматривать как *Быстрый старт*. Для использования интеграции в продуктивных средах ознакомьтесь со следующими ресурсами:
+The instructions below are meant to be viewed as a *Quick Start* guide. To use integration in production environments, please review the following resources:
 
 - [Yandex Lockbox](https://cloud.yandex.ru/ru/docs/lockbox/)
-- [Синхронизация с секретами Yandex Lockbox](https://cloud.yandex.ru/ru/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
+- [Synchronizing with Yandex Lockbox secrets](https://cloud.yandex.ru/ru/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
 - [External Secret Operator](https://external-secrets.io/latest/)
 
-#### Инструкция по развертыванию
+#### Deployment instructions
 
-1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create), необходимый для работы External Secrets Operator:
+1. [Create a service account](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) required for the External Secrets Operator:
 
    ```shell
    yc iam service-account create --name eso-service-account
    ```
 
-1. [Создайте авторизованный ключ](https://cloud.yandex.ru/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и сохраните его в файл:
+1. [Create an authorized key](https://cloud.yandex.ru/ru/docs/iam/operations/authorized-key/create) for the service account and save it to a file:
 
    ```shell
    yc iam key create --service-account-name eso-service-account --output authorized-key.json
    ```
 
-1. [Назначьте](https://cloud.yandex.ru/ru/docs/iam/operations/sa/assign-role-for-sa) сервисному аккаунту [роли](https://cloud.yandex.com/ru/docs/lockbox/security/#service-roles) `lockbox.editor`, `lockbox.payloadViewer` и `kms.keys.encrypterDecrypter` для доступа ко всем секретам каталога:
+1. [Assign](https://cloud.yandex.ru/ru/docs/iam/operations/sa/assign-role-for-sa) `lockbox.editor`, `lockbox.payloadViewer`, and `kms.keys.encrypterDecrypter` [roles](https://cloud.yandex.com/ru/docs/lockbox/security/#service-roles) to a service account to access all catalog secrets:
 
    ```shell
-   folder_id=<идентификатор каталога>
+   folder_id=<folder id>
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.editor
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.payloadViewer
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
    ```
 
-   Для более тонкой настройки ознакомьтесь с [управлением доступом в Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
+   For advanced customization, check out [access control in Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
 
-1. Установите External Secrets Operator с помощью Helm-чарта согласно [инструкции](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
+1. Install the External Secrets Operator using the Helm chart according to [instructions](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
-   Обратите внимание, что вам может понадобиться задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
-
-   Скачайте и распакуйте чарт:
+   Note that you may need to set `nodeSelector`, `tolerations` and other parameters. To do this, use the `./external-secrets/values.yaml` file after unpacking the Helm-chart.
+   
+   Pull and extract the chart:
 
    ```shell
    helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
@@ -90,7 +90,7 @@ The `cloud-provider-yandex` module:
      --untar
    ```
 
-   Установите Helm-чарт:
+   Install the Helm chart:
 
    ```shell
    helm install -n external-secrets --create-namespace \
@@ -98,10 +98,10 @@ The `cloud-provider-yandex` module:
      external-secrets ./external-secrets/
    ```
 
-   Где:
-   - `authorized-key.json` — название файла с авторизованным ключом из шага 2.
+   Where:
+   - `authorized-key.json` — the name of the file with the authorized key from step 2.
 
-1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
+1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) with the `sa-creds` secret in it:
 
    ```shell
    kubectl -n external-secrets apply -f - <<< '
@@ -118,13 +118,13 @@ The `cloud-provider-yandex` module:
              key: key'
    ```
 
-   Где:
-   - `sa-creds` — название `Secret`, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
-   - `key` — название ключа в поле `.data` секрета выше.
+   Where:
+   - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm Chart has been installed.
+   - `key` — the name of the key in the `.data` field of the secret above.
 
-#### Проверка работоспособности
+#### Checking that everything works as expected
 
-1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
+1. Check the status of the External Secrets Operator and the secrets store you created:
 
    ```shell
    $ kubectl -n external-secrets get po
@@ -138,13 +138,13 @@ The `cloud-provider-yandex` module:
    secret-store   69m   Valid
    ```
 
-1. [Создайте секрет](https://cloud.yandex.ru/ru/docs/lockbox/operations/secret-create) Yandex Lockbox со следующими параметрами:
+1. [Create](https://cloud.yandex.ru/ru/docs/lockbox/operations/secret-create) a Yandex Lockbox secret with the following parameters:
 
-    - **Имя** — `lockbox-secret`.
-    - **Ключ** — введите неконфиденциальный идентификатор `password`.
-    - **Значение** — введите конфиденциальные данные для хранения `p@$$w0rd`.
-
-1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
+    - **Name** — `lockbox-secret`.
+    - **Kay** — enter the non-confidential identifier `password`.
+    - **Value** — enter the confidential data to store `p@$$w0rd`.
+      
+1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
    ```shell
    kubectl -n external-secrets apply -f - <<< '
@@ -162,38 +162,38 @@ The `cloud-provider-yandex` module:
      data:
      - secretKey: password
        remoteRef:
-         key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
+         key: <SECRET_ID>
          property: password'
    ```
 
-   Где:
+   Where:
 
-   - `spec.target.name` — имя нового секрета. External Secret Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
-   - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secret Operator.
-   - `spec.data[].remoteRef.key` — идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
-   - `spec.data[].remoteRef.property` — **ключ**, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.
+   - `spec.target.name` — the name of the new secret. The External Secret Operator will create this secret in the Deckhouse Kubernetes Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
+   - `spec.data[].secretKey` — the name of the key in the `.data` field of the secret that the External Secret Operator will create.
+   - `spec.data[].remoteRef.key` — identifier of the Yandex Lockbox's `lockbox-secret` created earlier, e.g., `e6q28nvfmhu539******`.
+   - `spec.data[].remoteRef.property` — the **key** you specified earlier for the Yandex Lockbox's `lockbox-secret`.
 
-1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
+1. Make sure that the new `k8s-secret` key contains the `lockbox-secret` value:
 
    ```shell
    kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
-   В выводе команды будет содержаться **значение** ключа `password` секрета `lockbox-secret`, созданного ранее:
+   The output of the command should contain the **value** of the `password` key of the `lockbox-secret` created earlier:
 
    ```shell
    p@$$w0rd
    ```
 
-### Интеграция с Yandex Managed Service for Prometheus
+### Yandex Managed Service for Prometheus integration
 
-С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
+This integration lets you use the [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) as an external metrics repository, e.g., for long-term metrics storage.
 
-#### Запись метрик
+#### Writing metrics
 
-1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
-1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `PrometheusRemoteWrite`:
+1. [Create a service account](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) with the `monitoring.editor` role.
+1. [Create an API key](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) for the service account.
+1. Create a `PrometheusRemoteWrite` resource:
 
    ```shell
    kubectl apply -f - <<< '
@@ -202,25 +202,25 @@ The `cloud-provider-yandex` module:
    metadata:
      name: yc-remote-write
    spec:
-     url: <URL_ЗАПИСИ_МЕТРИК>
-     bearerToken: <API_КЛЮЧ>
+     url: <URL_TO_WRITE_METRICS>
+     bearerToken: <API_KEY>
    '
    ```
 
-   Где:
+   Where:
 
-   - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
-   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+   - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
+   - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#prometheusremotewrite).
+   You may also specify additional parameters; refer to the [documentation](../../modules/300-prometheus/cr.html#prometheusremotewrite).
 
-Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
+More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
-#### Чтение метрик через Grafana
+#### Reading metrics with Grafana
 
-1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
-1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `GrafanaAdditionalDatasource`:
+1. [Create a service account](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) with the `monitoring.viewer` role.
+1. [Create an API key](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) for the service account.
+1. Create a `GrafanaAdditionalDatasource` resource:
 
    ```shell
    kubectl apply -f - <<< '
@@ -231,21 +231,21 @@ The `cloud-provider-yandex` module:
    spec:
      type: prometheus
      access: Proxy
-     url: <URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>
+     url: <URL_READING_METRICS_WITH_GRAFANA>
      basicAuth: false
      jsonData:
        timeInterval: 30s
        httpMethod: POST
        httpHeaderName1: Authorization
      secureJsonData:
-       httpHeaderValue1: Bearer <API_КЛЮЧ>
+       httpHeaderValue1: Bearer <API_KEY>
    ```
 
-   Где:
+   Where:
 
-   - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
-   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+   - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
+   - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+   You may also specify additional parameters; refer to the [documentation](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
 
-Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
+More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
