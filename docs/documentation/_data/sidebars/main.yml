@@ -31,6 +31,8 @@ entries:
                 en: Global configuration
                 ru: Глобальные настройки
               url: /deckhouse-configure-global.html
+            - title: Custom Resources
+              url: /cr.html
         - title:
             en: Release channels
             ru: Каналы обновлений
@@ -800,7 +802,7 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/301-prometheus-metrics-adapter/configuration.html
-                - title: Custom resources
+                - title: Custom Resources
                   url: /modules/301-prometheus-metrics-adapter/cr.html
         - title:
             en: Vertical Pod autoscaler
@@ -822,7 +824,7 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/302-vertical-pod-autoscaler/configuration.html
-                - title: Custom resources
+                - title: Custom Resources
                   url: /modules/302-vertical-pod-autoscaler/cr.html
             - title: FAQ
               url: /modules/302-vertical-pod-autoscaler/faq.html

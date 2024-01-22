@@ -25,6 +25,15 @@ spec:
           type: object
           description: |
             Defines the configuration of the Deckhouse module. The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleConfig
+              metadata:
+                name: module-1
+              spec:
+                enabled: true
+                settings: { }
+                version: 1
           required:
             - spec
           properties:
