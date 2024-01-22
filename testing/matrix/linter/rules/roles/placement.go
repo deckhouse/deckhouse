@@ -40,7 +40,8 @@ func isSystemNamespace(actual string) bool {
 func isDeckhouseSystemNamespace(actual string) bool {
 	return actual == "d8-monitoring" ||
 		actual == "d8-system" ||
-		//TODO: remove next lines after RBAC objects naming fixes
+		// Temporary code required to ignore existing objects with incorrect naming
+		// TODO: remove next lines after RBAC objects naming fixes
 		actual == "d8-admission-policy-engine" ||
 		actual == "d8-operator-trivy" ||
 		actual == "d8-log-shipper"
