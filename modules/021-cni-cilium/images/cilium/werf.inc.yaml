@@ -86,6 +86,7 @@ docker:
     HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
     INITSYSTEM: SYSTEMD
     HUBBLE_COMPAT: legacy-json-output
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   WORKDIR: "/home/cilium"
   CMD: ["/usr/bin/cilium"]
 
