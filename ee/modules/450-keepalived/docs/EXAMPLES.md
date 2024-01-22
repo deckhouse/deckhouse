@@ -4,7 +4,7 @@ title: "The keepalived module: examples"
 
 ## Three public IP addresses
 
-Suppose there are three public IP addresses on three front nodes. Each virtual IP address is placed in a separate VRRP group. Thus, each address "jumps" independently of the others, and if there are three nodes in the cluster with the `node-role.deckhouse.io/frontend: ""` labels, then each IP gets its own MASTER node.
+There are three public IP addresses, each of which is linked to a separate front-end server. Each of the virtual IP addresses is part of a separate VRRP group, so each address switches independently of the others. If there are three nodes in the cluster with the label `none-role.deck house.io/frontend : ""`, then each IP will be linked to its main server.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -37,7 +37,7 @@ spec:
     - address: 42.43.44.103/32
 ```
 
-Suppose there is a gateway with a pair of IP addresses for LAN and WAN. In the case of the gateway, the private and public IPs are bind together, and they will "jump" between the nodes in tandem. In the below example, the VRRP traffic is routed through the LAN interface. It can be detected using the NetworkAddress method (assuming that each node has an IP belonging to this subnet).
+There is a gateway with two IP addresses: one for the internal (LAN) and one for the external (WAN) network. These two IP addresses work in pairs and switch between nodes together. The internal interface (LAN) is used for VRRP service traffic (traffic used to manage the VRRP group). This interface is defined using the `Network Address` functions with the assumption that each node has an IP address from the same subnet.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

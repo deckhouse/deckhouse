@@ -1,8 +1,8 @@
 ---
-title: "Cloud provider — OpenStack: FAQ"
+title: "Cloud provider — OpenStack"
 ---
 
-## How do I set up LoadBalancer?
+## Setting up the Load Balancer
 
 > **Note!** Load Balancer must support Proxy Protocol to determine the client IP correctly.
 
@@ -31,7 +31,7 @@ spec:
     value: frontend
 ```
 
-## How do I set up security policies on cluster nodes?
+## Setting up the security policies on cluster nodes
 
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
@@ -54,7 +54,7 @@ The `additionalSecurityGroups` field contains an array of strings with security 
 
 You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html) module.
 
-## How do I create a hybrid cluster?
+## Creating a hybrid cluster
 
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
@@ -84,7 +84,7 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 ```
 
-## How do I create an image in OpenStack?
+## Creating an image in OpenStack
 
 1. Download the latest stable Ubuntu 18.04 image:
 
@@ -96,7 +96,7 @@ volumeBindingMode: WaitForFirstConsumer
 
    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
 
-3. Otherwise, install the OpenStack client using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
+Or install the OpenStack client using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
    Also, you can run the container and mount an openrc file and a downloaded Ubuntu image in it:
 
@@ -104,13 +104,13 @@ volumeBindingMode: WaitForFirstConsumer
    docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.openrc:/openrc jmcvea/openstack-client
    ```
 
-4. Initialize the environment variables from the openrc file:
+3. Initialize the environment variables from the openrc file:
 
    ```shell
    source /openrc
    ```
 
-5. Get a list of available disk types:
+4. Get a list of available disk types:
 
    ```shell
    / # openstack volume type list
@@ -128,14 +128,14 @@ volumeBindingMode: WaitForFirstConsumer
    +--------------------------------------+---------------+-----------+
    ```
 
-6. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
+5. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
 
    ```shell
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
 
-7. Check that the image was created successfully:
+6. Check that the image was created successfully:
 
    ```text
    / # openstack image show ubuntu-18-04-cloud-amd64
@@ -164,11 +164,11 @@ volumeBindingMode: WaitForFirstConsumer
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    ```
 
-## How to check whether the provider supports SecurityGroups?
+## Checking up whether the provider supports SecurityGroups
 
 Run the following command: `openstack security group list`. If there are no errors in the output, then [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
-## How to set up online disk resize
+## Setting up online disk resize
 
 The OpenStack API states that the resize is completed successfully. However, Nova does not get any information about the resize from Cinder. As a result, the size of the disk in the guest OS remains the same.
 
@@ -194,7 +194,7 @@ username = {{ nova_service_user_name }}
 
 [Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
 
-## How to use `rootDiskSize` and when it is preferred?
+## Using a `rootDiskSize`
 
 ### Disks in OpenStack
 
@@ -220,17 +220,21 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 #### Network disk is recommended for master nodes and bastion host
 
-- Use flavor with a zero disk size.
-- Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+* Use flavor with a zero disk size.
+
+* Set the `rootDiskSize` in the `OpenStackInstanceClass`.
+
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
-- Use flavor with the specified disk size.
-- Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+* Use flavor with the specified disk size.
 
-### How do I check the disk volume in a flavor?
+* Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
+
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+
+### Checking up the disk volume in a flavor
 
 ```shell
 # openstack flavor show m1.medium-50g -c disk
@@ -241,7 +245,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 +-------+-------+
 ```
 
-## How to override a default volume type of cloud provider?
+## Overriding the default disk type of the cloud provider
 
 If there are several types of disks in a *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type. To do this, specify the name of a disk type in the image metadata.
 

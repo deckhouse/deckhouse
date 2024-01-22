@@ -6,6 +6,8 @@ Below is an example configuration for a VMware vSphere cloud provider.
 
 ## An example of the configuration
 
+The example is a module configuration named `cloud-provider-vsphere`, which is used with VMware vSphere. The module configuration contains connection settings, the path to the virtual machine folder, network names, security settings, and NSX settings that can be used to manage and monitor instances running on vSphere.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

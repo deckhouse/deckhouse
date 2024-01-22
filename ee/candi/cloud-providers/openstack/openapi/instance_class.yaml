@@ -19,6 +19,21 @@ spec:
             Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          x-examples:
+            - apiVersion: deckhouse.io/v1
+              kind: OpenStackInstanceClass
+              metadata:
+                name: test
+              spec:
+                flavorName: m1.large
+            - apiVersion: deckhouse.io/v1
+              kind: OpenStackInstanceClass
+              metadata:
+                name: worker
+              spec:
+                flavorName: m1.large
+                imageName: ubuntu-22-04-cloud-amd64
+                mainNetwork: kube-net
           required:
             - spec
           properties:

@@ -1,21 +1,12 @@
 ---
-title: "Cloud provider — OpenStack: примеры"
+title: "Cloud provider — OpenStack"
 ---
 
-Ниже представлены два простых примера конфигурации cloud-провайдера OpenStack.
+Ниже представлен пример конфигурации cloud-провайдера OpenStack.
 
-## Пример 1
+## Пример
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: OpenStackInstanceClass
-metadata:
-  name: test
-spec:
-  flavorName: m1.large
-```
-
-## Пример 2
+Пример представляет собой конфигурацию модуля с именем `cloud-provider-openstack`, которая используется с OpenStack. Конфигурация модуля содержит настройки подключения, имена сетей, настройки безопасности и теги, которые могут использоваться для управления и мониторинга экземпляров, работающих на OpenStack.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
