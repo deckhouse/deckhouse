@@ -25,6 +25,8 @@ spec:
           type: object
           description: |
             Defines the configuration for Deckhouse release.
+
+            **Deckhouse creates ModuleRelease resources by itself.**
           required:
             - spec
           properties:

@@ -25,6 +25,15 @@ spec:
           type: object
           description: |
             Defines the configuration.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleSource
+              metadata:
+                name: example
+              spec:
+                registry:
+                  repo: registry.example.io/modules-source
+                  dockerCfg: <base64 encoded credentials>
           required:
             - spec
           properties:
