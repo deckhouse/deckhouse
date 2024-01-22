@@ -47,37 +47,37 @@ spec:
                 moduleReleaseSelector:
                   type: object
                   description: |
-                    Определяет модули к которым применяются вышеуказанные настройки обновления.
-                    properties:
-                      labelSelector:
-                        description: |
-                          Определяет фильтр на основе меток, указанных у целевых модулей.
+                    Определяет модули к которым применяются настройки обновления.
+                  properties:
+                    labelSelector:
+                      description: |
+                        Определяет фильтр на основе меток, указанных у целевых модулей
 
-                          Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
-                        type: object
-                        properties:
-                          matchExpressions:
-                            type: array
-                            description: Список фильтров на основе выражений.
-                            items:
-                              type: object
-                              properties:
-                                key:
-                                  description: Имя метки.
-                                  type: string
-                                operator:
-                                  description: Оператор сравнения.
-                                  type: string
-                                values:
-                                  type: array
-                                  description: Значение метки.
-                                  items:
-                                    type: string
-                          matchLabels:
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
+                      type: object
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: Список фильтров на основе выражений.
+                          items:
                             type: object
-                            description: Фильтр на основе совпадения меток.
-                            additionalProperties:
-                              type: string
+                            properties:
+                              key:
+                                description: Имя метки.
+                                type: string
+                              operator:
+                                description: Оператор сравнения.
+                                type: string
+                              values:
+                                type: array
+                                description: Значение метки.
+                                items:
+                                  type: string
+                        matchLabels:
+                          type: object
+                          description: Фильтр на основе совпадения меток.
+                          additionalProperties:
+                            type: string
             status:
               properties:
                 matchedModules:
