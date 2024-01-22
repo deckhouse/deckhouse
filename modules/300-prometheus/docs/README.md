@@ -73,6 +73,10 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 <img src="../../images/300-prometheus/prometheus_monitoring.svg">
 
+##### WIP: new scheme for single datasource (testing_now)
+
+<img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
+
 ### Components installed by Deckhouse
 
 | Name                        | Description                                                                                                                                                                                                                                                                              |
@@ -80,6 +84,9 @@ Deckhouse supports sending alerts using `Alertmanager`:
 | **prometheus-main**         | The primary Prometheus instance that scrapes metrics every 30 seconds (you can change this value using the `scrapeInterval` parameter). It processes all the rules, sends alerts, and serves as the main data source.                                                                    |
 | **prometheus-longterm**     | The secondary Prometheus instance that scrapes the data of the primary Prometheus instance (`prometheus-main`) every 5 minutes (you can change this value using the `longtermScrapeInterval` parameter). It is used for long-term history storage and displaying data for large periods. |
 | **trickster**               | The caching proxy that reduces the load on Prometheus.                                                                                                                                                                                                                                   |
+| **promxy**                  | An aggregating proxy for both manin and longterm Prometheuses.                                                                                                                                                                                                                           |
+| **mimir-query-fronted**     | Stateless component that evaluates PromQL expressions by fetching time series and labels on the read path and can be used to accelerate the read path                                                                                                                                    |
+| **memcached**               | Distributed memory caching system for data already queried by mimir-query-frontend                                                                                                                                                                                                       |
 | **grafana**                 | The managed observability platform with ready-to-use dashboards for all Deckhouse modules and popular applications. Grafana instances are highly available, stateless, and configured by CRDs.                                                                                           |
 | **metrics-adapter**         | The component connecting Prometheus and Kubernetes metrics API. It enables HPA support in a Kubernetes cluster.                                                                                                                                                                          |
 | **vertical-pod-autoscaler** | An autoscaling tool to help size Pods for the optimal CPU and memory resources required by the Pods.                                                                                                                                                                                     |
