@@ -1,0 +1,14 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
+from: quay.io/cilium/hubble-ui:v0.12.1@sha256:e15af59a2ded739e420be82de6cbdd0ce22f8d3f00e3a10b3d2d2734e074a394
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/nginx-static
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
+  add: /app
+  to: /app
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
