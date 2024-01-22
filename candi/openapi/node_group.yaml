@@ -2096,12 +2096,12 @@ spec:
                     nodeType:
                       enum:
                         - Static
+                        - CloudStatic
                     cloudInstances:
                       not: {}
                 - properties:
                     nodeType:
                       enum:
                         - CloudPermanent
-                        - CloudStatic
                     staticInstances:
                       not: {}
