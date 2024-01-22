@@ -1,0 +1,11 @@
+---
+title: "Custom Resources"
+permalink: en/cr.html
+---
+
+{{ site.data.schemas.global.crds.module | format_crd: "global" }}
+{{ site.data.schemas.global.crds.module-config | format_crd: "global" }}
+{{ site.data.schemas.global.crds.module-pull-override | format_crd: "global" }}
+{{ site.data.schemas.global.crds.module-release | format_crd: "global" }}
+{{ site.data.schemas.global.crds.module-source | format_crd: "global" }}
+{{ site.data.schemas.global.crds.module-update-policy | format_crd: "global" }}
