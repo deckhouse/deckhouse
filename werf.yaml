@@ -884,11 +884,17 @@ git:
   to: /
   stageDependencies:
     setup:
-      - candi/version_map.yml
-      - ee/candi/version_map.yml
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.versionMapFile }}
+      - {{ $edition.versionMapFile }}
+      {{- end }}
+    {{- end }}
   includePaths:
-  - candi/version_map.yml
-  - ee/candi/version_map.yml
+{{- range $_, $edition := $.Editions }}
+  {{- if $edition.versionMapFile }}
+  - {{ $edition.versionMapFile }}
+  {{- end }}
+{{- end }}
 shell:
   install:
   - apk add --no-cache curl
