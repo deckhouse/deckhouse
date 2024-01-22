@@ -33,6 +33,6 @@ if exists(.file) {
 }
 if exists(.node_labels."node.deckhouse.io/group") {
 	.node_group = (.node_labels."node.deckhouse.io/group")
-	del(.node_labels)
 }
+del(.node_labels)
 `
