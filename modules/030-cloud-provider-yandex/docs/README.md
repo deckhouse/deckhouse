@@ -16,7 +16,7 @@ The `cloud-provider-yandex` module:
 
 ### Настройка групп безопасности
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех сетей, в том числе для сети кластера Deckhouse Kubernetes Platform. Группа безопасности по умолчанию содержит правила разрешающие входящий и исходящий трафик и применяется для всех подсетей в облачной сети, если на объект (интерфейс ВМ) не назначена другая группа безопасности. Можно изменить правила группы безопасности по умолчанию, если необходимо контролировать трафик в кластере.
+При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех сетей, в том числе и для сети кластера Deckhouse Kubernetes Platform. Группа безопасности по умолчанию содержит правила разрешающие любой трафик в любом направлении (входящий и исходящий) и применяется для всех подсетей в рамках облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности. Вы можете изменить правила группы безопасности по умолчанию, если вам необходимо контролировать трафик в вашем кластере.
 
 Здесь приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
@@ -33,21 +33,21 @@ The `cloud-provider-yandex` module:
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*.  В результате должна отображаться одна группа безопасности с пометкой `Default`.
+1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
     ![Группа безопасности по умолчанию](../../images/030-cloud-provider-yandex/sg-ru-default.png)
 
-1. Создайте правила по [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
+1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
     ![Правила для группы безопасности](../../images/030-cloud-provider-yandex/sg-ru-rules.png)
 
-1. Удалите правило, разрешающее любой **входящий** трафик (на вышеприведенном скриншоте правило удалено), и сохраните изменения.
+1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 
 ### Интеграция с Yandex Lockbox
 
-С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) можно настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
+С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
 
-Приведенная инструкция является примером *Быстрого старта*. Для использования интеграции в рабочих средах, ознакомьтесь с дополнительными ресурсами:
+Приведенную инструкцию следует рассматривать как *Быстрый старт*. Для использования интеграции в продуктивных средах ознакомьтесь со следующими ресурсами:
 
 - [Yandex Lockbox](https://cloud.yandex.ru/ru/docs/lockbox/)
 - [Синхронизация с секретами Yandex Lockbox](https://cloud.yandex.ru/ru/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
@@ -80,7 +80,7 @@ The `cloud-provider-yandex` module:
 
 1. Установите External Secrets Operator с помощью Helm-чарта согласно [инструкции](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
-   Обратите внимание, что может понадобиться задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
+   Обратите внимание, что вам может понадобиться задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
 
    Скачайте и распакуйте чарт:
 
@@ -98,7 +98,8 @@ The `cloud-provider-yandex` module:
      external-secrets ./external-secrets/
    ```
 
-   Где `authorized-key.json` — название файла с авторизованным ключом из шага 2.
+   Где:
+   - `authorized-key.json` — название файла с авторизованным ключом из шага 2.
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
@@ -186,7 +187,7 @@ The `cloud-provider-yandex` module:
 
 ### Интеграция с Yandex Managed Service for Prometheus
 
-С помощью данной интеграции можно использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
+С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
 
 #### Запись метрик
 
@@ -211,9 +212,9 @@ The `cloud-provider-yandex` module:
    - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также можно указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#prometheusremotewrite).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#prometheusremotewrite).
 
-Подробнее с этой функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
+Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
 #### Чтение метрик через Grafana
 
@@ -245,6 +246,6 @@ The `cloud-provider-yandex` module:
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также можно указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
 
-Подробнее с этой функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
+Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
