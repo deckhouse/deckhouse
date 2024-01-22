@@ -230,3 +230,23 @@ func main() {
 	// and if we dont use this the main goroutine will exit and the go routine will also exit which will stop the server
 	done <- true
 }
+
+// we will use k8s metrics server to get the metrics and then we will use the prometheus client to expose the metrics
+func (exporter *exporter) cpu_uses(Type string, Namespace string, Name string) (float64, error) {
+	// get the metrics for the object
+
+	metrics, err := exporter.client.CoreV1().Pods(Namespace).GetMetrics(context.Background(), Name, metav1.GetOptions{})
+	if err != nil {
+		fmt.Println("[logs] Error fetching metrics:", err)
+		return 0, err
+	}
+
+	for _, container := range metrics.Containers {
+		if container.Name == "nginx" {
+			return container.Usage.Cpu().MilliValue(), nil
+		}
+	}
+
+	return 0, nil
+
+}
