@@ -1989,6 +1989,7 @@ spec:
                           - required: [automatic]
                 kubelet:
                   type: object
+                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -2016,6 +2017,7 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
                     resourceReservation:
+                      default: {}
                       type: object
                       oneOf:
                       - properties:
