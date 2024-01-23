@@ -326,6 +326,14 @@ shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
+{{- if hasKey .nodeGroup.kubelet "topologyManager" }}
+{{- if hasKey .nodeGroup.kubelet.topologyManager "scope" }}
+topologyManagerScope: {{ .nodeGroup.kubelet.topologyManager.scope }}
+{{- end }}
+{{- if hasKey .nodeGroup.kubelet.topologyManager "policy" }}
+topologyManagerPolicy: {{ .nodeGroup.kubelet.topologyManager.policy }}
+{{- end }}
+{{- end }}
 EOF
 
 # CIS becnhmark purposes
