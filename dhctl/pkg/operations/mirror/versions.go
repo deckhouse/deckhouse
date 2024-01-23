@@ -100,17 +100,15 @@ func filterOnlyLatestPatches(versions []*semver.Version) []*semver.Version {
 }
 
 func getReleaseChannelVersionFromRegistry(mirrorCtx *Context, releaseChannel string) (*semver.Version, error) {
-	refOpts := []name.Option{name.StrictValidation}
-	if mirrorCtx.Insecure {
-		refOpts = append(refOpts, name.Insecure)
-	}
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	nameOpts = append(nameOpts, name.StrictValidation)
 
-	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:"+releaseChannel, refOpts...)
+	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:"+releaseChannel, nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parse rock solid release ref: %w", err)
 	}
 
-	rockSolidReleaseImage, err := remote.Image(ref, remote.WithAuth(mirrorCtx.RegistryAuth))
+	rockSolidReleaseImage, err := remote.Image(ref, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("get %s release channel data: %w", releaseChannel, err)
 	}
