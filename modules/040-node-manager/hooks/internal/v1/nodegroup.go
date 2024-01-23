@@ -319,10 +319,10 @@ type KubeletTopologyManager struct {
 	// usage topology
 	// Default: False
 	Enable *bool `json:"enabled,omitempty"`
-	// Default: container
+	// Default: Container
 	// +optional
 	Scope KubeletTopologyManagerScope `json:"scope"`
-	// Default: 'none'
+	// Default: 'None'
 	// +optional
 	Policy KubeletTopologyManagerPolicy `json:"policy"`
 }
