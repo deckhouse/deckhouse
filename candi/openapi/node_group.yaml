@@ -2100,9 +2100,9 @@ spec:
                             The policy defines the actual strategy used to carry out the alignment (e.g. best-effort, restricted, single-numa-node, etc.).
                           enum:
                             - None
-                            - Best-Effort
+                            - BestEffort
                             - Restricted
-                            - Single-Numa-Node
+                            - SingleNumaNode
                 update:
                   type: object
                   properties:

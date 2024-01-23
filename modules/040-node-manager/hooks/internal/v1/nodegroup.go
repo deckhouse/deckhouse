@@ -330,17 +330,17 @@ type KubeletTopologyManager struct {
 type KubeletTopologyManagerScope string
 
 const (
-	KubeletTopologyManagerScopeContainer KubeletTopologyManagerScope = "container"
-	KubeletTopologyManagerScopePod       KubeletTopologyManagerScope = "pod"
+	KubeletTopologyManagerScopeContainer KubeletTopologyManagerScope = "Container"
+	KubeletTopologyManagerScopePod       KubeletTopologyManagerScope = "Pod"
 )
 
 type KubeletTopologyManagerPolicy string
 
 const (
-	KubeletTopologyManagerPolicyNone           KubeletTopologyManagerPolicy = "none"
-	KubeletTopologyManagerPolicyBestEffort     KubeletTopologyManagerPolicy = "best-effort"
-	KubeletTopologyManagerPolicyRestricted     KubeletTopologyManagerPolicy = "restricted"
-	KubeletTopologyManagerPolicySingleNumaNode KubeletTopologyManagerPolicy = "single-numa-node"
+	KubeletTopologyManagerPolicyNone           KubeletTopologyManagerPolicy = "None"
+	KubeletTopologyManagerPolicyBestEffort     KubeletTopologyManagerPolicy = "BestEffort"
+	KubeletTopologyManagerPolicyRestricted     KubeletTopologyManagerPolicy = "Restricted"
+	KubeletTopologyManagerPolicySingleNumaNode KubeletTopologyManagerPolicy = "SingleNumaNode"
 )
 
 type KubeletResourceReservation struct {
