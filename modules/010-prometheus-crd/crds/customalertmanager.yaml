@@ -251,8 +251,6 @@ spec:
                                 requireTLS:
                                   description: |
                                     The SMTP TLS requirement.
-
-                                    Note that Go does not support unencrypted connections to remote SMTP endpoints.
                                   type: boolean
                                 sendResolved:
                                   description: Whether or not to notify about resolved alerts.
