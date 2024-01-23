@@ -75,7 +75,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "dnsmasq") }}
         volumeMounts:
         - name: dhcp-config
-          mountPath: /etc/dnsmasq.d
+          mountPath: /etc/dnsmasq.conf.d
         - name: network-gateway-config
           mountPath: /etc/network-gateway-config
         resources:
@@ -88,7 +88,7 @@ spec:
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
         volumeMounts:
         - name: dhcp-config
-          mountPath: /etc/dnsmasq.d
+          mountPath: /etc/dnsmasq.conf.d
         - name: dhcp-data
           mountPath: /var/lib/dnsmasq/
         resources:
