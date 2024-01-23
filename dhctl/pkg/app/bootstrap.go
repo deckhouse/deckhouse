@@ -26,7 +26,7 @@ var (
 
 	ResourcesPath    = ""
 	ResourcesTimeout = "15m"
-	DeckhouseTimeout = 10 * time.Minute
+	DeckhouseTimeout = 15 * time.Minute
 
 	PostBootstrapScriptTimeout = 10 * time.Minute
 	PostBootstrapScriptPath    = ""
