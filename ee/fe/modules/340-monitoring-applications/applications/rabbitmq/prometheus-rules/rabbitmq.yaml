@@ -1,7 +1,8 @@
 - name: applications.rabbitmq
   rules:
   - alert: ApplicationRabbitMQMemoryUsage
-    expr: rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"} * 100 > 85
+    expr: ((rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"}) or (rabbitmq_process_resident_memory_bytes{job="rabbitmq"} / rabbitmq_resident_memory_limit_bytes{job="rabbitmq"})) * 100 > 85
+
     for: 5m
     labels:
       severity_level: "4"
@@ -21,7 +22,7 @@
         is using more than 85% of memory limit.
 
   - alert: ApplicationRabbitMQMemoryUsage
-    expr: rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"} * 100 > 95
+    expr: ((rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"}) or (rabbitmq_process_resident_memory_bytes{job="rabbitmq"} / rabbitmq_resident_memory_limit_bytes{job="rabbitmq"})) * 100 > 95
     for: 1m
     labels:
       severity_level: "3"
@@ -39,3 +40,74 @@
       summary: >
         RabbitMQ node {{$labels.node}} in Pod {{$labels.namespace}}/{{$labels.pod}}
         is using more than 95% of memory limit.
+
+  - alert: ApplicationRabbitMQPredictDiskUsage
+    expr: predict_linear(rabbitmq_disk_space_available_bytes{job="rabbitmq"}[15m], 1 * 60 * 60) < rabbitmq_node_disk_free_limit
+    for: 5m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |-
+        The RabbitMQ instance in Pod `{{$labels.namespace}}/{{$labels.pod}}` is predicted to have insufficient disk space available in the next hour. This alert triggers when the predicted disk space falls below the configured limit. Take appropriate actions to prevent potential issues related to low disk space.
+
+        More info: https://www.rabbitmq.com/disk-alarms.html
+      summary: |
+        Potential RabbitMQ Disk Space Issue in Pod `{{$labels.namespace}}/{{$labels.pod}}`.
+
+  - alert: ApplicationRabbitMQFileDescriptorsLow
+    expr: (rabbitmq_process_open_fds{job="rabbitmq"} / rabbitmq_process_max_fds{job="rabbitmq"}) * 100 > 90
+    for: 1m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        The RabbitMQ instance `{{$labels.namespace}}/{{$labels.pod}}` is experiencing high file descriptor usage, exceeding 90% of the total available file descriptors. This may lead to performance degradation or service disruption. Investigate and take appropriate actions to address the file descriptor usage.
+
+      summary: |
+        RabbitMQ Low File Descriptor Availability in `{{$labels.namespace}}/{{$labels.pod}}`.
+
+  - alert: ApplicationRabbitMQTcpSocketLow
+    expr: (rabbitmq_process_open_tcp_sockets{job="rabbitmq"} / rabbitmq_process_max_tcp_sockets{job="rabbitmq"}) * 100 > 90
+    for: 1m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        The RabbitMQ instance `{{$labels.namespace}}/{{$labels.pod}}` is approaching high TCP socket usage, with more than 90% of the maximum allowed TCP sockets in use. Elevated TCP socket usage may impact RabbitMQ performance and lead to connection issues. Investigate and address the high TCP socket usage promptly.
+
+      summary: |
+        RabbitMQ High TCP Socket Usage Alert in `{{$labels.namespace}}/{{$labels.pod}}`.
+
+  - alert: ApplicationRabbitMQOneOrMoreReplicaUnavailable
+    expr: kube_statefulset_status_replicas{statefulset=~"(rabbitmq|rmq).*"} - kube_statefulset_status_replicas_ready{statefulset=~"(rabbitmq|rmq).*"} >= 1
+    for: 5m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        One or more replicas of the RabbitMQ StatefulSet in `{{$labels.namespace}}` are currently unavailable. This may indicate issues with pod readiness or other deployment problems. Investigate the StatefulSet status and take corrective actions to ensure the desired number of replicas are available.
+
+      summary: |
+        RabbitMQ StatefulSet: One or More Replicas Unavailable in `{{$labels.namespace}}`.
+
+  - alert: ApplicationRabbitMQAckedMessagesRate
+    expr: sum(irate(rabbitmq_channel_messages_acked_total{job="rabbitmq"}[2m])) == 0
+    for: 5m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        The RabbitMQ instance `{{$labels.namespace}}/{{$labels.pod}}` has not acknowledged any messages in the last 2 minutes. A lack of acknowledged messages may indicate potential issues with message processing or delivery. Investigate the RabbitMQ channels and message processing to identify and address the root cause.
+
+      summary: |
+        No Acknowledged Messages in RabbitMQ - `{{$labels.namespace}}/{{$labels.pod}}`.
