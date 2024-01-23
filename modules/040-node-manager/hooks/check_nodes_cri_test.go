@@ -40,7 +40,7 @@ metadata:
     node.deckhouse.io/group: ngNotManaged
 status:
   nodeInfo:
-    containerRuntimeVersion: containerd
+    containerRuntimeVersion: docker
     kubeletVersion: v1.25.0
 `
 
