@@ -115,7 +115,6 @@ spec:
                     Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
 
                     **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
-                    **Доступно только в версии Enterprise Edition.**
                   properties:
                     matchAny:
                       description: |
