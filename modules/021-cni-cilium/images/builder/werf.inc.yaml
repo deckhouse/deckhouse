@@ -163,6 +163,13 @@ shell:
     - chmod +x /binary_replace.sh
     - mkdir -p /relocate/usr/testln && ln -f -s /relocate/usr/testln /relocate/testln
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/usr/sbin/${cmd}"
+        ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+      done
+      # broken symlinks are not imported from the artifact
+      touch /usr/sbin/iptables-wrapper
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless-runtime-artifact
 fromImage: common/distroless
