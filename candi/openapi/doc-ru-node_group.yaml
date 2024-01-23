@@ -744,6 +744,9 @@ spec:
                           description: |
                             Параметры резервирования ресурсов в режиме `Static`.
                     topologyManager:
+                        enable:
+                          description: |
+                            Включает управление топологией на узле.
                       description: |
                         Управление политиками управления топологией на узле.
                         Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
