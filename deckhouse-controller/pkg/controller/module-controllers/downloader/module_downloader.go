@@ -482,7 +482,7 @@ type registrySchemaForValues struct {
 		Scheme struct {
 			Type    string `yaml:"type"`
 			Default string `yaml:"default"`
-		} `yaml:"dockercfg"`
+		} `yaml:"scheme"`
 	} `yaml:"properties"`
 }
 
