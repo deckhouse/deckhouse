@@ -28,3 +28,9 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/local/lib/python3/site-packages
     before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf.d
+    before: install
