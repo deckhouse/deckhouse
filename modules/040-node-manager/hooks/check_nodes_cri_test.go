@@ -40,7 +40,7 @@ metadata:
     node.deckhouse.io/group: ngNotManaged
 status:
   nodeInfo:
-    containerRuntimeVersion: docker
+    containerRuntimeVersion: containerd
     kubeletVersion: v1.25.0
 `
 
@@ -73,7 +73,7 @@ status:
 )
 
 var _ = Describe("node-manager :: check_containerd_nodes ", func() {
-	f := HookExecutionConfigInit(`{"global": {"clusterConfiguration": {"apiVersion": "deckhouse.io/v1", "clusterType": "Static", "kind": "ClusterConfiguration", "kubernetesVersion": "1.24", "podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16"}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"clusterConfiguration": {"apiVersion": "deckhouse.io/v1", "clusterType": "Static", "kind": "ClusterConfiguration", "kubernetesVersion": "1.29", "podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Nodes objects are not found", func() {
