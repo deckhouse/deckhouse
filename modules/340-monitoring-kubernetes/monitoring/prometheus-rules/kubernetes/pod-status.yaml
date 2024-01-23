@@ -13,8 +13,8 @@
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__node_have_pods_with_incorrect_status: "NodeHavePodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
-        plk_grouped_by__node_have_pods_with_incorrect_status: "NodeHavePodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__node_has_pods_with_incorrect_status: "NodeHasPodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_has_pods_with_incorrect_status: "NodeHasPodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
         description: |
           There is a {{ $labels.namespace }}/{{ $labels.pod }} Pod in the cluster that runs on the {{ $labels.node }} and listed as NotReady while all the Pod's containers are Ready.
 
