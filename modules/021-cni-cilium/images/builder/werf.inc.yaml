@@ -153,6 +153,7 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+fromCacheVersion: 2
 import:
 - image: common/alt
   add: /binary_replace.sh
