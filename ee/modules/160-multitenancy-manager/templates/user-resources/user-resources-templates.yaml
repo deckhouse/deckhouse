@@ -118,7 +118,6 @@ spec:
 {{- end }}
 
 {{- $projectValues := $.Values.project }}
-{{- $_ := set $projectValues "Template" $.Template }}
 {{- $projectTemplateValues := $.Values.projectTemplate }}
 
 

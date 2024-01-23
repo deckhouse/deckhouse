@@ -50,7 +50,7 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
        if .spec.templateName then .spec.projectTypeName = .spec.templateName end |
        if .spec.templateValues then .spec.template = .spec.templateValues end |
        del(.spec.templateName) |
-       del(.spectemplateValues)
+       del(.spec.templateValues)
      else . end
   )')
   then
