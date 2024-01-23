@@ -849,6 +849,17 @@ func (c *Controller) restoreAbsentSourceModules() error {
 		moduleName := item.Spec.ModuleName
 		moduleSource := item.GetModuleSource()
 
+		// if ModulePullOverride is set, don't check and restore overriden release
+		exists, err := c.isModulePullOverrideExists(moduleSource, moduleName)
+		if err != nil {
+			c.logger.Errorf("Couldn't check module pull override for module %s: %s", moduleName, err)
+		}
+
+		if exists {
+			c.logger.Infof("ModulePullOverride for module %q exists. Skipping release restore", moduleName)
+			continue
+		}
+
 		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
 		_, err = os.Stat(moduleDir)
 		if err != nil {
@@ -886,6 +897,71 @@ func (c *Controller) restoreAbsentSourceModules() error {
 		}
 	}
 
+	// restoring modules from MPO
+	mpoList, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, item := range mpoList.Items {
+		moduleName := item.Name
+		moduleSource := item.Spec.Source
+		moduleImageTag := item.Spec.ImageTag
+
+		ms, err := c.moduleSourcesLister.Get(moduleSource)
+		if err != nil {
+			c.logger.Warnf("ModuleSource %s is absent. Skipping restoration of the module %s with pull override", moduleSource, moduleName)
+			continue
+		}
+
+		md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+		_, moduleDef, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
+		if err != nil {
+			c.logger.Warnf("Couldn't get module %s pull override definition: %s", moduleName, err)
+			continue
+		}
+
+		if moduleDef == nil {
+			c.logger.Warnf("Module definition for module %s pull override is nil. Ignore", moduleName)
+			continue
+		}
+
+		moduleWeight := moduleDef.Weight
+		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
+		_, err = os.Stat(moduleDir)
+		if err != nil {
+			// module dir not found
+			if os.IsNotExist(err) {
+				// check if there is a symlink for the module with different weight in the symlink folder
+				anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
+				if err != nil {
+					c.logger.Warnf("Couldn't check if there are any other symlinks for module %s with pull override: %s", moduleName, err)
+					continue
+				}
+				if len(anotherModuleSymlink) > 0 {
+					if err := os.Remove(anotherModuleSymlink); err != nil {
+						c.logger.Warnf("Couldn't delete stale symlink %s for module %s with pull override: %w", anotherModuleSymlink, moduleName, err)
+						continue
+					}
+				}
+
+				// restore symlink
+				moduleRelativePath := filepath.Join("../", moduleName, "dev")
+				symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
+				err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
+				if err != nil {
+					c.logger.Warnf("Create symlink for module %s failed: %s", moduleName, err)
+					continue
+				}
+
+				log.Infof("Module %s with pull override restored", moduleName)
+				// some other error
+			} else {
+				c.logger.Errorf("Module %s with pull override check error: %s", moduleName, err)
+				continue
+			}
+		}
+	}
 	return nil
 }
 

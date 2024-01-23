@@ -282,6 +282,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
+	// what if it is nil?
 	if moduleDef != nil {
 		err = validateModule(c.modulesValidator, *moduleDef)
 		if err != nil {
