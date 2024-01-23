@@ -23,7 +23,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
-    {{- if ne $version "v4.5.0" }}
+    {{- if semverCompare ">=1.29" $version }}
     - go get -u golang.org/x/net@v0.17.0
     - go get -u google.golang.org/grpc@v1.57.2
     - go mod vendor
