@@ -743,6 +743,20 @@ spec:
                         static:
                           description: |
                             Параметры резервирования ресурсов в режиме `Static`.
+                    topologyManager:
+                      description: |
+                        Управление политиками управления топологией на узле.
+                        Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                      properties:
+                        enable:
+                          description: |
+                            Включает управление топологией на узле.
+                        scope:
+                          description: |
+                            Область действия определяет гранулярность, на которой вы хотите, чтобы выполнялось выравнивание ресурсов (например, на уровне стручков или контейнеров).
+                        policy:
+                          description: |
+                            Политика определяет фактическую стратегию, используемую для выравнивания (например, best-effort, restricted, single-numa-node и т. д.).
                 update:
                   properties:
                     maxConcurrent:
