@@ -54,7 +54,7 @@ metadata:
     node.deckhouse.io/group: group
 status:
   nodeInfo:
-    kubeletVersion: v1.24.17
+    kubeletVersion: v1.29.1
 `
 
 	nodeContainerd = `
@@ -68,7 +68,7 @@ metadata:
 status:
   nodeInfo:
     containerRuntimeVersion: containerd
-    kubeletVersion: v1.24.17
+    kubeletVersion: v1.29.1
 `
 )
 
