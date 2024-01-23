@@ -13,6 +13,7 @@ bashible: &bashible
     '9':
   altlinux:
     'p10':
+    '10':
     '10.0':
     '10.1':
     '10.2':
