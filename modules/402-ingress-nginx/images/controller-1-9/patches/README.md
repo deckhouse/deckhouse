@@ -50,3 +50,11 @@ Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs 
 Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
+
+### nginx-build
+
+Build nginx for controller on ALT Linux.
+
+### GeoIP
+
+https://github.com/kubernetes/ingress-nginx/pull/10495

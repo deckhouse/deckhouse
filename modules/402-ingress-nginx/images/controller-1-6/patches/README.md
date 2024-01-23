@@ -53,3 +53,7 @@ https://github.com/kubernetes/ingress-nginx/pull/9550/files
 Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
+
+### nginx-build
+
+Build nginx for controller on ALT Linux.
