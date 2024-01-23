@@ -163,7 +163,7 @@ shell:
     - chmod +x /binary_replace.sh
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
         ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
@@ -205,7 +205,7 @@ import:
   to: /
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /iptables-wrapper
+  add: /usr/sbin/iptables-wrapper
   to: /iptables-wrapper
   before: install
 ---
