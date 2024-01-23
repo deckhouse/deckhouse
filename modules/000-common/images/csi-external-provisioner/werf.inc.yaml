@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
 shell:
   beforeInstall:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
