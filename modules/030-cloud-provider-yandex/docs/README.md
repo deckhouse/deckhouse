@@ -18,11 +18,11 @@ The `cloud-provider-yandex` module:
 
 When creating a [cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates a default [security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Kubernetes Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
 
-This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
-
 {% alert level="danger" %}
 Do not delete the rule that allows for traffic to pass in any direction before finishing configuring all the other rules for the security group. Doing so may disrupt the performance of the cluster.
 {% endalert %}
+
+This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
