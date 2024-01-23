@@ -2076,29 +2076,33 @@ spec:
                               pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
                     topologyManager:
                       type: object
-                      oneOf:
                       description: |
                         Control Topology Management Policies on a node.
-
                         More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
                         enable:
+                          type: boolean
+                          x-doc-default: false
+                          description: |
+                            Enables Control Topology Management on a node.
                         scope:
                           type: string
-                          x-doc-default: container
+                          x-doc-default: Container
+                          description: |
+                            The scope defines the granularity at which you would like resource alignment to be performed (e.g. at the pod or container level).
                           enum:
-                            - container
-                            - pod
+                            - Container
+                            - Pod
                         policy:
-                          oneOf:
                           type: string
-                          x-doc-default: none
+                          x-doc-default: None
+                          description: |
+                            The policy defines the actual strategy used to carry out the alignment (e.g. best-effort, restricted, single-numa-node, etc.).
                           enum:
-                            - none
-                            - best-effort
-                            - restricted
-                            - single-numa-node
-
+                            - None
+                            - Best-effort
+                            - Restricted
+                            - Single-numa-node
                 update:
                   type: object
                   properties:
