@@ -35,8 +35,6 @@ editions:
   # skip collect images. Unfortunately we cannot handle error from .Files.Glob
   # BE edition does not have any images
   skipCollectImages: true
-  buildIncludes:
-    skipModules: true
 
 - name: EE
   modulesDir: "ee/modules"
