@@ -26,7 +26,7 @@ Do not delete the rule that allows for traffic to pass in any direction before f
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of the [ClusterConfiguration] resource(../../installing/configuration.html#clusterconfiguration). It can be retrieved using the following command:
+   The network name matches the `prefix` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource. It can be retrieved using the following command:
 
    ```bash
    kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
@@ -141,7 +141,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. [Create](https://cloud.yandex.com/en/docs/lockbox/operations/secret-create) a Yandex Lockbox secret with the following parameters:
 
     - **Name** — `lockbox-secret`.
-    - **Kay** — enter the non-confidential identifier `password`.
+    - **Key** — enter the non-confidential identifier `password`.
     - **Value** — enter the confidential data to store `p@$$w0rd`.
       
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
