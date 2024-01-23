@@ -34,8 +34,8 @@ clusterConfiguration:
   podSubnetCIDR: "127.0.0.1/24"
   clusterDomain: "%s.example.com"
 k8s:
-  '1.23':
-    patch: 7
+  '1.29':
+    patch: 1
 extraArgs: {}
 `), &data)
 	if err != nil {
