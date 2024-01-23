@@ -149,7 +149,7 @@ shell:
 ---
 # #####################################################################
 ---
-{{ $binaries := "/usr/bin/strace /bin/bash /bin/sh /bin/grep /bin/head /bin/sed /bin/printf /bin/echo /bin/cat /bin/cut /bin/rm /bin/awk /usr/bin/sleep /usr/bin/jq /usr/bin/curl /bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod /bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat /usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr sbin/arpd /usr/sbin/genl /usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml /usr/sbin/nfnl_osf /usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
+{{ $binaries := "/usr/bin/strace /bin/bash /bin/sh /bin/grep /bin/head /bin/sed /bin/printf /bin/echo /bin/cat /bin/cut /bin/rm /bin/od /bin/wc /bin/awk /usr/bin/sleep /usr/bin/jq /usr/bin/curl /bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod /bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat /usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr sbin/arpd /usr/sbin/genl /usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml /usr/sbin/nfnl_osf /usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
