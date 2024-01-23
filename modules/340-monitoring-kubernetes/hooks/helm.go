@@ -86,6 +86,9 @@ const unsupportedVersionsYAML = `
 
 "1.29":
   "flowcontrol.apiserver.k8s.io/v1beta2": ["FlowSchema", "PriorityLevelConfiguration"]
+
+"1.32":
+  "flowcontrol.apiserver.k8s.io/v1beta3": ["FlowSchema", "PriorityLevelConfiguration"]
 `
 
 const (
