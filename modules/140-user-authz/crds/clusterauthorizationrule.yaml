@@ -227,6 +227,7 @@ spec:
                         Since `labelSelector` provides access to a limited number of the namespaces that match it, `matchAny` is needed in cases where access to all namespaces is to be granted.
                       type: boolean
                       enum: [true]
+                      x-doc-d8Revision: ee
                     labelSelector:
                       description: |
                         Defines the label selector-based filter of the namespaces.
@@ -237,10 +238,12 @@ spec:
                         If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
                       type: object
                       minProperties: 1
+                      x-doc-d8Revision: ee
                       properties:
                         matchExpressions:
                           type: array
                           description: An array of set-based expressions.
+                          x-doc-d8Revision: ee
                           items:
                             type: object
                             required:
@@ -250,13 +253,16 @@ spec:
                               key:
                                 description: A label name.
                                 type: string
+                                x-doc-d8Revision: ee
                               operator:
                                 description: A comparison operator.
                                 type: string
                                 enum: [In,NotIn,Exists,DoesNotExist]
+                                x-doc-d8Revision: ee
                               values:
                                 type: array
                                 description: A label value.
+                                x-doc-d8Revision: ee
                                 items:
                                   type: string
                                   pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
@@ -266,6 +272,7 @@ spec:
                           type: object
                           description: A set of labels a namespace must have to match.
                           x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          x-doc-d8Revision: ee
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
