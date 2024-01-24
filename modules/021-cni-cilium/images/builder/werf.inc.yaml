@@ -221,6 +221,10 @@ import:
   to: /
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/lib/x86_64-linux-gnu/xtables/
+  to: /usr/lib/x86_64-linux-gnu/xtables
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/sbin/iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
