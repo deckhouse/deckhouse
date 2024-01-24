@@ -80,8 +80,37 @@ $(document).ready(function () {
       sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
     }
   });
+  const ip_match = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ip_with_subnet = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,3}$/
+  const domname = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/
+  const domsurrounded = /^".[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}"$/
   $('#noProxyAddressList').change(function () {
-    sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
+    let arr = $(this).val().split(', ');
+    let err = false
+    let errdomen = false
+    for (let i = 0; i < arr.length; i++) {
+      if (!arr[i].match(ip_match) && !arr[i].match(ip_with_subnet) && !arr[i].match(domname) && !arr[i].match(domsurrounded)) {
+        err = true
+      }
+      if (arr[i].match(/example\.com/)) {
+        errdomen = true
+      }
+    }
+    if (err) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-main').addClass('active');
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message-main').removeClass('active');
+    }
+    if (errdomen) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-example-com').addClass('active');
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message-example-com').removeClass('active');
+    }
+    if (!errdomen && !err) sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
   });
   // registry
   $('#registryImagesRepo').change(function () {
