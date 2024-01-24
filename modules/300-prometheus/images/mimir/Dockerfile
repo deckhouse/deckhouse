@@ -16,10 +16,7 @@ RUN apk add --no-cache make git
 RUN git clone --depth 1 --branch mimir-2.10.4 ${SOURCE_REPO}/grafana/mimir.git /mimir
 WORKDIR /mimir/
 
-COPY patches /patches
-
-RUN find /patches -name '*.patch' -exec git apply {} \; && \
-    go build -o mimir ./cmd/mimir && \
+RUN go build -o mimir ./cmd/mimir && \
     chown -R 64535:64535 /mimir/ && \
     chmod 0700 /mimir/mimir
 

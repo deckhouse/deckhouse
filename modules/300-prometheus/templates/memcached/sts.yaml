@@ -20,7 +20,6 @@ spec:
     updateMode: "Off"
 {{- end }}
 
-
 ---
 apiVersion: apps/v1
 kind: StatefulSet

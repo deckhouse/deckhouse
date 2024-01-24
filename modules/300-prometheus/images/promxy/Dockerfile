@@ -26,5 +26,3 @@ FROM $BASE_DISTROLESS
 COPY --from=artifact /promxy/promxy /bin/promxy
 
 ENTRYPOINT ["/bin/promxy"]
-
-CMD ["--config=/etc/promxy/config.yaml", "--web.enable-lifecycle"]

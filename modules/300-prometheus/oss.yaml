@@ -16,4 +16,18 @@
   logo: https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg
   licence: Apache License 2.0
 
+- name: Mimir
+  link: https://github.com/trickstercache/trickster
+  description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
+  logo: https://grafana.com/static/img/logos/logo-mimir.svg
+  licence: AGPL-3.0 license
 
+- name: Promxy
+  link: https://github.com/jacksontj/promxy
+  description: An aggregating proxy to enable HA prometheus
+  licence: MIT License
+
+- name: Memcached
+  link: https://github.com/memcached/memcached
+  description: High performance multithreaded event-based key/value cache store intended to be used in a distributed system.
+  licence: BSD-3-Clause license

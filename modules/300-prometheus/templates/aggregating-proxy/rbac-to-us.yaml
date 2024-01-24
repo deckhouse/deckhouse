@@ -2,25 +2,25 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: access-to-mimir-query-frontend-http
+  name: access-to-aggregating-proxy-http
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["deployments/http"]
-  resourceNames: ["mimir-query-frontend"]
+  resourceNames: ["aggregating-proxy"]
   verbs: ["get", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: access-to-mimir-query-frontend-http
+  name: access-to-aggregating-proxy-http
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: access-to-mimir-query-frontend-http
+  name: access-to-aggregating-proxy-http
 subjects:
 - kind: Group
   name: ingress-nginx:auth
@@ -43,25 +43,25 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: access-to-mimir-query-frontend-prometheus-metrics
+  name: access-to-aggregating-proxy-prometheus-metrics
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["deployments/prometheus-metrics"]
-  resourceNames: ["mimir-query-frontend"]
+  resourceNames: ["aggregating-proxy"]
   verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: access-to-mimir-query-frontend-prometheus-metrics
+  name: access-to-aggregating-proxy-prometheus-metrics
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "mimir-query-frontend")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: access-to-mimir-query-frontend-prometheus-metrics
+  name: access-to-aggregating-proxy-prometheus-metrics
 subjects:
 - kind: User
   name: d8-monitoring:scraper
