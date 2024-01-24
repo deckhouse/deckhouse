@@ -197,14 +197,10 @@ func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient
 }
 
 func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent string) (map[string]string, error) {
-	var authCfg authn.AuthConfig
-	if authConfig.Username != "" && authConfig.Password != "" {
-		authCfg.Auth = base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password))
-	}
 	authConfBytes, err := json.Marshal(
-		map[string]map[string]authn.AuthConfig{
+		map[string]map[string]*dockerCfgAuthEntry{
 			"auths": {
-				newRepo.RegistryStr(): authCfg,
+				newRepo.RegistryStr(): encodeDockerCfgAuthEntryFromAuthConfig(authConfig),
 			},
 		},
 	)
@@ -411,4 +407,22 @@ func authHeaderWithBearer(header http.Header) bool {
 	}
 
 	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
+}
+
+type dockerCfgAuthEntry struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Auth     string `json:"auth,omitempty"`
+}
+
+func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *dockerCfgAuthEntry {
+	if authConfig.Username == "" && authConfig.Password == "" && authConfig.Auth == "" {
+		return &dockerCfgAuthEntry{}
+	}
+
+	return &dockerCfgAuthEntry{
+		Username: authConfig.Username,
+		Password: authConfig.Password,
+		Auth:     base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password)),
+	}
 }

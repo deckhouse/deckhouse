@@ -59,6 +59,7 @@ type DeckhouseUpdater struct {
 	skippedPatchesIndexes       []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
+	appliedNowReleaseIndex      int
 	predictedReleaseIsPatch     *bool
 
 	deckhousePodIsReady      bool
@@ -84,6 +85,7 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
+		appliedNowReleaseIndex:      -1,
 		skippedPatchesIndexes:       make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
 		deckhouseIsBootstrapping:    isBootstrapping,
@@ -397,6 +399,10 @@ func (du *DeckhouseUpdater) PredictNextRelease() {
 		if release.AnnotationFlags.Force {
 			du.forcedReleaseIndex = i
 		}
+
+		if release.AnnotationFlags.ApplyNow {
+			du.appliedNowReleaseIndex = i
+		}
 	}
 }
 
@@ -439,6 +445,45 @@ func (du *DeckhouseUpdater) ApplyForcedRelease() {
 
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
+			du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
+		}
+	}
+}
+
+func (du *DeckhouseUpdater) HasAppliedNowRelease() bool {
+	return du.appliedNowReleaseIndex != -1
+}
+
+func (du *DeckhouseUpdater) ApplyAppliedNowRelease() {
+	appliedNowRelease := &(du.releases[du.appliedNowReleaseIndex])
+	var currentRelease *DeckhouseRelease
+
+	if !du.checkAppliedNowConditions(appliedNowRelease) {
+		return
+	}
+
+	if du.currentDeployedReleaseIndex != -1 {
+		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
+	}
+
+	du.input.LogEntry.Warnf("Applying release %s", appliedNowRelease.Name)
+
+	// all checks are passed, deploy release
+	du.runReleaseDeploy(appliedNowRelease, currentRelease)
+
+	annotationsPatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"release.deckhouse.io/apply-now": nil,
+			},
+		},
+	}
+	// remove annotation
+	du.input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", appliedNowRelease.Name)
+
+	// Outdate all previous releases
+	for i, release := range du.releases {
+		if i < du.appliedNowReleaseIndex {
 			du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
 		}
 	}
@@ -661,4 +706,35 @@ func (du *DeckhouseUpdater) createReleaseDataCM() {
 	}
 
 	du.input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+}
+
+// for applied now we check less conditions, then for minor release
+// - Release requirements
+// - Disruptions
+// - Deckhouse pod is ready
+func (du *DeckhouseUpdater) checkAppliedNowConditions(appliedNowRelease *DeckhouseRelease) bool {
+	// check: release requirements (hard lock)
+	passed := du.checkReleaseRequirements(appliedNowRelease)
+	if !passed {
+		du.input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": appliedNowRelease.Name, "reason": "requirement"}, metrics.WithGroup(metricReleasesGroup))
+		du.input.LogEntry.Warnf("Release %s requirements are not met", appliedNowRelease.Name)
+		return false
+	}
+
+	// check: release disruptions (hard lock)
+	passed = du.checkReleaseDisruptions(appliedNowRelease)
+	if !passed {
+		du.input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": appliedNowRelease.Name, "reason": "disruption"}, metrics.WithGroup(metricReleasesGroup))
+		du.input.LogEntry.Warnf("Release %s disruption approval required", appliedNowRelease.Name)
+		return false
+	}
+
+	// check: Deckhouse pod is ready
+	if !du.deckhousePodIsReady {
+		du.input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
+		du.updateStatus(appliedNowRelease, "Waiting for Deckhouse pod to be ready", v1alpha1.PhasePending)
+		return false
+	}
+
+	return true
 }

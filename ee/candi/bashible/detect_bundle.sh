@@ -55,7 +55,7 @@ case "$ID" in
     name_is_not_supported
   ;;
   altlinux)
-    case "$VERSION_ID" in p10|10.0|10.1|10.2)
+    case "$VERSION_ID" in p10|10|10.0|10.1|10.2)
       echo "altlinux" && exit 0 ;;
     esac
     name_is_not_supported

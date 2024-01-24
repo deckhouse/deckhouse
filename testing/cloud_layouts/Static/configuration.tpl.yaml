@@ -56,3 +56,13 @@ spec:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
   version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  enabled: true
+  settings:
+    earlyOomEnabled: false
+  version: 1

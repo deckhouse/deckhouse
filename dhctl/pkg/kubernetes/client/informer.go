@@ -93,7 +93,7 @@ func (p *DeploymentInformer) CreateSharedInformer() (err error) {
 	return nil
 }
 
-func (p *DeploymentInformer) OnAdd(obj interface{}) {
+func (p *DeploymentInformer) OnAdd(obj interface{}, _ bool) {
 	p.HandleWatchEvent(obj, "Added")
 }
 
@@ -163,7 +163,7 @@ func (p *CRDInformer) CreateSharedInformer() (err error) {
 	return nil
 }
 
-func (p *CRDInformer) OnAdd(obj interface{}) {
+func (p *CRDInformer) OnAdd(obj interface{}, _ bool) {
 	p.HandleWatchEvent(obj, "Added")
 }
 

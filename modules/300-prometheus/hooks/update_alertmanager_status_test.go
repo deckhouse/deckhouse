@@ -35,13 +35,22 @@ const (
 			"target": "alertmanager.mycompany.com",
 			"tlsConfig": {}
 		}],
-		"byService": [{
+		"byService": [
+			{
 			"name": "alerts-receiver",
 			"namespace": "d8-monitoring",
 			"pathPrefix": "/",
 			"port": "http",
 			"resourceName": "alerts-receiver"
-		}],
+			},
+			{
+			"name": "another-alert-receiver",
+			"namespace": "d8-monitoring",
+			"pathPrefix": "/",
+			"port": "http",
+			"resourceName": ""
+			},
+		],
 		"internal": [{
 			"name": "webhook",
 			"receivers": [{
@@ -89,7 +98,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: update alertmanagers' status
 		It("should have generated resources with 'synced' false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byAddress").Array()).To(HaveLen(1))
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(2))
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.internal").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {
@@ -120,7 +129,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: update alertmanagers' status
 		It("should have generated resources with 'synced' true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byAddress").Array()).To(HaveLen(1))
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").Array()).To(HaveLen(2))
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.internal").Array()).To(HaveLen(1))
 			const expectedStatus = `{
 				"deckhouse": {

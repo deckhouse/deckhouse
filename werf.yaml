@@ -33,6 +33,9 @@ gitWorktree:
 # rust proxy settings
 {{- $_ := set . "CRATESPROXY" (env "CRATESPROXY") }}
 
+# npm proxy settings
+{{- $_ := set . "NPMPROXY" (env "NPMPROXY") }}
+
 ---
 {{- define "base components" }}
   - name: "Install openssl"
@@ -149,7 +152,7 @@ ansible:
 
 ---
 image: base-for-go
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 ansible:
   beforeInstall:
   - name: "Install dependencies"
@@ -562,27 +565,27 @@ import:
   before: setup
 - artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
   add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
 - artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
-  add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
+  add: /terraform-provider-azurerm
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
 - artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
-  add: /terraform-provider-gcp/terraform-provider-gcp
+  add: /terraform-provider-gcp
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   after: setup
 - artifact: terraform-provider-yandex # from modules/040-terraform-manager/images/terraform-manager-yandex/werf.inc.yaml
   add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
 {{- if ne .Env "CE" }}
 - artifact: terraform-provider-openstack # from ee/modules/040-terraform-manager/images/terraform-manager-openstack/werf.inc.yaml
   add: /terraform-provider-openstack
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
 - artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
-  add: /terraform-provider-vsphere/terraform-provider-vsphere
+  add: /terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
   after: setup
 {{- end }}
@@ -680,6 +683,7 @@ context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images
 dockerfile: Dockerfile
 args:
   BASE_ALPINE: {{ .Images.BASE_ALPINE }}
+  BASE_ALT_P101: {{ .Images.BASE_ALT_P101 }}
   BASE_RUST: {{ .Images.BASE_RUST }}
   BASE_GOLANG_ALPINE: {{ .Images.BASE_GOLANG_ALPINE }}
   BASE_GOLANG_16_ALPINE: {{ .Images.BASE_GOLANG_16_ALPINE }}
@@ -695,6 +699,7 @@ args:
   BASE_GOLANG_20_ALPINE: {{ .Images.BASE_GOLANG_20_ALPINE }}
   BASE_GOLANG_20_BULLSEYE: {{ .Images.BASE_GOLANG_20_BULLSEYE }}
   BASE_GOLANG_20_BUSTER: {{ .Images.BASE_GOLANG_20_BUSTER }}
+  BASE_GOLANG_21_ALPINE: {{ .Images.BASE_GOLANG_21_ALPINE }}
   BASE_GOLANG_21_BULLSEYE: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
@@ -707,6 +712,7 @@ args:
   SOURCE_REPO: {{ .SOURCE_REPO }}
   GOPROXY: {{ .GOPROXY }}
   CRATESPROXY: {{ .CRATESPROXY }}
+  NPMPROXY: {{ .NPMPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
@@ -759,7 +765,7 @@ dependencies:
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
   {{- $_ := set $ctx "CRATESPROXY" $Root.CRATESPROXY }}
-
+  {{- $_ := set $ctx "NPMPROXY" $Root.NPMPROXY }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}

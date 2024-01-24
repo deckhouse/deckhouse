@@ -63,6 +63,7 @@ defaults:
       path: ""
       type: "pages"
     values:
+      toc: false
       layout: "page"
       comments: false
       searchable: true
@@ -120,11 +121,6 @@ defaults:
       d8Revision: ee
       featureStatus: experimental
   - scope:
-      path: "*/041-linstor"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
       path: "*/350-node-local-dns"
       type: "pages"
     values:
@@ -165,11 +161,6 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
-  - scope:
-      path: "*/490-virtualization"
-      type: "pages"
-    values:
-      featureStatus: temporaryDeprecated
   - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"

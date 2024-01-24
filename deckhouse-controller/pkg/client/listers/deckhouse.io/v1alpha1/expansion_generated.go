@@ -18,6 +18,26 @@ limitations under the License.
 
 package v1alpha1
 
+// ModuleListerExpansion allows custom methods to be added to
+// ModuleLister.
+type ModuleListerExpansion interface{}
+
 // ModuleConfigListerExpansion allows custom methods to be added to
 // ModuleConfigLister.
 type ModuleConfigListerExpansion interface{}
+
+// ModulePullOverrideListerExpansion allows custom methods to be added to
+// ModulePullOverrideLister.
+type ModulePullOverrideListerExpansion interface{}
+
+// ModuleReleaseListerExpansion allows custom methods to be added to
+// ModuleReleaseLister.
+type ModuleReleaseListerExpansion interface{}
+
+// ModuleSourceListerExpansion allows custom methods to be added to
+// ModuleSourceLister.
+type ModuleSourceListerExpansion interface{}
+
+// ModuleUpdatePolicyListerExpansion allows custom methods to be added to
+// ModuleUpdatePolicyLister.
+type ModuleUpdatePolicyListerExpansion interface{}

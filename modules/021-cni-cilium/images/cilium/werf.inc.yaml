@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "1.14.4" }}
+{{- $ciliumVersion := "1.14.5" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
 git:

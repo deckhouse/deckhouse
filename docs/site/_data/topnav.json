@@ -4,6 +4,40 @@
       {
         "items": [
           {
+            "title": "Documentation",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Platform",
+                "url": "/documentation/v1/deckhouse-overview.html",
+                "target": ""
+              },
+              {
+                "title": "Modules",
+                "url": "/modules/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "How to start",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Getting started",
+                "url": "/gs/",
+                "target": ""
+              },
+              {
+                "title": "Going to Production",
+                "url": "/guides/production.html",
+                "target": ""
+              }
+            ]
+          },
+          {
             "title": "Products",
             "url": "",
             "target": "",
@@ -54,7 +88,7 @@
               },
               {
                 "title": "Technical support regulations",
-                "url": "/regulations/",
+                "url": "/regulations-en/",
                 "target": ""
               },
               {
@@ -75,6 +109,40 @@
     "ru": [
       {
         "items": [
+          {
+            "title": "Документация",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Платформа",
+                "url": "/documentation/v1/deckhouse-overview.html",
+                "target": ""
+              },
+              {
+                "title": "Модули",
+                "url": "/modules/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Руководства",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Быстрый старт",
+                "url": "/gs/",
+                "target": ""
+              },
+              {
+                "title": "Подготовка к production",
+                "url": "/guides/production.html",
+                "target": ""
+              }
+            ]
+          },
           {
             "title": "Продукты",
             "url": "",

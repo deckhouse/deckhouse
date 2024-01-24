@@ -17,6 +17,7 @@ limitations under the License.
 package cr
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -25,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -36,6 +38,10 @@ import (
 )
 
 //go:generate minimock -i Client -o cr_mock.go
+
+const (
+	defaultTimeout = 90 * time.Second
+)
 
 type Client interface {
 	Image(tag string) (v1.Image, error)
@@ -52,7 +58,18 @@ type client struct {
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
 func NewClient(repo string, options ...Option) (Client, error) {
-	opts := &registryOptions{}
+	timeout := defaultTimeout
+	// make possible to rewrite timeout in runtime
+	if t := os.Getenv("REGISTRY_TIMEOUT"); t != "" {
+		var err error
+		timeout, err = time.ParseDuration(t)
+		if err != nil {
+			return nil, err
+		}
+	}
+	opts := &registryOptions{
+		timeout: timeout,
+	}
 
 	for _, opt := range options {
 		opt(opts)
@@ -96,6 +113,18 @@ func (r *client) Image(tag string) (v1.Image, error) {
 		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
 	}
 
+	if r.options.timeout > 0 {
+		// add default timeout to prevent endless request on a huge image
+		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
+		go func() {
+			<-ctx.Done()
+			cancel()
+		}()
+
+		imageOptions = append(imageOptions, remote.WithContext(ctx))
+	}
+
 	return remote.Image(
 		ref,
 		imageOptions...,
@@ -119,6 +148,17 @@ func (r *client) ListTags() ([]string, error) {
 	repo, err := name.NewRepository(r.registryURL, nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing repo %q: %w", r.registryURL, err)
+	}
+
+	if r.options.timeout > 0 {
+		// add default timeout to prevent endless request on a huge amount of tags
+		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		go func() {
+			<-ctx.Done()
+			cancel()
+		}()
+
+		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
 	return remote.List(repo, imageOptions...)
@@ -184,8 +224,8 @@ func GetHTTPTransport(ca string) (transport http.RoundTripper) {
 	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
+			Timeout:   defaultTimeout,
+			KeepAlive: defaultTimeout,
 		}).DialContext,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
@@ -202,6 +242,7 @@ type registryOptions struct {
 	withoutAuth bool
 	dockerCfg   string
 	userAgent   string
+	timeout     time.Duration
 }
 
 type Option func(options *registryOptions)
@@ -238,6 +279,14 @@ func WithAuth(dockerCfg string) Option {
 func WithUserAgent(ua string) Option {
 	return func(options *registryOptions) {
 		options.userAgent = ua
+	}
+}
+
+// WithTimeout limit and request to a registry with a timeout
+// default timeout is 30 seconds
+func WithTimeout(timeout time.Duration) Option {
+	return func(options *registryOptions) {
+		options.timeout = timeout
 	}
 }
 

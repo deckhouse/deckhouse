@@ -22,6 +22,7 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -50,8 +51,7 @@ type ModuleImageLayout struct {
 	ReleaseImages  map[string]struct{}
 }
 
-func CreateOCIImageLayouts(
-	registryRepo string,
+func CreateOCIImageLayoutsForDeckhouse(
 	rootFolder string,
 	modules []Module,
 ) (*ImageLayouts, error) {
@@ -59,37 +59,28 @@ func CreateOCIImageLayouts(
 	layouts := &ImageLayouts{Modules: map[string]ModuleImageLayout{}}
 
 	fsPaths := map[*layout.Path]string{
-		&layouts.Deckhouse:      filepath.Join(rootFolder, registryRepo),
-		&layouts.Install:        filepath.Join(rootFolder, registryRepo, "install"),
-		&layouts.ReleaseChannel: filepath.Join(rootFolder, registryRepo, "release-channel"),
+		&layouts.Deckhouse:      rootFolder,
+		&layouts.Install:        filepath.Join(rootFolder, "install"),
+		&layouts.ReleaseChannel: filepath.Join(rootFolder, "release-channel"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
-		if err := createEmptyImageLayoutAtPath(fsPath); err != nil {
-			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", fsPath, err)
-		}
-		*layoutPtr, err = layout.FromPath(fsPath)
+		*layoutPtr, err = CreateEmptyImageLayoutAtPath(fsPath)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", fsPath, err)
+			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", fsPath, err)
 		}
 	}
 
 	for _, module := range modules {
-		path := filepath.Join(rootFolder, registryRepo, "modules", module.Name)
-		if err := createEmptyImageLayoutAtPath(path); err != nil {
-			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
-		}
-		moduleLayout, err := layout.FromPath(path)
+		path := filepath.Join(rootFolder, "modules", module.Name)
+		moduleLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", path, err)
+			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}
 
-		path = filepath.Join(rootFolder, registryRepo, "modules", module.Name, "release")
-		if err := createEmptyImageLayoutAtPath(path); err != nil {
-			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
-		}
-		moduleReleasesLayout, err := layout.FromPath(path)
+		path = filepath.Join(rootFolder, "modules", module.Name, "release")
+		moduleReleasesLayout, err := CreateEmptyImageLayoutAtPath(path)
 		if err != nil {
-			return nil, fmt.Errorf("get OCI Image Layout from %s: %w", path, err)
+			return nil, fmt.Errorf("create OCI Image Layout at %s: %w", path, err)
 		}
 
 		layouts.Modules[module.Name] = ModuleImageLayout{
@@ -103,13 +94,13 @@ func CreateOCIImageLayouts(
 	return layouts, nil
 }
 
-func createEmptyImageLayoutAtPath(path string) error {
+func CreateEmptyImageLayoutAtPath(path string) (layout.Path, error) {
 	layoutFilePath := filepath.Join(path, "oci-layout")
 	indexFilePath := filepath.Join(path, "index.json")
 	blobsPath := filepath.Join(path, "blobs")
 
 	if err := os.MkdirAll(blobsPath, 0755); err != nil {
-		return fmt.Errorf("mkdir for blobs: %w", err)
+		return "", fmt.Errorf("mkdir for blobs: %w", err)
 	}
 
 	layoutContents := ociLayout{ImageLayoutVersion: "1.0.0"}
@@ -120,21 +111,21 @@ func createEmptyImageLayoutAtPath(path string) error {
 
 	rawJSON, err := json.MarshalIndent(indexContents, "", "    ")
 	if err != nil {
-		return fmt.Errorf("create index.json: %w", err)
+		return "", fmt.Errorf("create index.json: %w", err)
 	}
 	if err = os.WriteFile(indexFilePath, rawJSON, 0644); err != nil {
-		return fmt.Errorf("create index.json: %w", err)
+		return "", fmt.Errorf("create index.json: %w", err)
 	}
 
 	rawJSON, err = json.MarshalIndent(layoutContents, "", "    ")
 	if err != nil {
-		return fmt.Errorf("create oci-layout: %w", err)
+		return "", fmt.Errorf("create oci-layout: %w", err)
 	}
 	if err = os.WriteFile(layoutFilePath, rawJSON, 0644); err != nil {
-		return fmt.Errorf("create oci-layout: %w", err)
+		return "", fmt.Errorf("create oci-layout: %w", err)
 	}
 
-	return nil
+	return layout.Path(path), nil
 }
 
 type indexSchema struct {
@@ -151,7 +142,7 @@ type ociLayout struct {
 	ImageLayoutVersion string `json:"imageLayoutVersion"`
 }
 
-func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []*semver.Version) {
+func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []semver.Version) {
 	layouts.DeckhouseImages = map[string]struct{}{
 		mirrorCtx.DeckhouseRegistryRepo + ":alpha":        {},
 		mirrorCtx.DeckhouseRegistryRepo + ":beta":         {},
@@ -197,7 +188,12 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:rock-solid":   {},
 		}
 
-		channelVersions, err := fetchVersionsFromModuleReleaseChannels(mirrorCtx, moduleData.ReleaseImages)
+		channelVersions, err := fetchVersionsFromModuleReleaseChannels(
+			moduleData.ReleaseImages,
+			mirrorCtx.RegistryAuth,
+			mirrorCtx.Insecure,
+			mirrorCtx.SkipTLSVerification,
+		)
 		if err != nil {
 			return fmt.Errorf("fetch versions from %q release channels: %w", moduleName, err)
 		}
@@ -207,17 +203,9 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			moduleData.ReleaseImages[mirrorCtx.DeckhouseRegistryRepo+"/modules/"+moduleName+"/release:"+moduleVersion] = struct{}{}
 		}
 
+		nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 		fetchDigestsFrom := maputil.Clone(moduleData.ModuleImages)
 		for imageTag := range fetchDigestsFrom {
-			nameOpts := []name.Option{}
-			remoteOpts := []remote.Option{}
-			if mirrorCtx.Insecure {
-				nameOpts = append(nameOpts, name.Insecure)
-			}
-			if mirrorCtx.RegistryAuth != nil {
-				remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-			}
-
 			ref, err := name.ParseReference(imageTag, nameOpts...)
 			if err != nil {
 				return fmt.Errorf("get digests for %q version: %w", imageTag, err)
@@ -246,27 +234,24 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 }
 
 func fetchVersionsFromModuleReleaseChannels(
-	mirrorCtx *Context,
 	releaseChannelImages map[string]struct{},
+	authProvider authn.Authenticator,
+	insecure, skipVerifyTLS bool,
 ) (map[string]string, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
-		opts := []name.Option{}
-		remoteOpts := []remote.Option{}
-		if mirrorCtx.Insecure {
-			opts = append(opts, name.Insecure)
-		}
-		if mirrorCtx.RegistryAuth != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(mirrorCtx.RegistryAuth))
-		}
 
-		ref, err := name.ParseReference(imageTag, opts...)
+		ref, err := name.ParseReference(imageTag, nameOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("pull %q release channel: %w", imageTag, err)
 		}
 
 		img, err := remote.Image(ref, remoteOpts...)
 		if err != nil {
+			if isImageNotFoundError(err) {
+				continue
+			}
 			return nil, fmt.Errorf("pull %q release channel: %w", imageTag, err)
 		}
 

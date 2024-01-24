@@ -6,50 +6,25 @@ git:
   to: /deckhouse/candi/cloud-providers/gcp
 import:
 - artifact: terraform-provider-gcp
-  add: /terraform-provider-gcp/terraform-provider-gcp
+  add: /terraform-provider-gcp
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
-ansible:
-  install:
-  - name: "Create a directory for terraform provider gcp"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64
-      state: directory
-  - apk:
-      name: ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-gcp
-from: {{ .Images.BASE_GOLANG_ALPINE }}
-git:
-- url: https://github.com/flant/terraform-provider-google
-  add: /
-  to: /terraform-provider-gcp
-  tag: v{{ .TF.gcp.version }}-flant.1
-  stageDependencies:
-    install:
-    - "**/*"
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-ansible:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
   beforeInstall:
-  - apk:
-      name:
-      - git
-      - ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
-
+    - apk add --no-cache make patch git bash
   install:
-  - command: go mod download
-    args:
-      chdir: /terraform-provider-gcp
-
-  setup:
-  - command: go build -o terraform-provider-gcp
-    args:
-      chdir: /terraform-provider-gcp
-    environment:
-      CGO_ENABLED: "0"
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ $.SOURCE_REPO }}/flant/terraform-provider-google.git /src
+    - cd /src
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
+    - mv terraform-provider-gcp /terraform-provider-gcp
+    - chmod -R 755 /terraform-provider-gcp
+    - chown 64535:64535 /terraform-provider-gcp

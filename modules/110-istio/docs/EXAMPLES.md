@@ -240,7 +240,7 @@ metadata:
 spec:
   selector:
     # label selector for using the Istio Ingress Gateway main-hp
-    istio.deckhouse.io/ingress-gateway-class: istio-hp 
+    istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
         # standard template for using the HTTP protocol
@@ -300,7 +300,7 @@ metadata:
     # Nginx proxies traffic to the ClusterIP instead of pods' own IPs.
     nginx.ingress.kubernetes.io/service-upstream: "true"
     # In Istio, all routing is carried out based on the `Host:` headers.
-    # Instead of letting Istio know about the `productpage.example.com` external domain, 
+    # Instead of letting Istio know about the `productpage.example.com` external domain,
     # we use the internal domain of which Istio is aware.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
@@ -628,24 +628,24 @@ The annotation below adds the preStop hook to istio-proxy container in applicati
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x16` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x19` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Upgrade algorithm (i.e. to `1.16`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.16"]`).
-  * Wait for the corresponding pod `istiod-v1x16-xxx-yyy` to appear in `d8-istio` namespace.
+* Upgrade algorithm (i.e. to `1.19`):
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.19"]`).
+  * Wait for the corresponding pod `istiod-v1x19-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x16`.
+    * Change `istio-injection: enabled` label to `istio.io/rev: v1x19`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
-  * Reconfigure `globalVersion` to `1.16` and remove the `additionalVersions` configuration.
+  * Reconfigure `globalVersion` to `1.19` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision, execute the following command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x13" \
-  '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
+kubectl get pods -A -o json | jq --arg revision "v1x16" \
+  '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 

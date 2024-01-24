@@ -26,7 +26,6 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-  - deadcode
   - dogsled
   - errcheck
   - gci
@@ -43,5 +42,4 @@ linters:
   - typecheck
   - unconvert
   - unparam
-  - varcheck
   - whitespace

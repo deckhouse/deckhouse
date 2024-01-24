@@ -49,7 +49,18 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&ModuleConfig{},
 		&ModuleConfigList{},
+		&Module{},
+		&ModuleList{},
+		&ModuleSource{},
+		&ModuleSourceList{},
+		&ModuleRelease{},
+		&ModuleReleaseList{},
+		&ModuleUpdatePolicy{},
+		&ModuleUpdatePolicyList{},
+		&ModulePullOverride{},
+		&ModulePullOverrideList{},
 	)
+
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }

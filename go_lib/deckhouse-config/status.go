@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
@@ -47,7 +47,7 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string) Status {
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string, enabled bool) Status {
 	// Special case: unknown module name.
 	moduleType, fromSource := modulesToSource[cfg.GetName()]
 
@@ -67,7 +67,12 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
 		res := Service().ConfigValidator().Validate(cfg)
 		if res.HasError() {
-			invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
+			var prefix = "Ignored"
+			if enabled {
+				prefix = "Error"
+			}
+
+			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
 			return Status{
 				State:   "N/A",
 				Version: "",
@@ -118,12 +123,12 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
 		stateMsg = "Enabled"
 
-		lastHookErr := mod.State.GetLastHookErr()
+		lastHookErr := mod.GetLastHookError()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
 		}
-		if mod.State.LastModuleErr != nil {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.State.LastModuleErr))
+		if mod.GetModuleError() != nil {
+			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.GetModuleError()))
 		}
 
 		if len(statusMsgs) == 0 { // no errors were added
@@ -134,7 +139,7 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 			// However, there are too many addon-operator internals involved.
 			// We should consider moving these statuses to the `Module` resource,
 			// which is directly controlled by addon-operator.
-			if mod.State.Phase == module_manager.CanRunHelm {
+			if mod.GetPhase() == modules.CanRunHelm {
 				statusMsgs = append(statusMsgs, "Ready")
 			} else {
 				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
@@ -145,7 +150,8 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 		if cfg.Spec.Enabled == nil {
 			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
 			enabledMsg := "disabled"
-			if mergeEnabled(mod.CommonStaticConfig.IsEnabled, mod.StaticConfig.IsEnabled) {
+			// TODO(yalosev): think about it
+			if s.moduleManager.IsModuleEnabled(mod.GetName()) {
 				enabledMsg = "enabled"
 			}
 			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
@@ -163,21 +169,4 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 		Status:  strings.Join(statusMsgs, ", "),
 		Type:    moduleType,
 	}
-}
-
-// mergeEnabled merges enabled flags. Enabled flag can be nil.
-//
-// If all flags are nil, then false is returned — module is disabled by default.
-// Note: copy-paste from AddonOperator.moduleManager
-func mergeEnabled(enabledFlags ...*bool) bool {
-	result := false
-	for _, enabled := range enabledFlags {
-		if enabled == nil {
-			continue
-		}
-
-		result = *enabled
-	}
-
-	return result
 }

@@ -105,7 +105,7 @@ spec:
                   description: |
                     Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
                   x-doc-examples:
-                    - b0csh41c1or82vuch89v
+                  - - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
                   type: array
                   items:
@@ -222,7 +222,7 @@ spec:
                   description: |
                     Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
                   x-doc-examples:
-                    - b0csh41c1or82vuch89v
+                  - - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
                   type: array
                   items:

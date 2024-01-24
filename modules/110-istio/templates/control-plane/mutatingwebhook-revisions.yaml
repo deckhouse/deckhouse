@@ -1,0 +1,72 @@
+{{- define "mwh_common_revision" }}
+  {{- $context := index . 0 }}
+  {{- $version := index . 1 }}
+  {{- $prefix := index . 2 }}
+  {{- $versionInfo := get $context.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision" }}
+- name: {{ $prefix }}sidecar-injector.istio.io
+  clientConfig:
+    caBundle: {{ $context.Values.istio.internal.ca.cert | b64enc }}
+    service:
+      name: istiod-{{ $revision }}
+      namespace: d8-istio
+      path: "/inject"
+      port: 443
+  sideEffects: None
+  rules:
+  - operations: [ "CREATE" ]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  failurePolicy: Fail
+  reinvocationPolicy: Never
+  admissionReviewVersions: ["v1"]
+{{- end }}
+
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+{{- $baseArg := (list $ $version) }}
+---
+{{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $revision := get $versionInfo "revision" }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: d8-istio-sidecar-injector-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "istio.deckhouse.io/full-version" $fullVersion "istio.io/rev" $revision ) ) | nindent 2 }}
+webhooks:
+{{- /* Case 1: Namespace-wide injection */}}
+{{ include "mwh_common_revision" (append $baseArg "namespace-") }}
+  namespaceSelector:
+    matchExpressions:
+    - key: istio.io/rev
+      operator: In
+      values:
+      - "{{ $revision }}"
+    - key: istio-injection
+      operator: DoesNotExist
+  objectSelector:
+    matchExpressions:
+    - key: sidecar.istio.io/inject
+      operator: NotIn
+      values:
+      - "false"
+{{- /* Case 2: Injection for individual pods */}}
+{{ include "mwh_common_revision" (append $baseArg "object-") }}
+  namespaceSelector:
+    matchExpressions:
+    - key: istio.io/rev
+      operator: DoesNotExist
+    - key: istio-injection
+      operator: DoesNotExist
+  objectSelector:
+    matchExpressions:
+    - key: sidecar.istio.io/inject
+      operator: NotIn
+      values:
+      - "false"
+    - key: istio.io/rev
+      operator: In
+      values:
+      - "{{ $revision }}"
+{{- end }}

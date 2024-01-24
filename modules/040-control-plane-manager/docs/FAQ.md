@@ -477,7 +477,7 @@ Login into any control-plane node with `root` user and use next script:
 ```bash
 #!/usr/bin/env bash
 
-pod=`crictl ps | grep " etcd " | awk '{print $NF}'`
+pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
 mv /var/lib/etcd/"${pod##*/}.snapshot" etcd-backup.snapshot && \
 cp -r /etc/kubernetes/ ./ && \

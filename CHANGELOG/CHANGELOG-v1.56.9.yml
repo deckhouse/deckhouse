@@ -1,0 +1,7 @@
+external-module-manager:
+  fixes:
+    - summary: Fix multiple symlinks for a single module in the symlink folder.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7228
+    - summary: Fix outdated module versions in multi-master environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7222
+

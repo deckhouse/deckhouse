@@ -36,7 +36,9 @@ properties:
             description: |
               The mode of issuing certificates for the Ingress resource.
 
-              In the `SelfSigned` mode, a self-signed certificate will be issued for the Ingress resource.
+              In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
+              
+              Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:

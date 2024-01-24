@@ -10,6 +10,8 @@ data:
   cluster-name: default # make sense only for cluster mesh
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
+  pprof: "true"
+  pprof-address: "127.0.0.1"
 
   metrics: "+cilium_bpf_map_pressure"
 

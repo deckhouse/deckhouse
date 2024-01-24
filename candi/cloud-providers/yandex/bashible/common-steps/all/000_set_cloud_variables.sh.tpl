@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-shutdown_grace_period="30s"
+shutdown_grace_period="25s"
 shutdown_grace_period_critical_pods="5s"
 
 cat << EOF > /var/lib/bashible/cloud-provider-variables

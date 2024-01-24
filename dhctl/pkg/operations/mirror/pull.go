@@ -17,6 +17,7 @@ package mirror
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,11 +26,19 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull installers")
-	if err := pullImageSet(mirrorCtx.RegistryAuth, layouts.Install, layouts.InstallImages, mirrorCtx.Insecure); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.Install,
+		layouts.InstallImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ All required installers are pulled!")
@@ -38,7 +47,14 @@ func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 
 func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse release channels information")
-	if err := pullImageSet(mirrorCtx.RegistryAuth, layouts.ReleaseChannel, layouts.ReleaseChannelImages, mirrorCtx.Insecure); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.ReleaseChannel,
+		layouts.ReleaseChannelImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ Deckhouse release channels are pulled!")
@@ -47,53 +63,66 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 
 func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse, this may take a while")
-	if err := pullImageSet(mirrorCtx.RegistryAuth, layouts.Deckhouse, layouts.DeckhouseImages, mirrorCtx.Insecure); err != nil {
+	if err := PullImageSet(
+		mirrorCtx.RegistryAuth,
+		layouts.Deckhouse,
+		layouts.DeckhouseImages,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+		false,
+	); err != nil {
 		return err
 	}
 	log.InfoLn("✅ All required Deckhouse images are pulled!")
 	return nil
 }
 
-func pullImageSet(
+func PullImageSet(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	imageSet map[string]struct{},
-	insecure bool,
+	insecure, skipVerifyTLS, allowMissingTags bool,
 ) error {
 	pullCount := 1
 	totalCount := len(imageSet)
 	for imageTag := range imageSet {
-		log.InfoF("[%d / %d] Pulling %s...\t", pullCount, totalCount, imageTag)
-
-		pullOpts := []name.Option{}
-		remoteOpts := []remote.Option{}
-		if insecure {
-			pullOpts = append(pullOpts, name.Insecure)
-		}
-		if authProvider != nil {
-			remoteOpts = append(remoteOpts, remote.WithAuth(authProvider))
-		}
-
+		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 		ref, err := name.ParseReference(imageTag, pullOpts...)
 		if err != nil {
 			return fmt.Errorf("parse image reference %q: %w", imageTag, err)
 		}
-		img, err := remote.Image(ref, remoteOpts...)
-		if err != nil {
-			return fmt.Errorf("pull image %q metadata: %w", imageTag, err)
-		}
 
-		err = targetLayout.AppendImage(img,
-			layout.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}),
-			layout.WithAnnotations(map[string]string{
-				"org.opencontainers.image.ref.name": imageTag,
-				"io.deckhouse.image.short_tag":      imageTag[strings.LastIndex(imageTag, ":")+1:],
-			}),
-		)
+		err = retry.NewLoop(
+			fmt.Sprintf("[%d / %d] Pulling %s...", pullCount, totalCount, imageTag),
+			6,
+			10*time.Second,
+		).Run(func() error {
+			img, err := remote.Image(ref, remoteOpts...)
+			if err != nil {
+				if isImageNotFoundError(err) && allowMissingTags {
+					log.WarnLn("⚠️ Not found in registry")
+					return nil
+				}
+
+				return fmt.Errorf("pull image metadata: %w", err)
+			}
+
+			err = targetLayout.AppendImage(img,
+				layout.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}),
+				layout.WithAnnotations(map[string]string{
+					"org.opencontainers.image.ref.name": imageTag,
+					"io.deckhouse.image.short_tag":      imageTag[strings.LastIndex(imageTag, ":")+1:],
+				}),
+			)
+			if err != nil {
+				return fmt.Errorf("write image to index: %w", err)
+			}
+
+			return nil
+		})
 		if err != nil {
 			return fmt.Errorf("pull image %q: %w", imageTag, err)
 		}
-		log.InfoLn("✅")
 		pullCount++
 	}
 	return nil
@@ -102,10 +131,10 @@ func pullImageSet(
 func PullModules(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse modules")
 	for moduleName, moduleData := range layouts.Modules {
-		if err := pullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, false); err != nil {
 			return fmt.Errorf("pull %q module: %w", moduleName, err)
 		}
-		if err := pullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, true); err != nil {
 			return fmt.Errorf("pull %q module release information: %w", moduleName, err)
 		}
 	}

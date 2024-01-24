@@ -48,7 +48,7 @@ var regexPatterns = map[string]string{
 	`$BASE_SHELL_OPERATOR`:   imageRegexp(`shell-operator:v[\d.]+`),
 	`$BASE_UBUNTU`:           imageRegexp(`ubuntu:[\d.]+`),
 	`$BASE_JEKYLL`:           imageRegexp(`jekyll/jekyll:[\d.]+`),
-	`$BASE_SCRATCH`:          imageRegexp(`spotify/scratch:[\d.]+`),
+	`$BASE_SCRATCH`:          imageRegexp(`scratch:[\d.]+`),
 }
 
 func imageRegexp(s string) string {

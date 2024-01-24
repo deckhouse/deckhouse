@@ -1,5 +1,5 @@
 {{- if ne $.Env "development" -}}
-{{- $_ := set . "Env" "FE" }}
+{{- $_ := set . "Env" "EE" }}
 {{- end }}
 ---
 project: deckhouse-web
@@ -35,6 +35,10 @@ import:
 image: static-pages
 from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210713
+docker:
+  ENV:
+    LANG: en_US.UTF-8
+    LC_ALL: en_US.UTF-8
 ansible:
   install:
     - shell: |
@@ -120,13 +124,6 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate sidebars"
-      shell: |
-        export MODULES_DIR=modules_en
-        /bin/bash ./modules_make_data > _data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> _data/sidebars/modules.yml2  && mv -f _data/sidebars/modules.yml2 _data/sidebars/modules.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
     - name: "Extract the default Kubernetes version"
       shell: |
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -159,7 +156,6 @@ git:
   includePaths:
     - site/_config.yml
     - site/_includes/head.html
-    - site/_data/revision_comparison.yml
     - site/Gemfile
     - site/Gemfile.lock
     - documentation

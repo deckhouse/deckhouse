@@ -203,6 +203,9 @@ spec:
                   anyOf:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
+                  x-kubernetes-validations:
+                    - message: .spec.httpsPort can't be 6443, it's reserved for kube-apiserver
+                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer

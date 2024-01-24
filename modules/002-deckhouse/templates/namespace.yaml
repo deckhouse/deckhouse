@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "prometheus.deckhouse.io/monitor-watcher-enabled" "true" "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus.deckhouse.io/monitor-watcher-enabled" "true" "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true" "prometheus.deckhouse.io/scrape-configs-watcher-enabled" "true")) | nindent 2 }}
 ---
 apiVersion: v1
 kind: Namespace

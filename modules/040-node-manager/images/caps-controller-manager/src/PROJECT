@@ -69,13 +69,4 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: cluster.x-k8s.io
-  group: infrastructure
-  kind: StaticControlPlane
-  path: caps-controller-manager/api/v1alpha1
-  version: v1alpha1
 version: "3"

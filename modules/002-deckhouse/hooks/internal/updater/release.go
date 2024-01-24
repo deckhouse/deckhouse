@@ -44,6 +44,7 @@ type DeckhouseRelease struct {
 type DeckhouseReleaseAnnotationsFlags struct {
 	Suspend            bool
 	Force              bool
+	ApplyNow           bool
 	DisruptionApproved bool
 	NotificationShift  bool // time shift by the notification process
 }

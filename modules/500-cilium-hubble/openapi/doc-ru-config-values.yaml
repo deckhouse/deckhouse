@@ -2,6 +2,11 @@ type: object
 properties:
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Hubble.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для Hubble.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

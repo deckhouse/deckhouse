@@ -245,10 +245,6 @@ func (l *nameLookuper) Lookup() ([]string, error) {
 	return ips, nil
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano()) // TODO: remove this after moving to go 1.20, see https://pkg.go.dev/math/rand#Seed
-}
-
 // lookupAndShuffleIPs resolves IPs with timeout. It either returns nil and error, or non-empty
 // slice of IPs and nil error.
 func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, error) {

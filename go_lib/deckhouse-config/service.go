@@ -19,7 +19,8 @@ package deckhouse_config
 import (
 	"sync"
 
-	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -46,6 +47,10 @@ func InitService(mm ModuleManager) {
 		statusReporter:       NewModuleInfo(mm, possibleNames),
 		moduleNamesToSources: make(map[string]string),
 	}
+}
+
+func IsServiceInited() bool {
+	return serviceInstance != nil
 }
 
 func Service() *ConfigService {
@@ -81,18 +86,12 @@ func (srv *ConfigService) SetModuleNameToSources(allModuleNamesToSources map[str
 	srv.moduleNamesToSourcesMu.Lock()
 	srv.moduleNamesToSources = allModuleNamesToSources
 	srv.moduleNamesToSourcesMu.Unlock()
-
-	for moduleName, source := range allModuleNamesToSources {
-		srv.moduleManager.SetModuleSource(moduleName, source)
-	}
 }
 
 func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string) {
 	srv.moduleNamesToSourcesMu.Lock()
 	srv.moduleNamesToSources[moduleName] = moduleSource
 	srv.moduleNamesToSourcesMu.Unlock()
-
-	srv.moduleManager.SetModuleSource(moduleName, moduleSource)
 }
 
 func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
@@ -107,6 +106,10 @@ func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
 	return res
 }
 
-func (srv *ConfigService) ValidateModule(module *module_manager.Module) error {
+func (srv *ConfigService) GetValuesValidator() *validation.ValuesValidator {
+	return srv.moduleManager.GetValuesValidator()
+}
+
+func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {
 	return srv.moduleManager.ValidateModule(module)
 }

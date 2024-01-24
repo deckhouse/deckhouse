@@ -5,23 +5,25 @@ git:
   to: /deckhouse/candi/cloud-providers/azure
 import:
 - artifact: terraform-provider-azure
-  add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
+  add: /terraform-provider-azurerm
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
-shell:
-  install:
-    - "apk update && apk add ca-certificates"
-    - "rm -rf /var/cache/apk/*"
 ---
 artifact: terraform-provider-azure
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   beforeInstall:
-    - apt-get update && apt install -y wget unzip
-    - |
-      mkdir /terraform-provider-azure
-      wget -q https://releases.hashicorp.com/terraform-provider-azurerm/{{ .TF.azure.version }}/terraform-provider-azurerm_{{ .TF.azure.version }}_linux_amd64.zip -O /terraform-provider-azure.zip
-      unzip -d /terraform-provider-azure /terraform-provider-azure.zip
-      chmod -R 755 /terraform-provider-azure
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.azure.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-azurerm.git /src
+    - cd /src
+    - make fmt
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-azurerm/version.ProviderVersion={{ .TF.azure.version }}"
+    - mv /go/bin/terraform-provider-azurerm /terraform-provider-azurerm
+    - chmod -R 755 /terraform-provider-azurerm
+    - chown 64535:64535 /terraform-provider-azurerm

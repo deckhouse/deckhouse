@@ -16,6 +16,7 @@ package commands
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,10 +54,11 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 func mirrorPushDeckhouseToPrivateRegistry() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
+		SkipTLSVerification:   app.MirrorTLSSkipVerify,
 		RegistryHost:          app.MirrorRegistryHost,
 		RegistryPath:          app.MirrorRegistryPath,
-		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
-		TarBundlePath:         app.MirrorTarBundle,
+		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
+		TarBundlePath:         app.MirrorTarBundlePath,
 		UnpackedImagesPath:    filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
 		ValidationMode:        mirror.ValidationMode(app.MirrorValidationMode),
 	}
@@ -68,7 +70,16 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		})
 	}
 
-	defer os.RemoveAll(app.TmpDirName)
+	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
+
+	if err := mirror.ValidateWriteAccessForRepo(
+		mirrorCtx.RegistryHost+mirrorCtx.RegistryPath,
+		mirrorCtx.RegistryAuth,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+	); err != nil {
+		return fmt.Errorf("Registry credentials validation failure: %w", err)
+	}
 
 	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
 		return mirror.UnpackBundle(mirrorCtx)
@@ -78,7 +89,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 	}
 
 	err = log.Process("mirror", "Push Deckhouse images to registry", func() error {
-		return operations.PushMirrorToRegistry(mirrorCtx)
+		return operations.PushDeckhouseToRegistry(mirrorCtx)
 	})
 	if err != nil {
 		return err
@@ -90,22 +101,37 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
-		SkipGOSTDigests:       app.MirrorSkipGOSTHashing,
+		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
-		DeckhouseRegistryRepo: app.MirrorDeckhouseRegistryRepo,
-		RegistryAuth: authn.FromConfig(authn.AuthConfig{
-			Username: "license-token",
-			Password: app.MirrorDHLicenseToken,
-		}),
-		TarBundlePath:      app.MirrorTarBundle,
-		UnpackedImagesPath: filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
-		ValidationMode:     mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:         app.MirrorMinVersion,
+		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
+		RegistryAuth:          getSourceRegistryAuthProvider(),
+		TarBundlePath:         app.MirrorTarBundlePath,
+		UnpackedImagesPath: filepath.Join(
+			app.TmpDirName,
+			"mirror_pull",
+			fmt.Sprintf("%x", md5.Sum([]byte(app.MirrorSourceRegistryRepo))),
+		),
+		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:     app.MirrorMinVersion,
 	}
 
-	defer os.RemoveAll(mirrorCtx.UnpackedImagesPath)
+	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
+		if err := os.RemoveAll(mirrorCtx.UnpackedImagesPath); err != nil {
+			return fmt.Errorf("Cleanup last unfinished pull data: %w", err)
+		}
+	}
 
-	var versionsToMirror []*semver.Version
+	if err := mirror.ValidateReadAccessForImage(
+		mirrorCtx.DeckhouseRegistryRepo+":rock-solid",
+		mirrorCtx.RegistryAuth,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+	); err != nil {
+		return fmt.Errorf("Source registry access validation failure: %w", err)
+	}
+
+	var versionsToMirror []semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)
@@ -120,8 +146,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	err = log.Process("mirror", "Pull images", func() error {
-		log.InfoLn("Working directory:", mirrorCtx.UnpackedImagesPath)
-		return operations.MirrorRegistryToLocalFS(mirrorCtx, versionsToMirror)
+		return operations.MirrorDeckhouseToLocalFS(mirrorCtx, versionsToMirror)
 	})
 	if err != nil {
 		return err
@@ -134,29 +159,57 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		return err
 	}
 
-	err = log.Process("mirror", "Compute GOST digest", func() error {
-		if mirrorCtx.SkipGOSTDigests {
-			log.InfoLn("GOST digest calculation skipped")
+	if mirrorCtx.DoGOSTDigests {
+		err = log.Process("mirror", "Compute GOST digest", func() error {
+			tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
+			if err != nil {
+				return fmt.Errorf("Read tar bundle: %w", err)
+			}
+			gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
+			if err != nil {
+				return fmt.Errorf("Calculate GOST Checksum: %w", err)
+			}
+			if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
+				return fmt.Errorf("Write GOST Checksum: %w", err)
+			}
+			log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
 			return nil
+		})
+		if err != nil {
+			return err
 		}
+	}
 
-		tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
-		if err != nil {
-			return fmt.Errorf("Read tar bundle: %w", err)
-		}
-		gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
-		if err != nil {
-			return fmt.Errorf("Calculate GOST Checksum: %w", err)
-		}
-		if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
-			return fmt.Errorf("Write GOST Checksum: %w", err)
-		}
-		log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
-		return nil
-	})
-	if err != nil {
-		return err
+	if err = os.RemoveAll(app.TmpDirName); err != nil {
+		return fmt.Errorf("Cleanup temporary data after mirroring: %w", err)
 	}
 
 	return nil
+}
+
+func lastPullWasTooLongAgoToRetry(mirrorCtx *mirror.Context) bool {
+	s, err := os.Lstat(mirrorCtx.UnpackedImagesPath)
+	if err != nil {
+		return false
+	}
+
+	return time.Since(s.ModTime()) > 24*time.Hour
+}
+
+func getSourceRegistryAuthProvider() authn.Authenticator {
+	if app.MirrorSourceRegistryLogin != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Username: app.MirrorSourceRegistryLogin,
+			Password: app.MirrorSourceRegistryPassword,
+		})
+	}
+
+	if app.MirrorDHLicenseToken != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Username: "license-token",
+			Password: app.MirrorDHLicenseToken,
+		})
+	}
+
+	return authn.Anonymous
 }

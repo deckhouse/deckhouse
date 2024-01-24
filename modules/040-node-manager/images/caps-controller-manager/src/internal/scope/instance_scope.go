@@ -136,6 +136,23 @@ func (i *InstanceScope) Patch(ctx context.Context) error {
 	return nil
 }
 
+func (i *InstanceScope) ToPending(ctx context.Context) error {
+	i.Instance.Status.MachineRef = nil
+	i.Instance.Status.NodeRef = nil
+	i.Instance.Status.CurrentStatus = nil
+
+	conditions.MarkFalse(i.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
+
+	i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
+
+	err := i.Patch(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to set StaticInstance to Pending phase")
+	}
+
+	return nil
+}
+
 // Close the InstanceScope by updating the instance spec and status.
 func (i *InstanceScope) Close(ctx context.Context) error {
 	return i.Patch(ctx)

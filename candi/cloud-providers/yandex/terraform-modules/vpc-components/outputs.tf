@@ -15,7 +15,8 @@
 locals {
   zone_to_subnet_id_map_a = merge({}, (length(data.yandex_vpc_subnet.kube_a) > 0 ? {(data.yandex_vpc_subnet.kube_a[0].zone): data.yandex_vpc_subnet.kube_a[0].id } : {} ))
   zone_to_subnet_id_map_b = merge(local.zone_to_subnet_id_map_a, (length(data.yandex_vpc_subnet.kube_b) > 0 ?{(data.yandex_vpc_subnet.kube_b[0].zone): data.yandex_vpc_subnet.kube_b[0].id } : {} ))
-  zone_to_subnet_id_map_c_final = merge(local.zone_to_subnet_id_map_b, (length(data.yandex_vpc_subnet.kube_c) > 0 ? {(data.yandex_vpc_subnet.kube_c[0].zone): data.yandex_vpc_subnet.kube_c[0].id } : {} ))
+  zone_to_subnet_id_map_c = merge(local.zone_to_subnet_id_map_b, (length(data.yandex_vpc_subnet.kube_c) > 0 ? {(data.yandex_vpc_subnet.kube_c[0].zone): data.yandex_vpc_subnet.kube_c[0].id } : {} ))
+  zone_to_subnet_id_map_d_final = merge(local.zone_to_subnet_id_map_c, (length(data.yandex_vpc_subnet.kube_d) > 0 ? {(data.yandex_vpc_subnet.kube_d[0].zone): data.yandex_vpc_subnet.kube_d[0].id } : {} ))
 }
 
 output "route_table_id" {
@@ -27,9 +28,14 @@ output "zone_to_subnet_id_map" {
       (yandex_vpc_subnet.kube_a[0].zone): yandex_vpc_subnet.kube_a[0].id
       (yandex_vpc_subnet.kube_b[0].zone): yandex_vpc_subnet.kube_b[0].id
       (yandex_vpc_subnet.kube_c[0].zone): yandex_vpc_subnet.kube_c[0].id
-    } : local.zone_to_subnet_id_map_c_final
+      (yandex_vpc_subnet.kube_d[0].zone): yandex_vpc_subnet.kube_d[0].id
+    } : local.zone_to_subnet_id_map_d_final
 }
 
 output "nat_instance_name" {
   value = local.is_with_nat_instance ? yandex_compute_instance.nat_instance[0].name : ""
+}
+
+output "nat_instance_zone" {
+  value = local.is_with_nat_instance ? yandex_compute_instance.nat_instance[0].zone : ""
 }

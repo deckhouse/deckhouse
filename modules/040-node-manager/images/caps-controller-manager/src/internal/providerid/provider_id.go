@@ -17,11 +17,11 @@ limitations under the License.
 package providerid
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"regexp"
 
 	"github.com/pkg/errors"
-	"sigs.k8s.io/cluster-api/util"
 )
 
 const (
@@ -32,8 +32,10 @@ const (
 type ProviderID string
 
 // GenerateProviderID generates a provider ID for a static node.
-func GenerateProviderID() ProviderID {
-	return ProviderID(fmt.Sprintf("%s/%s", Prefix, util.RandomString(16)))
+func GenerateProviderID(staticInstanceName string) ProviderID {
+	sum := sha256.Sum256([]byte(staticInstanceName))
+
+	return ProviderID(fmt.Sprintf("%s/%x", Prefix, sum))
 }
 
 // ValidateProviderID validates a provider ID for a static node.

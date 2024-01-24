@@ -1,0 +1,21 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Отображает базовую информацию о модуле Deckhouse.
+
+            Ресурс предназначен **только для получения информации** о модуле, его нельзя изменить (ресурс только для чтения).
+          properties:
+            properties:
+              properties:
+                weight:
+                  description: |
+                    _Вес_ (приоритет) модуля.
+                state:
+                  description: 'Состояние модуля (включен или выключен).'
+                source:
+                  description: 'Имя ModuleSource, если модуль скачан из него (иначе пусто).'
+                description:
+                  description: 'Описание модуля.'

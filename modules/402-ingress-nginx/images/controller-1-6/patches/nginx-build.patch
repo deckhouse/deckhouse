@@ -1,0 +1,264 @@
+--- ../../../../../3dparty/ingress-nginx/images/nginx/rootfs/build.sh	2023-09-24 10:01:59.693194884 +0300
++++ nginx/rootfs/build.sh	2023-09-24 11:28:16.512828002 +0300
+@@ -14,6 +14,9 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++SOURCE_REPO="${SOURCE_REPO}"
++CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
++
+ set -o errexit
+ set -o nounset
+ set -o pipefail
+@@ -134,6 +137,8 @@
+ 
+ export BUILD_PATH=/tmp/build
+ 
++export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
++
+ ARCH=$(uname -m)
+ 
+ if [[ ${ARCH} == "s390x" ]]; then
+@@ -143,191 +148,13 @@
+   export LUA_STREAM_NGX_VERSION=0.0.7
+ fi
+ 
+-get_src()
+-{
+-  hash="$1"
+-  url="$2"
+-  f=$(basename "$url")
+-
+-  echo "Downloading $url"
+-
+-  curl -sSL "$url" -o "$f"
+-  echo "$hash  $f" | sha256sum -c - || exit 10
+-  tar xzf "$f"
+-  rm -rf "$f"
+-}
+-
+-# install required packages to build
+-apk add \
+-  bash \
+-  gcc \
+-  clang \
+-  libc-dev \
+-  make \
+-  automake \
+-  openssl-dev \
+-  pcre-dev \
+-  zlib-dev \
+-  linux-headers \
+-  libxslt-dev \
+-  gd-dev \
+-  geoip-dev \
+-  perl-dev \
+-  libedit-dev \
+-  mercurial \
+-  alpine-sdk \
+-  findutils \
+-  curl \
+-  ca-certificates \
+-  patch \
+-  libaio-dev \
+-  openssl \
+-  cmake \
+-  util-linux \
+-  lmdb-tools \
+-  wget \
+-  curl-dev \
+-  libprotobuf \
+-  git g++ pkgconf flex bison doxygen yajl-dev lmdb-dev libtool autoconf libxml2 libxml2-dev \
+-  python3 \
+-  libmaxminddb-dev \
+-  bc \
+-  unzip \
+-  dos2unix \
+-  yaml-cpp \
+-  coreutils
+-
+ mkdir -p /etc/nginx
+ 
+ mkdir --verbose -p "$BUILD_PATH"
+ cd "$BUILD_PATH"
+ 
+ # download, verify and extract the source files
+-get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
+-        "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
+-
+-get_src 0e971105e210d272a497567fa2e2c256f4e39b845a5ba80d373e26ba1abfbd85 \
+-        "https://github.com/simpl/ngx_devel_kit/archive/v$NDK_VERSION.tar.gz"
+-
+-get_src cd5e2cc834bcfa30149e7511f2b5a2183baf0b70dc091af717a89a64e44a2985 \
+-        "https://github.com/openresty/set-misc-nginx-module/archive/v$SETMISC_VERSION.tar.gz"
+-
+-get_src a3dcbab117a9c103bc1ea5200fc00a7b7d2af97ff7fd525f16f8ac2632e30fbf \
+-        "https://github.com/openresty/headers-more-nginx-module/archive/v$MORE_HEADERS_VERSION.tar.gz"
+-
+-get_src f09851e6309560a8ff3e901548405066c83f1f6ff88aa7171e0763bd9514762b \
+-        "https://github.com/atomx/nginx-http-auth-digest/archive/v$NGINX_DIGEST_AUTH.tar.gz"
+-
+-get_src a98b48947359166326d58700ccdc27256d2648218072da138ab6b47de47fbd8f \
+-        "https://github.com/yaoweibin/ngx_http_substitutions_filter_module/archive/$NGINX_SUBSTITUTIONS.tar.gz"
+-
+-get_src 6f97776ebdf019b105a755c7736b70bdbd7e575c7f0d39db5fe127873c7abf17 \
+-        "https://github.com/opentracing-contrib/nginx-opentracing/archive/v$NGINX_OPENTRACING_VERSION.tar.gz"
+-
+-get_src cbe625cba85291712253db5bc3870d60c709acfad9a8af5a302673d3d201e3ea \
+-        "https://github.com/opentracing/opentracing-cpp/archive/$OPENTRACING_CPP_VERSION.tar.gz"
+-
+-get_src 71de3d0658935db7ccea20e006b35e58ddc7e4c18878b9523f2addc2371e9270 \
+-        "https://github.com/rnburn/zipkin-cpp-opentracing/archive/$ZIPKIN_CPP_VERSION.tar.gz"
+-
+-get_src 32a42256616cc674dca24c8654397390adff15b888b77eb74e0687f023c8751b \
+-        "https://github.com/SpiderLabs/ModSecurity-nginx/archive/v$MODSECURITY_VERSION.tar.gz"
+-
+-get_src 43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3 \
+-        "https://github.com/jbeder/yaml-cpp/archive/$YAML_CPP_VERSION.tar.gz"
+-
+-get_src 3a3a03060bf5e3fef52c9a2de02e6035cb557f389453d8f3b0c1d3d570636994 \
+-        "https://github.com/jaegertracing/jaeger-client-cpp/archive/v$JAEGER_VERSION.tar.gz"
+-
+-get_src 754c3ace499a63e45b77ef4bcab4ee602c2c414f58403bce826b76ffc2f77d0b \
+-        "https://github.com/msgpack/msgpack-c/archive/cpp-$MSGPACK_VERSION.tar.gz"
+-
+-if [[ ${ARCH} == "s390x" ]]; then
+-get_src 7d5f3439c8df56046d0564b5857fd8a30296ab1bd6df0f048aed7afb56a0a4c2 \
+-        "https://github.com/openresty/lua-nginx-module/archive/v$LUA_NGX_VERSION.tar.gz"
+-get_src 99c47c75c159795c9faf76bbb9fa58e5a50b75286c86565ffcec8514b1c74bf9 \
+-        "https://github.com/openresty/stream-lua-nginx-module/archive/v$LUA_STREAM_NGX_VERSION.tar.gz"
+-else
+-get_src 9db756000578efaecb43bea4fc6cf631aaa80988d86ffe5d3afeb9927895ffad \
+-        "https://github.com/openresty/lua-nginx-module/archive/v$LUA_NGX_VERSION.tar.gz"
+-
+-get_src c7924f28cb014a99636e747ea907724dd55f60e180cb92cde6e8ed48d2278f27 \
+-        "https://github.com/openresty/stream-lua-nginx-module/archive/v$LUA_STREAM_NGX_VERSION.tar.gz"
+-
+-fi
+-
+-get_src a92c9ee6682567605ece55d4eed5d1d54446ba6fba748cff0a2482aea5713d5f \
+-        "https://github.com/openresty/lua-upstream-nginx-module/archive/$LUA_UPSTREAM_VERSION.tar.gz"
+-
+-if [[ ${ARCH} == "s390x" ]]; then
+-get_src 266ed1abb70a9806d97cb958537a44b67db6afb33d3b32292a2d68a2acedea75 \
+-        "https://github.com/openresty/luajit2/archive/$LUAJIT_VERSION.tar.gz"
+-else
+-get_src d3f2c870f8f88477b01726b32accab30f6e5d57ae59c5ec87374ff73d0794316 \
+-        "https://github.com/openresty/luajit2/archive/v$LUAJIT_VERSION.tar.gz"
+-fi
+-
+-get_src 586f92166018cc27080d34e17c59d68219b85af745edf3cc9fe41403fc9b4ac6 \
+-        "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
+-
+-get_src 1af5a5632dc8b00ae103d51b7bf225de3a7f0df82f5c6a401996c080106e600e \
+-        "https://github.com/influxdata/nginx-influxdb-module/archive/$NGINX_INFLUXDB_VERSION.tar.gz"
+-
+-get_src 4c1933434572226942c65b2f2b26c8a536ab76aa771a3c7f6c2629faa764976b \
+-        "https://github.com/leev/ngx_http_geoip2_module/archive/$GEOIP2_VERSION.tar.gz"
+-
+-get_src 778fcca851bd69dabfb382dc827d2ee07662f7eca36b5e66e67d5512bad75ef8 \
+-        "https://github.com/msva/nginx_ajp_module/archive/$NGINX_AJP_VERSION.tar.gz"
+-
+-get_src 5d16e623d17d4f42cc64ea9cfb69ca960d313e12f5d828f785dd227cc483fcbd \
+-        "https://github.com/openresty/lua-resty-upload/archive/v$LUA_RESTY_UPLOAD_VERSION.tar.gz"
+-
+-get_src bdbf271003d95aa91cab0a92f24dca129e99b33f79c13ebfcdbbcbb558129491 \
+-        "https://github.com/openresty/lua-resty-string/archive/v$LUA_RESTY_STRING_VERSION.tar.gz"
+-
+-get_src 16d72ed133f0c6df376a327386c3ef4e9406cf51003a700737c3805770ade7c5 \
+-        "https://github.com/openresty/lua-resty-balancer/archive/v$LUA_RESTY_BALANCER.tar.gz"
+-
+-if [[ ${ARCH} == "s390x" ]]; then
+-get_src 8f5f76d2689a3f6b0782f0a009c56a65e4c7a4382be86422c9b3549fe95b0dc4 \
+-        "https://github.com/openresty/lua-resty-core/archive/v$LUA_RESTY_CORE.tar.gz"
+-else
+-get_src efd6b51520429e64b1bcc10f477d370ebed1631c190f7e4dc270d959a743ad7d \
+-        "https://github.com/openresty/lua-resty-core/archive/v$LUA_RESTY_CORE.tar.gz"
+-fi
+-
+-get_src 0c551d6898f89f876e48730f9b55790d0ba07d5bc0aa6c76153277f63c19489f \
+-        "https://github.com/openresty/lua-cjson/archive/$LUA_CJSON_VERSION.tar.gz"
+-
+-get_src 5ed48c36231e2622b001308622d46a0077525ac2f751e8cc0c9905914254baa4 \
+-        "https://github.com/cloudflare/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
+-
+-get_src e810ed124fe788b8e4aac2c8960dda1b9a6f8d0ca94ce162f28d3f4d877df8af \
+-        "https://github.com/openresty/lua-resty-lrucache/archive/v$LUA_RESTY_CACHE.tar.gz"
+-
+-get_src 2b4683f9abe73e18ca00345c65010c9056777970907a311d6e1699f753141de2 \
+-        "https://github.com/openresty/lua-resty-lock/archive/v$LUA_RESTY_LOCK.tar.gz"
+-
+-get_src 70e9a01eb32ccade0d5116a25bcffde0445b94ad35035ce06b94ccd260ad1bf0 \
+-        "https://github.com/openresty/lua-resty-dns/archive/v$LUA_RESTY_DNS.tar.gz"
+-
+-get_src 9fcb6db95bc37b6fce77d3b3dc740d593f9d90dce0369b405eb04844d56ac43f \
+-        "https://github.com/ledgetech/lua-resty-http/archive/$LUA_RESTY_HTTP.tar.gz"
+-
+-get_src 42893da0e3de4ec180c9bf02f82608d78787290a70c5644b538f29d243147396 \
+-        "https://github.com/openresty/lua-resty-memcached/archive/v$LUA_RESTY_MEMCACHED_VERSION.tar.gz"
+-
+-get_src c15aed1a01c88a3a6387d9af67a957dff670357f5fdb4ee182beb44635eef3f1 \
+-        "https://github.com/openresty/lua-resty-redis/archive/v$LUA_RESTY_REDIS_VERSION.tar.gz"
+-
+-get_src efb767487ea3f6031577b9b224467ddbda2ad51a41c5867a47582d4ad85d609e \
+-        "https://github.com/api7/lua-resty-ipmatcher/archive/v$LUA_RESTY_IPMATCHER_VERSION.tar.gz"
+-
+-get_src 0fb790e394510e73fdba1492e576aaec0b8ee9ef08e3e821ce253a07719cf7ea \
+-        "https://github.com/ElvinEfendi/lua-resty-global-throttle/archive/v$LUA_RESTY_GLOBAL_THROTTLE_VERSION.tar.gz"
+-
+-get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
+-        "https://github.com/microsoft/mimalloc/archive/refs/tags/v${MIMALOC_VERSION}.tar.gz"
++git clone -b "$CONTROLLER_BRANCH" ${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git .
+ 
+ # improve compilation times
+ CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
+@@ -479,13 +306,14 @@
+ 
+ # Get Brotli source and deps
+ cd "$BUILD_PATH"
+-git clone --depth=1 https://github.com/google/ngx_brotli.git
++git clone --depth=1 ${SOURCE_REPO}/google/ngx_brotli.git
+ cd ngx_brotli
+ git submodule init
++git submodule set-url deps/brotli ${SOURCE_REPO}/google/brotli.git
+ git submodule update
+ 
+ cd "$BUILD_PATH"
+-git clone --depth=1 https://github.com/ssdeep-project/ssdeep
++git clone --depth=1 ${SOURCE_REPO}/ssdeep-project/ssdeep
+ cd ssdeep/
+ 
+ ./bootstrap
+@@ -496,10 +324,13 @@
+ 
+ # build modsecurity library
+ cd "$BUILD_PATH"
+-git clone -n https://github.com/SpiderLabs/ModSecurity
++git clone -n ${SOURCE_REPO}/SpiderLabs/ModSecurity
+ cd ModSecurity/
+ git checkout $MODSECURITY_LIB_VERSION
+ git submodule init
++git submodule set-url test/test-cases/secrules-language-tests ${SOURCE_REPO}/SpiderLabs/secrules-language-tests
++git submodule set-url others/libinjection ${SOURCE_REPO}/libinjection/libinjection.git
++git submodule set-url bindings/python ${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git
+ git submodule update
+ 
+ sh build.sh
+@@ -529,7 +360,7 @@
+ # Download owasp modsecurity crs
+ cd /etc/nginx/
+ 
+-git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
++git clone -b $OWASP_MODSECURITY_CRS_VERSION ${SOURCE_REPO}/coreruleset/coreruleset
+ mv coreruleset owasp-modsecurity-crs
+ cd owasp-modsecurity-crs
+ 
+@@ -744,7 +575,7 @@
+   /var/log/nginx \
+ );
+ 
+-adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
++adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+ 
+ for dir in "${writeDirs[@]}"; do
+   mkdir -p ${dir};

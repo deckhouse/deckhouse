@@ -128,9 +128,6 @@ area/ui:
 
 # area/ux
 
-area/virtualization:
-  - modules/490-virtualization/**
-
 python:
   - '**/*.py'
 

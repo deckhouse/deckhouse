@@ -1,1 +1,0 @@
-{{- include "helm_lib_prometheus_rules" (list . "d8-monitoring") }}

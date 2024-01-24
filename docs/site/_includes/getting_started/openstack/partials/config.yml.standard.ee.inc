@@ -32,30 +32,59 @@ deckhouse:
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
-  releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        # [<en>] Template that will be used for system apps domains within the cluster.
-        # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
-        # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
-        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
-        # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
-        publicDomainTemplate: "%s.example.com"
-    userAuthn:
-      controlPlaneConfigurator:
-        dexCAMode: DoNotNeed
-      publishAPI:
-        enable: true
-        https:
-          mode: Global
-          global:
-            kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] Section containing the parameters of the cloud provider.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bundle: Default
+    releaseChannel: Stable
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1
+  settings:
+    modules:
+      # [<en>] Template that will be used for system apps domains within the cluster.
+      # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+      # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+      # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+      # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+      publicDomainTemplate: "%s.example.com"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 1
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: DoNotNeed
+    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] Enabling access to the API server through Ingress.
+    # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    publishAPI:
+      enable: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
-# [<ru>] Секция, описывающая параметры облачного провайдера.
+# [<ru>] Настройки облачного провайдера..
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration

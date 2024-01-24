@@ -328,14 +328,12 @@ properties:
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   mainMaxDiskSizeGigabytes:
     type: integer
-    default: 300
     description: |
       Deprecated and will be removed. Doesn't affect anything.
       The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
     x-doc-deprecated: true
   longtermMaxDiskSizeGigabytes:
     type: integer
-    default: 300
     x-doc-deprecated: true
     description: |
       Deprecated and will be removed. Doesn't affect anything.

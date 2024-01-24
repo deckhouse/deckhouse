@@ -35,9 +35,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/module"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis"
 )
 
 func start(_ *kingpin.ParseContext) error {
@@ -61,19 +60,27 @@ func start(_ *kingpin.ParseContext) error {
 	}
 
 	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
-
-	// TODO: remove deckhouse-config purge after release 1.56
-	operator.ExplicitlyPurgeModules = []string{"deckhouse-config"}
 	validation.RegisterAdmissionHandlers(operator)
-	// TODO: move this routes to the deckhouse-controller
-	module.SetupAdmissionRoutes(operator.AdmissionServer)
 
 	err = operator.Setup()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	operator.ModuleManager.SetupModuleProducer(apis.NewModuleProducer())
+
+	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	operator.ModuleManager.SetModuleLoader(dController)
 
 	err = operator.Start()
 	if err != nil {

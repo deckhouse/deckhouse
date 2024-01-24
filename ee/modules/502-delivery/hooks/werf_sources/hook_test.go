@@ -413,11 +413,11 @@ metadata:
 		}
 
 		want := map[string]dockerFileConfig{
-			"registry-credentials-1":       {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}}},
-			"registry-credentials-2":       {Auths: map[string]authn.AuthConfig{"cr-2.example.com": {Username: "n-2", Password: "pwd-2"}}},
-			"mixed-registries-1-2":         {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}, "cr-2.example.com": {Username: "n-2other", Password: "pwd-2other"}}},
-			"registry-credentials-1-other": {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1other", Password: "pwd-1other"}}},
-			"registry-credentials-3-auth":  {Auths: map[string]authn.AuthConfig{"cr-3.example.com": {Auth: "bi0zOnB3ZC0z"}}},
+			"registry-credentials-1":       {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1", Auth: "bi0xOnB3ZC0x"}}},
+			"registry-credentials-2":       {Auths: map[string]authn.AuthConfig{"cr-2.example.com": {Username: "n-2", Password: "pwd-2", Auth: "bi0yOnB3ZC0y"}}},
+			"mixed-registries-1-2":         {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1", Auth: "bi0xOnB3ZC0x"}, "cr-2.example.com": {Username: "n-2other", Password: "pwd-2other", Auth: "bi0yb3RoZXI6cHdkLTJvdGhlcg=="}}},
+			"registry-credentials-1-other": {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1other", Password: "pwd-1other", Auth: "bi0xb3RoZXI6cHdkLTFvdGhlcg=="}}},
+			"registry-credentials-3-auth":  {Auths: map[string]authn.AuthConfig{"cr-3.example.com": {Username: "n-3", Password: "pwd-3", Auth: "bi0zOnB3ZC0z"}}},
 		}
 
 		It("parses secrets with .dockerconfigjson", func() {

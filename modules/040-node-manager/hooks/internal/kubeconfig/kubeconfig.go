@@ -25,8 +25,8 @@ import (
 )
 
 // New creates a new Kubeconfig using the cluster name and specified endpoint.
-func New(clusterName string, endpoint string, caCert []byte, token string) (*api.Config, error) {
-	userName := fmt.Sprintf("%s-admin", clusterName)
+func New(clusterName, endpoint string, caCert []byte, clientKey []byte, clientCert []byte) (*api.Config, error) {
+	userName := "capi-controller-manager"
 	contextName := fmt.Sprintf("%s@%s", userName, clusterName)
 
 	return &api.Config{
@@ -44,7 +44,8 @@ func New(clusterName string, endpoint string, caCert []byte, token string) (*api
 		},
 		AuthInfos: map[string]*api.AuthInfo{
 			userName: {
-				Token: token,
+				ClientKeyData:         clientKey,
+				ClientCertificateData: clientCert,
 			},
 		},
 		CurrentContext: contextName,
@@ -69,25 +70,5 @@ func GenerateSecret(clusterName string, namespace string, data []byte) *corev1.S
 			"value": data,
 		},
 		Type: "cluster.x-k8s.io/secret",
-	}
-}
-
-func GenerateSecretForServiceAccountToken(clusterName string, namespace string, serviceAccountName string) *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-kubeconfig-token", clusterName),
-			Namespace: namespace,
-			Labels: map[string]string{
-				"cluster.x-k8s.io/cluster-name": clusterName,
-			},
-			Annotations: map[string]string{
-				"kubernetes.io/service-account.name": serviceAccountName,
-			},
-		},
-		Type: "kubernetes.io/service-account-token",
 	}
 }

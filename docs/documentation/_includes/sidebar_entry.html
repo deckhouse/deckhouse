@@ -18,16 +18,6 @@
 
 {% unless skip_item %}
 
-{%- if entry.d8Revision %}
-    {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.d8Revision %}
-    {%- assign entry_title = site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' %}
-{%- endif %}
-
-{%- if entry.featureStatus %}
-    {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.featureStatus %}
-    {%- assign entry_title = entry_title | append: " " | append: site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' %}
-{%- endif %}
-
 {% assign entry_with_lang = entry.url | prepend: page.lang | prepend: "/" %}
 
 {%- assign page_url_parts = page.url | split: '/' -%}
@@ -46,8 +36,24 @@
 
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
-    <a href="#"{%- if entry_title.size > 0 %} title="{{ entry_title }}"{% endif -%}
-    >{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a>
+    <a href="#">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
+    {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
+        {%- if entry.featureStatus == "experimental" %}
+          Experimental
+        {%- elsif entry.featureStatus == "deprecated" %}
+          Deprecated
+        {%- elsif entry.featureStatus == "temporaryDeprecated" %}
+          Temporary deprecated
+        {%- elsif entry.featureStatus == "proprietaryOkmeter" %}
+          Proprietary
+        {%- else %}
+          NEW!
+        {%- endif %}
+      </span>
+    {%- endif %}
+    {%- if entry.d8Revision and entry.d8Revision != "ce" %}<span class="sidebar__badge sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}">EE Only</span>
+    {%- endif %}
+    </a>
     <ul class="sidebar__submenu">
         {%- for entry in entry.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" %}

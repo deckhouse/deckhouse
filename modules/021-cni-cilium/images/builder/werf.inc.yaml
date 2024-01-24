@@ -1,4 +1,4 @@
-{{- $ciliumVersion := "1.14.4" }}
+{{- $ciliumVersion := "1.14.5" }}
 # https://github.com/cilium/cilium/blob/83f313918cd97dc48c63fda7a0e15b8821a6f0d2/images/runtime/Dockerfile#L8-L10
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
@@ -10,7 +10,7 @@ from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
 ---
-# https://github.com/cilium/cilium/blob/v1.14.4/images/cilium/Dockerfile#L9
+# https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
 ---

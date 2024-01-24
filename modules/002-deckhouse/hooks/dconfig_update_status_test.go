@@ -54,6 +54,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Module", false)
 
 	Context("Known module enabled", func() {
 		BeforeEach(func() {

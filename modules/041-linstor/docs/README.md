@@ -3,6 +3,10 @@ title: "The linstor module"
 description: Deckhouse uses the linstor module to manage a replicated block storage in the Kubernetes cluster.
 ---
 
+{% alert level="danger" %}
+This version of the module is deprecated and is no longer supported. Use the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module instead.
+{% endalert %}
+
 {% alert level="warning" %}
 The module is guaranteed to work only in the following cases:
 - when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);
@@ -17,7 +21,7 @@ LINSTOR is an orchestrator, acting as an abstraction layer that:
 - automates the creation of volumes using well-known and proven technologies such as LVM and ZFS;
 - configures the replication of the volumes using DRBD.
 
-The linstor module makes it easy to use LINSTOR-based storage in your cluster. After enabling the linstor module in the Deckhouse configuration, your cluster will be automatically configured to use LINSTOR. All that remains is to [create storage pools](configuration.html#linstor-storage-configuration).
+The linstor module makes it easy to use LINSTOR-based storage in your cluster. After enabling the linstor module in the Deckhouse configuration, your cluster will be automatically configured to use LINSTOR. All that remains is to [create storage pools](usage.html#linstor-storage-configuration).
 
 Two modes are supported: **LVM** and **LVMThin**.
 

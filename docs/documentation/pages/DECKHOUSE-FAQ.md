@@ -105,6 +105,27 @@ In this case, Deckhouse does not check for updates and even doesn't apply patch 
 It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
 {% endalert %}
 
+### How do I apply an update without having to wait for the update window?
+
+To apply an update immediately without having to wait for the update window, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) resource.
+
+An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
+
+```shell
+kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+```
+
+An example of a resource with the update window skipping annotation in place:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
+...
+```
+
 ### How to understand what changes the update contains and how it will affect the cluster?
 
 You can find all the information about Deckhouse versions in the list of [Deckhouse releases](https://github.com/deckhouse/deckhouse/releases).
@@ -383,16 +404,20 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 ### Manually uploading images to an air-gapped registry
 
+{% alert level="warning" %}
+This feature is available in Enterprise Edition only.
+{% endalert %}
+
 1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
 
    ```shell
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.54.3 or higher.
+1. Run the Deckhouse installer version 1.56.3 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.54.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.56.3 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -407,6 +432,9 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
+   > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
+   > Use the `--no-pull-resume` flag, to start the download from scratch.
+
    To pull all Deckhouse images starting from a particular version, specify it in the `--min-version` parameter in the `X.Y` format.
 
    For example, here is how you can pull all Deckhouse version images starting from version 1.45:
@@ -416,6 +444,22 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
    ```
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
+
+   To pull Deckhouse images from a specific registry repository, specify that repository with the `--source` flag.
+   The optional `--source-login` and `--source-password` flags are used to authenticate to a given registry.
+   If they are omitted, mirroring will be performed anonymously.
+
+   For example, here is how you can pull images from a third-party registry:
+
+   ```shell
+   dhctl mirror --source="corp.company.com/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
+   ```
+
+   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
+   > If you specify both license and login+password pair for source registry, the latter will be used.
+
+   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
+   The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
 
@@ -439,13 +483,71 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
    If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
 
-1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
+1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it (is available in Enterprise Edition only). Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
    To run the installer, use its image from your private registry where Deckhouse images reside, rather than from the public registry. In other words, your address should look something like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
+### Manually uploading images of third-party Deckhouse modules into an isolated private registry
+
+1. Run Deckhouse installer version 1.56.0 or higher:
+
+  ```shell
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.56.0 bash
+   ```
+
+   Note that the directory from the host file system is mounted in the installer container. It will store module images and the ModuleSource YAML manifest describing the source of third-party modules.
+
+1. Pull module images from their source registry, defined as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`.
+
+   `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying.
+
+   The following command will pull module images from the source described in the ModuleSource resource located in the `$HOME/module_source.yml` file:
+
+   ```shell
+   dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
+   ```
+
+1. Optional: Copy the `dhctl` binary from the container to the directory to which Deckhouse images were pulled.
+
+   ```shell
+   cp /usr/bin/dhctl /tmp/d8-images/dhctl
+   ```
+
+1. To continue with installation, use the `dhctl` binary you copied earlier OR repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled modules images is mounted into the container.
+
+1. Upload module images to the isolated registry using the `dhctl mirror-modules` command.
+
+   Below is an example of a command for pulling images from the `/tmp/d8-modules` directory:
+
+   ```shell
+   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   ```
+
+   > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
+   > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
+
+   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
+
+1. After uploading the images to the air-gapped registry, edit the ModuleSource YAML manifest:
+
+    * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
+    * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
+
+1. Apply the ModuleSource manifest you got in the previous step to the cluster.
+
+   ```shell
+   kubectl apply -f $HOME/module_source.yml
+   ```
+
+   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the module developer's documentation.
+
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
+
+{% alert level="warning" %}
+Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
+{% endalert %}
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
@@ -453,10 +555,10 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user my-user --password my-password registry.example.com/deckhouse
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
     ```
 
-  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` in the Deckhouse Pod and add the `--ca-file ca.crt` option to the script or put the content of CA into a variable.
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
 
     ```shell
     $ CA_CONTENT=$(cat <<EOF
@@ -468,7 +570,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password YUvio925tyxFNBnqhfcx89nABwcnTP1K registry.deckhouse.io/deckhouse --ca-file <(cat <<<$CA_CONTENT)
+    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
@@ -592,8 +694,8 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
 ### How to switch Deckhouse EE to CE?
 
-{% alert %}
-The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+{% alert level="warning" %}
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
 {% endalert %}
 
 {% alert level="warning" %}

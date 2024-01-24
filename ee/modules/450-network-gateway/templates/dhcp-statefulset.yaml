@@ -71,11 +71,11 @@ spec:
       initContainers:
       - name: init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        command: ['/prepare-config.py']
+        command: ['/usr/bin/python3', '/prepare-config.py']
         image: {{ include "helm_lib_module_image" (list . "dnsmasq") }}
         volumeMounts:
         - name: dhcp-config
-          mountPath: /etc/dnsmasq.d
+          mountPath: /etc/dnsmasq.conf.d
         - name: network-gateway-config
           mountPath: /etc/network-gateway-config
         resources:
@@ -88,7 +88,7 @@ spec:
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
         volumeMounts:
         - name: dhcp-config
-          mountPath: /etc/dnsmasq.d
+          mountPath: /etc/dnsmasq.conf.d
         - name: dhcp-data
           mountPath: /var/lib/dnsmasq/
         resources:

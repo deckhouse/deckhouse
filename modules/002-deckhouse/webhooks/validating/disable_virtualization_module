@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: You should remove this hook as soon as the internal virtualization module is removed from deckhouse.
+# TODO: You should remove this hook as soon as the linstor module is removed from deckhouse.
 
 source /shell_lib.sh
 
@@ -22,7 +22,7 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: disable-virtualization-module.deckhouse.io
+- name: disable-linstor-module.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
@@ -35,11 +35,10 @@ EOF
 
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
-  if [[ "$mcName" == "virtualization" ]]; then
-    virtualizationModuleEnabled="$(context::jq -r '.review.request.object.spec.enabled')"
-    if [[ "$virtualizationModuleEnabled" == "true" ]]; then
+  if [[ "$mcName" == "linstor" ]]; then
+    if context::jq -e '.review.request.object.spec.enabled' >/dev/null; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"moduleconfigs.deckhouse.io \"virtualization\" is temporary deprecated, a new version will be published soon." }
+{"allowed":false, "message":"moduleconfigs.deckhouse.io \"linstor\" is deprecated, please use sds-drbd module instead (https://deckhouse.io/modules/)." }
 EOF
     return 0
     fi

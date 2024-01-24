@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -94,6 +94,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 
 		for _, release := range releases {
+			input.LogEntry.Infof("Cleanup release %q because module %q does not exist", release.Name, release.Module)
 			deleteModuleRelease(input, externalModulesDir, release)
 		}
 	}
@@ -104,6 +105,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 		if len(releases) > keepReleaseCount {
 			for i := keepReleaseCount; i < len(releases); i++ {
+				input.LogEntry.Infof("Cleanup release %q because it's outdated", releases[i].Name)
 				deleteModuleRelease(input, externalModulesDir, releases[i])
 			}
 		}

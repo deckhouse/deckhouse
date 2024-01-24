@@ -22,6 +22,7 @@ const labels = {
   'skip/no-cyrillic-validation': { type: 'skip-validation', validation_name: 'no_cyrillic' },
   'skip/documentation-validation': { type: 'skip-validation', validation_name: 'doc_changes' },
   'skip/copyright-validation': { type: 'skip-validation', validation_name: 'copyright' },
+  'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
 
@@ -45,6 +46,7 @@ const labels = {
   'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
+  'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },

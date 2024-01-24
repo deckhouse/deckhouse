@@ -36,6 +36,9 @@
   {{- if hasKey $cr.spec.policies "checkContainerDuplicates" }}
     {{- include "container_duplicates_policy" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "replicaLimits" }}
+    {{- include "replica_limits_policy" (list $context $cr) }}
+  {{- end }}
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -281,4 +284,24 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
     {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "replica_limits_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8ReplicaLimits
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    ranges:
+      - {{- $cr.spec.policies.replicaLimits | toYaml | nindent 8 }}
 {{- end }}

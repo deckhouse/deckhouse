@@ -37,18 +37,6 @@ metadata:
   {{- print $newName }}
 {{- end }}
 
-{{/* TODO need to remove add.prefix.yaml.value */}} 
-{{- define "add.prefix.yaml.value" }}
-  {{- $string := index . 0 }}
-  {{- $metadataField := index . 1 }}
-  {{- $prefix := index . 2 }}
-  {{- $rootContext := index . 3 }}
-
-  {{- $oldMetadataValue := trimPrefix $metadataField $string }}
-  {{- $newMetadataValue := printf "%s-%s" $prefix $oldMetadataValue }}
-  {{- printf "%s%s" $metadataField ( include "slugify" ( list $newMetadataValue $rootContext ) ) }}
-{{- end }}
-
 {{- define "prepare.template" }}
   {{- $template := index . 0 }}
   {{- $projectName := index . 1 }}
@@ -64,10 +52,6 @@ metadata:
   {{- $resultLines := list }}
   {{- $hasNamespace := false }}
   {{- range $line := $lines }}
-    {{- if hasPrefix $namePrefix $line }}
-      {{- $line = include "add.prefix.yaml.value" ( list $line $namePrefix $projectName $rootContext ) }}
-    {{- end }}
-
     {{- if hasPrefix $namespacePrefix $line }}
       {{- $hasNamespace = true }}
     {{- end }}
@@ -90,7 +74,6 @@ metadata:
   {{- end }}
 {{- end }}
 
-
 {{- define "prepare.templates" }}
   {{- $templates := splitList "---" ( index . 0) }}
   {{- $projectName := index . 1 }}
@@ -108,7 +91,7 @@ metadata:
   {{- $projectName := index . 0 }}
   {{- $values := index . 1 }}
   {{- $rootContext := index . 2 }}
-  {{- $kebabCaseAuthName := printf "%s-%s-%s-%s" $projectName $values.role $values.kind $values.name | kebabcase }}
+  {{- $kebabCaseAuthName := printf "%s-%s-%s" $values.role $values.kind $values.name | kebabcase }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule

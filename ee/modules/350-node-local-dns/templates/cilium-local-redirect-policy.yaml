@@ -20,5 +20,5 @@ spec:
       protocol: UDP
     - port: "53"
       name: dns-tcp
-      protocol: UDP
+      protocol: TCP
 {{- end }}

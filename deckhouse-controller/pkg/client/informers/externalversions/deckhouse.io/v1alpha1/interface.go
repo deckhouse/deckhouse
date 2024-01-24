@@ -24,8 +24,18 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Modules returns a ModuleInformer.
+	Modules() ModuleInformer
 	// ModuleConfigs returns a ModuleConfigInformer.
 	ModuleConfigs() ModuleConfigInformer
+	// ModulePullOverrides returns a ModulePullOverrideInformer.
+	ModulePullOverrides() ModulePullOverrideInformer
+	// ModuleReleases returns a ModuleReleaseInformer.
+	ModuleReleases() ModuleReleaseInformer
+	// ModuleSources returns a ModuleSourceInformer.
+	ModuleSources() ModuleSourceInformer
+	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
 }
 
 type version struct {
@@ -39,7 +49,32 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// Modules returns a ModuleInformer.
+func (v *version) Modules() ModuleInformer {
+	return &moduleInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // ModuleConfigs returns a ModuleConfigInformer.
 func (v *version) ModuleConfigs() ModuleConfigInformer {
 	return &moduleConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModulePullOverrides returns a ModulePullOverrideInformer.
+func (v *version) ModulePullOverrides() ModulePullOverrideInformer {
+	return &modulePullOverrideInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleReleases returns a ModuleReleaseInformer.
+func (v *version) ModuleReleases() ModuleReleaseInformer {
+	return &moduleReleaseInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleSources returns a ModuleSourceInformer.
+func (v *version) ModuleSources() ModuleSourceInformer {
+	return &moduleSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
+func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
+	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

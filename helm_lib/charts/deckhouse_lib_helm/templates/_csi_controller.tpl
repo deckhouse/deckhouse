@@ -57,6 +57,7 @@ memory: 50Mi
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
   {{- $additionalContainers := $config.additionalContainers }}
+  {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -307,6 +308,7 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
+        - "--health-port={{ $livenessProbePort }}"
         env:
         - name: ADDRESS
           value: /csi/csi.sock
@@ -333,7 +335,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9808
+            port: {{ $livenessProbePort }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi

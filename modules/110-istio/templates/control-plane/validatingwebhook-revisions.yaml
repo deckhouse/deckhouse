@@ -1,0 +1,44 @@
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+{{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-istio-validator-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "istio.io/rev" $revision )) | nindent 2 }}
+webhooks:
+  - name: rev.validation.istio.io
+    clientConfig:
+      caBundle: {{ $.Values.istio.internal.ca.cert | b64enc }}
+      service:
+        name: istiod-{{ $revision }}
+        namespace: d8-istio
+        path: "/validate"
+        port: 443
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - security.istio.io
+          - networking.istio.io
+          - telemetry.istio.io
+          - extensions.istio.io
+        apiVersions:
+          - "*"
+        resources:
+          - "*"
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    sideEffects: None
+    timeoutSeconds: 30
+    admissionReviewVersions: ["v1"]
+    objectSelector:
+      matchExpressions:
+        - key: istio.io/rev
+          operator: In
+          values:
+          - "{{ $revision }}"
+{{- end }}

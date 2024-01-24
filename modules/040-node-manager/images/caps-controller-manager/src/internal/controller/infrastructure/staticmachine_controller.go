@@ -48,8 +48,8 @@ import (
 )
 
 const (
-	DefaultStaticInstanceBootstrapTimeout = 60 * time.Minute
-	DefaultStaticInstanceCleanupTimeout   = 30 * time.Minute
+	DefaultStaticInstanceBootstrapTimeout = 20 * time.Minute
+	DefaultStaticInstanceCleanupTimeout   = 10 * time.Minute
 	RequeueForStaticInstancePending       = 10 * time.Second
 	RequeueForStaticInstanceBootstrapping = 60 * time.Second
 	RequeueForStaticInstanceCleaning      = 30 * time.Second
@@ -144,13 +144,6 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
-	// If the StaticMachine is in an error state, return early.
-	if machineScope.HasFailed() {
-		machineScope.Logger.Info("Not reconciling StaticMachine in failed state. See staticMachine.status.failureReason, staticMachine.status.failureMessage, or previously logged error for details")
-
-		return ctrl.Result{}, nil
-	}
-
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
@@ -166,6 +159,13 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	machineScope *scope.MachineScope,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
+	// If the StaticMachine is in an error state, return early.
+	if machineScope.HasFailed() {
+		machineScope.Logger.Info("Not reconciling StaticMachine in failed state. See staticMachine.status.failureReason, staticMachine.status.failureMessage, or previously logged error for details")
+
+		return ctrl.Result{}, nil
+	}
+
 	// If the StaticMachine doesn't have finalizer, add it.
 	if controllerutil.AddFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer) {
 		err := machineScope.Patch(ctx)
@@ -259,60 +259,81 @@ func (r *StaticMachineReconciler) cleanup(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
-	result, err := r.reconcileStaticInstancePhase(ctx, instanceScope)
-	if err != nil {
-		return result, errors.Wrap(err, "failed to reconcile StaticInstance")
+	instanceScope.Logger.Info("StaticInstance is cleaning")
+
+	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
+		instanceScope.Instance.Status.NodeRef != nil {
+		instanceScope.MachineScope.SetNotReady()
+
+		patchHelper, err := patch.NewHelper(instanceScope.MachineScope.Machine, r.Client)
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+		}
+
+		// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
+		if instanceScope.MachineScope.Machine.Status.NodeRef == nil {
+			instanceScope.MachineScope.Machine.Status.NodeRef = &corev1.ObjectReference{
+				APIVersion: instanceScope.Instance.Status.NodeRef.APIVersion,
+				Kind:       instanceScope.Instance.Status.NodeRef.Kind,
+				Name:       instanceScope.Instance.Status.NodeRef.Name,
+				UID:        instanceScope.Instance.Status.NodeRef.UID,
+			}
+		}
+
+		if instanceScope.MachineScope.Machine.Annotations == nil {
+			instanceScope.MachineScope.Machine.Annotations = make(map[string]string)
+		}
+
+		if instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] != "true" {
+			instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
+		}
+
+		cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.PreTerminateDeleteHookSucceededCondition)
+		if cond != nil && cond.Status == corev1.ConditionFalse {
+			err = r.HostClient.Cleanup(ctx, instanceScope)
+			if err != nil {
+				instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
+			}
+
+			delete(instanceScope.MachineScope.Machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
+		}
+
+		err = patchHelper.Patch(ctx, instanceScope.MachineScope.Machine)
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with NodeRef")
+		}
+
+		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	if !result.IsZero() {
-		return result, nil
-	}
+	estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
-	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning {
+	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && estimated < (10*time.Second) {
+		instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
+
+		r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
+
+		err := instanceScope.MachineScope.Patch(ctx)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticMachine error status")
+		}
+
+		err = instanceScope.ToPending(ctx)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticInstance to Pending phase")
+		}
+
+		instanceScope.Logger.Error(errors.New("timed out waiting for StaticInstance to clean up"), "StaticInstance is cleaning")
+
 		return ctrl.Result{}, nil
 	}
 
-	instanceScope.MachineScope.SetNotReady()
-
-	patchHelper, err := patch.NewHelper(instanceScope.MachineScope.Machine, r.Client)
+	err := r.HostClient.Cleanup(ctx, instanceScope)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+		instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
 	}
 
-	// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
-	if instanceScope.MachineScope.Machine.Status.NodeRef == nil {
-		instanceScope.MachineScope.Machine.Status.NodeRef = &corev1.ObjectReference{
-			APIVersion: instanceScope.Instance.Status.NodeRef.APIVersion,
-			Kind:       instanceScope.Instance.Status.NodeRef.Kind,
-			Name:       instanceScope.Instance.Status.NodeRef.Name,
-			UID:        instanceScope.Instance.Status.NodeRef.UID,
-		}
-	}
-
-	if instanceScope.MachineScope.Machine.Annotations == nil {
-		instanceScope.MachineScope.Machine.Annotations = make(map[string]string)
-	}
-
-	if instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] != "true" {
-		instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
-	}
-
-	cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.PreTerminateDeleteHookSucceededCondition)
-	if cond != nil && cond.Status == corev1.ConditionFalse {
-		err = r.HostClient.Cleanup(ctx, instanceScope)
-		if err != nil {
-			instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
-		}
-
-		delete(instanceScope.MachineScope.Machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
-	}
-
-	err = patchHelper.Patch(ctx, instanceScope.MachineScope.Machine)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with NodeRef")
-	}
-
-	return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
+	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceCleaning}, nil
 }
 
 func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
@@ -350,32 +371,6 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.MachineScope.SetReady()
 
 		instanceScope.Logger.Info("StaticInstance is running")
-	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
-		instanceScope.MachineScope.SetNotReady()
-
-		instanceScope.Logger.Info("StaticInstance is cleaning")
-
-		estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
-
-		if estimated < (10 * time.Second) {
-			instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
-
-			r.Recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
-
-			err := instanceScope.MachineScope.Patch(ctx)
-			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to set StaticMachine error status")
-			}
-
-			return ctrl.Result{}, errors.New("timed out waiting to clean up StaticInstance")
-		}
-
-		err := r.HostClient.Cleanup(ctx, instanceScope)
-		if err != nil {
-			instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
-		}
-
-		return ctrl.Result{RequeueAfter: RequeueForStaticInstanceCleaning}, nil
 	}
 
 	return ctrl.Result{}, nil

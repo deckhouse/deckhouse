@@ -75,6 +75,13 @@ spec:
                       description: "Проверка, что dnsPolicy `ClusterFirstWithHostNet` установлена для подов с `hostNetwork: true`."
                     checkContainerDuplicates:
                       description: "Проверка имен контейнеров и переменных env на наличие дубликатов."
+                    replicaLimits:
+                      description: "Проверка диапазона разрешенных реплик. Значения включаются в диапазон."
+                      properties:
+                        minReplicas:
+                          description: "Минимально разрешенное количество реплик, включительно."
+                        maxReplicas:
+                          description: "Максимально разрешенное количество реплик, включительно."
                 match:
                   properties:
                     namespaceSelector:

@@ -18,4 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+type ModuleExpansion interface{}
+
 type ModuleConfigExpansion interface{}
+
+type ModulePullOverrideExpansion interface{}
+
+type ModuleReleaseExpansion interface{}
+
+type ModuleSourceExpansion interface{}
+
+type ModuleUpdatePolicyExpansion interface{}

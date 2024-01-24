@@ -89,6 +89,7 @@ apiVersions:
               - ru-central1-a
               - ru-central1-b
               - ru-central1-c
+              - ru-central1-d
             uniqueItems: true
           instanceClass:
             type: object
@@ -154,8 +155,6 @@ apiVersions:
                   If specified, an additional network interface will be added to the node (the latter will use it as a default route).
 
                   Also, a route for the node's internal interface will be added (it will cover the entire `nodeNetworkCIDR` subnet).
-
-                  The number of array elements must correspond to the number of `replicas`.
                 items:
                   type: string
               additionalLabels: &instanceClassAdditionalLabels
@@ -202,6 +201,7 @@ apiVersions:
                 - ru-central1-a
                 - ru-central1-b
                 - ru-central1-c
+                - ru-central1-d
               uniqueItems: true
             nodeTemplate:
               description: |
@@ -300,6 +300,7 @@ apiVersions:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
             ru-central1-c: e2lu8r1tbbtryhdpa9ro
+            ru-central1-d: e2lu8r1tbbtryhdpa9ro
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -417,6 +418,7 @@ apiVersions:
             - ru-central1-a
             - ru-central1-b
             - ru-central1-c
+            - ru-central1-d
         uniqueItems: true
     oneOf:
     - required: [layout]

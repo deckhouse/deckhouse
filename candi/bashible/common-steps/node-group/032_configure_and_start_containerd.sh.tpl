@@ -16,6 +16,7 @@
 _on_containerd_config_changed() {
   {{ if ne .runType "ImageBuilding" -}}
   systemctl restart containerd-deckhouse.service
+  bb-flag-set kubelet-need-restart
   {{- end }}
 }
 

@@ -1,0 +1,52 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию релизов модулей Deckhouse.
+
+            **Ресурсы ModuleRelease создает Deckhouse.**
+          properties:
+            spec:
+              properties:
+                moduleName:
+                  description: Название модуля.
+                version:
+                  description: Версия модуля в данном релизе.
+                weight:
+                  description: _Вес_ (приоритет) модуля.
+                applyAfter:
+                  description: Время, до которого отложено обновление.
+                requirements:
+                  description: Структура содержащая требования, необходимые для применения релиза.
+            status:
+              properties:
+                phase:
+                  description: Текущий статус релиза.
+                message:
+                  description: Детальное сообщение об ошибке или статусе релиза.
+                transitionTime:
+                  description: Время изменения статуса релиза.
+                approved:
+                  description: |
+                    Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Показывает текущий статус релиза.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Применяемая политика обновления.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          description: 'Показывает, когда статус релиза изменился.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Детали статуса релиза.'

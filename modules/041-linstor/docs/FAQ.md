@@ -3,6 +3,10 @@ title: "The linstor module: FAQ"
 description: LINSTOR Troubleshooting. What is difference between LVM and LVMThin? LINSTOR performance and reliability notes, comparison to Ceph. How to add existing LINSTOR LVM or LVMThin pool. How to configure Prometheus to use LINSTOR for storing data.
 ---
 
+{% alert level="danger" %}
+This version of the module is deprecated and is no longer supported. Use the [sds-drbd](https://deckhouse.io/modules/sds-drbd/beta/) module instead.
+{% endalert %}
+
 {% alert level="warning" %}
 The module is guaranteed to work only in the following cases:
 - when using the stock kernels that come with [supported distributions](../../supported_versions.html#linux);
@@ -102,7 +106,7 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 ## How to add existing LVM or LVMThin pool?
 
 {% alert %}
-The general method is described in`[LINSTOR storage configuration](configuration.html#linstor-storage-configuration) page.
+The general method is described in`[LINSTOR storage configuration](usage.html#linstor-storage-configuration) page.
 Unlike commands listed below it will automatically configure the StorageClasses as well.
 {% endalert %}
 
@@ -124,7 +128,7 @@ You can also add pools with some volumes have already been created. LINSTOR will
 
 To configure Prometheus to use LINSTOR for storing data:
 
-- [Configure](configuration.html#linstor-storage-configuration) storage-pools and StorageClass;
+- [Configure](usage.html#linstor-storage-configuration) storage-pools and StorageClass;
 - Specify the [longtermStorageClass](../300-prometheus/configuration.html#parameters-longtermstorageclass) and [storageClass](../300-prometheus/configuration.html#parameters-storageclass) parameters in the [prometheus](../300-prometheus/) module configuration. E.g.:
 
   Example:
@@ -146,23 +150,21 @@ To configure Prometheus to use LINSTOR for storing data:
 
 ## How to evict resources from a node?
 
-To do this, just run the command:
+* Download the script `evict.sh` on a host that has access to the Kubernetes API server with administrative privileges (for the script to work, you need `kubectl` and `jq` installed):
 
-```shell
-linstor node evacuate <node_name>
-```
+  * Download the latest version of the script from GitHub:
 
-It will move resources to other free nodes and replicate them.
-However, sometimes, this operation may not proceed as expected. In such cases, you can evict resources manually.
+    ```shell
+    curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
+    chmod 700 evict.sh
+    ```
 
-### How to evict resources from a node manually?
+  * Alternatively, download the script from the `deckhouse` pod:
 
-* Download the script on a host that has access to the Kubernetes API server with administrative privileges (for the script to work, you need installed `kubectl` and `jq`):
-
-  ```shell
-  curl -fsSL -o evict.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/modules/041-linstor/tools/evict.sh
-  chmod 700 evict.sh
-  ```
+    ```shell
+    kubectl -n d8-system cp -c deckhouse $(kubectl -n d8-system get po -l app=deckhouse -o jsonpath='{.items[0].metadata.name}'):/deckhouse/modules/041-linstor/tools/evict.sh ./evict.sh
+    chmod 700 evict.sh
+    ```
 
 * Fix all faulty LINSTOR resources in the cluster. To identify them, execute the following command:
 
@@ -176,33 +178,72 @@ However, sometimes, this operation may not proceed as expected. In such cases, y
   kubectl -n d8-linstor get pods | grep -v Running
   ```
 
-* Run the script and follow the interactive instructions:
+### Evict Resources from a Node Without Deleting It from LINSTOR and Kubernetes
+
+Run the `evict.sh` script in interactive mode with the `--delete-resources-only` mode:
+
+```shell
+./evict.sh --delete-resources-only
+```
+
+To run the `evict.sh` script in non-interactive mode, it is necessary to add the `--non-interactive` flag when calling it, as well as the name of the node from which resources need to be evicted. In this mode, the script will perform all actions without requesting user confirmation. Example of invocation:
+
+```shell
+./evict.sh --non-interactive --delete-resources-only --node-name "worker-1"
+```
+
+> **Note!** After the script completes, the node will remain in Kubernetes with the status *SchedulingDisabled*, and in LINSTOR, the node will have the property *AutoplaceTarget=false* set, preventing the LINSTOR scheduler from creating resources on this node.
+
+Run the following command to allow resource and pod placement on the node again:
+
+```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+linstor node set-property "worker-1" AutoplaceTarget
+kubectl uncordon "worker-1"
+```
+
+Run the following command to check the *AutoplaceTarget* property for all nodes (the AutoplaceTarget field will be empty for nodes where LINSTOR resource placement is allowed):
+
+```shell
+alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+linstor node list -s AutoplaceTarget
+```
+
+### Evict Resources from a Node and Subsequently Remove It from LINSTOR and Kubernetes
+
+Run the `evict.sh` script in interactive mode with the `--delete-node` mode and specify the node to be removed:
+
+```shell
+./evict.sh --delete-node
+```
+
+To run the `evict.sh` script in non-interactive mode, you need to add the `--non-interactive` flag when calling it, as well as the name of the node that needs to be removed. In this mode, the script will execute all actions without requesting user confirmation. Example of invocation:
+
+```shell
+./evict.sh --non-interactive --delete-node --node-name "worker-1"
+```
+
+  > **Note!** During the execution, the script will remove the node from both Kubernetes and LINSTOR.
+
+In this `--delete-node` mode, resources are not physically removed from the node. To clean up the node, log in to it and perform the following actions:
+
+  > **Note!** These actions will destroy all your data on the node.
+
+* Get and remove all volume groups from the node that were used for LINSTOR LVM storage pools:
 
   ```shell
-  ./evict.sh
+  vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
+  vgremove -y <vg names from previous command>
   ```
 
-  > **Note!** After the script finishes, the node will be removed from both Kubernetes and LINSTOR.
+* Get and remove all logical volumes from the node that were used for LINSTOR LVM_THIN storage pools:
 
-* Clean up the node as follows:
+  ```shell
+  lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
+  lvremove -y /dev/<vg name from previous command>/<lv name from previous command>
+  ```
 
-  > **Note!** These actions will destroy all the data on the node.
-
-  * Get and remove all volume groups from the node that were used for LINSTOR LVM storage pools:
-
-    ```shell
-    vgs -o+tags | awk 'NR==1;$NF~/linstor-/'
-    vgremove -y <vg names from previous command>
-    ```
-  
-  * Get and remove all logical volumes from the node that were used for LINSTOR LVM_THIN storage pools:
-
-    ```shell
-    lvs -o+tags | awk 'NR==1;$NF~/linstor-/'
-    lvremove -y /dev/<vg name from previous command>/<lv name from previous command>
-    ```
-
-  * Use [the instruction](../040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
+* Use [the instruction](../040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster), starting from the second point for further cleanup.
 
 ## Troubleshooting
 

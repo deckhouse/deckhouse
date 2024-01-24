@@ -130,8 +130,6 @@ spec:
                                 requireTLS:
                                   description: |
                                     Использовать SMTP TLS.
-
-                                    Обратите внимание, что Go не поддерживает незашифрованные SMTP-подключения.
                                 sendResolved:
                                   description: Уведомлять или нет о том, что алерт более не активен.
                                 smarthost:
@@ -530,14 +528,14 @@ spec:
                             description: Список конфигураций для отправки оповещений через Telegram.
                             items:
                               description: |
-                                Конфигурация определяет параметры отправки оповещений с помощью Telegram. 
-                                
+                                Конфигурация определяет параметры отправки оповещений с помощью Telegram.
+
                                 [Подробнее см. в документации Prometheus…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
                               properties:
                                 apiURL:
                                   description: |
                                     Адрес Telegram API, например `https://api.telegram.org`.
-                                    
+
                                     Если не указано, будет использоваться адрес API по умолчанию.
                                   type: string
                                 botToken:
@@ -579,7 +577,7 @@ spec:
                                           description: |
                                             Устанавливает тип аутентификации.
 
-                                            По-умолчанию Bearer, Basic будет вызывать ошибку.
+                                            По умолчанию — Bearer. Basic будет вызывать ошибку.
                                           type: string
                                       type: object
                                     basicAuth:

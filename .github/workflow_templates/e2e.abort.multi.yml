@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.24" "1.25" "1.26" "1.27" "1.28" -}!}
+{!{- $kubernetesVersions := slice "1.24" "1.25" "1.26" "1.27" "1.28" "1.29" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -48,7 +48,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 {!{/* Template with e2e jobs for one provider. */}!}
 {!{- define "e2e_clean_workflow_template" -}!}
 {!{- $ctx := . -}!}
-{!{- $workflowName := printf "e2e destroy failed: %s" $ctx.providerName -}!}
+{!{- $workflowName := printf "destroy cluster: %s" $ctx.providerName -}!}
 # <template: e2e_workflow_template>
 name: '{!{ $workflowName }!}'
 on:

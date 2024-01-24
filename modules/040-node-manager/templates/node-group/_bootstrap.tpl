@@ -24,56 +24,35 @@ function detect_bundle() {
 }
 
 function check_python() {
-  if command -v python3 >/dev/null 2>&1; then
-    python_binary="python3"
-    script="$(p3_script)"
-    return 0
-  fi
-  if command -v python2 >/dev/null 2>&1; then
-    python_binary="python2"
-    script="$(p2_script)"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    python_binary="python"
-    if python --version | grep -q "Python 3"; then
-      script="$(p3_script)"
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
       return 0
     fi
-    if python --version | grep -q "Python 2"; then
-      script="$(p2_script)"
-      return 0
-    fi
-  fi
+  done
   echo "Python not found, exiting..."
   return 1
 }
 
-function p2_script() {
+function load_phase2_script() {
   cat - <<EOF
-import os
 import sys
 import json
-import urllib2
 import ssl
+
+try:
+    from urllib.request import urlopen, Request
+except ImportError as e:
+    from urllib2 import urlopen, Request
+
 ssl.match_hostname = lambda cert, hostname: True
-request = urllib2.Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
-response = urllib2.urlopen(request, cafile='/var/lib/bashible/ca.crt')
+request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
+response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
 data = json.loads(response.read())
 sys.stdout.write(data["bootstrap"])
 EOF
 }
 
-function p3_script() {
-  cat - <<EOF
-import sys
-import requests
-import json
-response = requests.get(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]}, verify='/var/lib/bashible/ca.crt')
-data = json.loads(response.content)
-sys.stdout.write(data["bootstrap"])
-EOF
-}
 
 function get_phase2() {
   check_python
@@ -82,7 +61,7 @@ function get_phase2() {
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_bundle_name}"
-      if eval "${python_binary}" - "${url}" "${token}" <<< "${script}"; then
+      if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
       fi
       >&2 echo "failed to get bootstrap ${bootstrap_bundle_name} from $url"
@@ -91,7 +70,7 @@ function get_phase2() {
   done
 }
 
-  {{- if ne $ng.nodeType "Static" }}
+  {{- if not (hasKey $ng "staticInstances") }}
 function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
@@ -138,7 +117,7 @@ function run_log_output() {
 }
  {{- end }}
 BUNDLE="$(detect_bundle)"
-  {{- if ne $ng.nodeType "Static" }}
+  {{- if not (hasKey $ng "staticInstances") }}
 run_cloud_network_setup
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}

@@ -9,6 +9,7 @@
   - '*/openapi/*-tests.yaml'
   - '*/docs/internal/'
   - '005-external-module-manager/crds/external-module-*'
+  - '040-node-manager/crds/deckhousecontrolplane.yaml'
   - '040-node-manager/crds/mcm.yaml'
   - '040-node-manager/crds/cluster.yaml'
   - '040-node-manager/crds/extension-config.yaml'
@@ -18,7 +19,6 @@
   - '040-node-manager/crds/staticcontrolplane.yaml'
   - '040-node-manager/crds/staticmachine*.yaml'
   - '110-istio/crds/istio'
-  - '490-virtualization/crds/kubevirt.yaml'
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 - add: /modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
@@ -41,6 +41,12 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /src/global/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 {{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ee

@@ -10,7 +10,7 @@ description: Описание возможностей сбора логов в 
 ![log-shipper architecture](../../images/460-log-shipper/log_shipper_architecture.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse следит за ресурсами `ClusterLoggingConfig`, `ClusterLogsDestination` и `PodLoggingConfig`.
+1. Deckhouse следит за ресурсами [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) и [PodLoggingConfig](cr.html#podloggingconfig).
    Комбинация конфигурации для сбора логов и направления для отправки называется `pipeline`.
 2. Deckhouse генерирует конфигурационный файл и сохраняет его в `Secret` в Kubernetes.
 3. `Secret` монтируется всем подам агентов `log-shipper`, конфигурация обновляется при ее изменении с помощью sidecar-контейнера `reloader`.
@@ -55,7 +55,7 @@ description: Описание возможностей сбора логов в 
 
 ## Метаданные
 
-При сборе логов сообщения будут обогащены метаданными в зависимости от способа их сбора.
+При сборе логов сообщения будут обогащены метаданными в зависимости от способа их сбора. Обогащение происходит на этапе `Source`.
 
 ### Kubernetes
 

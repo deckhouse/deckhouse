@@ -33,7 +33,8 @@ CODEGEN_PKG=$($PY -c "import os.path; print (os.path.relpath('${CODEGEN_PKG_ABS}
 
 
 chmod +x ${CODEGEN_PKG}/generate-groups.sh
-${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1
+chmod +x ${CODEGEN_PKG}/generate-internal-groups.sh
+${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1 --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
 #kube::codegen::gen_helpers \
 #    --input-pkg-root . \

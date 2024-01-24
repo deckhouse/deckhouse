@@ -1,0 +1,46 @@
+allowed_values: allowed values
+search-placeholder: Search...
+modules: modules
+module: module
+deckhouse: deckhouse
+documentation: documentation
+modules_documentation: Modules documentation
+core: core
+default_value: default
+platform: platform
+pattern: pattern
+example: example
+examples: examples
+length: length
+min_length: minimal length
+max_length: maximum length
+moduleLinkTitleREADME: Description
+moduleLinkTitleEXAMPLES: Examples
+moduleLinkTitleCONFIGURATION: Configuration
+moduleLinkTitleUSAGE: Usage
+moduleLinkTitleSETUP: Setup
+moduleLinkTitleFAQ: FAQ
+moduleLinkTitleCRD: Custom Resources
+moduleLinkTitleCR: Custom Resources
+module_is_available_in_ee_only: The module is available only in Deckhouse Enterprise Edition.
+module_alert_experimental: The module is actively developed. It might significantly change in the future.
+deprecated_parameter: Deprecated
+deprecated_parameter_hint: Support for the parameter might be removed in a later release.
+element_of_array: element of the array
+x-kubernetes-int-or-string: integer or string
+array: array
+of_array: of arrays
+object: object
+of_object: of objects
+number: number
+of_number: of numbers
+integer: integer
+of_integer: of integers
+string: string
+of_string: of strings
+boolean: boolean
+of_boolean: of booleans
+version: version
+version_of_schema: Schema version
+required_value_sentence: Required value
+

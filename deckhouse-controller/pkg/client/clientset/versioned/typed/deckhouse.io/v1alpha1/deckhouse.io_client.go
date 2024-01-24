@@ -28,7 +28,12 @@ import (
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ModulesGetter
 	ModuleConfigsGetter
+	ModulePullOverridesGetter
+	ModuleReleasesGetter
+	ModuleSourcesGetter
+	ModuleUpdatePoliciesGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
@@ -36,8 +41,28 @@ type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
 }
 
+func (c *DeckhouseV1alpha1Client) Modules() ModuleInterface {
+	return newModules(c)
+}
+
 func (c *DeckhouseV1alpha1Client) ModuleConfigs() ModuleConfigInterface {
 	return newModuleConfigs(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModulePullOverrides() ModulePullOverrideInterface {
+	return newModulePullOverrides(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModuleReleases() ModuleReleaseInterface {
+	return newModuleReleases(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
+	return newModuleSources(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
+	return newModuleUpdatePolicies(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.

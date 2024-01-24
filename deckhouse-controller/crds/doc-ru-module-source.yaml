@@ -1,0 +1,73 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию источника модулей Deckhouse.
+          properties:
+            spec:
+              properties:
+                releaseChannel:
+                  description: Желаемый канал обновлений по умолчанию для модулей данного container registry.
+                  x-doc-deprecated: true
+                registry:
+                  properties:
+                    scheme:
+                      description: Протокол для доступа к репозиторию контейнеров.
+                    repo:
+                      type: string
+                      description: Адрес репозитория образов контейнеров.
+                    dockerCfg:
+                      description: Строка с токеном доступа к container registry в Base64.
+                    ca:
+                      description: |
+                        Корневой сертификат (В формате PEM), которым можно проверить сертификат registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+            status:
+              properties:
+                syncTime:
+                  description: Время последней синхронизации с container registry.
+                modulesCount:
+                  type: integer
+                  description: Колличество доступых модулей.
+                modules:
+                  type: array
+                  description: Список доступных для установки модулей и их политики обновления.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Имя модуля.
+                      policy:
+                        type: string
+                        description: Имя политики.
+                      overridden:
+                        description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
+                message:
+                  type: string
+                  description: Сообщение с детальной ошибкой.
+                moduleErrors:
+                  type: array
+                  description: Сообщения с ошибками установки модулей.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: "release channel"
+          type: string
+          jsonPath: .spec.releaseChannel
+          description: "Канал обновлений по умолчанию для модулей в данном репозитории."
+        - name: count
+          type: integer
+          jsonPath: .status.modulesCount
+          description: "Количество доступных модулей в данном репозитории."
+        - name: sync
+          jsonPath: .status.syncTime
+          type: date
+          format: date-time
+          description: 'Время последней синхронизации с container registry.'
+        - name: msg
+          jsonPath: .status.message
+          type: string
+          description: 'Сообщение об ошибке.'

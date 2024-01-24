@@ -4,7 +4,6 @@ FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
 FORMATTING_END = \033[0m
 
-TESTS_TIMEOUT="15m"
 FOCUS=""
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
@@ -124,7 +123,7 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
+.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
@@ -135,6 +134,14 @@ tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered wit
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
+
+tests-controller: ## Run deckhouse-controller unit tests.
+	go test ./deckhouse-controller/... -v
+
+.PHONY: tests-doc-links
+tests-doc-links: ## Build documentation and run checker of html links.
+	bash tools/doc_check_links.sh
+
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -222,10 +229,6 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	echo "Open http://localhost to access the documentation..."
-
-.PHONY: docs-check-links
-docs-check-links: ## Build documentation and run link checker.
-	bash tools/doc_check_links.sh
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)

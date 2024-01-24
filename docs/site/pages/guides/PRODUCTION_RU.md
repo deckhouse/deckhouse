@@ -145,7 +145,7 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 Достаточно создать custom resource с описанием того, *что нужно собирать*: [ClusterLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) или [PodLoggingConfig](/documentation/v1/modules/460-log-shipper/cr.html#podloggingconfig); кроме того, необходимо создать custom resource с данными о том, *куда отправлять* собранные логи: [ClusterLogDestination](/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
 
 Дополнительная информация:
-- [Пример для Grafana Loki](/documentation/v1/modules/460-log-shipper/examples.html#чтение-логов-из-всех-podов-кластера-и-направление-их-в-loki)
+- [Пример для Grafana Loki](/documentation/v1/modules/460-log-shipper/examples.html#чтение-логов-из-всех-подов-кластера-и-направление-их-в-loki)
 - [Пример для Logstash](/documentation/v1/modules/460-log-shipper/examples.html#простой-пример-logstash)
 - [Пример для Splunk](/documentation/v1/modules/460-log-shipper/examples.html#пример-интеграции-со-splunk)
 

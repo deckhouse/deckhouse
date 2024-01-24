@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/utils/strings/slices"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -56,7 +54,8 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		log.DebugLn("No proxy is configured, skipping check")
 		return nil
 	}
-	if slices.Contains(noProxyAddresses, pc.metaConfig.Registry.Address) {
+
+	if tryToSkippingCheck(pc.metaConfig.Registry.Address, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
@@ -68,7 +67,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 	defer tun.Stop()
 
-	registryURL := &url.URL{Scheme: pc.metaConfig.Registry.Scheme, Host: pc.metaConfig.Registry.Address, Path: "/v2"}
+	registryURL := &url.URL{Scheme: pc.metaConfig.Registry.Scheme, Host: pc.metaConfig.Registry.Address, Path: "/v2/"}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
@@ -88,6 +87,35 @@ Please check connectivity from the control-plane node to the proxy and from the 
 	}
 
 	return nil
+}
+
+func tryToSkippingCheck(registryAddress string, noProxyAddresses []string) bool {
+	for _, noProxyAddress := range noProxyAddresses {
+		if registryAddress == noProxyAddress {
+			return true
+		}
+
+		registryIPAddr, _ := net.ResolveIPAddr("ip", registryAddress)
+		if registryIPAddr == nil {
+			continue
+		}
+
+		noProxyAddressIPAddr, _ := net.ResolveIPAddr("ip", noProxyAddress)
+		if noProxyAddressIPAddr != nil {
+			if noProxyAddressIPAddr.IP.Equal(registryIPAddr.IP) {
+				return true
+			}
+
+			continue
+		}
+
+		_, noProxyIPNet, _ := net.ParseCIDR(noProxyAddress)
+		if noProxyIPNet != nil && noProxyIPNet.Contains(registryIPAddr.IP) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {

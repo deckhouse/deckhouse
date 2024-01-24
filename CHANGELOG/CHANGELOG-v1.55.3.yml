@@ -1,0 +1,17 @@
+ceph-csi:
+  fixes:
+    - summary: Use different liveness probe ports for csi-controller-cephfs and csi-controller-rbd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6727
+control-plane-manager:
+  fixes:
+    - summary: Remove the use of crictl when backing up etcd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6720
+flant-integration:
+  fixes:
+    - summary: Fix grafana agent config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6743
+node-manager:
+  fixes:
+    - summary: Add MachineHealthCheck for CAPS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6609
+

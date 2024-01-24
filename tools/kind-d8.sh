@@ -379,27 +379,88 @@ EOF
 
   echo "Creating Deckhouse installation config file (${CONFIG_DIR}/config.yml)..."
   cat <<EOF >${CONFIG_DIR}/config.yml
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  releaseChannel: $D8_RELEASE_CHANNEL_NAME
-  bundle: Minimal
-  configOverrides:
-    global:
-      modules:
-        publicDomainTemplate: "%s.127.0.0.1.sslip.io"
-        https:
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bundle: Minimal
+    releaseChannel: EarlyAccess
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1
+  settings:
+    modules:
+      publicDomainTemplate: "%s.127.0.0.1.sslip.io"
+      https:
           mode: Disabled
-    operatorPrometheusCrdEnabled: true
-    operatorPrometheusEnabled: true
-    prometheusCrdEnabled: true
-    prometheusEnabled: true
-    monitoringKubernetesEnabled: true
-    monitoringDeckhouseEnabled: true
-    monitoringKubernetesControlPlaneEnabled: true
-    ingressNginxEnabled: true
-    prometheus:
-      longtermRetentionDays: 0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  settings:
+    longtermRetentionDays: 0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-kubernetes
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-kubernetes-control-plane
+spec:
+  enabled: true
 EOF
 
   if [[ -n "$D8_LICENSE_KEY" ]]; then

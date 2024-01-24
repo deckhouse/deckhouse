@@ -1,0 +1,59 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modules
+    singular: module
+    kind: Module
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Shows basic information about the Deckhouse module.
+
+            This resource is intended **only for getting information** about the module and cannot be changed (read-only).
+          properties:
+            properties:
+              type: object
+              properties:
+                weight:
+                  type: integer
+                  description: 'Module weight (priority).'
+                state:
+                  type: string
+                  description: 'Module state.'
+                  enum:
+                    - Enabled
+                    - Disabled
+                source:
+                  type: string
+                  description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                description:
+                  type: string
+                  description: 'Module description.'
+      additionalPrinterColumns:
+        - name: weight
+          jsonPath: .properties.weight
+          type: integer
+          description: 'Module weight (priority).'
+        - name: state
+          jsonPath: .properties.state
+          type: string
+          description: 'Module state. Enabled or Disabled.'
+        - name: source
+          jsonPath: .properties.source
+          type: string
+          description: 'ModuleSource name of the module if provided by one (otherwise empty).'

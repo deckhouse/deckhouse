@@ -770,11 +770,11 @@ Test PASSED
 Done
 ```
 
-## Как развернуть кастомный конфиг containerd ?
+## Как развернуть кастомный конфиг containerd?
 
 Bashible на узлах мержит основной конфиг containerd для Deckhouse с  конфигами из `/etc/containerd/conf.d/*.toml`.
 
-### Как добавить авторизацию в дополнительный registry ?
+### Как добавить авторизацию в дополнительный registry?
 
 Разверните скрипт `NodeGroupConfiguration`:
 

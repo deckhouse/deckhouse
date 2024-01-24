@@ -60,3 +60,6 @@ data:
   TRIVY_DEBUG: "false"
   TRIVY_SKIP_DB_UPDATE: "false"
   TRIVY_DB_REPOSITORY: {{ $dbRepository }}
+  {{- if $.Values.global.modulesImages.registry.CA }}
+  TRIVY_REGISTRY_CA: | {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
+  {{- end }}

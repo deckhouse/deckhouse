@@ -15,37 +15,85 @@
 package hooks
 
 import (
-	"fmt"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/iancoleman/strcase"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-type deckhouseSecret struct {
-	Bundle         string
-	ReleaseChannel string
-}
+func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ms v1alpha1.ModuleSource
 
-func filterDeckhouseSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, &ms)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
+		return nil, err
 	}
 
-	return deckhouseSecret{
-		Bundle:         string(secret.Data["bundle"]),
-		ReleaseChannel: string(secret.Data["releaseChannel"]),
-	}, nil
+	if ms.Spec.Registry.Scheme == "" {
+		// fallback to default https protocol
+		ms.Spec.Registry.Scheme = "HTTPS"
+	}
+
+	// remove unused fields
+	newms := v1alpha1.ModuleSource{
+		TypeMeta: ms.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ms.Name,
+		},
+		Spec: ms.Spec,
+		Status: v1alpha1.ModuleSourceStatus{
+			ModuleErrors: ms.Status.ModuleErrors,
+		},
+	}
+
+	return newms, nil
+}
+
+type deckhouseDiscoveryData struct {
+	ReleaseChannel string
+	UpdateSettings *v1alpha1.ModuleUpdatePolicySpecUpdate
+}
+
+func filterDiscovery(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm corev1.ConfigMap
+
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	ddd := deckhouseDiscoveryData{}
+
+	res, err := base64.StdEncoding.DecodeString(cm.Data["releaseChannel"])
+	if err != nil {
+		return nil, err
+	}
+	ddd.ReleaseChannel = string(res)
+
+	if rawSettings, ok := cm.Data["updateSettings.json"]; ok {
+		res, err = base64.StdEncoding.DecodeString(rawSettings)
+		if err != nil {
+			return nil, err
+		}
+
+		ddd.UpdateSettings = &v1alpha1.ModuleUpdatePolicySpecUpdate{}
+		err = json.Unmarshal(res, ddd.UpdateSettings)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ddd, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -73,30 +121,42 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse-discovery"},
 			},
-			FilterFunc: filterDeckhouseSecret,
+			FilterFunc: filterDiscovery,
 		},
 	},
-}, createDeckhouseModuleSource)
+}, createDeckhouseModuleSourceAndPolicy)
 
-func createDeckhouseModuleSource(input *go_hook.HookInput) error {
+func createDeckhouseModuleSourceAndPolicy(input *go_hook.HookInput) error {
 	deckhouseRepo := input.Values.Get("global.modulesImages.registry.base").String() + "/modules"
 	deckhouseDockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	deckhouseCA := input.Values.Get("global.modulesImages.registry.CA").String()
-	releaseChannel := ""
 
-	if len(input.Snapshots["deckhouse-secret"]) > 0 {
-		ds := input.Snapshots["deckhouse-secret"][0].(deckhouseSecret)
-		releaseChannel = strcase.ToKebab(ds.ReleaseChannel)
+	ms := v1alpha1.ModuleSource{}
+	if len(input.Snapshots["sources"]) > 0 {
+		ms = input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
 	}
 
-	if len(input.Snapshots["sources"]) > 0 {
-		ms := input.Snapshots["sources"][0].(v1alpha1.ModuleSource)
-		releaseChannel = ms.Spec.ReleaseChannel
+	releaseChannel := "Stable"
+	us := v1alpha1.ModuleUpdatePolicySpecUpdate{Mode: "Auto"}
 
-		if moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
-			// return if ModuleSource deckhouse already exists and all params are equal
-			return nil
+	if len(input.Snapshots["deckhouse-secret"]) > 0 {
+		ddd := input.Snapshots["deckhouse-secret"][0].(deckhouseDiscoveryData)
+		if ddd.ReleaseChannel != "Unknown" {
+			releaseChannel = ddd.ReleaseChannel
 		}
+		if ddd.UpdateSettings != nil {
+			us = *ddd.UpdateSettings
+		}
+	}
+
+	// get scheme from values
+	scheme := strings.ToUpper(input.Values.Get("global.modulesImages.registry.scheme").String())
+	switch scheme {
+	case "HTTP", "HTTPS":
+	// pass
+
+	default:
+		scheme = "HTTPS"
 	}
 
 	newms := v1alpha1.ModuleSource{
@@ -111,21 +171,47 @@ func createDeckhouseModuleSource(input *go_hook.HookInput) error {
 			},
 		},
 		Spec: v1alpha1.ModuleSourceSpec{
-			ReleaseChannel: releaseChannel,
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
-				Scheme:    "HTTPS",
+				Scheme:    scheme,
 				Repo:      deckhouseRepo,
 				DockerCFG: deckhouseDockerCfg,
 				CA:        deckhouseCA,
 			},
 		},
 	}
+	if !moduleSourceUpToDate(&ms, deckhouseRepo, deckhouseDockerCfg, deckhouseCA) {
+		o, err := sdk.ToUnstructured(&newms)
+		if err != nil {
+			return err
+		}
+		input.PatchCollector.Create(o, object_patch.UpdateIfExists())
+	}
 
-	o, err := sdk.ToUnstructured(&newms)
+	newmup := v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleUpdatePolicy",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: newms.ObjectMeta.Name,
+		},
+		Spec: v1alpha1.ModuleUpdatePolicySpec{
+			ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"source": newms.ObjectMeta.Name,
+					},
+				},
+			},
+			ReleaseChannel: releaseChannel,
+			Update:         us, // Use deckhouse update settings by default
+		},
+	}
+
+	o, err := sdk.ToUnstructured(&newmup)
 	if err != nil {
 		return err
 	}
-
 	input.PatchCollector.Create(o, object_patch.UpdateIfExists())
 
 	return nil

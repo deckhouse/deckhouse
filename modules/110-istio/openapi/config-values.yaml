@@ -3,15 +3,15 @@ type: object
 properties:
   globalVersion:
     type: string
-    description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`). Must be in supported versions list (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). By default — the latest version in supported versions list.
-    examples: ["1.12"]
-    default: "1.16"
+    description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
+    examples: ["1.16"]
+    default: "1.19"
   additionalVersions:
     type: array
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-    - ["1.13", "1.14"]
+    - ["1.13", "1.16"]
     default: []
     items:
       type: string
@@ -24,6 +24,13 @@ properties:
       - `AllowAny` — allow.
       - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
     default: AllowAny
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
   enableHTTP10:
     type: boolean
     default: false

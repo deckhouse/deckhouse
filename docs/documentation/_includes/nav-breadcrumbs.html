@@ -1,5 +1,12 @@
 <div class="breadcrumbs-container">
-   <ol class="breadcrumbs">
+  <div class="breadcrumbs__left">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+    </ol>
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
       <!--#include virtual="/includes/group-menu.html" -->
       {%- assign page_url_parts = page.url | split: '/' -%}
       {%- assign max_ind = page_url_parts.size | minus: 1 -%}
@@ -26,17 +33,19 @@
       {%- endif -%}
       {%- endif -%}
       {%- endfor %}
-   </ol>
-    <!--start search-->
-    <div class="search">
-        <form action='{{ "search.html" | true_relative_url }}' method="get">
-        <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
-        </form>
-    </div>
-    <!--end search-->
-   {% unless site.mode == "local" %}
-   <div id="doc-versions-menu" class="channel-menu submenu-parent">
-      <!--#include virtual="/includes/channel-menu.html" -->
-   </div>
-   {% endunless %}
+    </ol>
+  </div>
+
+  <!--start search-->
+  <div class="search">
+      <form action='{{ "search.html" | true_relative_url }}' method="get">
+      <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
+      </form>
+  </div>
+  <!--end search-->
+  {% unless site.mode == "local" %}
+  <div id="doc-versions-menu" class="channel-menu submenu-parent">
+    <!-- #include virtual="/includes/channel-menu.html" -->
+  </div>
+  {% endunless %}
 </div>

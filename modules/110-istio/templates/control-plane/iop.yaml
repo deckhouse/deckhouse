@@ -36,7 +36,7 @@ spec:
 
   components:
     base:
-      enabled: true
+      enabled: false
 
     pilot:
       enabled: true
@@ -107,6 +107,8 @@ spec:
 
   values:
     global:
+      configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
+      operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
       network: {{ include "istioNetworkName" $ }}

@@ -249,6 +249,9 @@ function update_license_parameters(newtoken = '') {
 
   if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
     let registry = 'registry.deckhouse.io';
+    if ($.cookie("lang") === "ru") {
+      registry = 'registry.deckhouse.ru'
+    }
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';

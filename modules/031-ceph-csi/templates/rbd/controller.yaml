@@ -153,6 +153,8 @@
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "rbd_csi_controller_volume_mounts" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalContainers" (include "rbd_csi_additional_containers" (list $csiDriverName $csiControllerImage) | fromYamlArray) }}
 
+  {{- $_ := set $csiControllerConfig "livenessProbePort" 9908 }}
+
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
 {{- end }}

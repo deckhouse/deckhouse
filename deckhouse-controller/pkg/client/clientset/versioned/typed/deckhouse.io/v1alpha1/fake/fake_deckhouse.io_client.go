@@ -28,8 +28,28 @@ type FakeDeckhouseV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeDeckhouseV1alpha1) Modules() v1alpha1.ModuleInterface {
+	return &FakeModules{c}
+}
+
 func (c *FakeDeckhouseV1alpha1) ModuleConfigs() v1alpha1.ModuleConfigInterface {
 	return &FakeModuleConfigs{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ModulePullOverrides() v1alpha1.ModulePullOverrideInterface {
+	return &FakeModulePullOverrides{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ModuleReleases() v1alpha1.ModuleReleaseInterface {
+	return &FakeModuleReleases{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ModuleSources() v1alpha1.ModuleSourceInterface {
+	return &FakeModuleSources{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePolicyInterface {
+	return &FakeModuleUpdatePolicies{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

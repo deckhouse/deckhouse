@@ -40,7 +40,7 @@ import (
 func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) error {
 	switch instanceScope.GetPhase() {
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
-		err := c.bootstrapFromPendingPhase(ctx, instanceScope)
+		_, err := c.bootstrap(ctx, instanceScope)
 		if err != nil {
 			return errors.Wrap(err, "failed to bootstrap StaticInstance from pending phase")
 		}
@@ -51,39 +51,6 @@ func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 		}
 	default:
 		return errors.New("StaticInstance is not pending or bootstrapping")
-	}
-
-	return nil
-}
-
-func (c *Client) bootstrapFromPendingPhase(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	providerID := providerid.GenerateProviderID()
-
-	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
-
-	err := instanceScope.MachineScope.Patch(ctx)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
-	}
-
-	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
-		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
-		Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
-		Name:       instanceScope.MachineScope.StaticMachine.Name,
-		UID:        instanceScope.MachineScope.StaticMachine.UID,
-	}
-
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
-
-	err = instanceScope.Patch(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
-	}
-
-	_, err = c.bootstrap(ctx, instanceScope)
-	if err != nil {
-		return errors.Wrap(err, "failed to bootstrap")
 	}
 
 	return nil
@@ -144,8 +111,34 @@ func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 		return false, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	done := c.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir /var/lib/bashible || exit 0 && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
+	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+		providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
+
+		instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
+
+		err := instanceScope.MachineScope.Patch(ctx)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
+		}
+
+		instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
+			APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
+			Kind:       instanceScope.MachineScope.StaticMachine.Kind,
+			Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
+			Name:       instanceScope.MachineScope.StaticMachine.Name,
+			UID:        instanceScope.MachineScope.StaticMachine.UID,
+		}
+
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
+
+		err = instanceScope.Patch(ctx)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
+		}
+	}
+
+	done := c.bootstrapTaskManager.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
+		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)), nil)
 		if err != nil {
 			// If Node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")

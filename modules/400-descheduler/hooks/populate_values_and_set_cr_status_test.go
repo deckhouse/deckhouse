@@ -42,6 +42,42 @@ spec:
         enabled: true
 `
 
+	deschedulerWithNodeSelector = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: test
+spec:
+  deploymentTemplate:
+    nodeSelector:
+      test: test
+  deschedulerPolicy:
+    globalParameters:
+      nodeSelector: group=worker
+      evictFailedBarePods: true
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+`
+
+	deschedulerWithIncorrectNodeSelector = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: test
+spec:
+  deploymentTemplate:
+    nodeSelector:
+      test: test
+  deschedulerPolicy:
+    globalParameters:
+      nodeSelector: group=unknown
+      evictFailedBarePods: true
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+`
+
 	deschedulerDeployment = `---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,6 +90,26 @@ metadata:
 status:
   replicas: 1
   readyReplicas: 1
+`
+)
+
+var (
+	node1CR = `---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    group: worker
+`
+
+	node2CR = `---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node2
+  labels:
+    group: worker
 `
 )
 
@@ -73,15 +129,85 @@ var _ = Describe("Modules :: descheduler :: hooks :: populate_values_and_set_cr_
 			var obj map[string]interface{}
 			Expect(yaml.Unmarshal([]byte(deschedulerCR), &obj)).Should(Succeed())
 
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster with descheduler object and 1 node", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR + node1CR)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
+			f.RunHook()
+		})
+
+		It("Should set values appropriately", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			var obj map[string]interface{}
+			Expect(yaml.Unmarshal([]byte(deschedulerCR), &obj)).Should(Succeed())
+
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster with descheduler object and 2 nodes", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR + node1CR + node2CR)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
+			f.RunHook()
+		})
+
+		It("Should set values appropriately", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			var obj map[string]interface{}
+			Expect(yaml.Unmarshal([]byte(deschedulerCR), &obj)).Should(Succeed())
+
 			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Value()).To(BeEquivalentTo(obj))
 			Expect(f.ValuesGet("descheduler.internal.deschedulers.1").Exists()).To(BeFalse())
 		})
 	})
 
+	Context("Cluster with descheduler object and with 2 nodes and with nodeSelector", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerWithNodeSelector + node1CR + node2CR)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
+			f.RunHook()
+		})
+
+		It("Should set values appropriately", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			var obj map[string]interface{}
+			Expect(yaml.Unmarshal([]byte(deschedulerWithNodeSelector), &obj)).Should(Succeed())
+
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Value()).To(BeEquivalentTo(obj))
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.1").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster with descheduler object and with 2 nodes and with incorrect nodeSelector", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerWithIncorrectNodeSelector + node1CR + node2CR)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
+			f.RunHook()
+		})
+
+		It("Should set values appropriately", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			var obj map[string]interface{}
+			Expect(yaml.Unmarshal([]byte(deschedulerWithNodeSelector), &obj)).Should(Succeed())
+
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("Set status", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(deschedulerCR + deschedulerDeployment)
+			f.KubeStateSet(deschedulerCR + deschedulerDeployment + node1CR + node2CR)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
 			f.RunHook()
 		})
 
