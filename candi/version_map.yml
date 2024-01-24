@@ -105,7 +105,7 @@ k8s:
     clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.29.0
-      yandex: e921aeabbbcd275220f21ca0f55a2da408bf9344
+      yandex: v0.29.0
       aws: v1.29.1
       vsphere: v1.29.0
       azure: v1.29.0
