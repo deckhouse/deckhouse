@@ -44,6 +44,7 @@ var auditPolicyBasicNamespaces = []string{
 }
 var auditPolicyBasicServiceAccounts = []string{
 	"agent",
+	"aggregating-proxy",
 	"alertmanager-internal",
 	"alerts-receiver",
 	"alliance-ingressgateway",
@@ -91,7 +92,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"local-path-provisioner",
 	"log-shipper",
 	"machine-controller-manager",
-	"mimir-query-frontend",
 	"monitoring-ping",
 	"multicluster-api-proxy",
 	"network-policy-engine",
@@ -107,7 +107,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"pod-reloader",
 	"pricing",
 	"prometheus",
-	"promxy",
 	"relay",
 	"report-updater",
 	"runtime-audit-engine",
