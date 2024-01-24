@@ -19,10 +19,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	sprig "github.com/go-task/slim-sprig"
+
 	"testing"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
