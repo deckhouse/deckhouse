@@ -849,7 +849,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 		moduleName := item.Spec.ModuleName
 		moduleSource := item.GetModuleSource()
 
-		// if ModulePullOverride is set, don't check and restore overriden release
+		// if ModulePullOverride is set, don't check and restore overridden release
 		exists, err := c.isModulePullOverrideExists(moduleSource, moduleName)
 		if err != nil {
 			c.logger.Errorf("Couldn't check module pull override for module %s: %s", moduleName, err)
@@ -932,17 +932,9 @@ func (c *Controller) restoreAbsentSourceModules() error {
 		if err != nil {
 			// module dir not found
 			if os.IsNotExist(err) {
-				// check if there is a symlink for the module with different weight in the symlink folder
-				anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
+				err := c.deleteStaleSymlink(moduleName)
 				if err != nil {
-					c.logger.Warnf("Couldn't check if there are any other symlinks for module %s with pull override: %s", moduleName, err)
-					continue
-				}
-				if len(anotherModuleSymlink) > 0 {
-					if err := os.Remove(anotherModuleSymlink); err != nil {
-						c.logger.Warnf("Couldn't delete stale symlink %s for module %s with pull override: %w", anotherModuleSymlink, moduleName, err)
-						continue
-					}
+					c.logger.Warnf("%s", err)
 				}
 
 				// restore symlink
@@ -965,10 +957,9 @@ func (c *Controller) restoreAbsentSourceModules() error {
 	return nil
 }
 
-func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource string, moduleWeight uint32) error {
-	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
-
-	// check if there is a symlink for the module with different weight in the symlink folder
+// deleteStaleSymlink checks if there is a symlink for the module with different weight in the symlink folder
+// and deletes it
+func (c *Controller) deleteStaleSymlink(moduleName string) error {
 	anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
 	if err != nil {
 		return fmt.Errorf("Couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
@@ -977,6 +968,19 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 		if err := os.Remove(anotherModuleSymlink); err != nil {
 			return fmt.Errorf("Couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
 		}
+	}
+
+	return nil
+}
+
+// createModuleSymlink checks if there is a stale symlink for a module in the symlink dir and deletes it before
+// attempting to download current version of the module and creating correct symlink
+func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource string, moduleWeight uint32) error {
+	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
+
+	err := c.deleteStaleSymlink(moduleName)
+	if err != nil {
+		return err
 	}
 
 	ms, err := c.moduleSourcesLister.Get(moduleSource)
