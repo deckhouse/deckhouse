@@ -48,6 +48,7 @@ properties:
 	sourceModule := &v1alpha1.ModuleSource{}
 	sourceModule.Spec.Registry.Repo = "test.deckhouse.io/foo/bar"
 	sourceModule.Spec.Registry.DockerCFG = "dGVzdG1lCg=="
+	sourceModule.Spec.Registry.Scheme = "http"
 
 	data, err := mutateOpenapiSchema([]byte(source), sourceModule)
 	require.NoError(t, err)
@@ -67,6 +68,9 @@ properties:
       dockercfg:
         type: string
         default: dGVzdG1lCg==
+      scheme:
+        type: string
+        default: http
   internal:
     default: {}
     properties:
