@@ -74,6 +74,10 @@ Deckhouse поддерживает отправку алертов с помощ
 
 ![Схема взаимодействия](../../images/300-prometheus/prometheus_monitoring_new.svg)
 
+##### WIP:  новая схема для единого  датасорса
+
+<img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
+
 ### Компоненты, устанавливаемые Deckhouse
 
 | Компонент                   | Описание                                                                                                                                                                                                                                                                                        |
