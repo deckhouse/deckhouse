@@ -53,11 +53,32 @@ $(document).ready(function () {
   });
   {%- if page.platform_code == 'bm-private' %}
   // proxy
+  const proxyAddress = /^(http|https):\/\/[0-9a-zA-Z\.\-:@_]+$/;
   $('#proxyHttpURI').change(function () {
-    sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
+    if (!$(this).val().match(proxyAddress)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-main').addClass('active');
+    } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-example-com').addClass('active');
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+      sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
+    }
   });
   $('#proxyHttpsURI').change(function () {
-    sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
+    if (!$(this).val().match(proxyAddress)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-main').addClass('active');
+    } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-example-com').addClass('active');
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+      sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
+    }
   });
   $('#noProxyAddressList').change(function () {
     sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
