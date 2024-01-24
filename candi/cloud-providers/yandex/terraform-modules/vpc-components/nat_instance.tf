@@ -115,8 +115,8 @@ resource "yandex_compute_instance" "nat_instance" {
 
   platform_id = "standard-v2"
   resources {
-    cores  = 2
-    memory = 2
+    cores  = 4
+    memory = 4
   }
 
   boot_disk {
