@@ -73,7 +73,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 <img src="../../images/300-prometheus/prometheus_monitoring.svg">
 
-##### WIP: new scheme for single datasource (testing_now)
+WIP: new scheme for single datasource (testing_now)
 
 <img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
 

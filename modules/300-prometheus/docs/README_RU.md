@@ -74,7 +74,7 @@ Deckhouse поддерживает отправку алертов с помощ
 
 <img src="../../images/300-prometheus/prometheus_monitoring.svg">
 
-##### WIP:  новая схема для единого  датасорса
+WIP:  новая схема для единого  датасорса
 
 <img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
 
