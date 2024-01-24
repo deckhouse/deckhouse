@@ -6,13 +6,20 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
+
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -27,7 +34,8 @@ const (
 )
 
 type exporter struct {
-	client *kubernetes.Clientset
+	client   *kubernetes.Clientset
+	metrices *metrics.Clientset
 }
 type Exporter interface {
 	ListAnnotatedObjects(namespace string) ([]Annotated, error)
@@ -45,8 +53,15 @@ func NewExporter() Exporter {
 		fmt.Fprintf(os.Stderr, "Failed to create clientset: %v", err)
 	}
 
+	metricsClient, err := metrics.NewForConfig(config)
+	if err != nil {
+		fmt.Printf("Error building metrics client: %v\n", err)
+		os.Exit(1)
+	}
+
 	return &exporter{
-		client: clientset,
+		client:   clientset,
+		metrices: metricsClient,
 	}
 }
 
@@ -231,22 +246,152 @@ func main() {
 	done <- true
 }
 
-// we will use k8s metrics server to get the metrics and then we will use the prometheus client to expose the metrics
-func (exporter *exporter) cpu_uses(Type string, Namespace string, Name string) (float64, error) {
-	// get the metrics for the object
+// to expose the metrices we use prometheus client library
+// we can run queries on the metrices using promql
 
-	metrics, err := exporter.client.CoreV1().Pods(Namespace).GetMetrics(context.Background(), Name, metav1.GetOptions{})
+func exposePod_cpu_usage(prometheusURL, namespace, podName string) {
+	client, err := api.NewClient(api.Config{
+		Address: prometheusURL,
+	})
 	if err != nil {
-		fmt.Println("[logs] Error fetching metrics:", err)
-		return 0, err
+		panic(err)
 	}
 
-	for _, container := range metrics.Containers {
-		if container.Name == "nginx" {
-			return container.Usage.Cpu().MilliValue(), nil
+	apiClient := v1.NewAPI(client)
+
+	//TODO : change the query to get the cpu usage of the pod
+	query := fmt.Sprintf(
+		`container_cpu_load_average_10s`,
+	)
+
+	cpuMetric := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "pod_cpu_usage",
+		Help: "Pod CPU usage",
+	})
+
+	prometheus.MustRegister(cpuMetric)
+
+	go func() {
+		for {
+			result, warning, err := apiClient.QueryRange(context.Background(), query, v1.Range{
+				Start: time.Now().Add(-10 * time.Minute),
+				End:   time.Now(),
+				Step:  (10 * time.Second) / 2,
+			})
+
+			if err != nil {
+				fmt.Println("Error querying Prometheus:", err)
+				continue
+			}
+
+			if warning != nil {
+				fmt.Println("Warning querying Prometheus:", warning)
+			}
+			// extract the value from the result
+			cpuValue := result.Type().String()
+
+			switch cpuValue {
+			case "matrix":
+				matrix := result.(model.Matrix)
+				for _, sample := range matrix {
+					fmt.Printf("Sample stream: %v\n", sample.Metric)
+					time.Sleep(5 * time.Second)
+					for _, value := range sample.Values {
+						fmt.Printf("  %v %v\n", value.Timestamp, value.Value)
+						time.Sleep(5 * time.Second)
+					}
+				}
+			}
+
+			fmt.Println("CPU usage:", cpuValue)
+
+			cpuFloatValue, err := strconv.ParseFloat(cpuValue, 64)
+			if err != nil {
+				fmt.Println("Error converting cpuValue to float64:", err)
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
+			cpuMetric.Set(cpuFloatValue)
+
 		}
+	}()
+
+	http.Handle("/metrics/pod/cpu", promhttp.Handler())
+	fmt.Println("Starting server on port http://localhost:8080")
+	http.ListenAndServe(":8080", nil)
+
+}
+
+func exposePod_memory_usage(prometheusURL, namespace, podName string) {
+	client, err := api.NewClient(api.Config{
+		Address: prometheusURL,
+	})
+	if err != nil {
+		panic(err)
 	}
 
-	return 0, nil
+	apiClient := v1.NewAPI(client)
+
+	query := fmt.Sprintf(
+		`container_memory_usage_bytes`,
+	)
+
+	memoryMetric := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "pod_memory_usage",
+		Help: "Pod memory usage",
+	})
+
+	prometheus.MustRegister(memoryMetric)
+
+	go func() {
+		for {
+			result, warning, err := apiClient.QueryRange(context.Background(), query, v1.Range{
+				Start: time.Now().Add(-10 * time.Minute),
+				End:   time.Now(),
+				Step:  (10 * time.Second) / 2,
+			})
+
+			if err != nil {
+				fmt.Println("Error querying Prometheus:", err)
+				continue
+			}
+
+			if warning != nil {
+				fmt.Println("Warning querying Prometheus:", warning)
+			}
+			// extract the value from the result
+			memoryValue := result.Type().String()
+
+			switch memoryValue {
+			case "matrix":
+				matrix := result.(model.Matrix)
+				for _, sample := range matrix {
+					fmt.Printf("Sample stream: %v\n", sample.Metric)
+					time.Sleep(5 * time.Second)
+					for _, value := range sample.Values {
+						fmt.Printf("  %v %v\n", value.Timestamp, value.Value)
+						time.Sleep(5 * time.Second)
+					}
+				}
+			}
+
+			fmt.Println("Memory usage:", memoryValue)
+
+			memoryFloatValue, err := strconv.ParseFloat(memoryValue, 64)
+			if err != nil {
+				fmt.Println("Error converting memoryValue to float64:", err)
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
+			memoryMetric.Set(memoryFloatValue)
+
+		}
+	}()
+
+	http.Handle("/metrics/pod/memory", promhttp.Handler())
+	fmt.Println("Starting server on port http://localhost:8080")
+	http.ListenAndServe(":8080", nil)
 
 }
