@@ -446,6 +446,7 @@ func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleS
 	reg := new(registrySchemaForValues)
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
+	reg.SetScheme(moduleSource.Spec.Registry.Scheme)
 
 	var yamlData injectedValues
 
@@ -478,12 +479,17 @@ type registrySchemaForValues struct {
 			Type    string `yaml:"type"`
 			Default string `yaml:"default,omitempty"`
 		} `yaml:"dockercfg"`
+		Scheme struct {
+			Type    string `yaml:"type"`
+			Default string `yaml:"default"`
+		} `yaml:"scheme"`
 	} `yaml:"properties"`
 }
 
 func (rsv *registrySchemaForValues) fillTypes() {
 	rsv.Properties.Base.Type = "string"
 	rsv.Properties.Dockercfg.Type = "string"
+	rsv.Properties.Scheme.Type = "string"
 	rsv.Type = "object"
 }
 
@@ -499,6 +505,10 @@ func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
 	}
 
 	rsv.Properties.Dockercfg.Default = dockercfg
+}
+
+func (rsv *registrySchemaForValues) SetScheme(scheme string) {
+	rsv.Properties.Scheme.Default = scheme
 }
 
 type injectedValues struct {
