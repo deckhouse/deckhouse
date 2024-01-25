@@ -1,5 +1,9 @@
 {{- $ciliumVersion := "1.14.5" }}
-# https://github.com/cilium/cilium/blob/83f313918cd97dc48c63fda7a0e15b8821a6f0d2/images/runtime/Dockerfile#L8-L10
+---
+# #####################################################################
+# Base artifacts
+---
+# https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
@@ -11,6 +15,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
 ---
 # https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
 ---
@@ -41,6 +46,9 @@ shell:
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - ./build-gops.sh
   - ./download-cni.sh
+---
+# #####################################################################
+# Base artifacts
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -133,6 +141,9 @@ shell:
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
   - ./install-protoplugins.sh
+---
+# #####################################################################
+# Build hubble binaries
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

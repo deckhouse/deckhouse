@@ -1,4 +1,6 @@
 {{- $ciliumVersion := "1.14.5" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
