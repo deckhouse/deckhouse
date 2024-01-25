@@ -43,11 +43,11 @@ import:
   to: /usr/bin/cilium-envoy
   before: install
 - artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /out/linux/amd64/bin/hubble
+  add: /hubble
   to: /usr/bin/hubble
   before: install
 - artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /out/linux/bash_completion
+  add: /bash_completion
   to: /etc/bash_completion.d/hubble
   before: install
 - image: common/pause

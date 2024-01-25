@@ -1,4 +1,5 @@
 {{- $ciliumVersion := "1.14.5" }}
+{{- $hubbleVersion := "v0.12.3" }}
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
@@ -157,23 +158,27 @@ shell:
   - ./install-protoplugins.sh
 ---
 # #####################################################################
-# "Build" hubble binaries
+# Build hubble binaries
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
-fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
-  add: /go/src/github.com/cilium/cilium/images/cilium/
-  to: /go/src/github.com/cilium/cilium/images/cilium/
-  before: install
-  includePaths:
-  - download-hubble.sh
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache make git binutils
   install:
-  - chmod +x /go/src/github.com/cilium/cilium/images/cilium/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/cilium
-  - ./download-hubble.sh
-  - /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/github.com/cilium/hubble
+  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
+  - cd /go/src/github.com/cilium/hubble
+  - make clean && make hubble
+  - cp /go/src/github.com/cilium/hubble/hubble /hubble
+  - strip /hubble
+  - chmod +x /hubble
+  - /hubble completion bash > /bash_completion
 ---
 # #####################################################################
 # Binaries artifact for distroless (based on Ubuntu)
