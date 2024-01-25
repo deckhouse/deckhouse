@@ -148,6 +148,7 @@ shell:
   - /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 ---
 # #####################################################################
+# Binaries artifact for distroless (based on Ubuntu)
 ---
 # clang dependencies
 {{ $binaries := "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
@@ -188,6 +189,9 @@ shell:
       done
       # broken symlinks are not imported from the artifact
       touch /usr/sbin/iptables-wrapper
+---
+# #####################################################################
+# Distroless Base Runtime Image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless-runtime-artifact
 fromImage: common/distroless
