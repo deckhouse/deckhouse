@@ -79,7 +79,7 @@ spec:
           - "-log.level=info"
         volumeMounts:
         - mountPath: /etc/mimir/config.yaml
-          name: mimir-config
+          name: aggregating-proxy-config
           subPath: mimir.yaml
         livenessProbe:
           httpGet:
@@ -107,7 +107,7 @@ spec:
           - "--log-level=info"
         volumeMounts:
           - mountPath: /etc/promxy/config.yaml
-            name: promxy-config
+            name: aggregating-proxy-config
             subPath: promxy.yaml
         livenessProbe:
           httpGet:
@@ -143,7 +143,7 @@ spec:
           value: |
             excludePaths:
             - /ready
-            -/promxy/-/ready
+            - /promxy/-/ready
             upstreams:
             - upstream: http://127.0.0.1:8080/
               path: /
