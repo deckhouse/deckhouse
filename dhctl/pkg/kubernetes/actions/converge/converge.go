@@ -240,6 +240,7 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", r.stateCache).
+			WithSkipChangesOnDeny(true).
 			WithVariables(metaConfig.MarshalConfig()).
 			WithState(clusterState).
 			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
