@@ -145,8 +145,8 @@ shell:
     apt-get install -y --no-install-recommends \
     gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross binutils-aarch64-linux-gnu \
     gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu \
-    gcc libc6-dev binutils \
-    coreutils curl unzip git patch make
+    unzip \
+    binutils coreutils curl gcc libc6-dev git make patch
   - apt-get purge --auto-remove
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
