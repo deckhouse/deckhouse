@@ -127,9 +127,12 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
 			if metaConfig.ClusterType == config.CloudClusterType {
 				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
-				destroyer = infrastructure.NewClusterInfraWithOptions(terraStateLoader, stateCache, infrastructure.ClusterInfraOptions{
-					PhasedExecutionContext: b.PhasedExecutionContext,
-				})
+				destroyer = infrastructure.NewClusterInfraWithOptions(
+					terraStateLoader, stateCache, b.TerraformContext,
+					infrastructure.ClusterInfraOptions{
+						PhasedExecutionContext: b.PhasedExecutionContext,
+					},
+				)
 			} else {
 				sshClient, err := getSSHClient(b.initializeNewAgent)
 				if err != nil {

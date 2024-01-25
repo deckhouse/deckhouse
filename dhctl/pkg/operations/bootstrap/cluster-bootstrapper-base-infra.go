@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure() error {
@@ -62,10 +61,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 	metaConfig.UUID = clusterUUID
 
 	return log.Process("bootstrap", "Cloud infrastructure", func() error {
-		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
-			WithVariables(metaConfig.MarshalConfig()).
-			WithAutoApprove(true)
-		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
+		baseRunner := b.Params.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
 		_, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		return err

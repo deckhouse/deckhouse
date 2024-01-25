@@ -62,7 +62,7 @@ var (
 
 type Runner struct {
 	*phases.PhasedExecutionContext
-	*terraform.TerraformContext
+	terraformContext *terraform.TerraformContext
 
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
@@ -87,7 +87,7 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateC
 		skipPhases:    make(map[Phase]bool),
 		stateCache:    stateCache,
 
-		TerraformContext: terraformContext,
+		terraformContext: terraformContext,
 	}
 }
 
@@ -238,7 +238,7 @@ func (r *Runner) converge() error {
 
 		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 			ngState := nodesState[nodeGroupName]
-			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache, r.TerraformContext)
+			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache, r.terraformContext)
 			controller.WithChangeSettings(r.changeSettings)
 			controller.WithCommanderMode(r.commanderMode)
 			controller.WithExcludedNodes(r.excludedNodes)
@@ -299,7 +299,7 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 			return fmt.Errorf("kubernetes cluster has no state")
 		}
 
-		baseRunner := r.TerraformContext.GetConvergeBaseInfraRunner(metaConfig, r.stateCache, terraform.ConvergeBaseInfraRunnerOptions{
+		baseRunner := r.terraformContext.GetConvergeBaseInfraRunner(metaConfig, r.stateCache, terraform.ConvergeBaseInfraRunnerOptions{
 			AutoDismissDestructive:           r.changeSettings.AutoDismissDestructive,
 			AutoApprove:                      r.changeSettings.AutoApprove,
 			CommanderMode:                    r.commanderMode,
@@ -333,7 +333,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 		}
 
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true)
+			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
 			if err != nil {
 				return err
 			}
@@ -528,9 +528,9 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 			var err error
 			var output *terraform.PipelineOutputs
 			if nodeGroup.Name == MasterNodeGroupName {
-				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
+				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true, c.terraformContext)
 			} else {
-				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
+				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true, c.terraformContext)
 			}
 			if err != nil {
 				return err
