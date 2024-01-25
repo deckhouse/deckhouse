@@ -47,6 +47,7 @@ func (f *TerraformContext) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig
 				WithVariables(metaConfig.MarshalConfig()).
 				WithState(opts.ClusterState).
 				WithAutoApprove(true)
+
 			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
 
 			return r
@@ -163,7 +164,7 @@ type ConvergeNodeDeleteRunnerOptions struct {
 
 func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts ConvergeNodeDeleteRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
-		fmt.Sprintf("delete.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
+		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
 		func() RunnerInterface {
 			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache).
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
@@ -182,4 +183,99 @@ func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaCo
 
 			return r
 		})
+}
+
+func (f *TerraformContext) GetBootstrapBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache) RunnerInterface {
+	return f.getOrCreateRunner(
+		fmt.Sprintf("bootstrap.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout),
+		func() RunnerInterface {
+			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
+				WithVariables(metaConfig.MarshalConfig()).
+				WithAutoApprove(true)
+
+			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+
+			return r
+		},
+	)
+}
+
+type BootstrapNodeRunnerOptions struct {
+	AutoApprove                      bool
+	NodeName                         string
+	NodeGroupName                    string
+	NodeGroupStep                    string
+	NodeIndex                        int
+	NodeCloudConfig                  string
+	AdditionalStateSaverDestinations []SaverDestination
+}
+
+func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) RunnerInterface {
+	name := fmt.Sprintf("bootstrap.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep)
+
+	return f.getOrCreateRunner(
+		name,
+		func() RunnerInterface {
+			nodeConfig := metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)
+
+			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache).
+				WithVariables(nodeConfig).
+				WithName(opts.NodeName).
+				WithAutoApprove(opts.AutoApprove).
+				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+
+			return r
+		},
+	)
+}
+
+type DestroyBaseInfraRunnerOptions struct {
+	AutoApprove bool
+}
+
+func (f *TerraformContext) GetDestroyBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyBaseInfraRunnerOptions) RunnerInterface {
+	name := fmt.Sprintf("destroy.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout)
+
+	return f.getOrCreateRunner(
+		name,
+		func() RunnerInterface {
+			runner := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
+				WithVariables(metaConfig.MarshalConfig()).
+				WithAllowedCachedState(true).
+				WithAutoApprove(opts.AutoApprove)
+
+			tomb.RegisterOnShutdown("base-infrastructure", runner.Stop)
+
+			return runner
+		},
+	)
+}
+
+type DestroyNodeRunnerOptions struct {
+	AutoApprove   bool
+	NodeName      string
+	NodeGroupName string
+	NodeGroupStep string
+	NodeIndex     int
+}
+
+func (f *TerraformContext) GetDestroyNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyNodeRunnerOptions) RunnerInterface {
+	name := fmt.Sprintf("destroy.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep)
+
+	return f.getOrCreateRunner(
+		name,
+		func() RunnerInterface {
+			runner := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache).
+				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, "")).
+				WithName(opts.NodeName).
+				WithAllowedCachedState(true).
+				WithAutoApprove(opts.AutoApprove)
+
+			tomb.RegisterOnShutdown(opts.NodeName, runner.Stop)
+
+			return runner
+		},
+	)
 }

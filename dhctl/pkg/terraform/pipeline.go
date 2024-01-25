@@ -101,7 +101,7 @@ func CheckPipeline(r RunnerInterface, name string) (int, *PlanDestructiveChanges
 
 type BaseInfrastructureDestructiveChanges struct {
 	PlanDestructiveChanges
-	OutputBrokenReason string      `json:"output_broken_reason"`
+	OutputBrokenReason string      `json:"output_broken_reason,omitempty"`
 	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
 }
 
