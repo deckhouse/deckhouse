@@ -37,14 +37,14 @@ const (
 
 type ClusterCheckResult struct {
 	Status             string                                          `json:"status,omitempty"`
-	DestructiveChanges *terraform.BaseInfrastructureDestructiveChanges `json:"destructive_change,omitempty"`
+	DestructiveChanges *terraform.BaseInfrastructureDestructiveChanges `json:"destructive_changes,omitempty"`
 }
 
 type NodeCheckResult struct {
 	Group              string                            `json:"group,omitempty"`
 	Name               string                            `json:"name,omitempty"`
 	Status             string                            `json:"status,omitempty"`
-	DestructiveChanges *terraform.PlanDestructiveChanges `json:"destructive_change,omitempty"`
+	DestructiveChanges *terraform.PlanDestructiveChanges `json:"destructive_changes,omitempty"`
 }
 
 type NodeGroupCheckResult struct {
