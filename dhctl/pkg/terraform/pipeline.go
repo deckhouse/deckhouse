@@ -101,7 +101,7 @@ func CheckPipeline(r RunnerInterface, name string) (int, *PlanDestructiveChanges
 
 type BaseInfrastructureDestructiveChanges struct {
 	PlanDestructiveChanges
-	OutputBroken       error       `json:"output_broken"`
+	OutputBrokenReason string      `json:"output_broken_reason"`
 	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
 }
 
@@ -138,7 +138,7 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, *Base
 		info, err := GetBaseInfraResult(r)
 		if err != nil {
 			isChange = PlanHasDestructiveChanges
-			getOrCreateDestructiveChanges().OutputBroken = err
+			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
 			return err
 		}
 
