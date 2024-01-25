@@ -19,6 +19,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type StateLoader interface {
@@ -35,24 +36,26 @@ type BaseInfraController interface {
 }
 
 type ClusterInfra struct {
-	stateLoader StateLoader
-	cache       state.Cache
+	stateLoader      StateLoader
+	cache            state.Cache
+	terraformContext *terraform.TerraformContext
 
 	*phases.PhasedExecutionContext
 }
 
-func NewClusterInfra(terraState StateLoader, cache state.Cache) *ClusterInfra {
-	return NewClusterInfraWithOptions(terraState, cache, ClusterInfraOptions{})
+func NewClusterInfra(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext) *ClusterInfra {
+	return NewClusterInfraWithOptions(terraState, cache, terraformContext, ClusterInfraOptions{})
 }
 
 type ClusterInfraOptions struct {
 	PhasedExecutionContext *phases.PhasedExecutionContext
 }
 
-func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, opts ClusterInfraOptions) *ClusterInfra {
+func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext, opts ClusterInfraOptions) *ClusterInfra {
 	return &ClusterInfra{
-		stateLoader: terraState,
-		cache:       cache,
+		stateLoader:      terraState,
+		cache:            cache,
+		terraformContext: terraformContext,
 
 		PhasedExecutionContext: opts.PhasedExecutionContext,
 	}
@@ -78,7 +81,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	}
 
 	for nodeGroupName, nodeGroupStates := range nodesState {
-		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings)
+		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.terraformContext)
 		if err != nil {
 			return err
 		}
@@ -98,7 +101,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	if err := NewBaseInfraController(metaConfig, r.cache).Destroy(clusterState, autoApprove); err != nil {
+	if err := NewBaseInfraController(metaConfig, r.cache, r.terraformContext).Destroy(clusterState, autoApprove); err != nil {
 		return err
 	}
 
