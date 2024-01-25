@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -31,7 +32,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.InstallDeckhouse()
 	})
 
@@ -46,7 +49,9 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.ExecuteBashible()
 	})
 
@@ -61,7 +66,9 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.CreateResources()
 	})
 
@@ -78,7 +85,9 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.Abort(app.ForceAbortFromCache)
 	})
 
@@ -92,7 +101,9 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 	app.DefineDropCacheFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.BaseInfrastructure()
 	})
 
@@ -106,7 +117,9 @@ func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TerraformContext: terraform.NewTerraformContext(),
+		})
 		return bootstraper.ExecPostBootstrap()
 	})
 
