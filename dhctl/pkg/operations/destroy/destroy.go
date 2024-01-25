@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -47,6 +48,8 @@ type Params struct {
 
 	CommanderMode bool
 	*commander.CommanderModeParams
+
+	TerraformContext *tf.TerraformContext
 }
 
 type ClusterDestroyer struct {
@@ -87,7 +90,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		terraStateLoader = terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	}
 
-	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
 	staticDestroyer := NewStaticMastersDestroyer(params.SSHClient)
 
