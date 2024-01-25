@@ -1,6 +1,8 @@
 {{- $ciliumVersion := "1.14.5" }}
 {{- $hubbleVersion := "v0.12.3" }}
 {{- $protocVersion := "22.3" }}
+{{- $gopsVersion := "v0.3.28" }}
+{{- $cniVersion := "1.4.0" }}
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
@@ -49,24 +51,22 @@ from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
-  add: /go/src/github.com/cilium/cilium/images/runtime/
-  to: /go/src/github.com/cilium/cilium/images/runtime
-  before: install
-  includePaths:
-  - build-gops.sh
-  - download-cni.sh
-  - cni-version.sh
 shell:
   beforeInstall:
   - apt-get update
-  - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
+  - apt-get install -y binutils-x86-64-linux-gnu curl git
   install:
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./build-gops.sh
-  - ./download-cni.sh
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/github.com/google/gops
+  - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /go/src/github.com/google/gops
+  - mkdir -p "/out/linux/amd64/bin
+  - GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
+  - x86_64-linux-gnu-strip /out/linux/amd64/bin/gops
+  - curl --fail --show-error --silent --location "https://github.com/containernetworking/plugins/releases/download/v{{ $cnisVersion }}/cni-plugins-linux-amd64-v{{ $cnisVersion }}.tgz" --output "/tmp/cni-amd64.tgz"
+  - mkdir -p "/out/linux/amd64/bin"
+  - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
+  - x86_64-linux-gnu-strip /out/linux/amd64/bin/loopback
 ---
 # #####################################################################
 # Runtime artifact
@@ -145,7 +145,6 @@ shell:
   - apt-get upgrade -y --no-install-recommends
   - |
     apt-get install -y --no-install-recommends \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross binutils-aarch64-linux-gnu \
     gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu \
     unzip \
     binutils coreutils curl gcc libc6-dev git make patch
