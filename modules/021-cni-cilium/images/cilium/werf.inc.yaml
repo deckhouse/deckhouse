@@ -1,28 +1,34 @@
 {{- $ciliumVersion := "1.14.5" }}
 ---
+# #####################################################################
+# Build cilium-agent binaries
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+fromImage: {{ $.ModuleName }}/builder-artifact
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
-fromImage: {{ $.ModuleName }}/builder-artifact
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - mkdir /tmp/cilium-repo
-  - curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v{{ $ciliumVersion }}.tar.gz | tar xvz -C /tmp/cilium-repo
+  - mkdir /go/src/github.com/cilium/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   install:
   - export PATH=$PATH:/usr/local/go/bin
-  - cd /tmp/cilium-repo/cilium-{{ $ciliumVersion }}
+  - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' -exec git apply {} \;
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+---
+# #####################################################################
+# OldMainImage
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: {{ $.ModuleName }}/builder-runtime-artifact
@@ -61,6 +67,7 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 # #####################################################################
+# NewMainImage
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
 fromImage: {{ $.ModuleName }}/builder-distroless-runtime-artifact
