@@ -96,7 +96,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 	s.memStore.RLock()
 	for fingerprint, alert := range s.memStore.alerts {
 		if alert.Resolved() {
-			s.memStore.removeAlert(fingerprint)
+			defer s.memStore.removeAlert(fingerprint)
 			continue
 		}
 
