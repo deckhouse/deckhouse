@@ -111,12 +111,12 @@ spec:
             subPath: promxy.yaml
         livenessProbe:
           httpGet:
-            path: /promxy/-/ready
+            path: /promxy/ready
             port: 8443
             scheme: HTTPS
         readinessProbe:
           httpGet:
-            path: /promxy/-/ready
+            path: /promxy/ready
             port: 8443
             scheme: HTTPS
         resources:
@@ -143,7 +143,7 @@ spec:
           value: |
             excludePaths:
             - /ready
-            - /promxy/-/ready
+            - /promxy/ready
             upstreams:
             - upstream: http://127.0.0.1:8080/
               path: /
@@ -175,16 +175,8 @@ spec:
                   resource: deployments
                   subresource: prometheus-metrics
                   name: aggregating-proxy
-            - upstream: http://127.0.0.1:8082/
-              path: /promxy
-              authorization:
-                resourceAttributes:
-                  namespace: d8-monitoring
-                  apiGroup: apps
-                  apiVersion: v1
-                  resource: deployments
-                  subresource: http
-                  name: aggregating-proxy
+            - upstream: http://127.0.0.1:8082/-/ready
+              path: /promxy/ready
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
