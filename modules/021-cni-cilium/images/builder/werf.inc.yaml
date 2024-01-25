@@ -1,5 +1,6 @@
 {{- $ciliumVersion := "1.14.5" }}
 {{- $hubbleVersion := "v0.12.3" }}
+{{- $protocVersion := "22.3" }}
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
@@ -127,13 +128,6 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
-  add: /go/src/github.com/cilium/cilium/images/builder/
-  to: /go/src/github.com/cilium/cilium/images/builder/
-  before: install
-  includePaths:
-  - install-protoc.sh
-  - install-protoplugins.sh
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -151,11 +145,17 @@ shell:
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
-  - export PATH=$PATH:/usr/local/go/bin
-  - chmod +x /go/src/github.com/cilium/cilium/images/builder/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/builder
-  - ./install-protoc.sh
-  - ./install-protoplugins.sh
+  - export GOROOT /usr/local/go
+  - export GOPATH /go
+  - export PATH=${GOROOT}/bin:${GOPATH}/bin:${PATH}
+  - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local
+  - chmod o+rx /usr/local/bin/protoc
+  - chmod o+rX -R /usr/local/include/google/
+  - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@8ba23be9613c672d40ae261d2a1335d639bdd59b
+  - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
+  - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
+  - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
 ---
 # #####################################################################
 # Build hubble binaries
