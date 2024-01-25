@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 const (
@@ -78,6 +77,7 @@ type Params struct {
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.OnPhaseFunc
 	CommanderMode              bool
+	TerraformContext           *terraform.TerraformContext
 
 	ConfigPaths             []string
 	ResourcesPath           string
@@ -282,10 +282,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithAutoApprove(true)
-			tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
+			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
 			baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			if err != nil {
@@ -303,11 +300,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node", stateCache).
-				WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
-				WithName(masterNodeName).
-				WithAutoApprove(true)
-			tomb.RegisterOnShutdown(masterNodeName, masterRunner.Stop)
+			masterRunner := b.Params.TerraformContext.GetBootstrapNodeRunner(metaConfig, stateCache, terraform.BootstrapNodeRunnerOptions{
+				AutoApprove:     true,
+				NodeName:        masterNodeName,
+				NodeGroupStep:   "master-node",
+				NodeGroupName:   "master",
+				NodeIndex:       0,
+				NodeCloudConfig: "",
+			})
 
 			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 			if err != nil {
@@ -450,7 +450,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 
 		err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
+			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
 			return err
@@ -573,13 +573,13 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
-	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
+	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
 		return err
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups); err != nil {
+	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
