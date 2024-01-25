@@ -1,6 +1,3 @@
-{{- $ciliumVersion := "1.14.5" }}
-# Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
@@ -13,16 +10,18 @@ git:
   stageDependencies:
     install:
       - '**/*'
+import:
+- artifact: {{ $.ModuleName }}/builder-src
+  add: /go/src/github.com/cilium/cilium
+  to: /go/src/github.com/cilium/cilium
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - mkdir -p /tmp/cilium-repo
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /tmp/cilium-repo
   install:
   - export PATH=$PATH:/usr/local/go/bin
-  - cd /tmp/cilium-repo
+  - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' -exec git apply {} \;
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
@@ -69,7 +68,7 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 # #####################################################################
-# New Main Image
+# New Main Image (Distroless)
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
 fromImage: {{ $.ModuleName }}/builder-distroless-runtime-artifact
@@ -98,6 +97,3 @@ docker:
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   WORKDIR: "/home/cilium"
   CMD: ["/usr/bin/cilium"]
-
-
-
