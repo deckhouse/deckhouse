@@ -28,7 +28,7 @@ func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
 	return fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
 }
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool) error {
+func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
@@ -40,16 +40,20 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		}
 	}
 
-	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 
 	// TODO pass cache as argument or better refact func
-	runner := terraform.NewRunnerFromConfig(cfg, step, cache.Global()).
-		WithVariables(nodeConfig).
-		WithName(nodeName).
-		WithAutoApprove(true).
-		WithAdditionalStateSaverDestination(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
-	tomb.RegisterOnShutdown(nodeName, runner.Stop)
+	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
+		AutoApprove:     true,
+		NodeName:        nodeName,
+		NodeGroupStep:   step,
+		NodeGroupName:   nodeGroupName,
+		NodeIndex:       index,
+		NodeCloudConfig: cloudConfig,
+		AdditionalStateSaverDestinations: []terraform.SaverDestination{
+			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+		},
+	})
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
@@ -68,7 +72,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool) (*terraform.PipelineOutputs, error) {
+func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
 	nodeName := NodeName(cfg, MasterNodeGroupName, index)
 
 	if isConverge {
@@ -80,15 +84,18 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		}
 	}
 
-	nodeConfig := cfg.NodeGroupConfig(MasterNodeGroupName, index, cloudConfig)
-
 	// TODO pass cache as argument or better refact func
-	runner := terraform.NewRunnerFromConfig(cfg, "master-node", cache.Global()).
-		WithVariables(nodeConfig).
-		WithName(nodeName).
-		WithAutoApprove(true).
-		WithAdditionalStateSaverDestination(NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil))
-	tomb.RegisterOnShutdown(nodeName, runner.Stop)
+	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
+		AutoApprove:     true,
+		NodeName:        nodeName,
+		NodeGroupStep:   "master-node",
+		NodeGroupName:   MasterNodeGroupName,
+		NodeIndex:       index,
+		NodeCloudConfig: cloudConfig,
+		AdditionalStateSaverDestinations: []terraform.SaverDestination{
+			NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil),
+		},
+	})
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {

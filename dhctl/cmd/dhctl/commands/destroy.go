@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -65,9 +66,10 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			SSHClient:     sshClient,
-			StateCache:    cache.Global(),
-			SkipResources: app.SkipResources,
+			SSHClient:        sshClient,
+			StateCache:       cache.Global(),
+			SkipResources:    app.SkipResources,
+			TerraformContext: terraform.NewTerraformContext(),
 		})
 		if err != nil {
 			return err
