@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-sync-file /etc/sysctl.d/10-d8-enable-ip-forwarding.conf- << "EOF"
+bb-sync-file /etc/sysctl.d/10-d8-enable-ip-forwarding.conf - << "EOF"
 net.ipv4.ip_forward=1
 EOF
