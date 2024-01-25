@@ -18,31 +18,30 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 type BaseInfraTerraformController struct {
-	metaConfig *config.MetaConfig
-	stateCache state.Cache
+	metaConfig       *config.MetaConfig
+	stateCache       state.Cache
+	terraformContext *terraform.TerraformContext
 }
 
-func NewBaseInfraController(metaConfig *config.MetaConfig, stateCache state.Cache) *BaseInfraTerraformController {
+func NewBaseInfraController(metaConfig *config.MetaConfig, stateCache state.Cache, terraformContext *terraform.TerraformContext) *BaseInfraTerraformController {
 	return &BaseInfraTerraformController{
-		metaConfig: metaConfig,
-		stateCache: stateCache,
+		metaConfig:       metaConfig,
+		stateCache:       stateCache,
+		terraformContext: terraformContext,
 	}
 }
 
-func (r *BaseInfraTerraformController) Destroy(clusterState []byte, sanityCheck bool) error {
+func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove bool) error {
 	if err := saveInCacheIfNotExists(r.stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
 		return err
 	}
 
-	baseRunner := terraform.NewRunnerFromConfig(r.metaConfig, "base-infrastructure", r.stateCache).
-		WithVariables(r.metaConfig.MarshalConfig()).
-		WithAllowedCachedState(true).
-		WithAutoApprove(sanityCheck)
-	tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
+	baseRunner := r.terraformContext.GetDestroyBaseInfraRunner(r.metaConfig, r.stateCache, terraform.DestroyBaseInfraRunnerOptions{
+		AutoApprove: autoApprove,
+	})
 
 	return terraform.DestroyPipeline(baseRunner, "Kubernetes cluster")
 }
