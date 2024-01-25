@@ -69,7 +69,7 @@ shell:
   - ./download-cni.sh
 ---
 # #####################################################################
-# Runtime and Build artifacts
+# Runtime artifact
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -117,6 +117,9 @@ shell:
   - rm -rf /iptables
   - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
+# #####################################################################
+# Build artifact
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
@@ -145,8 +148,8 @@ shell:
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
-  - export GOROOT /usr/local/go
-  - export GOPATH /go
+  - export GOROOT=/usr/local/go
+  - export GOPATH=/go
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:${PATH}
   - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local
