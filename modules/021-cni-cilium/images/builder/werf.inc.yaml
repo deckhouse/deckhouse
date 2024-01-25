@@ -52,7 +52,7 @@ mount:
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
   add: /go/src/github.com/cilium/cilium/images/runtime/
-  to: /go/src/github.com/cilium/cilium/images/runtime/
+  to: /go/src/github.com/cilium/cilium/images/runtime
   before: install
   includePaths:
   - build-gops.sh
@@ -99,10 +99,9 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
   add: /go/src/github.com/cilium/cilium/images/runtime/
-  to: /go/src/github.com/cilium/cilium/images/runtime/
+  to: /go/src/github.com/cilium/cilium/images/runtime
   before: install
   includePaths:
-  - install-runtime-deps.sh
   - iptables-wrapper-installer.sh
 shell:
   beforeInstall:
@@ -112,7 +111,13 @@ shell:
   install:
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./install-runtime-deps.sh
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update
+  - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+  - apt-get install -y --no-install-recommends bash-completion iproute2 iptables ipset kmod ca-certificates
+  - apt-get purge --auto-remove
+  - apt-get clean
+  - rm -rf /var/lib/apt/lists/*
   - dpkg -i /iptables/*.deb
   - rm -rf /iptables
   - ./iptables-wrapper-installer.sh --no-sanity-check
