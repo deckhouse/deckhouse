@@ -63,7 +63,7 @@ shell:
   - mkdir -p "/out/linux/amd64/bin
   - GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
   - x86_64-linux-gnu-strip /out/linux/amd64/bin/gops
-  - curl --fail --show-error --silent --location "https://github.com/containernetworking/plugins/releases/download/v{{ $cnisVersion }}/cni-plugins-linux-amd64-v{{ $cnisVersion }}.tgz" --output "/tmp/cni-amd64.tgz"
+  - curl --fail --show-error --silent --location "https://github.com/containernetworking/plugins/releases/download/v{{ $cniVersion }}/cni-plugins-linux-amd64-v{{ $cniVersion }}.tgz" --output "/tmp/cni-amd64.tgz"
   - mkdir -p "/out/linux/amd64/bin"
   - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
   - x86_64-linux-gnu-strip /out/linux/amd64/bin/loopback
