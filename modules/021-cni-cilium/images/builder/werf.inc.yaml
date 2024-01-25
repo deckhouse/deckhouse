@@ -7,7 +7,7 @@
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
-# Artifact with cilium repo
+# Artifact with repo cilium/cilium
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src
 from: {{ $.Images.BASE_ALPINE }}
@@ -47,26 +47,49 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt-get update
-  - apt-get install -y binutils-x86-64-linux-gnu curl git
+  - apk add --no-cache binutils curl git tar
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/google/gops
   - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /go/src/github.com/google/gops
+  - cd /go/src/github.com/google/gops
   - mkdir -p "/out/linux/amd64/bin"
   - GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
-  - x86_64-linux-gnu-strip /out/linux/amd64/bin/gops
+  - strip /out/linux/amd64/bin/gops
   - curl --fail --show-error --silent --location "https://github.com/containernetworking/plugins/releases/download/v{{ $cniVersion }}/cni-plugins-linux-amd64-v{{ $cniVersion }}.tgz" --output "/tmp/cni-amd64.tgz"
   - mkdir -p "/out/linux/amd64/bin"
   - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
-  - x86_64-linux-gnu-strip /out/linux/amd64/bin/loopback
+  - strip /out/linux/amd64/bin/loopback
+---
+---
+# #####################################################################
+# Build hubble binaries
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache make git binutils
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/github.com/cilium/hubble
+  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
+  - cd /go/src/github.com/cilium/hubble
+  - make clean && make hubble
+  - cp /go/src/github.com/cilium/hubble/hubble /hubble
+  - strip /hubble
+  - /hubble completion bash > /bash_completion
 ---
 # #####################################################################
 # Runtime artifact
@@ -163,29 +186,6 @@ shell:
   - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
   - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
   - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
----
-# #####################################################################
-# Build hubble binaries
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache make git binutils
-  install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /go/src/github.com/cilium/hubble
-  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
-  - cd /go/src/github.com/cilium/hubble
-  - make clean && make hubble
-  - cp /go/src/github.com/cilium/hubble/hubble /hubble
-  - strip /hubble
-  - chmod +x /hubble
-  - /hubble completion bash > /bash_completion
 ---
 # #####################################################################
 # Binaries artifact for distroless (based on Ubuntu)
