@@ -34,7 +34,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
+var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
           "clusterIsBootstrapped": true,
