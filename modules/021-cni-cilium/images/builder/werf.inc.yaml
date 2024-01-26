@@ -21,10 +21,25 @@ shell:
 # #####################################################################
 # Base artifacts
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache ca-certificates
+---
 # https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
+---
+# #####################################################################
+# Build llvm binaries
+# Based on
+---
+---
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
 from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
@@ -37,14 +52,11 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-from: {{ $.Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
+
+# #####################################################################
+# Build gops and cni loopback binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/build-gops.sh
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/download-cni.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
@@ -68,9 +80,10 @@ shell:
   - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
   - strip /out/linux/amd64/bin/loopback
 ---
----
 # #####################################################################
 # Build hubble binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/download-hubble.sh
+# and https://github.com/cilium/hubble/blob/v0.12.3/Dockerfile
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
@@ -92,7 +105,8 @@ shell:
   - /hubble completion bash > /bash_completion
 ---
 # #####################################################################
-# Runtime artifact
+# Runtime artifact (for build)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -147,6 +161,7 @@ shell:
 ---
 # #####################################################################
 # Build artifact
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/builder/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
@@ -187,6 +202,7 @@ shell:
   - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
   - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
 ---
+# #####################################################################
 # #####################################################################
 # Binaries artifact for distroless (based on Ubuntu)
 ---
