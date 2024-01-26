@@ -1,6 +1,12 @@
+{{- $ciliumVersion := "1.14.5" }}
+{{- $hubbleUIVersion := "0.12.1" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
 from: quay.io/cilium/hubble-ui-backend:v0.12.1@sha256:f88a73a120521eeafbcdbd908f517117f6557bf61e115847853fac371f0d774c
+---
+# Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/backend/Dockerfile
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}

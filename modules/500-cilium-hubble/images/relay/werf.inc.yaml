@@ -47,7 +47,7 @@ import:
   add: /etc/ssl/certs/ca-certificates.crt
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-hubble-relay-artifact
   add: /tmp/install/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
