@@ -36,9 +36,6 @@ gitWorktree:
 # npm proxy settings
 {{- $_ := set . "NPMPROXY" (env "NPMPROXY") }}
 
-# pip proxy settings
-{{- $_ := set . "PIPPROXY" (env "PIPPROXY") }}
-
 ---
 {{- define "base components" }}
   - name: "Install openssl"
@@ -716,7 +713,6 @@ args:
   GOPROXY: {{ .GOPROXY }}
   CRATESPROXY: {{ .CRATESPROXY }}
   NPMPROXY: {{ .NPMPROXY }}
-  PIPPROXY: {{ .PIPPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
@@ -770,7 +766,6 @@ dependencies:
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
   {{- $_ := set $ctx "CRATESPROXY" $Root.CRATESPROXY }}
   {{- $_ := set $ctx "NPMPROXY" $Root.NPMPROXY }}
-  {{- $_ := set $ctx "PIPPROXY" $Root.PIPPROXY }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
