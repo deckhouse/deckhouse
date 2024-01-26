@@ -3,7 +3,7 @@
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/hubble-relay/Dockerfile
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-hubble-relay-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -19,6 +19,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
+  - export "GOARCH=amd64"
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium/hubble-relay
@@ -47,7 +48,7 @@ import:
   add: /etc/ssl/certs/ca-certificates.crt
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-hubble-relay-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /tmp/install/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install

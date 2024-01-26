@@ -1,24 +1,28 @@
-{{- $ciliumVersion := "1.14.5" }}
 {{- $hubbleUIVersion := "0.12.1" }}
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
-from: quay.io/cilium/hubble-ui-backend:v0.12.1@sha256:f88a73a120521eeafbcdbd908f517117f6557bf61e115847853fac371f0d774c
----
 # Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/backend/Dockerfile
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALPINE }}
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
-  add: /usr/bin/backend
-  to: /usr/local/bin/hubble-ui-backend
-  before: install
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache make git bash
   install:
-  - chown 64535:64535 /usr/local/bin/hubble-ui-backend
-  - chmod 0700 /usr/local/bin/hubble-ui-backend
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export "GOARCH=amd64"
+  - mkdir -p /go/src/github.com/cilium/hubble-ui
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
+  - cd /go/src/github.com/cilium/hubble-ui
+  - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
+  - mkdir -p /tmp/install
+  - cp -t /tmp/install/ /go/src/github.com/cilium/hubble-ui/backend
+  - chown 64535:64535 /tmp/install/backend
+  - chmod 0700 /tmp/install/backend
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
@@ -33,10 +37,10 @@ import:
   add: /etc/ssl/certs/ca-certificates.crt
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/local/bin/hubble-ui-backend
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /tmp/install/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
 docker:
   USER: 64535
-  ENTRYPOINT: ["hubble-ui-backend"]
+  ENTRYPOINT: ["/usr/local/bin/hubble-ui-backend"]
