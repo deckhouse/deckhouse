@@ -24,8 +24,10 @@ shell:
   - cd /go/src/github.com/cilium/cilium
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
   - make licenses-all && mv LICENSE.all /out/linux/amd64
-  - chown 64535:64535 /usr/bin/cilium-operator
-  - chmod 0700 /usr/bin/cilium-operator
+  - mkdir -p /tmp/install
+  - cp -t /tmp/install/ /out/linux/amd64/usr/bin/cilium-operator /out/linux/amd64/LICENSE.all
+  - chown 64535:64535 /tmp/install/cilium-operator
+  - chmod 0700 /tmp/install/cilium-operator
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -35,7 +37,7 @@ import:
   to: /etc/ssl/certs/ca-certificates.crt
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /usr/bin/cilium-operator
+  add: /tmp/install/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
 docker:
