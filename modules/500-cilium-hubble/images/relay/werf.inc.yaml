@@ -41,7 +41,6 @@ shell:
 # Distroless Main Image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromCacheVersion: 15
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
