@@ -71,11 +71,13 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 ## Included modules
 
-<img src="../../images/300-prometheus/prometheus_monitoring.svg">
+Module interaction scheme:
 
-WIP: new scheme for single datasource (testing_now)
+![Module interaction scheme](../../images/300-prometheus/prometheus_monitoring.svg)
 
-<img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
+The scheme of interaction of modules using a single aggregated data source (WIP):
+
+![The scheme of interaction of modules using a single aggregated data source (WIP)](../../images/300-prometheus/prometheus_monitoring_new.svg)
 
 ### Components installed by Deckhouse
 
