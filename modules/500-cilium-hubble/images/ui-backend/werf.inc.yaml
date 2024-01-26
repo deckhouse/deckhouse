@@ -10,17 +10,17 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make git bash
+  - apk add --no-cache git bash make
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export "GOARCH=amd64"
   - mkdir -p /go/src/github.com/cilium/hubble-ui
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
-  - cd /go/src/github.com/cilium/hubble-ui
+  - cd /go/src/github.com/cilium/hubble-ui/backend
   - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
   - mkdir -p /tmp/install
-  - cp -t /tmp/install/ /go/src/github.com/cilium/hubble-ui/backend
+  - cp -t /tmp/install/ /go/src/github.com/cilium/hubble-ui/backend/backend
   - chown 64535:64535 /tmp/install/backend
   - chmod 0700 /tmp/install/backend
 ---
