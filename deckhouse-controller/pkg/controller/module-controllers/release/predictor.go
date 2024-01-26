@@ -51,8 +51,7 @@ func (rp *releasePredictor) calculateRelease() {
 	}
 
 	for index, rl := range rp.releases {
-		switch rl.Status.Phase {
-		case v1alpha1.PhasePending:
+		if rl.Status.Phase == v1alpha1.PhasePending {
 			if rp.desiredReleaseIndex >= 0 {
 				previousPredictedRelease := rp.releases[rp.desiredReleaseIndex]
 				if previousPredictedRelease.Spec.Version.Major() != rl.Spec.Version.Major() {
