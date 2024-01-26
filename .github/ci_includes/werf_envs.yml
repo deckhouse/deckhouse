@@ -17,6 +17,5 @@ SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
 GOPROXY: "${{secrets.GOPROXY}}"
 CRATESPROXY: "${{secrets.CRATESPROXY}}"
 NPMPROXY: "${{secrets.NPMPROXY}}"
-PIPPROXY: "${{secrets.PIPPROXY}}"
 # </template: git_source_envs>
 {!{- end -}!}
