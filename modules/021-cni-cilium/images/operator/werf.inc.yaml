@@ -15,7 +15,7 @@ mount:
 #   before: install
 shell:
   beforeInstall:
-  - apk add --no-cache make git
+  - apk add --no-cache make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
