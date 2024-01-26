@@ -72,11 +72,13 @@ Deckhouse поддерживает отправку алертов с помощ
 
 ## Включенные модули
 
-<img src="../../images/300-prometheus/prometheus_monitoring.svg">
+Схема взаимодействия модулей:
 
-WIP:  новая схема для единого  датасорса
+![Схема взаимодействия модулей]](../../images/300-prometheus/prometheus_monitoring.svg)
 
-<img src="../../images/300-prometheus/prometheus_monitoring_new.svg">
+Схема взаимодействия модулей с использованием одного агрегированного источника данных (WIP):  
+
+![Схема взаимодействия модулей с использованием одного агрегированного источника данных (WIP)](../../images/300-prometheus/prometheus_monitoring_new.svg)
 
 ### Компоненты, устанавливаемые Deckhouse
 
