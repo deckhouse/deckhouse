@@ -30,6 +30,21 @@ const (
 	DefaultPort                                           = 8080
 	Pod                                                   = "pod"
 	Deployment                                            = "deployment"
+	deploymentstatus                                      = "deploymentstatus"
+	deploymentreplicas                                    = "deploymentreplicas"
+	statefulsetcreated                                    = "statefulsetcreated"
+	statefulsetstatus                                     = "statefulsetstatus"
+	statefulsetreplicas                                   = "statefulsetreplicas"
+	podcpuusage                                           = "pod-cpuusage"
+	podmemory                                             = "pod-memory"
+	daemonsetcreated                                      = "daemonsetcreated"
+	daemonsetstatus                                       = "daemonsetstatus"
+	deamonsetready                                        = "daemonsetready"
+	daemonsetavailable                                    = "daemonsetavailable"
+	daemonsetunavailable                                  = "daemonsetunavailable"
+	daemonsetunmisscheduled                               = "daemonsetunmisscheduled"
+	nodecpuusage                                          = "nodecpuusage"
+	nodememory                                            = "nodememory"
 )
 
 type exporter struct {
@@ -252,14 +267,39 @@ var (
 	podMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "pod_metrices",
-			Help: "Pod metrices usage",
+			Help: "Pod CPU usage",
 		},
 		[]string{"pod_name"},
+	)
+
+	deploymentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_deployment_threshold",
+			Help: "Deployment status",
+		},
+		[]string{"deployment_name"},
+	)
+	statefulsetMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_statefulset_threshold",
+			Help: "Statefulset status",
+		},
+		[]string{"statefulset_name"},
+	)
+	daemonsetMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_daemonset_threshold",
+			Help: "Daemonset status",
+		},
+		[]string{"daemonset_name"},
 	)
 )
 
 func init() {
 	prometheus.MustRegister(podMetric)
+	prometheus.MustRegister(deploymentMetric)
+	prometheus.MustRegister(statefulsetMetric)
+	prometheus.MustRegister(daemonsetMetric)
 }
 
 func cpuUsage(prometheusURL, namespace, podName string) {
@@ -352,6 +392,159 @@ func memUsage(prometheusURL, namespace, podName string) {
 			}
 
 			podMetric.WithLabelValues(podName + "-memory").Set(latestValue)
+		}
+	}()
+}
+
+func deploymentMetrics(prometheusURL, namespace, deploymentName string) {
+	qeuryStatus := fmt.Sprintf(
+		`kube_deployment_status_replicas_available{namespace="%s", deployment="%s"}`,
+		namespace,
+		deploymentName,
+	)
+
+	qeuryReplicas := fmt.Sprintf(
+		`kube_deployment_status_replicas{deployment="%s",namespace="%s"}`,
+		deploymentName,
+		namespace,
+	)
+
+	go query(prometheusURL, qeuryStatus, deploymentstatus, deploymentName, namespace)
+	go query(prometheusURL, qeuryReplicas, deploymentreplicas, deploymentName, namespace)
+
+}
+
+func statefulsetMetrics(prometheusURL, namespace, statefulsetName string) {
+
+	qeuryCreated := fmt.Sprintf(
+		`kube_statefulset_created{namespace="%s", statefulset="%s"}`,
+		namespace,
+		statefulsetName,
+	)
+
+	qeuryStatus := fmt.Sprintf(
+		`kube_statefulset_status_replicas_available{namespace="%s", statefulset="%s"}`,
+		namespace,
+		statefulsetName,
+	)
+
+	qeuryReplicas := fmt.Sprintf(
+		`kube_statefulset_status_replicas{namespace="%s", statefulset="%s"}`,
+		namespace,
+		statefulsetName,
+	)
+
+	go query(prometheusURL, qeuryCreated, statefulsetcreated, statefulsetName, namespace)
+	go query(prometheusURL, qeuryStatus, statefulsetstatus, statefulsetName, namespace)
+	go query(prometheusURL, qeuryReplicas, statefulsetreplicas, statefulsetName, namespace)
+
+}
+
+func daemonsetMetrics(prometheusURL, namespace, daemonsetName string) {
+	qeuryCreated := fmt.Sprintf(
+		`kube_daemonset_created{namespace="%s", daemonset="%s"}`,
+		namespace,
+		daemonsetName,
+	)
+
+	qeuryStatus := fmt.Sprintf(
+		`kube_daemonset_status_number_ready{namespace="%s", daemonset="%s"}`,
+		namespace,
+		daemonsetName,
+	)
+
+	qeuryAvailable := fmt.Sprintf(
+		`kube_daemonset_status_number_available{namespace="%s", daemonset="%s"}`,
+		namespace,
+		daemonsetName,
+	)
+
+	qeuryUnmisscheduled := fmt.Sprintf(
+		`kube_daemonset_status_number_unavailable{namespace="%s", daemonset="%s"}`,
+		namespace,
+		daemonsetName,
+	)
+
+	qeuryMisscheduled := fmt.Sprintf(
+		`kube_daemonset_status_number_misscheduled{namespace="%s", daemonset="%s"}`,
+		namespace,
+		daemonsetName,
+	)
+
+	go query(prometheusURL, qeuryCreated, daemonsetcreated, daemonsetName, namespace)
+	go query(prometheusURL, qeuryStatus, daemonsetstatus, daemonsetName, namespace)
+	go query(prometheusURL, qeuryAvailable, daemonsetavailable, daemonsetName, namespace)
+	go query(prometheusURL, qeuryUnmisscheduled, daemonsetunmisscheduled, daemonsetName, namespace)
+	go query(prometheusURL, qeuryMisscheduled, daemonsetunmisscheduled, daemonsetName, namespace)
+
+}
+
+func query(prometheusURL, query string, objectType string, objName string, namespace string) {
+	client, err := api.NewClient(api.Config{
+		Address: prometheusURL,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	apiClient := v1.NewAPI(client)
+
+	go func() {
+		for {
+			result, warning, err := apiClient.QueryRange(context.Background(), query, v1.Range{
+				Start: time.Now().Add(-2 * time.Second),
+				End:   time.Now(),
+				Step:  (2 * time.Second) / 2,
+			})
+
+			if err != nil {
+				fmt.Println("Error querying Prometheus:", err)
+				fmt.Println(objectType)
+				continue
+			}
+
+			if warning != nil {
+				fmt.Println("Warning querying Prometheus:", warning)
+			}
+			// fmt.Println(result)
+			var latestValue float64
+			if result != nil && result.Type() == model.ValMatrix {
+				matrix := result.(model.Matrix)
+				// fmt.Println(matrix)
+				if len(matrix) > 0 {
+					latestValue = float64(matrix[matrix.Len()-1].Values[0].Value)
+					// fmt.Printf("Deployment: %s, Time: %s, Value: %f\n", objectType, matrix[len(matrix)-1].Values[0].Timestamp.Time().Format(time.RFC3339), latestValue)
+				}
+			}
+			// fmt.Println(latestValue)
+			switch objectType {
+			case "podcpuusage":
+				podMetric.WithLabelValues(objName + "-cpuusage").Set(latestValue)
+			case "podmemory":
+				podMetric.WithLabelValues(objName + "-memory").Set(latestValue)
+			case "deploymentstatus":
+				deploymentMetric.WithLabelValues(objName + "-status").Set(latestValue)
+			case "deploymentreplicas":
+				deploymentMetric.WithLabelValues(objName + "-replicas").Set(latestValue)
+			case "statefulsetcreated":
+				statefulsetMetric.WithLabelValues(objName + "-created").Set(latestValue)
+			case "statefulsetstatus":
+				statefulsetMetric.WithLabelValues(objName + "-status").Set(latestValue)
+			case "statefulsetreplicas":
+				statefulsetMetric.WithLabelValues(objName + "-replicas").Set(latestValue)
+			case "daemonsetcreated":
+				daemonsetMetric.WithLabelValues(objName + "-created").Set(latestValue)
+			case "daemonsetstatus":
+				daemonsetMetric.WithLabelValues(objName + "-status").Set(latestValue)
+			case "daemonsetavailable":
+				daemonsetMetric.WithLabelValues(objName + "-available").Set(latestValue)
+			case "daemonsetunmisscheduled":
+				daemonsetMetric.WithLabelValues(objName + "-unmisscheduled").Set(latestValue)
+			case "daemonsetunavailable":
+				daemonsetMetric.WithLabelValues(objName + "-unavailable").Set(latestValue)
+			default:
+				fmt.Println("invalid object type")
+			}
 		}
 	}()
 }
