@@ -113,30 +113,6 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
-// while cluster bootstrapping we have the tag for deckhouse image like: alpha, beta, early-access, stable, rock-solid
-// it is set via dhctl, which does not know anything about releases and tags
-// We can use this bootstrap image for applying first release without any requirements (like update windows, canary, etc)
-// We must check even digest or tag, for different cases. In fact, this function checks only if image is from release channel.
-func (dpi deckhousePodInfo) isBootstrapImage() bool {
-	isDigest := strings.LastIndex(dpi.Image, "@sha256")
-	if isDigest != -1 {
-		_, err := gcr.NewDigest(dpi.Image)
-		if err != nil {
-			return false
-		}
-	} else {
-		tag, err := gcr.NewTag(dpi.Image)
-		if err != nil {
-			return false
-		}
-		switch strings.ToLower(tag.TagStr()) {
-		case "alpha", "beta", "early-access", "stable", "rock-solid":
-			return true
-		}
-	}
-	return false
-}
-
 const (
 	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
@@ -165,7 +141,9 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// initialize deckhouseUpdater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	// if values key does not exist, then cluster is just bootstrapping
+	clusterBootstrapping := !input.Values.Exists("global.clusterIsBootstrapped")
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, clusterBootstrapping)
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
