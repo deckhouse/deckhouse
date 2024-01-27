@@ -85,6 +85,16 @@ func (a *memStore) removeAlert(fingerprint model.Fingerprint) {
 	delete(a.alerts, fingerprint)
 }
 
+// Remove a bunch of alerts from internal store
+func (a *memStore) removeAlerts(fingerprints []model.Fingerprint) {
+	a.Lock()
+	defer a.Unlock()
+	for _, fingerprint := range fingerprints {
+		log.Infof("alert with fingerprint %s removed from queue", fingerprint)
+		delete(a.alerts, fingerprint)
+	}
+}
+
 // Get alert from internal store
 func (a *memStore) getAlert(fingerprint model.Fingerprint) (*types.Alert, bool) {
 	a.Lock()
