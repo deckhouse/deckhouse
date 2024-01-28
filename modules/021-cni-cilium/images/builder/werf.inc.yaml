@@ -19,10 +19,7 @@ shell:
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
 ---
 # #####################################################################
-# Base artifacts
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+# Load ca-certificates
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
@@ -52,7 +49,6 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
 from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
 ---
-
 # #####################################################################
 # Build gops binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
@@ -65,7 +61,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache binutils curl git tar
+  - apk add --no-cache binutils git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -75,13 +71,9 @@ shell:
   - mkdir -p "/out/linux/amd64/bin"
   - GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
   - strip /out/linux/amd64/bin/gops
-  - curl --fail --show-error --silent --location "https://github.com/containernetworking/plugins/releases/download/v{{ $cniVersion }}/cni-plugins-linux-amd64-v{{ $cniVersion }}.tgz" --output "/tmp/cni-amd64.tgz"
-  - mkdir -p "/out/linux/amd64/bin"
-  - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
-  - strip /out/linux/amd64/bin/loopback
 ---
 # #####################################################################
-# Build cni loopback binaries
+# Build cni binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/download-cni.sh
 ---
@@ -92,7 +84,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache git bash make binutils
+  - apk add --no-cache binutils git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -190,13 +182,13 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
+- image: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
   to: /bin
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
-  add: /usr/local/go
-  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
