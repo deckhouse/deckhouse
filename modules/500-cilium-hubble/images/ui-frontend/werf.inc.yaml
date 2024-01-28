@@ -1,12 +1,32 @@
+{{- $hubbleUIVersion := "0.12.1" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
 from: quay.io/cilium/hubble-ui:v0.12.1@sha256:e15af59a2ded739e420be82de6cbdd0ce22f8d3f00e3a10b3d2d2734e074a394
+---
+# Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/Dockerfile
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: node:18-alpine3.18@sha256:a315556d82ef54561e54fca7d8ee333382de183d4e56841dcefcd05b55310f46
+shell:
+  beforeInstall:
+  - apk add --no-cache git bash
+  install:
+  - export "TARGETOS=linux"
+  - export "TARGETARCH=amd64"
+  - mkdir -p /app
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
+  - cd /app
+  - npm --target_arch=${TARGETARCH} install
+  - export "NODE_ENV=production"
+  - npm run build
+#  - chown -R 64535:64535 /app/server/public
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
-  add: /app
+  add: /app/server/public
   to: /app
   before: install
 docker:
