@@ -6,6 +6,9 @@
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+---
 # #####################################################################
 # Artifact with repo cilium/cilium
 ---
@@ -182,13 +185,13 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
-- image: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
-  add: /usr/local/go
-  to: /usr/local/go
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
   to: /bin
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
