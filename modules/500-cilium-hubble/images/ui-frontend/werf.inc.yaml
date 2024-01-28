@@ -25,7 +25,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-base-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /app/server/public
   to: /app
   before: install
