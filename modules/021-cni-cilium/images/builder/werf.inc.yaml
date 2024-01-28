@@ -97,9 +97,9 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/containernetworking/plugins
-  - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /go/src/github.com/containernetworking/plugins
+  - git clone --depth 1 --branch v{{ $cniVersion }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /go/src/github.com/containernetworking/plugins
   - cd /go/src/github.com/containernetworking/plugins
-  - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
+  - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
   - mkdir -p /out/linux/amd64/bin
   - cp -f /go/src/github.com/containernetworking/plugins/bin/* /out/linux/amd64/bin
   - strip /out/linux/amd64/bin/*
