@@ -54,9 +54,9 @@ from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e7303329
 ---
 
 # #####################################################################
-# Build gops and cni loopback binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/build-gops.sh
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/download-cni.sh
+# Build gops binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/build-gops.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
@@ -79,6 +79,30 @@ shell:
   - mkdir -p "/out/linux/amd64/bin"
   - tar -C "/out/linux/amd64/bin" -xf "/tmp/cni-amd64.tgz" ./loopback
   - strip /out/linux/amd64/bin/loopback
+---
+# #####################################################################
+# Build cni loopback binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/download-cni.sh
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cni-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache git bash make binutils
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/github.com/containernetworking/plugins
+  - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /go/src/github.com/containernetworking/plugins
+  - cd /go/src/github.com/containernetworking/plugins
+  - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
+  - mkdir -p /out/linux/amd64/bin
+  - cp -f /go/src/github.com/containernetworking/plugins/bin/* /out/linux/amd64/bin
+  - strip /out/linux/amd64/bin/*
 ---
 # #####################################################################
 # Build hubble binaries
@@ -126,7 +150,7 @@ import:
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cni-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
@@ -263,7 +287,7 @@ import:
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cni-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
