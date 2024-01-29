@@ -95,7 +95,7 @@ govc role.create deckhouse \
    $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
 ```
 
-В соответствии с созданной ролью назначьте пользователю права на объект `vCenter`, где нужно развернуть кластер Kubernetes:
+Назначьте пользователю роль на объекте `vCenter`:
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
