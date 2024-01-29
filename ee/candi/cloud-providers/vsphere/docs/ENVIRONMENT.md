@@ -85,8 +85,6 @@ We've intentionally skipped User creation since there are many ways to authentic
 This all-encompassing Role should be enough for all Deckhouse components. If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
-You have to create a role with the following list of permissions and assign .
-
 Create a role with the corresponding permissions:
 
 ```shell
