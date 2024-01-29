@@ -1,6 +1,4 @@
 {{- $ciliumVersion := "1.14.5" }}
-# Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/operator/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
