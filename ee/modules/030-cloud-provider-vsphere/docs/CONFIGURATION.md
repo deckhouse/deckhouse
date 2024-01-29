@@ -52,11 +52,21 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## List of privileges for using the module
 
+The list below is equivalent to the list of privileges assigned when configuring the vSphere environment to work with Deckhouse Kubernetes Platform, but is more detailed. You can obtain this list yourself using `govc role.ls` and [the command in the corresponding section of the documentation](../../../candi/cloud-providers/vsphere/docs/ENVIRONMENT.md#creating-and-assigning-a-role).
+
 ```none
+Cns.Searchable
 Datastore.AllocateSpace
+Datastore.Browse
 Datastore.FileManagement
+Folder.Create
+Folder.Delete
+Folder.Move
+Folder.Rename
 Global.GlobalTag
 Global.SystemTag
+Network.Assign
+StorageProfile.View
 InventoryService.Tagging.AttachTag
 InventoryService.Tagging.CreateCategory
 InventoryService.Tagging.CreateTag
@@ -66,19 +76,25 @@ InventoryService.Tagging.EditCategory
 InventoryService.Tagging.EditTag
 InventoryService.Tagging.ModifyUsedByForCategory
 InventoryService.Tagging.ModifyUsedByForTag
-Network.Assign
+InventoryService.Tagging.ObjectAttachable
+Resource.ApplyRecommendation
+Resource.AssignVAppToPool
 Resource.AssignVMToPool
-StorageProfile.View
-System.Anonymous
-System.Read
-System.View
+Resource.ColdMigrate
+Resource.CreatePool
+Resource.DeletePool
+Resource.EditPool
+Resource.HotMigrate
+Resource.MovePool
+Resource.QueryVMotion
+Resource.RenamePool
 VirtualMachine.Config.AddExistingDisk
 VirtualMachine.Config.AddNewDisk
 VirtualMachine.Config.AddRemoveDevice
 VirtualMachine.Config.AdvancedConfig
 VirtualMachine.Config.Annotation
-VirtualMachine.Config.CPUCount
 VirtualMachine.Config.ChangeTracking
+VirtualMachine.Config.CPUCount
 VirtualMachine.Config.DiskExtend
 VirtualMachine.Config.DiskLease
 VirtualMachine.Config.EditDevice
@@ -129,6 +145,7 @@ VirtualMachine.Interact.SESparseMaintenance
 VirtualMachine.Interact.SetCDMedia
 VirtualMachine.Interact.SetFloppyMedia
 VirtualMachine.Interact.Suspend
+VirtualMachine.Interact.SuspendToMemory
 VirtualMachine.Interact.TerminateFaultTolerantVM
 VirtualMachine.Interact.ToolsInstall
 VirtualMachine.Interact.TurnOffFaultTolerance
