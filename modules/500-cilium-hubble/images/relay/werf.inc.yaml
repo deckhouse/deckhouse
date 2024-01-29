@@ -1,6 +1,4 @@
 {{- $ciliumVersion := "1.14.5" }}
-# Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/hubble-relay/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
@@ -8,46 +6,29 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-# import:
-# - artifact: {{ $.ModuleName }}/builder-src
-#   add: /go/src/github.com/cilium/cilium
-#   to: /go/src/github.com/cilium/cilium
-#   before: install
 shell:
   beforeInstall:
   - apk add --no-cache make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - export "GOARCH=amd64"
+  - export GOOS=linux GOARCH=amd64
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium/hubble-relay
   - make
   - mkdir -p /out/linux/amd64/usr/bin
   - mv hubble-relay /out/linux/amd64/usr/bin
-  - cd /go/src/github.com/cilium/cilium
-  - make licenses-all && mv LICENSE.all /out/linux/amd64
   - mkdir -p /tmp/install
-  - cp -t /tmp/install/ /out/linux/amd64/usr/bin/hubble-relay /out/linux/amd64/LICENSE.all
+  - cp -t /tmp/install/ /out/linux/amd64/usr/bin/hubble-relay
   - chown 64535:64535 /tmp/install/hubble-relay
   - chmod 0700 /tmp/install/hubble-relay
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-from: {{ $.Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
 ---
 # Distroless Main Image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /tmp/install/hubble-relay
   to: /usr/local/bin/hubble-relay
