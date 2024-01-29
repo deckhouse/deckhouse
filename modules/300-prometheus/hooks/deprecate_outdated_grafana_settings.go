@@ -31,7 +31,7 @@ func grafanaSettingsHandler(input *go_hook.HookInput) error {
 	if customPlugins.Exists() {
 		pluginList := customPlugins.Array()
 		for _, plugin := range pluginList {
-			input.MetricsCollector.Set("d8_grafana_settings_outdated_plugin",
+			input.MetricsCollector.Set("d8_grafana_settings_unchecked_plugin",
 				1, map[string]string{
 					"plugin": sanitizeLabelName(plugin.String()),
 				},
