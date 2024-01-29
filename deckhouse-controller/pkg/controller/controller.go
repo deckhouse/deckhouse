@@ -22,9 +22,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-
 	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	log "github.com/sirupsen/logrus"
