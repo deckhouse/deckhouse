@@ -18,5 +18,6 @@
           For Cilium with Istio modules kernel should be >= 5.7.
           For Cilium with OpenVPN modules kernel should be >= 5.7.
           For Cilium with Node-local-dns modules kernel should be >= 5.7.
+          For ebpf_exporter modules kernel should be >= 5.8.
 
           To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus.
