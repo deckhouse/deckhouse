@@ -14,3 +14,13 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/be/modules/140-user-authz/templates/webhook
+  to: /deckhouse/modules/140-user-authz/templates/webhook
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/be/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  stageDependencies:
+    setup:
+        - '**/*.go'

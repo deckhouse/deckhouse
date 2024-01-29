@@ -38,3 +38,29 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/be/modules/140-user-authz/templates/webhook
+  to: /deckhouse/modules/140-user-authz/templates/webhook
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/be/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml

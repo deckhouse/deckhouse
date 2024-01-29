@@ -68,6 +68,52 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/be/modules/140-user-authz/templates/webhook
+  to: /deckhouse/modules/140-user-authz/templates/webhook
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/be/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
@@ -459,29 +505,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook
-  to: /deckhouse/modules/140-user-authz/templates/webhook
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/150-user-authn/hooks/common_test.go
   to: /deckhouse/modules/150-user-authn/hooks/common_test.go
   excludePaths:
@@ -737,29 +760,6 @@
         - '**/*.go'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
   excludePaths:
     - images
     - templates
