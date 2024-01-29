@@ -56,7 +56,8 @@ const labels = {
 
   // Edition for build-and-test workflow
   'edition/ce': { type: 'edition', edition: 'CE' },
-  'edition/ee': { type: 'edition', edition: 'EE' }
+  'edition/ee': { type: 'edition', edition: 'EE' },
+  'edition/be': { type: 'edition', edition: 'BE' }
 };
 module.exports.knownLabels = labels;
 
@@ -149,6 +150,7 @@ module.exports.e2eDefaults = {
 const editions = [
   'CE',
   'EE',
-  'FE'
+  'FE',
+  'BE'
 ];
 module.exports.knownEditions = editions;
