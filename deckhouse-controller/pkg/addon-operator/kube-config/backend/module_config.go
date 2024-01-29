@@ -106,7 +106,7 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
 }
 
-func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfig, error) {
+func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
 	// List all ModuleConfig and get settings
 	cfg := config.NewConfig()
 
