@@ -239,6 +239,7 @@ More details about this feature can be found in [Yandex Cloud documentation](htt
        httpHeaderName1: Authorization
      secureJsonData:
        httpHeaderValue1: Bearer <API_KEY>
+   '
    ```
 
    Where:
