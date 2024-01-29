@@ -7,6 +7,7 @@ require (
 	github.com/deckhouse/deckhouse v0.0.0
 	github.com/golangci/golangci-lint v1.40.1
 	github.com/iancoleman/strcase v0.2.0
+	github.com/tidwall/gjson v1.14.4
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -150,7 +151,6 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b // indirect
 	github.com/tetafro/godot v1.4.6 // indirect
-	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94 // indirect
