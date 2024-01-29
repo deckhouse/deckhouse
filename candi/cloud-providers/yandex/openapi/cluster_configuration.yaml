@@ -372,18 +372,22 @@ apiVersions:
             description: |
               If specified, an additional network interface will be added to the node (the node will use it as a default route).
             type: string
-          natInstanceCores:
+          natInstanceResources:
             description: |
-              Amount of CPU cores to provision on the NAT instance.
-            type: integer
-            default: 2
-            x-doc-default: 2
-          natInstanceMemory:
-            description: |
-              Amount of primary memory in MB provision on the NAT instance.
-            type: integer
-            default: 2048
-            x-doc-default: 2048
+              Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
+            type: object
+            default: {}
+            properties:
+              cores:
+                description: |
+                  Amount of CPU cores to provision on the NAT instance.
+                type: integer
+                default: 2
+              memory:
+                description: |
+                  Amount of primary memory in MB provision on the NAT instance.
+                type: integer
+                default: 2048
       provider:
         type: object
         description: |

@@ -66,10 +66,12 @@ variable "nat_instance_external_subnet_id" {
 
 variable "nat_instance_cores" {
   type = number
+  default = null
 }
 
 variable "nat_instance_memory" {
   type = number
+  default = null
 }
 
 variable "nat_instance_ssh_key" {
