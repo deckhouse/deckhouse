@@ -1,4 +1,4 @@
-ARG BASE_DISTROLESS
+ARG BASE_ALT
 ARG BASE_GOLANG_20_ALPINE
 
 FROM $BASE_GOLANG_20_ALPINE AS build
@@ -19,6 +19,6 @@ RUN patch -p1 < 001-change-node-collector-config.patch
 
 RUN go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 
-FROM $BASE_DISTROLESS
+FROM $BASE_ALT
 COPY --from=build /src/node-collector /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/node-collector" ]
