@@ -22,6 +22,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -120,6 +122,10 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	go dml.modulePullOverrideController.Run(dml.ctx, 1)
 
 	return nil
+}
+
+func (dml *DeckhouseController) ReloadModule(_, _ string) (*modules.BasicModule, error) {
+	return nil, fmt.Errorf("not implemented yet")
 }
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
