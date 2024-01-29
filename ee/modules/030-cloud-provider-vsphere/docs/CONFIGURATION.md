@@ -52,7 +52,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## List of privileges for using the module
 
-The list below is equivalent to the list of privileges assigned when configuring the vSphere environment to work with Deckhouse Kubernetes Platform, but is more detailed. You can obtain this list yourself using `govc role.ls` and [the command in the corresponding section of the documentation](../../../candi/cloud-providers/vsphere/docs/ENVIRONMENT.md#creating-and-assigning-a-role).
+The list below is equivalent to the list of privileges assigned when configuring the vSphere environment to work with Deckhouse Kubernetes Platform, but is more detailed. You can obtain this list yourself using `govc role.ls` and [the command in the corresponding section of the documentation](../../modules/030-cloud-provider-vsphere/environment.html#creating-and-assigning-a-role).
 
 ```none
 Cns.Searchable
