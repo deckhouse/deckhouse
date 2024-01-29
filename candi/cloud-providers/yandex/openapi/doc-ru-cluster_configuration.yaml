@@ -121,7 +121,6 @@ apiVersions:
         description: |
           ID существующей VPC Network.
       nodeNetworkCIDR:
-        x-unsafe: true
         description: |
           Данная подсеть будет разделена на **три** равные части и использована для создания подсетей в трех зонах Yandex Cloud.
       existingZoneToSubnetIDMap:
@@ -182,11 +181,9 @@ apiVersions:
           cloudID:
             description: |
               Идентификатор облака.
-            x-unsafe: true
           folderID:
             description: |
               Идентификатор директории.
-            x-unsafe: true
           serviceAccountJSON:
             description: |
               Ключ к service account'у в JSON-формате.

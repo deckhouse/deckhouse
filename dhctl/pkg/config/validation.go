@@ -28,13 +28,24 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-const xUnsafeExtension = "x-unsafe"
+const (
+	xUnsafeExtension      = "x-unsafe"
+	xUnsafeRulesExtension = "x-unsafe-rules"
+)
+
+type ValidateOptions struct {
+	CommanderMode bool
+}
 
 // ValidateClusterSettingsFormat parses and validates cluster configuration and resources.
 // It checks the cluster configuration yamls for compliance with the yaml format and schema.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
 // It can be used as an imported functionality in external modules.
-func ValidateClusterSettingsFormat(settings string) error {
+func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error {
+	if !opts.CommanderMode {
+		panic("ValidateClusterSettingsFormat operation currently supported only in commander mode")
+	}
+
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(settings)
@@ -57,24 +68,22 @@ func ValidateClusterSettingsFormat(settings string) error {
 	return nil
 }
 
-type RuleValidationOption struct {
-	path string
-	rule ValidationRule
-}
-
-func NewRuleValidationOption(path string, rule ValidationRule) RuleValidationOption {
-	return RuleValidationOption{
-		path: path,
-		rule: rule,
-	}
-}
-
 // ValidateClusterSettingsChanges validates changes of current cluster configuration with the previous one.
 // It checks the configuration changes for compliance with the current phase and schema extension rule (x-unsafe).
-// It denies any changes for fields with `x-unsafe: true` for non-BaseInfra phases. On the BaseInfra phase changes are allowed.
+// It denies any changes for fields with `x-unsafe: true`.
+// It applies all validation rules to fields with not empty `x-unsafe-rules` extension.
+// On the BaseInfra phase changes are allowed.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields: no changes validation for them.
 // It can be used as an imported functionality in external modules.
-func ValidateClusterSettingsChanges(phase phases.OperationPhase, oldSettings, newSettings string, options ...RuleValidationOption) error {
+func ValidateClusterSettingsChanges(
+	phase phases.OperationPhase,
+	oldSettings, newSettings string,
+	opts ValidateOptions,
+) error {
+	if !opts.CommanderMode {
+		panic("ValidateClusterSettingsChanges operation currently supported only in commander mode")
+	}
+
 	if phase == phases.BaseInfraPhase {
 		return nil
 	}
@@ -105,8 +114,6 @@ func ValidateClusterSettingsChanges(phase phases.OperationPhase, oldSettings, ne
 		return ErrConfigAmountChanged
 	}
 
-	ruleValidators := NewDefaultRuleValidators()
-
 	for index, newDoc := range newDocs {
 		oldDoc, ok := oldDocs[index]
 		if !ok {
@@ -118,12 +125,7 @@ func ValidateClusterSettingsChanges(phase phases.OperationPhase, oldSettings, ne
 			return errors.New("unknown yaml configuration index")
 		}
 
-		ruleValidator := ruleValidators[index]
-		for _, option := range options {
-			ruleValidator.CreateRule(option.path, option.rule)
-		}
-
-		err := compareWith([]byte(oldDoc), []byte(newDoc), *schema, &ruleValidator)
+		err := compareWith([]byte(oldDoc), []byte(newDoc), *schema)
 		if err != nil {
 			return err
 		}
@@ -163,7 +165,7 @@ func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc st
 	return nil
 }
 
-func compareWith(oldDoc, newDoc json.RawMessage, schema spec.Schema, ruleValidator *RuleValidator) error {
+func compareWith(oldDoc, newDoc json.RawMessage, schema spec.Schema) error {
 	if schema.Properties == nil {
 		return nil
 	}
@@ -181,33 +183,47 @@ func compareWith(oldDoc, newDoc json.RawMessage, schema spec.Schema, ruleValidat
 		return err
 	}
 
+	err = validateXUnsafeExtensions(oldDoc, newDoc, schema)
+	if err != nil {
+		return err
+	}
+
 	for field, fieldSchema := range schema.Properties {
-		isUnsafe, _ := fieldSchema.Extensions.GetBool(xUnsafeExtension)
-		if isUnsafe {
-			if bytes.Equal(oldProperties[field], newProperties[field]) {
-				continue
-			}
-
-			return fmt.Errorf("%s: %w", field, ErrUnsafeFieldChanged)
+		err = validateXUnsafeExtensions(oldProperties[field], newProperties[field], fieldSchema)
+		if err != nil {
+			return fmt.Errorf("%s: %w", field, err)
 		}
 
-		if ruleValidator != nil && ruleValidator.rules != nil && ruleValidator.rules[field] != nil {
-			err = ruleValidator.rules[field](oldProperties[field], newProperties[field])
-			if err != nil {
-				return fmt.Errorf("%s: %w", field, err)
-			}
-		}
-
-		var fieldValidator *RuleValidator
-		if ruleValidator != nil && ruleValidator.validators != nil {
-			fieldValidator = ruleValidator.validators[field]
-		}
-
-		err = compareWith(oldProperties[field], newProperties[field], fieldSchema, fieldValidator)
+		err = compareWith(oldProperties[field], newProperties[field], fieldSchema)
 		if err != nil {
 			return fmt.Errorf("%s: %w", field, err)
 		}
 	}
 
+	return nil
+}
+
+func validateXUnsafeExtensions(
+	oldDoc, newDoc json.RawMessage,
+	schema spec.Schema,
+) error {
+	isUnsafe, _ := schema.Extensions.GetBool(xUnsafeExtension)
+	if isUnsafe && !bytes.Equal(oldDoc, newDoc) {
+		return ErrUnsafeFieldChanged
+	}
+
+	if xRules, ok := schema.Extensions.GetStringSlice(xUnsafeRulesExtension); ok {
+		for _, rule := range xRules {
+			validator, ok := validators[rule]
+			if !ok {
+				continue
+			}
+
+			err := validator(oldDoc, newDoc)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

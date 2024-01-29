@@ -85,12 +85,32 @@ func TestValidateClusterSettingsChanges(t *testing.T) {
 		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, newResourceSettings)
 		require.NoError(t, err)
 	})
+}
 
-	t.Run("custom rule validation failed", func(t *testing.T) {
+func TestValidateRulesClusterSettingsChanges(t *testing.T) {
+	err := loadTestRulesSchemaStore()
+	require.NoError(t, err)
+
+	t.Run("x-unsafe-rules validation ok", func(t *testing.T) {
 		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
-			customValidationSettingsOld,
-			customValidationSettingsNew,
-			NewRuleValidationOption("testEmbeddedValidation.testValidation", NotLessRule),
+			validateRuleSettingsOld,
+			validateRuleSettingsNewOK,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("x-unsafe-rules notLessThanPrevious validation failed", func(t *testing.T) {
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
+			validateRuleSettingsOld,
+			validateRuleSettingsNewNotLessInvalid,
+		)
+		require.ErrorIs(t, err, ErrValidationRuleFailed)
+	})
+
+	t.Run("x-unsafe-rules deleteZones validation failed", func(t *testing.T) {
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
+			validateRuleSettingsOld,
+			validateRuleSettingsNewDeleteZonesInvalid,
 		)
 		require.ErrorIs(t, err, ErrValidationRuleFailed)
 	})
@@ -169,20 +189,30 @@ metadata:
   name: bar
 spec:
   enabled: true`
-	customValidationSettingsOld = `---
+	validateRuleSettingsOld = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-clusterType: Static
-clusterDomain: old-domain
-testEmbeddedValidation:
-  testValidation: 222`
-	customValidationSettingsNew = `---
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 1`
+	validateRuleSettingsNewOK = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-clusterType: Static
-clusterDomain: new-domain
-testEmbeddedValidation:
-  testValidation: 111`
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 3`
+	validateRuleSettingsNewNotLessInvalid = `---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 0`
+	validateRuleSettingsNewDeleteZonesInvalid = `---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+zones: [ru-central2]
+masterNodeGroup:
+  replicas: 1`
 )
 
 func loadTestSchemaStore() error {
@@ -218,12 +248,44 @@ apiVersions:
           prefix:
             type: string
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-      testEmbeddedValidation:
+`)
+
+	return store.upload(schema)
+}
+
+func loadTestRulesSchemaStore() error {
+	once.Do(func() {
+		store = newSchemaStore([]string{"/tmp"})
+	})
+
+	schema := []byte(`
+kind: ClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    x-unsafe-rules: [deleteZones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [ClusterConfiguration]
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
+      masterNodeGroup:
         type: object
         additionalProperties: false
         properties:
-          testValidation:
-            type: number
+          replicas:
+            type: integer
+            x-unsafe-rules: [notLessThanPrevious]
 `)
 
 	return store.upload(schema)
