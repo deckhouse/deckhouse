@@ -94,7 +94,7 @@ govc role.create deckhouse \
    $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
 ```
 
-In accordance with the created role, assign rights to a user to use the `vCenter` object where you want to deploy the Kubernetes cluster:
+Assign the user the role on the `vCenter` object:
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
