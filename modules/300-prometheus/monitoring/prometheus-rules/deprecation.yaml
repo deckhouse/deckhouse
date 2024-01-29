@@ -44,10 +44,9 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana panel interval has found.
+        summary: Deprecated Grafana panel intervals has been found.
         description: |
           Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
-          Deprecated interval found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.interval }}`
 
 - name: d8.grafana.alert_rule_deprecation
   rules:
@@ -65,7 +64,6 @@
         summary: Deprecated Grafana alert has found.
         description: |
           Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
-          Deprecated alert rule found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.alert_rule }}`
 
 - name: d8.grafana.plugin_deprecation
   rules:
@@ -83,9 +81,8 @@
         summary: Outdated Grafana dashboard plugin has found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          Outdated plugin found on dashboard panel `{{ $labels.dashboard }}/{{ $labels.panel }}`: `{{ $labels.plugin }}`
           {{ if (eq $labels.plugin "flant-statusmap-panel") }}
-          Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the future
+          Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
           We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
           {{ end }}
 
@@ -105,4 +102,3 @@
         summary: Outdated Grafana plugin has found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          Outdated plugin found listed in `prometheus` ModuleConfig section `grafana.customPlugins`: `{{ $labels.plugin }}`
