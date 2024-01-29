@@ -92,9 +92,7 @@ We've intentionally skipped User creation since there are many ways to authentic
 This all-encompassing Role should be enough for all Deckhouse components. If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
-You have to create a role with the following list of permissions and assign it to `vCenter`.
-
-Create a role with the following command:
+Create a role with the corresponding permissions:
 
 {% snippetcut %}
 ```shell
@@ -105,7 +103,7 @@ govc role.create deckhouse \
 ```
 {% endsnippetcut %}
 
-Assign the role to a user on the `vCenter` object:
+Assign the user the role on the `vCenter` object:
 
 {% snippetcut %}
 ```shell
