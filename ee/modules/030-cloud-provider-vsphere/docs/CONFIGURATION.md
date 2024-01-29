@@ -53,7 +53,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 ## List of privileges for using the module
 
 > Read [the documentation](environment.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
- 
+
 A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
 
 ```none
