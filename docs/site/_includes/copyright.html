@@ -9,8 +9,8 @@
     {%- endfor %}
   </ul>
   {% if page.lang == "ru" %}
-    <span>© 2023 Флант. Все права защищены.</span>
+    <span>© {{ "now" | date: "%Y" }} Флант. Все права защищены.</span>
   {% else %}
-    <span>© 2023 Flant JSC. All rights reserved.</span>
+    <span>© {{ "now" | date: "%Y" }} Flant JSC. All rights reserved.</span>
   {% endif %}
 </div>
