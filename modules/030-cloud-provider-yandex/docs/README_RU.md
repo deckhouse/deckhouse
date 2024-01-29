@@ -239,6 +239,7 @@ title: "Cloud provider — Yandex Cloud"
        httpHeaderName1: Authorization
      secureJsonData:
        httpHeaderValue1: Bearer <API_КЛЮЧ>
+   '
    ```
 
    Где:
