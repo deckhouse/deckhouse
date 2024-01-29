@@ -55,7 +55,7 @@ properties:
     x-examples: [ dev ]
   deckhouseEdition:
     type: string
-    enum: [Unknown, CE, FE, EE, CSE ]
+    enum: [Unknown, CE, FE, EE, CSE, BE, SE ]
     x-examples: [ FE ]
   enabledModules:
     type: array
