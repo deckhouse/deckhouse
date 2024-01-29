@@ -98,6 +98,8 @@ withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
   exporterAPIKey: ""
+  natInstanceCores: 2
+  natInstanceMemory: 2048
 nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
