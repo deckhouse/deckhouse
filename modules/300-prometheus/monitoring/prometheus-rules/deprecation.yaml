@@ -35,7 +35,7 @@
   rules:
     - alert: GrafanaDashboardPanelIntervalDeprecated
       expr: |
-        d8_grafana_dashboards_deprecated_interval > 0
+        sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
       labels:
         tier: cluster
         severity_level: "8"
@@ -53,7 +53,7 @@
   rules:
     - alert: GrafanaDashboardAlertRulesDeprecated
       expr: |
-        d8_grafana_dashboards_deprecated_alert_rule > 0
+        sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
       labels:
         tier: cluster
         severity_level: "8"
@@ -71,7 +71,7 @@
   rules:
     - alert: GrafanaDashboardPluginNeedsRevision
       expr: |
-        d8_grafana_dashboards_outdated_plugin > 0
+        sum by (dashboard, panel, plugin) (d8_grafana_dashboards_outdated_plugin) > 0
       labels:
         tier: cluster
         severity_level: "8"
@@ -93,7 +93,7 @@
   rules:
     - alert: GrafanaSettingNeedsRevision
       expr: |
-        d8_grafana_settings_outdated_plugin > 0
+        sum by (plugin) (d8_grafana_settings_outdated_plugin) > 0
       labels:
         tier: cluster
         severity_level: "8"
