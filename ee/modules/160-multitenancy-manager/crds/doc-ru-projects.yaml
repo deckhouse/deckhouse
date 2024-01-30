@@ -41,7 +41,8 @@ spec:
                     Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
                 parameters:
                   description: |
-                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha2-spec-resourcesTemplate) при создании проекта.
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
+
                     Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha2-spec-parameters) входных параметров шаблона ресурсов.
             status:
               properties:

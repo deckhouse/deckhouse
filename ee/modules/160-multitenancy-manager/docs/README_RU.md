@@ -19,13 +19,13 @@ description: Модуль multitenancy-manager добавляет функцию
 
 ## Внутренняя логика работы
 
-Для создания проектов используются [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/):
-* [ProjectTemplate](cr.html#project-template) — ресурс, который описывает шаблон проекта. При помощи него задается список ресурсов, которые будут созданы в проекте, а также схема параметров, которые можно передать при создании проекта;
-* [Project](cr.html#project) — ресурс, который описывает конкретный проект
+Для создания проектов используются следующие [Custom Resource'ы](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/):
+* [ProjectTemplate](cr.html#projecttemplate) — ресурс, который описывает шаблон проекта. При помощи него задается список ресурсов, которые будут созданы в проекте, а также схема параметров, которые можно передать при создании проекта;
+* [Project](cr.html#project) — ресурс, который описывает конкретный проект.
 
-При создании ресурса [Project](cr.html#project) из определенного [ProjectTemplate](cr.html#project-template) происходит следующее:
-1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) [ProjectTemplate](cr.html#project-template));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.html#project-v1alpha2-spec-template) [Project](cr.html#project);
+При создании ресурса [Project](cr.html#project) из определенного [ProjectTemplate](cr.html#projecttemplate) происходит следующее:
+1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) [ProjectTemplate](cr.html#projecttemplate));
+1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.html#project-v1alpha2-spec-template) ресурса [Project](cr.html#project);
 1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 

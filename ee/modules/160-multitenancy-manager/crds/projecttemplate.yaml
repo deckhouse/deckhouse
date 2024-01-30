@@ -35,6 +35,7 @@ spec:
                   required: ["openAPIV3Schema"]
                   description: |
                     One of parameters schema to validate parameters of a project.
+
                     For now only OpenAPI v3 schema is supported.
                   properties:
                     openAPIV3Schema:
@@ -43,12 +44,15 @@ spec:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
                         OpenAPI specification for [template parameters](#projecttemplate-v1alpha1-spec-template).
+
                         This is used to check the validity of the parameters that are passed when creating a new project.
                 resourcesTemplate:
                   description: |
                     A template that defines resources in the [`go template`](https://pkg.go.dev/text/template) format to be created when setting up a new project.
+
                     Templates are fully compatible with all [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/).
-                    Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
+
+                    Read more about [creating an isolated Environment...](usage.html#creating-an-isolated-environment)
 
                     The following parameters are available in templates:
                     - `{{ .projectName }}` — the name of the `Project` for which the template is being rendered.

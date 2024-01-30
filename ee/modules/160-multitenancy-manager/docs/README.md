@@ -19,13 +19,13 @@ For platform users:
 
 ## Internal Logic
 
-To create projects, [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
-* [ProjectTemplate](cr.html#project-template) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
+To create projects, the following [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
+* [ProjectTemplate](cr.html#projecttemplate) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
 * [Project](cr.html#project) — a resource that describes a specific project.
 
-When creating a [Project](cr.html#project) resource from a specific [ProjectTemplate](cr.html#project-template), the following happens:
-1. The [parameters](cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) parameter of [ProjectTemplate](cr.html#project-template));
-1. Rendering of the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [template](cr.html#project-v1alpha2-spec-template) parameter of [Project](cr.html#project);
+When creating a [Project](cr.html#project) resource from a specific [ProjectTemplate](cr.html#projecttemplate), the following happens:
+1. The [parameters](cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) parameter of [ProjectTemplate](cr.html#projecttemplate));
+1. Rendering of the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [template](cr.html#project-v1alpha2-spec-template) parameter of the [Project](cr.html#project) resource;
 1. A `Namespace` is created with a name matching the name of [Project](cr.html#project);
 1. All resources described in the template are created in sequence.
 
