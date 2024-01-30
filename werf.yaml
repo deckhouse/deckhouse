@@ -766,7 +766,7 @@ dependencies:
   {{- end }}
 
   {{- if eq $.Env $edition.name }}
-    {{- if hasKey $edition "excludeModules" }}
+    {{- if $edition.excludeModules }}
       {{- range $_, $exludeModuleName := $edition.excludeModules }}
         {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
       {{- end }}
