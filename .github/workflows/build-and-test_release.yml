@@ -665,6 +665,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
     # <template: build_template>
@@ -960,6 +961,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "BE"
     # <template: build_template>
