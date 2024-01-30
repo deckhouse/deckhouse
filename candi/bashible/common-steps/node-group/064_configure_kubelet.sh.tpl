@@ -326,7 +326,8 @@ shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
-{{- if eq (dig "kubelet" "topologyManager" "enabled" "" .nodeGroup) "true" }}
+{{ $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" "" .nodeGroup }}
+{{- if eq $topologyManagerEnabled "true" }}
 cpuManagerPolicy: static
 memoryManagerPolicy: static
 topologyManagerScope: {{ dig "kubelet" "topologyManager" "scope" "container" .nodeGroup }}
