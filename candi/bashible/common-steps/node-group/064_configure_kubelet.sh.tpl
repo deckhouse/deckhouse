@@ -332,7 +332,7 @@ providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
 {{- if eq $topologyManagerEnabled true }}
 cpuManagerPolicy: static
-memoryManagerPolicy: static
+memoryManagerPolicy: Static
 topologyManagerScope: {{ dig "kubelet" "topologyManager" "scope" "Container" .nodeGroup | kebabcase }}
 topologyManagerPolicy: {{ dig "kubelet" "topologyManager" "policy" "None" .nodeGroup | kebabcase }}
 {{- end }}
