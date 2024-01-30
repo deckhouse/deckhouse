@@ -124,4 +124,5 @@
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
           To list all potentially outdated plugins use the expr `sum by (plugin) (d8_grafana_custom_plugins) > 0`
+
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
