@@ -35,6 +35,11 @@ editions:
   # skip collect images. Unfortunately we cannot handle error from .Files.Glob
   # BE edition does not have any images
   skipCollectImages: true
+  # exclude modules from templates and images
+  excludeModules:
+  - ceph-csi
+  - openvpn
+  - snapshot-controller
 
 - name: EE
   modulesDir: "ee/modules"

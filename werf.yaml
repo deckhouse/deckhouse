@@ -255,6 +255,7 @@ git:
   - python_lib
   excludePaths:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
+{{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
 - url: https://github.com/flant/shell-operator
   tag: v1.1.3
   add: /frameworks/shell
@@ -753,6 +754,7 @@ dependencies:
 
 {{- $Root := . }}
 {{- $ModulesImagesDigestList := list }}
+{{- $ExcludedModulesDict := dict }}
 
 # Collect images if desired for editions
 {{- $ModulesImagesBuildFiles := dict }}
@@ -762,6 +764,12 @@ dependencies:
   {{- end }}
 
   {{- if eq $.Env $edition.name }}
+    {{- if hasKey $edition "excludeModules" }}
+      {{- range $_, $exludeModuleName := $edition.excludeModules }}
+        {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
+      {{- end }}
+    {{- end }}
+
     {{- break -}}
   {{- end }}
 {{- end }}
@@ -774,10 +782,16 @@ dependencies:
   {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
   {{- end }}
   {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+  {{- $moduleName := $ImageData._2 }}
+  # exclude modules and images from editions
+  {{- if hasKey $ExcludedModulesDict $moduleName }}
+    {{- continue -}}
+  {{- end }}
+
   {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
   {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
   {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
-  {{- $_ := set $ctx "ModuleName" $ImageData._2 }}
+  {{- $_ := set $ctx "ModuleName" $moduleName }}
   {{- $_ := set $ctx "ImageName" $ImageData._3 }}
   {{- $_ := set $ctx "ImageBuildData" $content }}
   {{- $_ := set $ctx "Files" $Root.Files }}
