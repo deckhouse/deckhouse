@@ -17,16 +17,14 @@ shell:
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
-  - mkdir -p /tmp/install
-  - cp -t /tmp/install/ /out/linux/amd64/usr/bin/cilium-operator
-  - chown 64535:64535 /tmp/install/cilium-operator
-  - chmod 0700 /tmp/install/cilium-operator
+  - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
+  - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /tmp/install/cilium-operator
+  add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
 docker:
