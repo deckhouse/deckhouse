@@ -25,7 +25,7 @@ spec:
           description: |
             Describes the project template.
 
-            This resource is referenced by the [Project](cr.html#project) CR.
+            This resource is referenced by the [Project](cr.html#project) custom resource.
           properties:
             spec:
               required: ["parametersSchema", "resourcesTemplate"]
@@ -33,34 +33,39 @@ spec:
                 parametersSchema:
                   type: object
                   required: ["openAPIV3Schema"]
+                  description: |
+                    One of parameters schema to validate parameters of a project.
+                    For now only OpenAPI v3 schema is supported.
                   properties:
                     openAPIV3Schema:
                       type: object
                       additionalProperties:
                         x-kubernetes-preserve-unknown-fields: true
-                      description: OpenAPI specification for template values (the [template](#projecttemplate-v1alpha1-spec-template) parameter).
+                      description: |
+                        OpenAPI specification for [template parameters](#projecttemplate-v1alpha1-spec-template).
+                        This is used to check the validity of the parameters that are passed when creating a new project.
                 resourcesTemplate:
                   description: |
-                    Templates in `helm` format to be created when setting up a new project.
+                    A template that defines resources in the [`go template`](https://pkg.go.dev/text/template) format to be created when setting up a new project.
+                    Templates are fully compatible with all [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/).
+                    Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
 
-                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
-
-                    The following values are also available in templates:
-                    - `{{ .projectName }}` — the name of the `Project` (project) for which the template is being rendered.
+                    The following parameters are available in templates:
+                    - `{{ .projectName }}` — the name of the `Project` for which the template is being rendered.
                     - `{{ .projectTemplateName }}` — the name of the `ProjectTemplate`.
-                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.valuesSchema](cr.html#projecttemplate-v1alpha1-spec-valuesSchema) parameter and defined in the [.spec.template](cr.html#project-v1alpha1-spec-template) parameter.
+                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) and defined in the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
 
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
-                    > as they are automatically set with the name of the created project.
+                    > as this field is automatically set with the name of the created project.
                   type: string
               type: object
             status:
               properties:
                 message:
-                  description: Status message.
+                  description: Message indicating the cause of the current status.
                   type: string
                 ready:
-                  description: Summary of the status (ready or not ready).
+                  description: Weather the template is ready to use. Indicates that the template has been successfully validated.
                   type: boolean
               type: object
           type: object

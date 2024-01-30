@@ -1,30 +1,32 @@
 ---
-title: "The multitenancy-manager module"
+title: "Module multitenancy-manager"
 search: multitenancy
-description: The multitenancy-manager Deckhouse module helps to conveniently create templated environments in a Kubernetes cluster using custom resources. Rendering environment templates with Helm makes it possible to use any Kubernetes objects in an environment template.   
+description: The multitenancy-manager module adds the functionality to create projects for various development teams with the ability to subsequently deploy applications in them.
 ---
+## Description
 
-The module allows you to create isolated environments in a Kubernetes cluster.
+The module allows creating projects in a Kubernetes cluster. **Project** is an isolated environment where applications can be deployed.
+The isolation of projects is achieved by creating separate `Namespaces` for each project with pre-filled resources such as `ResourceQuota`, `NetworkPolicy`, and so on.
 
-You can use the pre-made [template](cr.html#projecttype) and a [Project](cr.html#project) custom resource to create identical, isolated environments in a Kubernetes cluster, each with users with access rights set up (see [Examples](usage.html) for more details).
+## Advantages of the module
 
-Creating isolated environments using the `multitenancy-manager` module can be handy in the following cases:
-- As part of the CI/CD process — creating developer environments for testing or showcasing code.
-- When deploying applications — providing limited access to the cluster to the developer.
-- When cluster resources are shared between multiple tenants.
+For platform administrators:
+* **Security**: Projects provide isolation of resources and access policies between different projects, supporting a secure multitenant environment.
+* **Resource Consumption**: Administrators can easily set quotas on resources and limitations for each project, preventing excessive resource usage.
 
-## Module features
+For platform users:
+* **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 
-- Managing user and group access via the RBAC Kubernetes mechanism (based on the [user-authz](../140-user-authz/) module).
-- Managing isolation levels of particular environments.
-- Creating templates for multiple environments and customizing by parameters according to OpenAPI specification.
-- Fully `Helm`-compatible resource templates.
+## Internal Logic
 
-## How the module works
+To create projects, [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
+* [ProjectTemplate](cr.html#project-template) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
+* [Project](cr.html#project) — a resource that describes a specific project.
 
-When a [Project](cr.html#project) resource is being created, the following things happen:
-- A `Namespace` is created with the name from the [Project](cr.html#project) resource.
-- An [AuthorizationRule](../140-user-authz/cr.html#authorizationrule) is created with the data specified in the [subjects](cr.html#projecttype-v1alpha1-spec-subjects) field of the [ProjectType](cr.html#projecttype) resource.
-- Templates (parameter [resourcesTemplate](cr.html#projecttype-v1alpha1-spec-resourcestemplate) of the [ProjectType](cr.html#projecttype) resource) are rendered using [Helm](https://helm.sh/docs/). The values used for rendering are derived from the [template](cr.html#project-v1alpha1-spec-template) parameter of the [Project](cr.html#project) resource. During rendering, values are validated against the OpenAPI specification (parameter [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) of the [ProjectType](cr.html#projecttype) resource).
+When creating a [Project](cr.html#project) resource from a specific [ProjectTemplate](cr.html#project-template), the following happens:
+1. The [parameters](cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) parameter of [ProjectTemplate](cr.html#project-template));
+1. Rendering of the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [template](cr.html#project-v1alpha2-spec-template) parameter of [Project](cr.html#project);
+1. A `Namespace` is created with a name matching the name of [Project](cr.html#project);
+1. All resources described in the template are created in sequence.
 
-Since [templates](cr.html#projecttype-v1alpha1-spec-resourcestemplate) are rendered using `Helm`, you can define any necessary Kubernetes objects, such as `NetworkPolicy`, `LimitRange`, `ResourceQuota`, etc. in them.
+> **Attention!** When changing the project template, all created projects will be updated according to the new template.
