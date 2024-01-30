@@ -147,12 +147,10 @@ tests-doc-links: ## Build documentation and run checker of html links.
 validate: ## Check common patterns through all modules.
 	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
 
-bin/golangci-lint:
-	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
-
 .PHONY: lint lint-fix
 lint: ## Run linter.
+	mkdir -p bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 	golangci-lint run
 
 lint-fix: ## Fix lint violations.

@@ -83,19 +83,18 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
+
   dhctl_tests:
     name: Dhctl Tests
     needs:
       - git_info
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
-
-  golangci_lint:
-    name: GolangCI Lint
-    needs:
-      - git_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
