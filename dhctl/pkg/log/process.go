@@ -16,8 +16,9 @@ package log
 
 import (
 	"fmt"
-	"github.com/werf/logboek/pkg/types"
 	"time"
+
+	"github.com/werf/logboek/pkg/types"
 )
 
 type processStack struct {
