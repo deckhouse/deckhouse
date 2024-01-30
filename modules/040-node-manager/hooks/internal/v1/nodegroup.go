@@ -321,10 +321,10 @@ type KubeletTopologyManager struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	// Default: Container
 	// +optional
-	Scope KubeletTopologyManagerScope `json:"scope"`
+	Scope KubeletTopologyManagerScope `json:"scope,omitempty"`
 	// Default: 'None'
 	// +optional
-	Policy KubeletTopologyManagerPolicy `json:"policy"`
+	Policy KubeletTopologyManagerPolicy `json:"policy,omitempty"`
 }
 
 type KubeletTopologyManagerScope string
