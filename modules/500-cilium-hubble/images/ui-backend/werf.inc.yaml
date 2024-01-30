@@ -19,26 +19,14 @@ shell:
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
   - cd /go/src/github.com/cilium/hubble-ui/backend
   - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
-  - mkdir -p /tmp/install
-  - cp -t /tmp/install/ /go/src/github.com/cilium/hubble-ui/backend/backend
-  - chown 64535:64535 /tmp/install/backend
-  - chmod 0700 /tmp/install/backend
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-from: {{ $.Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
+  - chown 64535:64535 /go/src/github.com/cilium/hubble-ui/backend/backend
+  - chmod 0700 /go/src/github.com/cilium/hubble-ui/backend/backend
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /tmp/install/backend
+  add: /go/src/github.com/cilium/hubble-ui/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
 docker:
