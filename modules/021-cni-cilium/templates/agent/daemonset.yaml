@@ -24,7 +24,7 @@ spec:
     matchLabels:
       app: agent
   updateStrategy:
-    type: RollingUpdate
+    type: OnDelete
   template:
     metadata:
       annotations:
