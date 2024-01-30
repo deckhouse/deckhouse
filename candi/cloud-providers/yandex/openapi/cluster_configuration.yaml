@@ -15,6 +15,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: YandexClusterConfiguration
@@ -79,6 +80,7 @@ apiVersions:
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
+            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A limited set of zones in which nodes can be created.
@@ -286,11 +288,11 @@ apiVersions:
           The ID of the existing VPC Network.
       nodeNetworkCIDR:
         type: string
-        x-unsafe: true
         description: |
           This subnet will be split into **three** equal parts.
 
           They will serve as a basis for subnets in three Yandex Cloud zones.
+        x-unsafe: true
       existingZoneToSubnetIDMap:
         type: object
         description: |

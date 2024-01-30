@@ -17,53 +17,23 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	xUnsafeRuleUpdateReplicas = "updateReplicas"
+	xUnsafeRuleDeleteZones    = "deleteZones"
+)
+
 type ValidationRule func(oldValue, newValue json.RawMessage) error
 
-type RuleValidator struct {
-	rules      map[string]ValidationRule
-	validators map[string]*RuleValidator
+var validators = map[string]ValidationRule{
+	xUnsafeRuleUpdateReplicas: UpdateReplicasRule,
+	xUnsafeRuleDeleteZones:    DeleteZonesRule,
 }
 
-func (v *RuleValidator) CreateRule(path string, rule ValidationRule) {
-	separatorIndex := strings.IndexByte(path, '.')
-	if separatorIndex == -1 {
-		if v.rules == nil {
-			v.rules = make(map[string]ValidationRule)
-		}
-		v.rules[path] = rule
-		return
-	}
-
-	if v.validators == nil {
-		v.validators = make(map[string]*RuleValidator)
-	}
-
-	if v.validators[path[:separatorIndex]] == nil {
-		v.validators[path[:separatorIndex]] = &RuleValidator{}
-	}
-
-	v.validators[path[:separatorIndex]].CreateRule(path[separatorIndex+1:], rule)
-}
-
-func NewDefaultRuleValidators() map[SchemaIndex]RuleValidator {
-	var v RuleValidator
-	v.CreateRule("masterNodeGroup.replicas", NotLessRule)
-	v.CreateRule("nodeGroups.replicas", NotLessRule)
-
-	return map[SchemaIndex]RuleValidator{
-		SchemaIndex{
-			Kind:    "YandexClusterConfiguration",
-			Version: "deckhouse.io/v1",
-		}: v,
-	}
-}
-
-func NotLessRule(oldRaw, newRaw json.RawMessage) error {
+func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 	var oldValue int
 	var newValue int
 
@@ -77,13 +47,49 @@ func NotLessRule(oldRaw, newRaw json.RawMessage) error {
 		return err
 	}
 
-	if newValue < oldValue {
-		return fmt.Errorf("%w: the new value (%d) cannot be less that than previous one (%d)", ErrValidationRuleFailed, newValue, oldValue)
+	if newValue == 0 {
+		return fmt.Errorf("%w: got unacceptable replicas zero value", ErrValidationRuleFailed)
 	}
 
-	if newValue == 0 {
-		return fmt.Errorf("%w: got unacceptable zero value", ErrValidationRuleFailed)
+	if newValue < oldValue && newValue < 2 {
+		return fmt.Errorf("%w: the new replicas value (%d) cannot be less that than 2 (%d)", ErrValidationRuleFailed, newValue, oldValue)
 	}
 
 	return nil
+}
+
+func DeleteZonesRule(oldRaw, newRaw json.RawMessage) error {
+	type clusterConfig struct {
+		Zones           []string `yaml:"zones"`
+		MasterNodeGroup struct {
+			Replicas int `yaml:"replicas"`
+		} `yaml:"masterNodeGroup"`
+	}
+
+	var oldClusterConfig clusterConfig
+	var newClusterConfig clusterConfig
+
+	err := yaml.Unmarshal(oldRaw, &oldClusterConfig)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(newRaw, &newClusterConfig)
+	if err != nil {
+		return err
+	}
+
+	if len(newClusterConfig.Zones) >= len(oldClusterConfig.Zones) {
+		return nil
+	}
+
+	if newClusterConfig.MasterNodeGroup.Replicas >= 3 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"%w: can't delete zone if masterNodeGroup.Replicas < 3 (%d)",
+		ErrValidationRuleFailed,
+		newClusterConfig.MasterNodeGroup.Replicas,
+	)
 }

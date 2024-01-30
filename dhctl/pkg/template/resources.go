@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -212,5 +212,5 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 
 func BigFileSplit(content string) []string {
 	bigFileTmp := strings.TrimSpace(content)
-	return regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	return input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 }
