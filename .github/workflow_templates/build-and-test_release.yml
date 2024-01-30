@@ -161,6 +161,14 @@ jobs:
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "golangci_lint" "GolangCI Lint") }!}
+  golangci_lint:
+    name: {!{ $jobNames.golangci_lint }!}
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
   dhctl_tests:
     name: {!{ $jobNames.dhctl_tests }!}
@@ -169,15 +177,6 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.dhctl_tests) | strings.Indent 6 }!}
-
-{!{ $jobNames = coll.Merge $jobNames (dict "golangci_lint" "GolangCI Lint") }!}
-  golangci_lint:
-    name: {!{ $jobNames.golangci_lint }!}
-    needs:
-      - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "openapi_test_cases" "OpenAPI Test Cases") }!}
   openapi_test_cases:
