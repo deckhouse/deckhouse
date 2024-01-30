@@ -1,0 +1,46 @@
+kind: SSHConfig
+apiVersions:
+- apiVersion: dhctl.deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      General dhctl SSH config.
+    additionalProperties: false
+    required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
+    x-examples:
+      - apiVersion: dhctl.deckhouse.io/v1
+        kind: SSHConfig
+        sshUser: user
+        sshPort: 22
+        sshAgentPrivateKeys:
+          - key: <ssh-private-key>
+    properties:
+      apiVersion:
+        type: string
+        description: Version of the Deckhouse API.
+        enum: [dhctl.deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [SSHConfig]
+      sshUser:
+        type: string
+      sshPort:
+        type: integer
+      sshAgentPrivateKeys:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [key]
+          properties:
+            key:
+              type: string
+            passphrase:
+              type: string
+      sshBastionHost:
+        type: string
+      sshBastionPort:
+        type: int
+      sshBastionUser:
+        type: string
