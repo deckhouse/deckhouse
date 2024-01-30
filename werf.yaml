@@ -368,6 +368,7 @@ git:
   - go.mod
   - go.sum
   excludePaths:
+  {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
   - docs
   - modules/*/docs
   - modules/*/README.md
@@ -453,6 +454,7 @@ git:
     - go.sum
     - tools
   excludePaths:
+    {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 4}}
     - global-hooks/**/*_test.go
     - modules/**/*_test.go
     - modules/*/images

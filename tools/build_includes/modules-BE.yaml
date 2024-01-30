@@ -19,8 +19,13 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/be/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
+- add: /ee/be/modules/350-node-local-dns
+  to: /deckhouse/modules/350-node-local-dns
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/be/modules/600-flant-integration
+  to: /deckhouse/modules/600-flant-integration
   stageDependencies:
     setup:
         - '**/*.go'

@@ -51,8 +51,21 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/be/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
+- add: /ee/be/modules/350-node-local-dns
+  to: /deckhouse/modules/350-node-local-dns
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/be/modules/600-flant-integration
+  to: /deckhouse/modules/600-flant-integration
   excludePaths:
     - docs
     - README.md
