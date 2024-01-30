@@ -42,6 +42,14 @@ title: "Управление control plane: FAQ"
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST>
    ```
+   Для **Yandex Cloud** необходимо указать `- Auto` в параметре `masterNodeGroup.instanceClass.externalIPAddresses`, равное количеству реплик, например `masterNodeGroup.replicas: 3`:
+   
+   ```bash
+   externalIPAddresses:
+   - "Auto"
+   - "Auto"
+   - "Auto"
+   ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
