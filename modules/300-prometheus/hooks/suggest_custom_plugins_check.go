@@ -27,11 +27,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, grafanaCustomPluginsHandler)
 
 func grafanaCustomPluginsHandler(input *go_hook.HookInput) error {
-	isDisabled := input.Values.Get("prometheus.grafana.disableDeprecationWarnings")
-	if isDisabled.Exists() && isDisabled.Bool() {
-		return nil
-	}
-
 	customPlugins := input.Values.Get("prometheus.grafana.customPlugins")
 	if customPlugins.Exists() {
 		pluginList := customPlugins.Array()

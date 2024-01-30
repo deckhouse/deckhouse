@@ -43,11 +43,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
 func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-	isDisabled := input.Values.Get("prometheus.grafana.disableDeprecationWarnings")
-	if isDisabled.Exists() && isDisabled.Bool() {
-		return nil
-	}
-
 	client, err := dc.GetK8sClient()
 	if err != nil {
 		return err

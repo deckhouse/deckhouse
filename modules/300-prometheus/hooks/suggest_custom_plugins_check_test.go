@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -51,19 +54,6 @@ var _ = Describe("Prometheus hooks :: suggest custom plugins check ::", func() {
 				Expect(m[1].Labels).To(Equal(map[string]string{
 					"plugin": "vertamedia_clickhouse_datasource",
 				}))
-			})
-
-			Context("And after setting disableDeprecationWarnings to true", func() {
-				BeforeEach(func() {
-					f.ValuesSet("prometheus.grafana.disableDeprecationWarnings", true)
-					f.RunHook()
-				})
-
-				It("Should stop exposing metrics about custom plugins", func() {
-					Expect(f).To(ExecuteSuccessfully())
-					m := f.MetricsCollector.CollectedMetrics()
-					Expect(m).To(HaveLen(0))
-				})
 			})
 
 			Context("And after deleting custom plugins from ModuleConfig", func() {
