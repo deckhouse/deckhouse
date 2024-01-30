@@ -206,6 +206,7 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, stopCh
 
 		case <-stopCh:
 			log.DebugF("[%d] Kubeproxy monitor stopped")
+			return
 		}
 	}
 }
