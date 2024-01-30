@@ -24,7 +24,7 @@ import (
 
 func TestValidateClusterSettingsFormat(t *testing.T) {
 	once.Do(func() {
-		store = newSchemaStore([]string{"./../../../candi/openapi"})
+		store = newSchemaStore([]string{"./../../../candi/openapi"}, LoadOptions{})
 	})
 
 	t.Run("ok", func(t *testing.T) {
@@ -252,7 +252,7 @@ masterNodeGroup:
 
 func loadTestSchemaStore() error {
 	once.Do(func() {
-		store = newSchemaStore([]string{"/tmp"})
+		store = newSchemaStore([]string{"/tmp"}, LoadOptions{})
 	})
 
 	schema := []byte(`
