@@ -275,6 +275,10 @@ featureGates:
   ValidatingAdmissionPolicy: true
 {{- end }}
   RotateKubeletServerCertificate: true
+{{- $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" false .nodeGroup }}
+{{- if eq $topologyManagerEnabled true }}
+  MemoryManager: true
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
@@ -326,7 +330,6 @@ shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
-{{ $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" false .nodeGroup }}
 {{- if eq $topologyManagerEnabled true }}
 cpuManagerPolicy: static
 memoryManagerPolicy: static
