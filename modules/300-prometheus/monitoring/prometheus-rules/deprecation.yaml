@@ -63,6 +63,7 @@
           To list all deprecated panel intervals use the expr `sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0`
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          To disable this deprecation warning set `prometheus.grafana.disableDeprecationWarnings` to `true`
 
 - name: d8.grafana.alert_rule_deprecation
   rules:
@@ -83,6 +84,7 @@
           To list all deprecated alert rules use the expr `sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0`
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          To disable this deprecation warning set `prometheus.grafana.disableDeprecationWarnings` to `true`
 
 - name: d8.grafana.plugin_check_suggestion
   rules:
@@ -106,3 +108,4 @@
           We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+          To disable this deprecation warning set `prometheus.grafana.disableDeprecationWarnings` to `true`

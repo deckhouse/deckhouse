@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -44,8 +43,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
 func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-	testV := input.Values.Get("prometheus.grafana")
-	fmt.Println("XXXXXXXXXXXXXX", testV)
+	isDisabled := input.Values.Get("prometheus.grafana.disableDeprecationWarnings")
+	if isDisabled.Exists() && isDisabled.Bool() {
+		return nil
+	}
 
 	client, err := dc.GetK8sClient()
 	if err != nil {

@@ -447,6 +447,19 @@ spec:
 				}))
 			})
 
+			Context("And after setting disableDeprecationWarnings to true", func() {
+				BeforeEach(func() {
+					f.ValuesSet("prometheus.grafana.disableDeprecationWarnings", true)
+					f.RunHook()
+				})
+
+				It("Should stop exposing metrics about custom plugins", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					m := f.MetricsCollector.CollectedMetrics()
+					Expect(m).To(HaveLen(0))
+				})
+			})
+
 			Context("And after deleting GrafanaDashboardDefinition", func() {
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
