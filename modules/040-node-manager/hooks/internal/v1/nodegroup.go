@@ -318,7 +318,7 @@ type KubeletTopologyManager struct {
 	// https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/
 	// usage topology
 	// Default: False
-	Enable *bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 	// Default: Container
 	// +optional
 	Scope KubeletTopologyManagerScope `json:"scope"`

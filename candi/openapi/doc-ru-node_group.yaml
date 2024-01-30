@@ -748,7 +748,7 @@ spec:
                         Управление политиками управления топологией на узле.
                         Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
-                        enable:
+                        enabled:
                           description: |
                             Включает управление топологией на узле.
                         scope:

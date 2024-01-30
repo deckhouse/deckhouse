@@ -2080,7 +2080,7 @@ spec:
                         Control Topology Management Policies on a node.
                         More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
-                        enable:
+                        enabled:
                           type: boolean
                           x-doc-default: false
                           description: |
