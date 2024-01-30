@@ -29,19 +29,19 @@ func TestValidateClusterSettingsFormat(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		t.Run("cluster configuration", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigFormat)
+			err := ValidateClusterSettingsFormat(clusterConfigFormat, validateOpts)
 			require.NoError(t, err)
 		})
 		t.Run("resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(resourceFormat)
+			err := ValidateClusterSettingsFormat(resourceFormat, validateOpts)
 			require.NoError(t, err)
 		})
 		t.Run("cluster configuration with resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigWithResourcesFormat)
+			err := ValidateClusterSettingsFormat(clusterConfigWithResourcesFormat, validateOpts)
 			require.NoError(t, err)
 		})
 		t.Run("unexpected field", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(unknownFieldFormat)
+			err := ValidateClusterSettingsFormat(unknownFieldFormat, validateOpts)
 			require.Error(t, err)
 		})
 	})
@@ -52,37 +52,37 @@ func TestValidateClusterSettingsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ok", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, newSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, newSettings, validateOpts)
 		require.NoError(t, err)
 	})
 
 	t.Run("ok: base infra phase", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.BaseInfraPhase, oldSettings, unsafeNewSettings)
+		err = ValidateClusterSettingsChanges(phases.BaseInfraPhase, oldSettings, unsafeNewSettings, validateOpts)
 		require.NoError(t, err)
 	})
 
 	t.Run("unsafe field changed", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, unsafeNewSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, unsafeNewSettings, validateOpts)
 		require.ErrorIs(t, err, ErrUnsafeFieldChanged)
 	})
 
 	t.Run("without expected config", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, oldResourceSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, oldResourceSettings, validateOpts)
 		require.ErrorIs(t, err, ErrConfigAmountChanged)
 	})
 
 	t.Run("invalid document format", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, invalidSchemaSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, invalidSchemaSettings, validateOpts)
 		require.Error(t, err)
 	})
 
 	t.Run("non-config resources without changes", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, oldResourceSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, oldResourceSettings, validateOpts)
 		require.NoError(t, err)
 	})
 
 	t.Run("non-config resources with changes", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, newResourceSettings)
+		err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, newResourceSettings, validateOpts)
 		require.NoError(t, err)
 	})
 }
@@ -92,29 +92,47 @@ func TestValidateRulesClusterSettingsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("x-unsafe-rules validation ok", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
-			validateRuleSettingsOld,
-			validateRuleSettingsNewOK,
+		err = ValidateClusterSettingsChanges(
+			phases.FinalizationPhase,
+			validateRuleSettingsOK,
+			validateRuleSettingsOK1,
+			validateOpts,
 		)
 		require.NoError(t, err)
 	})
 
-	t.Run("x-unsafe-rules notLessThanPrevious validation failed", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
-			validateRuleSettingsOld,
-			validateRuleSettingsNewNotLessInvalid,
+	t.Run("x-unsafe-rules updateReplicas validation failed, 0 replicas", func(t *testing.T) {
+		err = ValidateClusterSettingsChanges(
+			phases.FinalizationPhase,
+			validateRuleSettingsOK1,
+			validateRuleSettingsUpdateReplicasInvalid1,
+			validateOpts,
+		)
+		require.ErrorIs(t, err, ErrValidationRuleFailed)
+	})
+
+	t.Run("x-unsafe-rules updateReplicas validation failed, less than 2 replicas", func(t *testing.T) {
+		err = ValidateClusterSettingsChanges(
+			phases.FinalizationPhase,
+			validateRuleSettingsOK1,
+			validateRuleSettingsUpdateReplicasInvalid2,
+			validateOpts,
 		)
 		require.ErrorIs(t, err, ErrValidationRuleFailed)
 	})
 
 	t.Run("x-unsafe-rules deleteZones validation failed", func(t *testing.T) {
-		err = ValidateClusterSettingsChanges(phases.FinalizationPhase,
-			validateRuleSettingsOld,
-			validateRuleSettingsNewDeleteZonesInvalid,
+		err = ValidateClusterSettingsChanges(
+			phases.FinalizationPhase,
+			validateRuleSettingsOK,
+			validateRuleSettingsDeleteZonesInvalid,
+			validateOpts,
 		)
 		require.ErrorIs(t, err, ErrValidationRuleFailed)
 	})
 }
+
+var validateOpts = ValidateOptions{CommanderMode: true}
 
 var (
 	clusterConfigFormat = `---
@@ -189,25 +207,31 @@ metadata:
   name: bar
 spec:
   enabled: true`
-	validateRuleSettingsOld = `---
+	validateRuleSettingsOK = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 zones: [ru-central1, ru-central2]
 masterNodeGroup:
   replicas: 1`
-	validateRuleSettingsNewOK = `---
+	validateRuleSettingsOK1 = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-zones: [ru-central1, ru-central2]
+zones: [ru-central1, ru-central2, ru-central3]
 masterNodeGroup:
   replicas: 3`
-	validateRuleSettingsNewNotLessInvalid = `---
+	validateRuleSettingsUpdateReplicasInvalid1 = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 zones: [ru-central1, ru-central2]
 masterNodeGroup:
   replicas: 0`
-	validateRuleSettingsNewDeleteZonesInvalid = `---
+	validateRuleSettingsUpdateReplicasInvalid2 = `---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 1`
+	validateRuleSettingsDeleteZonesInvalid = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 zones: [ru-central2]
@@ -285,7 +309,7 @@ apiVersions:
         properties:
           replicas:
             type: integer
-            x-unsafe-rules: [notLessThanPrevious]
+            x-unsafe-rules: [updateReplicas]
 `)
 
 	return store.upload(schema)

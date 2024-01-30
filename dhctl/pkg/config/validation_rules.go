@@ -22,18 +22,18 @@ import (
 )
 
 const (
-	xUnsafeRuleNotLessThanPrevious = "notLessThanPrevious"
-	xUnsafeRuleDeleteZones         = "deleteZones"
+	xUnsafeRuleUpdateReplicas = "updateReplicas"
+	xUnsafeRuleDeleteZones    = "deleteZones"
 )
 
 type ValidationRule func(oldValue, newValue json.RawMessage) error
 
 var validators = map[string]ValidationRule{
-	xUnsafeRuleNotLessThanPrevious: NotLessRuleThanPrevious,
-	xUnsafeRuleDeleteZones:         DeleteZonesRule,
+	xUnsafeRuleUpdateReplicas: UpdateReplicasRule,
+	xUnsafeRuleDeleteZones:    DeleteZonesRule,
 }
 
-func NotLessRuleThanPrevious(oldRaw, newRaw json.RawMessage) error {
+func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 	var oldValue int
 	var newValue int
 
@@ -47,12 +47,12 @@ func NotLessRuleThanPrevious(oldRaw, newRaw json.RawMessage) error {
 		return err
 	}
 
-	if newValue < oldValue {
-		return fmt.Errorf("%w: the new value (%d) cannot be less that than previous one (%d)", ErrValidationRuleFailed, newValue, oldValue)
+	if newValue == 0 {
+		return fmt.Errorf("%w: got unacceptable replicas zero value", ErrValidationRuleFailed)
 	}
 
-	if newValue == 0 {
-		return fmt.Errorf("%w: got unacceptable zero value", ErrValidationRuleFailed)
+	if newValue < oldValue && newValue < 2 {
+		return fmt.Errorf("%w: the new replicas value (%d) cannot be less that than 2 (%d)", ErrValidationRuleFailed, newValue, oldValue)
 	}
 
 	return nil

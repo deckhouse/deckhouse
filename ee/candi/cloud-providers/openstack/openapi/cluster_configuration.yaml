@@ -114,7 +114,7 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [notLessThanPrevious]
+            x-unsafe-rules: [updateReplicas]
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
