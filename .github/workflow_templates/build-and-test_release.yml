@@ -166,7 +166,7 @@ jobs:
     name: {!{ $jobNames.golangci_lint }!}
     needs:
       - git_info
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
