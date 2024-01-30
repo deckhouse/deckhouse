@@ -377,6 +377,7 @@ apiVersions:
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
             type: object
             default: {"cores": 2, "memory": 2048}
+            x-doc-default: ""
             properties:
               cores:
                 description: |
