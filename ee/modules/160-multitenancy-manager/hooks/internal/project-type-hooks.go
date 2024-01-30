@@ -26,7 +26,7 @@ var (
 func projectTypeHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       ProjectTypesQueue,
-		ApiVersion: APIVersion,
+		ApiVersion: ProjectTypeAPIVersion,
 		Kind:       ProjectTypeKind,
 		FilterFunc: filterFunc,
 	}

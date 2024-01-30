@@ -138,5 +138,7 @@ spec:
           type: object
       served: true
       storage: true
+      deprecated: true
+      deprecationWarning: "ProjectType is deprecated. Use ProjectTemplate instead"
       subresources:
         status: {}
