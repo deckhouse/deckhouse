@@ -40,11 +40,19 @@ type SchemaStore struct {
 	modulesCache       map[string]struct{}
 }
 
+type LoadOptions struct {
+	CommanderMode bool
+}
+
 var once sync.Once
 
 var store *SchemaStore
 
 func NewSchemaStore(paths ...string) *SchemaStore {
+	return NewSchemaStoreWithOpts(LoadOptions{}, paths...)
+}
+
+func NewSchemaStoreWithOpts(opts LoadOptions, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -55,10 +63,10 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 		}
 	}
 
-	return newOnceSchemaStore(paths)
+	return newOnceSchemaStore(paths, opts)
 }
 
-func newSchemaStore(schemasDir []string) *SchemaStore {
+func newSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -72,6 +80,14 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 
 		switch info.Name() {
 		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml", "cloud_provider_discovery_data.yaml":
+			uploadError := st.UploadByPath(path)
+			if uploadError != nil {
+				return uploadError
+			}
+		case "ssh_configuration.yaml", "ssh_host_configuration.yaml":
+			if !opts.CommanderMode {
+				break
+			}
 			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
@@ -91,7 +107,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir not found")
+		log.WarnF("Modules dir not found\n")
 		return st
 	}
 
@@ -110,7 +126,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
-			log.DebugF("openapi spec not found for module %s", moduleName)
+			log.DebugF("openapi spec not found for module %s\n", moduleName)
 		} else {
 			return err
 		}
@@ -141,9 +157,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir)
+		store = newSchemaStore(schemasDir, opts)
 	})
 	return store
 }
