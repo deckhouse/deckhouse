@@ -42,50 +42,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
-const (
-	dashboardResourceName    = "grafanadashboarddefinitions"
-	dashboardResourceGroup   = "deckhouse.io"
-	dashboardResourceVersion = "v1"
-)
-
-var (
-	dashboardCRDSchema = schema.GroupVersionResource{
-		Resource: dashboardResourceName,
-		Group:    dashboardResourceGroup,
-		Version:  dashboardResourceVersion,
-	}
-)
-
-// DashboardCRD is a model of Dashboard CRD stored in k8s
-type DashboardCRD struct {
-	Spec DashboardCRDSpec `json:"spec"`
-}
-
-// DashboardCRDSpec contains Dashboard JSON and folder name
-type DashboardCRDSpec struct {
-	Definition string `json:"definition"`
-	Folder     string `json:"folder"`
-}
-
-func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]*DashboardCRD, error) {
-	unstructuredList, err := dynamicClient.Resource(dashboardCRDSchema).List(ctx, v1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	list := make([]*DashboardCRD, 0, len(unstructuredList.Items))
-	for _, unstructuredListItem := range unstructuredList.Items {
-		var dashboardCRD DashboardCRD
-		err = runtime.DefaultUnstructuredConverter.FromUnstructured(
-			unstructuredListItem.UnstructuredContent(), &dashboardCRD,
-		)
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, &dashboardCRD)
-	}
-	return list, nil
-}
-
 func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	client, err := dc.GetK8sClient()
 	if err != nil {
@@ -154,6 +110,50 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	return nil
+}
+
+const (
+	dashboardResourceName    = "grafanadashboarddefinitions"
+	dashboardResourceGroup   = "deckhouse.io"
+	dashboardResourceVersion = "v1"
+)
+
+var (
+	dashboardCRDSchema = schema.GroupVersionResource{
+		Resource: dashboardResourceName,
+		Group:    dashboardResourceGroup,
+		Version:  dashboardResourceVersion,
+	}
+)
+
+// DashboardCRD is a model of Dashboard CRD stored in k8s
+type DashboardCRD struct {
+	Spec DashboardCRDSpec `json:"spec"`
+}
+
+// DashboardCRDSpec contains Dashboard JSON and folder name
+type DashboardCRDSpec struct {
+	Definition string `json:"definition"`
+	Folder     string `json:"folder"`
+}
+
+func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]*DashboardCRD, error) {
+	unstructuredList, err := dynamicClient.Resource(dashboardCRDSchema).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*DashboardCRD, 0, len(unstructuredList.Items))
+	for _, unstructuredListItem := range unstructuredList.Items {
+		var dashboardCRD DashboardCRD
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(
+			unstructuredListItem.UnstructuredContent(), &dashboardCRD,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &dashboardCRD)
+	}
+	return list, nil
 }
 
 var (

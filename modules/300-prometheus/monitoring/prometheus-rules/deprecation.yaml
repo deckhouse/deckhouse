@@ -93,23 +93,3 @@
           We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
-
-- name: d8.grafana.setting_deprecation
-  rules:
-    - alert: GrafanaSettingNeedsRevision
-      expr: |
-        count(d8_grafana_settings_unchecked_plugin > 0)
-      labels:
-        tier: cluster
-        severity_level: "8"
-      annotations:
-        plk_markup_format: markdown
-        plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Unchecked Grafana plugins has found.
-        description: |
-          Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          To list all installed plugins use the expr `sum by (plugin) (d8_grafana_settings_unchecked_plugin) > 0`
-
-          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
