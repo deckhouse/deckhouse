@@ -84,11 +84,11 @@
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
 
-- name: d8.grafana.plugin_deprecation
+- name: d8.grafana.plugin_check_suggestion
   rules:
-    - alert: GrafanaDashboardPluginNeedsRevision
+    - alert: GrafanaDashboardPluginMayBeOutdated
       expr: |
-        count(d8_grafana_dashboards_unchecked_plugin > 0)
+        count(d8_grafana_dashboards_external_plugin > 0)
       labels:
         tier: cluster
         severity_level: "8"
@@ -97,10 +97,10 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Unchecked Grafana dashboard plugins has been found.
+        summary: Potentially outdated Grafana dashboard plugins has been found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          To list all outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_unchecked_plugin) > 0`
+          To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_external_plugin) > 0`
 
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
           We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/

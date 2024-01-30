@@ -415,7 +415,7 @@ spec:
 					"panel":     "plugin_single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_unchecked_plugin"))
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_external_plugin"))
 				Expect(m[3].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
@@ -439,7 +439,7 @@ spec:
 					"panel":     "plugin_panel_inside_row",
 					"interval":  "interval_sx4",
 				}))
-				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_unchecked_plugin"))
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_external_plugin"))
 				Expect(m[7].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",

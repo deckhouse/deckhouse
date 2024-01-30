@@ -97,8 +97,8 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 				)
 			}
 			panelType := panel.Get("type").String()
-			if !isStablePanelType(panelType) {
-				input.MetricsCollector.Set("d8_grafana_dashboards_unchecked_plugin",
+			if !isInternalPanelType(panelType) {
+				input.MetricsCollector.Set("d8_grafana_dashboards_external_plugin",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -185,7 +185,7 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 	return "", false
 }
 
-var stablePanelTypes = []string{
+var internalPanelTypes = []string{
 	"row", // row is not a plugin type, but panel type also
 	"alertGroups",
 	"alertlist",
@@ -222,9 +222,9 @@ var stablePanelTypes = []string{
 	"xychart",
 }
 
-func isStablePanelType(panelType string) bool {
-	for _, stablePanelType := range stablePanelTypes {
-		if stablePanelType == panelType {
+func isInternalPanelType(panelType string) bool {
+	for _, internalPanelType := range internalPanelTypes {
+		if internalPanelType == panelType {
 			return true
 		}
 	}
