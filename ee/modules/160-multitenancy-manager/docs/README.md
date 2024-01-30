@@ -1,21 +1,36 @@
 ---
 title: "Module multitenancy-manager"
 search: multitenancy
-description: The multitenancy-manager module adds the functionality to create projects for various development teams with the ability to subsequently deploy applications in them.
+description: Multitenancy and Projects in Kubernetes. The multitenancy-manager module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.
 ---
 ## Description
 
-The module allows creating projects in a Kubernetes cluster. **Project** is an isolated environment where applications can be deployed.
-The isolation of projects is achieved by creating separate `Namespaces` for each project with pre-filled resources such as `ResourceQuota`, `NetworkPolicy`, and so on.
+The module enables the creation of projects in a Kubernetes cluster. **Project** is an isolated environment where applications can be deployed.
+
+## Why is this needed?
+
+The standard `Namespace` resource, used for logical resource separation in Kubernetes, does not provide necessary functionalities, hence it is not an isolated environment:
+* [Resource consumption by pods](https://kubernetes.io/docs/concepts/policy/resource-quotas/) is not limited by default;
+* [Network communication](https://kubernetes.io/docs/concepts/services-networking/network-policies/) with other pods works by default from any point in the cluster;
+* Unrestricted access to node resources: address space, network space, mounted host directories.
+
+The configuration capabilities of `Namespace` do not fully meet modern development requirements. By default, the following features are not included for `Namespace`:
+* Log collection;
+* Audit;
+* Vulnerability scanning.
+
+The functionality of projects allows addressing these issues.
 
 ## Advantages of the module
 
 For platform administrators:
+* **Consistency**: Administrators can create projects using the same template, ensuring consistency and simplifying management.
 * **Security**: Projects provide isolation of resources and access policies between different projects, supporting a secure multitenant environment.
 * **Resource Consumption**: Administrators can easily set quotas on resources and limitations for each project, preventing excessive resource usage.
 
 For platform users:
 * **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
+* **Quick Start**: Developers can request projects created from ready-made templates from administrators, allowing for a quick start to developing a new application.
 
 ## Internal Logic
 
