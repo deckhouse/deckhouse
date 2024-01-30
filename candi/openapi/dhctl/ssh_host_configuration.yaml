@@ -1,0 +1,23 @@
+kind: SSHHost
+apiVersions:
+- apiVersion: dhctl.deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      General dhctl SSH host config.
+    additionalProperties: false
+    required: [apiVersion,kind,host]
+    x-examples:
+      - apiVersion: dhctl.deckhouse.io/v1
+        kind: SSHHost
+        host: 172.16.0.0
+    properties:
+      apiVersion:
+        type: string
+        description: Version of the Deckhouse API.
+        enum: [dhctl.deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [SSHHost]
+      host:
+        type: string
