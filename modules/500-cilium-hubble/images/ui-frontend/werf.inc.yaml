@@ -1,6 +1,4 @@
 {{- $hubbleUIVersion := "0.12.1" }}
-# Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
