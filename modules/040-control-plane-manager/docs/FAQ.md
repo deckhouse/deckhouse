@@ -42,6 +42,16 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST>
    ```
+   For **Yandex Cloud**, you have to specify `- Auto` in the `masterNodeGroup.instanceClass.externalIPAddresses` 
+   parameter, equal to the number of replicas, for example `masterNodeGroup.replicas: 3`:
+
+   ```bash
+   externalIPAddresses:
+   - "Auto"
+   - "Auto"
+   - "Auto"
+   ```
+   *The `masterNodeGroup.instanceClass.externalIPAddresses` parameter is optional.*
 
 1. **In the installer container**, run the following command to start scaling:
 
