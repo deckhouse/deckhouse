@@ -280,7 +280,7 @@ apiVersions:
           region:
             type: string
             description: The name of the region where instances will be provisioned.
-          x-unsafe: true
+            x-unsafe: true
           serviceAccountJSON:
             type: string
             description: |
