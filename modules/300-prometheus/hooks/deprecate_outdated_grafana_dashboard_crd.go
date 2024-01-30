@@ -18,17 +18,18 @@ package hooks
 
 import (
 	"context"
+	"regexp"
+	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/tidwall/gjson"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"regexp"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/tidwall/gjson"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -86,7 +87,6 @@ func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]
 }
 
 func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-
 	client, err := dc.GetK8sClient()
 	if err != nil {
 		return err
