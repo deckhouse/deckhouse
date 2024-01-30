@@ -16,8 +16,9 @@ import (
 
 var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{"projects":[]}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Project", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "Project", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectType", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectTemplate", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -53,12 +54,12 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 var (
 	testCasesForProjectStatuses = []testProjectStatus{
 		{
-			name:   "test-project",
+			name:   "valid-project",
 			exists: true,
 			status: `{"sync":true,"state":"Sync"}`,
 		},
 		{
-			name:   "test-project-2",
+			name:   "invalid-project",
 			exists: true,
 			status: `{"sync":false,"state":"Error","message": "template data doesn't match the OpenAPI schema for 'test-project-type' ProjectType: validation failure list:\nrequests.cpu should match '^[0-9]+m?$'"}`,
 		},
@@ -68,14 +69,14 @@ var (
 
 const validProject = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Project
 metadata:
-  name: test-project
+  name: valid-project
 spec:
-  description: Test case from Deckhouse documentation
-  projectTypeName: test-project-type
-  template:
+  description: Valid project description
+  projectTemplateName: test-project-type
+  parameters:
     requests:
       cpu: 5
       memory: 5Gi
@@ -87,16 +88,16 @@ spec:
 
 const invalidProject = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Project
 metadata:
-  name: test-project-2
+  name: invalid-project
 spec:
-  description: Test case from Deckhouse documentation
-  projectTypeName: test-project-type
-  template:
+  description: Invalid project description
+  projectTemplateName: test-project-type
+  parameters:
     requests:
-      cpu: qwerty
+      cpu: wrong value
       memory: 5Gi
       storage: 1Gi
     limits:

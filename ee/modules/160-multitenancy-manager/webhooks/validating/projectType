@@ -23,19 +23,22 @@ kubernetes:
         "projectTypeName": .spec.projectTypeName
       }
 kubernetesValidating:
-- name: used-in-project.deckhouse.io
+- name: project-type.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["DELETE"]
+    operations:  ["CREATE", "DELETE"]
     resources:   ["projecttypes"]
     scope:       "Cluster"
 EOF
 }
 
 function __main__() {
-projectTypeName=$(context::jq -r '.review.request.oldObject.metadata.name')
+operation=$(context::jq -r '.review.request.operation')
+
+if [ "$operation" == "DELETE" ]; then 
+  projectTypeName=$(context::jq -r '.review.request.oldObject.metadata.name')
 
   if usedInProjectName="$(context::jq -er --arg typeName "$projectTypeName" '[.snapshots.projects[].filterResult | select(.projectTypeName == $typeName) | .projectName] | first' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
@@ -44,9 +47,17 @@ EOF
     return 0
   fi
 
-  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
+fi
+
+if [ "$operation" == "CREATE" ]; then
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"ProjectType is deprecated, use the \"ProjectTemplate\" instead." }
+EOF
+  return 0
+fi 
 
 }
 
