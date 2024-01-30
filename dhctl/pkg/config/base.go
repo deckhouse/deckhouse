@@ -20,10 +20,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -233,7 +233,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
-	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
@@ -265,7 +265,7 @@ func ValidateClusterSettings(configData string) error {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
-	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
