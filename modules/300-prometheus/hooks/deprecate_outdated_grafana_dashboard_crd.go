@@ -17,41 +17,86 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
+	"context"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"regexp"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/deprecate_outdated_grafana_dashboard_crd",
-	Kubernetes: []go_hook.KubernetesConfig{
+	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:       "grafana_dashboard_definitions",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "GrafanaDashboardDefinition",
-			FilterFunc: filterGrafanaDashboardCRD,
+			Name:    "helm_releases",
+			Crontab: "0 * * * *", // every hour
 		},
 	},
-}, grafanaDashboardCRDsHandler)
+}, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
-func filterGrafanaDashboardCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	definition, ok, err := unstructured.NestedString(obj.Object, "spec", "definition")
-	if err != nil {
-		return nil, fmt.Errorf("cannot get definition from spec field of GrafanaDashboardDefinition: %v", err)
+const (
+	dashboardResourceName    = "grafanadashboarddefinitions"
+	dashboardResourceGroup   = "deckhouse.io"
+	dashboardResourceVersion = "v1"
+)
+
+var (
+	dashboardCRDSchema = schema.GroupVersionResource{
+		Resource: dashboardResourceName,
+		Group:    dashboardResourceGroup,
+		Version:  dashboardResourceVersion,
 	}
-	if !ok {
-		return nil, fmt.Errorf("GrafanaDashboardDefinition has no definition inside of spec field")
-	}
-	return definition, nil
+)
+
+// DashboardCRD is a model of Dashboard CRD stored in k8s
+type DashboardCRD struct {
+	Spec DashboardCRDSpec `json:"spec"`
 }
 
-func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
-	dashboardCRDItems := input.Snapshots["grafana_dashboard_definitions"]
+// DashboardCRDSpec contains Dashboard JSON and folder name
+type DashboardCRDSpec struct {
+	Definition string `json:"definition"`
+	Folder     string `json:"folder"`
+}
+
+func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]*DashboardCRD, error) {
+	unstructuredList, err := dynamicClient.Resource(dashboardCRDSchema).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*DashboardCRD, 0, len(unstructuredList.Items))
+	for _, unstructuredListItem := range unstructuredList.Items {
+		var dashboardCRD DashboardCRD
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(
+			unstructuredListItem.UnstructuredContent(), &dashboardCRD,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &dashboardCRD)
+	}
+	return list, nil
+}
+
+func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
+
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	dashboardCRDItems, err := listDashboardCRDs(ctx, client.Dynamic())
+	if err != nil {
+		return err
+	}
 
 	if len(dashboardCRDItems) == 0 {
 		return nil
@@ -60,7 +105,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 	dashboardPanels := make(map[string][]gjson.Result)
 
 	for _, dashboardCRDItem := range dashboardCRDItems {
-		dashboard := gjson.Parse(dashboardCRDItem.(string))
+		dashboard := gjson.Parse(dashboardCRDItem.Spec.Definition)
 		dashboardTitle := dashboard.Get("title").String()
 		dashboardRows := dashboard.Get("rows").Array()
 		for _, dashboardRow := range dashboardRows {
@@ -97,7 +142,7 @@ func grafanaDashboardCRDsHandler(input *go_hook.HookInput) error {
 			}
 			panelType := panel.Get("type").String()
 			if !isStablePanelType(panelType) {
-				input.MetricsCollector.Set("d8_grafana_dashboards_outdated_plugin",
+				input.MetricsCollector.Set("d8_grafana_dashboards_unchecked_plugin",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),

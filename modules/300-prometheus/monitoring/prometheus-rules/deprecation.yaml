@@ -75,7 +75,7 @@
   rules:
     - alert: GrafanaDashboardPluginNeedsRevision
       expr: |
-        count(d8_grafana_dashboards_outdated_plugin > 0)
+        count(d8_grafana_dashboards_unchecked_plugin > 0)
       labels:
         tier: cluster
         severity_level: "8"
@@ -87,7 +87,7 @@
         summary: Unchecked Grafana dashboard plugins has been found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-          To list all outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_outdated_plugin) > 0`
+          To list all outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_unchecked_plugin) > 0`
 
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
           We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
