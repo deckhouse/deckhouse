@@ -153,12 +153,16 @@ bin/golangci-lint:
 
 .PHONY: lint lint-fix
 lint: ## Run linter.
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-        | sh -s -- -b $(go e nv GOPATH)/bin v1.55.2
 	golangci-lint run
 
 lint-fix: ## Fix lint violations.
 	golangci-lint run --fix
+
+lint-for-test: ## Run linter in build.* tests on github
+	rm -rf ./bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+        | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+	golangci-lint run
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
