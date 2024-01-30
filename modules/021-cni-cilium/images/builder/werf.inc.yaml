@@ -31,21 +31,23 @@ shell:
     - apk add --no-cache ca-certificates
 ---
 # https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10
+# Finding commit by image tag
+# example
+# IMAGE_TAG=a8c542efc076b62ba683e7699c0013adb6955f0f
+# git rev-list --all | git diff-tree --stdin --find-object=$TREETAG | grep -B1 -E "^:(\b\w+\b\s){3}$TREETAG"
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
----
-# #####################################################################
-# Build llvm binaries
-# Based on
----
----
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
 from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
+---
+# #####################################################################
+# Build llvm binaries
+# Based on
 ---
 # https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 ---
