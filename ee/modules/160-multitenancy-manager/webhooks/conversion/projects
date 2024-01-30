@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1alpha1_to_v1alpha2
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1alpha2
+  - name: v1alpha2_to_v1alpha1
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha1
+EOF
+}
+
+function __on_conversion::v1alpha1_to_v1alpha2() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha1" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       if .spec.projectTypeName then .spec.projectTemplateName = .spec.projectTypeName end |
+       if .spec.template then .spec.parameters = .spec.template end |
+       del(.spec.projectTypeName) |
+       del(.spec.template)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1alpha2_to_v1alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
+       if .spec.projectTemplateName then .spec.projectTypeName = .spec.projectTemplateName end |
+       if .spec.parameters then .spec.template = .spec.parameters end |
+       del(.spec.projectTemplateName) |
+       del(.spec.parameters)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"
