@@ -3,7 +3,7 @@ properties:
   storageClass:
     description: |
       Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-        * Если значение не указано, используется автоматически определяемый `cluster.defaultStorageClass`. Если `cluster.defaultStorageClass` не определен, используется `emptyDir`.
+        * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
   highAvailability:
