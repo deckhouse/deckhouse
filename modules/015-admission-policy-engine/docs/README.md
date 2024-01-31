@@ -94,7 +94,6 @@ An example of a security policy:
 
 ```yaml
 ---
----
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:

@@ -53,14 +53,76 @@ $(document).ready(function () {
   });
   {%- if page.platform_code == 'bm-private' %}
   // proxy
+  const proxyAddress = /^https?:\/\/([0-9a-zA-Z\.\-\_]+(:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$/;
   $('#proxyHttpURI').change(function () {
-    sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
+    if ($(this).val() !== "") {
+      if (!$(this).val().match(proxyAddress)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message').removeClass('active');
+        sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
+      }
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
   });
   $('#proxyHttpsURI').change(function () {
-    sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
+    if ($(this).val() !== "") {
+      if (!$(this).val().match(proxyAddress)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message').removeClass('active');
+        sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
+      }
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
   });
+  const ipAndProxy = /^[a-z0-9\-\.\/]+$/
   $('#noProxyAddressList').change(function () {
-    sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
+    if ($(this).val() !== "") {
+      let arr = $(this).val().split(', ');
+      let err = false
+      let errdomen = false
+      for (let i = 0; i < arr.length; i++) {
+        if (!arr[i].match(ipAndProxy)) {
+          err = true
+        }
+        if (arr[i].match(/example\.com/)) {
+          errdomen = true
+        }
+      }
+      if (err) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message-main').removeClass('active');
+      }
+      if (errdomen) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').removeClass('active');
+      }
+      if (!errdomen && !err) sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
   });
   // registry
   $('#registryImagesRepo').change(function () {
