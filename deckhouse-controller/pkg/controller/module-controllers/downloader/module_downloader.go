@@ -35,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -137,6 +138,19 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	return res, nil
 }
 
+func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
+	if !strings.HasPrefix(moduleVersion, "v") {
+		moduleVersion = "v" + moduleVersion
+	}
+
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+
+	return module.ExtractDocs(img), nil
+}
+
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
 	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
@@ -187,7 +201,7 @@ func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) error 
 }
 
 func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) error {
-	if err := os.MkdirAll(rootPath, 0700); err != nil {
+	if err := os.MkdirAll(rootPath, 0o700); err != nil {
 		return fmt.Errorf("mkdir root path: %w", err)
 	}
 
@@ -209,7 +223,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) er
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0700); err != nil {
+			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0o700); err != nil {
 				return err
 			}
 		case tar.TypeReg:
@@ -223,7 +237,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) er
 			}
 			outFile.Close()
 
-			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
+			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0o700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err != nil {
 				return fmt.Errorf("chmod: %w", err)
 			}
@@ -439,7 +453,7 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 		return err
 	}
 
-	return os.WriteFile(valuesFile, valuesData, 0666)
+	return os.WriteFile(valuesFile, valuesData, 0o666)
 }
 
 func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {

@@ -2,7 +2,7 @@
 <div class="submenu-container">
     <ul class="submenu">
     <li class="submenu-item">
-        <a data-proofer-ignore='' class='submenu-item-link' href='/documentation/v1/'>
+        <a data-proofer-ignore='' class='submenu-item-link' href='{{ if eq site.Params.mode "module" }}/en/platform/{{ else }}/documentation/v1/{{ end }}'>
             <span class="submenu-item-channel">{{ T "platform" | humanize }}</span>
         </a>
     </li>
