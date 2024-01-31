@@ -16,6 +16,8 @@ package release
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -58,7 +60,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 // Controller is the controller implementation for ModuleRelease resources
@@ -514,8 +518,12 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		}
 	}()
 
+	nConfig, err := c.parseNotificationConfig()
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
+	}
 	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
-	releaseUpdater := newUpdater(c.logger, kubeAPI)
+	releaseUpdater := newUpdater(c.logger, nConfig, kubeAPI)
 
 	releaseUpdater.PrepareReleases(otherReleases)
 	if releaseUpdater.ReleasesCount() == 0 {
@@ -1159,6 +1167,36 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 	log.Infof("Module %s:%s restored", moduleName, moduleVersion)
 
 	return nil
+}
+
+func (c *Controller) parseNotificationConfig() (*updater.NotificationConfig, error) {
+	secret, err := c.kubeclientset.CoreV1().Secrets("d8-system").Get(context.Background(), "deckhouse-discovery", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get secret: %w", err)
+	}
+
+	base64Settings, ok := secret.Data["updateSettings.json"]
+	if !ok {
+		return new(updater.NotificationConfig), nil
+	}
+
+	jsonSettings := make([]byte, base64.StdEncoding.DecodedLen(len(base64Settings)))
+	n, err := base64.StdEncoding.Decode(jsonSettings, base64Settings)
+	if err != nil {
+		return nil, fmt.Errorf("decode base64: %w", err)
+	}
+
+	var settings struct {
+		NotificationConfig *updater.NotificationConfig `json:"notification"`
+	}
+
+	jsonSettings = jsonSettings[:n]
+	err = json.Unmarshal(jsonSettings, &settings)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal json: %w", err)
+	}
+
+	return settings.NotificationConfig, nil
 }
 
 func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinition) error {

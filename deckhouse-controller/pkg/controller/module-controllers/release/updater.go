@@ -16,14 +16,17 @@ package release
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
@@ -34,8 +37,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newUpdater(logger logger.Logger, kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, new(updater.NotificationConfig), "",
+func newUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, "",
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(), newSettings())
 }
 
@@ -67,9 +70,30 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 	return err
 }
 
-func (k *kubeAPI) PatchReleaseAnnotations(_ string, _ map[string]interface{}) {}
+func (k *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) error {
+	patch, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"annotations": annotations,
+		},
+	})
 
-func (k *kubeAPI) PatchReleaseApplyAfter(_ string, _ time.Time) {}
+	_, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Patch(
+		context.Background(),
+		name,
+		types.MergePatchType,
+		patch,
+		metav1.PatchOptions{},
+	)
+
+	return err
+}
+
+func (k *kubeAPI) PatchReleaseApplyAfter(releaseName string, applyTime time.Time) error {
+	return k.PatchReleaseAnnotations(releaseName, map[string]any{
+		"release.deckhouse.io/notification-time-shift": "true",
+		"release.deckhouse.io/applyAfter":              applyTime.Format(time.RFC3339),
+	})
+}
 
 func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	moduleName := release.Spec.ModuleName
@@ -133,7 +157,16 @@ func (k *kubeAPI) suspendModuleVersionForRelease(release *v1alpha1.ModuleRelease
 	return k.UpdateReleaseStatus(release, updater.PhaseSuspended, message)
 }
 
-func (k *kubeAPI) SaveReleaseData(_ updater.DeckhouseReleaseData) {}
+func (k *kubeAPI) SaveReleaseData(release **v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
+	if release == nil || *release == nil {
+		return nil
+	}
+
+	return k.PatchReleaseAnnotations((*release).Name, map[string]interface{}{
+		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
+		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
+	})
+}
 
 type metricsUpdater struct{}
 

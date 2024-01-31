@@ -31,10 +31,10 @@ import (
 )
 
 type NotificationConfig struct {
-	WebhookURL              string
-	SkipTLSVerify           bool
-	MinimalNotificationTime libapi.Duration
-	Auth                    *Auth `json:"auth,omitempty"`
+	WebhookURL              string          `json:"webhook"`
+	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
+	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
+	Auth                    *Auth           `json:"auth,omitempty"`
 }
 
 type Auth struct {

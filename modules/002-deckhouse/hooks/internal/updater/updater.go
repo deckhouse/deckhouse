@@ -66,7 +66,7 @@ func (ru *kubeAPI) UpdateReleaseStatus(release *DeckhouseRelease, msg, phase str
 	return nil
 }
 
-func (ru *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) {
+func (ru *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) error {
 	annotationsPatch := map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
@@ -74,9 +74,10 @@ func (ru *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]a
 	}
 
 	ru.patchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", name)
+	return nil
 }
 
-func (ru *kubeAPI) PatchReleaseApplyAfter(name string, applyTime time.Time) {
+func (ru *kubeAPI) PatchReleaseApplyAfter(name string, applyTime time.Time) error {
 	patch := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"applyAfter": applyTime,
@@ -88,6 +89,7 @@ func (ru *kubeAPI) PatchReleaseApplyAfter(name string, applyTime time.Time) {
 		},
 	}
 	ru.patchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", name)
+	return nil
 }
 
 func (ru *kubeAPI) DeployRelease(release *DeckhouseRelease) error {
@@ -110,7 +112,7 @@ func (ru *kubeAPI) DeployRelease(release *DeckhouseRelease) error {
 	return nil
 }
 
-func (ru *kubeAPI) SaveReleaseData(data updater.DeckhouseReleaseData) {
+func (ru *kubeAPI) SaveReleaseData(_ **DeckhouseRelease, data updater.DeckhouseReleaseData) error {
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -132,6 +134,7 @@ func (ru *kubeAPI) SaveReleaseData(data updater.DeckhouseReleaseData) {
 	}
 
 	ru.patchCollector.Create(cm, object_patch.UpdateIfExists())
+	return nil
 }
 
 func newValueSettings(input *go_hook.HookInput) *ValueSettings {
