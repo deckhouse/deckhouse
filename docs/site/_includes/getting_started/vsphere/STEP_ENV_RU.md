@@ -93,9 +93,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
-Необходимо создать роль с указанными правами и прикрепить ее к `vCenter`, где нужно развернуть кластер Kubernetes.
-
-Создайте роль:
+Создайте роль с необходимыми правами:
 
 {% snippetcut %}
 ```shell
