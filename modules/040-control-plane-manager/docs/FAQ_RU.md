@@ -34,7 +34,7 @@ title: "Управление control plane: FAQ"
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   Ответ должен сообщить вам, что Terraform не хочет ничего менять.
+   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество мастер-узлов в параметре `masterNodeGroup.replicas`:
 
