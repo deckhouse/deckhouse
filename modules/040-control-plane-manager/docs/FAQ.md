@@ -34,7 +34,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   The response should tell you that Terraform does not want to change anything.
+   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
 
 1. **In the installer container**, run the following command and specify the required number of replicas using the `masterNodeGroup.replicas` parameter:
 
