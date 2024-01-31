@@ -36,22 +36,24 @@ title: "Управление control plane: FAQ"
 
    Ответ должен сообщить вам, что Terraform не хочет ничего менять.
 
-1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество реплик в параметре `masterNodeGroup.replicas`:
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество мастер-узлов в параметре `masterNodeGroup.replicas`:
 
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST>
    ```
-   Для **Yandex Cloud** необходимо указать `- Auto` в параметре `masterNodeGroup.instanceClass.externalIPAddresses`, равное количеству реплик, например `masterNodeGroup.replicas: 3`:
-   
-   ```bash
-   externalIPAddresses:
-   - "Auto"
-   - "Auto"
-   - "Auto"
-   ```
-   *Параметр `masterNodeGroup.instanceClass.externalIPAddresses` является опциональным.*
-   
+
+   > Для **Yandex Cloud**, при использовании внешних адресов на мастер-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству мастер-узлов. При использовании значения `Auto` (автоматический заказ статических адресов), количество элементов в массиве все равно должно соответствовать количеству мастер-узлов.
+   > 
+   > Например, при трех мастер узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```bash
+   > externalIPAddresses:
+   > - "Auto"
+   > - "Auto"
+   > - "Auto"
+   > ```
+
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
    ```bash

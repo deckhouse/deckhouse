@@ -140,7 +140,7 @@ apiVersions:
 
                   If `externalSubnetID` is set, you must select specific unallocated IP addresses from the specified subnet.
 
-                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used, then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
+                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used (automatic public IP reservation), then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
                 items:
                   type: string
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
