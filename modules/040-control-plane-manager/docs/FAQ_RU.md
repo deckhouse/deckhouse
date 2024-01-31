@@ -50,7 +50,7 @@ title: "Управление control plane: FAQ"
    - "Auto"
    - "Auto"
    ```
-   *Параметр `masterNodeGroup.instanceClass.externalIPAddresses` не является обязательным.*
+   *Параметр `masterNodeGroup.instanceClass.externalIPAddresses` является опциональным.*
    
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
