@@ -43,7 +43,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud**, при использовании внешних адресов на мастер-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству мастер-узлов. При использовании значения `Auto` (автоматический заказ статических адресов), количество элементов в массиве все равно должно соответствовать количеству мастер-узлов.
+   > Для **Yandex Cloud**, при использовании внешних адресов на мастер-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству мастер-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству мастер-узлов.
    > 
    > Например, при трех мастер узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
