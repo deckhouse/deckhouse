@@ -7,19 +7,20 @@ Current falco version is `FALCO_VERSION=0.35.1`.
 To build falco we need to repush used third-party libs to own registry. To do this we need to run specific Dockerfile:
 
 ```dockerfile
-ARG BASE_REDOS_UBI_MINIMAL
-FROM $BASE_REDOS_UBI_MINIMAL
+ARG BASE_ALT_DEV
+FROM $BASE_ALT_DEV
 ARG FALCO_VERSION
 ARG SOURCE_REPO
 
 ENV SOURCE_REPO=${SOURCE_REPO} \
     FALCO_VERSION=${FALCO_VERSION}
     
-RUN dnf install gcc gcc-c++ git make cmake autoconf automake pkg-config patch libtool elfutils-libelf-devel diffutils which perl-FindBin clang llvm rpm-build bpftool rsync wget && \
-    git clone --branch $FALCO_VERSION --depth 1 $SOURCE_REPO/falcosecurity/falco.git && \
+RUN git clone --branch ${FALCO_VERSION} --depth 1 ${SOURCE_REPO}/falcosecurity/falco.git && \
     mkdir -p /falco/build && \
     cd /falco/build && \
-    cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION=$FALCO_VERSION -DUSE_BUNDLED_DEPS=ON /falco && \
+    rm -f /usr/bin/clang
+    ln -s /usr/bin/clang-15 /usr/bin/clang
+    cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION="${FALCO_VERSION}" -DUSE_BUNDLED_DEPS=ON /falco &&
     make package -j4 && \
     mkdir /falco-deps && \
     rm -rf _CPack_Packages && \
@@ -31,7 +32,7 @@ RUN dnf install gcc gcc-c++ git make cmake autoconf automake pkg-config patch li
 To run Dockerfile exec the command:
 
 ```shell
-docker build --build-arg SOURCE_REPO=https://github.com --build-arg BASE_REDOS_UBI_MINIMAL=registry.red-soft.ru/ubi7-minimal --build-arg FALCO_VERSION=${FALCO_VERSION} -t falco-deps .
+docker build --build-arg SOURCE_REPO=https://github.com --build-arg BASE_ALT_DEV=registry.deckhouse.io/base_images/dev-alt:p10 --build-arg FALCO_VERSION=${FALCO_VERSION} -t falco-deps .
 ```
 
 Than copy folder `/falco-deps` from container:

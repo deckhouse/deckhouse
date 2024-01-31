@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   gomod:
-    image: gomods/athens:v0.12.1
+    image: gomods/athens:v0.13.1
     ports:
       - 3000:3000
     environment:
@@ -11,10 +11,3 @@ services:
       - ATHENS_GO_BINARY_ENV_VARS=GOPROXY=proxy.golang.org,direct
     volumes:
       - /data/gomod:/var/data
-
-  npm:
-    image: orlandohohmeier/local-npm:latest
-    ports:
-      - 5080:5080
-    volumes:
-      - /data/local-npm:/data
