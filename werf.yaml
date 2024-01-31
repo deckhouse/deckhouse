@@ -629,7 +629,7 @@ shell:
   setup:
   - |
     cat <<"EOD" > /etc/inputrc
-    {{- .Files.Get "deckhouse/deckhouse-controller/files/inputrc" | nindent 4 }}
+    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
 
     cat <<"EOD" > /etc/bashrc
