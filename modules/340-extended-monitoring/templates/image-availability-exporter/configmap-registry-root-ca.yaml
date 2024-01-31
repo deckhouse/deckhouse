@@ -1,0 +1,12 @@
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
+{{- with .Values.extendedMonitoring.imageAvailability.tlsConfig.registryCA }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-root-ca.crt
+  namespace: d8-monitoring
+data:
+  ca.crt: |
+    {{- . | nindent 4 }}
+{{- end }}
+{{- end }}
