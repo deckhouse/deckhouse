@@ -21,6 +21,7 @@ metadata:
       ssi on;
       ssi_silent_errors on;
       rewrite ^/source/modules/(.*)$ /modules/$1 permanent;
+      rewrite ^/documentation/v1/modules/490-virtualization/(examples|configuration|cr|faq).html(.*)$ /modules/virtualization/stable/$1.html$2 permanent;
       rewrite ^/documentation/v1/modules/490-virtualization/.*$ /modules/virtualization/stable/ permanent;
       rewrite ^/modules/([^./]+)/?$ /modules/$1/stable/ permanent;
       rewrite ^(/en|/ru)?/documentation/v1\.3[0-7](\.[0-9]+)?(/.*)$ /documentation/v1.38$3 permanent;
