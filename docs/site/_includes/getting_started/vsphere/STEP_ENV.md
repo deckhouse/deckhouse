@@ -103,7 +103,7 @@ govc role.create deckhouse \
 ```
 {% endsnippetcut %}
 
-Assign the user the role on the `vCenter` object:
+Assign the role to a user on the `vCenter` object:
 
 {% snippetcut %}
 ```shell

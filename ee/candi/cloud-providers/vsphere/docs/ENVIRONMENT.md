@@ -94,7 +94,7 @@ govc role.create deckhouse \
    $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
 ```
 
-Assign the user the role on the `vCenter` object:
+Assign the role to a user on the `vCenter` object:
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
