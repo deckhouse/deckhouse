@@ -240,6 +240,9 @@ ansible:
 ---
 artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  install:
+  - /binary_replace.sh -i "/usr/bin/ssh" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
@@ -546,7 +549,7 @@ ansible:
 
 ---
 image: dev/install
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALT }}
 git:
 - add: /
   to: /deckhouse
@@ -601,31 +604,51 @@ import:
   add: /deckhouse_digest.txt
   to: /deckhouse/image_digest
   after: setup
+- artifact: dev-alt-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+  - usr/share/ca-certificates/ca-bundle.crt
+  - usr/share/vim
+  - etc/vim
+  - etc/bash_completion.d
+  - etc/bashrc.d/bash_completion.sh
+  - usr/share/bash-completion
+  - usr/bin/vim-console
+- artifact: dev-alt-artifact
+  add: /relocate
+  to: /
+  before: setup
 docker:
   ENV:
     EDITOR: vim
     TF_CLI_CONFIG_FILE: /etc/terraformrc
 shell:
-  beforeInstall:
-  - "apk update && apk add openssh-client gettext bash bash-completion coreutils util-linux sed gawk grep ca-certificates vim git"
-  - "rm -rf /var/cache/apk/*"
   setup:
   - |
     cat <<"EOD" > /etc/inputrc
-    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+    {{- .Files.Get "deckhouse/deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
 
     cat <<"EOD" > /etc/bashrc
     PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
 
-    source /etc/profile.d/bash_completion.sh
+    source /etc/bashrc.d/bash_completion.sh
     EOD
 
+    rm -f /root/.bashrc
     ln -s /etc/bashrc /root/.bashrc
+    rm -f  /.bashrc
     ln -s /etc/bashrc /.bashrc
 
+    ln -fs /usr/bin/vim-console /usr/bin/vim
+    ln -fs /usr/bin/vim-console /usr/bin/vi
+
+    mkdir -p /etc/vim
     cat <<"EOD" > /etc/vim/vimrc.local
-    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+    {{- .Files.Get "deckhouse/deckhouse-controller/files/vimrc.local" | nindent 4 }}
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
