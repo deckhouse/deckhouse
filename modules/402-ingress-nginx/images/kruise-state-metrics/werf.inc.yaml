@@ -1,4 +1,3 @@
-{{- $branch := "master" }}
 {{- $commit := "b081f2ae9e011fd92fd23f6efa209601f5a20a01" }}
 ---
 artifact: kruise-state-metrics
@@ -8,7 +7,7 @@ shell:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
     - export "GOARCH=amd64"
-    - git clone --depth 1 --branch {{ $branch }} {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
+    - git clone {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
     - cd kruise-state-metrics
     - git checkout {{ $commit }}
     - go mod edit -go 1.20
