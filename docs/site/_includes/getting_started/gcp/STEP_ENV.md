@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You need to create a service account so that Deckhouse Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/documentation/v1/modules/030-cloud-provider-gcp/environment.html). Below is a brief sequence of required actions (run them on the **personal computer**):
+You need to create a service account so that Deckhouse Kubernetes Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/documentation/v1/modules/030-cloud-provider-gcp/environment.html). Below is a brief sequence of required actions (run them on the **personal computer**):
 
 {% alert %}
 List of roles required:
