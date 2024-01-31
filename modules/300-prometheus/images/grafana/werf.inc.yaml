@@ -134,6 +134,7 @@ git:
     - '**/*'
 shell:
   install:
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
@@ -161,7 +162,8 @@ shell:
     IFS="," && \
     BUNDLED_PLUGINS={{ $bundledPlugins }} && \
     for plugin in ${BUNDLED_PLUGINS}; do \
-      grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
+      plugin_path="$(find /grafana-plugins -type f -name "${plugin}*")"
+      grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" --pluginUrl ${plugin_path} plugins install ${plugin}; \
     done
   - chmod +r /etc/grafana/grafana.ini
   - export BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
