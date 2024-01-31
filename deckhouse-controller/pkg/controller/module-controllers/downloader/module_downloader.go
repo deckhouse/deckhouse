@@ -362,15 +362,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleRele
 	return meta, err
 }
 
-func (md *ModuleDownloader) ListModules() ([]string, error) {
-	regCli, err := cr.NewClient(md.ms.Spec.Registry.Repo, md.registryOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("get regestry client: %w", err)
-	}
-
-	return regCli.ListTags()
-}
-
 func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
 	tr := tar.NewReader(rc)
 	for {
