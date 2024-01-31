@@ -663,19 +663,19 @@ func (fl fakeLayer) Size() (int64, error) {
 }
 
 func TestSort(t *testing.T) {
-	s1 := updater.DeckhouseRelease{
+	s1 := &d8updater.DeckhouseRelease{
 		Version: semver.MustParse("v1.29.0"),
 	}
-	s2 := updater.DeckhouseRelease{
+	s2 := &d8updater.DeckhouseRelease{
 		Version: semver.MustParse("v1.29.1"),
 	}
-	s3 := updater.DeckhouseRelease{
+	s3 := &d8updater.DeckhouseRelease{
 		Version: semver.MustParse("v1.29.2"),
 	}
-	s4 := updater.DeckhouseRelease{
+	s4 := &d8updater.DeckhouseRelease{
 		Version: semver.MustParse("v1.29.3"),
 	}
-	s5 := updater.DeckhouseRelease{
+	s5 := &d8updater.DeckhouseRelease{
 		Version: semver.MustParse("v1.29.4"),
 	}
 
