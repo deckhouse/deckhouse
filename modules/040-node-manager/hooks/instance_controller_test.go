@@ -26,7 +26,7 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: instance_controller ::", func() {
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.23.1"}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.29.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)

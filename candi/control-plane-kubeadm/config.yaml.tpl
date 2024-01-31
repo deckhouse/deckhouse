@@ -3,9 +3,6 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare "< 1.25" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "CustomResourceValidationExpressions=true" | join "," }}
-{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
@@ -143,9 +140,6 @@ controllerManager:
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -172,9 +166,6 @@ scheduler:
     profiling: "false"
     feature-gates: {{ $featureGates | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}

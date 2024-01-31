@@ -94,7 +94,7 @@ gitWorktree:
 
   - name: "Install kubectl"
     shell: |
-{{- range $k8sVersion := tuple "1.24" "1.27" }}
+{{- range $k8sVersion := tuple "1.25" "1.28" }}
       curl -L https://dl.k8s.io/release/v{{ $k8sVersion }}.{{ index $.CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
       chmod +x /usr/local/bin/kubectl-{{ $k8sVersion }}
 {{- end }}
