@@ -43,7 +43,7 @@ After installation is complete, you will get the `admin` user password for acces
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
 
-You have installed Deckhouse Platform in kind!
+You have installed Deckhouse Kubernetes Platform in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-d8'.
 

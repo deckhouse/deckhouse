@@ -3,7 +3,7 @@
 
 To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-You have to create a service account with {{ page.platform_name[page.lang] }} so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the [documentation](/documentation/v1/modules/030-cloud-provider-azure/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**).
+You have to create a service account with {{ page.platform_name[page.lang] }} so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the [documentation](/documentation/v1/modules/030-cloud-provider-azure/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**).
 
 Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) and perform a `login`.
 

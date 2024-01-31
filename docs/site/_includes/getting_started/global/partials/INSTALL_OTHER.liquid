@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a Docker image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
@@ -186,10 +186,10 @@ kubectl -n d8-ingress-nginx get po
 
 Wait for the Ingress controller Pod to switch to `Ready` state.
 
-You have installed Deckhouse Platform in `kind`!
+You have installed Deckhouse Kubernetes Platform in `kind`!
 {%- else %}
 
-Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+Almost everything is ready for a fully-fledged Deckhouse Kubernetes Platform to work!
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->
