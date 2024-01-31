@@ -16,7 +16,7 @@
         "clusterType": "Cloud",
         "defaultCRI": "Containerd",
         "kind": "ClusterConfiguration",
-        "kubernetesVersion": "1.23",
+        "kubernetesVersion": "1.29",
         "podSubnetCIDR": "10.244.0.0/16",
         "podSubnetNodeCIDRPrefix": "24",
         "serviceSubnetCIDR": "192.168.0.0/16"

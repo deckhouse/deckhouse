@@ -16,8 +16,8 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.g
 +
 +	if remaining < (7 * 24 * time.Hour) {
 +		klog.Warningf("%s %s: [%s %s]: certificate expires in one week. Issuer: %s, Subject: %s, NotBefore: %s, NotAfter: %s",
-+				req.Method, req.RequestURI, req.UserAgent(), req.RemoteAddr,
-+				req.TLS.PeerCertificates[0].Issuer, req.TLS.PeerCertificates[0].Subject, req.TLS.PeerCertificates[0].NotBefore, req.TLS.PeerCertificates[0].NotAfter)
++			req.Method, req.RequestURI, req.UserAgent(), req.RemoteAddr,
++			req.TLS.PeerCertificates[0].Issuer, req.TLS.PeerCertificates[0].Subject, req.TLS.PeerCertificates[0].NotBefore, req.TLS.PeerCertificates[0].NotAfter)
 +	}
 +
  	chains, err := req.TLS.PeerCertificates[0].Verify(optsCopy)

@@ -272,9 +272,6 @@ featureGates:
   ExpandCSIVolumes: true
 {{- end }}
   RotateKubeletServerCertificate: true
-{{- if semverCompare "<1.23" .kubernetesVersion }}
-  EphemeralContainers: true
-{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70

@@ -7,7 +7,6 @@ that we include for now to support in-tree Ceph Volume Provisioner
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
-  {{- if semverCompare ">= 1.24" $version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
@@ -22,34 +21,4 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
-  {{- else }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
-import:
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: setup
-- artifact: common/kubernetes-artifact-{{ $image_version }}
-  add: /src/_output/bin/kube-controller-manager
-  to: /usr/bin/kube-controller-manager
-  before: setup
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt install ca-certificates apt-transport-https gnupg gnupg2 gnupg1 curl -y
-  - curl -sL 'https://download.ceph.com/keys/release.asc' | apt-key add -
-  - echo deb https://download.ceph.com/debian-pacific/ bionic main | tee /etc/apt/sources.list.d/ceph.list
-  - apt-get update
-  - apt-get install -y ceph-common
-  - touch /etc/ceph/ceph.conf /etc/ceph/ceph.keyring
-  - apt-get purge -y --auto-remove curl apt-transport-https gnupg gnupg2 gnupg1
-  - rm -rf /var/lib/apt/lists/*
-docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
-  ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
-  {{- end }}
 {{- end }}
