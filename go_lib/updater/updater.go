@@ -150,9 +150,17 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 		}
 	}
 
-	du.changeNotifiedFlag(true)
+	err := du.changeNotifiedFlag(true)
+	if err != nil {
+		du.logger.Error("change notified flag: %s", err.Error())
+		return false
+	}
+
 	if applyTimeChanged {
-		du.kubeAPI.PatchReleaseApplyAfter((*predictedRelease).GetName(), releaseApplyTime)
+		err = du.kubeAPI.PatchReleaseApplyAfter((*predictedRelease).GetName(), releaseApplyTime)
+		if err != nil {
+			du.logger.Errorf("patch apply after: %s", err.Error())
+		}
 		return false
 	}
 
@@ -359,10 +367,18 @@ func (du *Updater[R]) InManualMode() bool {
 func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool {
 	du.logger.Infof("Applying release %s", (*predictedRelease).GetName())
 
-	du.ChangeUpdatingFlag(true)
-	du.changeNotifiedFlag(false)
+	err := du.ChangeUpdatingFlag(true)
+	if err != nil {
+		du.logger.Error("change updating flag: %s", err.Error())
+		return false
+	}
+	err = du.changeNotifiedFlag(false)
+	if err != nil {
+		du.logger.Error("change notified flag: %s", err.Error())
+		return false
+	}
 
-	err := du.kubeAPI.DeployRelease(*predictedRelease)
+	err = du.kubeAPI.DeployRelease(*predictedRelease)
 	if err != nil {
 		du.logger.Error(err)
 		return false
@@ -453,12 +469,14 @@ func (du *Updater[R]) ApplyForcedRelease() {
 	du.runReleaseDeploy(forcedRelease, currentRelease)
 
 	// remove annotation
-	du.kubeAPI.PatchReleaseAnnotations((*forcedRelease).GetName(), map[string]any{
+	err := du.kubeAPI.PatchReleaseAnnotations((*forcedRelease).GetName(), map[string]any{
 		"release.deckhouse.io/force": nil,
 	})
+	if err != nil {
+		du.logger.Errorf("patch force annotation: %s", err.Error())
+	}
 
 	// Outdate all previous releases
-
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
 			err := du.updateStatus(&release, "", PhaseSuperseded)
@@ -491,9 +509,12 @@ func (du *Updater[R]) ApplyAppliedNowRelease() {
 	du.runReleaseDeploy(appliedNowRelease, currentRelease)
 
 	// remove annotation
-	du.kubeAPI.PatchReleaseAnnotations((*appliedNowRelease).GetName(), map[string]interface{}{
+	err := du.kubeAPI.PatchReleaseAnnotations((*appliedNowRelease).GetName(), map[string]interface{}{
 		"release.deckhouse.io/apply-now": nil,
 	})
+	if err != nil {
+		du.logger.Errorf("patch apply now annotation: %s", err.Error())
+	}
 
 	// Outdate all previous releases
 	for i, release := range du.releases {
@@ -577,10 +598,14 @@ func (du *Updater[R]) patchSuspendedStatus(release R) R {
 		return release
 	}
 
-	du.kubeAPI.PatchReleaseAnnotations(release.GetName(), map[string]any{
+	err := du.kubeAPI.PatchReleaseAnnotations(release.GetName(), map[string]any{
 		"release.deckhouse.io/suspended": nil,
 	})
-	err := du.updateStatus(&release, "", PhaseSuspended)
+	if err != nil {
+		du.logger.Error("patch suspended annotation:", err)
+	}
+
+	err = du.updateStatus(&release, "", PhaseSuspended)
 	if err != nil {
 		du.logger.Error(err)
 	}
@@ -660,26 +685,32 @@ func (du *Updater[R]) updateStatus(release *R, msg, phase string) error {
 	return du.kubeAPI.UpdateReleaseStatus(*release, msg, phase)
 }
 
-func (du *Updater[R]) ChangeUpdatingFlag(fl bool) {
+func (du *Updater[R]) ChangeUpdatingFlag(fl bool) error {
 	if du.releaseData.IsUpdating == fl {
-		return
+		return nil
 	}
 
 	du.releaseData.IsUpdating = fl
-	du.saveReleaseData()
+	return du.saveReleaseData()
 }
 
-func (du *Updater[R]) changeNotifiedFlag(fl bool) {
+func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 	if du.releaseData.Notified == fl {
-		return
+		return nil
 	}
 
 	du.releaseData.Notified = fl
-	du.saveReleaseData()
+	return du.saveReleaseData()
 }
 
-func (du *Updater[R]) saveReleaseData() {
-	du.kubeAPI.SaveReleaseData(du.releaseData)
+func (du *Updater[R]) saveReleaseData() error {
+	var release *R
+
+	if du.predictedReleaseIndex != -1 {
+		release = &du.releases[du.predictedReleaseIndex]
+	}
+
+	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
 }
 
 // for applied now we check less conditions, then for minor release

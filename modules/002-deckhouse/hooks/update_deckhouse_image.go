@@ -165,7 +165,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	if isDeckhousePodReady(dc.GetHTTPClient()) {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
-			deckhouseUpdater.ChangeUpdatingFlag(false)
+			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
 		labels := map[string]string{
