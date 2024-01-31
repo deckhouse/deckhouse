@@ -17,6 +17,7 @@ package deckhouse
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// ConvergeDeckhouseConfiguration – reconciles deckhouse in-cluster configmaps and secrets.
+// This function used in commander-mode, which stores primary configuration in the storage outside of cluster,
+// and periodically reconciles configuration inside cluster to match configuration stored outside of cluster.
 func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID string, clusterConfig []byte, providerClusterConfig []byte) error {
 	tasks := []actions.ManifestTask{
 		{
@@ -73,7 +77,21 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 				return manifests.ClusterUUIDConfigMap(clusterUUID)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+				// NOTE: Uuid configmap uses "more careful" update task,
+				// NOTE:  which will create configmap only if it does not exist,
+				// NOTE:  or update configmap only if actual uuid in configmap does not match target uuid.
+				actualManifest, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifest.(*apiv1.ConfigMap).Name, metav1.GetOptions{})
+				if errors.IsAlreadyExists(err) {
+					if actualManifest.Data[manifests.ClusterUUIDCmKey] != manifest.(*apiv1.ConfigMap).Data[manifests.ClusterUUIDCmKey] {
+						// Update manifest only if update needed
+						return err
+					} else {
+						// Do nothing if manifest is actual
+						return nil
+					}
+				}
+
+				_, err = kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
