@@ -57,7 +57,7 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana panel intervals has been found.
+        summary: Deprecated Grafana panel intervals have been found.
         description: |
           Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
           To list all deprecated panel intervals use the expr `sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0`
@@ -77,7 +77,7 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Deprecated Grafana alerts has been found.
+        summary: Deprecated Grafana alerts have been found.
         description: |
           Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
           To list all deprecated alert rules use the expr `sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0`
@@ -97,7 +97,7 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Potentially outdated Grafana dashboard plugins has been found.
+        summary: Potentially outdated Grafana dashboard plugins have been found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
           To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_external_plugin) > 0`
@@ -120,9 +120,7 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
         plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
-        summary: Potentially outdated Grafana plugins has been found.
+        summary: Potentially outdated Grafana plugins have been found.
         description: |
           Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
           To list all potentially outdated plugins use the expr `sum by (plugin) (d8_grafana_custom_plugins) > 0`
-
-          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
