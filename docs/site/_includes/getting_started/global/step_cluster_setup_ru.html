@@ -51,6 +51,8 @@
       type="text" id="proxyHttpURI"
       name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
     <span class="info">
          Оставьте пустым, если proxy-сервер для HTTP-трафика не используется.
       </span>
@@ -65,6 +67,8 @@
       type="text" id="proxyHttpsURI"
       name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
     <span class="info">
         Оставьте пустым, если proxy-сервер для HTTPS-трафика не используется.
       </span>
@@ -79,6 +83,8 @@
       type="text" id="noProxyAddressList"
       name="noProxyAddressList" placeholder=""
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адреса должны совпадать с шаблоном <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>example.com</code>.</span>
     <span class="info">
          Укажите список IP-адресов, сетей и доменных имен, к которым есть доступ напрямую, без использования proxy-сервера. Для настройки wildcard-доменов используйте написание вида ".example.com" (пример: <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>). Оставьте пустым, если таких исключений нет.
       </span>
