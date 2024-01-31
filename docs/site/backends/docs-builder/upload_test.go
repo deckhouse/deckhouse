@@ -48,6 +48,21 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 		{
+			"docs/install.md",
+			"/app/hugo/content/moduleName/stable/install.md",
+			true,
+		},
+		{
+			"docs/README_RU.md",
+			"/app/hugo/content/moduleName/stable/README.ru.md",
+			true,
+		},
+		{
+			"docs",
+			"/app/hugo/content/moduleName/stable",
+			true,
+		},
+		{
 			"not-docs/file.ext",
 			"",
 			false,
@@ -70,6 +85,11 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		{
 			"./openapi/config-values.yaml",
 			"/app/hugo/data/modules/moduleName/stable/openapi/config-values.yaml",
+			true,
+		},
+		{
+			"openapi",
+			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
 		{

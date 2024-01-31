@@ -29,7 +29,7 @@
 {% asset featherlight.min.css %}
 
 <!-- scripts -->
-{%- unless site.mode == "local" %}
+{%- unless site.mode == "module" %}
 {%- if page.lang == "ru" %}
     <script src="https://embed.small.chat/T037FSPS9C02AE1YJWQ2.js" async></script>
 {%- else %}
@@ -174,7 +174,7 @@
     });
 </script>
 
-{%- unless site.mode == "local" %}
+{%- unless site.mode == "module" %}
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript" >
     (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};

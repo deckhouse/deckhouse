@@ -17,7 +17,6 @@ package release
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -41,7 +40,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	coordinationv1 "k8s.io/client-go/listers/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,6 +56,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 // Controller is the controller implementation for ModuleRelease resources
@@ -65,6 +68,8 @@ type Controller struct {
 	// d8ClientSet is a clientset for our own API group
 	d8ClientSet versioned.Interface
 
+	docsBuilder *docs_builder.Client
+
 	moduleReleasesLister       d8listers.ModuleReleaseLister
 	moduleReleasesSynced       cache.InformerSynced
 	moduleSourcesLister        d8listers.ModuleSourceLister
@@ -73,13 +78,16 @@ type Controller struct {
 	moduleUpdatePoliciesSynced cache.InformerSynced
 	modulePullOverridesLister  d8listers.ModulePullOverrideLister
 	modulePullOverridesSynced  cache.InformerSynced
+	leaseLister                coordinationv1.LeaseLister
+	leaseInformer              cache.SharedIndexInformer
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
+	workqueue      workqueue.RateLimitingInterface
+	leaseWorkqueue workqueue.RateLimitingInterface
 
 	logger logger.Logger
 
@@ -93,6 +101,7 @@ type Controller struct {
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
+	httpClient    d8http.Client
 }
 
 const (
@@ -104,6 +113,8 @@ const (
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	manualApprovalRequired = "Waiting for manual approval"
 	waitingForWindow       = "Release is waiting for the update window: %s"
+	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
+	namespace              = "d8-system"
 )
 
 // NewController returns a new sample controller
@@ -114,6 +125,7 @@ func NewController(ks kubernetes.Interface,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	mv moduleValidator,
+	httpClient d8http.Client,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -122,9 +134,22 @@ func NewController(ks kubernetes.Interface,
 
 	lg := log.WithField("component", "ModuleReleaseController")
 
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		ks,
+		15*time.Minute,
+		informers.WithNamespace(namespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = docsLeaseLabel
+		}),
+	)
+	leaseInformerFactory := factory.Coordination().V1().Leases()
+	leaseLister := leaseInformerFactory.Lister()
+	leaseInformer := leaseInformerFactory.Informer()
+
 	controller := &Controller{
 		kubeclientset:              ks,
 		d8ClientSet:                d8ClientSet,
+		docsBuilder:                docs_builder.NewClient(httpClient),
 		moduleReleasesLister:       moduleReleaseInformer.Lister(),
 		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
 		moduleSourcesLister:        moduleSourceInformer.Lister(),
@@ -133,7 +158,10 @@ func NewController(ks kubernetes.Interface,
 		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
 		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
+		leaseLister:                leaseLister,
+		leaseInformer:              leaseInformer,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
+		leaseWorkqueue:             workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
 
 		sourceModules: make(map[string]string),
@@ -165,6 +193,13 @@ func NewController(ks kubernetes.Interface,
 		log.Fatalf("add event handler failed: %s", err)
 	}
 
+	_, err = leaseInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueLease,
+	})
+	if err != nil {
+		log.Fatalf("add event handler failed: %s", err)
+	}
+
 	return controller
 }
 
@@ -179,12 +214,24 @@ func (c *Controller) enqueueModuleRelease(obj interface{}) {
 	c.workqueue.Add(key)
 }
 
+func (c *Controller) enqueueLease(obj interface{}) {
+	var key cache.ObjectName
+	var err error
+	if key, err = cache.ObjectToName(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.logger.Debugf("enqueue Lease: %s", key)
+	c.leaseWorkqueue.Add(key)
+}
+
 func (c *Controller) emitRestart(msg string) {
 	c.m.Lock()
 	c.delayTimer.Reset(3 * time.Second)
 	c.restartReason = msg
 	c.m.Unlock()
 }
+
 func (c *Controller) restartLoop(ctx context.Context) {
 	for {
 		c.m.Lock()
@@ -216,6 +263,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+	defer c.leaseWorkqueue.ShutDown()
 
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
@@ -232,13 +280,16 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	go c.restartLoop(ctx)
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced); !ok {
+	go c.leaseInformer.Run(ctx.Done())
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced,
+		c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced, c.leaseInformer.HasSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
 	c.logger.Infof("Starting workers count: %d", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
+		go wait.UntilWithContext(ctx, c.runLeaseWorker, time.Second)
 	}
 
 	<-ctx.Done()
@@ -247,6 +298,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 func (c *Controller) runWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
+	}
+}
+
+func (c *Controller) runLeaseWorker(ctx context.Context) {
+	for c.processNextLease(ctx) {
 	}
 }
 
@@ -297,7 +353,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 		return err
 	}(obj)
-
 	if err != nil {
 		c.logger.Errorf("ModuleRelease reconcile error: %s", err.Error())
 		return true
@@ -364,6 +419,11 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 		return ctrl.Result{}, nil
 
 	case v1alpha1.PhaseDeployed:
+		err := c.sendDocumentation(ctx, mr)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
+		}
+
 		// add finalizer and status label
 		if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
 			controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
@@ -579,36 +639,62 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	return ctrl.Result{}, nil
 }
 
-// nolint: revive
-func (c *Controller) sendDocumentation(ctx context.Context, _ string) {
-	return
-	// TODO: placeholder for documentation
-
-	// nolint: govet
-	list, err := c.kubeclientset.DiscoveryV1().EndpointSlices("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=documentation"})
-	if err != nil {
-		// TODO: handle error
-		panic(err)
+func (c *Controller) processNextLease(ctx context.Context) bool {
+	obj, shutdown := c.leaseWorkqueue.Get()
+	if shutdown {
+		return false
 	}
 
-	for _, eps := range list.Items {
-		var port int32
-		for _, p := range eps.Ports {
-			// TODO: find builder port
-			if *p.Name == "???" {
-				port = *p.Port
-			}
+	err := func(obj interface{}) error {
+		defer c.leaseWorkqueue.Done(obj)
+		var key cache.ObjectName
+		var ok bool
+		var req ctrl.Request
+
+		if key, ok = obj.(cache.ObjectName); !ok {
+			c.leaseWorkqueue.Forget(obj)
+			c.logger.Errorf("expected cache.ObjectName in workqueue but got %#v", obj)
+			return nil
 		}
 
-		if port == 0 {
+		req.Namespace, req.Name = key.Parts()
+		result, err := c.leaseCreateReconcile(ctx, req)
+		switch {
+		case result.RequeueAfter != 0:
+			c.leaseWorkqueue.AddAfter(key, result.RequeueAfter)
+
+		case result.Requeue:
+			c.leaseWorkqueue.AddRateLimited(key)
+
+		default:
+			c.leaseWorkqueue.Forget(key)
+		}
+
+		return err
+	}(obj)
+	if err != nil {
+		c.logger.Errorf("Lease reconcile error: %s", err.Error())
+		return true
+	}
+
+	return true
+}
+
+func (c *Controller) leaseCreateReconcile(_ context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	releases, err := c.moduleReleasesLister.List(labels.Everything())
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModuleReleases failed: %w", err)
+	}
+
+	for _, release := range releases {
+		if release.Status.Phase != v1alpha1.PhaseDeployed {
 			continue
 		}
-		for _, ep := range eps.Endpoints {
-			for _, addr := range ep.Addresses {
-				_, _ = http.DefaultClient.Post(fmt.Sprintf("http://%s:%d/???", addr, port), "TODO", nil)
-			}
-		}
+
+		c.enqueueModuleRelease(release)
 	}
+
+	return ctrl.Result{}, nil
 }
 
 func (c *Controller) Reconcile(ctx context.Context, releaseName string) (ctrl.Result, error) {
@@ -1063,4 +1149,67 @@ func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
 type moduleValidator interface {
 	ValidateModule(m *addonmodules.BasicModule) error
 	GetValuesValidator() *validation.ValuesValidator
+}
+
+func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
+	addrs, err := c.getDocsBuilderAddresses(ctx)
+	if err != nil {
+		return fmt.Errorf("get docs builder addresses: %w", err)
+	}
+
+	if len(addrs) == 0 {
+		return nil
+	}
+
+	ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
+	if err != nil {
+		return fmt.Errorf("get module source: %w", err)
+	}
+
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	for _, addr := range addrs {
+		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
+	list, err := c.kubeclientset.CoordinationV1().Leases("d8-system").List(ctx, metav1.ListOptions{LabelSelector: docsLeaseLabel})
+	if err != nil {
+		return nil, fmt.Errorf("list leases: %w", err)
+	}
+
+	for _, lease := range list.Items {
+		if lease.Spec.HolderIdentity == nil {
+			continue
+		}
+
+		addresses = append(addresses, "http://"+*lease.Spec.HolderIdentity)
+	}
+
+	return
+}
+
+func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
+	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
+	if err != nil {
+		return fmt.Errorf("get documentation archive: %w", err)
+	}
+	defer docsArchive.Close()
+
+	err = c.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
+	if err != nil {
+		return fmt.Errorf("send documentation: %w", err)
+	}
+
+	err = c.docsBuilder.BuildDocumentation(baseAddr)
+	if err != nil {
+		return fmt.Errorf("build documentation: %w", err)
+	}
+
+	return nil
 }
