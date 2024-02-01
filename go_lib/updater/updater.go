@@ -369,24 +369,24 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 
 	err := du.ChangeUpdatingFlag(true)
 	if err != nil {
-		du.logger.Error("change updating flag:", err.Error())
+		du.logger.Error("change updating flag: ", err.Error())
 		return false
 	}
 	err = du.changeNotifiedFlag(false)
 	if err != nil {
-		du.logger.Error("change notified flag:", err.Error())
+		du.logger.Error("change notified flag: ", err.Error())
 		return false
 	}
 
 	err = du.kubeAPI.DeployRelease(*predictedRelease)
 	if err != nil {
-		du.logger.Error("deploy release:", err)
+		du.logger.Error("deploy release: ", err)
 		return false
 	}
 
 	err = du.updateStatus(predictedRelease, "", PhaseDeployed)
 	if err != nil {
-		du.logger.Error("update status to deployed:", err)
+		du.logger.Error("update status to deployed: ", err)
 		return false
 	}
 
@@ -394,7 +394,7 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 		// skip last deployed release
 		err = du.updateStatus(currentRelease, "", PhaseSuperseded)
 		if err != nil {
-			du.logger.Error("update status to superseded:", err)
+			du.logger.Error("update status to superseded: ", err)
 			return false
 		}
 	}
@@ -405,7 +405,7 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 			// skip not-deployed patches
 			err = du.updateStatus(&release, "", PhaseSkipped)
 			if err != nil {
-				du.logger.Error("update status to skipped:", err)
+				du.logger.Error("update status to skipped: ", err)
 				return false
 			}
 		}
