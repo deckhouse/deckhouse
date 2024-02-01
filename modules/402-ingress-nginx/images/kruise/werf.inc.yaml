@@ -11,6 +11,9 @@ git:
         - '**/*'
     includePaths:
       - patches
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64

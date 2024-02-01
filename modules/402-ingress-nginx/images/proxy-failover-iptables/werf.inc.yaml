@@ -21,10 +21,13 @@ git:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
     - cd /workdir
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
 ---
 image: {{ $.ModuleName }}/proxy-failover-iptables
 fromImage: common/distroless
