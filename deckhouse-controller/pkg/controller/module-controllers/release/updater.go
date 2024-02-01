@@ -70,7 +70,7 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 
 	newRelease, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
 	if err != nil {
-		//prevent the object has been modified error
+		// prevents the object has been modified error
 		*release = *newRelease
 	}
 	return err
