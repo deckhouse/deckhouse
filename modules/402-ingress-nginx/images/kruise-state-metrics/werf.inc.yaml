@@ -15,7 +15,7 @@ shell:
     - go get -u golang.org/x/crypto@v0.14.0
     - go mod tidy
     - go mod vendor
-    - GOPROXY={{ $.GOPROXY }} go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
+    - go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics
 ---
