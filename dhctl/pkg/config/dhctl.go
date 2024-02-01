@@ -16,9 +16,9 @@ package config
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"sigs.k8s.io/yaml"
 )
 
@@ -59,8 +59,7 @@ func ParseDHCTLConfig(configData string, schemaStore *SchemaStore, opts DHCTLCon
 		panic("ParseSSHConfigFromData operation currently supported only in commander mode")
 	}
 
-	// todo: reuse global regexp
-	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(strings.TrimSpace(configData), -1)
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 
 	config := &DHCTLConfig{}
 
@@ -102,10 +101,6 @@ func ParseDHCTLConfig(configData string, schemaStore *SchemaStore, opts DHCTLCon
 
 	if config.SSHConfig == nil {
 		return nil, fmt.Errorf("SSHConfig required")
-	}
-
-	if len(config.SSHHosts) == 0 {
-		return nil, fmt.Errorf("SSHHosts required")
 	}
 
 	return config, nil
