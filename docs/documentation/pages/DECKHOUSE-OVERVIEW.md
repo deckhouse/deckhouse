@@ -3,16 +3,18 @@ title: Overview
 permalink: en/deckhouse-overview.html
 ---
 
-Welcome to the home page of the Deckhouse Kubernetes cluster management platform documentation! We recommend starting with the [Getting started]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
+Приветствуем вас на главной странице документации Deckhouse - платформы для управления Kubernetes-кластерами. Если вы еще не использовали платформу, рекомендуем начать с раздела [Быстрый старт]({% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/gs/), где вы найдете пошаговые инструкции по развертыванию платформы на любой инфраструктуре.
 
-Here are some tips on how to find what you need:
-- Note that the documentation is version-specific and may differ from version to version. You can select the Deckhouse version in the drop-down list at the top right of the page.
-- If you know what you're looking for exactly, use the search box at the top of the page.
-- Check [this list](revision-comparison.html) if you are looking for information on a particular module.
-- The menu on the left is for searching by scope. Try to guess which section might contain what you are looking for.
+Как быстро найти то, что нужно:
+- Документация по Deckhouse разных версий может отличаться. Выберите нужную версию в выпадающем списке вверху страницы. В списке доступны актуальные версии документации по Deckhouse.
+- Если знаете, что ищете - используйте поиск.
+- Если нужен конкретный модуль - найдите его в [списке](revision-comparison.html).
+- Для поиска по области применения - воспользуйтесь меню.
 
-Can't find what you were looking for? Don't give up. Visit our [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}) for help! There you will definitely find an answer to your problem.
+Если возникнут вопросы, вы можете обратиться за помощью в наш [тelegram-канал]({{ site.social_links[page.lang]['telegram'] }}). Мы обязательно поможем и проконсультируем.
 
-Users of the Enterprise Edition of the platform can [email us](mailto:support@deckhouse.io) — we'll be sure to help.
+Если вы используете Enterprise версию, можете написать нам [на почту](mailto:support@deckhouse.ru), мы также окажем вам поддержку.
 
-Want to make Deckhouse better? Create an [issue](https://github.com/deckhouse/deckhouse/issues/), [discuss](https://github.com/deckhouse/deckhouse/discussions) your idea with us, or even [suggest a solution](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md)!
+Хотите улучшить Deckhouse? Можете завести [задачу](https://github.com/deckhouse/deckhouse/issues/), предложить свою [идею](https://github.com/deckhouse/deckhouse/discussions) или [решение](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md) на GitHub.
+
+А если вам хочется большего, присоединяйтесь к нашей [команде](https://job.flant.ru/)! Мы рады новым специалистам.
