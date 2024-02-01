@@ -97,7 +97,7 @@ func TestParseSSHConfig(t *testing.T) {
 			config:  invalidSSHConfigNoKeys,
 			wantErr: true,
 		},
-		"invalid config: no hosts": {
+		"invalid config: empty host": {
 			config:  invalidSSHConfigNoHosts,
 			wantErr: true,
 		},
@@ -189,4 +189,6 @@ sshAgentPrivateKeys:
     some-key
     -----END RSA PRIVATE KEY-----
   passphrase: spicyburrito
+apiVersion: dhctl.deckhouse.io/v1
+kind: SSHHost
 `
