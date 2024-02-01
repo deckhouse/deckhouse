@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %v", ciliumNs, CiliumAgentDS.Generation)
+	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %d", ciliumNs, uint64(CiliumAgentDS.Generation))
 
 	CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=agent",
@@ -67,7 +67,7 @@ func main() {
 	}
 	CurrentPod := CiliumAgentPodsOnSameNode.Items[0]
 	log.Infof("[SafeUpdater] Name of pod which running on the same node is %s", CurrentPod.Name)
-	log.Infof("[SafeUpdater] Generation of pod on same node is %v", CurrentPod.Generation)
+	log.Infof("[SafeUpdater] Generation of pod on same node is %d", uint64(CurrentPod.Generation))
 
 	if CiliumAgentDS.Generation != CurrentPod.Generation {
 		log.Infof("[SafeUpdater] Generation on DS and Pod are not the same. Deleting Pod %s", CurrentPod.Name)
