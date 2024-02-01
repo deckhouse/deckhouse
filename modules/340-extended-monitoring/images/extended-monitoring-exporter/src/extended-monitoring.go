@@ -45,6 +45,7 @@ const (
 	daemonsetunmisscheduled                               = "daemonsetunmisscheduled"
 	nodecpuusage                                          = "nodecpuusage"
 	nodememory                                            = "nodememory"
+	kube_node                                             = "node"
 )
 
 type exporter struct {
@@ -293,6 +294,54 @@ var (
 		},
 		[]string{"daemonset_name"},
 	)
+
+	extended_monitoring_pod_threshold = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_pod_threshold",
+			Help: "pod threshold",
+		},
+		[]string{"pod_name"},
+	)
+
+	deployment_threshold = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_deployment_threshold",
+			Help: "deployment_threshold",
+		},
+		[]string{"deployment_name"},
+	)
+
+	extended_monitoring_node_threshold = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_node_threshold",
+			Help: "node_threshold",
+		},
+		[]string{"statefulset_name"},
+	)
+
+	extended_monitoring_statefulset_threshold = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_statefulset_threshold",
+			Help: "statefulset_threshold",
+		},
+		[]string{"statefulset_name"},
+	)
+
+	extended_monitoring_statefulset_enabled = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_statefulset_threshold",
+			Help: "statefulset_threshold",
+		},
+		[]string{"statefulset_name"},
+	)
+
+	extended_monitoring_node_enabled = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "extended_monitoring_node_enabled",
+			Help: "is_node_enabled?",
+		},
+		[]string{"node_name"},
+	)
 )
 
 func init() {
@@ -300,6 +349,12 @@ func init() {
 	prometheus.MustRegister(deploymentMetric)
 	prometheus.MustRegister(statefulsetMetric)
 	prometheus.MustRegister(daemonsetMetric)
+	prometheus.MustRegister(extended_monitoring_pod_threshold)
+	prometheus.MustRegister(deployment_threshold)
+	prometheus.MustRegister(extended_monitoring_node_threshold)
+	prometheus.MustRegister(extended_monitoring_statefulset_threshold)
+	prometheus.MustRegister(extended_monitoring_statefulset_enabled)
+	prometheus.MustRegister(extended_monitoring_node_enabled)
 }
 
 func cpuUsage(prometheusURL, namespace, podName string) {
@@ -477,6 +532,13 @@ func daemonsetMetrics(prometheusURL, namespace, daemonsetName string) {
 	go query(prometheusURL, qeuryUnmisscheduled, daemonsetunmisscheduled, daemonsetName, namespace)
 	go query(prometheusURL, qeuryMisscheduled, daemonsetunmisscheduled, daemonsetName, namespace)
 
+}
+
+func nodeMetrics(prometheusURL, namespace, nodeName string) {
+	queryString := fmt.Sprintf(
+		`kube_node_info`,
+	)
+	go query(prometheusURL, queryString, kube_node, nodeName, namespace)
 }
 
 func query(prometheusURL, query string, objectType string, objName string, namespace string) {
