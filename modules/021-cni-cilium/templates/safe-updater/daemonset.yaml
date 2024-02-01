@@ -3,6 +3,18 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 ---
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: safe-updater
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "safe-updater" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "safe-updater" "pause" .Values.cniCilium.resourcesManagement ) | nindent 2}}
+{{- end }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -27,7 +39,7 @@ spec:
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       restartPolicy: Never
       terminationGracePeriodSeconds: 1
       imagePullSecrets:
@@ -36,12 +48,18 @@ spec:
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
       - name: prepull-image
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
         command:
         - exit
-        - 0
+        args:
+        - "0"
         terminationMessagePolicy: FallbackToLogsOnError
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: safe-updater
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "safeUpdater") }}
         imagePullPolicy: IfNotPresent
         command:
@@ -52,19 +70,19 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        securityContext:
-          privileged: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- include "safe_updater_resources" . | nindent 12 }}
       containers:
-      - name: safe-updater
+      - name: pause
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "pause") }}
         resources:
           requests:
             cpu: "10m"
             memory: "1Mi"
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 
 
 

@@ -25,6 +25,8 @@ shell:
   - export CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o safe-updater .
+  - chown 64535:64535 /src/safe-updater
+  - chmod 0700 /src/safe-updater
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -34,4 +36,5 @@ import:
   to: /safe-updater
   before: install
 docker:
+  USER: 64535
   ENTRYPOINT: ["/safe-updater"]
