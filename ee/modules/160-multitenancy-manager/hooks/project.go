@@ -25,15 +25,13 @@ import (
 )
 
 const (
-	defaultProjectTemplatePath           = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
-	secureProjectTemplatePath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
-	secureWithDedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	userResourcesTemplatePath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 	// Alternative path is needed to run tests in ci\cd pipeline
-	alternativeDefaultProjectTemplatePath           = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
-	alternativeSecureProjectTemplatePath            = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
-	alternativeSecureWithDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	alternativeUserResourcesTemplatePath            = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 )
 
 var onceCreateDefaultTemplates sync.Once
@@ -157,15 +155,8 @@ func createDefaultProjectTemplate(input *go_hook.HookInput) {
 			return
 		}
 
-		secureWithDedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(secureWithDedicatedNodesTemplatePath, alternativeSecureWithDedicatedNodesTemplatePath)
-		if err != nil {
-			klog.Errorf("error reading default ProjectTemplate: %v", err)
-			return
-		}
-
 		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
 		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
-		input.PatchCollector.Create(secureWithDedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
 	}
 
 	onceCreateDefaultTemplates.Do(onceBody)

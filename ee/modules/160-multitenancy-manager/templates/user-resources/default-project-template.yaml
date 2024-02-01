@@ -6,42 +6,52 @@ metadata:
 spec:
   parametersSchema:
     openAPIV3Schema:
-      requests:
+      required:
+      - administrators
+      - resourceQuota
+      resourceQuota:
         type: object
+        description: |
+          Resource quota for the project.
+          Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
         properties:
-          cpu:
-            oneOf:
-              - type: number
-                format: int
-              - type: string
-            pattern: "^[0-9]+m?$"
-          memory:
-            oneOf:
-              - type: number
-                format: int
-              - type: string
-            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          storage:
-            type: string
-            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-      limits:
-        type: object
-        properties:
-          cpu:
-            oneOf:
-              - type: number
-                format: int
-              - type: string
-            pattern: "^[0-9]+m?$"
-          memory:
-            oneOf:
-              - type: number
-                format: int
-              - type: string
-            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          requests:
+            type: object
+            properties:
+              cpu:
+                oneOf:
+                  - type: number
+                    format: int
+                  - type: string
+                pattern: "^[0-9]+m?$"
+              memory:
+                oneOf:
+                  - type: number
+                    format: int
+                  - type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+              storage:
+                type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          limits:
+            type: object
+            properties:
+              cpu:
+                oneOf:
+                  - type: number
+                    format: int
+                  - type: string
+                pattern: "^[0-9]+m?$"
+              memory:
+                oneOf:
+                  - type: number
+                    format: int
+                  - type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       administrators:
         description: |
-          Who has the access to the project
+          Users and groups that will have admin access to the project.
+          Administrators are eligible to manage roles and access to the project.
         type: array
         items:
           type: object
@@ -65,20 +75,40 @@ spec:
               type: string
       networkPolicy:
         description: |
-          To create network policy or not.
+          NotRestricted — Allow all traffic by default.
+          Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
         enum:
           - Isolated
           - NotRestricted
         type: string
         default: Isolated
-      extendedMoniroting:
+      podSecurityProfile:
         description: |
-          Extended monitoring (set the label extended-monitoring.deckhouse.io/enabled on the namespace or not).
+          Pod security profile name.
+
+          The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
+          - Privileged — Unrestricted policy. Provides the widest possible permission level;
+          - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
+          - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+        type: string
+        default: Baseline
+        enum:
+          - Baseline
+          - Restricted
+          - Privileged
+      extendedMonitoringEnabled:
+        description: |
+          Enable extended monitoring for the project.
+          When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
+           - Controller outages and restarts
+           - 5xx errors in ingress-nginx
+           - Low free space on the persistent volumes
         type: boolean
         default: true
-      clusterLogDestnationName:
+      clusterLogDestinationName:
         description: |
-          The value for the clusterlogdestination in the podloggingconfig.
+          If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
+          The names of the custom resource must be specified in the `clusterLogDestinationName` field.
         type: string
   resourcesTemplate: |
     ---
@@ -86,8 +116,9 @@ spec:
     kind: Namespace
     metadata:
       {{ with .projectName }}name: {{ . }}{{ end }}
-      annotations:
-        {{ if .parameters.extendedMoniroting }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+      labels:
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
     {{- range $administrator := .parameters.administrators }}
     ---
     apiVersion: deckhouse.io/v1alpha1
@@ -109,11 +140,11 @@ spec:
       name: all-pods
     spec:
       hard:
-        {{ with .parameters.requests.cpu }}requests.cpu: {{ . }}{{ end }}
-        {{ with .parameters.requests.memory }}requests.memory: {{ . }}{{ end }}
-        {{ with .parameters.requests.storage }}requests.storage: {{ . }}{{ end }}
-        {{ with .parameters.limits.cpu }}limits.cpu: {{ . }}{{ end }}
-        {{ with .parameters.limits.memory }}limits.memory: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.cpu }}requests.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.memory }}requests.memory: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.storage }}requests.storage: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.cpu }}limits.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
     # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -121,7 +152,7 @@ spec:
     kind: NetworkPolicy
     apiVersion: networking.k8s.io/v1
     metadata:
-      name: deny-all-except-current-namespace
+      name: isolated
     spec:
       podSelector:
         matchLabels: {}
@@ -130,20 +161,31 @@ spec:
         - Egress
       ingress:
         - from:
+            # Traffic within the project is allowed.
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "{{ .projectName }}"
+            # Metrics scraping from Prometheus.
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "d8-monitoring"
                 podSelector:
                   matchLabels:
                     app: prometheus
+            # Ingress nginx traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-ingress-nginx"
+                podSelector:
+                  matchLabels:
+                    app: controller
       egress:
+        # Traffic within the project is allowed.
         - to:
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "{{ .projectName }}"
+        # Allow DNS traffic (both kube-dns and nodelocaldns).
         - to:
             - namespaceSelector:
                 matchLabels:
@@ -154,7 +196,7 @@ spec:
     {{- end }}
     ---
     # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
-    {{- with .parameters.clusterLogDestnationName }}
+    {{- with .parameters.clusterLogDestinationName }}
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -163,3 +205,20 @@ spec:
       clusterDestinationRefs:
         - {{ . }}
     {{- end }}
+    ---
+    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      policies:
+        requiredResources:
+          requests:
+            - cpu
+            - memory
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: "{{ .projectName }}"

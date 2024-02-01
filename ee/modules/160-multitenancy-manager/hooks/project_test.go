@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
-	f := HookExecutionConfigInit(`{"multitenancyManager":{"internal":{"projects":[]}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"multitenancyManager":{}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha2", "Project", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectType", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ProjectTemplate", false)
