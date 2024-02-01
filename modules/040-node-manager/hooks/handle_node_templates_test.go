@@ -120,6 +120,7 @@ metadata:
 			          "kind": "Node",
 			          "metadata": {
 			            "annotations": {
+			              "cluster-autoscaler.kubernetes.io/scale-down-disabled": "true",
 			              "node-manager.deckhouse.io/last-applied-node-template": "{\"annotations\":{},\"labels\":{},\"taints\":[]}"
 			            },
 			            "labels": {
@@ -421,6 +422,7 @@ metadata:
   name: wor-ker
   annotations:
     a: a
+    cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
     node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"key":"a","effect":"NoSchedule"}]}'
   labels:
     a: a
