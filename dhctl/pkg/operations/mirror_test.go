@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
@@ -54,6 +55,7 @@ func TestMirrorE2E_Insecure(t *testing.T) {
 	targetHost, targetRepoPath, targetBlobHandler := setupEmptyRegistryRepo(false)
 
 	createDeckhouseControllersAndInstallersInRegistry(t, sourceHost+sourceRepoPath)
+	createTrivyVulnerabilityDatabaseInRegistry(t, sourceHost+sourceRepoPath, true, false)
 	createDeckhouseReleaseChannelsInRegistry(t, sourceHost+sourceRepoPath)
 
 	pullCtx := &mirror.Context{
@@ -115,6 +117,8 @@ func setupEmptyRegistryRepo(useTLS bool) (host, repoPath string, blobHandler *Li
 }
 
 func createDeckhouseReleaseChannelsInRegistry(t *testing.T, repo string) {
+	t.Helper()
+
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "alpha", "v1.56.5")
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "beta", "v1.56.5")
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "early-access", "v1.55.7")
@@ -122,6 +126,18 @@ func createDeckhouseReleaseChannelsInRegistry(t *testing.T, repo string) {
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "rock-solid", "v1.55.7")
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "v1.55.7", "v1.55.7")
 	createDeckhouseReleaseChannelImageInRegistry(t, repo+"/release-channel", "v1.56.5", "v1.56.5")
+}
+
+func createTrivyVulnerabilityDatabaseInRegistry(t *testing.T, repo string, insecure, useTLS bool) {
+	t.Helper()
+	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authn.Anonymous, insecure, useTLS)
+
+	trivyDBImageTag := repo + "/security/trivy-db:2"
+	ref, err := name.ParseReference(trivyDBImageTag, nameOpts...)
+	require.NoError(t, err)
+	wantImage, err := random.Image(256, 1)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(ref, wantImage, remoteOpts...))
 }
 
 func createDeckhouseControllersAndInstallersInRegistry(t *testing.T, repo string) {

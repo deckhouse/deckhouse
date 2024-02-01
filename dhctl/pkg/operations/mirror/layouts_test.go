@@ -14,31 +14,24 @@
 
 package mirror
 
-import "strings"
+import (
+	"os"
+	"path/filepath"
+	"testing"
 
-func isImageNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
+	"github.com/stretchr/testify/require"
+)
 
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "MANIFEST_UNKNOWN") || strings.Contains(errMsg, "404 Not Found")
-}
+func TestCreateEmptyImageLayoutAtPath(t *testing.T) {
+	p, err := os.MkdirTemp(os.TempDir(), "create_layout_test")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(p)
+	})
 
-func isRepoNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "NAME_UNKNOWN")
-}
-
-func IsTrivyMediaTypeNotAllowedError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "MANIFEST_INVALID") && strings.Contains(errMsg, "vnd.aquasec.trivy")
+	_, err = CreateEmptyImageLayoutAtPath(p)
+	require.NoError(t, err)
+	require.DirExists(t, p)
+	require.FileExists(t, filepath.Join(p, "oci-layout"))
+	require.FileExists(t, filepath.Join(p, "index.json"))
 }
