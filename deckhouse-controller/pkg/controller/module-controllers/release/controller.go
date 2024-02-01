@@ -60,7 +60,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -522,6 +521,8 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
 	}
+
+	c.logger.Debugf("%+v", nConfig) // TODO: remove this
 	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
 	releaseUpdater := newUpdater(c.logger, nConfig, kubeAPI)
 
@@ -685,6 +686,39 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		//if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
 		//	return ctrl.Result{Requeue: true}, e
 		//}
+
+		releaseUpdater.SetMode(policy.Spec.Update.Mode)
+
+		if releaseUpdater.PredictedReleaseIsPatch() {
+			// patch release does not respect update windows or ManualMode
+			if !releaseUpdater.ApplyPredictedRelease(nil) {
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			}
+
+			err = releaseUpdater.ChangeUpdatingFlag(false)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, fmt.Errorf("change updating flag: %w", err)
+			}
+
+			return ctrl.Result{}, nil
+		}
+
+		var windows update.Windows
+		if !releaseUpdater.InManualMode() {
+			windows = policy.Spec.Update.Windows
+		}
+
+		if !releaseUpdater.ApplyPredictedRelease(windows) {
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		err = releaseUpdater.ChangeUpdatingFlag(false)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("change updating flag: %w", err)
+		}
+
+		modulesChangedReason = "a new module release found"
+
 	} else {
 		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 			return ctrl.Result{Requeue: true}, e

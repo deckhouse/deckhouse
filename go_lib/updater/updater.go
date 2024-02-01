@@ -704,13 +704,13 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 }
 
 func (du *Updater[R]) saveReleaseData() error {
-	var release *R
+	var releaseName string
 
 	if du.predictedReleaseIndex != -1 {
-		release = &du.releases[du.predictedReleaseIndex]
+		releaseName = du.releases[du.predictedReleaseIndex].GetName()
 	}
 
-	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
+	return du.kubeAPI.SaveReleaseData(releaseName, du.releaseData)
 }
 
 // for applied now we check less conditions, then for minor release

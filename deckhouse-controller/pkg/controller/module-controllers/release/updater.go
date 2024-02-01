@@ -157,12 +157,12 @@ func (k *kubeAPI) suspendModuleVersionForRelease(release *v1alpha1.ModuleRelease
 	return k.UpdateReleaseStatus(release, updater.PhaseSuspended, message)
 }
 
-func (k *kubeAPI) SaveReleaseData(release **v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
-	if release == nil || *release == nil {
-		return nil
+func (k *kubeAPI) SaveReleaseData(releaseName string, data updater.DeckhouseReleaseData) error {
+	if releaseName == "" {
+		return fmt.Errorf("empty release name")
 	}
 
-	return k.PatchReleaseAnnotations((*release).Name, map[string]interface{}{
+	return k.PatchReleaseAnnotations(releaseName, map[string]interface{}{
 		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
 		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
 	})
