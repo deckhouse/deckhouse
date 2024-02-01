@@ -290,7 +290,7 @@ apiVersions:
 
 func loadTestRulesSchemaStore() error {
 	once.Do(func() {
-		store = newSchemaStore([]string{"/tmp"})
+		store = newSchemaStore([]string{"/tmp"}, LoadOptions{})
 	})
 
 	schema := []byte(`
