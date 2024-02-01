@@ -256,7 +256,7 @@ func routeAdd(dstNet string, linkName string, table int) {
 		log.Fatal("error parse IPNet: ", err)
 	}
 
-	link, _ := netlink.LinkByName(linkName)
+	link, err := netlink.LinkByName(linkName)
 	if err != nil {
 		log.Fatal("error find LinkByName: ", err)
 	}
@@ -285,8 +285,8 @@ func waitingForFile(path string) {
 		if errors.Is(err, os.ErrNotExist) {
 			log.Println("waiting for", path)
 			time.Sleep(2 * time.Second)
-		} else {
-			break
+			continue
 		}
+		break
 	}
 }
