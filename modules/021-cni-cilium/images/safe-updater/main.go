@@ -79,7 +79,7 @@ func main() {
 
 		for {
 			log.Infof("[SafeUpdater] Waiting until new pod created on same node")
-			CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
+			CiliumAgentPodsOnSameNode, err = kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
 				LabelSelector: "app=agent",
 				FieldSelector: "spec.nodeName=" + SelfNodeName,
 			})
@@ -88,7 +88,7 @@ func main() {
 			}
 			if CiliumAgentPodsOnSameNode.Size() == 1 &&
 				CiliumAgentPodsOnSameNode.Items[0].Name != "" {
-				NewPodName := CiliumAgentPodsOnSameNode.Items[0].Name
+				NewPodName = CiliumAgentPodsOnSameNode.Items[0].Name
 				log.Infof("New pod created with name %s", NewPodName)
 				break
 			}
