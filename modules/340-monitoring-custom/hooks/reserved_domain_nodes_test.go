@@ -50,6 +50,17 @@ metadata:
   labels:
     node-role.deckhouse.io/stateful: ""
 `
+		resourcesWithFewLabels = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: double
+  labels:
+    node-role.deckhouse.io/invalid: ""
+    node-role.deckhouse.io/system: ""
+`
+
 		resourcesWithReservedTaints = `
 ---
 apiVersion: v1
@@ -120,6 +131,35 @@ spec:
 				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "stateful",
+				},
+			}
+			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
+		})
+	})
+
+	Context("Cluster with Node having reserved a few labels", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(resourcesWithFewLabels))
+			f.RunHook()
+		})
+
+		It("Hook must not fail, should get 2 metrics - expire and about invalid node label", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(2))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
+
+			// second is metrics
+			expectedMetric := operation.MetricOperation{
+				Name:   "reserved_domain_nodes",
+				Action: "set",
+				Value:  pointer.Float64(1.0),
+				Labels: map[string]string{
+					"name": "double",
 				},
 			}
 			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
