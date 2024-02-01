@@ -1,13 +1,15 @@
 version: "3.7"
 
 services:
-  gomod:
-    image: gomods/athens:v0.13.1
+  goproxy:
+    image: ghcr.io/goproxy/goproxy
     ports:
       - 3000:3000
-    environment:
-      - ATHENS_DISK_STORAGE_ROOT=/var/data
-      - ATHENS_STORAGE_TYPE=disk
-      - ATHENS_GO_BINARY_ENV_VARS=GOPROXY=proxy.golang.org,direct
     volumes:
-      - /data/gomod:/var/data
+      - /data/goproxy:/caches
+    command:
+      - server
+      - --address
+      - :3000
+      - --cacher-dir
+      - /caches

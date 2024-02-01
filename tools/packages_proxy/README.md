@@ -1,5 +1,4 @@
 ## docker-compose.yaml
 This file includes services for package proxies:
 
-* gomod - caching proxy for go packages.
-* npm - caching proxy for npm packages.
+* goproxy - caching proxy for go packages. Listens on the port 3000. To use it you should set GOPROXY env.
