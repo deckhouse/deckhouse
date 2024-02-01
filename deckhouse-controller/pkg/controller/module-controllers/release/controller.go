@@ -1096,18 +1096,10 @@ func (c *Controller) parseNotificationConfig() (*updater.NotificationConfig, err
 		return new(updater.NotificationConfig), nil
 	}
 
-	c.logger.Println(jsonSettings)
-	//jsonSettings := make([]byte, base64.StdEncoding.DecodedLen(len(base64Settings)))
-	//n, err := base64.StdEncoding.Decode(jsonSettings, base64Settings)
-	//if err != nil {
-	//	return nil, fmt.Errorf("decode base64: %w", err)
-	//}
-
 	var settings struct {
 		NotificationConfig *updater.NotificationConfig `json:"notification"`
 	}
 
-	//jsonSettings = jsonSettings[:n]
 	err = json.Unmarshal(jsonSettings, &settings)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal json: %w", err)
