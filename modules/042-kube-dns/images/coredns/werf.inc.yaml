@@ -17,7 +17,6 @@ shell:
     - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .
     - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - go get -u google.golang.org/grpc@v1.57.1
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.11.1' -o /coredns
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
