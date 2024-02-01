@@ -11,8 +11,10 @@ Here are some tips on how to find what you need:
 - Check [this list](revision-comparison.html) if you are looking for information on a particular module.
 - The menu on the left is for searching by scope. Try to guess which section might contain what you are looking for.
 
-Can't find what you were looking for? Don't give up. Visit our [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}) for help! There you will definitely find an answer to your problem.
+Если возникнут вопросы, вы можете обратиться за помощью в наш [тelegram-канал]({{ site.social_links[page.lang]['telegram'] }}). Мы обязательно поможем и проконсультируем.
 
-Users of the Enterprise Edition of the platform can [email us](mailto:support@deckhouse.io) — we'll be sure to help.
+Если вы используете Enterprise версию, можете написать нам [на почту](mailto:support@deckhouse.ru), мы также окажем вам поддержку.
 
-Want to make Deckhouse better? Create an [issue](https://github.com/deckhouse/deckhouse/issues/), [discuss](https://github.com/deckhouse/deckhouse/discussions) your idea with us, or even [suggest a solution](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md)!
+Хотите улучшить Deckhouse? Можете завести [задачу](https://github.com/deckhouse/deckhouse/issues/), предложить свою [идею](https://github.com/deckhouse/deckhouse/discussions) или [решение](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md) на GitHub.
+
+А если вам хочется большего, присоединяйтесь к нашей [команде](https://job.flant.ru/)! Мы рады новым специалистам.
