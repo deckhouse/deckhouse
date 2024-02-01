@@ -35,7 +35,7 @@ const (
 	candiDir                 = "/deckhouse/candi"
 	modulesDir               = "/deckhouse/modules"
 	globalHooksModule        = "/deckhouse/global-hooks"
-	DefaultKubernetesVersion = "1.25"
+	DefaultKubernetesVersion = "1.27"
 )
 
 const (

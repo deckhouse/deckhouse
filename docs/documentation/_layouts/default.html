@@ -8,7 +8,7 @@
     </script>
   {%- endif %}
   {% include head.html mode='documentation' %}
-  {%- if site.mode == 'local' %}
+  {%- if site.mode == 'module' %}
   {% include head-local.html %}
   {%- endif %}
   <!--#include virtual="/includes/head-site.html" -->
@@ -16,7 +16,7 @@
 
 <body>
   <div class="content">
-    {%- if site.mode == 'local' %}
+    {%- if site.mode == 'module' %}
     {% include header.html %}
     {%- else %}
      <!--#include virtual="/includes/header.html" -->

@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: documentation
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: d8-system
+  name: documentation:leases-edit
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: documentation:builder
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "docs-builder")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: documentation
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: documentation:leases-edit
+  apiGroup: rbac.authorization.k8s.io

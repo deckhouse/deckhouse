@@ -52,11 +52,23 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## List of privileges for using the module
 
+> Read [the documentation](environment.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
+
+A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+
 ```none
+Cns.Searchable
 Datastore.AllocateSpace
+Datastore.Browse
 Datastore.FileManagement
+Folder.Create
+Folder.Delete
+Folder.Move
+Folder.Rename
 Global.GlobalTag
 Global.SystemTag
+Network.Assign
+StorageProfile.View
 InventoryService.Tagging.AttachTag
 InventoryService.Tagging.CreateCategory
 InventoryService.Tagging.CreateTag
@@ -66,19 +78,25 @@ InventoryService.Tagging.EditCategory
 InventoryService.Tagging.EditTag
 InventoryService.Tagging.ModifyUsedByForCategory
 InventoryService.Tagging.ModifyUsedByForTag
-Network.Assign
+InventoryService.Tagging.ObjectAttachable
+Resource.ApplyRecommendation
+Resource.AssignVAppToPool
 Resource.AssignVMToPool
-StorageProfile.View
-System.Anonymous
-System.Read
-System.View
+Resource.ColdMigrate
+Resource.CreatePool
+Resource.DeletePool
+Resource.EditPool
+Resource.HotMigrate
+Resource.MovePool
+Resource.QueryVMotion
+Resource.RenamePool
 VirtualMachine.Config.AddExistingDisk
 VirtualMachine.Config.AddNewDisk
 VirtualMachine.Config.AddRemoveDevice
 VirtualMachine.Config.AdvancedConfig
 VirtualMachine.Config.Annotation
-VirtualMachine.Config.CPUCount
 VirtualMachine.Config.ChangeTracking
+VirtualMachine.Config.CPUCount
 VirtualMachine.Config.DiskExtend
 VirtualMachine.Config.DiskLease
 VirtualMachine.Config.EditDevice
@@ -129,6 +147,7 @@ VirtualMachine.Interact.SESparseMaintenance
 VirtualMachine.Interact.SetCDMedia
 VirtualMachine.Interact.SetFloppyMedia
 VirtualMachine.Interact.Suspend
+VirtualMachine.Interact.SuspendToMemory
 VirtualMachine.Interact.TerminateFaultTolerantVM
 VirtualMachine.Interact.ToolsInstall
 VirtualMachine.Interact.TurnOffFaultTolerance

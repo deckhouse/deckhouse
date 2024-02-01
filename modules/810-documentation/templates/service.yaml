@@ -15,3 +15,18 @@ spec:
   selector:
     app: documentation
 {{- end }}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: documentation-builder
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+spec:
+  ports:
+    - name: builder-http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+  selector:
+    app: documentation

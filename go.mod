@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.3.7-0.20231229084321-a7c885b5ec66
+	github.com/flant/addon-operator v1.3.8
 	github.com/flant/kube-client v1.1.0
 	github.com/flant/shell-operator v1.4.4
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -63,6 +63,7 @@ require (
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
 	github.com/slok/kubewebhook/v2 v2.5.0
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/mod v0.12.0
 	golang.org/x/time v0.5.0
 	k8s.io/cli-runtime v0.28.4
@@ -199,7 +200,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect

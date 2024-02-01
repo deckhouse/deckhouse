@@ -3,7 +3,7 @@
 {%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
 {%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
 {%- assign revision = 'fe' %}
-{%- if site.mode == 'local' and site.d8Revision %}
+{%- if site.mode == 'module' and site.d8Revision %}
 {%- assign revision = site.d8Revision | downcase %}
 {%- endif %}
 
@@ -11,7 +11,7 @@
 <thead>
     <tr>
       <th style="text-align: center"></th>
-      <th style="text-align: center">CE</th>
+      <th style="text-align: center">CE/BE</th>
       <th style="text-align: center"><a style="color: #fff;" href="{{ site.url }}/products/enterprise_edition.html">EE</a></th>
     </tr>
 </thead>

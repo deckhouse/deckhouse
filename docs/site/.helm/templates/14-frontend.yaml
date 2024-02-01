@@ -56,6 +56,8 @@ spec:
           image: {{ index .Values.werf.image "docs-builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
+            - name: HUGO_ENVIRONMENT
+              value: production
             - name: POD_IP
               valueFrom:
                 fieldRef:
@@ -70,6 +72,8 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+            - name: CLUSTER_DOMAIN
+              value: "cluster.local"
           ports:
           - containerPort: 8081
             name: http

@@ -1,0 +1,40 @@
+diff --git a/pkg/openstack/instances.go b/pkg/openstack/instances.go
+index b52d6f58..a78e9305 100644
+--- a/pkg/openstack/instances.go
++++ b/pkg/openstack/instances.go
+@@ -19,6 +19,7 @@ package openstack
+ import (
+ 	"bytes"
+ 	"context"
++	stderrors "errors"
+ 	"fmt"
+ 	"net"
+ 	sysos "os"
+@@ -249,7 +250,9 @@ func (i *Instances) InstanceExists(ctx context.Context, node *v1.Node) (bool, er
+
+ func instanceExistsByProviderID(ctx context.Context, compute *gophercloud.ServiceClient, providerID string, region string) (bool, error) {
+ 	instanceID, instanceRegion, err := instanceIDFromProviderID(providerID)
+-	if err != nil {
++	if stderrors.Is(err, errStaticNode) {
++		return true, nil
++	} else if err != nil {
+ 		return false, err
+ 	}
+
+@@ -444,11 +447,16 @@ func isValidLabelValue(v string) bool {
+ // If Instances.InstanceID or cloudprovider.GetInstanceProviderID is changed, the regexp should be changed too.
+ var providerIDRegexp = regexp.MustCompile(`^` + ProviderName + `://([^/]*)/([^/]+)$`)
+
++var errStaticNode = stderrors.New("static Node detected")
++
+ // instanceIDFromProviderID splits a provider's id and return instanceID.
+ // A providerID is build out of '${ProviderName}:///${instance-id}' which contains ':///'.
+ // or '${ProviderName}://${region}/${instance-id}' which contains '://'.
+ // See cloudprovider.GetInstanceProviderID and Instances.InstanceID.
+ func instanceIDFromProviderID(providerID string) (instanceID string, region string, err error) {
++	if strings.HasPrefix(providerID, "static://") {
++		return "", "", errStaticNode
++	}
+
+ 	// https://github.com/kubernetes/kubernetes/issues/85731
+ 	if providerID != "" && !strings.Contains(providerID, "://") {

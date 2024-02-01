@@ -9,12 +9,12 @@ properties:
       projects:
         items:
           properties:
-            projectTypeName:
-              type: string
             projectName:
               type: string
-            params:
-              description: OpenApi spec for tempalte
+            projectTemplateName:
+              type: string
+            parameters:
+              description: Parameters for resources template
               additionalProperties: true
           type: object
         type: array
@@ -78,4 +78,15 @@ properties:
                   type: string
               type: object
             type: array
+        type: object
+      projectTemplates:
+        properties:
+          parametersSchema:
+            description: OpenApi spec for tempaltes
+            openAPIV3Schema:
+              description: OpenAPI specification for template values (the [template](#projecttemplate-v1alpha1-spec-template) parameter).
+              type: object
+          resourcesTemplate:
+            description: Resource templates
+            type: string
         type: object

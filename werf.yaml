@@ -4,6 +4,28 @@ configVersion: 1
 gitWorktree:
   forceShallowClone: true
 ---
+# revisions settings
+{{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
+{{- $_ := set . "Editions" $editionsSettings.editions }}
+
+# checks redactions list
+{{- if not $.Editions }}
+  {{ fail "Editions list is empty" }}
+{{- end }}
+
+{{- $editionsDict := dict }}
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.name }}
+     {{ fail printf "Editions name is empty" }}
+  {{- end }}
+  {{- $_ := set $editionsDict $edition.name "" }}
+{{- end }}
+
+{{- if not (hasKey $editionsDict .Env) }}
+  {{ fail (printf "Editions name not found %v" .Env) }}
+{{- end }}
+
+---
 # Base Images
 {{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
@@ -14,11 +36,17 @@ gitWorktree:
   {{- end }}
 ---
 # Version Map
-{{- if or (eq $.Env "EE") (eq $.Env "FE") }}
-  {{- $_ := set . "CandiVersionMap" (merge (.Files.Get "candi/version_map.yml" | fromYaml) (.Files.Get "ee/candi/version_map.yml" | fromYaml)) }}
-{{- else }}
-  {{- $_ := set . "CandiVersionMap" ( .Files.Get "candi/version_map.yml" | fromYaml ) }}
+{{- $versionMap := dict }}
+{{- range $_, $edition := $.Editions }}
+ {{- if $edition.versionMapFile }}
+   {{- $versionMap = (merge $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
+ {{- end }}
+ {{- if eq $.Env $edition.name }}
+   {{- break -}}
+ {{- end }}
 {{- end }}
+
+{{- $_ := set . "CandiVersionMap" $versionMap }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
@@ -66,7 +94,7 @@ gitWorktree:
 
   - name: "Install kubectl"
     shell: |
-{{- range $k8sVersion := tuple "1.24" "1.27" }}
+{{- range $k8sVersion := tuple "1.25" "1.28" }}
       curl -L https://dl.k8s.io/release/v{{ $k8sVersion }}.{{ index $.CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
       chmod +x /usr/local/bin/kubectl-{{ $k8sVersion }}
 {{- end }}
@@ -255,14 +283,12 @@ ansible:
   - name: "Add bundle {{ $key }}"
     copy:
       content: |
-        {{- $.Files.Get (printf "modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- if eq $.Env "EE" }}
-        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- end }}
-{{- if eq $.Env "FE" }}
-        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
-        {{- $.Files.Get (printf "ee/fe/modules/values-%s.yaml" $key ) | nindent 8 }}
-{{- end }}
+      {{- range $_, $edition := $.Editions }}
+        {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 8 }}
+        {{- if eq $.Env $edition.name }}
+           {{- break -}}
+        {{- end }}
+     {{- end }}
       dest: /deckhouse/modules/values-{{ $key }}.yaml
 {{- end }}
 
@@ -393,10 +419,13 @@ ansible:
   - raw: rm -rf /var/cache/apk/*
 
   setup:
-  - name: "Migrate ee/fe internal packages imports"
+  - name: "Migrate internal packages imports"
     shell: |
-      find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-      find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+      {{- range $_, $edition := $.Editions }}
+        {{- if not $edition.skipFixingImports }}
+      find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+        {{- end }}
+      {{- end }}
 
 docker:
   ENV:
@@ -454,11 +483,14 @@ shell:
   - mkdir /deckhouse /out
 
   setup:
-  # Migrate ee/fe internal packages imports
-  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+  # Migrate internal packages imports
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipFixingImports }}
+  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+  {{- end }}
+{{- end }}
   - cd /deckhouse
-  # Generate hooks imports for particular edition (CE/EE/FE)
+  # Generate hooks imports for particular edition
   - go generate ./tools/register.go
   # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
   # into separate phases.
@@ -563,31 +595,21 @@ import:
   add: /root/.terraformrc
   to: /etc/terraformrc
   before: setup
-- artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
-  add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
+{{- range $_, $edition := $.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $.TF $tfProvider }}
+
+- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
-- artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
-  add: /terraform-provider-azurerm
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
-  before: setup
-- artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
-  add: /terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
-  after: setup
-- artifact: terraform-provider-yandex # from modules/040-terraform-manager/images/terraform-manager-yandex/werf.inc.yaml
-  add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
-  before: setup
-{{- if ne .Env "CE" }}
-- artifact: terraform-provider-openstack # from ee/modules/040-terraform-manager/images/terraform-manager-openstack/werf.inc.yaml
-  add: /terraform-provider-openstack
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
-  before: setup
-- artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
-  add: /terraform-provider-vsphere
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
-  after: setup
+
+    {{- end }}
+  {{- end }}
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
 {{- end }}
 - image: images-digests
   add: /images_digests.json
@@ -732,14 +754,16 @@ dependencies:
 {{- $Root := . }}
 {{- $ModulesImagesDigestList := list }}
 
-# Collect EE and FE images if desired
-{{ $ModulesImagesBuildFiles := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}" }}
-{{- if eq .Env "EE" }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
-{{- end }}
-{{- if eq .Env "FE" }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
-  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/fe/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
+# Collect images if desired for editions
+{{- $ModulesImagesBuildFiles := dict }}
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipCollectImages }}
+    {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
+  {{- end }}
+
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
 {{- end }}
 
 {{- range $path, $content := $ModulesImagesBuildFiles  }}
@@ -860,20 +884,48 @@ git:
   to: /
   stageDependencies:
     setup:
-      - candi/version_map.yml
-      - ee/candi/version_map.yml
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.versionMapFile }}
+      - {{ $edition.versionMapFile }}
+      {{- end }}
+    {{- end }}
   includePaths:
-  - candi/version_map.yml
-  - ee/candi/version_map.yml
+{{- range $_, $edition := $.Editions }}
+  {{- if $edition.versionMapFile }}
+  - {{ $edition.versionMapFile }}
+  {{- end }}
+{{- end }}
 shell:
   install:
   - apk add --no-cache curl
   - curl -sfL https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64 --output /usr/local/bin/yq
   - chmod +x /usr/local/bin/yq
   setup:
-  - cp candi/version_map.yml /version_map_CE.yml
-  - yq m candi/version_map.yml ee/candi/version_map.yml > /version_map_EE.yml
-  - cp /version_map_EE.yml /version_map_FE.yml
+{{- $previousEditionFile := "" }}
+{{- range $_, $edition := $.Editions }}
+  {{- $curEditionFile := printf "/version_map_%s.yml" $edition.name }}
+  {{- if $edition.versionMapFile }}
+    {{- $tmpEditionFile := printf "%s.tmp" $curEditionFile }}
+
+     {{- if $previousEditionFile }}
+  - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
+  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+
+      {{- else }}
+
+  - cp {{ $edition.versionMapFile }} {{ $curEditionFile }}
+
+      {{- end }}
+
+  {{- else }}
+
+  - cp {{ $previousEditionFile }} {{ $curEditionFile }}
+
+  {{- end }}
+
+  {{- $previousEditionFile = $curEditionFile }}
+{{- end }}
+
 ---
 # use image for actual terraform version for infra deployment in e2e
 image: e2e-terraform

@@ -37,6 +37,7 @@ import (
 var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
+          "clusterIsBootstrapped": true,
           "modulesImages": {
 			"registry": {
 				"base": "my.registry.com/deckhouse"
@@ -355,7 +356,8 @@ spec:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
-			f.KubeStateSet(deckhouseBootstrapPod + deckhouseDeployment + deckhousePatchRelease)
+			f.ValuesDelete("global.clusterIsBootstrapped")
+			f.KubeStateSet(deckhousePodYaml + deckhousePatchRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -386,11 +388,12 @@ spec:
 		})
 	})
 
-	Context("Pending Manual release", func() {
+	Context("Pending Manual release on cluster bootstrap", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
-			f.KubeStateSet(deckhouseBootstrapPod + deckhouseDeployment + `
+			f.ValuesDelete("global.clusterIsBootstrapped")
+			f.KubeStateSet(deckhousePodYaml + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -932,25 +935,7 @@ status:
       imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
       ready: true
 `
-	deckhouseBootstrapPod = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: deckhouse-6f46df5bd7-nk4j7
-  namespace: d8-system
-  labels:
-    app: deckhouse
-spec:
-  containers:
-    - name: deckhouse
-      image: dev-registry.deckhouse.io:5000/sys/deckhouse-oss:alpha
-status:
-  containerStatuses:
-    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
-      imageID: dev-registry.deckhouse.io:5000/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
-      ready: true
-`
+
 	deckhouseNotReadyPod = `
 ---
 apiVersion: v1

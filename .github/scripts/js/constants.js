@@ -41,7 +41,6 @@ const labels = {
   'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'Containerd' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.24': { type: 'e2e-use', ver: '1.24' },
   'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },
   'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
@@ -57,7 +56,8 @@ const labels = {
 
   // Edition for build-and-test workflow
   'edition/ce': { type: 'edition', edition: 'CE' },
-  'edition/ee': { type: 'edition', edition: 'EE' }
+  'edition/ee': { type: 'edition', edition: 'EE' },
+  'edition/be': { type: 'edition', edition: 'BE' }
 };
 module.exports.knownLabels = labels;
 
@@ -150,6 +150,7 @@ module.exports.e2eDefaults = {
 const editions = [
   'CE',
   'EE',
-  'FE'
+  'FE',
+  'BE'
 ];
 module.exports.knownEditions = editions;

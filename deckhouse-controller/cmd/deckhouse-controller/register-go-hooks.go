@@ -13,6 +13,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
+	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha2"
 	_ "github.com/deckhouse/deckhouse/ee/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/350-node-local-dns/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/380-metallb/hooks"

@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/csi-attacher"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
 shell:
   beforeInstall:
     - apk add --no-cache make bash git patch rsync gcc musl-dev
@@ -23,9 +23,11 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
+    {{- if semverCompare "<1.29" $version }}
     - go get -u golang.org/x/net@v0.17.0
     - go get -u google.golang.org/grpc@v1.57.2
     - go mod vendor
+    {{- end }}
     - make build
     - cp bin/csi-attacher /csi-attacher
     - chown 64535:64535 /csi-attacher

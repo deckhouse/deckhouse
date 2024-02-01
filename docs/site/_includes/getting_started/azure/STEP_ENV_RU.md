@@ -3,7 +3,7 @@
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учётную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/documentation/v1/modules/030-cloud-provider-azure/environment.html). Далее представлена краткая последовательность действий (выполняйте их на **персональном компьютере**), которую необходимо выполнить с помощью консольной утилиты Azure CLI.
+Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/documentation/v1/modules/030-cloud-provider-azure/environment.html). Далее представлена краткая последовательность действий (выполняйте их на **персональном компьютере**), которую необходимо выполнить с помощью консольной утилиты Azure CLI.
 
 Установите [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) и выполните `login`.
 
