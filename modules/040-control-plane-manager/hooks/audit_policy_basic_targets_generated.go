@@ -114,6 +114,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-runtime-audit-engine:runtime-audit-engine",
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
 	"system:serviceaccount:d8-system:deckhouse",
+	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
 	"system:serviceaccount:d8-system:terraform-state-exporter",
