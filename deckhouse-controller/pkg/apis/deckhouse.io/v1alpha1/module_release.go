@@ -76,6 +76,10 @@ func (mr *ModuleRelease) GetName() string {
 }
 
 func (mr *ModuleRelease) GetApplyAfter() *time.Time {
+	if mr.Spec.ApplyAfter == nil {
+		return nil
+	}
+
 	return &mr.Spec.ApplyAfter.Time
 }
 
