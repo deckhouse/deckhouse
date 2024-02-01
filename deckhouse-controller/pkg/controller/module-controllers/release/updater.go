@@ -63,10 +63,16 @@ type kubeAPI struct {
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
+	ctx := context.Background()
+
 	release.Status.Phase = phase
 	release.Status.Message = msg
 
-	_, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(context.Background(), release, metav1.UpdateOptions{})
+	newRelease, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+	if err != nil {
+		//prevent the object has been modified error
+		*release = *newRelease
+	}
 	return err
 }
 
