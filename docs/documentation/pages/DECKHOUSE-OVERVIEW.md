@@ -3,7 +3,7 @@ title: Overview
 permalink: en/deckhouse-overview.html
 ---
 
-Welcome to the home page of the Deckhouse Kubernetes cluster management platform documentation! We recommend starting with the [Getting started]({% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
+Welcome to the home page of the Deckhouse Kubernetes Platform cluster management platform documentation! We recommend starting with the [Getting started]({% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
 
 Here are some tips on how to find what you need:
 - Note that the Deckhouse documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up to date versions of the Deckhouse documentation.
