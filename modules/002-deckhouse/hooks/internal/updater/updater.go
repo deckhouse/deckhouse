@@ -112,7 +112,7 @@ func (ru *kubeAPI) DeployRelease(release *DeckhouseRelease) error {
 	return nil
 }
 
-func (ru *kubeAPI) SaveReleaseData(_ **DeckhouseRelease, data updater.DeckhouseReleaseData) error {
+func (ru *kubeAPI) SaveReleaseData(_ string, data updater.DeckhouseReleaseData) error {
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
