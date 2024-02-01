@@ -40,6 +40,9 @@ type ImageLayouts struct {
 	ReleaseChannel       layout.Path
 	ReleaseChannelImages map[string]struct{}
 
+	Security       layout.Path
+	SecurityImages map[string]struct{}
+
 	Modules map[string]ModuleImageLayout
 }
 
@@ -62,6 +65,7 @@ func CreateOCIImageLayoutsForDeckhouse(
 		&layouts.Deckhouse:      rootFolder,
 		&layouts.Install:        filepath.Join(rootFolder, "install"),
 		&layouts.ReleaseChannel: filepath.Join(rootFolder, "release-channel"),
+		&layouts.Security:       filepath.Join(rootFolder, "security", "trivy-db"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
 		*layoutPtr, err = CreateEmptyImageLayoutAtPath(fsPath)
@@ -165,6 +169,10 @@ func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersi
 		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:early-access": {},
 		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:stable":       {},
 		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:rock-solid":   {},
+	}
+
+	layouts.SecurityImages = map[string]struct{}{
+		mirrorCtx.DeckhouseRegistryRepo + "/security/trivy-db:2": {},
 	}
 
 	for _, version := range deckhouseVersions {
