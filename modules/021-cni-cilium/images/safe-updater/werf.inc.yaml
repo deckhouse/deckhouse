@@ -1,6 +1,6 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
@@ -23,8 +23,8 @@ shell:
   setup:
   - export GOOS=linux GOARCH=amd64
   - export CGO_ENABLED=0
-  - cd /src/cmd/bc
-  - go build -o safe-updater .
+  - cd /src
+  - go build -ldflags="-s -w" -o safe-updater .
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 from: common/distroless
