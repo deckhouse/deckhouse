@@ -19,8 +19,7 @@ shell:
   beforeInstall:
     - git clone --depth 1 --branch {{ $value.csi.attacher }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-attacher.git /src
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     {{- if semverCompare "<1.29" $version }}
     - go get -u golang.org/x/net@v0.17.0

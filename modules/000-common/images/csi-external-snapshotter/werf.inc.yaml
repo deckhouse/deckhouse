@@ -19,8 +19,7 @@ shell:
   beforeInstall:
     - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     - go get -u google.golang.org/grpc@v1.56.3 && \
     - go mod vendor && \
