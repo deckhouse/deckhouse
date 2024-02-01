@@ -85,6 +85,9 @@ ansible:
 ---
 artifact: yq4-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
@@ -95,6 +98,9 @@ shell:
 ---
 artifact: yq-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
