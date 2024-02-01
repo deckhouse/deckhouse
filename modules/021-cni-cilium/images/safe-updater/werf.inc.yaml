@@ -30,7 +30,7 @@ image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/cmd/bc/safe-updater
+  add: /src/safe-updater
   to: /safe-updater
   before: install
 docker:
