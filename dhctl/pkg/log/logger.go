@@ -19,17 +19,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/werf/logboek/pkg/level"
-	"github.com/werf/logboek/pkg/types"
 	"io"
 	"os"
 
-	"github.com/gookit/color"
-	"github.com/sirupsen/logrus"
-	"github.com/werf/logboek"
 	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/gookit/color"
+	"github.com/sirupsen/logrus"
+	"github.com/werf/logboek"
+	"github.com/werf/logboek/pkg/level"
+	"github.com/werf/logboek/pkg/types"
 )
 
 var (
