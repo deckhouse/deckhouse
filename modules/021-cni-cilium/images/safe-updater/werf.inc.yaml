@@ -2,7 +2,7 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 git:
-- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
   excludePaths:
   - "**/*.md"

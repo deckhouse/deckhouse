@@ -23,6 +23,7 @@ import (
 	"safe-updater/pkg/logger"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -32,6 +33,7 @@ import (
 
 const (
 	safeUpdaterCtrlName = "safe-updater-controller"
+	ciliumNs            = "d8-cni-cilium"
 )
 
 func SafeUpdaterController(
@@ -54,25 +56,25 @@ func SafeUpdaterController(
 	}
 
 	go func() {
-		CiliumAgentDS, err := GetDS(ctx, cl, "cilium", "agent")
+		CiliumAgentDS, err := GetDSByName(ctx, cl, ciliumNs, "agent")
 		if err != nil {
 			return nil, err
 		}
 
-		fmt.Printf("generation of DS")
-		CiliumAgentPods, err := ListPods(ctx, cl, "cilium", "app=agent")
+		log.Info(fmt.Sprintf("[SafeUpdaterController] Generation of DS %s/agent = %s", ciliumNs, CiliumAgentDS.Generation))
+		CiliumAgentPods, err := ListPodsByLabel(ctx, cl, ciliumNs, "app=agent")
 		if err != nil {
 			return nil, err
 		}
 
-		CiliumAgentPodOnSameNode, err := GetPodOnSameNode(CiliumAgentPods, NODE_NAME)
+		CiliumAgentPodOnSameNode, err := GetPodOnSameNode(CiliumAgentPods, cfg.NodeName)
 		if err != nil {
 			return nil, err
 		}
 
 		fmt.Printf("generation of pod on same node")
 
-		if CiliumAgentDS.generation != CiliumAgentPodOnSameNode.generation {
+		if CiliumAgentDS.Generation != CiliumAgentPodOnSameNode.generation {
 			fmt.Printf("generation do not match. Deleting pod")
 			_, err := DeletePod(ctx, cl, "cilium", CiliumAgentPodOnSameNode.Name)
 			if err != nil {
@@ -84,7 +86,7 @@ func SafeUpdaterController(
 
 		for {
 			fmt.Printf("Wait until pod created on same node")
-			NewCiliumAgentPodOnSameNode, err := GetPodOnSameNode(CiliumAgentPods, NODE_NAME)
+			NewCiliumAgentPodOnSameNode, err := GetPodOnSameNode(CiliumAgentPods, cfg.NodeName)
 			if err != nil {
 				return nil, err
 			}
@@ -120,15 +122,25 @@ func SafeUpdaterController(
 	return c, err
 }
 
-func GetDS() {}
+func GetDSByName(ctx context.Context, cl client.Client, namespace, name string) (*appsv1.DaemonSet, error) {
+	ds := &appsv1.DaemonSet{}
+	err := cl.Get(ctx, client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, ds)
+	if err != nil {
+		return nil, err
+	}
+	return ds, nil
+}
 
-func ListPods() {}
+func ListPodsByLabel(ctx context.Context, cl client.Client, namespace, labelSet string) {}
 
-func GetPodOnSameNode() {}
+func GetPodOnSameNode(ctx context.Context, cl client.Client) {}
 
-func DeletePod() {}
+func DeletePod(ctx context.Context, cl client.Client) {}
 
-func GetPodStatus() {}
+func GetPodStatus(ctx context.Context, cl client.Client) {}
 
 func GetPod(ctx context.Context, cl client.Client, namespace, name string) (*v1.Pod, error) {
 
