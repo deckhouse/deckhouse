@@ -27,7 +27,7 @@ shell:
   - go build -ldflags="-s -w" -o safe-updater .
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
-from: common/distroless
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /src/cmd/bc/safe-updater
