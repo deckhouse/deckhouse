@@ -16,7 +16,7 @@ export LANG=C
 set -Eeuo pipefail
 
 availability=""
-attempts=50
+attempts=20
 
 allow_alerts=(
 "D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
