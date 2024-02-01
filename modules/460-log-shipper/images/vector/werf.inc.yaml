@@ -102,7 +102,7 @@ shell:
 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
   to: /src
@@ -115,8 +115,11 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o reloader main.go
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - go build -ldflags="-s -w" -o reloader main.go
