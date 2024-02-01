@@ -142,6 +142,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/safe-updater"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/021-kube-proxy/images/init-container/entrypoint"
   labels:
   - "type/dependencies"
