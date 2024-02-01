@@ -648,7 +648,7 @@ shell:
 
     mkdir -p /etc/vim
     cat <<"EOD" > /etc/vim/vimrc.local
-    {{- .Files.Get "deckhouse/deckhouse-controller/files/vimrc.local" | nindent 4 }}
+    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
