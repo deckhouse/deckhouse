@@ -23,7 +23,7 @@ title: "Модуль multitenancy-manager: примеры использован
 Для создания проекта необходимо создать ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate).
 В поле [.spec.template](cr.html#project-v1alpha1-spec-template) ресурса `Project` необходимо указать значения параметров, которые подходят для [.spec.schema.openAPIV3Schema ProjectTemplate](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema).
 
-Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate):
+Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -69,7 +69,7 @@ kubectl get projects my-project
 
 3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения. **Не забудьте** что изменить нужно не только шаблон, но и схему входных параметров под него.
 4. Измените имя шаблона в поле [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name).
-5. Примените свой новый шаблон командой:
+5. Примените полученный шаблон командой:
 
     ```shell
     kubectl apply -f my-project-template.yaml
