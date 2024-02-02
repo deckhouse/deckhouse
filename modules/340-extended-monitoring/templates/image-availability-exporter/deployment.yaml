@@ -80,10 +80,10 @@ spec:
         - --allow-plain-http
         {{- end }}
         {{- with .Values.global.modulesImages.registry.CA }}
-        - --capath /deckhouse-registry-root-ca/ca.crt
+        - --capath=/deckhouse-registry-root-ca/ca.crt
         {{- end }}
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
-        - --capath /registry-root-ca/ca.crt
+        - --capath=/registry-root-ca/ca.crt
         {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
