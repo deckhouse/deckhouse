@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"os"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -50,7 +51,8 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %v", ciliumNs, CiliumAgentDS.Generation)
+	CiliumAgentDSGenerationStr := strconv.FormatInt(CiliumAgentDS.Generation, 10)
+	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %s", ciliumNs, CiliumAgentDSGenerationStr)
 
 	CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=agent",
@@ -68,10 +70,15 @@ func main() {
 	}
 	CurrentPod := CiliumAgentPodsOnSameNode.Items[0]
 	log.Infof("[SafeUpdater] Name of pod which running on the same node is %s", CurrentPod.Name)
-	log.Infof("[SafeUpdater] Generation of pod %s is %v", CurrentPod.Name, CurrentPod.Generation)
+	log.Infof("[SafeUpdater] Generation of pod %s is %s", CurrentPod.Name, CurrentPod.Labels["pod-template-generation"])
 
-	if CiliumAgentDS.Generation != CurrentPod.Generation {
-		log.Infof("[SafeUpdater] Generation on DS(%v) and Pod(%v) are not the same. Deleting Pod %s", CiliumAgentDS.Generation, CurrentPod.Generation, CurrentPod.Name)
+	if CiliumAgentDSGenerationStr != CurrentPod.Labels["pod-template-generation"] {
+		log.Infof(
+			"[SafeUpdater] Generation on DS(%s) and Pod(%s) are not the same. Deleting Pod %s",
+			CiliumAgentDSGenerationStr,
+			CurrentPod.Labels["pod-template-generation"],
+			CurrentPod.Name,
+		)
 		err := kubeClient.CoreV1().Pods(ciliumNs).Delete(context.TODO(), CurrentPod.Name, metav1.DeleteOptions{})
 		if err != nil {
 			log.Error(err)
