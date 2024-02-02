@@ -46,7 +46,7 @@ spec:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.
 
-                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
@@ -160,7 +160,7 @@ spec:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.
 
-                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
