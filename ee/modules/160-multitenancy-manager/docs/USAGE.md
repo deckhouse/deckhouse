@@ -23,37 +23,37 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate) field.
 2. In the [.spec.template](cr.html#project-v1alpha1-spec-template) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.schema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema).
 
-Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
+   Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: Project
-metadata:
-  name: my-project
-spec:
-  description: This is an example from the Deckhouse documentation.
-  projectTemplateName: default
-  parameters:
-    resourceQuota:
-      requests:
-        cpu: 5
-        memory: 5Gi
-        storage: 1Gi
-      limits:
-        cpu: 5
-        memory: 5Gi
-    networkPolicy: Isolated
-    podSecurityPolicy: Restricted
-    enableExtendedMonitoring: true
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: Project
+   metadata:
+     name: my-project
+   spec:
+     description: This is an example from the Deckhouse documentation.
+     projectTemplateName: default
+     parameters:
+       resourceQuota:
+         requests:
+           cpu: 5
+           memory: 5Gi
+           storage: 1Gi
+         limits:
+           cpu: 5
+           memory: 5Gi
+       networkPolicy: Isolated
+       podSecurityPolicy: Restricted
+       enableExtendedMonitoring: true
+   ```
 
-To check the status of the project, execute the command:
+3. To check the status of the project, execute the command:
 
-```shell
-kubectl get projects my-project
-```
+   ```shell
+   kubectl get projects my-project
+   ```
 
-A successfully created project should be in the "Synchronized" status.
+   A successfully created project should be in the `Sync` status.
 
 ## Creating your own project template
 
@@ -67,15 +67,16 @@ To create your own template:
    kubectl get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-3. Edit the `my-project-template.yaml` file, make the necessary changes. 
+3. Edit the `my-project-template.yaml` file, make the necessary changes.
 
    > It is necessary to change not only the template, but also the scheme of input parameters for it.
+
 4. Change the template name in the [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name) field.
 5. Apply your new template with the command:
 
-    ```shell
-    kubectl apply -f my-project-template.yaml
-    ```
+   ```shell
+   kubectl apply -f my-project-template.yaml
+   ```
 
    > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
