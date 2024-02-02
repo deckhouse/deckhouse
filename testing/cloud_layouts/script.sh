@@ -783,7 +783,6 @@ function wait_cluster_ready() {
 
   testAlerts=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
-  sleep 240
   test_failed="true"
   if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
     test_failed=""
