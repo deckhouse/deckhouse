@@ -21,6 +21,8 @@ import (
 	"os"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,11 +155,14 @@ func main() {
 			if err != nil {
 				log.Error(err)
 			}
-			if NewPod.Status.Phase != "Running" {
-				log.Infof("[SafeUpdater] Waiting until pod become Running")
-			} else {
-				break
+			log.Infof("[SafeUpdater] Waiting until new pod %s become Ready", NewPod.Name)
+
+			for _, cond := range NewPod.Status.Conditions {
+				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+					break
+				}
 			}
+
 			time.Sleep(scanInterval * time.Second)
 		}
 		log.Infof("[SafeUpdater] Cilium agent on node %s successfully reloaded", SelfNodeName)
