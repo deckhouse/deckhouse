@@ -63,7 +63,9 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 					NamespaceMetadata: val.Spec.NamespaceMetadata,
 					ResourcesTemplate: resourcesTemplate,
 					ParametersSchema: v1alpha1.ParametersSchema{
-						OpenAPIV3Schema: val.Spec.OpenAPI,
+						OpenAPIV3Schema: map[string]interface{}{
+							"properties": val.Spec.OpenAPI,
+						},
 					},
 				},
 			}

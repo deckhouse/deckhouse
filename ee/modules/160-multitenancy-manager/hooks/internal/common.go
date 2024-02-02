@@ -42,16 +42,7 @@ func ModuleValuePath(svp ...string) string {
 	return strings.Join(resultPath, ".")
 }
 
-func LoadOpenAPISchema(s map[string]interface{}) (*spec.Schema, error) {
-	properties := s
-	// Weird thing. It was wrapped in "properties" key in the old version of the schema, and with this approach it's not possible to specify required fields.
-	// This code is a migration from the old version of the schema to the new one.
-	if _, ok := s["properties"]; !ok {
-		properties = map[string]interface{}{
-			"properties": s,
-		}
-	}
-
+func LoadOpenAPISchema(properties map[string]interface{}) (*spec.Schema, error) {
 	d, err := json.Marshal(properties)
 	if err != nil {
 		if jsonErr, ok := err.(*json.SyntaxError); ok {
