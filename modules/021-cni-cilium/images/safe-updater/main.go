@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %d", ciliumNs, uint64(CiliumAgentDS.Generation))
+	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %v", ciliumNs, CiliumAgentDS.Generation)
 
 	CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=agent",
@@ -59,18 +59,19 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
+	log.Errorf("Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
 	switch {
-	case CiliumAgentPodsOnSameNode.Size() == 0:
+	case len(CiliumAgentPodsOnSameNode.Items) == 0:
 		log.Errorf("On node %s no one pod of agent", SelfNodeName)
-	case CiliumAgentPodsOnSameNode.Size() > 1:
-		log.Errorf("On node %s more then one pods of agent", SelfNodeName)
+	case len(CiliumAgentPodsOnSameNode.Items) > 1:
+		log.Errorf("On node %s running more then one agent", SelfNodeName)
 	}
 	CurrentPod := CiliumAgentPodsOnSameNode.Items[0]
 	log.Infof("[SafeUpdater] Name of pod which running on the same node is %s", CurrentPod.Name)
-	log.Infof("[SafeUpdater] Generation of pod on same node is %d", uint64(CurrentPod.Generation))
+	log.Infof("[SafeUpdater] Generation of pod %s is %v", CurrentPod.Name, CurrentPod.Generation)
 
 	if CiliumAgentDS.Generation != CurrentPod.Generation {
-		log.Infof("[SafeUpdater] Generation on DS and Pod are not the same. Deleting Pod %s", CurrentPod.Name)
+		log.Infof("[SafeUpdater] Generation on DS(%v) and Pod(%v) are not the same. Deleting Pod %s", CiliumAgentDS.Generation, CurrentPod.Generation, CurrentPod.Name)
 		err := kubeClient.CoreV1().Pods(ciliumNs).Delete(context.TODO(), CurrentPod.Name, metav1.DeleteOptions{})
 		if err != nil {
 			log.Error(err)
@@ -86,7 +87,8 @@ func main() {
 			if err != nil {
 				log.Error(err)
 			}
-			if CiliumAgentPodsOnSameNode.Size() == 1 &&
+			log.Errorf("Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
+			if len(CiliumAgentPodsOnSameNode.Items) == 1 &&
 				CiliumAgentPodsOnSameNode.Items[0].Name != "" {
 				NewPodName = CiliumAgentPodsOnSameNode.Items[0].Name
 				log.Infof("New pod created with name %s", NewPodName)

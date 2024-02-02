@@ -50,9 +50,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
         command:
-        - exit
-        args:
-        - "0"
+        - "/usr/bin/true"
         terminationMessagePolicy: FallbackToLogsOnError
         resources:
           requests:
@@ -62,7 +60,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "safeUpdater") }}
         imagePullPolicy: IfNotPresent
         command:
-        - safe-updater
+        - /safe-updater
         env:
         - name: NODE_NAME
           valueFrom:
