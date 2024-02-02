@@ -76,3 +76,5 @@ kubectl get projects my-project
     ```
 
 > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+
+{% endraw %}

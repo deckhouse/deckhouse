@@ -76,3 +76,5 @@ To create your own template:
     ```
 
 > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+
+{% endraw %}
