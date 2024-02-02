@@ -59,7 +59,7 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Errorf("Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
+	log.Infof("[SafeUpdater] Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
 	switch {
 	case len(CiliumAgentPodsOnSameNode.Items) == 0:
 		log.Errorf("On node %s no one pod of agent", SelfNodeName)
@@ -87,7 +87,7 @@ func main() {
 			if err != nil {
 				log.Error(err)
 			}
-			log.Errorf("Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
+			log.Infof("[SafeUpdater] Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
 			if len(CiliumAgentPodsOnSameNode.Items) == 1 &&
 				CiliumAgentPodsOnSameNode.Items[0].Name != "" {
 				NewPodName = CiliumAgentPodsOnSameNode.Items[0].Name
