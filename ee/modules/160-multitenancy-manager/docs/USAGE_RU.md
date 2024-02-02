@@ -23,37 +23,37 @@ Deckhouse Kubernetes Platform включает следующий набор ш�
 1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate).
 2. В параметре [.spec.template](cr.html#project-v1alpha1-spec-template) ресурса `Project` укажите значения параметров для секции [.spec.schema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema) ресурса `ProjectTemplate`.
 
-Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
+   Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: Project
-metadata:
-  name: my-project
-spec:
-  description: This is an example from the Deckhouse documentation.
-  projectTemplateName: default
-  parameters:
-    resourceQuota:
-      requests:
-        cpu: 5
-        memory: 5Gi
-        storage: 1Gi
-      limits:
-        cpu: 5
-        memory: 5Gi
-    networkPolicy: Isolated
-    podSecurityPolicy: Restricted
-    enableExtendedMonitoring: true
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: Project
+   metadata:
+     name: my-project
+   spec:
+     description: This is an example from the Deckhouse documentation.
+     projectTemplateName: default
+     parameters:
+       resourceQuota:
+         requests:
+           cpu: 5
+           memory: 5Gi
+           storage: 1Gi
+         limits:
+           cpu: 5
+           memory: 5Gi
+       networkPolicy: Isolated
+       podSecurityPolicy: Restricted
+       enableExtendedMonitoring: true
+   ```
 
-3. Для проверки статуса проекта введите команду:
+3. Для проверки статуса проекта выполните команду:
 
-```shell
-kubectl get projects my-project
-```
+   ```shell
+   kubectl get projects my-project
+   ```
 
-Успешно созданный проект должен отображаться в статусе `Sync` (синхронизирован).
+   Успешно созданный проект должен отображаться в статусе `Sync` (синхронизирован).
 
 ## Создание своего шаблона для проекта
 
@@ -67,7 +67,7 @@ kubectl get projects my-project
    kubectl get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения. 
+3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
    > Необходимо изменить не только шаблон, но и схему входных параметров под него.
 4. Измените имя шаблона в поле [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name).
 5. Примените полученный шаблон командой:
