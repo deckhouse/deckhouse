@@ -13,6 +13,8 @@ spec:
   {{- end }}
 {{- end }}
 ---
+{{- define "daemonset_agent_template_with_generation_checksum" }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -29,6 +31,7 @@ spec:
     metadata:
       annotations:
         configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
+        daemonset-generation.deckhouse.io/checksum: "%%g_checksum%%"
         scheduler.alpha.kubernetes.io/critical-pod: ""
         container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
@@ -458,3 +461,8 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+{{- end  }}
+
+{{ $generation_checksum := include "daemonset_agent_template_with_generation_checksum" . | sha256sum }}
+
+{{- include "daemonset_agent_template_with_generation_checksum" . | replace "%%g_checksum%%" $generation_checksum }}
