@@ -3,12 +3,17 @@ Copyright 2023 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package hooks_test
+package hooks
 
 import (
+	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -49,7 +54,38 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 			}
 		})
 	})
+
+	Context("Test default project template", func() {
+		It("Should render default project template", func() {
+			validateProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
+		})
+		It("Should render secure project template", func() {
+			validateProjectTemplate(secureProjectTemplatePath, alternativeSecureProjectTemplatePath)
+		})
+	})
 })
+
+func validateProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath string) {
+	defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
+	Expect(err).ToNot(HaveOccurred())
+
+	projectTemplate := &v1alpha1.ProjectTemplate{}
+	obj := unstructured.Unstructured{Object: make(map[string]interface{})}
+
+	err = yaml.Unmarshal(defaultProjectTemplateRaw, &obj.Object)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = sdk.FromUnstructured(&obj, projectTemplate)
+	Expect(err).ToNot(HaveOccurred())
+
+	projectTemplateSnapshot := internal.ProjectTemplateSnapshot{
+		Name: "default",
+		Spec: projectTemplate.Spec,
+	}
+
+	err = internal.ValidateProjectTemplate(projectTemplateSnapshot)
+	Expect(err).ToNot(HaveOccurred())
+}
 
 var (
 	testCasesForProjectStatuses = []testProjectStatus{

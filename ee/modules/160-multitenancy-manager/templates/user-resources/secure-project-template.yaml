@@ -6,146 +6,148 @@ metadata:
 spec:
   parametersSchema:
     openAPIV3Schema:
+      type: object
       required:
-        - administrators
-        - resourceQuota
-      resourceQuota:
-        type: object
-        description: |
-          Resource quota for the project.
-          Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
-        properties:
-          requests:
-            type: object
-            properties:
-              cpu:
-                oneOf:
-                  - type: number
-                    format: int
-                  - type: string
-                pattern: "^[0-9]+m?$"
-              memory:
-                oneOf:
-                  - type: number
-                    format: int
-                  - type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-              storage:
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          limits:
-            type: object
-            properties:
-              cpu:
-                oneOf:
-                  - type: number
-                    format: int
-                  - type: string
-                pattern: "^[0-9]+m?$"
-              memory:
-                oneOf:
-                  - type: number
-                    format: int
-                  - type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-      administrators:
-        description: |
-          Users and groups that will have admin access to the project.
-          Administrators are eligible to manage roles and access to the project.
-        type: array
-        items:
+      - administrators
+      - resourceQuota
+      properties:
+        resourceQuota:
           type: object
-          required:
-            - subject
-            - name
+          description: |
+            Resource quota for the project.
+            Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
           properties:
-            subject:
-              description: |
-                Kind of the target resource to apply access to the
-                environment (`Group` or `User`).
-              enum:
-                - User
-                - Group
-              type: string
-            name:
-              description: |
-                The name of the target resource to apply access
-                to the environment.
-              minLength: 1
-              type: string
-      networkPolicy:
-        description: |
-          NotRestricted — Allow all traffic by default.
-          Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
-        enum:
-          - Isolated
-          - NotRestricted
-        type: string
-        default: Isolated
-      podSecurityProfile:
-        description: |
-          Pod security profile name.
+            requests:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                storage:
+                  type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+            limits:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+        administrators:
+          description: |
+            Users and groups that will have admin access to the project.
+            Administrators are eligible to manage roles and access to the project.
+          type: array
+          items:
+            type: object
+            required:
+              - subject
+              - name
+            properties:
+              subject:
+                description: |
+                  Kind of the target resource to apply access to the
+                  environment (`Group` or `User`).
+                enum:
+                  - User
+                  - Group
+                type: string
+              name:
+                description: |
+                  The name of the target resource to apply access
+                  to the environment.
+                minLength: 1
+                type: string
+        networkPolicy:
+          description: |
+            NotRestricted — Allow all traffic by default.
+            Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+          enum:
+            - Isolated
+            - NotRestricted
+          type: string
+          default: Isolated
+        podSecurityProfile:
+          description: |
+            Pod security profile name.
 
-          The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
-          - Privileged — Unrestricted policy. Provides the widest possible permission level;
-          - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
-          - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
-        type: string
-        default: Baseline
-        enum:
-          - Baseline
-          - Restricted
-          - Privileged
-      extendedMonitoringEnabled:
-        description: |
-          Enable extended monitoring for the project.
-          When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
-           - Controller outages and restarts
-           - 5xx errors in ingress-nginx
-           - Low free space on the persistent volumes
-        type: boolean
-        default: true
-      clusterLogDestinationName:
-        description: |
-          If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
-          The names of the custom resource must be specified in the `clusterLogDestinationName` field.
-        type: string
-      securityScanningEnabled:
-        description: |
-          Allows you to run periodic vulnerability scans. It is based on the Trivy project.
-          Scanning is performed every 24 hours.
-        type: boolean
-        default: true
-      allowedUIDs:
-        description: |
-          Range of IDs allowed for users in the container.
-          Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-        required:
-          - min
-          - max
-        properties:
-          max:
-            type: number
-          min:
-            type: number
-      allowedGIDs:
-        description: |
-          Range of IDs allowed for groups in the container.
-          Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-        required:
-          - min
-          - max
-        properties:
-          max:
-            type: number
-          min:
-            type: number
-      runtimeAuditEnabled:
-        description: |
-          Enable runtime audit rules to catch syscalls to the kernel and find malicious activities.
-          Works only if allowed UID/GID range is specified.
-        type: boolean
-        default: false
+            The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
+            - Privileged — Unrestricted policy. Provides the widest possible permission level;
+            - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
+            - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+          type: string
+          default: Baseline
+          enum:
+            - Baseline
+            - Restricted
+            - Privileged
+        extendedMonitoringEnabled:
+          description: |
+            Enable extended monitoring for the project.
+            When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
+             - Controller outages and restarts
+             - 5xx errors in ingress-nginx
+             - Low free space on the persistent volumes
+          type: boolean
+          default: true
+        clusterLogDestinationName:
+          description: |
+            If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
+            The names of the custom resource must be specified in the `clusterLogDestinationName` field.
+          type: string
+        securityScanningEnabled:
+          description: |
+            Allows you to run periodic vulnerability scans. It is based on the Trivy project.
+            Scanning is performed every 24 hours.
+          type: boolean
+          default: true
+        allowedUIDs:
+          description: |
+            Range of IDs allowed for users in the container.
+            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+          required:
+            - min
+            - max
+          properties:
+            max:
+              type: number
+            min:
+              type: number
+        allowedGIDs:
+          description: |
+            Range of IDs allowed for groups in the container.
+            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+          required:
+            - min
+            - max
+          properties:
+            max:
+              type: number
+            min:
+              type: number
+        runtimeAuditEnabled:
+          description: |
+            Enable runtime audit rules to catch syscalls to the kernel and find malicious activities.
+            Works only if allowed UID/GID range is specified.
+          type: boolean
+          default: false
   resourcesTemplate: |
     ---
     apiVersion: v1
