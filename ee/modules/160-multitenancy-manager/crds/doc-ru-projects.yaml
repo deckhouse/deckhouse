@@ -18,6 +18,38 @@ spec:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
                     Перед созданием, значения согласовываются со [схемой](cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
+                dedicatedNodes:
+                  description: ""
+                  properties:
+                    labelSelector:
+                      description: |
+                        Настройка фильтра меток (label) по ресурсам.
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
+
+                         Пустое значение `labelSelector` соответствует всем объектам. Нулевое — никаким.
+                      properties:
+                        matchExpressions:
+                          description: |
+                            Список фильтров на основе выражений.
+
+                            Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: |
+                            Фильтр на основе совпадения/несовпадения меток.
+                    tolerations:
+                      description: |
+                        Структура, аналогичная параметру `spec.tolerations` пода Kubernetes для главного контроллера.
+
+                        Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
             status:
               description: ""
               properties:

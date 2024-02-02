@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
@@ -27,10 +29,12 @@ import (
 const (
 	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/dedicated-nodes-project-template.yaml"
 	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 	// Alternative path is needed to run tests in ci\cd pipeline
 	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/dedicated-nodes-project-template.yaml"
 	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 )
 
@@ -91,6 +95,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
+		addAnnotations(&projectValues)
 		values := concatValues(projectValues, projectTemplateValues)
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
@@ -157,8 +162,15 @@ func createDefaultProjectTemplate(input *go_hook.HookInput) {
 			return
 		}
 
+		dedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(dedicatedNodesTemplatePath, alternativeDedicatedNodesTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
 		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
 		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(dedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
 	}
 
 	onceCreateDefaultTemplates.Do(onceBody)
@@ -178,4 +190,34 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 	}
 
 	return projectTemplate, nil
+}
+
+func addAnnotations(ps *internal.ProjectSnapshot) {
+	labelSelector, err := metav1.LabelSelectorAsSelector(ps.DedicatedNodes.LabelSelector)
+	if err == nil {
+		ps.Parameters["nodeSelector"] = labelSelector.String()
+	}
+
+	ps.Parameters["defaultTolerations"] = ""
+	if len(ps.DedicatedNodes.Tolerations) > 0 {
+		var tolerations []string
+		for _, toleration := range ps.DedicatedNodes.Tolerations {
+			if toleration.Operator != "" {
+				var buf string
+				if toleration.Key != "" {
+					buf = fmt.Sprintf(`%s, "key": "%s"`, buf, toleration.Key)
+				}
+				if toleration.Value != "" {
+					buf = fmt.Sprintf(`%s, "value": "%s"`, buf, toleration.Value)
+				}
+				if toleration.Effect != "" {
+					buf = fmt.Sprintf(`%s, "effect": "%s"`, buf, toleration.Effect)
+				}
+
+				tolerations = append(tolerations, fmt.Sprintf(`{"operator": "%s"%s}`, toleration.Operator, buf))
+			}
+		}
+
+		ps.Parameters["defaultTolerations"] = fmt.Sprintf(`'[%s]'`, strings.Join(tolerations, ","))
+	}
 }
