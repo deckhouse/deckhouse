@@ -29,7 +29,7 @@ allow_alerts=(
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts
 kernelVersion=$(uname -r | cut -c 1)$(uname -r | cut -c 3,4)
 echo "${kernelVersion}"
-if [[ ${kernelVersion} < 515 ]]; then # Min kernel for ebpf exporter is 5.15
+if [[ ${kernelVersion} < 508 ]]; then # Min kernel for ebpf exporter is 5.08
   allow_alerts+=("D8NodeHasUnmetKernelRequirements" "KubernetesDaemonSetReplicasUnavailable")
 fi
 
