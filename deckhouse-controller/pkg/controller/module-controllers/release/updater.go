@@ -65,15 +65,22 @@ type kubeAPI struct {
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
 	ctx := context.Background()
 
-	release.Status.Phase = phase
-	release.Status.Message = msg
-
-	newRelease, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+	// prevents the object has been modified error
+	r, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Get(ctx, release.Name, metav1.GetOptions{})
 	if err != nil {
-		// prevents the object has been modified error
-		*release = *newRelease
+		return fmt.Errorf("get release %s: %w", release.Name, err)
 	}
-	return err
+
+	r.Status.Phase = phase
+	r.Status.Message = msg
+
+	r, err = k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("update release %s status: %w", release.Name, err)
+	}
+
+	*release = *r
+	return nil
 }
 
 func (k *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) error {
