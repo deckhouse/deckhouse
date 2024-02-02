@@ -20,8 +20,8 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
 ## Creating a project
 
-To create a project, you need to create a [Project](cr.html#project) resource specifying the name of the project template in the [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate) field.
-In the [.spec.template](cr.html#project-v1alpha1-spec-template) field of the `Project` resource, you need to specify the parameter values that are suitable for the [.spec.schema.openAPIV3Schema ProjectTemplate](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema).
+1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate) field.
+2. In the [.spec.template](cr.html#project-v1alpha1-spec-template) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.schema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema).
 
 Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
@@ -67,7 +67,9 @@ To create your own template:
    kubectl get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-3. Edit the `my-project-template.yaml` file, make the necessary changes. **Don't forget** that you need to change not only the template but also the schema of input parameters for it.
+3. Edit the `my-project-template.yaml` file, make the necessary changes. 
+
+   > It is necessary to change not only the template, but also the scheme of input parameters for it.
 4. Change the template name in the [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name) field.
 5. Apply your new template with the command:
 
@@ -75,6 +77,6 @@ To create your own template:
     kubectl apply -f my-project-template.yaml
     ```
 
-> Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
 {% endraw %}
