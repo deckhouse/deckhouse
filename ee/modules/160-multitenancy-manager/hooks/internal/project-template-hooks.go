@@ -49,7 +49,7 @@ func filterProjectTemplates(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func validateProjectTemplate(projectTemplate ProjectTemplateSnapshot) error {
+func ValidateProjectTemplate(projectTemplate ProjectTemplateSnapshot) error {
 	if _, err := LoadOpenAPISchema(projectTemplate.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
 		return fmt.Errorf("can't load open api schema from '%s' ProjectTemplate spec: %s", projectTemplate.Name, err)
 	}
@@ -68,7 +68,7 @@ func GetProjectTemplateSnapshots(input *go_hook.HookInput) map[string]ProjectTem
 			continue
 		}
 
-		if err := validateProjectTemplate(pt); err != nil {
+		if err := ValidateProjectTemplate(pt); err != nil {
 			SetProjectTemplateStatusError(input.PatchCollector, pt.Name, err.Error())
 			continue
 		}

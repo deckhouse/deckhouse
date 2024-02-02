@@ -46,11 +46,11 @@ type ProjectTemplateStatus struct {
 
 type ProjectTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	Spec ProjectTemplateSpec `json:"spec,omitempty"`
+	Spec ProjectTemplateSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
 
-	Status ProjectTemplateStatus `json:"status,omitempty"`
+	Status ProjectTemplateStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 type ProjectTemplateList struct {

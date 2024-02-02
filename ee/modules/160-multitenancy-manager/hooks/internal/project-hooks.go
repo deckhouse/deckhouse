@@ -126,7 +126,7 @@ func validateProject(project ProjectSnapshot, projectTemplates map[string]Projec
 
 	sc = schema.TransformSchema(sc, &schema.AdditionalPropertiesTransformer{})
 	if err := validate.AgainstSchema(sc, project.Parameters, strfmt.Default); err != nil {
-		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTemplateName, err)
+		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectTemplate: %v", project.ProjectTemplateName, err)
 	}
 	return nil
 }
