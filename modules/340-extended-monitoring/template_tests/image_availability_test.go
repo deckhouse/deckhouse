@@ -66,7 +66,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 	Context("With imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
-			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.tlsConfig", `{}`)
+			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
@@ -79,7 +79,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 	Context("Without imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", false)
-			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.tlsConfig", `{}`)
+			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
@@ -95,7 +95,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
 				hec.ValuesSet("extendedMonitoring.certificates.exporterEnabled", false)
-				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 				hec.HelmRender()
@@ -113,7 +113,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 		Context("Filled", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
-				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 				hec.ValuesSet("extendedMonitoring.imageAvailability.ignoredImages", []string{
@@ -137,8 +137,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 		Context("true", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
-				hec.ValuesSet("extendedMonitoring.certificates.exporterEnabled", false)
-				hec.ValuesSet("extendedMonitoring.imageAvailability.tlsConfig.insecureSkipVerify", true)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify", true)
 				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 				hec.HelmRender()
@@ -156,16 +155,52 @@ serviceSubnetCIDR: 10.222.0.0/16
 		Context("false", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
-				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.tlsConfig", `{}`)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify", false)
 				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
-				hec.ValuesSet("extendedMonitoring.imageAvailability.ignoredImages", []string{
-					"a.b.com/zzz:9.7.1",
-					"cr.k8s.io/xx-yy:4.3.1",
-				})
 				hec.HelmRender()
 			})
 			It("Should not contain --skip-registry-cert-verification flag", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+
+				Expect(insecureSkipVerifyArg).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("imageAvailability.registry.scheme", func() {
+		Context("HTTP", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.registry.scheme", "HTTP")
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.HelmRender()
+			})
+			It("Should contain --allow-plain-http flag", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				allowPlainHTTPArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+
+				Expect(allowPlainHTTPArg).To(Equal("--allow-plain-http"))
+			})
+		})
+
+		Context("HTTPS", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.registry.scheme", "HTTPS")
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.HelmRender()
+			})
+			It("Should not contain --allow-plain-http flag", func() {
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")

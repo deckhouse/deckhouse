@@ -1,5 +1,5 @@
 {{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
-{{- with .Values.extendedMonitoring.imageAvailability.tlsConfig.registryCA }}
+{{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

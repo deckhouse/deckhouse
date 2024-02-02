@@ -19,27 +19,33 @@ properties:
           A list of images to ignore when checking the presence in the registry, e.g., `alpine:3.12` or `quay.io/test/test:v1.1`.
         items:
           type: string
-      tlsConfig:
+      registry:
         type: object
         description: |
           <PLACEHOLDER>
         default: {}
         properties:
-          insecureSkipVerify:
-            type: boolean
-            description: |
-              Whether to skip the verification of the container registry certificate.
-            default: false
-          registryCA:
-            type: string
-            description: |
-              Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
-          registryScheme:
+          scheme:
             type: string
             description: |
               Container registry access scheme.
             enum: [HTTP, HTTPS]
             default: HTTPS
+          tlsConfig:
+            type: object
+            description: |
+              <PLACEHOLDER>
+            default: {}
+            properties:
+              insecureSkipVerify:
+                type: boolean
+                description: |
+                  Whether to skip the verification of the container registry certificate.
+                default: false
+              ca:
+                type: string
+                description: |
+                  Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
   events:
     type: object
     default: {}

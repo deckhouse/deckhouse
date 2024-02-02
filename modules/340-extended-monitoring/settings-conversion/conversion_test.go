@@ -78,8 +78,9 @@ events:
   severityLevel: OnlyWarnings
 imageAvailability:
   exporterEnabled: true
-  tlsConfig:
-    insecureSkipVerify: true
+  registry:
+    tlsConfig:
+      insecureSkipVerify: true
 `,
 			),
 			table.Entry("giving settings with imageAvailability.exporterEnabled=false",

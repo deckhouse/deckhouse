@@ -28,7 +28,7 @@ var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 func convertV1ToV2(settings *conversion.Settings) error {
 	insecure := settings.Get("imageAvailability.skipRegistryCertVerification").Bool()
 	if insecure {
-		err := settings.Set("imageAvailability.tlsConfig.insecureSkipVerify", insecure)
+		err := settings.Set("imageAvailability.registry.tlsConfig.insecureSkipVerify", insecure)
 		if err != nil {
 			return err
 		}
