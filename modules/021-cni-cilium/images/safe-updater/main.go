@@ -47,21 +47,36 @@ func main() {
 
 	SelfNodeName := os.Getenv("NODE_NAME")
 
-	CiliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNs).Get(context.TODO(), "agent", metav1.GetOptions{})
+	CiliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNs).Get(
+		context.TODO(),
+		"agent",
+		metav1.GetOptions{},
+	)
 	if err != nil {
 		log.Error(err)
 	}
 	CiliumAgentDSGenerationStr := strconv.FormatInt(CiliumAgentDS.Generation, 10)
-	log.Infof("[SafeUpdater] Current generation of DS %s/agent is %s", ciliumNs, CiliumAgentDSGenerationStr)
+	log.Infof(
+		"[SafeUpdater] Current generation of DS %s/agent is %s",
+		ciliumNs,
+		CiliumAgentDSGenerationStr,
+	)
 
-	CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "app=agent",
-		FieldSelector: "spec.nodeName=" + SelfNodeName,
-	})
+	CiliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNs).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: "app=agent",
+			FieldSelector: "spec.nodeName=" + SelfNodeName,
+		},
+	)
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("[SafeUpdater] Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
+	log.Infof(
+		"[SafeUpdater] Count of agents running on node %s is %v",
+		SelfNodeName,
+		len(CiliumAgentPodsOnSameNode.Items),
+	)
 	switch {
 	case len(CiliumAgentPodsOnSameNode.Items) == 0:
 		log.Errorf("On node %s no one pod of agent", SelfNodeName)
@@ -69,8 +84,15 @@ func main() {
 		log.Errorf("On node %s running more then one agent", SelfNodeName)
 	}
 	CurrentPod := CiliumAgentPodsOnSameNode.Items[0]
-	log.Infof("[SafeUpdater] Name of pod which running on the same node is %s", CurrentPod.Name)
-	log.Infof("[SafeUpdater] Generation of pod %s is %s", CurrentPod.Name, CurrentPod.Labels["pod-template-generation"])
+	log.Infof(
+		"[SafeUpdater] Name of pod which running on the same node is %s",
+		CurrentPod.Name,
+	)
+	log.Infof(
+		"[SafeUpdater] Generation of pod %s is %s",
+		CurrentPod.Name,
+		CurrentPod.Labels["pod-template-generation"],
+	)
 
 	if CiliumAgentDSGenerationStr != CurrentPod.Labels["pod-template-generation"] {
 		log.Infof(
@@ -79,32 +101,55 @@ func main() {
 			CurrentPod.Labels["pod-template-generation"],
 			CurrentPod.Name,
 		)
-		err := kubeClient.CoreV1().Pods(ciliumNs).Delete(context.TODO(), CurrentPod.Name, metav1.DeleteOptions{})
+		err := kubeClient.CoreV1().Pods(ciliumNs).Delete(
+			context.TODO(),
+			CurrentPod.Name,
+			metav1.DeleteOptions{},
+		)
 		if err != nil {
 			log.Error(err)
 		}
-		log.Infof("[SafeUpdater] Pod %s/%s deleted", ciliumNs, CurrentPod.Name)
+		log.Infof(
+			"[SafeUpdater] Pod %s/%s deleted",
+			ciliumNs,
+			CurrentPod.Name,
+		)
 
 		for {
 			log.Infof("[SafeUpdater] Waiting until new pod created on same node")
-			CiliumAgentPodsOnSameNode, err = kubeClient.CoreV1().Pods(ciliumNs).List(context.TODO(), metav1.ListOptions{
-				LabelSelector: "app=agent",
-				FieldSelector: "spec.nodeName=" + SelfNodeName,
-			})
+			CiliumAgentPodsOnSameNode, err = kubeClient.CoreV1().Pods(ciliumNs).List(
+				context.TODO(),
+				metav1.ListOptions{
+					LabelSelector: "app=agent",
+					FieldSelector: "spec.nodeName=" + SelfNodeName,
+				},
+			)
 			if err != nil {
 				log.Error(err)
 			}
-			log.Infof("[SafeUpdater] Count of agents running on node %s is %v", SelfNodeName, len(CiliumAgentPodsOnSameNode.Items))
+			log.Infof(
+				"[SafeUpdater] Count of agents running on node %s is %v",
+				SelfNodeName,
+				len(CiliumAgentPodsOnSameNode.Items),
+			)
 			if len(CiliumAgentPodsOnSameNode.Items) == 1 &&
 				CiliumAgentPodsOnSameNode.Items[0].Name != "" {
 				NewPodName = CiliumAgentPodsOnSameNode.Items[0].Name
-				log.Infof("New pod created with name %s", NewPodName)
+				log.Infof(
+					"[SafeUpdater] New pod created with name %s",
+					NewPodName,
+				)
 				break
 			}
 			time.Sleep(scanInterval * time.Second)
 		}
+
 		for {
-			NewPod, err := kubeClient.CoreV1().Pods(ciliumNs).Get(context.TODO(), NewPodName, metav1.GetOptions{})
+			NewPod, err := kubeClient.CoreV1().Pods(ciliumNs).Get(
+				context.TODO(),
+				NewPodName,
+				metav1.GetOptions{},
+			)
 			if err != nil {
 				log.Error(err)
 			}
