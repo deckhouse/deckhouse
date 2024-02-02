@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	log "github.com/sirupsen/logrus"
 
@@ -145,7 +145,6 @@ func main() {
 			}
 			time.Sleep(scanInterval * time.Second)
 		}
-
 		for {
 			NewPod, err := kubeClient.CoreV1().Pods(ciliumNs).Get(
 				context.TODO(),
@@ -157,10 +156,8 @@ func main() {
 			}
 			log.Infof("[SafeUpdater] Waiting until new pod %s become Ready", NewPod.Name)
 
-			for _, cond := range NewPod.Status.Conditions {
-				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-					break
-				}
+			if PodIsReady(NewPod) {
+				break
 			}
 			time.Sleep(scanInterval * time.Second)
 		}
@@ -169,4 +166,15 @@ func main() {
 		log.Infof("[SafeUpdater] The cilium agent pod completely matches its DaemonSet. Nothing to do")
 	}
 	log.Infof("[SafeUpdater] Finished and exit")
+}
+
+func PodIsReady(pod *v1.Pod) bool {
+	var isReady = false
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			isReady = true
+			break
+		}
+	}
+	return isReady
 }
