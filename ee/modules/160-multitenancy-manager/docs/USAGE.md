@@ -13,7 +13,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   * choice of security profile;
   * project administrators setup.
 
-- `secure` — includes all the capabilities of the `default` template and additionally:
+- `secure` — includes all the capabilities of the `default` template and additional features:
   * setting up permissible UID/GID for the project;
   * audit rules for project users' access to the Linux kernel;
   * scanning of launched container images for CVE presence.
