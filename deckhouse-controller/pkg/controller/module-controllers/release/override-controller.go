@@ -286,7 +286,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	if moduleDef != nil {
 		err = validateModule(c.modulesValidator, *moduleDef)
 		if err != nil {
-			mo.Status.Message = "Openapi config is invalid"
+			mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
