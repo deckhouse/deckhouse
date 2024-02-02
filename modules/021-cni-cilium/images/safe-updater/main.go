@@ -31,9 +31,9 @@ import (
 )
 
 const (
-	ciliumNs                        = "d8-cni-cilium"
-	generation_checksum_annotations = "daemonset-generation.deckhouse.io/checksum"
-	scanInterval                    = 3
+	ciliumNs                      = "d8-cni-cilium"
+	generationChecksumAnnotations = "daemonset-generation.deckhouse.io/checksum"
+	scanInterval                  = 3
 )
 
 var (
@@ -57,7 +57,7 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	CiliumAgentDSGenerationChecksum := CiliumAgentDS.Spec.Template.Annotations[generation_checksum_annotations]
+	CiliumAgentDSGenerationChecksum := CiliumAgentDS.Spec.Template.Annotations[generationChecksumAnnotations]
 	log.Infof(
 		"[SafeUpdater] Current generation of DS %s/agent is %s",
 		ciliumNs,
@@ -90,7 +90,7 @@ func main() {
 		"[SafeUpdater] Name of pod which running on the same node is %s",
 		CurrentPod.Name,
 	)
-	CurrentPodGenerationChecksum := CurrentPod.Annotations[generation_checksum_annotations]
+	CurrentPodGenerationChecksum := CurrentPod.Annotations[generationChecksumAnnotations]
 	log.Infof(
 		"[SafeUpdater] Generation of pod %s is %s",
 		CurrentPod.Name,
@@ -162,7 +162,6 @@ func main() {
 					break
 				}
 			}
-
 			time.Sleep(scanInterval * time.Second)
 		}
 		log.Infof("[SafeUpdater] Cilium agent on node %s successfully reloaded", SelfNodeName)
