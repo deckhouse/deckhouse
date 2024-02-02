@@ -20,8 +20,8 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
 ## Creating a project
 
-1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate) field.
-2. In the [.spec.template](cr.html#project-v1alpha1-spec-template) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.schema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema).
+1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename) field.
+2. In the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
 
    Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 

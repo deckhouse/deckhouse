@@ -20,8 +20,8 @@ Deckhouse Kubernetes Platform включает следующий набор ш�
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha1-spec-projecttemplate).
-2. В параметре [.spec.template](cr.html#project-v1alpha1-spec-template) ресурса `Project` укажите значения параметров для секции [.spec.schema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec--schema-openAPIV3Schema) ресурса `ProjectTemplate`.
+1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
+2. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) ресурса `Project` укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса `ProjectTemplate`.
 
    Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
