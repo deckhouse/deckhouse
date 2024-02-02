@@ -20,7 +20,7 @@ kubernetes:
     jqFilter: |
       {
         "projectName": .metadata.name,
-        "templateName": .spec.templateName
+        "projectTemplateName": .spec.projectTemplateName
       }
 kubernetesValidating:
 - name: used-in-project.deckhouse.io
@@ -37,12 +37,12 @@ EOF
 function __main__() {
 projectTemplateName=$(context::jq -r '.review.request.oldObject.metadata.name')
                                                               
-  if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.templateName == $templateName) | .projectName] | first' 2>&1)"; then
+if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.projectTemplateName == $templateName) | .projectName] | first' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ProjectTemplate \"$projectTemplateName\" cannot be deleted. It is used in the Project \"$usedInProjectName\"" }
 EOF
-    return 0
-  fi
+  return 0
+fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
