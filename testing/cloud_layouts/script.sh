@@ -783,17 +783,14 @@ function wait_cluster_ready() {
 
   testAlerts=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
-  testRunAttempts=5
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
-      sleep 30
-    fi
-  done
+  test_failed="true"
+  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
+    test_failed=""
+  else
+    test_failed="true"
+    >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+    sleep 30
+  fi
 
   if [[ $test_failed == "true" ]] ; then
       return 1
