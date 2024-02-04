@@ -471,9 +471,9 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
 	}
 
-	c.logger.Debugf("%+v", nConfig) // TODO: remove this
+	c.logger.Infof("%+v", nConfig) // TODO: remove this
 	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
-	releaseUpdater := newUpdater(c.logger, nConfig, kubeAPI)
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, kubeAPI)
 
 	releaseUpdater.PrepareReleases(otherReleases)
 	if releaseUpdater.ReleasesCount() == 0 {

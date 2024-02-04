@@ -37,7 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
+func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, "",
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(), newSettings())
 }
