@@ -7,7 +7,6 @@ package hooks
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +16,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
@@ -95,7 +93,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
-		addAnnotations(&projectValues)
 		values := concatValues(projectValues, projectTemplateValues)
 
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
@@ -190,34 +187,4 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 	}
 
 	return projectTemplate, nil
-}
-
-func addAnnotations(ps *internal.ProjectSnapshot) {
-	labelSelector, err := metav1.LabelSelectorAsSelector(ps.DedicatedNodes.LabelSelector)
-	if err == nil {
-		ps.Parameters["nodeSelector"] = labelSelector.String()
-	}
-
-	ps.Parameters["defaultTolerations"] = ""
-	if len(ps.DedicatedNodes.Tolerations) > 0 {
-		var tolerations []string
-		for _, toleration := range ps.DedicatedNodes.Tolerations {
-			if toleration.Operator != "" {
-				var buf string
-				if toleration.Key != "" {
-					buf = fmt.Sprintf(`%s, "key": "%s"`, buf, toleration.Key)
-				}
-				if toleration.Value != "" {
-					buf = fmt.Sprintf(`%s, "value": "%s"`, buf, toleration.Value)
-				}
-				if toleration.Effect != "" {
-					buf = fmt.Sprintf(`%s, "effect": "%s"`, buf, toleration.Effect)
-				}
-
-				tolerations = append(tolerations, fmt.Sprintf(`{"operator": "%s"%s}`, toleration.Operator, buf))
-			}
-		}
-
-		ps.Parameters["defaultTolerations"] = fmt.Sprintf(`'[%s]'`, strings.Join(tolerations, ","))
-	}
 }

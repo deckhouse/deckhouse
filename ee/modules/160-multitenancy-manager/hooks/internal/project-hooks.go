@@ -14,7 +14,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
-	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -70,12 +69,6 @@ type ProjectSnapshot struct {
 	ProjectName         string                 `json:"projectName" yaml:"projectName"`
 	ProjectTemplateName string                 `json:"projectTemplateName" yaml:"projectTemplateName"`
 	Parameters          map[string]interface{} `json:"parameters" yaml:"parameters"`
-	DedicatedNodes      DedicatedNode
-}
-
-type DedicatedNode struct {
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
-	Tolerations   []apiv1.Toleration    `json:"tolerations,omitempty"`
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -104,26 +97,11 @@ func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnap
 		return nil, err
 	}
 
-	var tolerations []apiv1.Toleration
-	for _, toleration := range project.Spec.DedicatedNodes.Tolerations {
-		tolerations = append(tolerations, apiv1.Toleration{
-			Key:               toleration.Key,
-			Operator:          toleration.Operator,
-			Value:             toleration.Value,
-			Effect:            toleration.Effect,
-			TolerationSeconds: toleration.TolerationSeconds,
-		})
-	}
-
 	projectSnapshotWithStatus := ProjectSnapshotWithStatus{
 		Snapshot: ProjectSnapshot{
 			ProjectName:         project.Name,
 			ProjectTemplateName: project.Spec.ProjectTemplateName,
 			Parameters:          project.Spec.Parameters,
-			DedicatedNodes: DedicatedNode{
-				Tolerations:   tolerations,
-				LabelSelector: project.Spec.DedicatedNodes.LabelSelector,
-			},
 		},
 		Status: project.Status,
 	}

@@ -6,14 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package v1alpha2
 
 import (
-	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-type DedicatedNode struct {
-	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	Tolerations   []apiv1.Toleration    `json:"tolerations,omitempty"`
-}
 
 type ProjectSpec struct {
 	// Description of the Project
@@ -26,9 +20,6 @@ type ProjectSpec struct {
 	// in helm values format that map to the open-api specification
 	// from the ValuesSchema ProjectTemplate field
 	Parameters map[string]interface{} `json:"parameters,omitempty"`
-
-	// DedicatedNodes
-	DedicatedNodes DedicatedNode `json:"dedicatedNodes,omitempty"`
 }
 
 type ProjectStatus struct {
