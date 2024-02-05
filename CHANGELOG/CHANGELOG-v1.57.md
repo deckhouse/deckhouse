@@ -11,7 +11,7 @@
 ## Features
 
 
- - **[candi]** Add Deckhouse Kubernetes Platform Basic Вdition (BE). [#7260](https://github.com/deckhouse/deckhouse/pull/7260)
+ - **[candi]** Add Deckhouse Kubernetes Platform Basic Edition (BE). [#7260](https://github.com/deckhouse/deckhouse/pull/7260)
  - **[candi]** Add the ability to install packages from images inside an external module. [#7254](https://github.com/deckhouse/deckhouse/pull/7254)
  - **[candi]** Set curl connect timeout to 10s and explicitly set overall timeout to 300s. [#7059](https://github.com/deckhouse/deckhouse/pull/7059)
  - **[ceph-csi]** ceph-csi module is based on a distroless image. [#6724](https://github.com/deckhouse/deckhouse/pull/6724)
@@ -40,6 +40,7 @@
 ## Fixes
 
 
+ - **[candi]** BE edition improvements. [#7338](https://github.com/deckhouse/deckhouse/pull/7338)
  - **[candi]** Add validation pattern for the `imagesRepo` parameter. [#7169](https://github.com/deckhouse/deckhouse/pull/7169)
  - **[candi]** Raise the priority for NodeUser step. [#7140](https://github.com/deckhouse/deckhouse/pull/7140)
  - **[candi]** Decrease shutdownGracePeriod for YandexCloud. [#6897](https://github.com/deckhouse/deckhouse/pull/6897)
@@ -51,6 +52,7 @@
  - **[deckhouse-controller]** fix for `change-registry` helper's handling of registry credentials. [#7095](https://github.com/deckhouse/deckhouse/pull/7095)
  - **[deckhouse-controller]** Fix ModuleConfig validation for configs with empty settings. [#7064](https://github.com/deckhouse/deckhouse/pull/7064)
  - **[descheduler]** Set the number of replicas to 0 if we have only one node. [#5221](https://github.com/deckhouse/deckhouse/pull/5221)
+ - **[dhctl]** Mirroring will now include Trivy vulnerability database image. [#7359](https://github.com/deckhouse/deckhouse/pull/7359)
  - **[dhctl]** Skip converge base infra if user does not want converge base infra [#7313](https://github.com/deckhouse/deckhouse/pull/7313)
  - **[dhctl]** Fix skipping preflight check about registry-through-proxy. [#7135](https://github.com/deckhouse/deckhouse/pull/7135)
  - **[dhctl]** Fix ModuleConfig update error: 'Invalid value: 0x0: must be specified for an update' [#7048](https://github.com/deckhouse/deckhouse/pull/7048)
@@ -64,6 +66,7 @@
  - **[network-gateway]** Fix distroless build. [#7250](https://github.com/deckhouse/deckhouse/pull/7250)
  - **[network-policy-engine]** Module images are based on a distroless image. [#6460](https://github.com/deckhouse/deckhouse/pull/6460)
  - **[node-manager]** Add RBAC rules for kube-rbac-proxy in capi-controller-manager. [#6854](https://github.com/deckhouse/deckhouse/pull/6854)
+ - **[operator-trivy]** Fix `node-collector` image. [#7329](https://github.com/deckhouse/deckhouse/pull/7329)
  - **[operator-trivy]** CIS compliance checks are now available immediately after activating the module. [#6951](https://github.com/deckhouse/deckhouse/pull/6951)
  - **[prometheus]** Fix alerts-receiver reconcile loop issue. [#7287](https://github.com/deckhouse/deckhouse/pull/7287)
     Alerts-receiver pod will be recreated.
