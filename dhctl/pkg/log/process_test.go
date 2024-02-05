@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/werf/logboek"
 )
 
 func TestProcessStack(t *testing.T) {
@@ -72,7 +73,7 @@ func TestProcessLoggers(t *testing.T) {
 		},
 
 		{
-			logger: newPrettyProcessLogger(),
+			logger: newPrettyProcessLogger(logboek.DefaultLogger()),
 			name:   "pretty logger",
 		},
 	}

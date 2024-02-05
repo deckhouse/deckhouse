@@ -17,6 +17,7 @@ package frontend
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"regexp"
 	"time"
 
@@ -39,13 +40,16 @@ type KubeProxy struct {
 	stop      bool
 	port      string
 	localPort int
+
+	healthMonitorsByStartID map[int]chan struct{}
 }
 
 func NewKubeProxy(sess *session.Session) *KubeProxy {
 	return &KubeProxy{
-		Session:   sess,
-		port:      "0",
-		localPort: DefaultLocalAPIPort,
+		Session:                 sess,
+		port:                    "0",
+		localPort:               DefaultLocalAPIPort,
+		healthMonitorsByStartID: make(map[int]chan struct{}),
 	}
 }
 
@@ -86,11 +90,18 @@ func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
 	k.tunnel = tun
 	k.localPort = localPort
 
-	go k.healthMonitor(proxyCommandErrorCh, tunnelErrorCh, startID)
+	k.healthMonitorsByStartID[startID] = make(chan struct{}, 1)
+	go k.healthMonitor(proxyCommandErrorCh, tunnelErrorCh, k.healthMonitorsByStartID[startID], startID)
 
 	success = true
 
 	return fmt.Sprintf("%d", k.localPort), nil
+}
+
+func (k *KubeProxy) StopAll() {
+	for startID := range k.healthMonitorsByStartID {
+		k.Stop(startID)
+	}
 }
 
 func (k *KubeProxy) Stop(startID int) {
@@ -102,6 +113,11 @@ func (k *KubeProxy) Stop(startID int) {
 	if k.stop {
 		log.DebugF("[%d] Stop kube-proxy: kube proxy already stopped. Skip.\n", startID)
 		return
+	}
+
+	if k.healthMonitorsByStartID[startID] != nil {
+		k.healthMonitorsByStartID[startID] <- struct{}{}
+		delete(k.healthMonitorsByStartID, startID)
 	}
 	if k.proxy != nil {
 		log.DebugF("[%d] Stop proxy command\n", startID)
@@ -143,7 +159,11 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 }
 
 func (k *KubeProxy) proxyCMD(startID int) *Command {
-	command := fmt.Sprintf("PATH=$PATH:%s/; kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", app.DeckhouseNodeBinPath, k.port)
+	kubectlProxy := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+	if v := os.Getenv("KUBE_PROXY_ACCEPT_HOSTS"); v != "" {
+		kubectlProxy += fmt.Sprintf(" --accept-hosts='%s'", v)
+	}
+	command := fmt.Sprintf("PATH=$PATH:%s/; %s", app.DeckhouseNodeBinPath, kubectlProxy)
 
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 
@@ -152,7 +172,7 @@ func (k *KubeProxy) proxyCMD(startID int) *Command {
 	return cmd
 }
 
-func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, startID int) {
+func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, stopCh chan struct{}, startID int) {
 	defer log.DebugF("[%d] Kubeproxy health monitor stopped\n", startID)
 	log.DebugF("[%d] Kubeproxy health monitor started\n", startID)
 
@@ -183,6 +203,10 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, startI
 			}
 
 			log.DebugF("[%d] Tunnel re up successfully\n")
+
+		case <-stopCh:
+			log.DebugF("[%d] Kubeproxy monitor stopped")
+			return
 		}
 	}
 }
@@ -211,7 +235,13 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 		}
 
 		// try to start tunnel from localPort to proxy port
-		tunnelAddress := fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
+		var tunnelAddress string
+		if v := os.Getenv("KUBE_PROXY_BIND_ADDR"); v != "" {
+			tunnelAddress = fmt.Sprintf("%s:%d:localhost:%s", v, localPort, kubeProxyPort)
+		} else {
+			tunnelAddress = fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
+		}
+
 		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)
 		tun = NewTunnel(k.Session, "L", tunnelAddress)
 		err := tun.Up()

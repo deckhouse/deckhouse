@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
@@ -37,11 +38,15 @@ type Destroyer interface {
 }
 
 type Params struct {
-	SSHClient   *ssh.Client
-	StateCache  dhctlstate.Cache
-	OnPhaseFunc phases.OnPhaseFunc
+	SSHClient              *ssh.Client
+	StateCache             dhctlstate.Cache
+	OnPhaseFunc            phases.OnPhaseFunc
+	PhasedExecutionContext *phases.PhasedExecutionContext
 
 	SkipResources bool
+
+	CommanderMode bool
+	*commander.CommanderModeParams
 }
 
 type ClusterDestroyer struct {
@@ -59,11 +64,29 @@ type ClusterDestroyer struct {
 	*phases.PhasedExecutionContext
 }
 
-func NewClusterDestroyer(params *Params) *ClusterDestroyer {
+func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
-	pec := phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+
+	var pec *phases.PhasedExecutionContext
+	if params.PhasedExecutionContext != nil {
+		pec = params.PhasedExecutionContext
+	} else {
+		pec = phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+	}
+
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
-	terraStateLoader := terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+
+	var terraStateLoader terraform.StateLoader
+	if params.CommanderMode {
+		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+		}
+		terraStateLoader = terraform.NewFileTerraStateLoader(state.cache, metaConfig)
+	} else {
+		terraStateLoader = terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+	}
+
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
 	staticDestroyer := NewStaticMastersDestroyer(params.SSHClient)
@@ -81,13 +104,13 @@ func NewClusterDestroyer(params *Params) *ClusterDestroyer {
 		PhasedExecutionContext: pec,
 
 		staticDestroyer: staticDestroyer,
-	}
+	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	defer d.d8Destroyer.UnlockConverge(true)
 
-	if err := d.PhasedExecutionContext.Init(d.stateCache); err != nil {
+	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
 		return err
 	}
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
@@ -110,7 +133,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	if !d.skipResources {
-		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false); err != nil {
+		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false, d.stateCache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -118,7 +141,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
 			return err
 		}
-		if err := d.PhasedExecutionContext.CommitState(d.stateCache); err != nil {
+		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache); err != nil {
 			return err
 		}
 	}
@@ -149,7 +172,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	d.state.Clean()
-	return d.PhasedExecutionContext.Complete()
+	return d.PhasedExecutionContext.CompletePipeline(d.stateCache)
 }
 
 type StaticMastersDestroyer struct {
