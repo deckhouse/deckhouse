@@ -57,3 +57,7 @@ __pycache__/
 
 # Helm lib
 deckhouse_lib_helm-*.tgz
+
+# Spellchecker
+spell_log_site
+spell_log_documentation

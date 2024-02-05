@@ -35,6 +35,45 @@ import:
   to: /app
   before: setup
 ---
+image: docs-spell-checker
+from: {{ .Images.BASE_UBUNTU }}
+import:
+  - image: static-pages
+    add: /app/_site
+    to: /spelling/_documentation
+    before: setup
+git:
+  - add: /tools/spelling/dictionaries/
+    to: /temp/dictionaries
+    stageDependencies:
+      setup: '**/*'
+  - add: /tools/spelling/internal/
+    to: /temp/internal
+    stageDependencies:
+      setup: '**/*'
+docker:
+  ENV:
+    LANG: ru_RU.UTF-8
+    LANGUAGE: ru_RU:ru
+    LC_LANG: ru_RU.UTF-8
+    LC_ALL: ru_RU.UTF-8
+    LC_MESSAGES: ru_RU.UTF-8
+    TZ: Europe/Moscow
+    PIP_ROOT_USER_ACTION: ignore
+shell:
+  beforeInstall:
+    - apt -y update && apt -y upgrade
+    - apt install -y locales
+    - sed -i -e 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
+    - ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+  install:
+    - apt -y update && apt -y install hunspell html2text python3.11 python3-pip tree
+    - pip3 install beautifulsoup4
+  setup:
+    - rm /usr/share/hunspell/*
+    - cp /temp/dictionaries/* /usr/share/hunspell/
+    - cp /temp/internal/* /spelling
+---
 image: static-pages
 from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210713
