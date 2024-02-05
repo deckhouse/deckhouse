@@ -18,6 +18,11 @@ editions:
     - yandex
   # skip adding fix imports for release. need only for CE edition in general case
   skipFixingImports: true
+
+  # skip collect images. Unfortunately we cannot handle error from .Files.Glob
+  # for some editions we cannot have any images
+  # skipCollectImages: true
+
   # settings for tools/build.go
   buildIncludes:
     # skipping write build includes candi-%s.yaml file for edition
@@ -32,9 +37,11 @@ editions:
 - name: BE
   versionMapFile: "ee/be/candi/version_map.yml"
   modulesDir: "ee/be/modules"
-  # skip collect images. Unfortunately we cannot handle error from .Files.Glob
-  # BE edition does not have any images
-  skipCollectImages: true
+
+  # exclude modules from templates and images
+  excludeModules:
+  - ceph-csi
+  - openvpn
 
 - name: EE
   modulesDir: "ee/modules"
