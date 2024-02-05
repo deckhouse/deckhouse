@@ -17,7 +17,6 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -255,31 +254,4 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
-}
-
-// ValidateClusterSettings parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-func ValidateClusterSettings(configData string) error {
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
