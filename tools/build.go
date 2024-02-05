@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -39,6 +40,7 @@ const (
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	candiFileName              = "candi-%s.yaml"
+	modulesExcluded            = "modules-excluded-%s.yaml"
 )
 
 var workDir = cwd()
@@ -89,6 +91,35 @@ type writeSettings struct {
 	SaveTo            string
 	ExcludePaths      []string
 	StageDependencies map[string][]string
+	ExcludedModules   map[string]struct{}
+}
+
+func writeExcludedModules(settings writeSettings, modules map[string]string, ed edition) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+
+	if len(ed.ExcludeModules) == 0 {
+		if err := writeToFile(saveTo, nil); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	resultArr := make([]string, 0, len(ed.ExcludeModules))
+
+	for _, name := range ed.ExcludeModules {
+		modulePath, ok := modules[name]
+		if !ok {
+			log.Print(fmt.Sprintf("Not found module path for module %s\n", modulePath))
+			continue
+		}
+		resultArr = append(resultArr, fmt.Sprintf("- %s/**", modulePath))
+	}
+
+	result := []byte(strings.Join(resultArr, "\n"))
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func writeSections(settings writeSettings) {
@@ -133,6 +164,14 @@ func writeSections(settings writeSettings) {
 
 		if !info.IsDir() {
 			continue
+		}
+
+		if len(settings.ExcludedModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// skip excluded modules
+			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
 		}
 
 		buildFile := filepath.Join(file, ".build.yaml")
@@ -234,9 +273,10 @@ type buildIncludes struct {
 }
 
 type edition struct {
-	Name          string         `yaml:"name,omitempty"`
-	ModulesDir    string         `yaml:"modulesDir,omitempty"`
-	BuildIncludes *buildIncludes `yaml:"buildIncludes,omitempty"`
+	Name           string         `yaml:"name,omitempty"`
+	ModulesDir     string         `yaml:"modulesDir,omitempty"`
+	BuildIncludes  *buildIncludes `yaml:"buildIncludes,omitempty"`
+	ExcludeModules []string       `yaml:"excludeModules,omitempty"`
 }
 
 type editions struct {
@@ -295,8 +335,29 @@ func main() {
 
 func (e *executor) executeEdition(editionName string) {
 	deleteRevisionFiles(editionName)
+	modulesDict := make(map[string]string)
 
 	for _, ed := range e.Editions {
+		// get moduleName => path dict
+		searchDir := filepath.Join(workDir, ed.ModulesDir)
+		entries, err := os.ReadDir(searchDir)
+		if err != nil {
+			log.Fatalf("cannot read dir: %s", err)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			moduleName := e.Name()[4:]
+			modulesDict[moduleName] = path.Join(ed.ModulesDir, e.Name())
+		}
+
+		// convert excluded modules to dict
+		excludeModules := make(map[string]struct{})
+		for _, moduleName := range ed.ExcludeModules {
+			excludeModules[moduleName] = struct{}{}
+		}
+
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
@@ -317,18 +378,21 @@ func (e *executor) executeEdition(editionName string) {
 		}
 
 		writeSettingsModules := writeSettings{
-			Edition: editionName,
-			SaveTo:  modulesFileName,
+			Edition:         editionName,
+			SaveTo:          modulesFileName,
+			ExcludedModules: excludeModules,
 		}
 
 		writeSettingsExcludeFileName := writeSettings{
-			Edition: editionName,
-			SaveTo:  modulesWithExcludeFileName,
+			Edition:         editionName,
+			SaveTo:          modulesWithExcludeFileName,
+			ExcludedModules: excludeModules,
 		}
 
 		writeSettingStageDeps := writeSettings{
-			Edition: editionName,
-			SaveTo:  modulesWithDependencies,
+			Edition:         editionName,
+			SaveTo:          modulesWithDependencies,
+			ExcludedModules: excludeModules,
 		}
 
 		if bi.SkipModules == nil || !*bi.SkipModules {
@@ -353,6 +417,11 @@ func (e *executor) executeEdition(editionName string) {
 		writeSections(writeSettingCandi)
 
 		if ed.Name == editionName {
+			// only for one edition
+			writeExcludedModules(writeSettings{
+				SaveTo:  modulesExcluded,
+				Edition: editionName,
+			}, modulesDict, ed)
 			return
 		}
 	}

@@ -43,6 +43,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/140-user-authz/images/webhook"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/600-flant-integration/images/madison-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
   labels:
   - "type/dependencies"
@@ -61,25 +79,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/140-user-authz/images/webhook"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/500-operator-trivy/images/report-updater"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/600-flant-integration/images/madison-proxy"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -485,7 +485,7 @@ updates:
 
 # pip
 - package-ecosystem: "pip"
-  directory: "/ee/modules/600-flant-integration/images/flant-pricing"
+  directory: "/ee/be/modules/600-flant-integration/images/flant-pricing"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
