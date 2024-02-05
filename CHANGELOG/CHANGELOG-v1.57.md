@@ -98,6 +98,7 @@
  - **[linstor]** Add a validating webhook to prevent the linstor module from being enabled. [#7086](https://github.com/deckhouse/deckhouse/pull/7086)
     The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
  - **[monitoring-kubernetes]** Move `helm` module to `monitoring-kubernetes` module. [#6726](https://github.com/deckhouse/deckhouse/pull/6726)
+ - **[operator-trivy]** Update the base image for the operator-trivy module. [#7381](https://github.com/deckhouse/deckhouse/pull/7381)
  - **[prometheus]** Fix concurrent map access error. [#7261](https://github.com/deckhouse/deckhouse/pull/7261)
     Internal alerts-receiver will restart.
  - **[prometheus]** Set `.spec.externalURL` in the alermanager manifest when a public domain is specified. [#7042](https://github.com/deckhouse/deckhouse/pull/7042)
