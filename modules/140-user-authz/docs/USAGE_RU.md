@@ -122,8 +122,8 @@ spec:
         ```
 
    * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../modules/150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
-      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    * Если используется непубличный CA:
 
