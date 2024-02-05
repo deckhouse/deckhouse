@@ -62,6 +62,9 @@ var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
 		It("Should render secure project template", func() {
 			validateProjectTemplate(secureProjectTemplatePath, alternativeSecureProjectTemplatePath)
 		})
+		It("Should render secure project template with dedicated nodes", func() {
+			validateProjectTemplate(dedicatedNodesTemplatePath, alternativeDedicatedNodesTemplatePath)
+		})
 	})
 })
 
