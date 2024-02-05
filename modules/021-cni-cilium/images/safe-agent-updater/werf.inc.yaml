@@ -24,17 +24,17 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - export CGO_ENABLED=0
   - cd /src
-  - go build -ldflags="-s -w" -o safe-updater .
-  - chown 64535:64535 /src/safe-updater
-  - chmod 0700 /src/safe-updater
+  - go build -ldflags="-s -w" -o safe-agent-updater .
+  - chown 64535:64535 /src/safe-agent-updater
+  - chmod 0700 /src/safe-agent-updater
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/safe-updater
-  to: /safe-updater
+  add: /src/safe-agent-updater
+  to: /safe-agent-updater
   before: install
 docker:
   USER: 64535
-  ENTRYPOINT: ["/safe-updater"]
+  ENTRYPOINT: ["/safe-agent-updater"]

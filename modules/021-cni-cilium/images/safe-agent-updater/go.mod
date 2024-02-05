@@ -1,4 +1,4 @@
-module safe-updater
+module safe-agent-updater
 
 go 1.21
 
