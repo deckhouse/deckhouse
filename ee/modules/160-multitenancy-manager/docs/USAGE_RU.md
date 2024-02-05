@@ -25,7 +25,7 @@ Deckhouse Kubernetes Platform включает следующий набор ш�
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
-kubectl get projecttemplates <имя_шаблона_проекта> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
+kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
 ```
 
 ## Создание проекта

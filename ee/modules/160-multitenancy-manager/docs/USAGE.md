@@ -25,7 +25,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 To list all available parameters for a project template, execute the command:
 
 ```shell
-kubectl get projecttemplates <project_template_name> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
+kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
 ```
 
 ## Creating a project
