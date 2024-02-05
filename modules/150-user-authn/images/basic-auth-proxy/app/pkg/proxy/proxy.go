@@ -19,11 +19,11 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -33,6 +33,8 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"basic-auth-proxy/pkg/proxy/provider"
 )
 
 const (
@@ -42,7 +44,7 @@ const (
 	caFilepath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
 
-var logger = capnslog.NewPackageLogger("crowd-auth-proxy", "proxy")
+var logger = capnslog.NewPackageLogger("basic-auth-proxy", "proxy")
 
 var defaultFlushInterval = 50 * time.Millisecond
 
@@ -61,7 +63,7 @@ func tlsHTTPClientTransport(certPath string) *http.Transport {
 	}
 
 	caCerts := x509.NewCertPool()
-	caCert, err := ioutil.ReadFile(caFilepath)
+	caCert, err := os.ReadFile(caFilepath)
 	if err != nil {
 		logger.Fatalf("append CA cert: %+v", err)
 	}
@@ -90,20 +92,28 @@ func tlsHTTPClientTransport(certPath string) *http.Transport {
 }
 
 type Handler struct {
-	ListenAddress            string
-	KubernetesAPIServerURL   string
-	CertPath                 string
+	ListenAddress          string
+	KubernetesAPIServerURL string
+	CertPath               string
+
 	CrowdBaseURL             string
 	CrowdApplicationLogin    string
 	CrowdApplicationPassword string
 	CrowdGroups              []string
+
+	OIDCBaseURL             string
+	OIDCApplicationLogin    string
+	OIDCApplicationPassword string
+	OIDCGroups              []string
+	OIDCScopes              []string
 
 	AuthCacheTTL   time.Duration
 	GroupsCacheTTL time.Duration
 
 	Cache        *ttlcache.Cache
 	reverseProxy *httputil.ReverseProxy
-	crowdClient  *CrowdClient
+
+	provider provider.Provider
 
 	PrometheusRegistry *prometheus.Registry
 }
@@ -118,18 +128,29 @@ func NewHandler() *Handler {
 
 func (h *Handler) Run() {
 	logger.Printf("-- Listening on: %s", h.ListenAddress)
-	logger.Printf("-- Atlassian Crowd URL: %s", h.CrowdBaseURL)
 	logger.Printf("-- Kubernetes API URL: %s", h.KubernetesAPIServerURL)
 	logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
 	logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
+
+	if h.CrowdBaseURL != "" && h.OIDCBaseURL != "" {
+		logger.Fatal("only one auth provider can be used")
+	}
+
+	if h.CrowdBaseURL != "" {
+		h.provider = provider.NewCrowdProvider(h.CrowdBaseURL, h.CrowdApplicationLogin, h.CrowdApplicationPassword, h.CrowdGroups)
+		logger.Printf("-- Crowd URL: %s", h.CrowdBaseURL)
+	}
+
+	if h.OIDCBaseURL != "" {
+		h.provider = provider.NewOIDCProvider(h.OIDCBaseURL, h.OIDCApplicationLogin, h.OIDCApplicationPassword, h.OIDCScopes, h.OIDCGroups)
+		logger.Printf("-- OIDC URL: %s", h.OIDCBaseURL)
+	}
 
 	u, _ := url.Parse(h.KubernetesAPIServerURL)
 
 	h.reverseProxy = httputil.NewSingleHostReverseProxy(u)
 	h.reverseProxy.Transport = tlsHTTPClientTransport(h.CertPath)
 	h.reverseProxy.FlushInterval = defaultFlushInterval
-
-	h.crowdClient = NewCrowdClient(h.CrowdBaseURL, h.CrowdApplicationLogin, h.CrowdApplicationPassword, h.CrowdGroups)
 
 	h.PrometheusRegistry = prometheus.NewRegistry()
 	requestCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -157,7 +178,7 @@ func (h *Handler) Run() {
 	})
 	http.Handle("/metrics", promhttp.HandlerFor(h.PrometheusRegistry, promhttp.HandlerOpts{}))
 	http.HandleFunc("/healthz", healthz)
-	caCert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	caCert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -200,8 +221,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Printf("%s %v -- [%s] %s%s %v", basicLogin, groups, r.Method, r.Host, r.RequestURI, r.Header)
-
 	h.modifyRequest(w, r, basicLogin, groups)
 }
 
@@ -216,33 +235,16 @@ func (h *Handler) validateCredentials(login, password string) []string {
 		return []string{}
 	}
 
-	_, err := h.crowdClient.MakeRequest("/session", "POST", struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}{Username: login, Password: password})
+	groups, err := h.provider.ValidateCredentials(login, password)
 	if err != nil {
 		logger.Errorf("validating user credentials: %+v", err)
 		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
 		return nil
 	}
 
-	body, err := h.crowdClient.MakeRequest("/user/group/nested?username="+login, "GET", nil)
-	if err != nil {
-		logger.Errorf("getting user groups: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
-		return nil
-	}
-
-	crowdGroups, err := h.crowdClient.GetGroups(body)
-	if err != nil {
-		logger.Errorf("parsing user groups: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
-		return nil
-	}
-
-	h.Cache.SetWithTTL(userID, crowdGroups, h.GroupsCacheTTL)
-	logger.Printf("received groups for %s: %s", login, crowdGroups)
-	return crowdGroups
+	h.Cache.SetWithTTL(userID, groups, h.GroupsCacheTTL)
+	logger.Printf("received groups for %s: %s", login, groups)
+	return groups
 }
 
 func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login string, groups []string) {
@@ -253,5 +255,6 @@ func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login st
 		r.Header.Add("X-Remote-Group", group)
 	}
 
+	logger.Printf("%s [%s] %s --  %v", r.Method, r.Host, r.RequestURI, r.Header)
 	h.reverseProxy.ServeHTTP(w, r)
 }

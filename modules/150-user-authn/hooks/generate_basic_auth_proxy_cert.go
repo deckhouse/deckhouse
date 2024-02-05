@@ -44,21 +44,21 @@ import (
 
 const (
 	proxyJobNS   = "d8-system"
-	proxyJobName = "crowd-proxy-cert-generate-job"
+	proxyJobName = "proxy-cert-generate-job"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/user-authn/generate_crowd_basic_auth_proxy_cert",
+	Queue:        "/modules/user-authn/generate_basic_auth_proxy_cert",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "generate_crowd_basic_auth_proxy_cert",
+			Name:    "generate_basic_auth_proxy_cert",
 			Crontab: "42 4 * * *",
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "crowd-secret",
+			Name:       "secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -67,7 +67,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"crowd-basic-auth-cert"},
+				MatchNames: []string{"basic-auth-cert"},
 			},
 			FilterFunc: filterSecret,
 		},
@@ -95,6 +95,9 @@ type provider struct {
 	Crowd struct {
 		EnableBasicAuth bool `json:"enableBasicAuth"`
 	} `json:"crowd"`
+	OIDC struct {
+		EnableBasicAuth bool `json:"enableBasicAuth"`
+	} `json:"oidc"`
 }
 
 func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) error {
@@ -116,35 +119,41 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 		return err
 	}
 
-	var crowdConfig *provider
+	var config *provider
 
 	for _, prov := range providers {
 		if prov.Typ == "Crowd" && prov.Crowd.EnableBasicAuth {
-			if crowdConfig != nil {
-				return errors.New("only one enableBasicAuth must be enabled for Crowd")
+			if config != nil {
+				return errors.New("only one enableBasicAuth must be enabled")
 			}
-			crowdConfig = &prov
+			config = &prov
+		}
+		if prov.Typ == "OIDC" && prov.OIDC.EnableBasicAuth {
+			if config != nil {
+				return errors.New("only one enableBasicAuth must be enabled")
+			}
+			config = &prov
 		}
 	}
 
-	if crowdConfig == nil {
+	if config == nil {
 		return nil
 	}
 
 	// check certificate renewal necessity
-	snap := input.Snapshots["crowd-secret"]
+	snap := input.Snapshots["secret"]
 	if len(snap) > 0 {
 		secret := snap[0].(secret)
 
-		// if cert if valid more then two days - skip renewal
+		// if cert is valid more than two days - skip renewal
 		expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)
 		if err != nil {
 			return err
 		}
 
 		if !expiring {
-			input.Values.Set("userAuthn.internal.crowdProxyCert", base64.StdEncoding.EncodeToString(secret.Crt))
-			input.Values.Set("userAuthn.internal.crowdProxyKey", base64.StdEncoding.EncodeToString(secret.Key))
+			input.Values.Set("userAuthn.internal.basicAuthProxyCert", base64.StdEncoding.EncodeToString(secret.Crt))
+			input.Values.Set("userAuthn.internal.basicAuthProxyKey", base64.StdEncoding.EncodeToString(secret.Key))
 			return nil
 		}
 	}
@@ -184,7 +193,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	// get logs from completed pod
-	pods, err := kubeClient.CoreV1().Pods(proxyJobNS).List(context.Background(), v1.ListOptions{LabelSelector: "job-name=crowd-proxy-cert-generate-job"})
+	pods, err := kubeClient.CoreV1().Pods(proxyJobNS).List(context.Background(), v1.ListOptions{LabelSelector: "job-name=" + proxyJobName})
 	if err != nil {
 		return err
 	}
@@ -219,8 +228,8 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 		return errors.New("cert not generated")
 	}
 
-	input.Values.Set("userAuthn.internal.crowdProxyCert", certb64)
-	input.Values.Set("userAuthn.internal.crowdProxyKey", base64.StdEncoding.EncodeToString(pkey))
+	input.Values.Set("userAuthn.internal.basicAuthProxyCert", certb64)
+	input.Values.Set("userAuthn.internal.basicAuthProxyKey", base64.StdEncoding.EncodeToString(pkey))
 
 	return nil
 }
@@ -266,7 +275,7 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 			Name:      proxyJobName,
 			Namespace: proxyJobNS,
 			Labels: map[string]string{
-				"name":     "crowd-proxy-cert-generate-job",
+				"name":     proxyJobName,
 				"heritage": "deckhouse",
 				"module":   "user-authn",
 			},
@@ -280,7 +289,7 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 						{
 							Name:  "generator",
 							Image: fmt.Sprintf("%s@%s", registry, digest),
-							Args:  []string{"generate-crowd-proxy-certs"},
+							Args:  []string{"generate-proxy-certs"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CSR",

@@ -1,9 +1,9 @@
-{{- if include "is_basic_auth_enabled_in_any_crowd" . }}
+{{- if include "is_basic_auth_enabled" . }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: crowd-basic-auth-proxy
+  name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
@@ -11,7 +11,7 @@ metadata:
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   ingressClassName: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
@@ -28,7 +28,7 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: crowd-basic-auth-proxy
+            name: basic-auth-proxy
             port:
               number: 7332
 {{- end }}
