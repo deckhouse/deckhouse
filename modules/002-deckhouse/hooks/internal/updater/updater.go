@@ -40,7 +40,19 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data updater.Dec
 	}
 
 	return updater.NewUpdater[*DeckhouseRelease](input.LogEntry, nConfig, mode, data, podIsReady, isBootstrapping,
-		newKubeAPI(input), newMetricsUpdater(input), newValueSettings(input)), nil
+		newKubeAPI(input), newMetricsUpdater(input), newValueSettings(input), newWebhookDataGetter()), nil
+}
+
+func newWebhookDataGetter() *webhookDataGetter {
+	return &webhookDataGetter{}
+}
+
+type webhookDataGetter struct {
+}
+
+func (w *webhookDataGetter) GetMessage(release *DeckhouseRelease, releaseApplyTime time.Time) string {
+	version := fmt.Sprintf("%d.%d", release.GetVersion().Major(), release.GetVersion().Minor())
+	return fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
 }
 
 func newKubeAPI(input *go_hook.HookInput) *kubeAPI {

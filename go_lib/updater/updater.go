@@ -65,12 +65,15 @@ type Updater[R Release] struct {
 	releaseData        DeckhouseReleaseData
 	notificationConfig *NotificationConfig
 
-	kubeAPI        KubeAPI[R]
-	metricsUpdater MetricsUpdater
-	settings       Settings
+	kubeAPI           KubeAPI[R]
+	metricsUpdater    MetricsUpdater
+	settings          Settings
+	webhookDataGetter WebhookDataGetter[R]
 }
 
-func NewUpdater[R Release](logger logger.Logger, notificationConfig *NotificationConfig, mode string, data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater, settings Settings) *Updater[R] {
+func NewUpdater[R Release](logger logger.Logger, notificationConfig *NotificationConfig, mode string,
+	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
+	settings Settings, webhookDataGetter WebhookDataGetter[R]) *Updater[R] {
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
@@ -89,9 +92,10 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 		releaseData:                 data,
 		notificationConfig:          notificationConfig,
 
-		kubeAPI:        kubeAPI,
-		metricsUpdater: metricsUpdater,
-		settings:       settings,
+		kubeAPI:           kubeAPI,
+		metricsUpdater:    metricsUpdater,
+		settings:          settings,
+		webhookDataGetter: webhookDataGetter,
 	}
 }
 
@@ -132,15 +136,13 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 	releaseApplyTime := updateWindows.NextAllowedTime(predictedReleaseApplyTime)
 
 	predictedReleaseVersion := (*predictedRelease).GetVersion()
-	version := fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor())
-	msg := fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
 	if du.notificationConfig.WebhookURL != "" {
 		data := webhookData{
 			Version:       fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor()),
 			Requirements:  (*predictedRelease).GetRequirements(),
 			ChangelogLink: (*predictedRelease).GetChangelogLink(),
 			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
-			Message:       msg,
+			Message:       du.webhookDataGetter.GetMessage(*predictedRelease, releaseApplyTime),
 		}
 
 		err := sendWebhookNotification(du.notificationConfig, data)
