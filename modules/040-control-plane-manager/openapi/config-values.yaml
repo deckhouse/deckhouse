@@ -28,6 +28,8 @@ properties:
 
           **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
           - `ExtendedResourceToleration`
+          - `PodNodeSelector`
+          - `PodTolerationRestriction`
           - `EventRateLimit` with the following config:
 
             ```yaml
