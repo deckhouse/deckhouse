@@ -150,7 +150,7 @@ spec:
           default: false
         dedicatedNodes:
           type: object
-          oneOf:
+          anyOf:
             - required:
               - labelSelector
             - required:
