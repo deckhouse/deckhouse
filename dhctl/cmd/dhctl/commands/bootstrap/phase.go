@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -24,7 +25,7 @@ import (
 
 func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("install-deckhouse", "Install deckhouse and wait for its readiness.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -43,7 +44,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 
 func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("execute-bashible-bundle", "Prepare Master node and install Kubernetes.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineBashibleBundleFlags(cmd)
@@ -60,7 +61,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 
 func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("create-resources", "Create resources in Kubernetes cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineResourcesFlags(cmd, true)
 	app.DefineKubeFlags(cmd)
@@ -77,7 +78,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 
 func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
@@ -112,7 +113,7 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("exec-post-bootstrap", "Test scp upload and ssh run uploaded script.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 

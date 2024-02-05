@@ -39,19 +39,11 @@ type SchemaStore struct {
 	moduleConfigsCache map[string]*spec.Schema
 }
 
-type LoadOptions struct {
-	CommanderMode bool
-}
-
 var once sync.Once
 
 var store *SchemaStore
 
 func NewSchemaStore(paths ...string) *SchemaStore {
-	return NewSchemaStoreWithOpts(LoadOptions{}, paths...)
-}
-
-func NewSchemaStoreWithOpts(opts LoadOptions, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -62,10 +54,10 @@ func NewSchemaStoreWithOpts(opts LoadOptions, paths ...string) *SchemaStore {
 		}
 	}
 
-	return newOnceSchemaStore(paths, opts)
+	return newOnceSchemaStore(paths)
 }
 
-func newSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
+func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -77,15 +69,13 @@ func newSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
 		}
 
 		switch info.Name() {
-		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml", "cloud_provider_discovery_data.yaml":
-			uploadError := st.UploadByPath(path)
-			if uploadError != nil {
-				return uploadError
-			}
-		case "ssh_configuration.yaml", "ssh_host_configuration.yaml":
-			if !opts.CommanderMode {
-				break
-			}
+		case "init_configuration.yaml",
+			"cluster_configuration.yaml",
+			"static_cluster_configuration.yaml",
+			"cloud_discovery_data.yaml",
+			"cloud_provider_discovery_data.yaml",
+			"ssh_configuration.yaml",
+			"ssh_host_configuration.yaml":
 			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
@@ -154,9 +144,9 @@ func newSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(schemasDir []string, opts LoadOptions) *SchemaStore {
+func newOnceSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir, opts)
+		store = newSchemaStore(schemasDir)
 	})
 	return store
 }
