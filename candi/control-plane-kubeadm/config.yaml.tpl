@@ -52,7 +52,7 @@ apiServer:
     {{- if .apiserver.admissionPlugins }}
       {{ $admissionPlugins = concat $admissionPlugins .apiserver.admissionPlugins | uniq }}
     {{- end }}
-    enable-admission-plugins: "{{ $admissionPlugins | sort | join "," }}"
+    enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
