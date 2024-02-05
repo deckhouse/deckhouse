@@ -89,7 +89,7 @@ spec:
                   description: |
                     Users and/or groups to grant privileges.
 
-                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
@@ -293,7 +293,7 @@ spec:
                   description: |
                     Users and/or groups to grant privileges.
 
-                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
