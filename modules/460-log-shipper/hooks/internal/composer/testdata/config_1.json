@@ -15,6 +15,9 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
       "glob_minimum_cooldown_ms": 1000,
       "use_apiserver_cache": true
     },
@@ -32,6 +35,9 @@
         "pod_namespace": "namespace",
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
       },
       "glob_minimum_cooldown_ms": 1000,
       "use_apiserver_cache": true
@@ -74,7 +80,8 @@
         "pod_ip": "{{ pod_ip }}",
         "pod_labels_*": "{{ pod_labels }}",
         "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "stream": "{{ stream }}",
+        "node_group": "{{ node_group }}"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"

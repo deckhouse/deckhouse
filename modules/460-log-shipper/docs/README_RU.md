@@ -72,6 +72,10 @@ description: Описание возможностей сбора логов в 
 | `node`       | spec.nodeName           |
 | `pod_owner`  | metadata.ownerRef[0]    |
 
+| Label        | Node spec path                            |
+|--------------|-------------------------------------------|
+| `node_group` | metadata.labels[].node.deckhouse.io/group |
+
 {% alert -%}
 Для Splunk поля `pod_labels` не экспортируются, потому что это вложенный объект, который не поддерживается самим Splunk.
 {%- endalert %}
