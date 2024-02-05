@@ -43,6 +43,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	tests := map[string]struct {
 		config   string
 		expected *ConnectionConfig
+		opts     ValidateOptions
 		wantErr  bool
 	}{
 		"valid config": {
@@ -86,12 +87,17 @@ func TestParseConnectionConfig(t *testing.T) {
 			config:  invalidSSHConfigNoHosts,
 			wantErr: true,
 		},
+		"invalid config: duplicated field": {
+			config:  validSSHConfig,
+			opts:    ValidateOptions{StrictUnmarshal: true},
+			wantErr: true,
+		},
 	}
 
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			config, err := ParseConnectionConfig(tt.config, newStore)
+			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, config)
@@ -107,6 +113,7 @@ var validSSHConfig = `
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHConfig
 sshUser: ubuntu
+sshPort: 21 # without strict unmarshalling will be overwritten with value below
 sshPort: 22
 sshExtraArgs: -vvv
 sshAgentPrivateKeys:

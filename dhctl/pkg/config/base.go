@@ -174,7 +174,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig.Prepare()
 }
 
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) error {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ValidateOptions) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -195,7 +195,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 			return err
 		}
 
-		_, err = schemaStore.Validate(&docData)
+		_, err = schemaStore.validate(&docData, opts)
 		if err != nil {
 			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
@@ -204,7 +204,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 		return nil
 	}
 
-	_, err = schemaStore.Validate(&docData)
+	_, err = schemaStore.validate(&docData, opts)
 	if err != nil {
 		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
@@ -236,7 +236,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
 			return nil, err
 		}
 	}
@@ -248,7 +248,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
 			return nil, err
 		}
 	}
