@@ -40,10 +40,13 @@ func main() {
 	config, _ := rest.InClusterConfig()
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Error(err)
+		log.Fatalf("[SafeAgentUpdater] Failed to init kubeClient. Error: %v", err)
 	}
 
 	nodeName := os.Getenv("NODE_NAME")
+	if len(nodeName) == 0 {
+		log.Fatalf("[SafeAgentUpdater] Failed to get NODE_NAME.")
+	}
 
 	ciliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNS).Get(
 		context.TODO(),
@@ -51,9 +54,17 @@ func main() {
 		metav1.GetOptions{},
 	)
 	if err != nil {
-		log.Error(err)
+		log.Fatalf("[SafeAgentUpdater] Failed to get DaemonSets %s/agent. Error: %v", ciliumNS, err)
 	}
+
 	ciliumAgentDSGenerationChecksum := ciliumAgentDS.Spec.Template.Annotations[generationChecksumAnnotation]
+	if len(ciliumAgentDSGenerationChecksum) == 0 {
+		log.Fatalf(
+			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotations %s.",
+			ciliumNS,
+			generationChecksumAnnotation,
+		)
+	}
 	log.Infof(
 		"[SafeAgentUpdater] Current generation of DS %s/agent is %s",
 		ciliumNS,
@@ -68,7 +79,7 @@ func main() {
 		},
 	)
 	if err != nil {
-		log.Error(err)
+		log.Fatalf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v", err)
 	}
 	log.Infof(
 		"[SafeAgentUpdater] Count of agents running on node %s is %v",
@@ -77,9 +88,9 @@ func main() {
 	)
 	switch {
 	case len(ciliumAgentPodsOnSameNode.Items) == 0:
-		log.Errorf("There aren't agent pods on node %s", nodeName)
+		log.Fatalf("[SafeAgentUpdater] There aren't agent pods on node %s", nodeName)
 	case len(ciliumAgentPodsOnSameNode.Items) > 1:
-		log.Errorf("There are more than one running agent pods on node %s", nodeName)
+		log.Fatalf("[SafeAgentUpdater] There are more than one running agent pods on node %s", nodeName)
 	}
 	currentPod := ciliumAgentPodsOnSameNode.Items[0]
 	log.Infof(
@@ -108,7 +119,7 @@ func main() {
 			metav1.DeleteOptions{},
 		)
 		if err != nil {
-			log.Error(err)
+			log.Fatalf("[SafeAgentUpdater] Failed to delete pod %s. Error: %v", currentPod.Name, err)
 		}
 		log.Infof(
 			"[SafeAgentUpdater] Pod %s/%s deleted",
@@ -126,7 +137,7 @@ func main() {
 				},
 			)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v", err)
 			}
 			log.Infof(
 				"[SafeAgentUpdater] Count of agents running on node %s is %v",
@@ -151,7 +162,7 @@ func main() {
 				metav1.GetOptions{},
 			)
 			if err != nil {
-				log.Error(err)
+				log.Errorf("[SafeAgentUpdater] Failed to get pod %s. Error: %v", newPodName, err)
 			}
 			log.Infof("[SafeAgentUpdater] Waiting until new pod %s become Ready", newPod.Name)
 
