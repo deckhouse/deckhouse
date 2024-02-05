@@ -51,6 +51,8 @@ properties:
             - AlwaysPullImages
             - NamespaceAutoProvision
             - OwnerReferencesPermissionEnforcement
+            - PodNodeSelector
+            - PodTolerationRestriction
       bindToWildcard:
         type: boolean
         default: false
