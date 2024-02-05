@@ -43,6 +43,11 @@ var once sync.Once
 
 var store *SchemaStore
 
+type ValidateOptions struct {
+	CommanderMode   bool
+	StrictUnmarshal bool
+}
+
 func NewSchemaStore(paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 
@@ -175,7 +180,15 @@ func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	return 1
 }
 
+func (s *SchemaStore) ValidateWithOpts(doc *[]byte, opts ValidateOptions) (*SchemaIndex, error) {
+	return s.validate(doc, opts)
+}
+
 func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
+	return s.validate(doc, ValidateOptions{})
+}
+
+func (s *SchemaStore) validate(doc *[]byte, opts ValidateOptions) (*SchemaIndex, error) {
 	var index SchemaIndex
 
 	err := yaml.Unmarshal(*doc, &index)
@@ -183,7 +196,7 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
-	err = s.ValidateWithIndex(&index, doc)
+	err = s.validateWithIndexOpts(&index, doc, opts)
 	return &index, err
 }
 
@@ -198,7 +211,15 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
+func (s *SchemaStore) ValidateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ValidateOptions) error {
+	return s.validateWithIndexOpts(index, doc, opts)
+}
+
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
+	return s.validateWithIndexOpts(index, doc, ValidateOptions{})
+}
+
+func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ValidateOptions) error {
 	if !index.IsValid() {
 		return fmt.Errorf(
 			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
@@ -245,7 +266,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
 	}
 
-	isValid, err := openAPIValidate(&docForValidate, schema)
+	isValid, err := openAPIValidate(&docForValidate, schema, opts)
 	if !isValid {
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
@@ -293,14 +314,21 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ValidateOptions) (isValid bool, multiErr error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}
 
-	err := yaml.Unmarshal(*dataObj, &blank)
-	if err != nil {
-		return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+	if opts.StrictUnmarshal {
+		err := yaml.UnmarshalStrict(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal strict: %v", err)
+		}
+	} else {
+		err := yaml.Unmarshal(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+		}
 	}
 
 	result := validator.Validate(blank)
@@ -321,7 +349,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiE
 func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
 	schemaStore := NewSchemaStore(paths...)
 
-	_, err := schemaStore.Validate(config)
+	_, err := schemaStore.validate(config, ValidateOptions{})
 	if err != nil {
 		return false, fmt.Errorf("Loading schema file: %v", err)
 	}
