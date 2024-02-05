@@ -69,7 +69,7 @@ spec:
                   description: Message indicating the cause of the current status.
                   type: string
                 ready:
-                  description: Weather the template is ready to use. Indicates that the template has been successfully validated.
+                  description: Whether the template is ready to use. Indicates that the template has been successfully validated.
                   type: boolean
               type: object
           type: object
