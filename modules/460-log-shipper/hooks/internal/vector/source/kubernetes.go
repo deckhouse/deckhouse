@@ -50,8 +50,9 @@ type Kubernetes struct {
 	labelSelector          string
 	namespaceLabelSelector string
 
-	annotationFields KubernetesAnnotationFields
-	globCooldownMs   int
+	annotationFields     KubernetesAnnotationFields
+	nodeAnnotationFields NodeAnnotationFields
+	globCooldownMs       int
 }
 
 // KubernetesAnnotationFields are supported fields for the following vector options
@@ -67,17 +68,22 @@ type KubernetesAnnotationFields struct {
 	PodOwner       string `json:"pod_owner,omitempty"`
 }
 
+type NodeAnnotationFields struct {
+	NodeLabels string `json:"node_labels,omitempty"`
+}
+
 // rawKubernetesLogs represents `kubernetes_logs` vector source
 // https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/
 type rawKubernetesLogs struct {
 	commonSource
 
-	Labels             string                     `json:"extra_label_selector,omitempty"`
-	Fields             string                     `json:"extra_field_selector,omitempty"`
-	NamespaceLabels    string                     `json:"extra_namespace_label_selector,omitempty"`
-	AnnotationFields   KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
-	GlobCooldownMs     int                        `json:"glob_minimum_cooldown_ms,omitempty"`
-	UserAPIServerCache bool                       `json:"use_apiserver_cache,omitempty"`
+	Labels               string                     `json:"extra_label_selector,omitempty"`
+	Fields               string                     `json:"extra_field_selector,omitempty"`
+	NamespaceLabels      string                     `json:"extra_namespace_label_selector,omitempty"`
+	AnnotationFields     KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
+	NodeAnnotationFields NodeAnnotationFields       `json:"node_annotation_fields,omitempty"`
+	GlobCooldownMs       int                        `json:"glob_minimum_cooldown_ms,omitempty"`
+	UserAPIServerCache   bool                       `json:"use_apiserver_cache,omitempty"`
 }
 
 func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
@@ -140,6 +146,9 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 			PodNodeName:    "node",
 			PodOwner:       "pod_owner",
 		},
+		nodeAnnotationFields: NodeAnnotationFields{
+			NodeLabels: "node_labels",
+		},
 		globCooldownMs: defaultGlobCooldownMs,
 	}
 }
@@ -150,12 +159,13 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 			Type: k.Type,
 			Name: name,
 		},
-		Fields:             strings.Join(fields, ","),
-		Labels:             k.labelSelector,
-		NamespaceLabels:    k.namespaceLabelSelector,
-		AnnotationFields:   k.annotationFields,
-		GlobCooldownMs:     k.globCooldownMs,
-		UserAPIServerCache: true,
+		Fields:               strings.Join(fields, ","),
+		Labels:               k.labelSelector,
+		NamespaceLabels:      k.namespaceLabelSelector,
+		AnnotationFields:     k.annotationFields,
+		NodeAnnotationFields: k.nodeAnnotationFields,
+		GlobCooldownMs:       k.globCooldownMs,
+		UserAPIServerCache:   true,
 	}
 }
 
