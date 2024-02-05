@@ -2,14 +2,14 @@
 title: "The user-authn module: FAQ"
 ---
 
+{% raw %}
+
 ## How to secure my application?
 
 It is possible to hide your application behind Dex authentication by using the `DexAuthenticator` custom resource (CR).
 In fact, by creating the DexAuthenticator in a cluster, user creates an instance [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), which is already connected to Dex.
 
 ### An example of the `DexAuthenticator` CR
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -27,16 +27,12 @@ spec:
   - everyone
   - admins
   whitelistSourceRanges:
-  - 1.1.1.1
+  - 1.1.1.1/32
   - 192.168.0.0/24
 ```
 
-{% endraw %}
-
 After the `DexAuthenticator` custom resource is created in the cluster, Kubernetes will make the necessary deployment, service, ingress, secret in the specified namespace.
 Add the following annotations to your app's Ingress resource to connect your application to dex:
-
-{% raw %}
 
 ```yaml
 annotations:
@@ -44,8 +40,6 @@ annotations:
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ cluster domain, e.g., | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
 ```
-
-{% endraw %}
 
 ### Setting up CIDR-based restrictions
 
@@ -63,7 +57,7 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
 
-### Authentication flow with DexAuthenticator
+## Authentication flow with DexAuthenticator
 
 ![Authentication flow with DexAuthenticator](../../images/150-user-authn/dex_login.svg)
 
@@ -124,3 +118,5 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 ## How secure is Dex from brute-forcing my credentials?
 
 Only 20 authentication requests are allowed for a single user. If the limit exceeds, another login attempt will be allowed each six seconds.
+
+{% endraw %}
