@@ -35,5 +35,5 @@
         You can get the service with deprecated annotation with the following command:
 
             ```
-            kubectl -n {{$labels.namespace}} get svc {{$labels.name}} -o yaml
+            kubectl -n {{$labels.service_namespace}} get svc {{$labels.service_name}} -o yaml
             ```
