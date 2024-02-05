@@ -40,7 +40,17 @@ type CheckBaseInfraRunnerOptions struct {
 }
 
 // TODO(dhctl-for-commander): Use same tf-runner for check & converge in commander mode only, keep things as-is without changes
-func (f *TerraformContext) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts CheckBaseInfraRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts CheckBaseInfraRunnerOptions) RunnerInterface {
+	if opts.CommanderMode {
+		return f.GetConvergeBaseInfraRunner(metaConfig, stateCache,
+			ConvergeBaseInfraRunnerOptions{
+				AutoDismissDestructive:           false,
+				AutoApprove:                      true,
+				AdditionalStateSaverDestinations: nil,
+			},
+		)
+	}
+
 	return f.getOrCreateRunner(
 		fmt.Sprintf("check.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout), func() RunnerInterface {
 			r := NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure").
