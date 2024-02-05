@@ -14,6 +14,21 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/be/modules/140-user-authz/templates/webhook
+  to: /deckhouse/modules/140-user-authz/templates/webhook
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/be/modules/350-node-local-dns
+  to: /deckhouse/modules/350-node-local-dns
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/be/modules/600-flant-integration
+  to: /deckhouse/modules/600-flant-integration
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
@@ -99,11 +114,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook
-  to: /deckhouse/modules/140-user-authz/templates/webhook
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/150-user-authn/hooks/common_test.go
   to: /deckhouse/modules/150-user-authn/hooks/common_test.go
   stageDependencies:
@@ -139,11 +149,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/350-node-local-dns
-  to: /deckhouse/modules/350-node-local-dns
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
@@ -166,11 +171,6 @@
         - '**/*.go'
 - add: /ee/modules/502-delivery
   to: /deckhouse/modules/502-delivery
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/600-flant-integration
-  to: /deckhouse/modules/600-flant-integration
   stageDependencies:
     setup:
         - '**/*.go'

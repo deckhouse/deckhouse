@@ -13,17 +13,17 @@ webhooks:
     - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
+      - kube-system
+      - d8-flant-integration
       - kube-basic-auth
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vsphere
       - d8-multitenancy-manager
-      - kube-system
       - d8-metallb
       - d8-keepalived
       - d8-network-gateway
       - d8-operator-trivy
       - d8-delivery
-      - d8-flant-integration
       - d8-runtime-audit-engine
       - d8-system
       - d8-admission-policy-engine
