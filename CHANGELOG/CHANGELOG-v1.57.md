@@ -40,7 +40,7 @@
 ## Fixes
 
 
- - **[candi]** BE edition improvements. [#7338](https://github.com/deckhouse/deckhouse/pull/7338)
+ - **[candi]** Deckhouse Kubernetes Platform BE improvements. [#7338](https://github.com/deckhouse/deckhouse/pull/7338)
  - **[candi]** Add validation pattern for the `imagesRepo` parameter. [#7169](https://github.com/deckhouse/deckhouse/pull/7169)
  - **[candi]** Raise the priority for NodeUser step. [#7140](https://github.com/deckhouse/deckhouse/pull/7140)
  - **[candi]** Decrease shutdownGracePeriod for YandexCloud. [#6897](https://github.com/deckhouse/deckhouse/pull/6897)
