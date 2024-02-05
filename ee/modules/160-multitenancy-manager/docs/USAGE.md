@@ -18,6 +18,16 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   * audit rules for project users' access to the Linux kernel;
   * scanning of launched container images for CVE presence.
 
+- `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
+  * defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically;
+  * defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
+
+To list all available parameters for a project template, execute the command:
+
+```shell
+kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
+```
+
 ## Creating a project
 
 1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename) field.

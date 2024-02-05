@@ -27,10 +27,12 @@ import (
 const (
 	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
 	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 	// Alternative path is needed to run tests in ci\cd pipeline
 	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
 	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 )
 
@@ -157,8 +159,15 @@ func createDefaultProjectTemplate(input *go_hook.HookInput) {
 			return
 		}
 
+		dedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(dedicatedNodesTemplatePath, alternativeDedicatedNodesTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
 		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
 		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(dedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
 	}
 
 	onceCreateDefaultTemplates.Do(onceBody)
