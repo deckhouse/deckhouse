@@ -36,10 +36,8 @@ markup:
       wrapStandAloneImageWithinParagraph: true
     renderer:
       hardWraps: false
-      unsafe: false
+      unsafe: true
       xhtml: false
-
-markup:
   highlight:
     anchorLineNos: false
     codeFences: true
@@ -54,7 +52,6 @@ markup:
     noHl: false
     style: native
     tabWidth: 4
-
 
 # "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
