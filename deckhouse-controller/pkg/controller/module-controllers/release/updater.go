@@ -37,9 +37,25 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
+func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease]) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, "",
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(), newSettings())
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(),
+		newSettings(), newWebhookDataGetter())
+}
+
+func newWebhookDataGetter() *webhookDataGetter {
+	return &webhookDataGetter{}
+}
+
+type webhookDataGetter struct {
+}
+
+func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseApplyTime time.Time) string {
+	version := fmt.Sprintf("%d.%d", release.GetVersion().Major(), release.GetVersion().Minor())
+
+	return fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
+		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
 }
 
 func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister, externalModulesDir string, symlinksDir string, modulesValidator moduleValidator) *kubeAPI {
