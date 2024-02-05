@@ -1,6 +1,6 @@
 candi:
   fixes:
-    - summary: BE edition improvements.
+    - summary: Deckhouse Kubernetes Platform BE improvements.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7338
 ci:
   fixes:
