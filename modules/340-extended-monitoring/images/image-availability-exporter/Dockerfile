@@ -1,8 +1,8 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_19_ALPINE
+ARG BASE_GOLANG_21_ALPINE
 
 # Based on https://github.com/deckhouse/k8s-image-availability-exporter/blob/master/Dockerfile
-FROM $BASE_GOLANG_19_ALPINE as artifact
+FROM $BASE_GOLANG_21_ALPINE as artifact
 
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
