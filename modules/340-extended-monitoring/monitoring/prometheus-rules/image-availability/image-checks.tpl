@@ -143,7 +143,7 @@
     description: |
       An unknown error occurred for the  `{{`{{ $labels.image }}`}}` image
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }} {{` }}`}}`
+      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
       in the `{{`{{ $labels.container }}`}}` container in the registry.
 
       Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`

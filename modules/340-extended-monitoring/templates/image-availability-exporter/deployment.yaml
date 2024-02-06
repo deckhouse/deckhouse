@@ -99,6 +99,10 @@ spec:
             scheme: HTTPS
             port: 8081
         volumeMounts:
+        {{- with .Values.global.modulesImages.registry.dockercfg }}
+        - name: deckhouse-registry-dockercfg
+          mountPath: /.docker
+        {{- end }}
         {{- with .Values.global.modulesImages.registry.CA }}
         - name: deckhouse-registry-root-ca
           mountPath: /deckhouse-registry-root-ca
@@ -146,13 +150,18 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
   {{- end }}
       volumes:
-      {{- with .Values.global.modulesImages.registry.CA }}
-      - name: deckhouse-registry-root-ca
+      {{- with .Values.global.modulesImages.registry.dockercfg }}
+      - name: deckhouse-registry-dockercfg
         secret:
           secretName: deckhouse-registry
           items:
-          - key: ca
-            path: ca.crt
+          - key: .dockerconfigjson
+            path: config.json
+      {{- end }}
+      {{- with .Values.global.modulesImages.registry.CA }}
+      - name: deckhouse-registry-root-ca
+        configMap:
+          name: deckhouse-registry-root-ca.crt
       {{- end }}
       {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
       - name: registry-root-ca
