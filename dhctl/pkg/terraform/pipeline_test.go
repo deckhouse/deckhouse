@@ -145,7 +145,7 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, err := CheckBaseInfrastructurePipeline(runner, "test")
+			res, _, err := CheckBaseInfrastructurePipeline(runner, "test")
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
