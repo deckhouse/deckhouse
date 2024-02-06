@@ -6,10 +6,10 @@ title: "Модуль user-authn: FAQ"
 
 ## Как защитить мое приложение?
 
-Чтобы включить аутентификацию через Dex для вашего приложения, нужно:
-1. Создать custom resource [DexAuthenticator](cr.html#dexauthenticator).
+Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
+1. Создайте custom resource [DexAuthenticator](cr.html#dexauthenticator).
 
-   Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в кластере в указанном namespace'е появятся необходимые Deployment, Service, Ingress, Secret.
+   Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
    Пример custom resource `DexAuthenticator`:
 
