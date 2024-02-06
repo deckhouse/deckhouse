@@ -17,7 +17,6 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -175,7 +174,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig.Prepare()
 }
 
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) error {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ValidateOptions) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -196,7 +195,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 			return err
 		}
 
-		_, err = schemaStore.Validate(&docData)
+		_, err = schemaStore.validate(&docData, opts)
 		if err != nil {
 			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
@@ -205,7 +204,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 		return nil
 	}
 
-	_, err = schemaStore.Validate(&docData)
+	_, err = schemaStore.validate(&docData, opts)
 	if err != nil {
 		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
@@ -237,7 +236,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
 			return nil, err
 		}
 	}
@@ -249,37 +248,10 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
 			return nil, err
 		}
 	}
 
 	return metaConfig.Prepare()
-}
-
-// ValidateClusterSettings parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-func ValidateClusterSettings(configData string) error {
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
