@@ -1,0 +1,27 @@
+- name: runtime-audit-engine
+  rules:
+  - alert: D8RuntimeAuditEngineNotScheduledInCluster
+    for: 15m
+    expr: |
+      kube_daemonset_status_desired_number_scheduled{daemonset="runtime-audit-engine", namespace="d8-runtime-audit-engine", job="kube-state-metrics"}
+      -
+      kube_daemonset_status_number_available{daemonset="runtime-audit-engine", namespace="d8-runtime-audit-engine", job="kube-state-metrics"}
+      > 0
+    labels:
+      severity_level: "4"
+      d8_module: runtime-audit-engine
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Pods of runtime-audit-engine cannot be scheduled in the cluster.
+      description: |
+        A number of runtime-audit-engine pods are not scheduled.
+        Security audit is not fully operational.
+
+        Consider checking state of the d8-runtime-audit-engine/runtime-audit-engine DaemonSet.
+        `kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine`
+        Get a list of nodes that have pods in an not Ready state.
+        ```
+        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
