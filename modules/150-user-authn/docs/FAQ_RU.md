@@ -50,7 +50,7 @@ title: "Модуль user-authn: FAQ"
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`; 
+      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
       - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
