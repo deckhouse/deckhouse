@@ -19,3 +19,5 @@
   to: /deckhouse/candi/cloud-providers/vcd
 - add: /ee/fe/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
   to: /deckhouse/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
+- add: /ee/candi/cloud-providers/ovirt
+  to: /deckhouse/candi/cloud-providers/ovirt
