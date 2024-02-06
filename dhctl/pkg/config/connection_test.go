@@ -24,49 +24,35 @@ import (
 func TestLoadDHCTLConfigSchema(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
 
-	t.Run("commander mode: false", func(t *testing.T) {
-		newStore := newSchemaStore([]string{schemasDir}, LoadOptions{CommanderMode: false})
+	newStore := newSchemaStore([]string{schemasDir})
 
-		require.Nil(t, newStore.Get(&SchemaIndex{
-			Kind:    "SSHConfig",
-			Version: "dhctl.deckhouse.io/v1",
-		}))
-		require.Nil(t, newStore.Get(&SchemaIndex{
-			Kind:    "SSHHost",
-			Version: "dhctl.deckhouse.io/v1",
-		}))
-	})
-
-	t.Run("commander mode: true", func(t *testing.T) {
-		newStore := newSchemaStore([]string{schemasDir}, LoadOptions{CommanderMode: true})
-
-		require.NotEmpty(t, newStore.Get(&SchemaIndex{
-			Kind:    "SSHConfig",
-			Version: "dhctl.deckhouse.io/v1",
-		}))
-		require.NotEmpty(t, newStore.Get(&SchemaIndex{
-			Kind:    "SSHHost",
-			Version: "dhctl.deckhouse.io/v1",
-		}))
-	})
-
+	require.NotEmpty(t, newStore.Get(&SchemaIndex{
+		Kind:    "SSHConfig",
+		Version: "dhctl.deckhouse.io/v1",
+	}))
+	require.NotEmpty(t, newStore.Get(&SchemaIndex{
+		Kind:    "SSHHost",
+		Version: "dhctl.deckhouse.io/v1",
+	}))
 }
 
-func TestParseSSHConfig(t *testing.T) {
+func TestParseConnectionConfig(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
-	newStore := newSchemaStore([]string{schemasDir}, LoadOptions{CommanderMode: true})
+	newStore := newSchemaStore([]string{schemasDir})
 
 	tests := map[string]struct {
 		config   string
-		expected *DHCTLConfig
+		expected *ConnectionConfig
+		opts     ValidateOptions
 		wantErr  bool
 	}{
 		"valid config": {
 			config: validSSHConfig,
-			expected: &DHCTLConfig{
+			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
-					SSHUser: "ubuntu",
-					SSHPort: pointer.Int32(22),
+					SSHUser:      "ubuntu",
+					SSHPort:      pointer.Int32(22),
+					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{
 							Key:        "-----BEGIN RSA PRIVATE KEY-----\nsome-key\n-----END RSA PRIVATE KEY-----\n",
@@ -101,12 +87,17 @@ func TestParseSSHConfig(t *testing.T) {
 			config:  invalidSSHConfigNoHosts,
 			wantErr: true,
 		},
+		"invalid config: duplicated field": {
+			config:  validSSHConfig,
+			opts:    ValidateOptions{StrictUnmarshal: true},
+			wantErr: true,
+		},
 	}
 
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			config, err := ParseDHCTLConfig(tt.config, newStore, DHCTLConfigOptions{CommanderMode: true})
+			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, config)
@@ -122,7 +113,9 @@ var validSSHConfig = `
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHConfig
 sshUser: ubuntu
+sshPort: 21 # without strict unmarshalling will be overwritten with value below
 sshPort: 22
+sshExtraArgs: -vvv
 sshAgentPrivateKeys:
 - key: |
     -----BEGIN RSA PRIVATE KEY-----
