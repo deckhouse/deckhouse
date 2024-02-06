@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 type ModuleConfigBackend struct {
@@ -117,9 +118,11 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
 }
 
-func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
+// LoadConfig loads modules configs from ModuleConfig resources, either for all modules at once or if modulesNames list is provided, then only for listed modules
+func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, modulesNames ...string) (*config.KubeConfig, error) {
 	// List all ModuleConfig and get settings
 	cfg := config.NewConfig()
+	modules := set.New(modulesNames...)
 
 	list, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -127,6 +130,11 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 	}
 
 	for _, item := range list.Items {
+		// check if some certain modules were inquiered
+		if len(modules) > 0 && !modules.Has(item.Name) {
+			continue
+		}
+
 		values, err := mc.fetchValuesFromModuleConfig(&item)
 		if err != nil {
 			return nil, err

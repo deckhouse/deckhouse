@@ -113,3 +113,9 @@ func (srv *ConfigService) GetValuesValidator() *validation.ValuesValidator {
 func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {
 	return srv.moduleManager.ValidateModule(module)
 }
+
+func (srv *ConfigService) AddPossibleName(name string) {
+	serviceInstanceLock.Lock()
+	srv.possibleNames.Add(name)
+	serviceInstanceLock.Unlock()
+}
