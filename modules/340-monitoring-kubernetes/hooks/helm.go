@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -100,9 +101,15 @@ const (
 	// fetchSecretsInterval pause between fetching the helm secrets from apiserver
 	// need for avoiding apiserver overload
 	fetchSecretsInterval = 3 * time.Second
+
+	MinimalUnavailabelK8sVesion = "minimalUnavailabelK8sVesion"
+	MinimalUnavailabelK8sReason = "minimalUnavailabelK8sReason"
 )
 
-var helmStorage unsupportedVersionsStore
+var (
+	helmStorage      unsupportedVersionsStore
+	unsupportVersion k8sUnsupportedVersion
+)
 
 func init() {
 	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helmStorage)
@@ -180,6 +187,11 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	wg.Wait()
 	close(releasesC)
 	<-doneC
+
+	if k8sVersion, reason := unsupportVersion.get(); k8sVersion != "" {
+		input.Values.Set(MinimalUnavailabelK8sVesion, k8sVersion)
+		input.Values.Set(MinimalUnavailabelK8sReason, reason)
+	}
 
 	// to avoid data race
 	input.MetricsCollector.Set("helm_releases_count", float64(totalHelm3Releases), map[string]string{"helm_version": "3"})
@@ -336,6 +348,39 @@ type manifest struct {
 	} `json:"metadata" yaml:"metadata"`
 }
 
+type k8sUnsupportedVersion struct {
+	k8sVersion *semver.Version
+	reasons    map[string]struct{}
+}
+
+func (uv *k8sUnsupportedVersion) verify(resourceAPIVersion, resourceKind string) {
+	reason := fmt.Sprintf("%s: %s", resourceAPIVersion, resourceKind)
+
+	for version, store := range helmStorage {
+		if store.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind) {
+			k8sVersion := semver.MustParse(version)
+			switch {
+			case uv.k8sVersion == nil || uv.k8sVersion.GreaterThan(k8sVersion):
+				uv.k8sVersion = k8sVersion
+				uv.reasons = map[string]struct{}{
+					reason: {},
+				}
+			case uv.k8sVersion != nil && uv.k8sVersion.Equal(k8sVersion):
+				uv.reasons[reason] = struct{}{}
+			}
+		}
+	}
+}
+
+func (uv *k8sUnsupportedVersion) get() (k8sVersion, reasons string) {
+	keys := make([]string, 0, len(uv.reasons))
+	for key := range uv.reasons {
+		keys = append(keys, key)
+	}
+
+	return uv.k8sVersion.String(), strings.Join(keys, ", ")
+}
+
 // k8s version: APIVersion: [Kind, ...]
 type unsupportedVersionsStore map[string]unsupportedAPIVersions
 
@@ -366,6 +411,9 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 			return UnsupportedVersion, fmt.Sprintf("%d.%d", currentVersion.Major(), currentVersion.Minor())
 		}
 	}
+
+	// check if the api was the closest k8s version restriction
+	unsupportVersion.verify(resourceAPIVersion, resourceKind)
 
 	// if api is supported - check deprecation in the next 2 minor k8s versions
 	for i := 1; i <= delta; i++ {
