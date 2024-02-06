@@ -89,6 +89,26 @@ spec:
             - containerPort: 7946
               name: memberlist-udp
               protocol: UDP
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              host: 127.0.0.1
+              port: 7472
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              host: 127.0.0.1
+              port: 7472
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
