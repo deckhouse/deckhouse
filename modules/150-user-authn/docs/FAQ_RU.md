@@ -18,10 +18,10 @@ title: "Модуль user-authn: FAQ"
    kind: DexAuthenticator
    metadata:
      # Префикс имени подов Dex authenticator.
-     # Например, если префикс имени `app-name`, то поды Dex authenticator будут иметь вид `app-name-dex-authenticator-7f698684c8-c5cjg`.
+     # Например, если префикс имени `app-name`, то поды Dex authenticator будут вида `app-name-dex-authenticator-7f698684c8-c5cjg`.
      name: app-name
      # Namespace, в котором будет развернут Dex authenticator.
-     namespace: app-namespace
+     namespace: app-ns
    spec:
      # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
@@ -29,7 +29,7 @@ title: "Модуль user-authn: FAQ"
      sendAuthorizationHeader: false
      # Имя Secret'а с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
-     # Название Ingress-класса, которое будет использоваться в создаваемом для Dex authenticator Ingress-ресурсе .
+     # Название Ingress-класса, которое будет использоваться в создаваемом для Dex authenticator Ingress-ресурсе.
      applicationIngressClassName: "nginx"
      # Время, на протяжении которого пользовательская сессия будет считаться активной.
      keepUsersLoggedInFor: "720h"
@@ -52,14 +52,14 @@ title: "Модуль user-authn: FAQ"
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
       - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`; 
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`)
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
    Пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
 
    ```yaml
    annotations:
      nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-     nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-namespace.svc.cluster.local/dex-authenticator/auth
+     nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
 
@@ -70,7 +70,7 @@ title: "Модуль user-authn: FAQ"
 * Если нужно ограничить доступ по IP и оставить прохождение аутентификации в Dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
 
   ```yaml
-  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
+  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
 
 * Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в Dex, а пользователи из остальных сетей были обязаны аутентифицироваться в Dex, добавьте следующую аннотацию:
