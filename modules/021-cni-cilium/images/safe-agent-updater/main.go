@@ -55,7 +55,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		waitUntilNewPodCreatedAndBecomeReady(kubeClient, nodeName, scanIterations)
+		err := waitUntilNewPodCreatedAndBecomeReady(kubeClient, nodeName, scanIterations)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.Infof("[SafeAgentUpdater] Finished and exit")
 }
@@ -77,7 +80,7 @@ func checkGeneration(kubeClient kubernetes.Interface, nodeName string) (currentP
 	desiredAgentGeneration := ciliumAgentDS.Spec.Template.Annotations[generationAnnotation]
 	if len(desiredAgentGeneration) == 0 {
 		return "", false, fmt.Errorf(
-			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotations %s.",
+			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotations %s",
 			ciliumNS,
 			generationAnnotation,
 		)
