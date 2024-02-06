@@ -25,7 +25,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 To list all available parameters for a project template, execute the command:
 
 ```shell
-kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
+kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ## Creating a project
@@ -36,7 +36,7 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
    Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: Project
    metadata:
      name: my-project
@@ -53,8 +53,11 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
            cpu: 5
            memory: 5Gi
        networkPolicy: Isolated
-       podSecurityPolicy: Restricted
-       enableExtendedMonitoring: true
+       podSecurityProfile: Restricted
+       extendedMonitoringEnabled: true
+       administrators:
+       - subject: Group
+         name: k8s-admins
    ```
 
 3. To check the status of the project, execute the command:
@@ -63,7 +66,7 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
    kubectl get projects my-project
    ```
 
-   A successfully created project should be in the `Sync` status.
+   A successfully created project should be in the `Sync` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
 
 ## Creating your own project template
 
@@ -80,6 +83,8 @@ To create your own template:
 3. Edit the `my-project-template.yaml` file, make the necessary changes.
 
    > It is necessary to change not only the template, but also the scheme of input parameters for it.
+   >
+   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
 4. Change the template name in the [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name) field.
 5. Apply your new template with the command:
@@ -88,6 +93,10 @@ To create your own template:
    kubectl apply -f my-project-template.yaml
    ```
 
-   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+6. Check the availability of the new template with the command:
+
+   ```shell
+   kubectl get projecttemplates <NEW_TEMPLATE_NAME>
+   ```
 
 {% endraw %}

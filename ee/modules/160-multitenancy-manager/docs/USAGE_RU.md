@@ -25,7 +25,7 @@ Deckhouse Kubernetes Platform включает следующий набор ш�
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
-kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}'
+kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ## Создание проекта
@@ -36,7 +36,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: Project
    metadata:
      name: my-project
@@ -53,8 +53,11 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
            cpu: 5
            memory: 5Gi
        networkPolicy: Isolated
-       podSecurityPolicy: Restricted
-       enableExtendedMonitoring: true
+       podSecurityProfile: Restricted
+       extendedMonitoringEnabled: true
+       administrators:
+       - subject: Group
+         name: k8s-admins
    ```
 
 3. Для проверки статуса проекта выполните команду:
@@ -63,7 +66,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    kubectl get projects my-project
    ```
 
-   Успешно созданный проект должен отображаться в статусе `Sync` (синхронизирован).
+   Успешно созданный проект должен отображаться в статусе `Sync` (синхронизирован). Если отображается статус `Error` (ошибка), добавьте аргумент `-o yaml` к команде (например, `kubectl get projects my-project -o yaml`) для получения более подробной информации о причине ошибки.
 
 ## Создание собственного шаблона для проекта
 
@@ -80,7 +83,8 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
 
    > Необходимо изменить не только шаблон, но и схему входных параметров под него.
-
+   >
+   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
 4. Измените имя шаблона в поле [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name).
 5. Примените полученный шаблон командой:
 
@@ -88,6 +92,10 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    kubectl apply -f my-project-template.yaml
    ```
 
-   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+6. Проверьте доступность нового шаблона с помощью команды:
+
+   ```shell
+   kubectl get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
+   ```
 
 {% endraw %}
