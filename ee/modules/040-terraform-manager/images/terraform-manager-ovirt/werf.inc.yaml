@@ -1,0 +1,30 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+  - add: /{{ .ModulePath }}candi/cloud-providers/ovirt
+    to: /deckhouse/candi/cloud-providers/ovirt
+import:
+  - artifact: terraform-provider-ovirt
+    add: /terraform-provider-ovirt
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
+    before: setup
+---
+artifact: terraform-provider-ovirt
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.ovirt.version }} {{ $.SOURCE_REPO }}/oVirt/terraform-provider-ovirt.git /src
+    - cd /src
+    - go mod edit -go=1.20
+    - go mod tidy
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X main.version={{ .TF.ovirt.version }} -X main.commit=00000000"
+    - mv /src/terraform-provider-ovirt /terraform-provider-ovirt
+    - chmod -R 755 /terraform-provider-ovirt
+    - chown 64535:64535 /terraform-provider-ovirt
