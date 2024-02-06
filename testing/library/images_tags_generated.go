@@ -396,6 +396,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerGcp":       "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerOpenstack": "imageHash-terraformManager-terraformManagerOpenstack",
 		"terraformManagerVcd":       "imageHash-terraformManager-terraformManagerVcd",
+		"terraformManagerOvirt":     "imageHash-terraformManager-terraformManagerOvirt",
 		"terraformManagerVsphere":   "imageHash-terraformManager-terraformManagerVsphere",
 		"terraformManagerYandex":    "imageHash-terraformManager-terraformManagerYandex",
 	},
