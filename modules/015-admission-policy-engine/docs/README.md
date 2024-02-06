@@ -9,7 +9,7 @@ The Pod Security Standards define three different policies to broadly cover the 
 
 {% alert level="info" %}
 The module does not apply policies to system namespaces.
-In deckhouse version >= 1.55. Istio sidecar-injector container starts only in `Privileged` mode
+When using Deckhouse version >= 1.55, the Istio `sidecar-injector` container runs only in `Privileged` mode.
 {% endalert %}
 
 List of policies available for use:
