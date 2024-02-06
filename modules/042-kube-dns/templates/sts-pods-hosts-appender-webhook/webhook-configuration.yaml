@@ -10,7 +10,7 @@ webhooks:
   failurePolicy: Fail
   matchPolicy: Equivalent
   sideEffects: None
-  timeoutSeconds: 3
+  timeoutSeconds: 30
   admissionReviewVersions:
   - v1
   clientConfig:
