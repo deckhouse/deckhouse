@@ -34,22 +34,21 @@ func newTestRunner() *Runner {
 
 func TestCheckPlanDestructiveChanges(t *testing.T) {
 	tests := []struct {
-		name        string
-		plan        string
-		destructive bool
-		err         error
+		name    string
+		plan    string
+		changes *PlanDestructiveChanges
+		err     error
 	}{
 		{
-			name:        "Empty Changes",
-			plan:        "./mocks/checkplan/empty.json",
-			destructive: false,
-			err:         nil,
+			name:    "Empty Changes",
+			plan:    "./mocks/checkplan/empty.json",
+			changes: nil,
+			err:     nil,
 		},
 		{
-			name:        "Has destructive changes",
-			plan:        "./mocks/checkplan/destructively_changed.json",
-			destructive: true,
-			err:         nil,
+			name:    "Has destructive changes",
+			plan:    "./mocks/checkplan/destructively_changed.json",
+			changes: destructivelyChanged,
 		},
 	}
 
@@ -64,14 +63,14 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 
 			runner := newTestRunner().withTerraformExecutor(executor)
 
-			code, err := runner.getPlanDestructiveChanges("")
+			changes, err := runner.getPlanDestructiveChanges("")
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
 				require.NoError(t, err)
 			}
 
-			require.Equal(t, tc.destructive, code)
+			require.Equal(t, tc.changes, changes)
 		})
 	}
 }
@@ -209,4 +208,60 @@ func TestConcurrentExec(t *testing.T) {
 	_, err := runner.execTerraform()
 
 	require.Equal(t, "Terraform have been already executed.", err.Error())
+}
+
+var destructivelyChanged = &PlanDestructiveChanges{
+	ResourcesDeleted: nil,
+	ResourcesRecreated: []ValueChange{
+		{
+			CurrentValue: map[string]any{
+				"allow_stopping_for_update": true,
+				"boot_disk": []any{map[string]any{
+					"auto_delete":       true,
+					"device_name":       "test",
+					"disk_id":           "test",
+					"initialize_params": []any{map[string]any{"description": "", "image_id": "tests", "name": "kubernetes-data-root", "size": float64(35), "snapshot_id": "", "type": "network-ssd"}},
+					"mode":              "READ_WRITE"},
+				},
+				"created_at":                "2021-02-26T09:41:42Z",
+				"description":               "",
+				"folder_id":                 "test",
+				"fqdn":                      "kube-master",
+				"hostname":                  "kube-master",
+				"id":                        "test",
+				"labels":                    map[string]any{},
+				"metadata":                  map[string]any{"ssh-keys": "", "user-data": ""},
+				"name":                      "kube-master",
+				"network_acceleration_type": "standard",
+				"network_interface":         []any{map[string]any{"index": float64(0), "ip_address": "10.233.2.21", "ipv4": true, "ipv6": false, "ipv6_address": "", "mac_address": "test", "nat": false, "nat_ip_address": "", "nat_ip_version": "", "security_group_ids": []any{}, "subnet_id": "test"}},
+				"platform_id":               "standard-v2",
+				"resources":                 []any{map[string]any{"core_fraction": float64(100), "cores": float64(4), "gpus": float64(0), "memory": float64(8)}},
+				"scheduling_policy":         []any{map[string]any{"preemptible": false}},
+				"secondary_disk":            []any{map[string]any{"auto_delete": false, "device_name": "kubernetes-data", "disk_id": "test", "mode": "READ_WRITE"}},
+				"service_account_id":        "",
+				"status":                    "running",
+				"timeouts":                  nil,
+				"zone":                      "ru-central1-c",
+			},
+			NextValue: map[string]any{
+				"allow_stopping_for_update": true,
+				"boot_disk": []any{map[string]any{
+					"auto_delete":       true,
+					"initialize_params": []any{map[string]any{"image_id": "test", "size": float64(45), "type": "network-ssd"}},
+				}},
+				"description":               nil,
+				"hostname":                  "kube-master",
+				"labels":                    nil,
+				"metadata":                  map[string]any{"node-network-cidr": "10.233.0.0/22", "ssh-keys": "test", "user-data": ""},
+				"name":                      "kube-master",
+				"network_acceleration_type": "standard",
+				"network_interface":         []any{map[string]any{"ipv4": true, "nat": false, "subnet_id": "test"}},
+				"platform_id":               "standard-v2",
+				"resources":                 []any{map[string]any{"core_fraction": float64(100), "cores": float64(4), "gpus": nil, "memory": float64(8)}},
+				"secondary_disk":            []any{map[string]any{"auto_delete": false, "device_name": "kubernetes-data", "disk_id": "test", "mode": "READ_WRITE"}},
+				"timeouts":                  nil,
+				"zone":                      "ru-central1-c",
+			},
+		},
+	},
 }

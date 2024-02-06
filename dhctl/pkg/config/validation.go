@@ -34,10 +34,6 @@ const (
 	xUnsafeRulesExtension = "x-unsafe-rules"
 )
 
-type ValidateOptions struct {
-	CommanderMode bool
-}
-
 // ValidateClusterSettingsFormat parses and validates cluster configuration and resources.
 // It checks the cluster configuration yamls for compliance with the yaml format and schema.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
@@ -54,7 +50,7 @@ func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error 
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		_, err := parseDocument(doc, &metaConfig, schemaStore)
+		_, err := parseDocument(doc, &metaConfig, schemaStore, opts)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err
@@ -98,14 +94,14 @@ func ValidateClusterSettingsChanges(
 	newDocs := map[SchemaIndex]string{}
 
 	for _, rawDoc := range oldRawDocs {
-		err := setConfigs(schemaStore, oldDocs, rawDoc)
+		err := setConfigs(schemaStore, oldDocs, rawDoc, opts)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, rawDoc := range newRawDocs {
-		err := setConfigs(schemaStore, newDocs, rawDoc)
+		err := setConfigs(schemaStore, newDocs, rawDoc, opts)
 		if err != nil {
 			return err
 		}
@@ -135,7 +131,7 @@ func ValidateClusterSettingsChanges(
 	return nil
 }
 
-func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc string) error {
+func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc string, opts ValidateOptions) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -143,7 +139,7 @@ func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc st
 
 	docData := []byte(doc)
 
-	index, err := schemaStore.Validate(&docData)
+	index, err := schemaStore.ValidateWithOpts(&docData, opts)
 	if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 		return err
 	}

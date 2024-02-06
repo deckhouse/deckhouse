@@ -191,7 +191,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 //	    ModuleConfig
 //
 // if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) (bool, error) {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ValidateOptions) (bool, error) {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return false, nil
@@ -212,7 +212,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 			return false, fmt.Errorf("module config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
-		_, err = schemaStore.Validate(&docData)
+		_, err = schemaStore.validate(&docData, opts)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
 				return false, nil
@@ -224,7 +224,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 		return true, nil
 	}
 
-	_, err = schemaStore.Validate(&docData)
+	_, err = schemaStore.validate(&docData, opts)
 	if err != nil {
 		if errors.Is(err, ErrSchemaNotFound) {
 			return false, nil
@@ -266,7 +266,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		found, err := parseDocument(doc, &metaConfig, schemaStore)
+		found, err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		found, err := parseDocument(doc, &metaConfig, schemaStore)
+		found, err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +309,7 @@ func ValidateClusterSettings(configData string) error {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		_, err := parseDocument(doc, &metaConfig, schemaStore)
+		_, err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{})
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err
