@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"io"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -146,6 +147,46 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				}
 			})
 		})
+
+		Context("check for k8s version 1.20", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.20.4")
+				f.RunGoHook()
+			})
+			It("must have minimalUnavailabelK8sVesion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
+				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				Expect(k8sVersion).To(Equal("1.22.0"))
+				Expect(reasons).To(HaveLen(2))
+				for _, reason := range reasons {
+					Expect(`
+						networking.k8s.io/v1beta1: Ingress, 
+						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
+					`).To(ContainSubstring(reason))
+				}
+			})
+		})
+
+		Context("check for k8s version 1.22", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.22.5")
+				f.RunGoHook()
+			})
+			It("must have minimalUnavailabelK8sVesion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
+				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				Expect(k8sVersion).To(Equal("1.22.0"))
+				Expect(reasons).To(HaveLen(2))
+				for _, reason := range reasons {
+					Expect(`
+						networking.k8s.io/v1beta1: Ingress, 
+						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
+					`).To(ContainSubstring(reason))
+				}
+			})
+		})
 	})
 
 	Context("helm3 release without deprecated apis", func() {
@@ -162,6 +203,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
 		})
+
 		It("must have no metrics about deprecation", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
@@ -173,6 +215,27 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				}
 			}
 		})
+
+		Context("check for k8s version 1.20", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.20.4")
+				f.RunGoHook()
+			})
+			It("must have minimalUnavailabelK8sVesion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
+				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				Expect(k8sVersion).To(Equal("1.22.0"))
+				Expect(reasons).To(HaveLen(2))
+				for _, reason := range reasons {
+					Expect(`
+						networking.k8s.io/v1beta1: Ingress, 
+						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
+					`).To(ContainSubstring(reason))
+				}
+			})
+		})
+
 	})
 
 	Context("helm2 release with deprecated versions", func() {
@@ -207,6 +270,26 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 					Expect(*metric.Value).To(Equal(float64(2)))
 				}
 			}
+		})
+
+		Context("check for k8s version 1.20", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.20.4")
+				f.RunGoHook()
+			})
+			It("must have minimalUnavailabelK8sVesion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
+				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				Expect(k8sVersion).To(Equal("1.22.0"))
+				Expect(reasons).To(HaveLen(2))
+				for _, reason := range reasons {
+					Expect(`
+						networking.k8s.io/v1beta1: Ingress, 
+						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
+					`).To(ContainSubstring(reason))
+				}
+			})
 		})
 	})
 

@@ -33,9 +33,10 @@ import (
 )
 
 const (
-	candiDir                 = "/deckhouse/candi"
-	modulesDir               = "/deckhouse/modules"
-	globalHooksModule        = "/deckhouse/global-hooks"
+	candiDir          = "/deckhouse/candi"
+	modulesDir        = "/deckhouse/modules"
+	globalHooksModule = "/deckhouse/global-hooks"
+	// don't forget to update the version in release requirements (release.yaml)
 	DefaultKubernetesVersion = "1.27"
 )
 
