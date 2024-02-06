@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -29,9 +30,10 @@ import (
 )
 
 const (
-	ciliumNS                     = "d8-cni-cilium"
-	generationChecksumAnnotation = "safe-agent-updater-daemonset-generation"
-	scanInterval                 = 3 * time.Second
+	ciliumNS             = "d8-cni-cilium"
+	generationAnnotation = "safe-agent-updater-daemonset-generation"
+	scanInterval         = 3 * time.Second
+	scanIterations       = 20
 )
 
 func main() {
@@ -40,33 +42,49 @@ func main() {
 	if err != nil {
 		log.Fatalf("[SafeAgentUpdater] Failed to init kubeClient. Error: %v", err)
 	}
-
 	nodeName := os.Getenv("NODE_NAME")
 	if len(nodeName) == 0 {
-		log.Fatalf("[SafeAgentUpdater] Failed to get NODE_NAME.")
+		log.Fatalf("[SafeAgentUpdater] Failed to get env NODE_NAME.")
 	}
+	currentPodName, isCurrentGenEqDesiredGen, err := checkGeneration(kubeClient, nodeName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !isCurrentGenEqDesiredGen {
+		err = deletePod(kubeClient, currentPodName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		waitUntilNewPodCreatedAndBecomeReady(kubeClient, nodeName, scanIterations)
+	}
+	log.Infof("[SafeAgentUpdater] Finished and exit")
+}
 
+func checkGeneration(kubeClient kubernetes.Interface, nodeName string) (currentPodName string, isCurrentGenEqDesiredGen bool, err error) {
 	ciliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNS).Get(
 		context.TODO(),
 		"agent",
 		metav1.GetOptions{},
 	)
 	if err != nil {
-		log.Fatalf("[SafeAgentUpdater] Failed to get DaemonSets %s/agent. Error: %v", ciliumNS, err)
+		return "", false, fmt.Errorf(
+			"[SafeAgentUpdater] Failed to get DaemonSets %s/agent. Error: %v",
+			ciliumNS,
+			err,
+		)
 	}
 
-	ciliumAgentDSGenerationChecksum := ciliumAgentDS.Spec.Template.Annotations[generationChecksumAnnotation]
-	if len(ciliumAgentDSGenerationChecksum) == 0 {
-		log.Fatalf(
+	desiredAgentGeneration := ciliumAgentDS.Spec.Template.Annotations[generationAnnotation]
+	if len(desiredAgentGeneration) == 0 {
+		return "", false, fmt.Errorf(
 			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotations %s.",
 			ciliumNS,
-			generationChecksumAnnotation,
+			generationAnnotation,
 		)
 	}
 	log.Infof(
-		"[SafeAgentUpdater] Current generation of DS %s/agent is %s",
-		ciliumNS,
-		ciliumAgentDSGenerationChecksum,
+		"[SafeAgentUpdater] Desired generation of agent is %s",
+		desiredAgentGeneration,
 	)
 
 	ciliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNS).List(
@@ -77,8 +95,12 @@ func main() {
 		},
 	)
 	if err != nil {
-		log.Fatalf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v", err)
+		return "", false, fmt.Errorf(
+			"[SafeAgentUpdater] Failed to list pods on same node. Error: %v",
+			err,
+		)
 	}
+
 	log.Infof(
 		"[SafeAgentUpdater] Count of agents running on node %s is %v",
 		nodeName,
@@ -86,92 +108,128 @@ func main() {
 	)
 	switch {
 	case len(ciliumAgentPodsOnSameNode.Items) == 0:
-		log.Fatalf("[SafeAgentUpdater] There aren't agent pods on node %s", nodeName)
+		return "", false, fmt.Errorf(
+			"[SafeAgentUpdater] There aren't agent pods on node %s",
+			nodeName,
+		)
 	case len(ciliumAgentPodsOnSameNode.Items) > 1:
-		log.Fatalf("[SafeAgentUpdater] There are more than one running agent pods on node %s", nodeName)
+		return "", false, fmt.Errorf(
+			"[SafeAgentUpdater] There are more than one running agent pods on node %s",
+			nodeName,
+		)
 	}
+
 	currentPod := ciliumAgentPodsOnSameNode.Items[0]
 	log.Infof(
 		"[SafeAgentUpdater] Name of pod which running on the same node is %s",
 		currentPod.Name,
 	)
-	currentPodGenerationChecksum := currentPod.Annotations[generationChecksumAnnotation]
+	currentAgentGeneration := currentPod.Annotations[generationAnnotation]
 	log.Infof(
 		"[SafeAgentUpdater] Generation of pod %s is %s",
 		currentPod.Name,
-		currentPodGenerationChecksum,
+		currentAgentGeneration,
 	)
-	if ciliumAgentDSGenerationChecksum == currentPodGenerationChecksum {
-		log.Infof("[SafeAgentUpdater] The cilium agent pod completely matches its DaemonSet. Nothing to do")
-	}
-	if ciliumAgentDSGenerationChecksum != currentPodGenerationChecksum {
+
+	switch {
+	case desiredAgentGeneration == currentAgentGeneration:
 		log.Infof(
-			"[SafeAgentUpdater] Generation on DS(%s) and Pod(%s) are not the same. Deleting Pod %s",
-			ciliumAgentDSGenerationChecksum,
-			currentPodGenerationChecksum,
-			currentPod.Name,
+			"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are same. Nothing to do.",
+			desiredAgentGeneration,
+			currentAgentGeneration,
 		)
-		err := kubeClient.CoreV1().Pods(ciliumNS).Delete(
+		isCurrentGenEqDesiredGen = true
+	case desiredAgentGeneration != currentAgentGeneration:
+		log.Infof(
+			"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
+			desiredAgentGeneration,
+			currentAgentGeneration,
+		)
+		isCurrentGenEqDesiredGen = false
+	}
+	return currentPod.Name, isCurrentGenEqDesiredGen, nil
+}
+
+func deletePod(kubeClient kubernetes.Interface, podName string) error {
+	err := kubeClient.CoreV1().Pods(ciliumNS).Delete(
+		context.TODO(),
+		podName,
+		metav1.DeleteOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"[SafeAgentUpdater] Failed to delete pod %s. Error: %v",
+			podName,
+			err,
+		)
+	}
+	log.Infof(
+		"[SafeAgentUpdater] Pod %s/%s deleted",
+		ciliumNS,
+		podName,
+	)
+	return nil
+}
+
+func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeName string, scanIterations int) error {
+	var newPodName string
+	for i := 1; i <= scanIterations; i++ {
+		log.Infof("[SafeAgentUpdater] Waiting until new pod created on same node")
+		ciliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNS).List(
 			context.TODO(),
-			currentPod.Name,
-			metav1.DeleteOptions{},
+			metav1.ListOptions{
+				LabelSelector: "app=agent",
+				FieldSelector: "spec.nodeName=" + nodeName,
+			},
 		)
 		if err != nil {
-			log.Fatalf("[SafeAgentUpdater] Failed to delete pod %s. Error: %v", currentPod.Name, err)
+			log.Errorf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v.", err)
 		}
 		log.Infof(
-			"[SafeAgentUpdater] Pod %s/%s deleted",
-			ciliumNS,
-			currentPod.Name,
+			"[SafeAgentUpdater] Count of agents running on node %s is %v",
+			nodeName,
+			len(ciliumAgentPodsOnSameNode.Items),
 		)
-		var newPodName string
-		for {
-			log.Infof("[SafeAgentUpdater] Waiting until new pod created on same node")
-			ciliumAgentPodsOnSameNode, err = kubeClient.CoreV1().Pods(ciliumNS).List(
-				context.TODO(),
-				metav1.ListOptions{
-					LabelSelector: "app=agent",
-					FieldSelector: "spec.nodeName=" + nodeName,
-				},
-			)
-			if err != nil {
-				log.Errorf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v", err)
-			}
+
+		if len(ciliumAgentPodsOnSameNode.Items) == 1 &&
+			ciliumAgentPodsOnSameNode.Items[0].DeletionTimestamp == nil {
+
+			newPodName = ciliumAgentPodsOnSameNode.Items[0].Name
 			log.Infof(
-				"[SafeAgentUpdater] Count of agents running on node %s is %v",
-				nodeName,
-				len(ciliumAgentPodsOnSameNode.Items),
-			)
-
-			if len(ciliumAgentPodsOnSameNode.Items) == 1 {
-				newPodName = ciliumAgentPodsOnSameNode.Items[0].Name
-				log.Infof(
-					"[SafeAgentUpdater] New pod created with name %s",
-					newPodName,
-				)
-				break
-			}
-			time.Sleep(scanInterval)
-		}
-		for {
-			newPod, err := kubeClient.CoreV1().Pods(ciliumNS).Get(
-				context.TODO(),
+				"[SafeAgentUpdater] New pod created with name %s",
 				newPodName,
-				metav1.GetOptions{},
 			)
-			if err != nil {
-				log.Errorf("[SafeAgentUpdater] Failed to get pod %s. Error: %v", newPodName, err)
-			}
-			log.Infof("[SafeAgentUpdater] Waiting until new pod %s become Ready", newPod.Name)
-
-			if isPodReady(newPod) {
-				break
-			}
-			time.Sleep(scanInterval)
+			break
+		} else if i == scanIterations {
+			return fmt.Errorf("[SafeAgentUpdater] Failed to get one new pod after %v attempts", scanIterations)
 		}
-		log.Infof("[SafeAgentUpdater] Cilium agent on node %s successfully reloaded", nodeName)
+		time.Sleep(scanInterval)
 	}
-	log.Infof("[SafeAgentUpdater] Finished and exit")
+	for i := 1; i <= scanIterations; i++ {
+		newPod, err := kubeClient.CoreV1().Pods(ciliumNS).Get(
+			context.TODO(),
+			newPodName,
+			metav1.GetOptions{},
+		)
+		if err != nil {
+			log.Errorf("[SafeAgentUpdater] Failed to get pod %s. Error: %v.", newPodName, err)
+		}
+		log.Infof("[SafeAgentUpdater] Waiting until new pod %s become Ready", newPod.Name)
+
+		if isPodReady(newPod) {
+			log.Infof("[SafeAgentUpdater] Pod %s id Ready", newPod.Name)
+			break
+		} else if i == scanIterations {
+			return fmt.Errorf(
+				"[SafeAgentUpdater] Failed to wait until new pod %s become Ready after %v attempts",
+				newPod.Name,
+				scanIterations,
+			)
+		}
+		time.Sleep(scanInterval)
+	}
+	log.Infof("[SafeAgentUpdater] Cilium agent on node %s successfully reloaded", nodeName)
+	return nil
 }
 
 func isPodReady(pod *v1.Pod) bool {
