@@ -12,6 +12,7 @@ apiVersions:
         kind: SSHConfig
         sshUser: user
         sshPort: 22
+        sshExtraArgs: -vvv
         sshAgentPrivateKeys:
           - key: <ssh-private-key>
     properties:
@@ -26,6 +27,8 @@ apiVersions:
         type: string
       sshPort:
         type: integer
+      sshExtraArgs:
+        type: string
       sshAgentPrivateKeys:
         type: array
         minItems: 1

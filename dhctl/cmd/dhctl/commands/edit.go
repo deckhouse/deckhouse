@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +36,7 @@ const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent)
+	app.DefineSSHFlags(parent, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(parent)
 }
 
