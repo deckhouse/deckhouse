@@ -1,0 +1,142 @@
+{{- define "project.namespace" }}
+{{ $name := index . 0 }}
+{{ $metadata := index . 1 }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $name }}
+  {{- with $metadata }}
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+
+{{- end }}
+
+{{- define "slugify" }}
+  {{- /* https://gitlab.com/gitlab-org/gitlab/-/blob/6db59634ecbb1581bbb16b627b9631ca96ce2e8d/lib/gitlab/utils.rb#L100 */}}
+  {{- $oldName := index . 0 }}
+  {{- $rootContext := index . 1 }}
+
+  {{- $newName := lower $oldName }}
+  {{- $newName = regexReplaceAllLiteral "[^a-z0-9]" $newName "-" }}
+
+  {{- if gt (len $newName) 63 }}
+    {{- if not ( index $rootContext.Release "bigNamePostfixes" ) }}
+      {{- $_ := set $rootContext.Release "bigNamePostfixes" dict }}
+    {{- end }}
+
+    {{- /* This will allow us to reuse random string after helm release upgrade */}}
+    {{- if not ( index $rootContext.Release.bigNamePostfixes $newName ) }}
+      {{- $_ := set $rootContext.Release.bigNamePostfixes $newName ( randAlphaNum 10 | lower ) }}
+    {{- end }}
+
+    {{- $newNameShortened := substr 0 52 $newName }}
+    {{- $newName = printf "%s-%s" $newNameShortened ( index $rootContext.Release.bigNamePostfixes $newName ) }}
+  {{- end }}
+
+  {{- $newName = regexReplaceAllLiteral "(^-+|-+$)" $newName "" }}
+  {{- print $newName }}
+{{- end }}
+
+{{- define "prepare.template" }}
+  {{- $template := index . 0 }}
+  {{- $projectName := index . 1 }}
+  {{- $rootContext := index . 2 }}
+
+  {{- if $template }}
+
+  {{- $kindPrefix := "kind: Namespace" }}
+  {{- $namePrefix := "  name: " }}
+  {{- $namespacePrefix := "  namespace: "}}
+  {{- $namespacePrefixithProject := printf "%s%s" $namespacePrefix $projectName }}
+  {{- $lines := splitList "\n" $template }}
+
+  {{- $resultLines := list }}
+  {{- $isNamespace := false }}
+  {{- $hasNamespace := false }}
+  {{- range $line := $lines }}
+    {{- if hasPrefix $kindPrefix $line }}
+      {{- $isNamespace = true }}
+    {{- end }}
+
+    {{- if hasPrefix $namespacePrefix $line }}
+      {{- $hasNamespace = true }}
+    {{- end }}
+
+    {{- $resultLines = append $resultLines $line }}
+  {{- end }}
+
+  {{- if and (not $hasNamespace) (not $isNamespace) }}
+    {{- $newResultLines := list }}
+    {{- range $line := $resultLines }}
+      {{- if hasPrefix $namePrefix $line }}
+        {{- $newResultLines = append $newResultLines $namespacePrefixithProject }}
+      {{- end }}
+      {{- $newResultLines = append $newResultLines $line }}
+    {{- end }}
+    {{- $resultLines = $newResultLines }}
+  {{- end }}
+
+  {{- $resultLines | join "\n" | trim }}
+  {{- end }}
+{{- end }}
+
+{{- define "prepare.templates" }}
+  {{- $templates := splitList "---" ( index . 0) }}
+  {{- $projectName := index . 1 }}
+  {{- $rootContext := index . 2 }}
+
+  {{- $newTemplates := list }}
+  {{- range $template := $templates }}
+    {{- $newTemplates = append $newTemplates ( include "prepare.template" ( list $template $projectName $rootContext ) ) }}
+  {{- end }}
+
+  {{- $newTemplates | join "\n---\n" }}
+{{- end }}
+
+{{- define "authorization.rule" }}
+  {{- $projectName := index . 0 }}
+  {{- $values := index . 1 }}
+  {{- $rootContext := index . 2 }}
+  {{- $kebabCaseAuthName := printf "%s-%s-%s" $values.role $values.kind $values.name | kebabcase }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  name: {{ list $kebabCaseAuthName $rootContext | include "slugify" | replace "--" "-" }}
+  namespace: {{ $projectName }}
+spec:
+  accessLevel: {{ $values.role }}
+  subjects:
+  - kind: {{ $values.kind }}
+    name: {{ $values.name | quote }}
+  {{- if $values.namespace }}
+    namespace: {{ $values.namespace | quote }}
+  {{- end }}
+{{- end }}
+
+{{- define "authorization.rules" }}
+  {{- $projectName := index . 0 }}
+  {{- $authorizationRules := index . 1 }}
+  {{- $rootContext := index . 2 }}
+  {{- range $ruleValues := $authorizationRules }}
+    {{- include "authorization.rule" (list $projectName $ruleValues $rootContext) }}
+  {{- end }}
+{{- end }}
+
+{{- $projectValues := $.Values.project }}
+{{- $_ := set $projectValues "Template" $.Template }}
+{{- $projectTemplateValues := $.Values.projectTemplate }}
+
+{{- /* legacy namespace */}}
+{{- if $projectTemplateValues.namespaceMetadata }}
+  {{- include "project.namespace" ( list $projectValues.projectName $projectTemplateValues.namespaceMetadata ) }}
+{{- end }}
+
+{{- $templates := include "prepare.templates" ( list $projectTemplateValues.resourcesTemplate $projectValues.projectName $) }}
+{{- tpl $templates $projectValues }}
+
+{{- /* legacy subjects */}}
+{{- if $projectTemplateValues.subjects }}
+  {{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
+{{- end }}
