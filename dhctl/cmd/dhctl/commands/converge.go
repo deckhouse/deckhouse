@@ -16,6 +16,8 @@ package commands
 
 import (
 	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -26,7 +28,7 @@ import (
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -50,7 +52,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge-periodical", "Start service for periodical run converge.")
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
