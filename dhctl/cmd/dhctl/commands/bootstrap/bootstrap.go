@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -24,7 +25,7 @@ import (
 
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
