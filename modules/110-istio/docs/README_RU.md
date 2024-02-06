@@ -181,8 +181,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 Рекомендованный способ добавления sidecar-ов — использовать sidecar-injector. Istio умеет «подселять» к вашим подам sidecar-контейнер с помощью механизма [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/). Настраивается с помощью лейблов и аннотаций:
 
 {% alert level="info" %}
-Версия deckhouse >= 1.55 При работе модуля admission-policy-engine Istio sidecar-injector контейнеры работаю только в режиме `Privileged`
-[admission-policy-engine](https://deckhouse.ru/documentation/v1/modules/015-admission-policy-engine/)
+При использовании Deckhouse версии >= 1.55 и включенном модуле [admission-policy-engine](../015-admission-policy-engine/), контейнер `sidecar-injector` Istio запускается только в режиме `Privileged`.
 {% endalert %}
 
 * Лейбл к **namespace** — обращает внимание sidecar-injector'а на ваш namespace, после установки лейбла к новым подам будут подселяться sidecar'ы:
