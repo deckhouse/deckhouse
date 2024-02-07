@@ -37,9 +37,9 @@ properties:
       kubernetesApiserverAddresses:
         type: array
         items: strings
-      crowdProxyCert:
+      basicAuthProxyCert:
         type: string
-      crowdProxyKey:
+      basicAuthProxyKey:
         type: string
       selfSignedCA:
         type: object

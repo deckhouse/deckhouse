@@ -7,6 +7,7 @@ memory: 25Mi
 
   {{- $type := "" }}
   {{- $config := false }}
+
   {{- range $provider := .Values.userAuthn.internal.providers }}
     {{- if eq $provider.type "Crowd" }}
       {{- if $provider.crowd.enableBasicAuth }}
@@ -95,7 +96,7 @@ spec:
       containers:
       - name: proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "crowdBasicAuthProxy") }}
+        image: {{ include "helm_lib_module_image" (list . "basicAuthProxy") }}
         args:
         - --listen=$(POD_IP):7332
         - --cert-path=/etc/certs
