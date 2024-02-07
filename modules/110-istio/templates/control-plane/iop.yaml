@@ -23,7 +23,29 @@ metadata:
 spec:
 {{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
   {{- end }}
-
+  {{- if eq ($.Values.istio.controlPlane.replicasManagement.mode) "HPA" }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+spec:
+  minReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.autoscaleMin }}
+  maxReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.autoscaleMax }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istiod-{{ $revision }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $.Values.istio.controlPlane.replicasManagement.hpa.cpuTargetAverageUtilization }}
+  {{- end}}
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -170,7 +192,9 @@ spec:
 
     pilot:
       autoscaleEnabled: false
+  {{- if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- end }}
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
       configNamespace: d8-{{ $.Chart.Name }}
