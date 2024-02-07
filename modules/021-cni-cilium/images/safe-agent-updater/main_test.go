@@ -34,7 +34,7 @@ const (
 	testNodeName = "testcluster-worker-02334ee2-7694f-h9zgk"
 )
 
-func TestCheckGeneration(t *testing.T) {
+func TestCheckAgentPodGeneration(t *testing.T) {
 	testCases := []struct {
 		name             string
 		nodeName         string
@@ -258,8 +258,8 @@ func TestCheckGeneration(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
-			_, isCurrentGenEqDesiredGen, err := checkGeneration(fakeClientset, test.nodeName)
-			podRestartNeeded := !isCurrentGenEqDesiredGen
+			_, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(fakeClientset, test.nodeName)
+			podRestartNeeded := !isCurrentAgentPodGenerationDesired
 
 			switch test.expectSuccess {
 			case false:

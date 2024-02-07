@@ -46,12 +46,12 @@ func main() {
 	if len(nodeName) == 0 {
 		log.Fatalf("[SafeAgentUpdater] Failed to get env NODE_NAME.")
 	}
-	currentPodName, isCurrentGenEqDesiredGen, err := checkGeneration(kubeClient, nodeName)
+	currentAgentPodName, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(kubeClient, nodeName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !isCurrentGenEqDesiredGen {
-		err = deletePod(kubeClient, currentPodName)
+	if !isCurrentAgentPodGenerationDesired {
+		err = deletePod(kubeClient, currentAgentPodName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func main() {
 	log.Infof("[SafeAgentUpdater] Finished and exit")
 }
 
-func checkGeneration(kubeClient kubernetes.Interface, nodeName string) (currentPodName string, isCurrentGenEqDesiredGen bool, err error) {
+func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, isCurrentAgentPodGenerationDesired bool, err error) {
 	ciliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNS).Get(
 		context.TODO(),
 		"agent",
@@ -80,7 +80,7 @@ func checkGeneration(kubeClient kubernetes.Interface, nodeName string) (currentP
 	desiredAgentGeneration := ciliumAgentDS.Spec.Template.Annotations[generationAnnotation]
 	if len(desiredAgentGeneration) == 0 {
 		return "", false, fmt.Errorf(
-			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotations %s",
+			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotation %s",
 			ciliumNS,
 			generationAnnotation,
 		)
@@ -134,23 +134,21 @@ func checkGeneration(kubeClient kubernetes.Interface, nodeName string) (currentP
 		currentAgentGeneration,
 	)
 
-	switch {
-	case desiredAgentGeneration == currentAgentGeneration:
+	if desiredAgentGeneration == currentAgentGeneration {
 		log.Infof(
 			"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are same. Nothing to do.",
 			desiredAgentGeneration,
 			currentAgentGeneration,
 		)
-		isCurrentGenEqDesiredGen = true
-	case desiredAgentGeneration != currentAgentGeneration:
+		return currentPod.Name, true, nil
+	} else {
 		log.Infof(
 			"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
 			desiredAgentGeneration,
 			currentAgentGeneration,
 		)
-		isCurrentGenEqDesiredGen = false
+		return currentPod.Name, false, nil
 	}
-	return currentPod.Name, isCurrentGenEqDesiredGen, nil
 }
 
 func deletePod(kubeClient kubernetes.Interface, podName string) error {
@@ -176,7 +174,7 @@ func deletePod(kubeClient kubernetes.Interface, podName string) error {
 
 func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeName string, scanIterations int) error {
 	var newPodName string
-	for i := 1; i <= scanIterations; i++ {
+	for i := 0; i < scanIterations; i++ {
 		log.Infof("[SafeAgentUpdater] Waiting until new pod created on same node")
 		ciliumAgentPodsOnSameNode, err := kubeClient.CoreV1().Pods(ciliumNS).List(
 			context.TODO(),
@@ -203,12 +201,12 @@ func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeN
 				newPodName,
 			)
 			break
-		} else if i == scanIterations {
+		} else if i == scanIterations-1 {
 			return fmt.Errorf("[SafeAgentUpdater] Failed to get one new pod after %v attempts", scanIterations)
 		}
 		time.Sleep(scanInterval)
 	}
-	for i := 1; i <= scanIterations; i++ {
+	for i := 0; i < scanIterations; i++ {
 		newPod, err := kubeClient.CoreV1().Pods(ciliumNS).Get(
 			context.TODO(),
 			newPodName,
@@ -222,7 +220,7 @@ func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeN
 		if isPodReady(newPod) {
 			log.Infof("[SafeAgentUpdater] Pod %s id Ready", newPod.Name)
 			break
-		} else if i == scanIterations {
+		} else if i == scanIterations-1 {
 			return fmt.Errorf(
 				"[SafeAgentUpdater] Failed to wait until new pod %s become Ready after %v attempts",
 				newPod.Name,
