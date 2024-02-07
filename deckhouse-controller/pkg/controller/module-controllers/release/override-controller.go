@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,6 +63,8 @@ type ModulePullOverrideController struct {
 
 	logger logger.Logger
 
+	metricStorage *metric_storage.MetricStorage
+
 	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
@@ -73,6 +76,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	modulesValidator moduleValidator,
+	metricStorage *metric_storage.MetricStorage,
 ) *ModulePullOverrideController {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -96,6 +100,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		metricStorage:      metricStorage,
 	}
 
 	_, err := modulePullOverridesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -260,7 +265,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms), c.metricStorage)
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()

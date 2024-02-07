@@ -32,6 +32,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -80,6 +81,7 @@ type Controller struct {
 	modulePullOverridesSynced  cache.InformerSynced
 	leaseLister                coordinationv1.LeaseLister
 	leaseInformer              cache.SharedIndexInformer
+	metricStorage              *metric_storage.MetricStorage
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -126,6 +128,7 @@ func NewController(ks kubernetes.Interface,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	mv moduleValidator,
 	httpClient d8http.Client,
+	metricStorage *metric_storage.MetricStorage,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -160,6 +163,7 @@ func NewController(ks kubernetes.Interface,
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		leaseLister:                leaseLister,
 		leaseInformer:              leaseInformer,
+		metricStorage:              metricStorage,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		leaseWorkqueue:             workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
@@ -577,7 +581,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{Requeue: true}, err
 			}
 
-			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+			md := c.newModuleDownloader(ms)
 			err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 			if err != nil {
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
@@ -1009,7 +1013,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			continue
 		}
 
-		md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+		md := c.newModuleDownloader(ms)
 		_, moduleDef, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			c.logger.Warnf("Couldn't get module %s pull override definition: %s", moduleName, err)
@@ -1083,7 +1087,7 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 		return fmt.Errorf("ModuleSource %v is absent. Skipping restoration of the module %v", moduleSource, moduleName)
 	}
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := c.newModuleDownloader(ms)
 	err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("Download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
@@ -1177,7 +1181,7 @@ func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleR
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := c.newModuleDownloader(ms)
 	for _, addr := range addrs {
 		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 		if err != nil {
@@ -1223,4 +1227,8 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 	}
 
 	return nil
+}
+
+func (c *Controller) newModuleDownloader(ms *v1alpha1.ModuleSource) *downloader.ModuleDownloader {
+	return downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms), c.metricStorage)
 }

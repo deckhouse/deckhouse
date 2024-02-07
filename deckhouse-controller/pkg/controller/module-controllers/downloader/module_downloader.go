@@ -25,8 +25,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/utils/measure"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
@@ -47,13 +50,15 @@ type ModuleDownloader struct {
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
+	metricStorage   *metric_storage.MetricStorage
 }
 
-func NewModuleDownloader(externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option, metricStorage *metric_storage.MetricStorage) *ModuleDownloader {
 	return &ModuleDownloader{
 		externalModulesDir: externalModulesDir,
 		ms:                 ms,
 		registryOptions:    registryOptions,
+		metricStorage:      metricStorage,
 	}
 }
 
@@ -101,6 +106,10 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
 	}
+
+	defer measure.Duration(func(d time.Duration) {
+		md.metricStorage.CounterAdd("{PREFIX}module_pull_seconds_total", d.Seconds(), map[string]string{"version": moduleVersion})
+	})()
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
@@ -110,6 +119,11 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
 	res := ModuleDownloadResult{}
+
+	defer measure.Duration(func(d time.Duration) {
+		md.metricStorage.CounterAdd("{PREFIX}module_pull_metadata_seconds_total", d.Seconds(), map[string]string{"channel": releaseChannel})
+	})()
+
 	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
 		return res, err

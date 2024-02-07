@@ -27,6 +27,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -63,6 +64,7 @@ type Controller struct {
 	moduleUpdatePoliciesSynced cache.InformerSynced
 	modulePullOverridesLister  d8listers.ModulePullOverrideLister
 	modulePullOverridesSynced  cache.InformerSynced
+	metricStorage              *metric_storage.MetricStorage
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -86,6 +88,7 @@ func NewController(
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+	metricStorage *metric_storage.MetricStorage,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -105,6 +108,7 @@ func NewController(
 		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
+		metricStorage:              metricStorage,
 
 		logger: lg,
 
@@ -329,7 +333,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	modulesChecksums := c.getModuleSourceChecksum(ms.Name)
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts)
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts, c.metricStorage)
 
 	// get all policies regardless of their labels
 	policies, err := c.moduleUpdatePoliciesLister.List(labels.Everything())
