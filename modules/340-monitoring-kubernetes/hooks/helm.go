@@ -40,6 +40,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -189,8 +190,8 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	<-doneC
 
 	if k8sVersion, reason := unsupportVersion.get(); k8sVersion != "" {
-		input.Values.Set(MinimalUnavailabelK8sVesion, k8sVersion)
-		input.Values.Set(MinimalUnavailabelK8sReason, reason)
+		requirements.SaveValue(MinimalUnavailabelK8sVesion, k8sVersion)
+		requirements.SaveValue(MinimalUnavailabelK8sReason, reason)
 	}
 
 	// to avoid data race

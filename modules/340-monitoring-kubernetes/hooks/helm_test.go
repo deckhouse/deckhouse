@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -28,6 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -155,8 +157,15 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			})
 			It("must have minimalUnavailabelK8sVesion", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
-				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+
+				var k8sVersion string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				var reasons []string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
+				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
 				Expect(reasons).To(HaveLen(2))
 				for _, reason := range reasons {
@@ -175,13 +184,19 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			})
 			It("must have minimalUnavailabelK8sVesion", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
-				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				var k8sVersion string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				var reasons []string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
+				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
 				Expect(reasons).To(HaveLen(2))
 				for _, reason := range reasons {
 					Expect(`
-						networking.k8s.io/v1beta1: Ingress, 
+						networking.k8s.io/v1beta1: Ingress,
 						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
 					`).To(ContainSubstring(reason))
 				}
@@ -223,13 +238,19 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			})
 			It("must have minimalUnavailabelK8sVesion", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
-				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				var k8sVersion string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				var reasons []string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
+				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
 				Expect(reasons).To(HaveLen(2))
 				for _, reason := range reasons {
 					Expect(`
-						networking.k8s.io/v1beta1: Ingress, 
+						networking.k8s.io/v1beta1: Ingress,
 						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
 					`).To(ContainSubstring(reason))
 				}
@@ -279,13 +300,19 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			})
 			It("must have minimalUnavailabelK8sVesion", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				k8sVersion := f.ValuesGet(MinimalUnavailabelK8sVesion).String()
-				reasons := strings.Split(f.ValuesGet(MinimalUnavailabelK8sReason).String(), ", ")
+				var k8sVersion string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				var reasons []string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
+				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
 				Expect(reasons).To(HaveLen(2))
 				for _, reason := range reasons {
 					Expect(`
-						networking.k8s.io/v1beta1: Ingress, 
+						networking.k8s.io/v1beta1: Ingress,
 						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
 					`).To(ContainSubstring(reason))
 				}
