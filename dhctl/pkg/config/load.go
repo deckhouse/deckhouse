@@ -44,8 +44,9 @@ var once sync.Once
 var store *SchemaStore
 
 type ValidateOptions struct {
-	CommanderMode   bool
-	StrictUnmarshal bool
+	CommanderMode      bool
+	StrictUnmarshal    bool
+	ValidateExtensions bool
 }
 
 func NewSchemaStore(paths ...string) *SchemaStore {
@@ -332,18 +333,24 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ValidateOptions)
 	}
 
 	result := validator.Validate(blank)
-	if result.IsValid() {
-		// Add default values from openAPISpec
-		post.ApplyDefaults(result)
-		*dataObj, _ = json.Marshal(result.Data())
+	if !result.IsValid() {
+		var allErrs *multierror.Error
+		allErrs = multierror.Append(allErrs, result.Errors...)
 
-		return true, nil
+		return false, allErrs.ErrorOrNil()
 	}
 
-	var allErrs *multierror.Error
-	allErrs = multierror.Append(allErrs, result.Errors...)
+	if opts.ValidateExtensions {
+		if err := validateExtensions(*dataObj, *schema); err != nil {
+			return false, err
+		}
+	}
 
-	return false, allErrs.ErrorOrNil()
+	// Add default values from openAPISpec
+	post.ApplyDefaults(result)
+	*dataObj, _ = json.Marshal(result.Data())
+
+	return true, nil
 }
 
 func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
