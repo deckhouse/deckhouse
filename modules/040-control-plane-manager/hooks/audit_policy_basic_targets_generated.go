@@ -43,6 +43,7 @@ var auditPolicyBasicNamespaces = []string{
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
+	"system:serviceaccount::webhook",
 	"system:serviceaccount:d8-cert-manager:cainjector",
 	"system:serviceaccount:d8-cert-manager:cert-manager",
 	"system:serviceaccount:d8-cert-manager:webhook",
@@ -64,7 +65,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-vsphere:alliance-metadata-exporter",
 	"system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-vsphere:multicluster-api-proxy",
-	"system:serviceaccount:d8-cloud-provider-vsphere:webhook",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter",
 	"system:serviceaccount:d8-cni-cilium:agent",
