@@ -171,6 +171,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
+			TerraformContext:       b.TerraformContext,
 		}
 
 		if b.CommanderMode {
