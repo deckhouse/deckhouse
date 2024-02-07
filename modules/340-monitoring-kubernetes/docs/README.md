@@ -14,5 +14,3 @@ It safely collects metrics and provides a basic set of rules for monitoring of:
 - The cases of the prolonged CPU stealing.
 - The state of the Conntrack table on nodes.
 - The Pods that report an incorrect state (due to kubelet-related or other issues), etc.
-
-To collect metrics about Linux Memory Overcommitment, Linux kernel version >= `5.8.0` is required.
