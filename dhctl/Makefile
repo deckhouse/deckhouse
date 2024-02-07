@@ -16,6 +16,10 @@
 # Dependency versions
 GOLANGCI_VERSION = 1.50.1
 GOFUMPT_VERSION=0.1.1
+PROTOC_VERSION = 25.2
+PROTOC_GEN_GO_VERSION = 1.32
+PROTOC_GEN_GO_GROC_VERSION = 1.3
+
 
 # Build versions
 GO_VERSION=1.19.3
@@ -23,12 +27,29 @@ GOARCH=amd64
 
 DHCTL_BIN_NAME=bin/dhctl
 
+OS_NAME := $(shell uname)
+PLATFORM_NAME := $(shell uname -m)
 ifndef OS
 	ifeq ($(UNAME), Linux)
 		OS = linux
 	else ifeq ($(UNAME), Darwin)
 		OS = darwin
 	endif
+endif
+
+# Set platform for deps
+ifeq ($(OS_NAME), Linux)
+	PROTOC_PLATFORM = linux
+else ifeq ($(OS_NAME), Darwin)
+	PROTOC_PLATFORM = osx
+endif
+JQ_VERSION = 1.6
+
+# Set arch for deps
+ifeq ($(PLATFORM_NAME), x86_64)
+	PROTOC_ARCH = x86_64
+else ifeq ($(PLATFORM_NAME), arm64)
+	PROTOC_ARCH = universal_binary
 endif
 
 export PATH := $(abspath bin/):${PATH}
@@ -50,7 +71,20 @@ bin/gofumpt:
 	curl -sLo "bin/gofumpt" https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
 	@chmod +x "./bin/gofumpt"
 
-build:
+.PHONY: bin/protoc
+bin/protoc:
+	@mkdir -p bin
+	@curl -sLo "bin/protoc.zip" https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_PLATFORM)-$(PROTOC_ARCH).zip
+	@unzip -o "./bin/protoc.zip" -d bin/protoc 1>/dev/null
+	@rm -f "bin/protoc.zip"
+	@GOBIN=$(abspath bin/) go install google.golang.org/protobuf/cmd/protoc-gen-go@v$(PROTOC_GEN_GO_VERSION)
+	@GOBIN=$(abspath bin/) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROTOC_GEN_GO_GROC_VERSION)
+
+.PHONY: protoc
+protoc:
+	bin/protoc/bin/protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
+
+build: protoc
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
@@ -59,7 +93,7 @@ build-test:
 test:
 	go test ./...
 
-deps: bin/golangci-lint bin/gofumpt
+deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
 
 lint:
@@ -78,7 +112,7 @@ ci:
 	./hack/coverage.sh
 
 devenv:
-		./hack/devenv/start.sh
+	./hack/devenv/start.sh
 
 devstop:
 	./hack/devenv/stop.sh
