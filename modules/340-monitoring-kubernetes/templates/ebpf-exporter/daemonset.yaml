@@ -56,8 +56,6 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      initContainers:
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.8.0") | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "ebpfExporter") }}
         name: ebpf-exporter
