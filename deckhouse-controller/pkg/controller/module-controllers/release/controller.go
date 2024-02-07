@@ -551,11 +551,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 
 			// if policy mode manual
-			if policy.Spec.Update.Mode == "Manual" && !isReleaseApproved(release) {
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
-					return ctrl.Result{Requeue: true}, e
+			if policy.Spec.Update.Mode == "Manual" {
+				if !isReleaseApproved(release) {
+					if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
+						return ctrl.Result{Requeue: true}, e
+					}
+					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+				release.Status.Approved = true
 			}
 
 			// if policy mode auto

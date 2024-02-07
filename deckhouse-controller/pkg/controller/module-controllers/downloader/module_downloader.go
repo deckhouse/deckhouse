@@ -169,7 +169,7 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) er
 	}
 
 	// inject registry to values
-	err = injectRegistryToModuleValues(moduleStorePath, md.ms)
+	err = InjectRegistryToModuleValues(moduleStorePath, md.ms)
 	if err != nil {
 		return fmt.Errorf("inject registry error: %v", err)
 	}
@@ -440,7 +440,7 @@ type moduleReleaseMetadata struct {
 
 // Inject registry to module values
 
-func injectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
+func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 
 	valuesData, err := os.ReadFile(valuesFile)
