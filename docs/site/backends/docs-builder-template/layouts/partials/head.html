@@ -1,9 +1,8 @@
-{{ $description := "" }}
-{{ if .Description }}{{ $description = .Description }}{{ else }}{{ $description = .Summary }}{{ end }}
-{{ if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
-
-{{ $canonicalURL := strings.TrimRight "readme.html" .RelPermalink }}
-{{ $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/[a-zA-Z0-9-]+/(.*)$" "$1/stable/$2" $canonicalURL 1 }}
+{{- $description := "" }}
+{{- if .Description }}{{ $description = .Description }}{{ else }}{{ $description = .Summary }}{{ end }}
+{{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
+{{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
+{{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/[a-zA-Z0-9-]+/(.*)$" "$1/stable/$2" $canonicalURL 1 }}
 
 <title>{{ .Title }} | {{ .Site.Title }}</title>
 <link rel="canonical" href="{{ site.BaseURL }}{{ $canonicalURL }}" />
