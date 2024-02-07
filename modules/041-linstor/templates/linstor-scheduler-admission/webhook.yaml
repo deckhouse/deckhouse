@@ -13,11 +13,14 @@ webhooks:
     - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
+      - d8-user-authz
       - kube-system
       - d8-flant-integration
       - kube-basic-auth
+      - d8-admission-policy-engine
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vsphere
+      - d8-istio
       - d8-multitenancy-manager
       - d8-metallb
       - d8-keepalived
@@ -26,7 +29,6 @@ webhooks:
       - d8-delivery
       - d8-runtime-audit-engine
       - d8-system
-      - d8-admission-policy-engine
       - d8-cni-cilium
       - d8-cloud-provider-aws
       - d8-cloud-provider-azure
@@ -40,8 +42,6 @@ webhooks:
       - d8-linstor
       - d8-snapshot-controller
       - d8-cert-manager
-      - d8-istio
-      - d8-user-authz
       - d8-user-authn
       - d8-operator-prometheus
       - kube-prometheus-pushgateway
