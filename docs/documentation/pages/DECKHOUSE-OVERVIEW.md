@@ -3,7 +3,7 @@ title: Overview
 permalink: en/deckhouse-overview.html
 ---
 
-Welcome to the home page of the Deckhouse Kubernetes Platform documentation! We recommend starting with the [Getting started]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
+Welcome to the home page of the Deckhouse Kubernetes Platform documentation! We recommend starting with the {% if site.mode == 'module' %}[Getting started🔗]({{ site.urls[page.lang] }}/gs/){% else %}[Getting started](/gs/){% endif %} guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
 
 Here are some tips on how to find what you need:
 - Note that the Deckhouse Kubernetes Platform documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up-to-date versions of the documentation.
@@ -13,7 +13,7 @@ Here are some tips on how to find what you need:
 
 If you have any questions, feel free to contact us at [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}). We will do our best to help you.
 
-Enterprise Edition users can contact us at [email](mailto:support@deckhouse.ru). We will be glad to provide assistance!
+Enterprise Edition users can contact us at [email](mailto:support@deckhouse.io). We will be glad to provide assistance!
 
 Interested in improving Deckhouse? Feel free to open a GitHub [Issue](https://github.com/deckhouse/deckhouse/issues/), suggest an [idea](https://github.com/deckhouse/deckhouse/discussions) or join the list of [contributors](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
 

@@ -20,7 +20,7 @@ gitWorktree:
 {{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "module") }}
+    {{- if or (eq $.Env "development") (eq $.Env "module") (eq $.Env "local") }}
       {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
@@ -33,7 +33,7 @@ from: {{ .Images.BASE_ALPINE }}
 shell:
   install: apk add jq curl
 ---
-{{- if and (ne $.Env "development") (ne $.Env "module") }}
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 artifact: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24) }}v1
 fromImage: site-tools
@@ -90,7 +90,7 @@ git:
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
-{{- if and (ne $.Env "development") (ne $.Env "module") }}
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
   - artifact: site-external-artifacts
     add: /data/topnav.json
