@@ -64,19 +64,18 @@ bb-rp-is-fetched?() {
   local AUTH_REALM=""
   local AUTH_SERVICE=""
 
-  if [[ -n ${REGISTRY_AUTH} ]]; then
-    AUTH="-u ${REGISTRY_AUTH}"
+  if [[ -n "${REGISTRY_AUTH}" ]]; then
+    AUTH="yes"
   fi
 
   AUTH_HEADER="$(bb-rp-curl -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
-  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
+  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
-  if [ -z ${AUTH_REALM} ]; then
+  if [ -z "${AUTH_REALM}" ]; then
     bb-exit 1 "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
   fi
-  # shellcheck disable=SC2086
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
-  bb-rp-curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
+  bb-rp-curl -fsSL ${AUTH:+-u "$REGISTRY_AUTH"} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
 # Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
@@ -163,7 +162,7 @@ bb-rp-fetch() {
   bb-rp-fetch-manifests PACKAGES_MAP
   if bb-error?; then
     bb-log-error "Failed to fetch manifests"
-    return $BB_ERROR
+    return "${BB_ERROR}"
   fi
 
   declare -A BLOB_FILES_MAP
@@ -212,7 +211,7 @@ bb-rp-install() {
     then
         rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
         bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
-        return $BB_ERROR
+        return "${BB_ERROR}"
     fi
 
     bb-log-info "Installing package '${PACKAGE}'"
@@ -224,7 +223,7 @@ bb-rp-install() {
         popd >/dev/null
         rm -rf "${TMP_DIR}"
         bb-log-error "Failed to install package '${PACKAGE}'"
-        return $BB_ERROR
+        return "${BB_ERROR}"
     fi
     popd >/dev/null
 
