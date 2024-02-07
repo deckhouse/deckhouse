@@ -1,6 +1,0 @@
-type: object
-properties:
-  debugLogging:
-    type: boolean
-    description: |
-      Если true, все события будут дублироваться в stdout.
