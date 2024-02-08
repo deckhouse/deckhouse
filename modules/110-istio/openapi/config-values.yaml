@@ -456,7 +456,7 @@ properties:
             type: string
             description: |
               The mode for managing replicas:
-              - `Standard` - mode based on highAvailability (Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules),
+              - `Standard` - mode based on `highAvailability` (Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules),
               - `Static` - where you explicitly specify the desired number of replicas,
               - `HPA` - the pod count is automatically calculated based on CPU load.
             enum: ['Standard', 'Static', 'HPA']
