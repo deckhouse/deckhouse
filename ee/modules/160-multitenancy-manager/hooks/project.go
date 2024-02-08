@@ -214,6 +214,8 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 		return renderedManifests, nil
 	}
 
+	fmt.Println("POST RENDER", ptr.projectName)
+
 	result := bytes.NewBuffer(nil)
 
 	manifests := releaseutil.SplitManifests(renderedManifests.String())
@@ -253,6 +255,8 @@ metadata:
 
 		result.WriteString(projectNS)
 	}
+
+	fmt.Println("RESULT", result.String())
 
 	return result, nil
 }

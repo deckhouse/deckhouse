@@ -161,7 +161,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		latestRelease := releases[0]
 		val, ok := latestRelease.Labels["hashsum"]
 		if ok {
-			if val == hashsum {
+			if val == hashsum && latestRelease.Info.Status == release.StatusDeployed {
 				klog.Info("the hashes matched")
 				return nil
 			}
