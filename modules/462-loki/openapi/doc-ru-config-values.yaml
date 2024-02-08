@@ -38,7 +38,7 @@ properties:
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesManagement:
     description: |
-      Варианты управления ресурсами Loki.
+      Настройка управления ресурсами Loki.
     properties:
       mode:
         description: >
@@ -71,7 +71,7 @@ properties:
                   Если параметр указан, то VPA, при пересчете запросов CPU (requests) будет пересчитывать лимиты использования CPU, сохраняя указанное соотношение лимитов к запросам (limits/requests).
           memory:
             description: |
-              Запрашиваемый объем памяти.
+              Настройки VPA при работе с памятью.
             properties:
               max:
                 description: |
