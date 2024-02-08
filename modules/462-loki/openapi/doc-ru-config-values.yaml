@@ -46,11 +46,11 @@ properties:
           запросы/ограничение или `VPA`.
       vpa:
         description: |
-          Параметры модели VPA.
+          Параметры VPA.
         properties:
           mode:
             description: |
-              Режим использования VPA.
+              Режим VPA.
           cpu:
             description: |
               Параметры, связанные с процессором.
