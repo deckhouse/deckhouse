@@ -18,6 +18,7 @@ require (
 	github.com/google/go-containerregistry v0.17.0
 	github.com/google/uuid v1.3.0
 	github.com/gookit/color v1.5.2
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/pkg/errors v0.9.1
@@ -28,6 +29,8 @@ require (
 	github.com/werf/logboek v0.5.5
 	go.cypherpunks.ru/gogost/v5 v5.13.0
 	golang.org/x/term v0.18.0
+	google.golang.org/grpc v1.58.3
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -111,7 +114,7 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
