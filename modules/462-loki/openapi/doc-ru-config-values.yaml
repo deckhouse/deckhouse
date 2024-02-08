@@ -19,18 +19,10 @@ properties:
       Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-объекты)
 
       **ОСТОРОЖНО!**  Если диск с данными Loki переполнится, приложение перестанет работать. Вам следует выбрать необходимый баланс между значениями параметров `retentionPeriodHours` и `diskSizeGigabytes`.
-    x-doc-default: 2
-    default: 2
   retentionPeriodHours:
-    type: integer
     description: |
       Сколько часов логи будут храниться, прежде чем будут удалены.
-    x-doc-default: 168
-    default: 168      
   storeSystemLogs:
-    type: boolean
-    default: true
-    x-doc-default: 'true'
     description: |
       Сохранять логи из пространства имен `d8-*` в loki.
 
@@ -67,158 +59,72 @@ properties:
   resourcesManagement:
     description: |
       Варианты управления ресурсами Loki.
-    default: {}
-    x-examples:
-      - mode: VPA
-        vpa:
-          mode: Auto
-          cpu:
-            min: 50m
-            max: 2
-            limitRatio: 1.5
-          memory:
-            min: 256Mi
-            max: 2Gi
-            limitRatio: 1.5
-      - mode: Static
-        static:
-          requests:
-            cpu: 55m
-            memory: 256Mi
-          limits:
-            cpu: 2
-            memory: 2Gi
     properties:
       mode:
-        type: string
-        description: |
-    properties:
-      mode:
-        type: string
         description: >
           Режим управления запросами ресурсов. Классические `Static`
           запросы/ограничение или `VPA`.
-        enum:
-          - VPA
-          - Static
-        default: VPA
       vpa:
-        type: object
-        default: {}
         description: |
           Параметры модели VPA.
         properties:
           mode:
-            type: string
             description: |
               Режим использования VPA.
-            enum:
-              - Initial
-              - Auto
-            default: Auto
           cpu:
-            type: object
-            default: {}
             description: |
               Параметры, связанные с процессором.
             properties:
               max:
                 description: |
                   Максимально допустимые запросы к процессору.
-                default: 2
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+m?$'
-                  - type: number
               min:
                 description: |
                   Минимально допустимые запросы к процессору.
-                default: 50m
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+m?$'
-                  - type: number
               limitRatio:
-                type: number
-                examples:
-                  - 1.5
                 description: >
                   Коэффициент расчета лимитов процессора.
-                  Необязательно используется для расчета начальных лимитов для пода. 
-                  VPA, со своей стороны, сохраняет соотношение начальных лимитов/запросов 
+                  Необязательно используется для расчета начальных лимитов для пода.
+                  VPA, со своей стороны, сохраняет соотношение начальных лимитов/запросов
                   при дальнейшей настройке ресурсов.
           memory:
-            type: object
-            default: {}
             description: |
               Запрашиваемый объем памяти.
             properties:
               max:
                 description: |
                   Максимально допустимые запросы к памяти.
-                default: 2Gi
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                  - type: number
               min:
                 description: |
                   Минимально допустимые запросы к памяти.
-                default: 256Mi
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                  - type: number
               limitRatio:
-                type: number
-                examples:
-                  - 1.5
                 description: >
                   Коэффициент для расчета лимитов памяти.
                   Необязательно используется для расчета начальных лимитов для пода.
                   VPA, со своей стороны, сохраняет соотношение начальных лимитов/запросов
                   при дальнейшей настройке ресурсов.
       static:
-        type: object
         description: |
           Параметры статического управления ресурсами.
         properties:
           requests:
-            type: object
             description: |
               Запрашивает конфигурацию.
             properties:
               cpu:
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+m?$'
-                  - type: number
                 description: |
                   Запросы процессора.
               memory:
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                  - type: number
                 description: |
                   Запросы к памяти.
           limits:
-            type: object
             description: |
               Конфигурация лимитов.
             properties:
               cpu:
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+m?$'
-                  - type: number
                 description: |
                   Лимиты процессора.
               memory:
-                oneOf:
-                  - type: string
-                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                  - type: number
                 description: |
                   Лимиты памяти.
-                  
+
