@@ -23,6 +23,8 @@ import (
 	"maps"
 	"time"
 
+	"helm.sh/helm/v3/pkg/postrender"
+
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -77,6 +79,8 @@ type helmOptions struct {
 	Namespace  string
 	HistoryMax int32
 	Timeout    time.Duration
+
+	PostRenderer postrender.PostRenderer
 }
 
 type Option func(options *helmOptions)
@@ -90,6 +94,12 @@ func WithHistoryMax(historyMax int32) Option {
 func WithTimeout(timeout time.Duration) Option {
 	return func(options *helmOptions) {
 		options.Timeout = timeout
+	}
+}
+
+func WithPostRenderer(pr postrender.PostRenderer) Option {
+	return func(options *helmOptions) {
+		options.PostRenderer = pr
 	}
 }
 
@@ -125,6 +135,9 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	upgradeObject.Labels = map[string]string{
 		"hashsum": hashsum,
 	}
+	if client.options.PostRenderer != nil {
+		upgradeObject.PostRenderer = client.options.PostRenderer
+	}
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
@@ -135,6 +148,9 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		installObject.UseReleaseName = true
 		installObject.Labels = map[string]string{
 			"hashsum": hashsum,
+		}
+		if client.options.PostRenderer != nil {
+			installObject.PostRenderer = client.options.PostRenderer
 		}
 
 		_, err = installObject.Run(ch, values)

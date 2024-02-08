@@ -6,11 +6,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"helm.sh/helm/v3/pkg/releaseutil"
+	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -75,8 +83,9 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
+	projectPostRenderer := &projectTemplateHelmRenderer{}
 
-	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
+	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager, helm.WithPostRenderer(projectPostRenderer))
 	if err != nil {
 		return err
 	}
@@ -94,7 +103,8 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-
+		fmt.Println("INSTALLL", values)
+		projectPostRenderer.SetProject(projectName)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
@@ -114,6 +124,63 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+type projectTemplateHelmRenderer struct {
+	projectName string
+}
+
+func (f *projectTemplateHelmRenderer) SetProject(name string) {
+	f.projectName = name
+}
+
+func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	if f.projectName == "" {
+		return renderedManifests, nil
+	}
+
+	fmt.Println("BEFORE", renderedManifests.String())
+	manifests := releaseutil.SplitManifests(renderedManifests.String())
+
+	renderedManifests.Reset()
+
+	var nsExists bool
+
+	for _, manifest := range manifests {
+		var ns v1.Namespace
+		_ = yaml.Unmarshal([]byte(manifest), &ns)
+
+		fmt.Println("NS", ns)
+		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
+			renderedManifests.WriteString(manifest)
+			continue
+		}
+
+		if ns.Name != f.projectName {
+			// drop Namespace from manifests if it's not a project namespace
+			continue
+		}
+
+		nsExists = true
+
+		renderedManifests.WriteString(manifest)
+	}
+
+	if !nsExists {
+		projectNS := fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, f.projectName)
+
+		renderedManifests.WriteString(projectNS)
+	}
+
+	fmt.Println("AFTER", renderedManifests.String())
+
+	return renderedManifests, nil
 }
 
 func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnapshot) map[string]interface{} {
