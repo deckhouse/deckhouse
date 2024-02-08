@@ -97,6 +97,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName, projectValues := range projectValuesSnap {
+		projectName := projectName
 		projectPostRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
