@@ -32,8 +32,8 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
 spec:
-  minReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.autoscaleMin }}
-  maxReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.autoscaleMax }}
+  minReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.minReplicas }}
+  maxReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.maxReplicas }}
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
