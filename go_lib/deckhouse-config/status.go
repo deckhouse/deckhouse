@@ -28,11 +28,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type Status struct {
-	State   string
+type ModuleConfigStatus struct {
 	Version string
-	Status  string
-	Type    string
+	Message string
+}
+
+type ModuleStatus struct {
+	Status string
 }
 
 type StatusReporter struct {
@@ -47,79 +49,14 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForModule(module *v1alpha1.Module, bundleName string, modulesToSource map[string]string, enabled bool) Status {
-}
-
-func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string, enabled bool) Status {
-	// Special case: unknown module name.
-	moduleType, fromSource := modulesToSource[cfg.GetName()]
-
-	if !s.possibleNames.Has(cfg.GetName()) && !fromSource {
-		return Status{
-			State:   "Ignored: unknown module name",
-			Version: "",
-		}
-	}
-
-	chain := conversion.Registry().Chain(cfg.GetName())
-
-	// Run conversions and validate versioned settings to warn about invalid spec.settings.
-	// TODO(future): add cache for these errors, for example in internal values.
-	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
-		res := Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
-			var prefix = "Ignored"
-			if enabled {
-				prefix = "Error"
-			}
-
-			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
-			return Status{
-				State:   invalidMsg,
-				Version: "",
-			}
-		}
-	}
-
-	// Fill the 'version' field. The value is a spec.version or the latest version from registered conversions.
-	// Also create warning if version is unknown or outdated.
-	versionWarning := ""
-	version := ""
-	if cfg.Spec.Version == 0 {
-		// Use latest version if spec.version is empty.
-		version = strconv.Itoa(chain.LatestVersion())
-	}
-	if cfg.Spec.Version > 0 {
-		version = strconv.Itoa(cfg.Spec.Version)
-		if !chain.IsKnownVersion(cfg.Spec.Version) {
-			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
-		} else if chain.Conversion(cfg.Spec.Version) != nil {
-			// Warn about obsolete version if there is conversion for spec.version.
-			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
-		}
-	}
-
-	// 'global' config is always enabled.
-	if cfg.GetName() == "global" {
-		return Status{
-			State:   fmt.Sprintf("%s: %s", "Enabled", versionWarning),
-			Version: version,
-		}
-	}
-
+func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.ModuleConfig, bundleName string) ModuleStatus {
 	// Figure out additional statuses for known modules.
 	statusMsgs := make([]string, 0)
-	if versionWarning != "" {
-		statusMsgs = append(statusMsgs, versionWarning)
-	}
 
-	mod := s.moduleManager.GetModule(cfg.GetName())
+	mod := s.moduleManager.GetModule(module.GetName())
 
 	// Calculate state and status.
-	stateMsg := "Disabled"
-	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
-		stateMsg = "Enabled"
-
+	if s.moduleManager.IsModuleEnabled(module.GetName()) {
 		lastHookErr := mod.GetLastHookError()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
@@ -160,8 +97,74 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 		}
 	}
 
-	return Status{
+	return ModuleStatus{
+		Status: strings.Join(statusMsgs, ", "),
+	}
+}
+
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatus {
+	statusMsgs := make([]string, 0)
+
+	// Special case: unknown module name.
+	if !s.possibleNames.Has(cfg.GetName()) {
+		return ModuleConfigStatus{
+			Version: "",
+			Message: "Ignored: unknown module name",
+		}
+	}
+
+	chain := conversion.Registry().Chain(cfg.GetName())
+
+	// Run conversions and validate versioned settings to warn about invalid spec.settings.
+	// TODO(future): add cache for these errors, for example in internal values.
+	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
+		res := Service().ConfigValidator().Validate(cfg)
+		if res.HasError() {
+			var prefix = "Ignored"
+			if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
+				prefix = "Error"
+			}
+
+			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
+			return ModuleConfigStatus{
+				Version: "",
+				Message: invalidMsg,
+			}
+		}
+	}
+
+	// Fill the 'version' field. The value is a spec.version or the latest version from registered conversions.
+	// Also create warning if version is unknown or outdated.
+	versionWarning := ""
+	version := ""
+	if cfg.Spec.Version == 0 {
+		// Use latest version if spec.version is empty.
+		version = strconv.Itoa(chain.LatestVersion())
+	}
+	if cfg.Spec.Version > 0 {
+		version = strconv.Itoa(cfg.Spec.Version)
+		if !chain.IsKnownVersion(cfg.Spec.Version) {
+			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
+		} else if chain.Conversion(cfg.Spec.Version) != nil {
+			// Warn about obsolete version if there is conversion for spec.version.
+			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
+		}
+	}
+
+	// 'global' config is always enabled.
+	if cfg.GetName() == "global" {
+		return ModuleConfigStatus{
+			Version: version,
+			Message: versionWarning,
+		}
+	}
+
+	if versionWarning != "" {
+		statusMsgs = append(statusMsgs, versionWarning)
+	}
+
+	return ModuleConfigStatus{
 		Version: version,
-		State:   fmt.Sprintf("%s: %s", stateMsg, strings.Join(statusMsgs, ", "),
+		Message: strings.Join(statusMsgs, ", "),
 	}
 }

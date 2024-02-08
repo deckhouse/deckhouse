@@ -51,7 +51,7 @@ type ModuleProperties struct {
 }
 
 type ModuleStatus struct {
-	Status   string `json:"status"`
+	Status string `json:"status"`
 }
 
 type moduleKind struct{}
