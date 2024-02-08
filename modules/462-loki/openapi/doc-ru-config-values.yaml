@@ -1,4 +1,3 @@
-type: object
 properties:
   storageClass:
     description: |
@@ -37,25 +36,6 @@ properties:
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-  resourcesRequests:
-    description: |
-      Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла.
-
-      Если модуль [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) выключен, максимальные значения становятся значениями по умолчанию.
-       items:
-      type: object
-      properties:
-        effect:
-          type: string
-        key:
-          type: string
-        operator:
-          type: string
-        tolerationSeconds:
-          type: integer
-          format: int64
-        value:
-          type: string
   resourcesManagement:
     description: |
       Варианты управления ресурсами Loki.
