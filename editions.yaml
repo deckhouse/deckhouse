@@ -55,6 +55,7 @@ editions:
     - openstack
     - vsphere
     - vcd
+    - ovirt
 
 - name: FE
   modulesDir: "ee/fe/modules"
