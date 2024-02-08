@@ -103,7 +103,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-		fmt.Println("INSTALLL", values)
 		projectPostRenderer.SetProject(projectName)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
@@ -153,7 +152,11 @@ func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modi
 
 		fmt.Println("NS", ns)
 		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
-			renderedManifests.WriteString(manifest)
+			fmt.Println("MANIFEST")
+			fmt.Println("#############")
+			fmt.Println(manifest)
+			fmt.Println("#############")
+			renderedManifests.WriteString("---\n" + manifest)
 			continue
 		}
 
@@ -164,7 +167,7 @@ func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modi
 
 		nsExists = true
 
-		renderedManifests.WriteString(manifest)
+		renderedManifests.WriteString("---\n" + manifest)
 	}
 
 	if !nsExists {
@@ -176,7 +179,7 @@ metadata:
   name: %s
 `, f.projectName)
 
-		renderedManifests.WriteString(projectNS)
+		renderedManifests.WriteString("---\n" + projectNS)
 	}
 
 	fmt.Println("AFTER", renderedManifests.String())
