@@ -469,6 +469,7 @@ properties:
             properties:
               numReplicas:
                 type: number
+                minimum: 1
                 description: |
                   Desired number of replicas
           hpa:
@@ -479,14 +480,17 @@ properties:
             properties:
               minReplicas:
                 type: number
+                minimum: 1
                 description: |
                   The lower limit for the number of replicas to which the HPA can scale down
               maxReplicas:
                 type: number
+                minimum: 1
                 description: |
                   The upper limit for the number of replicas to which the HPA can scale up
               cpuTargetAverageUtilization:
                 type: number
+                minimum: 10
                 description: |
                   The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods
       resourcesManagement:
@@ -512,7 +516,7 @@ properties:
               cpu: "55m"
               memory: "256Mi"
             limits:
-              cpu: 2
+              cpu: "2"
               memory: "2Gi"
         properties:
           mode:
