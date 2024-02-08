@@ -111,6 +111,8 @@ const istioValues = `
     tracing: {}
     proxyConfig: {}
     controlPlane:
+      replicasManagement:
+        mode: Standard
       resourcesManagement:
         mode: VPA
         vpa:

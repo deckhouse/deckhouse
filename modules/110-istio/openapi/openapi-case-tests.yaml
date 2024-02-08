@@ -11,5 +11,20 @@ positive:
           static:
             requests:
               memory: "2G"
+    - controlPlane:
+        replicasManagement:
+          mode: Standard
+    - controlPlane:
+        replicasManagement:
+          mode: Static
+          static:
+            numReplicas: 3
+    - controlPlane:
+        replicasManagement:
+          mode: HPA
+          hpa:
+            minReplicas: 2
+            maxReplicas: 5
+            cpuTargetAverageUtilization: 80
   values:
     - {}

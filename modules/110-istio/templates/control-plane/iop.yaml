@@ -192,9 +192,12 @@ spec:
 
     pilot:
       autoscaleEnabled: false
-  {{- if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA" }}
+  {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
+      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.numReplicas }}
   {{- end }}
+  # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
       configNamespace: d8-{{ $.Chart.Name }}
