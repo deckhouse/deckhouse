@@ -6,9 +6,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"bytes"
+	"testing"
+
+	"helm.sh/helm/v3/pkg/releaseutil"
+
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -450,3 +457,95 @@ spec:
         {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
     ---
 `
+
+func TestPostRenderer(t *testing.T) {
+	pr := new(projectTemplateHelmRenderer)
+	pr.SetProject("test-project-1")
+	buf := bytes.NewBuffer(nil)
+
+	t.Run("without any namespace", func(t *testing.T) {
+
+		// must create namespace with project name
+		mfs := `
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+data: {}
+`
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		assert.Contains(t, result.String(), "kind: Namespace")
+	})
+
+	t.Run("with namespace", func(t *testing.T) {
+		mfs := `
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		assert.Contains(t, result.String(), "kind: Namespace")
+	})
+
+	t.Run("with a few namespaces", func(t *testing.T) {
+		mfs := `
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-invalid
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		assert.Contains(t, result.String(), "kind: Namespace")
+		assert.NotContains(t, result.String(), "test-project-invalid")
+	})
+}

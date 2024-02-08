@@ -97,14 +97,13 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName, projectValues := range projectValuesSnap {
+		projectPostRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
-		projectPostRenderer.SetProject(projectName)
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-		fmt.Println("SETTIGN PROJECT", projectName)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
@@ -124,68 +123,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
-}
-
-type projectTemplateHelmRenderer struct {
-	projectName string
-}
-
-func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
-	ptr.projectName = name
-}
-
-func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	fmt.Println("RUN POST RENDERER - ", ptr.projectName)
-	if ptr.projectName == "" {
-		return renderedManifests, nil
-	}
-
-	fmt.Println("BEFORE", renderedManifests.String())
-	manifests := releaseutil.SplitManifests(renderedManifests.String())
-
-	renderedManifests.Reset()
-
-	var nsExists bool
-
-	for _, manifest := range manifests {
-		var ns v1.Namespace
-		_ = yaml.Unmarshal([]byte(manifest), &ns)
-
-		fmt.Println("NS", ns)
-		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
-			fmt.Println("MANIFEST")
-			fmt.Println("#############")
-			fmt.Println(manifest)
-			fmt.Println("#############")
-			renderedManifests.WriteString("\n---\n" + manifest)
-			continue
-		}
-
-		if ns.Name != ptr.projectName {
-			// drop Namespace from manifests if it's not a project namespace
-			continue
-		}
-
-		nsExists = true
-
-		renderedManifests.WriteString("\n---\n" + manifest)
-	}
-
-	if !nsExists {
-		projectNS := fmt.Sprintf(`
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: %s
-`, ptr.projectName)
-
-		renderedManifests.WriteString("\n---\n" + projectNS)
-	}
-
-	fmt.Println("AFTER", renderedManifests.String())
-
-	return renderedManifests, nil
 }
 
 func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnapshot) map[string]interface{} {
@@ -259,4 +196,62 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 	}
 
 	return projectTemplate, nil
+}
+
+type projectTemplateHelmRenderer struct {
+	projectName string
+}
+
+func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
+	ptr.projectName = name
+}
+
+// Run post renderer which will remove all namespaces except the project one
+// or will add a project namespace if it does not exist in manifests
+func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	if ptr.projectName == "" {
+		return renderedManifests, nil
+	}
+
+	result := bytes.NewBuffer(nil)
+
+	manifests := releaseutil.SplitManifests(renderedManifests.String())
+
+	var nsExists bool
+
+	for _, manifest := range manifests {
+		var ns v1.Namespace
+		err = yaml.Unmarshal([]byte(manifest), &ns)
+		if err != nil {
+			return result, err
+		}
+
+		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
+			result.WriteString("\n---\n" + manifest)
+			continue
+		}
+
+		if ns.Name != ptr.projectName {
+			// drop Namespace from manifests if it's not a project namespace
+			continue
+		}
+
+		nsExists = true
+
+		result.WriteString("\n---\n" + manifest)
+	}
+
+	if !nsExists {
+		projectNS := fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, ptr.projectName)
+
+		result.WriteString(projectNS)
+	}
+
+	return result, nil
 }
