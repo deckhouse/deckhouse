@@ -383,6 +383,25 @@ properties:
     type: object
     description: istiod specific settings.
     default: {}
+    oneOf:
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['Standard', 'Static']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static', 'VPA']
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['HPA']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static']
     properties:
       nodeSelector:
         type: object
