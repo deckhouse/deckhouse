@@ -83,9 +83,12 @@ bin/protoc:
 
 .PHONY: protoc
 protoc:
-	protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
+	bin/protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
 
-build: protoc
+generate: protoc
+	go generate ./...
+
+build:
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
