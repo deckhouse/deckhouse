@@ -182,6 +182,8 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 
 func (client *helmClient) Delete(releaseName string) error {
 	uninstallObject := action.NewUninstall(client.actionConfig)
+	uninstallObject.KeepHistory = false
+	uninstallObject.IgnoreNotFound = true
 
 	if _, err := uninstallObject.Run(releaseName); err != nil {
 		return fmt.Errorf("helm uninstall %s invocation error: %v", releaseName, err)
