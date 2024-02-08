@@ -47,16 +47,17 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
+func (s *StatusReporter) ForModule(module *v1alpha1.Module, bundleName string, modulesToSource map[string]string, enabled bool) Status {
+}
+
 func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string, enabled bool) Status {
 	// Special case: unknown module name.
 	moduleType, fromSource := modulesToSource[cfg.GetName()]
 
 	if !s.possibleNames.Has(cfg.GetName()) && !fromSource {
 		return Status{
-			State:   "N/A",
+			State:   "Ignored: unknown module name",
 			Version: "",
-			Status:  "Ignored: unknown module name",
-			Type:    "N/A",
 		}
 	}
 
@@ -74,10 +75,8 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 
 			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
 			return Status{
-				State:   "N/A",
+				State:   invalidMsg,
 				Version: "",
-				Status:  invalidMsg,
-				Type:    moduleType,
 			}
 		}
 	}
@@ -103,10 +102,8 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 	// 'global' config is always enabled.
 	if cfg.GetName() == "global" {
 		return Status{
-			State:   "Enabled",
+			State:   fmt.Sprintf("%s: %s", "Enabled", versionWarning),
 			Version: version,
-			Status:  versionWarning,
-			Type:    moduleType,
 		}
 	}
 
@@ -165,8 +162,6 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 
 	return Status{
 		Version: version,
-		State:   stateMsg,
-		Status:  strings.Join(statusMsgs, ", "),
-		Type:    moduleType,
+		State:   fmt.Sprintf("%s: %s", stateMsg, strings.Join(statusMsgs, ", "),
 	}
 }

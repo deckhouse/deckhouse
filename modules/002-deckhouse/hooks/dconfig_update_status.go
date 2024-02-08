@@ -107,6 +107,7 @@ func filterModuleForState(unstructured *unstructured.Unstructured) (go_hook.Filt
 		Properties: v1alpha1.ModuleProperties{
 			State: module.Properties.State,
 		},
+		Status: module.Status,
 	}, nil
 }
 
@@ -138,40 +139,49 @@ const (
 	d8ConfigMetricName = "module_config_obsolete_version"
 )
 
-func updateModuleConfigStatuses(input *go_hook.HookInput) error {
+func updateModuleStatuses(input *go_hook.HookInput) error {
 	allConfigs := snapshotToModuleConfigList(input.Snapshots["configs"])
-
+	allModules := snapshotToModuleList(input.Snapshots["modules"])
 	enabledModules := make(map[string]struct{})
-	for _, item := range input.Snapshots["modules"] {
-		module := item.(*v1alpha1.Module)
-		if module.Properties.State == "Enabled" {
-			enabledModules[module.GetName()] = struct{}{}
-		}
-	}
 
 	bundleName := os.Getenv("DECKHOUSE_BUNDLE")
 
 	moduleNamesToSources := d8config.Service().ModuleToSourcesNames()
+	for _, module := range allModules {
+		moduleEnabled := false
+		if module.Properties.State == "Enabled" {
+			moduleEnabled = true
+			enabledModules[module.GetName()] = struct{}{}
+		}
+
+		moduleStatus := d8config.Service().StatusReporter().ForModule(module, bundleName, moduleNamesToSources, moduleEnabled)
+		sPatch := makeStatusPatchForModule(module, moduleStatus)
+		if sPatch != nil {
+			input.LogEntry.Debugf(
+				"Patch /status for module/%s: status '%s' to '%s'",
+				module.GetName(),
+				Module.Status.State, sPatch.State,
+			)
+			input.PatchCollector.MergePatch(sPatch, "deckhouse.io/v1alpha1", "Module", "", module.GetName(), object_patch.WithSubresource("/status"))
+		}
+	}
+
+	// Export metrics for configs with specified but obsolete versions and update module configs' statuses
+	input.MetricsCollector.Expire(d8ConfigGroup)
 	for _, cfg := range allConfigs {
 		_, moduleEnabled := enabledModules[cfg.GetName()]
-
 		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, moduleNamesToSources, moduleEnabled)
-		sPatch := makeStatusPatch(cfg, moduleStatus)
+		sPatch := makeStatusPatchForModuleConfig(cfg, moduleStatus)
 		if sPatch != nil {
 			input.LogEntry.Debugf(
 				"Patch /status for moduleconfig/%s: state '%s' to '%s', version '%s' to %s', status '%s' to '%s'",
 				cfg.GetName(),
 				cfg.Status.State, sPatch.State,
 				cfg.Status.Version, sPatch.Version,
-				cfg.Status.Status, sPatch.Status,
-			)
+                        )
 			input.PatchCollector.MergePatch(sPatch, "deckhouse.io/v1alpha1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 		}
-	}
 
-	// Export metrics for configs with specified but obsolete versions.
-	input.MetricsCollector.Expire(d8ConfigGroup)
-	for _, cfg := range allConfigs {
 		chain := conversion.Registry().Chain(cfg.GetName())
 		if cfg.Spec.Version > 0 && chain.Conversion(cfg.Spec.Version) != nil {
 			input.MetricsCollector.Set(d8ConfigMetricName, 1.0, map[string]string{
@@ -185,36 +195,52 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	return nil
 }
 
-func makeStatusPatch(cfg *v1alpha1.ModuleConfig, moduleStatus d8config.Status) *statusPatch {
-	if cfg == nil || !isStatusChanged(cfg.Status, moduleStatus) {
+func makeStatusPatchForModuleConfig(cfg *v1alpha1.ModuleConfig, moduleStatus d8config.Status) *v1alpha1.ModuleConfigStatus {
+	if cfg == nil || !isModuleConfigStatusChanged(cfg.Status, moduleStatus) {
 		return nil
 	}
 
-	return &statusPatch{
-		Status:  moduleStatus.Status,
+	return &v1alpha1.ModuleConfigStatus{
 		State:   moduleStatus.State,
 		Version: moduleStatus.Version,
-		Type:    moduleStatus.Type,
 	}
 }
 
-func isStatusChanged(currentStatus v1alpha1.ModuleConfigStatus, moduleStatus d8config.Status) bool {
+func makeStatusPatchForModule(module *v1alpha1.Module, moduleStatus d8config.Status) *v1alpha1.ModuleStatus {
+	if module == nil || !isModuleStatusChanged(module.Status, moduleStatus) {
+		return nil
+	}
+
+	return &v1alpha1.ModuleStatus{
+		Status:  moduleStatus.Status,
+	}
+}
+
+func isModuleConfigStatusChanged(currentStatus v1alpha1.ModuleConfigStatus, moduleStatus d8config.Status) bool {
 	switch {
 	case currentStatus.State != moduleStatus.State:
 		return true
-	case currentStatus.Status != moduleStatus.Status:
-		return true
 	case currentStatus.Version != moduleStatus.Version:
 		return true
-	case currentStatus.Type != moduleStatus.Type:
-		return true
-	}
 	return false
 }
 
-type statusPatch v1alpha1.ModuleConfigStatus
+func isModuleStatusChanged(currentStatus v1alpha1.ModuleStatus, moduleStatus d8config.Status) bool {
+	switch {
+	case currentStatus.Status != moduleStatus.Status:
+		return true
+	return false
+}
 
-func (sp statusPatch) MarshalJSON() ([]byte, error) {
+func (sp v1alpha1.Module) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"status": v1alpha1.ModuleStatus(sp),
+	}
+
+	return json.Marshal(m)
+}
+
+func (sp v1alpha1.ModuleConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
 		"status": v1alpha1.ModuleConfigStatus(sp),
 	}
@@ -230,4 +256,14 @@ func snapshotToModuleConfigList(snapshot []go_hook.FilterResult) []*v1alpha1.Mod
 		configs = append(configs, cfg)
 	}
 	return configs
+}
+
+// snapshotToModuleList returns a typed array of Module items from untyped items in the snapshot.
+func snapshotToModuleList(snapshot []go_hook.FilterResult) []*v1alpha1.Module {
+	modules := make([]*v1alpha1.Module, 0, len(snapshot))
+	for _, item := range snapshot {
+		module := item.(*v1alpha1.Module)
+		modules = append(modules, module)
+	}
+	return modules
 }
