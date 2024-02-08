@@ -142,6 +142,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	if err == driver.ErrReleaseNotFound {
 		installObject := action.NewInstall(client.actionConfig)
 		installObject.Namespace = client.options.Namespace
+		installObject.CreateNamespace = true
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
