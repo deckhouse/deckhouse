@@ -59,6 +59,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		defaultLogger = NewSimpleLogger(opts)
 	case "json":
 		defaultLogger = NewJSONLogger(opts)
+	case "silent":
+		defaultLogger = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
