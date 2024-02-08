@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
 	"os"
 	"strconv"
 
@@ -186,23 +187,23 @@ func updateStatuses(input *go_hook.HookInput) error {
 	return nil
 }
 
-func makeStatusPatchForModuleConfig(cfg *v1alpha1.ModuleConfig, moduleConfigStatus d8config.ModuleConfigStatus) *v1alpha1.ModuleConfigStatus {
+func makeStatusPatchForModuleConfig(cfg *v1alpha1.ModuleConfig, moduleConfigStatus d8config.ModuleConfigStatus) *moduleConfigStatusPatch {
 	if cfg == nil || !isModuleConfigStatusChanged(cfg.Status, moduleConfigStatus) {
 		return nil
 	}
 
-	return &v1alpha1.ModuleConfigStatus{
+	return &moduleConfigStatusPatch{
 		Version: moduleConfigStatus.Version,
 		Message: moduleConfigStatus.Message,
 	}
 }
 
-func makeStatusPatchForModule(module *v1alpha1.Module, moduleStatus d8config.ModuleStatus) *v1alpha1.ModuleStatus {
+func makeStatusPatchForModule(module *v1alpha1.Module, moduleStatus d8config.ModuleStatus) *moduleStatusPatch {
 	if module == nil || !isModuleStatusChanged(module.Status, moduleStatus) {
 		return nil
 	}
 
-	return &v1alpha1.ModuleStatus{
+	return &moduleStatusPatch{
 		Status: moduleStatus.Status,
 	}
 }
@@ -243,4 +244,23 @@ func snapshotToModuleList(snapshot []go_hook.FilterResult) []*v1alpha1.Module {
 		modules = append(modules, module)
 	}
 	return modules
+}
+
+type moduleConfigStatusPatch v1alpha1.ModuleConfigStatus
+type moduleStatusPatch v1alpha1.ModuleStatus
+
+func (sp moduleConfigStatusPatch) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"status": v1alpha1.ModuleConfigStatus(sp),
+	}
+
+	return json.Marshal(m)
+}
+
+func (sp moduleStatusPatch) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"status": v1alpha1.ModuleStatus(sp),
+	}
+
+	return json.Marshal(m)
 }
