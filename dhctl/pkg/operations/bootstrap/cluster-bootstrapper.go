@@ -80,7 +80,7 @@ type Params struct {
 
 	ConfigPath              string
 	ResourcesPath           string
-	ResourcesTimeout        string
+	ResourcesTimeout        time.Duration
 	DeckhouseTimeout        time.Duration
 	SSHUser                 string
 	SSHBastionUser          string
@@ -129,7 +129,7 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	if b.ResourcesPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
 	}
-	if b.ResourcesTimeout != "" {
+	if b.ResourcesTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))
 	}
 	if b.DeckhouseTimeout != 0 {

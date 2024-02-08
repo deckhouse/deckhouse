@@ -43,7 +43,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	tests := map[string]struct {
 		config   string
 		expected *ConnectionConfig
-		opts     ValidateOptions
+		opts     []ValidateOption
 		wantErr  bool
 	}{
 		"valid config": {
@@ -89,7 +89,7 @@ func TestParseConnectionConfig(t *testing.T) {
 		},
 		"invalid config: duplicated field": {
 			config:  validSSHConfig,
-			opts:    ValidateOptions{StrictUnmarshal: true},
+			opts:    []ValidateOption{ValidateOptionStrictUnmarshal(true)},
 			wantErr: true,
 		},
 	}
@@ -97,7 +97,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts)
+			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts...)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, config)
