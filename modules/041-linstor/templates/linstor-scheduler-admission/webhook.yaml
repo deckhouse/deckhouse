@@ -20,7 +20,7 @@ webhooks:
       - d8-admission-policy-engine
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vsphere
-      - d8-istio
+      - d8-cloud-provider-zvirt
       - d8-multitenancy-manager
       - d8-metallb
       - d8-keepalived
