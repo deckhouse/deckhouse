@@ -74,15 +74,16 @@ bin/gofumpt:
 .PHONY: bin/protoc
 bin/protoc:
 	@mkdir -p bin
-	@curl -sLo "bin/protoc.zip" https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_PLATFORM)-$(PROTOC_ARCH).zip
-	@unzip -o "./bin/protoc.zip" -d bin/protoc 1>/dev/null
-	@rm -f "bin/protoc.zip"
-	@GOBIN=$(abspath bin/) go install google.golang.org/protobuf/cmd/protoc-gen-go@v$(PROTOC_GEN_GO_VERSION)
-	@GOBIN=$(abspath bin/) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROTOC_GEN_GO_GROC_VERSION)
+	curl -sLo "protoc.zip" https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_PLATFORM)-$(PROTOC_ARCH).zip
+	unzip -o -j "protoc.zip" "bin/protoc" -d bin 1>/dev/null
+	unzip -o "protoc.zip" "include/*" -d . 1>/dev/null
+	rm -f "protoc.zip"
+	GOBIN=$(abspath bin/) go install google.golang.org/protobuf/cmd/protoc-gen-go@v$(PROTOC_GEN_GO_VERSION)
+	GOBIN=$(abspath bin/) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROTOC_GEN_GO_GROC_VERSION)
 
 .PHONY: protoc
 protoc:
-	bin/protoc/bin/protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
+	protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
 
 build: protoc
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
