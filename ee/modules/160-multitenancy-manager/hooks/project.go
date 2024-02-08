@@ -156,7 +156,7 @@ func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modi
 			fmt.Println("#############")
 			fmt.Println(manifest)
 			fmt.Println("#############")
-			renderedManifests.WriteString("---\n" + manifest)
+			renderedManifests.WriteString("\n---\n" + manifest)
 			continue
 		}
 
@@ -167,7 +167,7 @@ func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modi
 
 		nsExists = true
 
-		renderedManifests.WriteString("---\n" + manifest)
+		renderedManifests.WriteString("\n---\n" + manifest)
 	}
 
 	if !nsExists {
@@ -179,7 +179,7 @@ metadata:
   name: %s
 `, f.projectName)
 
-		renderedManifests.WriteString("---\n" + projectNS)
+		renderedManifests.WriteString("\n---\n" + projectNS)
 	}
 
 	fmt.Println("AFTER", renderedManifests.String())
