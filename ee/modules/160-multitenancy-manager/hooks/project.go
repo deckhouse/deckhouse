@@ -161,7 +161,7 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 
-		if ns.Name != f.projectName {
+		if ns.Name != ptr.projectName {
 			// drop Namespace from manifests if it's not a project namespace
 			continue
 		}
@@ -178,7 +178,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: %s
-`, f.projectName)
+`, ptr.projectName)
 
 		renderedManifests.WriteString("\n---\n" + projectNS)
 	}
