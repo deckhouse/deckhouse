@@ -64,6 +64,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-zvirt
+  to: /deckhouse/modules/030-cloud-provider-zvirt
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
