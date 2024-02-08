@@ -141,8 +141,8 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
 		installObject := action.NewInstall(client.actionConfig)
-		installObject.Namespace = client.options.Namespace
 		installObject.CreateNamespace = true
+		installObject.Namespace = client.options.Namespace
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
@@ -153,6 +153,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 			installObject.PostRenderer = client.options.PostRenderer
 		}
 
+		fmt.Println("HELM INSTALL")
 		_, err = installObject.Run(ch, values)
 		return err
 	}
@@ -173,6 +174,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		}
 	}
 
+	fmt.Println("HELM UPGRADE", len(releases))
 	_, err = upgradeObject.Run(releaseName, ch, values)
 	if err != nil {
 		return fmt.Errorf("helm upgrade failed: %s", err)
