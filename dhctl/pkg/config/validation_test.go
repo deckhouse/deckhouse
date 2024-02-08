@@ -44,7 +44,7 @@ func TestValidateClusterSettingsFormat(t *testing.T) {
 
 	t.Run("not ok", func(t *testing.T) {
 		t.Run("unexpected field", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(unknownFieldFormat, ValidateOptions{CommanderMode: true})
+			err := ValidateClusterSettingsFormat(unknownFieldFormat, validateOpts)
 			require.Error(t, err)
 		})
 	})
@@ -143,7 +143,7 @@ func TestValidateRulesClusterSettingsChanges(t *testing.T) {
 	})
 }
 
-var validateOpts = ValidateOptions{CommanderMode: true}
+var validateOpts = ValidateOptionCommanderMode(true)
 
 var (
 	clusterConfigFormat = `---

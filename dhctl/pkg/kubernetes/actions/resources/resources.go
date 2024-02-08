@@ -218,11 +218,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 }
 
 func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker) error {
-	timeout, err := time.ParseDuration(app.ResourcesTimeout)
-	if err != nil {
-		return fmt.Errorf("cannot parse timeout to create resources: %v", err)
-	}
-	endChannel := time.After(timeout)
+	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
