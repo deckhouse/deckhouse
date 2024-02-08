@@ -103,6 +103,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
+		fmt.Println("SETTIGN PROJECT", projectName)
 		projectPostRenderer.SetProject(projectName)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
@@ -134,7 +135,7 @@ func (f *projectTemplateHelmRenderer) SetProject(name string) {
 }
 
 func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	fmt.Println("RUN POST RENDERER", f.projectName)
+	fmt.Println("RUN POST RENDERER - ", f.projectName)
 	if f.projectName == "" {
 		return renderedManifests, nil
 	}
