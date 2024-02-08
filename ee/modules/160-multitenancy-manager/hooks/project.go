@@ -83,7 +83,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
-	projectPostRenderer := &projectTemplateHelmRenderer{}
+	projectPostRenderer := new(projectTemplateHelmRenderer)
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager, helm.WithPostRenderer(projectPostRenderer))
 	if err != nil {
@@ -100,11 +100,11 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
+		projectPostRenderer.SetProject(projectName)
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
 		fmt.Println("SETTIGN PROJECT", projectName)
-		projectPostRenderer.SetProject(projectName)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
@@ -130,13 +130,13 @@ type projectTemplateHelmRenderer struct {
 	projectName string
 }
 
-func (f *projectTemplateHelmRenderer) SetProject(name string) {
-	f.projectName = name
+func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
+	ptr.projectName = name
 }
 
-func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	fmt.Println("RUN POST RENDERER - ", f.projectName)
-	if f.projectName == "" {
+func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	fmt.Println("RUN POST RENDERER - ", ptr.projectName)
+	if ptr.projectName == "" {
 		return renderedManifests, nil
 	}
 
