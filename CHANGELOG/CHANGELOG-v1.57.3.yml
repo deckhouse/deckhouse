@@ -1,0 +1,16 @@
+candi:
+  fixes:
+    - summary: Fix bash word splitting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7410
+metallb:
+  fixes:
+    - summary: Add `livenessProbe` and `readinessProbe` in metallb speaker spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7382
+      impact: The `metallb-speaker` pods will restart.
+monitoring-kubernetes:
+  fixes:
+    - summary: Revert https://github.com/deckhouse/deckhouse/pull/7272
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7411
+    - summary: Revert https://github.com/deckhouse/deckhouse/pull/6241.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7269
+

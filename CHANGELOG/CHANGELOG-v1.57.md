@@ -26,7 +26,7 @@
  - **[extended-monitoring]** Group `CronJobFailed` alerts. [#6715](https://github.com/deckhouse/deckhouse/pull/6715)
  - **[external-module-manager]** Always create default MUP for Deckhouse [#7185](https://github.com/deckhouse/deckhouse/pull/7185)
  - **[monitoring-kubernetes]** Add `NodeFilesystemIsRO` alert. [#6744](https://github.com/deckhouse/deckhouse/pull/6744)
- - **[monitoring-kubernetes]** `ebpf_exporter` image is based on a distroless image. Bump version to `v2.3.0`. [#6241](https://github.com/deckhouse/deckhouse/pull/6241)
+ - **[monitoring-kubernetes]** **(Reverted in #7269)** `ebpf_exporter` image is based on a distroless image. Bump version to `v2.3.0`. [#6241](https://github.com/deckhouse/deckhouse/pull/6241)
  - **[network-gateway]** network-gateway module is based on a distroless image. [#6968](https://github.com/deckhouse/deckhouse/pull/6968)
  - **[node-manager]** Allow specifying the `CloudStatic` type in the `staticInstance` field of a NodeGroup. [#7178](https://github.com/deckhouse/deckhouse/pull/7178)
  - **[operator-trivy]** Disable non-remote image source for remote scans. [#7016](https://github.com/deckhouse/deckhouse/pull/7016)
@@ -40,6 +40,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix bash word splitting. [#7410](https://github.com/deckhouse/deckhouse/pull/7410)
  - **[candi]** Deckhouse Kubernetes Platform BE improvements. [#7338](https://github.com/deckhouse/deckhouse/pull/7338)
  - **[candi]** Add validation pattern for the `imagesRepo` parameter. [#7169](https://github.com/deckhouse/deckhouse/pull/7169)
  - **[candi]** Raise the priority for NodeUser step. [#7140](https://github.com/deckhouse/deckhouse/pull/7140)
@@ -59,7 +60,11 @@
  - **[external-module-manager]** Fix outdated module versions in multi-master environment. [#7234](https://github.com/deckhouse/deckhouse/pull/7234)
  - **[istio]** Improved checking for currently running deprecated versions of Istio in the cluster. [#7028](https://github.com/deckhouse/deckhouse/pull/7028)
  - **[istio]** After disabling the module, clean up any orphaned Istio components. [#6906](https://github.com/deckhouse/deckhouse/pull/6906)
- - **[monitoring-kubernetes]** Add control of minimal Linux kernel version >= `5.8.0` for `ebpf_exporter` and a corresponding alert. [#7272](https://github.com/deckhouse/deckhouse/pull/7272)
+ - **[metallb]** Add `livenessProbe` and `readinessProbe` in metallb speaker spec. [#7382](https://github.com/deckhouse/deckhouse/pull/7382)
+    The `metallb-speaker` pods will restart.
+ - **[monitoring-kubernetes]** Revert https://github.com/deckhouse/deckhouse/pull/7272 [#7411](https://github.com/deckhouse/deckhouse/pull/7411)
+ - **[monitoring-kubernetes]** Revert https://github.com/deckhouse/deckhouse/pull/6241. [#7269](https://github.com/deckhouse/deckhouse/pull/7269)
+ - **[monitoring-kubernetes]** **(Reverted in #7411)** Add control of minimal Linux kernel version >= `5.8.0` for `ebpf_exporter` and a corresponding alert. [#7272](https://github.com/deckhouse/deckhouse/pull/7272)
  - **[monitoring-kubernetes]** Fix generation of `metrics kube_persistentvolume_is_local` recording rule. [#6755](https://github.com/deckhouse/deckhouse/pull/6755)
  - **[monitoring-kubernetes]** Bump `node-exporter` to `v1.7.0`. Fix crashes of `node-exporter`. [#6730](https://github.com/deckhouse/deckhouse/pull/6730)
  - **[monitoring-kubernetes]** Fix AppArmor rule in `kubelet-eviction-thresholds-exporter`. [#6711](https://github.com/deckhouse/deckhouse/pull/6711)
