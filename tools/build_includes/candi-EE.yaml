@@ -17,5 +17,5 @@
   to: /deckhouse/candi/cloud-providers/vsphere
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
-- add: /ee/candi/cloud-providers/ovirt
-  to: /deckhouse/candi/cloud-providers/ovirt
+- add: /ee/candi/cloud-providers/zvirt
+  to: /deckhouse/candi/cloud-providers/zvirt
