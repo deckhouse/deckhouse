@@ -68,6 +68,7 @@ apiVersions:
             - "vSphere"
             - "Azure"
             - "VCD"
+            - "zVirt"
           prefix:
             type: string
             description: |
