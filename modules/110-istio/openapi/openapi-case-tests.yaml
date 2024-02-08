@@ -1,24 +1,15 @@
 positive:
   configValues:
     - controlPlane:
+        replicasManagement:
+          mode: Static
+          static:
+            numReplicas: 3
         resourcesManagement:
           vpa:
             memory:
               max: "2.000G"
               min: "1.123G"
-    - controlPlane:
-        resourcesManagement:
-          static:
-            requests:
-              memory: "2G"
-    - controlPlane:
-        replicasManagement:
-          mode: Standard
-    - controlPlane:
-        replicasManagement:
-          mode: Static
-          static:
-            numReplicas: 3
     - controlPlane:
         replicasManagement:
           mode: HPA
@@ -26,5 +17,9 @@ positive:
             minReplicas: 2
             maxReplicas: 5
             cpuTargetAverageUtilization: 80
+        resourcesManagement:
+          static:
+            requests:
+              memory: "2G"
   values:
     - {}

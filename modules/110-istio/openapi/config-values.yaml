@@ -441,6 +441,11 @@ properties:
         - mode: Static
           static:
             numReplicas: 3
+        x-doc-examples:
+        - mode: Standard
+        - mode: Static
+          static:
+            numReplicas: 3
         - mode: HPA
           hpa:
             minReplicas: 2
@@ -460,32 +465,30 @@ properties:
             type: object
             description: |
               Static replicas management settings.
+            required: ["numReplicas"]
             properties:
               numReplicas:
                 type: number
                 description: |
                   Desired number of replicas
-                default: 2
           hpa:
             type: object
             description: |
               Parameters of the HPA mode.
+            required: ["minReplicas", "maxReplicas", "cpuTargetAverageUtilization"]
             properties:
               minReplicas:
                 type: number
                 description: |
                   The lower limit for the number of replicas to which the HPA can scale down
-                default: 2
               maxReplicas:
                 type: number
                 description: |
                   The upper limit for the number of replicas to which the HPA can scale up
-                default: 5
               cpuTargetAverageUtilization:
                 type: number
                 description: |
                   The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods
-                default: 80
       resourcesManagement:
         description: |
           istiod resources management options.
