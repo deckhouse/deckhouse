@@ -434,6 +434,7 @@ properties:
       replicasManagement:
         description: |
           istiod replicas management options.
+        type: object
         default: {}
         x-examples:
         - mode: Standard
@@ -488,6 +489,7 @@ properties:
       resourcesManagement:
         description: |
           istiod resources management options.
+        type: object
         default: {}
         x-examples:
         - mode: VPA
