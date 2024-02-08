@@ -135,6 +135,7 @@ func (f *projectTemplateHelmRenderer) SetProject(name string) {
 }
 
 func (f *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	fmt.Println("RUN POST RENDERER")
 	if f.projectName == "" {
 		return renderedManifests, nil
 	}

@@ -124,7 +124,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
-
+	fmt.Println("PR", client.options.PostRenderer)
 	hashsum := getMD5Hash(templates, values)
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
@@ -136,6 +136,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		"hashsum": hashsum,
 	}
 	if client.options.PostRenderer != nil {
+		fmt.Println("SET POSTRENDER 1")
 		upgradeObject.PostRenderer = client.options.PostRenderer
 	}
 
@@ -150,6 +151,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 			"hashsum": hashsum,
 		}
 		if client.options.PostRenderer != nil {
+			fmt.Println("SET POSTRENDER 2")
 			installObject.PostRenderer = client.options.PostRenderer
 		}
 
