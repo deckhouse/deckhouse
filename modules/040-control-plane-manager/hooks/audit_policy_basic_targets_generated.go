@@ -14,6 +14,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-cloud-provider-vcd",
 	"d8-cloud-provider-vsphere",
 	"d8-cloud-provider-yandex",
+	"d8-cloud-provider-zvirt",
 	"d8-cni-cilium",
 	"d8-cni-flannel",
 	"d8-cni-simple-bridge",
