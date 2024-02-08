@@ -208,7 +208,6 @@ func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
 }
 
 // Run post renderer which will remove all namespaces except the project one
-// or will add a project namespace if it does not exist in manifests
 func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
 	if ptr.projectName == "" {
 		return renderedManifests, nil
@@ -219,8 +218,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 	result := bytes.NewBuffer(nil)
 
 	manifests := releaseutil.SplitManifests(renderedManifests.String())
-
-	var nsExists bool
 
 	for _, manifest := range manifests {
 		var ns v1.Namespace
@@ -239,21 +236,7 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 
-		nsExists = true
-
 		result.WriteString("\n---\n" + manifest)
-	}
-
-	if !nsExists {
-		projectNS := fmt.Sprintf(`
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: %s
-`, ptr.projectName)
-
-		result.WriteString(projectNS)
 	}
 
 	fmt.Println("RESULT", result.String())

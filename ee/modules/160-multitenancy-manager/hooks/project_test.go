@@ -463,28 +463,6 @@ func TestPostRenderer(t *testing.T) {
 	pr.SetProject("test-project-1")
 	buf := bytes.NewBuffer(nil)
 
-	t.Run("without any namespace", func(t *testing.T) {
-
-		// must create namespace with project name
-		mfs := `
----
-# Source: test-project-1/user-resources-templates.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: test-project-1
-  name: tututu
-data: {}
-`
-		buf.WriteString(mfs)
-
-		result, err := pr.Run(buf)
-		require.NoError(t, err)
-		mm := releaseutil.SplitManifests(result.String())
-		assert.Len(t, mm, 2)
-		assert.Contains(t, result.String(), "kind: Namespace")
-	})
-
 	t.Run("with namespace", func(t *testing.T) {
 		mfs := `
 ---
