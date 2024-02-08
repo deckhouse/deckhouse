@@ -81,7 +81,7 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 		}
 	} else {
 		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
-		if cfg.Spec.Enabled == nil {
+		if cfg == nil || (cfg != nil && cfg.Spec.Enabled == nil) {
 			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
 			enabledMsg := "disabled"
 			// TODO(yalosev): think about it
@@ -92,7 +92,7 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 		}
 
 		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+		if cfg != nil && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
 		}
 	}
