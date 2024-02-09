@@ -1,0 +1,100 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: zvirtinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-zvirt
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of zVirt VirtualMachines used by `` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - numCPUs
+                - memory
+                - template
+              properties:
+                numCPUs:
+                  description: |
+                    Count of vCPUs to allocate to zVirt VirtualMachines.
+                  x-doc-examples: [2]
+                  type: integer
+                memory:
+                  description: |
+                    Memory in MiB to allocate to zVirt VirtualMachines.
+                  x-doc-examples: [8192]
+                  type: integer
+                rootDiskSize:
+                  description: |
+                    Root disk size in GiB to use in zVirt VirtualMachines.
+
+                    The disk will be automatically enlarged if its size in the template is less than specified.
+                  x-doc-examples: [20]
+                  x-doc-default: 20
+                  type: integer
+                template:
+                  description: |
+                    Template name to be cloned.
+                  x-doc-examples: ['debian-bookworm']
+                  type: string
+                os:
+                  description: |
+                    OS type.
+                  x-doc-examples: ['debian_9']
+                  type: string
+                vm_type:
+                  description: |
+                    Load profile.
+                  x-doc-examples: ['high_performance']
+                  type: string
+                vnic_profile_id:
+                  description: |
+                    vNIC profile id.
+                  x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
+                  type: string
+                nic_name:
+                  description: |
+                    vNIC name.
+                  x-doc-examples: ['nic1']
+                  type: string
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: zvirtinstanceclasses
+    singular: zvirtinstanceclass
+    kind: ZvirtInstanceClass
+    categories:
+      - cloudinstanceclasses
