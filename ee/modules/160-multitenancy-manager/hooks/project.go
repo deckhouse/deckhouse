@@ -57,6 +57,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleProjects))
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
+	projectPostRenderer := new(projectTemplateHelmRenderer)
+	fmt.Println("PR1 ", projectPostRenderer)
+
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 
@@ -83,7 +86,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
-	projectPostRenderer := new(projectTemplateHelmRenderer)
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager, helm.WithPostRenderer(projectPostRenderer))
 	if err != nil {
@@ -221,8 +223,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 	manifests := releaseutil.SplitManifests(renderedManifests.String())
 
-	var nsExists bool
-
 	for _, manifest := range manifests {
 		var ns v1.Namespace
 		err = yaml.Unmarshal([]byte(manifest), &ns)
@@ -240,25 +240,18 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 
-		nsExists = true
+		if v := ns.Labels["name"]; v == ptr.projectName {
+			// Namespace was created via createNamespace helm flag and have to be adopted with helm labels
+			if ns.Annotations == nil {
+				ns.Annotations = make(map[string]string)
+			}
+
+			ns.Annotations["meta.helm.sh/release-name"] = ptr.projectName
+			ns.Annotations["meta.helm.sh/release-namespace"] = ptr.projectName
+			ns.Labels["app.kubernetes.io/managed-by"] = "Helm"
+		}
 
 		result.WriteString("\n---\n" + manifest)
-	}
-
-	if !nsExists {
-		projectNS := fmt.Sprintf(`
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: %s
-`, ptr.projectName)
-
-		// write to the beginning of the buffer
-		tmp := result.Bytes()
-		result.Reset()
-		result.WriteString(projectNS)
-		result.Write(tmp)
 	}
 
 	fmt.Println("RESULT", result.String())

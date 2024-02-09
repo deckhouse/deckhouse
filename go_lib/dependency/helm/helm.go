@@ -44,7 +44,7 @@ type Client interface {
 
 type helmClient struct {
 	actionConfig *action.Configuration
-	options      helmOptions
+	options      *helmOptions
 }
 
 // NewClient initializes helm client with secret backend storage in `namespace` arg namespace.
@@ -69,7 +69,7 @@ func NewClient(namespace string, options ...Option) (Client, error) {
 
 	client := helmClient{
 		actionConfig: conf,
-		options:      *opts,
+		options:      opts,
 	}
 
 	return &client, nil
@@ -151,6 +151,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 		if client.options.PostRenderer != nil {
 			installObject.PostRenderer = client.options.PostRenderer
+			fmt.Println("PR2 ", installObject.PostRenderer)
 		}
 
 		fmt.Printf("HELM INSTALL: %+v\n", installObject)
