@@ -30,7 +30,7 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("requirement met", func(t *testing.T) {
 		requirements.SaveValue(hooks.MinimalUnavailabelK8sVesion, "1.22.0")
 		requirements.SaveValue(hooks.MinimalUnavailabelK8sReason, "networking.k8s.io/v1beta1: Ingress")
-		ok, err := requirements.CheckRequirement("k8sMinimumNotAllowedVersion", "1.21.8")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.21.8")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
@@ -38,7 +38,7 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(hooks.MinimalUnavailabelK8sVesion, "1.22.0")
 		requirements.SaveValue(hooks.MinimalUnavailabelK8sReason, "networking.k8s.io/v1beta1: Ingress")
-		ok, err := requirements.CheckRequirement("k8sMinimumNotAllowedVersion", "1.27.1")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27.1")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

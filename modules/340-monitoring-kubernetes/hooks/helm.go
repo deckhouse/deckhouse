@@ -135,6 +135,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
+	var k8sConfigK8sVersion string
+	unsupportVersion.clean()
+	k8sConfigK8sVersionRaw, ok := input.Values.GetOk("global.clusterConfiguration.kubernetesVersion")
+	if ok {
+		k8sConfigK8sVersion = k8sConfigK8sVersionRaw.String()
+	}
+
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
 	if !ok {
 		input.LogEntry.Warn("kubernetes version not found")
@@ -151,7 +158,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 
 	// helm3 and helm2 are listed and parsed in goroutines
 	// deprecated resources will be processed here in the separated goroutine
-	go runReleaseProcessor(k8sCurrentVersion, input, releasesC, doneC)
+	go runReleaseProcessor(k8sCurrentVersion, k8sConfigK8sVersion, input, releasesC, doneC)
 
 	ctx := context.Background()
 	client, err := dc.GetK8sClient()
@@ -192,6 +199,9 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	if k8sVersion, reason := unsupportVersion.get(); k8sVersion != "" {
 		requirements.SaveValue(MinimalUnavailabelK8sVesion, k8sVersion)
 		requirements.SaveValue(MinimalUnavailabelK8sReason, reason)
+	} else {
+		requirements.RemoveValue(MinimalUnavailabelK8sVesion)
+		requirements.RemoveValue(MinimalUnavailabelK8sReason)
 	}
 
 	// to avoid data race
@@ -296,7 +306,7 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 	return totalReleases, nil
 }
 
-func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releasesC <-chan *release, doneC chan<- bool) {
+func runReleaseProcessor(k8sCurrentVersion *semver.Version, k8sConfigK8sVersion string, input *go_hook.HookInput, releasesC <-chan *release, doneC chan<- bool) {
 	defer func() {
 		doneC <- true
 	}()
@@ -313,7 +323,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				continue
 			}
 
-			incompatibility, k8sCompatibilityVersion := helmStorage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			incompatibility, k8sCompatibilityVersion := helmStorage.CalculateCompatibility(k8sCurrentVersion, k8sConfigK8sVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
@@ -378,8 +388,16 @@ func (uv *k8sUnsupportedVersion) get() (k8sVersion, reasons string) {
 	for key := range uv.reasons {
 		keys = append(keys, key)
 	}
+	if uv.k8sVersion != nil {
+		return uv.k8sVersion.String(), strings.Join(keys, ", ")
+	}
 
-	return uv.k8sVersion.String(), strings.Join(keys, ", ")
+	return "", ""
+}
+
+func (uv *k8sUnsupportedVersion) clean() {
+	uv.k8sVersion = nil
+	uv.reasons = make(map[string]struct{})
 }
 
 // k8s version: APIVersion: [Kind, ...]
@@ -403,7 +421,12 @@ const (
 //	 1 - if resource in deprecated and will be removed in the future
 //	 2 - if resource is unsupported for current k8s version
 //	and k8s version in which deprecation would be
-func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) (uint, string) {
+func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, configVersion string, resourceAPIVersion, resourceKind string) (uint, string) {
+	// check if the api was the closest k8s version restriction
+	if configVersion == "Automatic" {
+		unsupportVersion.verify(resourceAPIVersion, resourceKind)
+	}
+
 	// check unsupported api for the current k8s version
 	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
 	if exists {
@@ -412,9 +435,6 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 			return UnsupportedVersion, fmt.Sprintf("%d.%d", currentVersion.Major(), currentVersion.Minor())
 		}
 	}
-
-	// check if the api was the closest k8s version restriction
-	unsupportVersion.verify(resourceAPIVersion, resourceKind)
 
 	// if api is supported - check deprecation in the next 2 minor k8s versions
 	for i := 1; i <= delta; i++ {

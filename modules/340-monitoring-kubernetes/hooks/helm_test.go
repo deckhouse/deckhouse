@@ -39,6 +39,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(globalClusterConfiguration))
 			var sec corev1.Secret
 			_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
 
@@ -170,7 +171,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Expect(reasons).To(HaveLen(2))
 				for _, reason := range reasons {
 					Expect(`
-						networking.k8s.io/v1beta1: Ingress, 
+						networking.k8s.io/v1beta1: Ingress,
 						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
 					`).To(ContainSubstring(reason))
 				}
@@ -202,11 +203,34 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				}
 			})
 		})
-	})
 
+		Context("check for clusterConfiguration k8s version is not 'Automatic'", func() {
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.22.5")
+				f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.25")
+
+				f.RunGoHook()
+			})
+			It("must have minimalUnavailabelK8sVesion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				var k8sVersion string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				var reasons []string
+				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
+				}
+				Expect(k8sVersion).To(Equal(""))
+				Expect(reasons).To(BeNil())
+			})
+		})
+	})
 	Context("helm3 release without deprecated apis", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(globalClusterConfiguration))
 			var sec corev1.Secret
 			_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
 
@@ -246,14 +270,8 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
-				Expect(k8sVersion).To(Equal("1.22.0"))
-				Expect(reasons).To(HaveLen(2))
-				for _, reason := range reasons {
-					Expect(`
-						networking.k8s.io/v1beta1: Ingress,
-						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
-					`).To(ContainSubstring(reason))
-				}
+				Expect(k8sVersion).To(Equal(""))
+				Expect(reasons).To(BeNil())
 			})
 		})
 
@@ -262,6 +280,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	Context("helm2 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(globalClusterConfiguration))
 			var cm corev1.ConfigMap
 			_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
 
@@ -309,11 +328,10 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
-				Expect(reasons).To(HaveLen(2))
+				Expect(reasons).To(HaveLen(1))
 				for _, reason := range reasons {
 					Expect(`
 						networking.k8s.io/v1beta1: Ingress,
-						apiextensions.k8s.io/v1beta1: CustomResourceDefinition
 					`).To(ContainSubstring(reason))
 				}
 			})
@@ -453,4 +471,13 @@ metadata:
   name: sh.helm.release.v1.fooing.v1
   namespace: default
 type: helm.sh/release.v1
+`
+
+const globalClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
 `

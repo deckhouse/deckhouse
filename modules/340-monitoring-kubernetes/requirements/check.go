@@ -52,5 +52,5 @@ func init() {
 		return true, nil
 	}
 
-	requirements.RegisterCheck("k8sMinimumNotAllowedVersion", f)
+	requirements.RegisterCheck("autoK8sVersion", f)
 }
