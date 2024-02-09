@@ -9,6 +9,8 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
+	"helm.sh/helm/v3/pkg/postrender"
+
 	"github.com/gojuno/minimock/v3"
 )
 
@@ -370,7 +372,7 @@ func (e *ClientMockUpgradeExpectation) Then(err error) *ClientMock {
 }
 
 // Upgrade implements Client
-func (mmUpgrade *ClientMock) Upgrade(releaseName, releaseNamespace string, templates map[string]interface{}, values map[string]interface{}, debug bool) (err error) {
+func (mmUpgrade *ClientMock) Upgrade(releaseName, releaseNamespace string, templates map[string]interface{}, values map[string]interface{}, debug bool, pr ...postrender.PostRenderer) (err error) {
 	mm_atomic.AddUint64(&mmUpgrade.beforeUpgradeCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpgrade.afterUpgradeCounter, 1)
 

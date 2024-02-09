@@ -18,8 +18,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
-
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -87,7 +85,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
 
-	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager, helm.WithPostRenderer(projectPostRenderer))
+	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
 	if err != nil {
 		return err
 	}
@@ -109,7 +107,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false)
+		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false, projectPostRenderer)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)

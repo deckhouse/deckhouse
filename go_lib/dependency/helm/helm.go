@@ -38,7 +38,7 @@ import (
 const helmDriver = "secret"
 
 type Client interface {
-	Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, debug bool) error
+	Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, debug bool, pr ...postrender.PostRenderer) error
 	Delete(releaseName string) error
 }
 
@@ -79,8 +79,6 @@ type helmOptions struct {
 	Namespace  string
 	HistoryMax int32
 	Timeout    time.Duration
-
-	PostRenderer postrender.PostRenderer
 }
 
 type Option func(options *helmOptions)
@@ -97,14 +95,7 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func WithPostRenderer(pr postrender.PostRenderer) Option {
-	return func(options *helmOptions) {
-		fmt.Println("PR Options", pr, &pr)
-		options.PostRenderer = pr
-	}
-}
-
-func (client *helmClient) Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, _ bool) error {
+func (client *helmClient) Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, _ bool, pr ...postrender.PostRenderer) error {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -135,8 +126,8 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 	upgradeObject.Labels = map[string]string{
 		"hashsum": hashsum,
 	}
-	if client.options.PostRenderer != nil {
-		upgradeObject.PostRenderer = client.options.PostRenderer
+	if len(pr) > 0 {
+		upgradeObject.PostRenderer = pr[0]
 	}
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
@@ -150,10 +141,8 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		installObject.Labels = map[string]string{
 			"hashsum": hashsum,
 		}
-		if client.options.PostRenderer != nil {
-			fmt.Println("PR21 ", client.options.PostRenderer, &client.options.PostRenderer)
-
-			installObject.PostRenderer = client.options.PostRenderer
+		if len(pr) > 0 {
+			installObject.PostRenderer = pr[0]
 			fmt.Println("PR22 ", installObject.PostRenderer, &installObject.PostRenderer)
 		}
 
