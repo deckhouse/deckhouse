@@ -75,6 +75,13 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 			// which is directly controlled by addon-operator.
 			if mod.GetPhase() == modules.CanRunHelm {
 				statusMsgs = append(statusMsgs, "Ready")
+				// enrich status message with a notification that module config has something to say
+				if cfg != nil {
+					cfgStatus := s.ForConfig(cfg)
+					if len(cfgStatus.Message) > 0 {
+						statusMsgs = append(statusMsgs, "Info: module configuration reports some remarks")
+					}
+				}
 			} else {
 				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
 			}
@@ -82,18 +89,31 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 	} else {
 		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
 		if cfg == nil || (cfg != nil && cfg.Spec.Enabled == nil) {
-			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-			enabledMsg := "disabled"
-			// TODO(yalosev): think about it
-			if s.moduleManager.IsModuleEnabled(mod.GetName()) {
-				enabledMsg = "enabled"
+			// for external modules it makes sense to notify that their must be explicitly enabled via module configs
+			if module.Properties.Source != "Embedded" {
+				statusMsgs = append(statusMsgs, "Info: apply module config to enable")
+
+			} else {
+				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
+				enabledMsg := "disabled"
+				// TODO(yalosev): think about it
+				if s.moduleManager.IsModuleEnabled(mod.GetName()) {
+					enabledMsg = "enabled"
+				}
+				statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
 			}
-			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
 		}
 
 		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg != nil && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
+		if cfg != nil {
+			if cfg.Spec.Enabled != nil {
+				if *cfg.Spec.Enabled {
+					statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
+				} else {
+					statusMsgs = append(statusMsgs, "Info: disabled by module config")
+				}
+			}
+
 		}
 	}
 
