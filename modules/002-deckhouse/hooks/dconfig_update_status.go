@@ -220,10 +220,7 @@ func isModuleConfigStatusChanged(currentStatus v1alpha1.ModuleConfigStatus, modu
 }
 
 func isModuleStatusChanged(currentStatus v1alpha1.ModuleStatus, moduleStatus d8config.ModuleStatus) bool {
-	if currentStatus.Status != moduleStatus.Status {
-		return true
-	}
-	return false
+	return currentStatus.Status != moduleStatus.Status
 }
 
 // snapshotToModuleConfigList returns a map of ModuleConfig items from untyped items in the snapshot.
