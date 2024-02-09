@@ -90,7 +90,7 @@ properties:
           type: string
   resourcesManagement:
     description: |
-      Loki resources management options.
+      Настройки запросов и ограничений (limits) использования CPU и памяти подами Loki.
     default: {}
     x-examples:
       - mode: VPA
@@ -115,9 +115,10 @@ properties:
     properties:
       mode:
         type: string
-        description: >
-          The mode for managing resource requests. Classical `Static`
-          requests/limit or `VPA`.
+        description: |
+          Режим управления ресурсами:
+          - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
         enum:
           - VPA
           - Static
@@ -126,7 +127,7 @@ properties:
         type: object
         default: {}
         description: |
-          Parameters of the VPA mode.
+          Параметры управления ресурсами в режиме VPA.
         properties:
           mode:
             type: string
@@ -140,11 +141,11 @@ properties:
             type: object
             default: {}
             description: |
-              CPU-related parameters.
+              Настройки VPA при работе с CPU.
             properties:
               max:
                 description: |
-                  Maximum allowed CPU requests.
+                  Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
                 default: 2
                 oneOf:
                   - type: string
@@ -152,7 +153,7 @@ properties:
                   - type: number
               min:
                 description: |
-                  Minimum allowed CPU requests.
+                  Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
                 default: 50m
                 oneOf:
                   - type: string
@@ -162,20 +163,21 @@ properties:
                 type: number
                 examples:
                   - 1.5
-                description: >
-                  The coefficient to calculate cpu limits. It is optionally used
-                  to calculate initial limits for Pod. VPA for its part keeps
-                  the initial limits/requests ratio during further resource
-                  tunings.
+                description: |
+                  Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
           memory:
             type: object
             default: {}
             description: |
-              The amount of memory requested.
+              Настройки VPA при работе с памятью.
             properties:
               max:
                 description: |
-                  Maximum allowed memory requests.
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
                 default: 2Gi
                 oneOf:
                   - type: string
@@ -183,7 +185,7 @@ properties:
                   - type: number
               min:
                 description: |
-                  Minimum allowed memory requests.
+                  Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
                 default: 256Mi
                 oneOf:
                   - type: string
@@ -193,20 +195,21 @@ properties:
                 type: number
                 examples:
                   - 1.5
-                description: >
-                  The coefficient to calculate memory limits. It is optionally
-                  used to calculate initial limits for Pod. VPA for its part
-                  keeps the initial limits/requests ratio during further
-                  resource tunings.
+                description: |
+                  Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
       static:
         type: object
         description: |
-          Static resource management settings.
+          Настройка управления ресурсами в режиме `Static`.
         properties:
           requests:
             type: object
             description: |
-              Requests configuration.
+              Настройки запросов ресурсов (requests) подов.
             properties:
               cpu:
                 oneOf:
@@ -214,18 +217,18 @@ properties:
                     pattern: '^[0-9]+m?$'
                   - type: number
                 description: |
-                  CPU requests.
+                  Настройка запроса CPU (CPU requests).
               memory:
                 oneOf:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Memory requests.
+                  Настройка запроса памяти (memory requests).
           limits:
             type: object
             description: |
-              Limits configuration.
+              Настройка ограничений (limits) использования CPU и памяти.
             properties:
               cpu:
                 oneOf:
@@ -233,11 +236,11 @@ properties:
                     pattern: '^[0-9]+m?$'
                   - type: number
                 description: |
-                  CPU limits.
+                  Настройка ограничений использования CPU (CPU limits).
               memory:
                 oneOf:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Memory limits.
+                  Настройка ограничений использования памяти (memory limits).
