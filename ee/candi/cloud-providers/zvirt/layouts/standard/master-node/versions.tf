@@ -3,7 +3,7 @@
 
 terraform {
   required_providers {
-    ovirt = {
+    vsphere = {
       source = "oVirt/ovirt"
       version = "2.1.5"
     }
