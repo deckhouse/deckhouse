@@ -111,7 +111,7 @@ resource "openstack_compute_keypair_v2" "ssh" {
 data "openstack_images_image_v2" "astra_image" {
   most_recent = true
   visibility  = "shared"
-  name        = "alse-vanilla-1.7.2-cloud-mg7.2.0"
+  name        = "alse-vanilla-1.7.5-cloud-adv-mg12.1.2"
 }
 
 data "openstack_images_image_v2" "alt_image" {
