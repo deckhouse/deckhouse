@@ -132,7 +132,7 @@ properties:
           mode:
             type: string
             description: |
-              The VPA usage mode.
+              Режим работы VPA.
             enum:
               - Initial
               - Auto

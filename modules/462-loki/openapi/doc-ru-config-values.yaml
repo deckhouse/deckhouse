@@ -51,7 +51,7 @@ properties:
         properties:
           mode:
             description: |
-              Режим VPA.
+              Режим работы VPA.
           cpu:
             description: |
               Настройки VPA при работе с CPU.
