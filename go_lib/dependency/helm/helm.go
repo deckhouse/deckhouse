@@ -151,7 +151,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 		if client.options.PostRenderer != nil {
 			installObject.PostRenderer = client.options.PostRenderer
-			fmt.Println("PR2 ", installObject.PostRenderer)
+			fmt.Println("PR2 ", installObject.PostRenderer, &installObject.PostRenderer)
 		}
 
 		fmt.Printf("HELM INSTALL: %+v\n", installObject)

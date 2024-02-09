@@ -58,7 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	projectPostRenderer := new(projectTemplateHelmRenderer)
-	fmt.Println("PR1 ", projectPostRenderer)
+	fmt.Println("PR1 ", projectPostRenderer, &projectPostRenderer)
 
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
@@ -105,6 +105,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
+		fmt.Println("PR11 ", projectPostRenderer, &projectPostRenderer)
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
@@ -240,7 +241,7 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 
-		if v := ns.Labels["name"]; v == ptr.projectName {
+		if v := ns.Labels["name"]; len(ns.Labels) == 1 && v == ptr.projectName {
 			// Namespace was created via createNamespace helm flag and have to be adopted with helm labels
 			if ns.Annotations == nil {
 				ns.Annotations = make(map[string]string)
