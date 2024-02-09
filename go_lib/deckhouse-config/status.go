@@ -89,10 +89,9 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 	} else {
 		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
 		if cfg == nil || (cfg != nil && cfg.Spec.Enabled == nil) {
-			// for external modules it makes sense to notify that their must be explicitly enabled via module configs
+			// for external modules it makes sense to notify that they must be explicitly enabled via module configs
 			if module.Properties.Source != "Embedded" {
 				statusMsgs = append(statusMsgs, "Info: apply module config to enable")
-
 			} else {
 				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
 				enabledMsg := "disabled"

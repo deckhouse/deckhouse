@@ -105,7 +105,8 @@ func filterModuleForState(unstructured *unstructured.Unstructured) (go_hook.Filt
 			Name: module.Name,
 		},
 		Properties: v1alpha1.ModuleProperties{
-			State: module.Properties.State,
+			State:  module.Properties.State,
+			Source: module.Properties.Source,
 		},
 		Status: module.Status,
 	}, nil
