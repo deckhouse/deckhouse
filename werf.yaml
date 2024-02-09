@@ -913,7 +913,12 @@ import:
 
 ---
 artifact: version-map-artifact
-from: {{ .Images.BASE_ALPINE_DEV }}
+from: {{ .Images.BASE_ALPINE }}
+import:
+- artifact: yq-artifact
+  add: /usr/local/bin/yq
+  to: /usr/local/bin/yq
+  before: install
 git:
 - add: /
   to: /
