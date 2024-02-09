@@ -117,6 +117,11 @@ apiVersions:
                 description: |
                   vNIC name.
                 example: "nic1"
+              storage_domain_id:
+                type: string
+                description: |
+                  Storage domain id.
+                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
       nodeGroups:
         type: array
         description: |
