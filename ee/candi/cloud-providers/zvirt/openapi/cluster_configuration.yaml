@@ -77,10 +77,15 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, template]
+            required: [cluster_id, numCPUs, memory, template]
             description: |
               Partial contents of the fields of the [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties
+              cluster_id:
+                type: string
+                description: |
+                  cluster id.
+                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               numCPUs:
                 type: integer
                 description: |
@@ -185,7 +190,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, template]
+              required: [cluster_id, numCPUs, memory, template]
               description: |
                 Partial contents of the fields of the.
               properties:
