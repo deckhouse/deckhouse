@@ -38,7 +38,7 @@ import (
 const helmDriver = "secret"
 
 type Client interface {
-	Upgrade(releaseName string, templates, values map[string]interface{}, debug bool) error
+	Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, debug bool) error
 	Delete(releaseName string) error
 }
 
@@ -103,7 +103,7 @@ func WithPostRenderer(pr postrender.PostRenderer) Option {
 	}
 }
 
-func (client *helmClient) Upgrade(releaseName string, templates, values map[string]interface{}, _ bool) error {
+func (client *helmClient) Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, _ bool) error {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -127,7 +127,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 	hashsum := getMD5Hash(templates, values)
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
-	upgradeObject.Namespace = client.options.Namespace
+	upgradeObject.Namespace = releaseNamespace
 	upgradeObject.Install = true
 	upgradeObject.MaxHistory = int(client.options.HistoryMax)
 	upgradeObject.Timeout = client.options.Timeout
@@ -140,10 +140,9 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
-		fmt.Println("NS", client.options.Namespace)
 		installObject := action.NewInstall(client.actionConfig)
 		installObject.CreateNamespace = true
-		installObject.Namespace = client.options.Namespace
+		installObject.Namespace = releaseNamespace
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
@@ -152,10 +151,6 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		}
 		if client.options.PostRenderer != nil {
 			installObject.PostRenderer = client.options.PostRenderer
-		}
-
-		if releaseName == "test-project-2" {
-			installObject.Namespace = "test-project-2"
 		}
 
 		fmt.Printf("HELM INSTALL: %+v\n", installObject)

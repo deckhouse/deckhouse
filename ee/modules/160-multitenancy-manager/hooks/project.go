@@ -105,7 +105,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
+		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
@@ -210,11 +210,10 @@ func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
 func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	fmt.Println("POST RENDER: ", ptr.projectName)
 	if ptr.projectName == "" {
 		return renderedManifests, nil
 	}
-
-	fmt.Println("POST RENDER", ptr.projectName)
 
 	result := bytes.NewBuffer(nil)
 
