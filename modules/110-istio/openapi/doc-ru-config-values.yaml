@@ -229,7 +229,7 @@ properties:
                   Нижний предел количества реплик.
               maxReplicas:
                 description: |
-                  Верхний предел количества реплик.
+                  Верхний предел количества реплик. Не может быть меньше `minReplicas`.
               cpuTargetAverageUtilization:
                 description: |
                   Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.

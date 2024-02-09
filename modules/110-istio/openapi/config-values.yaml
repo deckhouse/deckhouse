@@ -471,7 +471,7 @@ properties:
                 type: number
                 minimum: 1
                 description: |
-                  Desired number of replicas
+                  Desired number of replicas.
           hpa:
             type: object
             description: |
@@ -482,17 +482,16 @@ properties:
                 type: number
                 minimum: 1
                 description: |
-                  The lower limit for the number of replicas to which the HPA can scale down
+                  The lower limit for the number of replicas to which the HPA can scale down.
               maxReplicas:
                 type: number
                 minimum: 1
                 description: |
-                  The upper limit for the number of replicas to which the HPA can scale up
+                  The upper limit for the number of replicas to which the HPA can scale up. It cannot be less that `minReplicas`.
               cpuTargetAverageUtilization:
                 type: number
-                minimum: 10
                 description: |
-                  The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods
+                  The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
       resourcesManagement:
         description: |
           istiod resources management options.
