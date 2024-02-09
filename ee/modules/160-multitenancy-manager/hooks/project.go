@@ -107,6 +107,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		values := concatValues(projectValues, projectTemplateValues)
 		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
 		if err != nil {
+			panic(err)
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
 			continue
