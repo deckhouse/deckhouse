@@ -25,10 +25,16 @@ spec:
             spec:
               type: object
               required:
+                - cluster_id
                 - numCPUs
                 - memory
                 - template
               properties:
+                cluster_id:
+                  description: |
+                    cluster_id.
+                  x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
+                  type: string
                 numCPUs:
                   description: |
                     Count of vCPUs to allocate to zVirt VirtualMachines.
