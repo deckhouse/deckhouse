@@ -143,6 +143,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		installObject := action.NewInstall(client.actionConfig)
 		installObject.CreateNamespace = true
 		installObject.Namespace = client.options.Namespace
+		installObject.DryRunOption = "client"
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
