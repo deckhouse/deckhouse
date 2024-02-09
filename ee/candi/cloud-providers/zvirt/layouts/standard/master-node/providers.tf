@@ -7,3 +7,4 @@ provider "ovirt" {
   password = var.password
   tls_insecure = var.insecure_mode
 }
+
