@@ -253,7 +253,11 @@ metadata:
   name: %s
 `, ptr.projectName)
 
+		// write to the beginning of the buffer
+		tmp := result.Bytes()
+		result.Reset()
 		result.WriteString(projectNS)
+		result.Write(tmp)
 	}
 
 	fmt.Println("RESULT", result.String())
