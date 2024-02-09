@@ -17,7 +17,7 @@ spec:
     kind: DaemonSet
     name: speaker
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: speaker
