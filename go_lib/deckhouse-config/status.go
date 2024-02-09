@@ -112,7 +112,6 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 					statusMsgs = append(statusMsgs, "Info: disabled by module config")
 				}
 			}
-
 		}
 	}
 

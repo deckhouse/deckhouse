@@ -220,8 +220,7 @@ func isModuleConfigStatusChanged(currentStatus v1alpha1.ModuleConfigStatus, modu
 }
 
 func isModuleStatusChanged(currentStatus v1alpha1.ModuleStatus, moduleStatus d8config.ModuleStatus) bool {
-	switch {
-	case currentStatus.Status != moduleStatus.Status:
+	if currentStatus.Status != moduleStatus.Status {
 		return true
 	}
 	return false
