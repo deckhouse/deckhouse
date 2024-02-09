@@ -15,5 +15,3 @@
   to: /deckhouse/candi/cloud-providers/openstack
 - add: /ee/candi/cloud-providers/vsphere
   to: /deckhouse/candi/cloud-providers/vsphere
-- add: /ee/candi/cloud-providers/ovirt
-  to: /deckhouse/candi/cloud-providers/ovirt
