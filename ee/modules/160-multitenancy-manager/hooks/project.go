@@ -97,6 +97,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName, projectValues := range projectValuesSnap {
+		fmt.Println("PROCESS", projectName)
 		projectName := projectName
 		projectPostRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
@@ -204,6 +205,7 @@ type projectTemplateHelmRenderer struct {
 }
 
 func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
+	fmt.Println("SETTING PROJECT", name)
 	ptr.projectName = name
 }
 
