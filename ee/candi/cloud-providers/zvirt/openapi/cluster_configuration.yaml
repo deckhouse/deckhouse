@@ -71,10 +71,15 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, template]
+            required: [cluster_id, numCPUs, memory, template]
             description: |
               Partial contents of the fields of the
             properties: &instanceClassProperties
+              cluster_id:
+                type: string
+                description: |
+                  cluster id.
+                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               numCPUs:
                 type: integer
                 description: |
@@ -90,13 +95,6 @@ apiVersions:
                 description: |
                   Template name to be cloned.
                 example: debian-bookworm
-              rootDiskSize:
-                type: integer
-                description: |
-                  Root disk size in GiB to use in zVirt VirtualMachines.
-
-                  The disk will be automatically enlarged if its size in the template is less than specified.
-                example: 20
               os:
                 type: string
                 description: |
@@ -184,7 +182,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, template]
+              required: [cluster_id, numCPUs, memory, template]
               description: |
                 Partial contents of the fields of the.
               properties:
