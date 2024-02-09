@@ -913,7 +913,7 @@ import:
 
 ---
 artifact: version-map-artifact
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALPINE_DEV }}
 git:
 - add: /
   to: /
