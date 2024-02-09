@@ -1,8 +1,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-  - add: /{{ .ModulePath }}candi/cloud-providers/ovirt
-    to: /deckhouse/candi/cloud-providers/ovirt
+  - add: /{{ .ModulePath }}candi/cloud-providers/zvirt
+    to: /deckhouse/candi/cloud-providers/zvirt
 import:
   - artifact: terraform-provider-ovirt
     add: /terraform-provider-ovirt
