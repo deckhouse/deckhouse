@@ -99,6 +99,7 @@ func WithTimeout(timeout time.Duration) Option {
 
 func WithPostRenderer(pr postrender.PostRenderer) Option {
 	return func(options *helmOptions) {
+		fmt.Println("PR Options", pr, &pr)
 		options.PostRenderer = pr
 	}
 }
@@ -150,8 +151,10 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 			"hashsum": hashsum,
 		}
 		if client.options.PostRenderer != nil {
+			fmt.Println("PR21 ", client.options.PostRenderer, &client.options.PostRenderer)
+
 			installObject.PostRenderer = client.options.PostRenderer
-			fmt.Println("PR2 ", installObject.PostRenderer, &installObject.PostRenderer)
+			fmt.Println("PR22 ", installObject.PostRenderer, &installObject.PostRenderer)
 		}
 
 		fmt.Printf("HELM INSTALL: %+v\n", installObject)
