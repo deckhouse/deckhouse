@@ -39,7 +39,7 @@ openstack:
   destinationBinary: terraform-provider-openstack
 
 ovirt:
-  namespace: terraform-provider-ovirt
+  namespace: hashicorp
   type: ovirt
   version: 2.1.5
   artifact: terraform-provider-ovirt
