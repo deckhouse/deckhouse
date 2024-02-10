@@ -25,14 +25,14 @@ spec:
             spec:
               type: object
               required:
-                - cluster_id
+                - clusterId
                 - numCPUs
                 - memory
                 - template
               properties:
-                cluster_id:
+                clusterId:
                   description: |
-                    cluster_id.
+                    cluster id.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
                   type: string
                 numCPUs:
@@ -63,17 +63,17 @@ spec:
                     OS type.
                   x-doc-examples: ['debian_9']
                   type: string
-                vm_type:
+                vmType:
                   description: |
                     Load profile.
                   x-doc-examples: ['high_performance']
                   type: string
-                vnic_profile_id:
+                vnicProfileId:
                   description: |
                     vNIC profile id.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
                   type: string
-                nic_name:
+                nicName:
                   description: |
                     vNIC name.
                   x-doc-examples: ['nic1']
