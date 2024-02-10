@@ -52,7 +52,7 @@ apiVersions:
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
-        enum: [VsphereClusterConfiguration]
+        enum: [ZvirtClusterConfiguration]
       masterNodeGroup:
         type: object
         additionalProperties: false
