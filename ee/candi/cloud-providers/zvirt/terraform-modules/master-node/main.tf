@@ -67,6 +67,3 @@ resource "ovirt_vm_start" "master_vm" {
   depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment]
 }
 
-resource "ovirt_wait_for_ip" "master_vm" {
-  vm_id = ovirt_vm_start.master_vm.vm_id
-}
