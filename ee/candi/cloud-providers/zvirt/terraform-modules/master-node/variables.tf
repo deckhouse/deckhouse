@@ -42,3 +42,8 @@ locals {
     "ssh_authorized_keys" : [local.ssh_pubkey]
   }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
 }
+
+variable "nodeIndex" {
+  type    = number
+  default = 0
+}
