@@ -1,1 +1,1 @@
-/home/aleksey_su/workspace/deckhouse/ee/candi/cloud-providers/zvirt/terraform-modules/versions.tf
+../../../terraform-modules/versions.tf
