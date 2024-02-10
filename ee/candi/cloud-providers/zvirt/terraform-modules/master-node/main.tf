@@ -3,15 +3,15 @@
 
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
-  vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnic_profile_id", [])
-  storage_domain_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storage_domain_id", [])
-  cluster_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "cluster_id", [])
+  vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnicProfileId", [])
+  storage_domain_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageDomainId", [])
+  cluster_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "clusterId", [])
   template_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "template", [])
   master_cpus = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "numCPUs", [])
   master_ram_mb = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "memory", [])
   master_os_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "os", [])
-  master_vm_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vm_type", [])
-  master_nic_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "nic_name", [])
+  master_vm_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vmType", [])
+  master_nic_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "nicName", [])
 }
 
 data "ovirt_templates" "master_template" {
@@ -20,7 +20,7 @@ data "ovirt_templates" "master_template" {
 }
 
 resource "ovirt_vm" "master_vm" {
-  name        = join("-", [local.resource_name_prefix, "master"])
+  name        = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
   cluster_id  = local.cluster_id
   template_id = tolist(data.ovirt_templates.master_template.templates)[0].id
   clone = true

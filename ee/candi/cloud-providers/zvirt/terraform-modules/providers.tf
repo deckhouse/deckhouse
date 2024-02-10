@@ -5,5 +5,5 @@ provider "ovirt" {
   url = var.url
   username = var.username
   password = var.password
-  tls_insecure = var.insecure_mode
+  tls_insecure = var.insecure
 }
