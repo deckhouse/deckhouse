@@ -78,7 +78,7 @@ spec:
                     vNIC name.
                   x-doc-examples: ['nic1']
                   type: string
-                storage_domain_id:
+                storageDomainId:
                   description: |
                     Storage domain id.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
