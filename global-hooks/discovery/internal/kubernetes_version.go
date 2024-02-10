@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hooks
+package internal
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1core "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
@@ -46,89 +46,11 @@ const kubeVersionFileName = "/tmp/kubectl_version"
 
 const apiServerNs = "kube-system"
 
-// versionHTTPClient is used to validate that tls certificate DNS name contains kubernetes service cluster ip
+// VersionHTTPClient is used to validate that tls certificate DNS name contains kubernetes service cluster ip
 var (
-	versionHTTPClient d8http.Client
+	VersionHTTPClient d8http.Client
 	once              sync.Once
 )
-
-func apiServerK8sAppLabels() map[string]string {
-	return map[string]string{
-		"k8s-app": "kube-apiserver",
-	}
-}
-
-func apiServerControlPlaneLabels() map[string]string {
-	return map[string]string{
-		"component": "kube-apiserver",
-		"tier":      "control-plane",
-	}
-}
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Kubernetes: []go_hook.KubernetesConfig{
-		// it needs for change apiserver
-		{
-			Name:       kubeAPIServCPLabeledSnap,
-			ApiVersion: "v1",
-			Kind:       "Pod",
-			LabelSelector: &v1meta.LabelSelector{
-				MatchLabels: apiServerControlPlaneLabels(),
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{apiServerNs},
-				},
-			},
-			FilterFunc: applyAPIServerPodFilter,
-		},
-		// it needs for change apiserver
-		{
-			Name:       kubeAPIServK8sLabeledSnap,
-			ApiVersion: "v1",
-			Kind:       "Pod",
-			LabelSelector: &v1meta.LabelSelector{
-				MatchLabels: apiServerK8sAppLabels(),
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{apiServerNs},
-				},
-			},
-			FilterFunc: applyAPIServerPodFilter,
-		},
-
-		{
-			Name:       kubeEndpointsSnap,
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubernetes"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"default"},
-				},
-			},
-			FilterFunc: applyEndpointsAPIServerFilter,
-		},
-
-		{
-			Name:       kubeServiceSnap,
-			ApiVersion: "v1",
-			Kind:       "Service",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubernetes"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"default"},
-				},
-			},
-			FilterFunc: applyServiceAPIServerFilter,
-		},
-	},
-}, k8sVersions)
 
 func applyAPIServerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// creationTimestamp needs for run hook on restart pod (name of apiserver not contains generated part)
@@ -137,7 +59,7 @@ func applyAPIServerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var endpoints v1core.Endpoints
+	var endpoints v1.Endpoints
 
 	err := sdk.FromUnstructured(obj, &endpoints)
 	if err != nil {
@@ -165,7 +87,7 @@ func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var service v1core.Service
+	var service v1.Service
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
@@ -173,6 +95,73 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	return service.Spec.ClusterIP, nil
+}
+
+var KubernetesVersionConfigs = []go_hook.KubernetesConfig{
+	{
+		Name:       kubeAPIServCPLabeledSnap,
+		ApiVersion: "v1",
+		Kind:       "Pod",
+		LabelSelector: &v1meta.LabelSelector{
+			MatchLabels: map[string]string{
+				"component": "kube-apiserver",
+				"tier":      "control-plane",
+			},
+		},
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{apiServerNs},
+			},
+		},
+		FilterFunc: applyAPIServerPodFilter,
+	},
+	// it needs for change apiserver
+	{
+		Name:       kubeAPIServK8sLabeledSnap,
+		ApiVersion: "v1",
+		Kind:       "Pod",
+		LabelSelector: &v1meta.LabelSelector{
+			MatchLabels: map[string]string{
+				"k8s-app": "kube-apiserver",
+			},
+		},
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{apiServerNs},
+			},
+		},
+		FilterFunc: applyAPIServerPodFilter,
+	},
+
+	{
+		Name:       kubeEndpointsSnap,
+		ApiVersion: "v1",
+		Kind:       "Endpoints",
+		NameSelector: &types.NameSelector{
+			MatchNames: []string{"kubernetes"},
+		},
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"default"},
+			},
+		},
+		FilterFunc: applyEndpointsAPIServerFilter,
+	},
+
+	{
+		Name:       kubeServiceSnap,
+		ApiVersion: "v1",
+		Kind:       "Service",
+		NameSelector: &types.NameSelector{
+			MatchNames: []string{"kubernetes"},
+		},
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"default"},
+			},
+		},
+		FilterFunc: applyServiceAPIServerFilter,
+	},
 }
 
 // getKubeVersionForServer
@@ -228,7 +217,7 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 	if len(serviceSnap) > 0 {
 		endpoint := serviceSnap[0].(string)
 
-		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
+		ver, err := getKubeVersionForServer(endpoint, VersionHTTPClient)
 		if err != nil {
 			return nil, err
 		}
@@ -291,14 +280,14 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 	return endpoints, nil
 }
 
-func k8sVersions(input *go_hook.HookInput) error {
+func KubernetesVersions(input *go_hook.HookInput) (string, error) {
 	input.LogEntry.Infoln("k8s version. Start discovery")
 	endpoints, err := apiServerEndpoints(input)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if endpoints == nil {
-		return nil
+		return "", nil
 	}
 
 	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
@@ -307,12 +296,12 @@ func k8sVersions(input *go_hook.HookInput) error {
 	// ServerName option allows Deckhouse to check, that certificate is issued for the kubernetes service dns name
 	// even if it requests apiserver endpoint.
 	once.Do(func() {
-		if versionHTTPClient != nil {
+		if VersionHTTPClient != nil {
 			return
 		}
 		contentCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 
-		versionHTTPClient = d8http.NewClient(
+		VersionHTTPClient = d8http.NewClient(
 			d8http.WithTLSServerName("kubernetes.default.svc"),
 			d8http.WithAdditionalCACerts([][]byte{contentCA}),
 		)
@@ -322,11 +311,11 @@ func k8sVersions(input *go_hook.HookInput) error {
 	var minVer *semver.Version
 
 	for _, endpoint := range endpoints {
-		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
+		ver, err := getKubeVersionForServer(endpoint, VersionHTTPClient)
 		if err != nil {
 			ver, err = getKubeVersionForServerFallback(input, err)
 			if err != nil {
-				return err
+				return "", err
 			}
 		}
 
@@ -338,14 +327,14 @@ func k8sVersions(input *go_hook.HookInput) error {
 
 	if len(versions) == 0 {
 		input.LogEntry.Infoln("k8s version. Versions is empty. Skip")
-		return nil
+		return "", nil
 	}
 
 	minVerStr := minVer.String()
 
 	err = os.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
 	if err != nil {
-		return err
+		return "", err
 	}
 	input.Values.Set("global.discovery.kubernetesVersions", versions)
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
@@ -356,5 +345,5 @@ func k8sVersions(input *go_hook.HookInput) error {
 	input.MetricsCollector.Set("deckhouse_kubernetes_version", 1, map[string]string{
 		"version": minVerStr,
 	})
-	return nil
+	return minVerStr, nil
 }
