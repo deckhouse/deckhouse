@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     ovirt = {
-      source = "oVirt/ovirt"
+      source = "terraform-provider-ovirt/ovirt"
       version = "2.1.5"
     }
   }
