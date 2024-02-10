@@ -32,8 +32,8 @@ function bb-event-error-create() {
     # step is used as argument for function call.
     # If event creation failed, error from kubectl suppressed.
     step="$1"
-    eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
-    nodeName="$(hostname -s)"
+    eventName="$(echo -n "$(DECK_NODE_HOSTNAME)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    nodeName="$(DECK_NODE_HOSTNAME)"
     eventLog="/var/lib/bashible/step.log"
     kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
@@ -49,27 +49,43 @@ function bb-event-error-create() {
         reason: BashibleStepFailed
         type: Warning
         reportingController: bashible
-        reportingInstance: '$(hostname -s)'
+        reportingInstance: '$(DECK_NODE_HOSTNAME)'
         eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
         action: "BashibleStepExecution"
 EOF
 }
 
+function wait_node() {
+  attempt=0
+  while true; do
+    if error=$(kubectl_exec get node $(DECK_NODE_HOSTNAME) 2>&1 >/dev/null); then
+      return 0
+    fi
+    errors+="\n$error"
+
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to check existence of node $(DECK_NODE_HOSTNAME) after ${MAX_RETRIES} retries."
+      exit 1
+    fi
+    if [ "$attempt" -gt "3" ]; then
+      >&2 echo -e "Failed to check existence of node $(DECK_NODE_HOSTNAME) ... retry in 10 seconds. Errors:$errors"
+      errors=""
+    fi
+    sleep 10
+  done
+}
 
 function annotate_node() {
   echo "Annotate node $(hostname -s) with annotation ${@}"
   attempt=0
-  until error=$(kubectl_exec annotate node $(hostname -s) --overwrite ${@} 2>&1); do
+  until kubectl_exec annotate node $(DECK_NODE_HOSTNAME) --overwrite ${@} 1> /dev/null; do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
+      >&2 echo "ERROR: Failed to annotate node $(DECK_NODE_HOSTNAME) with annotation ${@} after ${MAX_RETRIES} retries."
       exit 1
     fi
-    if [ "$attempt" -gt "2" ]; then
-      >&2 echo "Failed to annotate node $(hostname -s) with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
-      >&2 echo "Retrying..."
-      attempt=0
-    fi
+    >&2 echo "Failed to annotate node $(DECK_NODE_HOSTNAME) with annotation ${@} ... retry in 10 seconds."
     sleep 10
   done
   echo "Succesful annotate node $(hostname -s) with annotation ${@}"
@@ -185,9 +201,14 @@ function main() {
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
+{{- if or (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+  export DECK_NODE_HOSTNAME=$(hostname -s)
+{{- else }}
+  export DECK_NODE_HOSTNAME=$(hostname)
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl_exec get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+    if tmp="$(kubectl_exec get node $(DECK_NODE_HOSTNAME) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
