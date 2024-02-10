@@ -1,0 +1,14 @@
+kind: ZvirtCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [ZvirtCloudProviderDiscoveryData]
