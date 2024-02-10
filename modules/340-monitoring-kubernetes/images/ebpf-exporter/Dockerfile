@@ -1,6 +1,6 @@
-ARG BASE_UBUNTU
+ARG BASE_UBUNTU_BIONIC
 
-FROM $BASE_UBUNTU as builder
+FROM $BASE_UBUNTU_BIONIC as builder
 
 WORKDIR /
 
@@ -36,7 +36,7 @@ RUN GOPROXY="off" GOFLAGS="-mod=vendor" go build -o /ebpf_exporter -v -ldflags="
     " ./cmd/ebpf_exporter
 
 
-FROM $BASE_UBUNTU
+FROM $BASE_UBUNTU_BIONIC
 
 RUN apt-get update && apt-get install -y --no-install-recommends libelf1 && rm -rf /var/lib/apt/lists/*
 
