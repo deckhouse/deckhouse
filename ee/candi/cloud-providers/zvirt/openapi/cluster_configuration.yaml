@@ -24,27 +24,27 @@ apiVersions:
         masterNodeGroup:
           replicas: 1
           instanceClass:
+            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             numCPUs: 4
             memory: 8192
-            template: ubuntu-jammy
-            rootDiskSize: 20
+            template: debian-bookworm
             os: debian_9
-            vm_type: high_performance
-            vnic_profile_id: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-            nic_name: "nic1"
+            vmType: high_performance
+            vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+            nicName: "nic1"
         nodeGroups:
           - name: worker
             replicas: 1
             instanceClass:
+              clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
               numCPUs: 4
               memory: 8192
-              template: ubuntu-jammy
+              template: debian-bookworm
         provider:
           server: '<SERVER>'
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-          cluster_id: "b46372e7-0d52-40c7-9bbf-fda31e187088"
     required: [apiVersion, kind, masterNodeGroup, layout, provider]
     properties:
       apiVersion:
@@ -71,11 +71,11 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [cluster_id, numCPUs, memory, template]
+            required: [clusterId, numCPUs, memory, template]
             description: |
               Partial contents of the fields of the
             properties: &instanceClassProperties
-              cluster_id:
+              clusterId:
                 type: string
                 description: |
                   cluster id.
@@ -100,17 +100,17 @@ apiVersions:
                 description: |
                   OS type.
                 example: debian_9
-              vm_type:
+              vmType:
                 type: string
                 description: |
                   Load profile.
                 example: high_performance
-              vnic_profile_id:
+              vnicProfileId:
                 type: string
                 description: |
                   vNIC profile id.
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-              nic_name:
+              nicName:
                 type: string
                 description: |
                   vNIC name.
@@ -182,7 +182,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [cluster_id, numCPUs, memory, template]
+              required: [clusterId, numCPUs, memory, template]
               description: |
                 Partial contents of the fields of the.
               properties:
