@@ -32,6 +32,7 @@ apiVersions:
             vmType: high_performance
             vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
             nicName: "nic1"
+            storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
         nodeGroups:
           - name: worker
             replicas: 1
@@ -115,7 +116,7 @@ apiVersions:
                 description: |
                   vNIC name.
                 example: "nic1"
-              storage_domain_id:
+              storageDomainId:
                 type: string
                 description: |
                   Storage domain id.
