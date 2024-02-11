@@ -55,39 +55,24 @@ function bb-event-error-create() {
 EOF
 }
 
-function wait_node() {
-  attempt=0
-  while true; do
-    if error=$(kubectl_exec get node $(hostname -s) 2>&1 >/dev/null); then
-      return 0
-    fi
-    errors+="\n$error"
-
-    attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to check existence of node $(hostname -s) after ${MAX_RETRIES} retries."
-      exit 1
-    fi
-    if [ "$attempt" -gt "3" ]; then
-      >&2 echo -e "Failed to check existence of node $(hostname -s) ... retry in 10 seconds. Errors:$errors"
-      errors=""
-    fi
-    sleep 10
-  done
-}
 
 function annotate_node() {
-  wait_node
+  echo "Annotate node $(hostname -s) with annotation ${@}"
   attempt=0
-  until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
+  until error=$(kubectl_exec annotate node $(hostname -s) --overwrite ${@} 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries."
+      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
       exit 1
     fi
-    >&2 echo "Failed to annotate node $(hostname -s) with annotation ${@} ... retry in 10 seconds."
+    if [ "$attempt" -gt "2" ]; then
+      >&2 echo "Failed to annotate node $(hostname -s) with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
+      >&2 echo "Retrying..."
+      attempt=0
+    fi
     sleep 10
   done
+  echo "Succesful annotate node $(hostname -s) with annotation ${@}"
 }
 
 function get_secret() {
