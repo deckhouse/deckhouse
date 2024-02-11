@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"slices"
+
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -42,11 +44,13 @@ import (
 type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
 	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
+	VolumesMeta(ctx context.Context) ([]v1alpha1.VolumeMeta, error)
 }
 
 type Reconciler struct {
 	cloudRequestErrorMetric   *prometheus.GaugeVec
 	updateResourceErrorMetric *prometheus.GaugeVec
+	remainingVolumesMetric    *prometheus.GaugeVec
 
 	discoverer       Discoverer
 	checkInterval    time.Duration
@@ -137,6 +141,16 @@ func (c *Reconciler) registerMetrics() {
 		make([]string, 0),
 	)
 	prometheus.MustRegister(c.updateResourceErrorMetric)
+
+	c.remainingVolumesMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "cloud_data",
+		Subsystem: "discovery",
+		Name:      "remaining_volume_info",
+		Help:      "Indicates that there is a volume in the cloud for which there is no PV in the cluster",
+	},
+		[]string{"id", "name"},
+	)
+	prometheus.MustRegister(c.remainingVolumesMetric)
 }
 
 func (c *Reconciler) reconcileLoop(ctx context.Context, doneCh chan<- struct{}) {
@@ -180,6 +194,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 
 	c.instanceTypesReconcile(ctx)
 	c.discoveryDataReconcile(ctx)
+	c.remainingVolumesReconcile(ctx)
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
@@ -389,4 +404,49 @@ func (c *Reconciler) createSecretWithDiscoveryData(discoveryData []byte) *v1.Sec
 	}
 
 	return secret
+}
+
+func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
+	c.logger.Infoln("Start remaining volumes discovery step")
+	defer c.logger.Infoln("Finish remaining volumes discovery step")
+
+	for i := 1; i <= 3; i++ {
+		if i > 1 {
+			c.logger.Infoln("Waiting 3 seconds before next attempt")
+			time.Sleep(3 * time.Second)
+		}
+		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		cloudVolumes, err := c.discoverer.VolumesMeta(cctx)
+		if err != nil {
+			c.logger.Errorf("Getting volumes meta error: %v\n", err)
+			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(1.0)
+			continue
+		}
+
+		persistentVolumes, err := c.k8sClient.CoreV1().PersistentVolumes().List(cctx, metav1.ListOptions{})
+		if err != nil {
+			c.logger.Errorf("Attempt %d. Failed to get PersistentVolumes from cluster: %v", i, err)
+			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(1.0)
+			continue
+		}
+
+		c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(0.0)
+
+		persistentVolumeNames := make([]string, 0, len(persistentVolumes.Items))
+		for _, pv := range persistentVolumes.Items {
+			persistentVolumeNames = append(persistentVolumeNames, pv.Name)
+		}
+
+		c.remainingVolumesMetric.Reset()
+		for _, volume := range cloudVolumes {
+			if !slices.Contains(persistentVolumeNames, volume.Name) {
+				c.remainingVolumesMetric.WithLabelValues(volume.ID, volume.Name).Set(1.0)
+			}
+
+		}
+	}
+	c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+	return
 }
