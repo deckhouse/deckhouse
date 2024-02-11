@@ -128,7 +128,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
-  to: /img/
+  to: /img
   stageDependencies:
     install:
     - '**/*'
@@ -197,19 +197,19 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /usr/share/grafana/
-  to: /usr/share/grafana/
+  to: /usr/share/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /etc/grafana/
-  to: /etc/grafana/
+  to: /etc/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/lib/grafana/
-  to: /var/lib/grafana/
+  to: /var/lib/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/log/grafana/
-  to: /var/log/grafana/
+  to: /var/log/grafana
   before: install
 docker:
   ENV:

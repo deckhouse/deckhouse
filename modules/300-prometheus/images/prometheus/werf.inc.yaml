@@ -80,19 +80,19 @@ import:
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /prometheus/prometheus/console_libraries/
-  to: /usr/share/prometheus/console_libraries/
+  to: /usr/share/prometheus/console_libraries
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /consoles/
-  to: /usr/share/prometheus/consoles/
+  to: /usr/share/prometheus/consoles
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /etc/
-  to: /etc/prometheus/
+  to: /etc/prometheus
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /empty/
-  to: /prometheus/
+  to: /prometheus
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate

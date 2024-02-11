@@ -15,7 +15,7 @@ artifact: {{ .ModuleName }}/failover-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/402-ingress-nginx/images/proxy-failover-iptables/failover/
-  to: /workdir/
+  to: /workdir
   stageDependencies:
     install:
     - '**/*.go'
