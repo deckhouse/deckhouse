@@ -24,11 +24,230 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 78,
-  "iteration": 1707727525056,
+  "id": 52,
+  "iteration": 1707745212996,
   "links": [],
   "liveNow": false,
   "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "right",
+            "displayMode": "auto",
+            "inspect": false
+          },
+          "decimals": 2,
+          "displayName": "",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 0.75
+              },
+              {
+                "color": "red",
+                "value": 0.96
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Usage"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "id": 798,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "expr": "metallb_allocator_addresses_total",
+          "format": "table",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "expr": "metallb_allocator_addresses_in_use_total",
+          "format": "table",
+          "hide": false,
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Pools",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "pool"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "Time 2": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "container 1": true,
+              "container 2": true,
+              "instance 1": true,
+              "instance 2": true,
+              "job 1": true,
+              "job 2": true,
+              "namespace 1": true,
+              "namespace 2": true,
+              "pod 1": true,
+              "pod 2": true,
+              "tier 1": true,
+              "tier 2": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Time 1": "",
+              "Value #A": "Total addresses",
+              "Value #B": "Used addresses",
+              "instance 2": "",
+              "job 2": "",
+              "pool": "Pool",
+              "tier 1": "",
+              "tier 2": ""
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Usage",
+            "binary": {
+              "left": "Used addresses",
+              "operator": "/",
+              "reducer": "sum",
+              "right": "Total addresses"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "merge",
+          "options": {
+            "reducers": []
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "expr": "sum(metallb_k8s_client_config_stale_bool)",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "client_config_stale",
+          "refId": "A"
+        }
+      ],
+      "title": "Stale config",
+      "type": "gauge"
+    },
     {
       "datasource": {
         "type": "prometheus",
@@ -65,7 +284,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 796,
       "options": {
@@ -137,6 +356,100 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": "${ds_prometheus}",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "hiddenSeries": false,
+      "id": 6,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(metallb_layer2_gratuitous_sent{instance=~\"$layer2instance\"}[5m])",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "gratuitous_sent instance={{instance}} ip={{ip}} ",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(metallb_layer2_requests_received{instance=~\"$layer2instance\"}[5m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "requests_received instance={{instance}} ip={{ip}} ",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(metallb_layer2_responses_sent{instance=~\"$layer2instance\"}[5m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "responses_sent instance={{instance}} ip={{ip}} ",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "GARP Announces",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": {},
       "description": "",
       "fill": 1,
@@ -145,7 +458,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 25
       },
       "hiddenSeries": false,
       "id": 2,
@@ -179,10 +492,11 @@
             "type": "prometheus",
             "uid": "P0D6E4079E36703EB"
           },
+          "editorMode": "code",
           "expr": "metallb_allocator_addresses_total",
           "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Total addresses in pool: {{pool}}",
           "refId": "A"
         },
         {
@@ -190,9 +504,11 @@
             "type": "prometheus",
             "uid": "P0D6E4079E36703EB"
           },
+          "editorMode": "code",
           "expr": "metallb_allocator_addresses_in_use_total",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Used addresses in pool: {{pool}}",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -253,6 +569,37 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(metallb_layer2_gratuitous_sent,instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Layer 2 instance",
+        "multi": true,
+        "name": "layer2instance",
+        "options": [],
+        "query": {
+          "query": "label_values(metallb_layer2_gratuitous_sent,instance)",
+          "refId": "main-layer2instance-Variable-Query"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 5,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -288,6 +635,6 @@
   "timezone": "",
   "title": "Metallb",
   "uid": "sZzUB4ymk2",
-  "version": 7,
+  "version": 2,
   "weekStart": ""
 }
