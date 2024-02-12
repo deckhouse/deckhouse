@@ -60,6 +60,7 @@
  - **[external-module-manager]** Fix outdated module versions in multi-master environment. [#7234](https://github.com/deckhouse/deckhouse/pull/7234)
  - **[istio]** Improved checking for currently running deprecated versions of Istio in the cluster. [#7028](https://github.com/deckhouse/deckhouse/pull/7028)
  - **[istio]** After disabling the module, clean up any orphaned Istio components. [#6906](https://github.com/deckhouse/deckhouse/pull/6906)
+ - **[metallb]** Change VPA `updateMode` to `Initial`. [#7432](https://github.com/deckhouse/deckhouse/pull/7432)
  - **[metallb]** Add `livenessProbe` and `readinessProbe` in metallb speaker spec. [#7382](https://github.com/deckhouse/deckhouse/pull/7382)
     The `metallb-speaker` pods will restart.
  - **[monitoring-kubernetes]** Revert https://github.com/deckhouse/deckhouse/pull/7272 [#7411](https://github.com/deckhouse/deckhouse/pull/7411)
@@ -80,6 +81,7 @@
 ## Chore
 
 
+ - **[candi]** Fix the bashible message about node annotation. [#7452](https://github.com/deckhouse/deckhouse/pull/7452)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.26.13`, `v1.27.10`, `v1.28.6` [#7262](https://github.com/deckhouse/deckhouse/pull/7262)
     Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Update `cni-plugins` to version `1.4.0`. [#7078](https://github.com/deckhouse/deckhouse/pull/7078)
