@@ -24,8 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"slices"
-
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -406,6 +404,20 @@ func (c *Reconciler) createSecretWithDiscoveryData(discoveryData []byte) *v1.Sec
 	return secret
 }
 
+type Set map[string]struct{}
+
+func (s Set) Add(xs ...string) Set {
+	for _, x := range xs {
+		s[x] = struct{}{}
+	}
+	return s
+}
+
+func (s Set) Has(x string) bool {
+	_, ok := s[x]
+	return ok
+}
+
 func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
 	c.logger.Infoln("Start remaining volumes discovery step")
 	defer c.logger.Infoln("Finish remaining volumes discovery step")
@@ -434,14 +446,14 @@ func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
 
 		c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(0.0)
 
-		persistentVolumeNames := make([]string, 0, len(persistentVolumes.Items))
+		persistentVolumeNames := Set{}
 		for _, pv := range persistentVolumes.Items {
-			persistentVolumeNames = append(persistentVolumeNames, pv.Name)
+			persistentVolumeNames.Add(pv.Name)
 		}
 
 		c.remainingVolumesMetric.Reset()
 		for _, volume := range cloudVolumes {
-			if !slices.Contains(persistentVolumeNames, volume.Name) {
+			if !persistentVolumeNames.Has(volume.Name) {
 				c.remainingVolumesMetric.WithLabelValues(volume.ID, volume.Name).Set(1.0)
 			}
 
