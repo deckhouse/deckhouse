@@ -118,8 +118,8 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Deckhouse использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
 
-* open-vm-tools
-* cloud-init
+* `open-vm-tools`
+* `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
 
 Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
