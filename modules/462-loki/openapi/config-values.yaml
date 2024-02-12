@@ -127,7 +127,7 @@ properties:
         type: object
         default: {}
         description: |
-          Resource management options for `VPA` mode.
+          Resource management options for the `VPA` mode.
         properties:
           mode:
             type: string
@@ -204,7 +204,7 @@ properties:
       static:
         type: object
         description: |
-          Resource management options for `Static` mode.
+          Resource management options for the `Static` mode.
         properties:
           requests:
             type: object
