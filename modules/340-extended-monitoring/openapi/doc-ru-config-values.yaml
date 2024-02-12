@@ -11,7 +11,7 @@ properties:
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
       registry:
         description: |
-          <PLACEHOLDER>
+          Настройки подключения к container registry.
         properties:
           scheme:
             description: |
