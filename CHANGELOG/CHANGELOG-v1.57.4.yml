@@ -1,0 +1,9 @@
+docs:
+  fixes:
+    - summary: Change `NodeUser` UID example type (from string to number).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7434
+metallb:
+  fixes:
+    - summary: Change VPA `updateMode` to `Initial`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7432
+
