@@ -28,11 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-const (
-	xUnsafeExtension      = "x-unsafe"
-	xUnsafeRulesExtension = "x-unsafe-rules"
-)
-
 // ValidateClusterSettingsFormat parses and validates cluster configuration and resources.
 // It checks the cluster configuration yamls for compliance with the yaml format and schema.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
@@ -210,7 +205,7 @@ func validateXUnsafeExtensions(
 
 	if xRules, ok := schema.Extensions.GetStringSlice(xUnsafeRulesExtension); ok {
 		for _, rule := range xRules {
-			validator, ok := validators[rule]
+			validator, ok := xUnsafeRulesValidators[rule]
 			if !ok {
 				continue
 			}
