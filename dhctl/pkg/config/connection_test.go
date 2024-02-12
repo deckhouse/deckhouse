@@ -15,6 +15,8 @@
 package config
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,14 +42,26 @@ func TestParseConnectionConfig(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
 	newStore := newSchemaStore([]string{schemasDir})
 
+	configFunc := func(config, keyPath1, keyPath2 string) string {
+		return fmt.Sprintf(
+			config,
+			strings.Join(strings.Split(readFile(t, keyPath1), "\n"), "\n    "),
+			strings.Join(strings.Split(readFile(t, keyPath2), "\n"), "\n    "),
+		)
+	}
+
 	tests := map[string]struct {
-		config   string
-		expected *ConnectionConfig
-		opts     ValidateOptions
-		wantErr  bool
+		config      string
+		expected    *ConnectionConfig
+		opts        ValidateOptions
+		errContains string
 	}{
 		"valid config": {
-			config: validSSHConfig,
+			config: configFunc(
+				validSSHConfig,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
 			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
 					SSHUser:      "ubuntu",
@@ -55,12 +69,12 @@ func TestParseConnectionConfig(t *testing.T) {
 					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{
-							Key:        "-----BEGIN RSA PRIVATE KEY-----\nsome-key\n-----END RSA PRIVATE KEY-----\n",
+							Key:        readFile(t, "./mocks/id_rsa"),
 							Passphrase: "",
 						},
 						{
-							Key:        "-----BEGIN RSA PRIVATE KEY-----\nsome-key\n-----END RSA PRIVATE KEY-----\n",
-							Passphrase: "spicyburrito",
+							Key:        readFile(t, "./mocks/id_passphrase_rsa"),
+							Passphrase: "test",
 						},
 					},
 				},
@@ -73,24 +87,45 @@ func TestParseConnectionConfig(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			opts: ValidateOptions{ValidateExtensions: true},
+		},
+		"invalid config: bad ssh key": {
+			config: configFunc(
+				validSSHConfig,
+				"./mocks/id_rsa",
+				"./mocks/id_invalid_rsa",
+			),
+			errContains: "not an encrypted key",
+			opts:        ValidateOptions{ValidateExtensions: true},
 		},
 		"invalid config: no user": {
-			config:  invalidSSHConfigNoUser,
-			wantErr: true,
+			config: configFunc(
+				invalidSSHConfigNoUser,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
+			errContains: "sshUser is required",
 		},
 		"invalid config: no agent private keys": {
-			config:  invalidSSHConfigNoKeys,
-			wantErr: true,
+			config:      invalidSSHConfigNoKeys,
+			errContains: "sshAgentPrivateKeys is required",
 		},
 		"invalid config: empty host": {
-			config:  invalidSSHConfigNoHosts,
-			wantErr: true,
+			config: configFunc(
+				invalidSSHConfigNoHosts,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
+			errContains: "host is required",
 		},
 		"invalid config: duplicated field": {
-			config:  validSSHConfig,
-			opts:    ValidateOptions{StrictUnmarshal: true},
-			wantErr: true,
+			config: configFunc(
+				validSSHConfig,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
+			opts:        ValidateOptions{StrictUnmarshal: true},
+			errContains: "already set in map",
 		},
 	}
 
@@ -98,12 +133,12 @@ func TestParseConnectionConfig(t *testing.T) {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
 			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts)
-			if tt.wantErr {
-				require.Error(t, err)
-				require.Nil(t, config)
-			} else {
+			if tt.errContains == "" {
 				require.NoError(t, err)
 				require.Equal(t, tt.expected, config)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+				require.Nil(t, config)
 			}
 		})
 	}
@@ -118,14 +153,10 @@ sshPort: 22
 sshExtraArgs: -vvv
 sshAgentPrivateKeys:
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
+    %s
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
-  passphrase: spicyburrito
+    %s
+  passphrase: test
 ---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
@@ -142,14 +173,10 @@ kind: SSHConfig
 sshPort: 22
 sshAgentPrivateKeys:
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
+    %s
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
-  passphrase: spicyburrito
+    %s
+  passphrase: test
 ---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
@@ -174,13 +201,9 @@ sshUser: ubuntu
 sshPort: 22
 sshAgentPrivateKeys:
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
+    %s
 - key: |
-    -----BEGIN RSA PRIVATE KEY-----
-    some-key
-    -----END RSA PRIVATE KEY-----
+    %s
   passphrase: spicyburrito
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
