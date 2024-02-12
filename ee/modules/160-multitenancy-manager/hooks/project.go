@@ -8,7 +8,6 @@ package hooks
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +79,6 @@ func filterNsName(unst *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	projectPostRenderer := new(projectTemplateHelmRenderer)
-	fmt.Println("PR1 ", projectPostRenderer, &projectPostRenderer)
 
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
@@ -122,13 +120,10 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName, projectValues := range projectValuesSnap {
-		fmt.Println("PROCESS", projectName)
-		projectName := projectName
 		projectPostRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
-		fmt.Println("PR11 ", projectPostRenderer, &projectPostRenderer)
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
@@ -234,14 +229,12 @@ type projectTemplateHelmRenderer struct {
 }
 
 func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
-	fmt.Println("SETTING PROJECT", name)
 	ptr.projectName = name
 }
 
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
 func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	fmt.Println("POST RENDER: ", ptr.projectName)
 	if ptr.projectName == "" {
 		return renderedManifests, nil
 	}
@@ -269,8 +262,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 		result.WriteString("\n---\n" + manifest)
 	}
-
-	fmt.Println("RESULT", result.String())
 
 	return result, nil
 }

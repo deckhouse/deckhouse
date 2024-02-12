@@ -143,10 +143,8 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 		if len(pr) > 0 {
 			installObject.PostRenderer = pr[0]
-			fmt.Println("PR22 ", installObject.PostRenderer, &installObject.PostRenderer)
 		}
 
-		fmt.Printf("HELM INSTALL: %+v\n", installObject)
 		_, err = installObject.Run(ch, values)
 		return err
 	}
@@ -167,7 +165,6 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 	}
 
-	fmt.Println("HELM UPGRADE", len(releases))
 	_, err = upgradeObject.Run(releaseName, ch, values)
 	if err != nil {
 		return fmt.Errorf("helm upgrade failed: %s", err)
