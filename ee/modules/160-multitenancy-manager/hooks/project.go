@@ -13,12 +13,9 @@ import (
 	"strings"
 	"sync"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
-
 	"helm.sh/helm/v3/pkg/releaseutil"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/fatih/structs"
@@ -54,22 +51,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		internal.ProjectTemplateHookKubeConfig,
 		internal.ProjectTypeHookKubeConfig,
 		internal.ProjectHookKubeConfigOld,
-		{
-			Name:       "ns",
-			ApiVersion: "v1",
-			Kind:       "Namespace",
-			LabelSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "name",
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				},
-			},
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   filterNsName,
-		},
 	},
 }, dependency.WithExternalDependencies(handleProjects))
 
@@ -81,7 +62,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	postRenderer := new(projectTemplateHelmRenderer)
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
-	var namespaces = set.NewFromSnapshot(input.Snapshots["ns"])
 
 	createDefaultProjectTemplate(input)
 
@@ -140,9 +120,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("delete project \"%v\" error: %v", projectName, err)
-		}
-		if namespaces.Has(projectName) {
-			input.PatchCollector.Delete("v1", "Namespace", "", projectName, object_patch.InBackground())
 		}
 	}
 
