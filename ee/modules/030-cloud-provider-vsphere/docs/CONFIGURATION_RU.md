@@ -31,13 +31,14 @@ force_searchable: true
    > Состояние `FileSystemResizePending` не является проблемой.
 4. На узле, где находится под, выполнить команду `kubectl uncordon <имя_узла>`.
 
-## Требования к окружениям
+## Требования к окружению
 
 * Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
 * vCenter, до которого есть доступ изнутри кластера с master-узлов.
 * Создать Datacenter, в котором создать:
-  1. VirtualMachine template [со специальным](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource внутри.
+  1. VirtualMachine template.
      * Образ виртуальной машины должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
+     * В образе должны быть установлены следующие пакеты: `open-vm-tools`, `cloud-init` и [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3).
   2. Network, доступную на всех ESXi, на которых будут создаваться виртуальные машины.
   3. Datastore (или несколько), подключенный ко всем ESXi, на которых будут создаваться виртуальные машины.
      * На Datastore'ы **необходимо** «повесить» тег из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
