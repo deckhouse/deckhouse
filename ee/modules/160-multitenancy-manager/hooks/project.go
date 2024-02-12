@@ -8,12 +8,10 @@ package hooks
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"text/template"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -80,6 +78,7 @@ func filterNsName(unst *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
+	postRenderer := new(projectTemplateHelmRenderer)
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 	var namespaces = set.NewFromSnapshot(input.Snapshots["ns"])
@@ -118,16 +117,15 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
 	for projectName, projectValues := range projectValuesSnap {
+		postRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
-		projectTemplateValues = preprocessProjectTemplate(projectName, projectTemplateValues)
 		values := concatValues(projectValues, projectTemplateValues)
-		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false)
+		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false, postRenderer)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
@@ -149,70 +147,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
-}
-
-func preprocessProjectTemplate(projectName string, pts internal.ProjectTemplateSnapshot) internal.ProjectTemplateSnapshot {
-	helmTemplate := pts.Spec.ResourcesTemplate
-	manifests := releaseutil.SplitManifests(helmTemplate)
-
-	builder := strings.Builder{}
-
-	var nsExists bool
-
-	for _, manifest := range manifests {
-		var ns v1.Namespace
-		_ = yaml.Unmarshal([]byte(manifest), &ns)
-
-		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
-			builder.WriteString("\n---\n" + manifest)
-			continue
-		}
-
-		v := strings.ReplaceAll(manifest, ".projectName", ".ProjectName")
-		tpl, _ := template.New("ns").Parse(v)
-		buf := bytes.NewBuffer(nil)
-		inv := struct {
-			ProjectName string
-		}{ProjectName: projectName}
-		_ = tpl.Execute(buf, inv)
-
-		if !strings.Contains(buf.String(), "name: "+projectName) {
-			// drop Namespace from manifests if it's not a project namespace
-			continue
-		}
-
-		//if ns.Name != projectName {
-		//	continue
-		//}
-
-		nsExists = true
-
-		builder.WriteString("\n---\n" + manifest)
-	}
-
-	result := builder.String()
-
-	if !nsExists {
-		ns := fmt.Sprintf(`
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    meta.helm.sh/release-name: %[1]s
-    meta.helm.sh/release-namespace: %[1]s
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    module: multitenancy-manager
-  name: %[1]s
-`, projectName)
-		result = ns + result
-	}
-
-	pts.Spec.ResourcesTemplate = result
-	fmt.Println("RESULT", result)
-
-	return pts
 }
 
 func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnapshot) map[string]interface{} {
@@ -303,19 +237,21 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 		return renderedManifests, nil
 	}
 
-	result := bytes.NewBuffer(nil)
+	builder := strings.Builder{}
 
 	manifests := releaseutil.SplitManifests(renderedManifests.String())
+
+	namespaces := make([]v1.Namespace, 0)
 
 	for _, manifest := range manifests {
 		var ns v1.Namespace
 		err = yaml.Unmarshal([]byte(manifest), &ns)
 		if err != nil {
-			return result, err
+			return renderedManifests, err
 		}
 
 		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
-			result.WriteString("\n---\n" + manifest)
+			builder.WriteString("\n---\n" + manifest)
 			continue
 		}
 
@@ -324,8 +260,26 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 
-		result.WriteString("\n---\n" + manifest)
+		namespaces = append(namespaces, ns)
 	}
+
+	result := bytes.NewBuffer(nil)
+
+	for _, ns := range namespaces {
+		if _, ok := ns.GetAnnotations()["multitenancy-boilerplate"]; ok && len(namespaces) > 1 {
+			continue
+		}
+		if ns.Labels == nil {
+			ns.Labels = make(map[string]string)
+		}
+		ns.Labels["d8-module"] = "multitenancy-manager"
+		data, _ := yaml.Marshal(ns)
+		result.WriteString("---\n")
+		result.Write(data)
+		break
+	}
+
+	result.WriteString(builder.String())
 
 	return result, nil
 }

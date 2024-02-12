@@ -463,14 +463,17 @@ func TestPostRenderer(t *testing.T) {
 	pr.SetProject("test-project-1")
 	buf := bytes.NewBuffer(nil)
 
-	t.Run("with namespace", func(t *testing.T) {
+	t.Run("without desired namespace", func(t *testing.T) {
 		mfs := `
 ---
-# Source: test-project-1/user-resources-templates.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: test-project-1
+  labels:
+    d8-module: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
 ---
 # Source: test-project-1/user-resources-templates.yaml
 apiVersion: v1
@@ -488,11 +491,88 @@ data: {}
 		require.NoError(t, err)
 		mm := releaseutil.SplitManifests(result.String())
 		assert.Len(t, mm, 2)
-		assert.Contains(t, result.String(), "kind: Namespace")
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  labels:
+    d8-module: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+  name: test-project-1
+spec: {}
+status: {}
+`, ns)
+	})
+
+	t.Run("with desired namespace", func(t *testing.T) {
+		mfs := `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    d8-module: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    twotwotwo: nanana
+  annotations:
+    foo: bar
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    foo: bar
+  creationTimestamp: null
+  labels:
+    d8-module: multitenancy-manager
+    twotwotwo: nanana
+  name: test-project-1
+spec: {}
+status: {}
+`, ns)
 	})
 
 	t.Run("with a few namespaces", func(t *testing.T) {
 		mfs := `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    d8-module: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
 ---
 # Source: test-project-1/user-resources-templates.yaml
 apiVersion: v1
@@ -506,6 +586,7 @@ kind: Namespace
 metadata:
   name: test-project-1
   labels:
+    twotwotwo: lalala
 ---
 # Source: test-project-1/user-resources-templates.yaml
 apiVersion: v1
@@ -523,7 +604,18 @@ data: {}
 		require.NoError(t, err)
 		mm := releaseutil.SplitManifests(result.String())
 		assert.Len(t, mm, 2)
-		assert.Contains(t, result.String(), "kind: Namespace")
-		assert.NotContains(t, result.String(), "test-project-invalid")
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  labels:
+    d8-module: multitenancy-manager
+    twotwotwo: lalala
+  name: test-project-1
+spec: {}
+status: {}
+`, ns)
 	})
 }
