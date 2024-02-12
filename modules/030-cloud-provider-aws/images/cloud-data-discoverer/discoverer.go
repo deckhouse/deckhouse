@@ -118,3 +118,8 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	return nil, nil
 }
+
+// NotImplemented
+func (d *Discoverer) VolumesMeta(ctx context.Context) ([]v1alpha1.VolumeMeta, error) {
+	return []v1alpha1.VolumeMeta{}, nil
+}

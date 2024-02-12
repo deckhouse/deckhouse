@@ -437,6 +437,12 @@ func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
 			continue
 		}
 
+		if len(cloudVolumes) == 0 {
+			c.logger.Infoln("No cloud volumes found")
+			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(0.0)
+			return
+		}
+
 		persistentVolumes, err := c.k8sClient.CoreV1().PersistentVolumes().List(cctx, metav1.ListOptions{})
 		if err != nil {
 			c.logger.Errorf("Attempt %d. Failed to get PersistentVolumes from cluster: %v", i, err)
