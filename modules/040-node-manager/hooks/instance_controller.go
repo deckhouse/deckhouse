@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -205,7 +204,9 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range machines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+
+			continue
 		}
 
 		if ic, ok := instances[name]; ok {
@@ -232,7 +233,9 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range clusterAPIMachines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+
+			continue
 		}
 
 		if ic, ok := instances[name]; ok {
