@@ -1,10 +1,6 @@
 # Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-locals {
-  master_node_name = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
-}
-
 data "ovirt_templates" "master_template" {
   name          = local.template_name
   fail_on_empty = true
@@ -28,7 +24,7 @@ resource "ovirt_vm" "master_vm" {
   os_type = local.master_os_type
 
   initialization_custom_script = local.master_cloud_init_script
-  initialization_hostname      = local.master_node_name
+#  initialization_hostname      = local.master_node_name
 }
 
 resource "ovirt_nic" "master_vm_nic" {
