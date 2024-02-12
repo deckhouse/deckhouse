@@ -14,6 +14,10 @@ import (
 	"strings"
 	"sync"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+
 	"helm.sh/helm/v3/pkg/releaseutil"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -51,8 +55,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		internal.ProjectTemplateHookKubeConfig,
 		internal.ProjectTypeHookKubeConfig,
 		internal.ProjectHookKubeConfigOld,
+		{
+			Name:       "ns",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "name",
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
+			},
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			FilterFunc:                   filterNsName,
+		},
 	},
 }, dependency.WithExternalDependencies(handleProjects))
+
+func filterNsName(unst *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return unst.GetName(), nil
+}
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	projectPostRenderer := new(projectTemplateHelmRenderer)
@@ -60,6 +84,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
+	var namespaces = set.NewFromSnapshot(input.Snapshots["ns"])
 
 	createDefaultProjectTemplate(input)
 
@@ -122,6 +147,9 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("delete project \"%v\" error: %v", projectName, err)
+		}
+		if namespaces.Has(projectName) {
+			input.PatchCollector.Delete("v1", "Namespace", "", projectName, object_patch.InBackground())
 		}
 	}
 
@@ -237,17 +265,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 		if ns.Name != ptr.projectName {
 			// drop Namespace from manifests if it's not a project namespace
 			continue
-		}
-
-		if v := ns.Labels["name"]; len(ns.Labels) == 1 && v == ptr.projectName {
-			// Namespace was created via createNamespace helm flag and have to be adopted with helm labels
-			if ns.Annotations == nil {
-				ns.Annotations = make(map[string]string)
-			}
-
-			ns.Annotations["meta.helm.sh/release-name"] = ptr.projectName
-			ns.Annotations["meta.helm.sh/release-namespace"] = ptr.projectName
-			ns.Labels["app.kubernetes.io/managed-by"] = "Helm"
 		}
 
 		result.WriteString("\n---\n" + manifest)
