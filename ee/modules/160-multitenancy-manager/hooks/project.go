@@ -15,7 +15,6 @@ import (
 
 	"helm.sh/helm/v3/pkg/releaseutil"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/fatih/structs"
@@ -53,10 +52,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		internal.ProjectHookKubeConfigOld,
 	},
 }, dependency.WithExternalDependencies(handleProjects))
-
-func filterNsName(unst *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return unst.GetName(), nil
-}
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	postRenderer := new(projectTemplateHelmRenderer)
