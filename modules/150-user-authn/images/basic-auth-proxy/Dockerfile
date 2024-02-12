@@ -13,11 +13,11 @@ ENV GOPROXY=${GOPROXY} \
 WORKDIR /src/
 COPY /app/ /src/
 RUN apk add --no-cache git && \
-    go build -ldflags="-s -w" ./cmd/crowd-basic-auth-proxy
+    go build -ldflags="-s -w" ./cmd/basic-auth-proxy
 
-RUN chown 64535:64535 crowd-basic-auth-proxy
-RUN chmod 0700 crowd-basic-auth-proxy
+RUN chown 64535:64535 basic-auth-proxy
+RUN chmod 0700 basic-auth-proxy
 
 FROM $BASE_DISTROLESS
-COPY --from=artifact /src/crowd-basic-auth-proxy /crowd-basic-auth-proxy
-ENTRYPOINT [ "/crowd-basic-auth-proxy" ]
+COPY --from=artifact /src/basic-auth-proxy /basic-auth-proxy
+ENTRYPOINT [ "/basic-auth-proxy" ]
