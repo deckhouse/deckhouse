@@ -419,8 +419,8 @@ func (s Set) Has(x string) bool {
 }
 
 func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
-	c.logger.Infoln("Start remaining volumes discovery step")
-	defer c.logger.Infoln("Finish remaining volumes discovery step")
+	c.logger.Infoln("Start orphaned disks discovery step")
+	defer c.logger.Infoln("Finish orphaned disks discovery step")
 
 	for i := 1; i <= 3; i++ {
 		if i > 1 {
@@ -464,7 +464,11 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 			}
 
 		}
+
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
 	}
-	c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-	return
+
+	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 }
