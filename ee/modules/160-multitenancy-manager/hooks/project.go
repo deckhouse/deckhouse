@@ -243,7 +243,7 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			continue
 		}
 		if ns.Labels == nil {
-			ns.Labels = make(map[string]string)
+			ns.Labels = make(map[string]string, 1)
 		}
 		ns.Labels["d8-module"] = "multitenancy-manager"
 		data, _ := yaml.Marshal(ns)
