@@ -47,7 +47,7 @@ resource "ovirt_disk" "master-kubernetes-data" {
   format            = "raw"
   size              = 15*1024*1024*1024 # 15 GB
   storage_domain_id = local.storage_domain_id
-  alias             = join("-", [local.resource_name_prefix, "master", "kubernetes-data"])
+  alias             = join("-", [local.resource_name_prefix, "master", var.nodeIndex, "kubernetes-data"])
   sparse            = false
 }
 
