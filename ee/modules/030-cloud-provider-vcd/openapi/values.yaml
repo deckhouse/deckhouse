@@ -53,7 +53,7 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [ apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName ]
+        required: [ apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork ]
         properties:
           apiVersion:
             type: string
