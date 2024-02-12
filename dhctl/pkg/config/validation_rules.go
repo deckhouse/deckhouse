@@ -18,19 +18,30 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"golang.org/x/crypto/ssh"
 	"sigs.k8s.io/yaml"
+)
+
+const (
+	xUnsafeExtension      = "x-unsafe"
+	xUnsafeRulesExtension = "x-unsafe-rules"
+	xRulesExtension       = "x-rules"
 )
 
 const (
 	xUnsafeRuleUpdateReplicas = "updateReplicas"
 	xUnsafeRuleDeleteZones    = "deleteZones"
+
+	xRulesSSHPrivateKey = "sshPrivateKey"
 )
 
-type ValidationRule func(oldValue, newValue json.RawMessage) error
-
-var validators = map[string]ValidationRule{
+var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage) error{
 	xUnsafeRuleUpdateReplicas: UpdateReplicasRule,
 	xUnsafeRuleDeleteZones:    DeleteZonesRule,
+}
+
+var xRulesValidators = map[string]func(oldValue json.RawMessage) error{
+	xRulesSSHPrivateKey: ValidateSSHPrivateKey,
 }
 
 func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
@@ -92,4 +103,33 @@ func DeleteZonesRule(oldRaw, newRaw json.RawMessage) error {
 		ErrValidationRuleFailed,
 		newClusterConfig.MasterNodeGroup.Replicas,
 	)
+}
+
+func ValidateSSHPrivateKey(value json.RawMessage) error {
+	type keyConfig struct {
+		Key        string `yaml:"key"`
+		Passphrase string `yaml:"passphrase"`
+	}
+
+	var key keyConfig
+
+	err := yaml.Unmarshal(value, &key)
+	if err != nil {
+		return err
+	}
+
+	switch key.Passphrase {
+	case "":
+		_, err = ssh.ParseRawPrivateKey([]byte(key.Key))
+		if err != nil {
+			return fmt.Errorf("%w: invalid ssh key: %w", ErrValidationRuleFailed, err)
+		}
+	default:
+		_, err = ssh.ParseRawPrivateKeyWithPassphrase([]byte(key.Key), []byte(key.Passphrase))
+		if err != nil {
+			return fmt.Errorf("%w: invalid ssh key: %w", ErrValidationRuleFailed, err)
+		}
+	}
+
+	return nil
 }
