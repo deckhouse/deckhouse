@@ -238,6 +238,43 @@ spec:
 1. If a log message is in JSON format, the `service_name` field of this JSON document is moved to the metadata level.
 2. The new metadata field `service` is used for the index template.
 
+## Kubernetes metadata
+
+For Kubernetes source, it is possible to access namespace and node labels through the `@metadata` field.
+
+### To filter messages by namespace labels
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: '@metadata.namespace_labels."app.kubernetes.io/owner"'
+    operator: In
+    values: ["Backend Team"]
+  destinationRefs:
+    - loki-storage
+```
+
+### To add extra labels
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  extraLabels:
+    managed-by: '{{ @metadata.namespace_labels."app.kubernetes.io/managed-by" }}'
+    arch: '{{ @metadata.namespace_labels."kubernetes.io/arch" }}'
+```
+
 ## Splunk integration
 
 It is possible to send logs from Deckhouse to Splunk.

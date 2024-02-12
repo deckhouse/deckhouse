@@ -28,12 +28,13 @@ import (
 
 // Copied these regexes from another place. Remove them after refactoring.
 var (
-	vectorArrayTemplate   = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+\[\d+\]$`)
-	validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
+	vectorArrayTemplate   = regexp.MustCompile(`^(\@)?[a-zA-Z0-9_\\\.\-]+\[\d+\]$`)
+	validMustacheTemplate = regexp.MustCompile(`^\{\{\ ((\@)?[a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
 )
 
 const (
-	parsedDataField = "parsed_data"
+	parsedDataField           = "@parsed_data"
+	deprecatedParsedDataField = "parsed_data"
 )
 
 // ExtraFieldTransform converts templated labels to values.
@@ -80,10 +81,11 @@ func mapKeys(m map[string]string) []string {
 // used for extra deild remap transformation
 //
 // example with template in value:
-// aaa: {{ pay-load[0].a }} -> if exists(.parsed_data."pay-load"[0].a) { .aaa=.parsed_data."pay-load"[0].a }
+// aaa: {{ pay-load[0].a }} -> if exists(."@parsed_data"."pay-load"[0].a) { .aaa=."@parsed_data"."pay-load"[0].a }
 //
 // example with template and parsed_data in value:
-// abc: {{ parsed_data }} -> if exists(.parsed_data) { .abc=.parsed_data }
+// abc: {{ @parsed_data }} -> if exists(."@parsed_data") { .abc=."@parsed_data" }
+// or abc: {{ parsed_data }} -> if exists(.parsed_data) { .abc=.parsed_data }
 //
 // example with plain string in value:
 // aba: bbb -> .aba="bbb"
@@ -106,28 +108,28 @@ func processExtraFieldKey(key, value string) string {
 	//   parenthesis. Submatch 0 is the match of the entire expression, submatch 1 is
 	//   the match of the first parenthesized subexpression, and so on.
 	//
-	// for example, for string `{{ parsed_data.asas }}` there would be
+	// for example, for string `{{ "@parsed_data".asas }}` there would be
 	// two submatches for expression from 'validMustacheTemplate' variable:
-	// `{{ parsed_data.asas }}` and `parsed_data.asas`
+	// `{{ "@parsed_data".asas }}` and `"@parsed_data".asas`
 	//
 	dataField := validMustacheTemplate.FindStringSubmatch(value)[1]
-	if dataField == parsedDataField {
-		return fmt.Sprintf(" if exists(.%s) { .%s=.%s } \n", parsedDataField, key, parsedDataField)
+	if dataField == parsedDataField || dataField == deprecatedParsedDataField {
+		return fmt.Sprintf(" if exists(.%q) { .%s=.%q } \n", parsedDataField, key, parsedDataField)
 	}
 
 	dataField = generateDataField(dataField)
-	return fmt.Sprintf(" if exists(.%s.%s) { .%s=.%s.%s } \n", parsedDataField, dataField, key, parsedDataField, dataField)
+	return fmt.Sprintf(" if exists(.%q.%s) { .%s=.%q.%s } \n", parsedDataField, dataField, key, parsedDataField, dataField)
 }
 
 // generateDataField escapes field for valid vrl. In detail,
 // this func splits field by dots (`.`), then it iterates over
-// splitted slices and determines fields with
+// split slices and determines fields with
 // 'processDataFieldWithEscape' function, for example:
 // `test.pay\.lo\.ad.hel\.lo.world` -> [`test`, `pay\.lo\.ad`, `hel\.lo`, `world`]
 // and then it escapes every field and concatenates them back
 func generateDataField(dataField string) string {
 	tmpDataFieldParts := strings.Split(dataField, ".")
-	if tmpDataFieldParts[0] == parsedDataField {
+	if tmpDataFieldParts[0] == parsedDataField || tmpDataFieldParts[0] == deprecatedParsedDataField {
 		tmpDataFieldParts = tmpDataFieldParts[1:]
 	}
 

@@ -238,6 +238,43 @@ spec:
 1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
 2. Новое поле метаданных `service` используется в шаблоне индекса.
 
+## Метаданные Kubernetes
+
+Для источника Kubernetes возможен доступ к лейблам пространства имен и узлов через поле `@metadata`.
+
+### Фильтрация сообщений по лейблам пространства имен
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: '@metadata.namespace_labels."app.kubernetes.io/owner"'
+    operator: In
+    values: ["Backend Team"]
+  destinationRefs:
+    - loki-storage
+```
+
+### Добавление дополнительных лейблов
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  extraLabels:
+    managed-by: '{{ @metadata.namespace_labels."app.kubernetes.io/managed-by" }}'
+    arch: '{{ @metadata.namespace_labels."kubernetes.io/arch" }}'
+```
+
 ## Пример интеграции со Splunk
 
 Существует возможность отсылать события из Deckhouse в Splunk.

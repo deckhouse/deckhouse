@@ -35,12 +35,12 @@ func Test_processExtraFieldKey(t *testing.T) {
 		{
 			name: "simple::template::value",
 			args: args{key: "key1", value: "{{ simple_template }}"},
-			want: " if exists(.parsed_data.simple_template) { .key1=.parsed_data.simple_template } \n",
+			want: " if exists(.\"@parsed_data\".simple_template) { .key1=.\"@parsed_data\".simple_template } \n",
 		},
 		{
 			name: "template::value::with::hypens",
 			args: args{key: "key2", value: "{{ X-Check-hypen }}"},
-			want: " if exists(.parsed_data.\"X-Check-hypen\") { .key2=.parsed_data.\"X-Check-hypen\" } \n",
+			want: " if exists(.\"@parsed_data\".\"X-Check-hypen\") { .key2=.\"@parsed_data\".\"X-Check-hypen\" } \n",
 		},
 		{
 			name: "value::with::dots",
@@ -50,12 +50,12 @@ func Test_processExtraFieldKey(t *testing.T) {
 		{
 			name: "template::value::with::dots",
 			args: args{key: "key4", value: "{{ ve.ry.dot.ted.va.lue }}"},
-			want: " if exists(.parsed_data.ve.ry.dot.ted.va.lue) { .key4=.parsed_data.ve.ry.dot.ted.va.lue } \n",
+			want: " if exists(.\"@parsed_data\".ve.ry.dot.ted.va.lue) { .key4=.\"@parsed_data\".ve.ry.dot.ted.va.lue } \n",
 		},
 		{
 			name: "template::value::with::dots::and::hypens::escaped",
 			args: args{key: "key5", value: `{{ va\.lue-hy\.pen }}`},
-			want: " if exists(.parsed_data.\"va.lue-hy.pen\") { .key5=.parsed_data.\"va.lue-hy.pen\" } \n",
+			want: " if exists(.\"@parsed_data\".\"va.lue-hy.pen\") { .key5=.\"@parsed_data\".\"va.lue-hy.pen\" } \n",
 		},
 		{
 			name: "template::empty::value",
@@ -69,13 +69,18 @@ func Test_processExtraFieldKey(t *testing.T) {
 		},
 		{
 			name: "template::value::parsed_data",
+			args: args{key: "key8", value: `{{ @parsed_data }}`},
+			want: " if exists(.\"@parsed_data\") { .key8=.\"@parsed_data\" } \n",
+		},
+		{
+			name: "template::value::deprecated_parsed_data",
 			args: args{key: "key8", value: "{{ parsed_data }}"},
-			want: " if exists(.parsed_data) { .key8=.parsed_data } \n",
+			want: " if exists(.\"@parsed_data\") { .key8=.\"@parsed_data\" } \n",
 		},
 		{
 			name: "key::with::hypens::and::dots",
 			args: args{key: "key9.with-dots.and-hypens", value: "{{ parsed_data }}"},
-			want: " if exists(.parsed_data) { .\"key9.with-dots.and-hypens\"=.parsed_data } \n",
+			want: " if exists(.\"@parsed_data\") { .\"key9.with-dots.and-hypens\"=.\"@parsed_data\" } \n",
 		},
 		{
 			name: "empty::key::and::value",
@@ -84,13 +89,18 @@ func Test_processExtraFieldKey(t *testing.T) {
 		},
 		{
 			name: "template::value::with::parsed_data",
+			args: args{key: "key11", value: "{{ @parsed_data.check.parsed-data }}"},
+			want: " if exists(.\"@parsed_data\".check.\"parsed-data\") { .key11=.\"@parsed_data\".check.\"parsed-data\" } \n",
+		},
+		{
+			name: "template::value::with::deprecated_parsed_data",
 			args: args{key: "key11", value: "{{ parsed_data.check.parsed-data }}"},
-			want: " if exists(.parsed_data.check.\"parsed-data\") { .key11=.parsed_data.check.\"parsed-data\" } \n",
+			want: " if exists(.\"@parsed_data\".check.\"parsed-data\") { .key11=.\"@parsed_data\".check.\"parsed-data\" } \n",
 		},
 		{
 			name: "template::value::with::dots::escapes::hypens::and::indexing",
 			args: args{key: "key12", value: `{{ pay\.lo[3].te\.st }}`},
-			want: " if exists(.parsed_data.\"pay.lo\"[3].\"te.st\") { .key12=.parsed_data.\"pay.lo\"[3].\"te.st\" } \n",
+			want: " if exists(.\"@parsed_data\".\"pay.lo\"[3].\"te.st\") { .key12=.\"@parsed_data\".\"pay.lo\"[3].\"te.st\" } \n",
 		},
 	}
 	for _, tt := range tests {

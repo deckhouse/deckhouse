@@ -57,7 +57,7 @@ func CleanUpParsedDataTransform() *DynamicTransform {
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        vrl.ParsedDataCleanUpRule.String(),
+			"source":        vrl.DataCleanUpRule.String(),
 			"drop_on_abort": false,
 		},
 	}

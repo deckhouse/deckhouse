@@ -288,7 +288,8 @@ spec:
                     Вы можете использовать простые шаблоны: `{{ app }}`.
 
                     Некоторые ключи зарезервированы:
-                    - parsed_data;
+                    - @metadata;
+                    - @parsed_data;
                     - pod;
                     - pod_labels_*;
                     - pod_ip;

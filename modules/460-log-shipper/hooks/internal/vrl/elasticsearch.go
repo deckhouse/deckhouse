@@ -27,19 +27,12 @@ const StreamRule Rule = `
 ."@timestamp" = del(.timestamp)
 `
 
-// DeDotRule replaces all dots in kubernetes labels to avoid ELasticsearch treating them as nested objects.
+// DeDotRule replaces all dots in kubernetes labels to avoid Elasticsearch treating them as nested objects.
 //
 // Related issue https://github.com/timberio/vector/issues/3588
 // P.S. pod_labels is always an object type if it is present, so we can panic on error here.
 const DeDotRule Rule = `
 if exists(.pod_labels) {
     .pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, ".", "_") }
-}
-`
-
-// ParsedDataCleanUpRule cleans up the temporary parsed data object.
-const ParsedDataCleanUpRule Rule = `
-if exists(.parsed_data) {
-    del(.parsed_data)
 }
 `

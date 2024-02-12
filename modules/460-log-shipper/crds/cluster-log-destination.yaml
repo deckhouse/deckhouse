@@ -636,7 +636,8 @@ spec:
                     You can use simple templating here: `{{ app }}`.
 
                     There are some reserved keys:
-                    - parsed_data
+                    - @metadata
+                    - @parsed_data
                     - pod
                     - pod_labels_*
                     - pod_ip
@@ -657,7 +658,7 @@ spec:
                     type: string
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
-                      - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                      - pattern: '^\{\{\ (\@)?[a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
                 buffer:
                   type: object
                   oneOf:
