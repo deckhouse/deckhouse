@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"text/template"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -167,10 +168,22 @@ func preprocessProjectTemplate(projectName string, pts internal.ProjectTemplateS
 			continue
 		}
 
-		if ns.Name != projectName {
+		v := strings.ReplaceAll(manifest, ".projectName", ".ProjectName")
+		tpl, _ := template.New("ns").Parse(v)
+		buf := bytes.NewBuffer(nil)
+		inv := struct {
+			ProjectName string
+		}{ProjectName: projectName}
+		_ = tpl.Execute(buf, inv)
+
+		if !strings.Contains(buf.String(), "name: "+projectName) {
 			// drop Namespace from manifests if it's not a project namespace
 			continue
 		}
+
+		//if ns.Name != projectName {
+		//	continue
+		//}
 
 		nsExists = true
 
