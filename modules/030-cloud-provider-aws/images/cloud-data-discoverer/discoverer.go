@@ -120,6 +120,6 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 }
 
 // NotImplemented
-func (d *Discoverer) VolumesMeta(ctx context.Context) ([]v1alpha1.VolumeMeta, error) {
-	return []v1alpha1.VolumeMeta{}, nil
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	return []v1alpha1.DiskMeta{}, nil
 }
