@@ -6,55 +6,55 @@ title: "The user-authn module: FAQ"
 
 ## How to secure my application?
 
-Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
-1. Создайте custom resource [DexAuthenticator](cr.html#dexauthenticator).
+To enable Dex authentication for your application, follow these steps:
+1. Create a [DexAuthenticator](cr.html#dexauthenticator) custom resource.
 
-   Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
+   Creating `DexAuthenticator` in a cluster results in an [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instance being created. The latter is connected to Dex. Once the `DexAuthenticator` custom resource becomes available, the necessary Deployment, Service, Ingress, Secret objects will be created in the specified namespace.
 
-   Пример custom resource `DexAuthenticator`:
+   An example of the `DexAuthenticator` custom resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
    kind: DexAuthenticator
    metadata:
-     # Префикс имени подов Dex authenticator.
-     # Например, если префикс имени `app-name`, то поды Dex authenticator будут вида `app-name-dex-authenticator-7f698684c8-c5cjg`.
+     # Dex authenticator pod name prefix.
+     # For example, if the name prefix is `app-name`, then Dex authenticator pods will look like `app-name-dex-authenticator-7f698684c8-c5cjg`.
      name: app-name
-     # Namespace, в котором будет развернут Dex authenticator.
+     # Namespace to deploy Dex authenticator to.
      namespace: app-ns
    spec:
-     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
+     # Your application's domain. Requests to it will be redirected for Dex authentication.
      applicationDomain: "app-name.kube.my-domain.com"
-     # Отправлять ли `Authorization: Bearer` header приложению. Полезно в связке с auth_request в NGINX.
+     # A parameter that determines whether to send the `Authorization: Bearer` header to the application. This one is useful in combination with auth_request in NGINX.
      sendAuthorizationHeader: false
-     # Имя Secret'а с SSL-сертификатом.
+     # The name of the Secret containing the SSL certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
-     # Название Ingress-класса, которое будет использоваться в создаваемом для Dex authenticator Ingress-ресурсе.
+     # The name of the Ingress class to use in the Ingress resource created for the Dex authenticator.
      applicationIngressClassName: "nginx"
-     # Время, на протяжении которого пользовательская сессия будет считаться активной.
+     # The duration of the active user session.
      keepUsersLoggedInFor: "720h"
-     # Список групп, пользователям которых разрешено проходить аутентификацию.
+     # The list of groups whose users are allowed to authenticate.
      allowedGroups:
      - everyone
      - admins
-     # Список адресов и сетей, с которых разрешено проходить аутентификацию.
+     # The list of addresses and networks for which authentication is allowed.
      whitelistSourceRanges:
      - 1.1.1.1/32
      - 192.168.0.0/24
    ```
 
-2. Подключите приложение к Dex.
+2. Connect your application to Dex.
 
-   Для этого добавьте в Ingress-ресурс приложения следующие аннотации:
+   For this, add the following annotations to the application's Ingress resource:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
-      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
+      - `NAME` — the value of the `metadata.name` parameter of the `DexAuthenticator` resource;
+      - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource;
+      - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
 
-   Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
+   Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 
    ```yaml
    annotations:
@@ -73,7 +73,7 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
   nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
 
-* Add the following annotation if you want to exclude users from specific networks from passing authentication via Dex, and force users from all other networks to authenticate via Dex:
+* Add the following annotation if you want to exclude users from specific networks from passing authentication via Dex and force users from all other networks to authenticate via Dex:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
@@ -139,6 +139,6 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 ## How secure is Dex from brute-forcing my credentials?
 
-Only 20 authentication requests are allowed for a single user. If the limit exceeds, another login attempt will be allowed each six seconds.
+Only 20 login attempts are allowed per user. If this limit is used up, one additional attempt will be added every 6 seconds.
 
 {% endraw %}
