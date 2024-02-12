@@ -8,7 +8,6 @@ package hooks
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -118,7 +117,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName := range existProjects {
-		fmt.Println("DELETING", projectName)
 		err := helmClient.Delete(projectName)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
