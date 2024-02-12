@@ -37,8 +37,9 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 * vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work).
 * vCenter to which master nodes can connect to from within the cluster.
 * Datacenter with the following components:
-  1. VirtualMachine template with a [specific](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource.
+  1. VirtualMachine template.
      * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).
+     * The following packages must be installed in the VM image: `open-vm-tools`, `cloud-init` and [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used).
   2. The network must be available on all ESXi where VirtualMachines will be created.
   3. One or more Datastores connected to all ESXi where VirtualMachines will be created.
      * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone.
