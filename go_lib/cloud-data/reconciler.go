@@ -42,13 +42,13 @@ import (
 type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
 	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
-	VolumesMeta(ctx context.Context) ([]v1alpha1.VolumeMeta, error)
+	DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 }
 
 type Reconciler struct {
 	cloudRequestErrorMetric   *prometheus.GaugeVec
 	updateResourceErrorMetric *prometheus.GaugeVec
-	remainingVolumesMetric    *prometheus.GaugeVec
+	orphanedDiskMetric        *prometheus.GaugeVec
 
 	discoverer       Discoverer
 	checkInterval    time.Duration
@@ -140,15 +140,15 @@ func (c *Reconciler) registerMetrics() {
 	)
 	prometheus.MustRegister(c.updateResourceErrorMetric)
 
-	c.remainingVolumesMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	c.orphanedDiskMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "cloud_data",
 		Subsystem: "discovery",
-		Name:      "remaining_volume_info",
-		Help:      "Indicates that there is a volume in the cloud for which there is no PV in the cluster",
+		Name:      "orphaned_disk_info",
+		Help:      "Indicates that there is disk in the cloud for which there is no PersistentVolume in the cluster",
 	},
 		[]string{"id", "name"},
 	)
-	prometheus.MustRegister(c.remainingVolumesMetric)
+	prometheus.MustRegister(c.orphanedDiskMetric)
 }
 
 func (c *Reconciler) reconcileLoop(ctx context.Context, doneCh chan<- struct{}) {
@@ -192,7 +192,7 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 
 	c.instanceTypesReconcile(ctx)
 	c.discoveryDataReconcile(ctx)
-	c.remainingVolumesReconcile(ctx)
+	c.orphanedDisksReconcile(ctx)
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
@@ -418,7 +418,7 @@ func (s Set) Has(x string) bool {
 	return ok
 }
 
-func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
+func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	c.logger.Infoln("Start remaining volumes discovery step")
 	defer c.logger.Infoln("Finish remaining volumes discovery step")
 
@@ -430,37 +430,37 @@ func (c *Reconciler) remainingVolumesReconcile(ctx context.Context) {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		cloudVolumes, err := c.discoverer.VolumesMeta(cctx)
+		disksMeta, err := c.discoverer.DisksMeta(cctx)
 		if err != nil {
-			c.logger.Errorf("Getting volumes meta error: %v\n", err)
-			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(1.0)
+			c.logger.Errorf("Getting disks meta error: %v\n", err)
+			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(1.0)
 			continue
 		}
 
-		if len(cloudVolumes) == 0 {
-			c.logger.Infoln("No cloud volumes found")
-			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(0.0)
+		if len(disksMeta) == 0 {
+			c.logger.Infoln("No disks found")
+			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
 			return
 		}
 
 		persistentVolumes, err := c.k8sClient.CoreV1().PersistentVolumes().List(cctx, metav1.ListOptions{})
 		if err != nil {
 			c.logger.Errorf("Attempt %d. Failed to get PersistentVolumes from cluster: %v", i, err)
-			c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(1.0)
+			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(1.0)
 			continue
 		}
 
-		c.cloudRequestErrorMetric.WithLabelValues("volumes_meta").Set(0.0)
+		c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
 
 		persistentVolumeNames := Set{}
 		for _, pv := range persistentVolumes.Items {
 			persistentVolumeNames.Add(pv.Name)
 		}
 
-		c.remainingVolumesMetric.Reset()
-		for _, volume := range cloudVolumes {
-			if !persistentVolumeNames.Has(volume.Name) {
-				c.remainingVolumesMetric.WithLabelValues(volume.ID, volume.Name).Set(1.0)
+		c.orphanedDiskMetric.Reset()
+		for _, disk := range disksMeta {
+			if !persistentVolumeNames.Has(disk.Name) {
+				c.orphanedDiskMetric.WithLabelValues(disk.ID, disk.Name).Set(1.0)
 			}
 
 		}

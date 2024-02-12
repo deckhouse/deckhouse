@@ -158,24 +158,24 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	return discoveryDataJson, nil
 }
 
-func (d *Discoverer) VolumesMeta(ctx context.Context) ([]v1alpha1.VolumeMeta, error) {
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
 	provider, err := newProvider(d.authOpts, d.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
 	}
 
-	cloudVolumes, err := d.getVolumes(ctx, provider)
+	disks, err := d.getVolumes(ctx, provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get volumes: %v", err)
 	}
 
-	volumesMeta := make([]v1alpha1.VolumeMeta, 0, len(cloudVolumes))
+	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
 
-	for _, volume := range cloudVolumes {
-		volumesMeta = append(volumesMeta, v1alpha1.VolumeMeta{ID: volume.ID, Name: volume.Name})
+	for _, volume := range disks {
+		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: volume.ID, Name: volume.Name})
 	}
 
-	return volumesMeta, nil
+	return disksMeta, nil
 }
 
 func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercloud.ProviderClient, error) {

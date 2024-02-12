@@ -42,7 +42,7 @@ type InstanceTypesCatalog struct {
 	InstanceTypes []InstanceType `json:"instanceTypes"`
 }
 
-type VolumeMeta struct {
+type DiskMeta struct {
 	ID   string
 	Name string
 }

@@ -33,4 +33,3 @@
       description: |
         Cloud data discoverer cannot save data to k8s resource. See cloud data discoverer logs for more information:
         `kubectl -n d8-cloud-provider-openstack logs deploy/cloud-data-discoverer`
-
