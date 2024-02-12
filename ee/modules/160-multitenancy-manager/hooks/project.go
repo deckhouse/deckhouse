@@ -13,15 +13,14 @@ import (
 	"strings"
 	"sync"
 
-	"helm.sh/helm/v3/pkg/releaseutil"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/yaml"
-
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
