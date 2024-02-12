@@ -29,7 +29,6 @@ spec:
     metadata:
       annotations:
         configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
-        scheduler.alpha.kubernetes.io/critical-pod: ""
         container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
