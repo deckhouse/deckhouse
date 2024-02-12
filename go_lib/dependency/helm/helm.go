@@ -43,7 +43,7 @@ type Client interface {
 
 type helmClient struct {
 	actionConfig *action.Configuration
-	options      *helmOptions
+	options      helmOptions
 }
 
 // NewClient initializes helm client with secret backend storage in `namespace` arg namespace.
@@ -68,7 +68,7 @@ func NewClient(namespace string, options ...Option) (Client, error) {
 
 	client := helmClient{
 		actionConfig: conf,
-		options:      opts,
+		options:      *opts,
 	}
 
 	return &client, nil
