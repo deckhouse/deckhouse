@@ -144,7 +144,7 @@ func (c *Reconciler) registerMetrics() {
 		Namespace: "cloud_data",
 		Subsystem: "discovery",
 		Name:      "orphaned_disk_info",
-		Help:      "Indicates that there is disk in the cloud for which there is no PersistentVolume in the cluster",
+		Help:      "Indicates that there is a disk in the cloud for which there is no PersistentVolume in the cluster",
 	},
 		[]string{"id", "name"},
 	)
