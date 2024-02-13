@@ -214,10 +214,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 		_, err = schemaStore.validate(&docData, opts)
 		if err != nil {
-			if errors.Is(err, ErrSchemaNotFound) {
-				return false, nil
-			}
-			return false, fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
@@ -226,9 +223,6 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 	_, err = schemaStore.validate(&docData, opts)
 	if err != nil {
-		if errors.Is(err, ErrSchemaNotFound) {
-			return false, nil
-		}
 		return false, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
