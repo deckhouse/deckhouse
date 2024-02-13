@@ -24,7 +24,15 @@ resource "ovirt_vm" "master_vm" {
   os_type = local.master_os_type
 
   initialization_custom_script = local.master_cloud_init_script
-#  initialization_hostname      = local.master_node_name
+}
+
+data "ovirt_disk_attachments" "master-vm-boot-disk-attachment" {
+  vm_id = ovirt_vm.master_vm.id
+}
+
+resource "ovirt_disk_resize" "master_boot_disk_resize" {
+  disk_id = tolist(data.ovirt_disk_attachments.master-vm-boot-disk-attachment.attachments)[0].disk_id
+  size    = 40*1024*1024*1024 #40 GB
 }
 
 resource "ovirt_nic" "master_vm_nic" {
