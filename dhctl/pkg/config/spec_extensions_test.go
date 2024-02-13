@@ -114,7 +114,7 @@ key: |
 		t.Run(name, func(t *testing.T) {
 			content := []byte(tt.content)
 
-			_, err := newStore.ValidateWithOpts(&content, ValidateOptions{ValidateExtensions: true})
+			_, err := newStore.Validate(&content, ValidateOptionValidateExtensions(true))
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {
