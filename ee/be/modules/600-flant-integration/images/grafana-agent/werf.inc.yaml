@@ -1,6 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/agent-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 shell:
   install:
     - apk add --no-cache git
