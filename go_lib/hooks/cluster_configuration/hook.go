@@ -88,7 +88,7 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
 			}
-			_, err = config.ValidateDiscoveryData(&discoveryDataJSON)
+			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{})
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 			}

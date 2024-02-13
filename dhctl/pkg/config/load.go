@@ -43,10 +43,30 @@ var once sync.Once
 
 var store *SchemaStore
 
-type ValidateOptions struct {
-	CommanderMode      bool
-	StrictUnmarshal    bool
-	ValidateExtensions bool
+type validateOptions struct {
+	commanderMode      bool
+	strictUnmarshal    bool
+	validateExtensions bool
+}
+
+type ValidateOption func(o *validateOptions)
+
+func ValidateOptionCommanderMode(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.commanderMode = v
+	}
+}
+
+func ValidateOptionStrictUnmarshal(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.strictUnmarshal = v
+	}
+}
+
+func ValidateOptionValidateExtensions(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.validateExtensions = v
+	}
 }
 
 func NewSchemaStore(paths ...string) *SchemaStore {
@@ -181,15 +201,7 @@ func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	return 1
 }
 
-func (s *SchemaStore) ValidateWithOpts(doc *[]byte, opts ValidateOptions) (*SchemaIndex, error) {
-	return s.validate(doc, opts)
-}
-
-func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
-	return s.validate(doc, ValidateOptions{})
-}
-
-func (s *SchemaStore) validate(doc *[]byte, opts ValidateOptions) (*SchemaIndex, error) {
+func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaIndex, error) {
 	var index SchemaIndex
 
 	err := yaml.Unmarshal(*doc, &index)
@@ -197,7 +209,7 @@ func (s *SchemaStore) validate(doc *[]byte, opts ValidateOptions) (*SchemaIndex,
 		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
-	err = s.validateWithIndexOpts(&index, doc, opts)
+	err = s.ValidateWithIndex(&index, doc, opts...)
 	return &index, err
 }
 
@@ -212,15 +224,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
-func (s *SchemaStore) ValidateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ValidateOptions) error {
-	return s.validateWithIndexOpts(index, doc, opts)
-}
-
-func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
-	return s.validateWithIndexOpts(index, doc, ValidateOptions{})
-}
-
-func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ValidateOptions) error {
+func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
 	if !index.IsValid() {
 		return fmt.Errorf(
 			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
@@ -267,7 +271,7 @@ func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opt
 		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
 	}
 
-	isValid, err := openAPIValidate(&docForValidate, schema, opts)
+	isValid, err := openAPIValidate(&docForValidate, schema, opts...)
 	if !isValid {
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
@@ -315,12 +319,13 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ValidateOptions) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ...ValidateOption) (isValid bool, multiErr error) {
+	options := applyOptions(opts...)
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}
 
-	if opts.StrictUnmarshal {
+	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
 		if err != nil {
 			return false, fmt.Errorf("openAPIValidate json unmarshal strict: %v", err)
@@ -340,7 +345,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ValidateOptions)
 		return false, allErrs.ErrorOrNil()
 	}
 
-	if opts.ValidateExtensions {
+	if options.validateExtensions {
 		if err := validateExtensions(*dataObj, *schema); err != nil {
 			return false, err
 		}
@@ -353,13 +358,21 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ValidateOptions)
 	return true, nil
 }
 
-func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
+func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
 	schemaStore := NewSchemaStore(paths...)
 
-	_, err := schemaStore.validate(config, ValidateOptions{})
+	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
 		return false, fmt.Errorf("Loading schema file: %v", err)
 	}
 
 	return true, nil
+}
+
+func applyOptions(opts ...ValidateOption) validateOptions {
+	options := validateOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	return options
 }
