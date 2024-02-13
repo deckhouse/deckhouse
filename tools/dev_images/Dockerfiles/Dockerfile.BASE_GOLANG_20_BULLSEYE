@@ -1,0 +1,4 @@
+ARG DISTRO
+FROM $DISTRO
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends  apt-utils bash binutils binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu bzip2 ca-certificates coreutils curl g++-aarch64-linux-gnu g++-x86-64-linux-gnu gcc gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu git gnupg jq libbtrfs-dev libc6-dev libc6-dev-amd64-cross libc6-dev-arm64-cross libseccomp-dev make make openssh-client openssl patch unzip musl musl-tools

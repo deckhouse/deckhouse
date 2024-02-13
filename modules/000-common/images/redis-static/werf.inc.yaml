@@ -1,9 +1,8 @@
 ---
 artifact: {{ .ModuleName }}/build-redis-static-artifact
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
   install:
-  - apk add coreutils curl gcc make musl-dev openssl-dev git
   - mkdir /build && cd /build
   - git clone --branch 7.0.9 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git .
 

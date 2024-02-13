@@ -11,23 +11,18 @@ git:
         - '**/*'
     includePaths:
       - patches
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   setup:
-    - export "CGO_ENABLED=0"
-    - export "GOOS=linux"
-    - export "GOARCH=amd64"
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git
     - cd kruise
     - find /patches -name '*.patch' -exec git apply {} \;
-    - go mod edit -go 1.20
-    - go get -u golang.org/x/net@v0.17.0
-    - go get -u github.com/docker/distribution@v2.8.3
-    - go get -u github.com/docker/docker@v20.10.24
-    - go get -u github.com/opencontainers/runc@v1.1.5
-    - go get -u gopkg.in/yaml.v3@v3.0.1
     - go mod tidy
     - go mod vendor
-    - GOPROXY={{ $.GOPROXY }} go build -a -mod=vendor -o /tmp/manager main.go
+    - go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager
     - chmod 0700 /tmp/manager
 ---

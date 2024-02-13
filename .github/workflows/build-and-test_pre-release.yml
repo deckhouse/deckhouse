@@ -40,8 +40,6 @@ env:
   # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
-  CRATESPROXY: "${{secrets.CRATESPROXY}}"
-  NPMPROXY: "${{secrets.NPMPROXY}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same branch.

@@ -1,13 +1,12 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 
-FROM $BASE_GOLANG_20_ALPINE AS build
+FROM $BASE_GOLANG_20_ALPINE_DEV AS build
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 WORKDIR /src
-RUN apk add --update --no-cache git
 RUN git clone --depth 1 --branch v0.9.1 ${SOURCE_REPO}/kubernetes-sigs/prometheus-adapter.git .
 
 RUN go get -u golang.org/x/net@v0.17.0 \

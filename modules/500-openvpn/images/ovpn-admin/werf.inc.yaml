@@ -1,7 +1,7 @@
 {{- $gitCommit := "dbc48ef3f1141caa7769488dd3273cff530c9df7" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-openvpn-bin-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
     - apt-get update
@@ -56,7 +56,7 @@ shell:
     - npm run build
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT }}
 git:
 - add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/templates
   to: /app/templates

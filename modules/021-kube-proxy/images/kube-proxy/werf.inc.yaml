@@ -1,25 +1,16 @@
-artifact: {{ .ModuleName }}/distroless-kube-proxy-artifact
-from: {{ .Images.BASE_ALPINE }}
-git:
-- add: /{{ .ModulePath }}modules/021-kube-proxy/images/kube-proxy
-  to: /workdir/
-  includePaths:
-  - '**/file-filter'
+{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - cd /workdir
-    - apk update
-    - apk add rsync
-    - apk fetch -R -o . iptables ip6tables conntrack-tools
-    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
-    - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
+      # broken symlinks are not imported from the artifact
       touch /iptables-wrapper
-
-{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
   {{- $v := semver $version }}
@@ -28,9 +19,16 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/distroless-kube-proxy-artifact
-  add: /filtered-apk
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /relocate
   to: /
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
   before: setup
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
@@ -42,4 +40,4 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-proxy"]
-{{- end }}
+  {{- end }}

@@ -1,34 +1,13 @@
-artifact: {{ .ModuleName }}/distroless-nginx-artifact
-from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: 1
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /workdir/
-  includePaths:
-  - '**/file-filter'
-shell:
-  install:
-    - cd /workdir
-    - apk update
-    - apk add rsync
-    - apk fetch -R -o . nginx nginx-mod-stream
-    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
-    - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+fromImage: common/nginx-static
 import:
-- artifact: {{ .ModuleName }}/distroless-nginx-artifact
-  add: /filtered-apk
-  to: /
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader
   before: install
 docker:
-  ENTRYPOINT: ["/usr/sbin/nginx"]
-
+  ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
