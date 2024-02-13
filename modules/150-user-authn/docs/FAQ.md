@@ -25,7 +25,8 @@ To enable Dex authentication for your application, follow these steps:
    spec:
      # Your application's domain. Requests to it will be redirected for Dex authentication.
      applicationDomain: "app-name.kube.my-domain.com"
-     # A parameter that determines whether to send the `Authorization: Bearer` header to the application. This one is useful in combination with auth_request in NGINX.
+     # A parameter that determines whether to send the `Authorization: Bearer` header to the application.
+     # This one is useful in combination with auth_request in NGINX.
      sendAuthorizationHeader: false
      # The name of the Secret containing the SSL certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
