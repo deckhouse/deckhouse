@@ -1,11 +1,9 @@
 {{- $binaries := "/usr/sbin/conntrack /sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT }}
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - apt-get update
-    - apt-get install -y iptables iptables-nft conntrack-tools
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir -m 0755 -p /relocate/lib64/iptables /relocate/run
     - cp -rp /lib64/iptables /relocate/lib64/
