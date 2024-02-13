@@ -205,7 +205,7 @@ properties:
           Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       replicasManagement:
         description: |
-          Настройки управления репликами и масштабированием istiod.
+          Настройки управления репликами и горизонтальным масштабированием istiod.
         properties:
           mode:
             description: |
@@ -240,7 +240,7 @@ properties:
           mode:
             description: |
               Режим управления ресурсами:
-              - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
               - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
           vpa:
             description: |
