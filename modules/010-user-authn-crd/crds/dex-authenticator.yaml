@@ -32,6 +32,24 @@ spec:
             * Secrets, needed to access Dex
 
             **NOTE!** After restarting a pod with an oauth2-proxy, the current `access token` and `id token` will be queried (using the refresh token) and stored in a redis memory.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: app-name
+                namespace: app-namespace
+              spec:
+                applicationDomain: "app-name.kube.my-domain.com"
+                sendAuthorizationHeader: false
+                applicationIngressCertificateSecretName: "ingress-tls"
+                applicationIngressClassName: "nginx"
+                keepUsersLoggedInFor: "720h"
+                allowedGroups:
+                  - everyone
+                  - admins
+                whitelistSourceRanges:
+                  - 1.1.1.1/32
+                  - 192.168.0.0/24
           properties:
             spec:
               type: object
