@@ -94,6 +94,8 @@ EOF
 }
 
 function __main__() {
+  echo "$(context::jq)"
+  
   operationType="$(context::jq -r '.review.request.operation')"
 
   clusterType="$(context::jq -r '.snapshots.cluster_config[0].filterResult.clusterType')"
