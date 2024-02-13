@@ -522,8 +522,8 @@ properties:
             type: string
             description: |
               Resource management mode:
-              - Allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-controlplane-resourcesmanagement-static) parameter section;
-              - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-controlplane-resourcesmanagement-vpa) parameter section.
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-controlplane-resourcesmanagement-static) parameter section;
+              - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-controlplane-resourcesmanagement-vpa) parameter section.
             enum: ['VPA', 'Static']
             default: 'VPA'
           vpa:
