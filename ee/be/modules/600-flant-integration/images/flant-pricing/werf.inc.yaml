@@ -1,5 +1,3 @@
-{{- $shellOperatorVersion := "v1.3.1"}}
-{{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/flant-pricing
 fromImage: common/shell-operator
@@ -23,31 +21,3 @@ shell:
     - python3 -m pip install -r /src/requirements.txt
 docker:
   ENTRYPOINT: ["/shell-operator"]
----
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
-shell:
-  beforeInstall:
-  - apk add --no-cache build-base gcc git autoconf automake bison flex libtool
-  install:
-  - git clone {{ .SOURCE_REPO }}/flant/jq.git
-  - cd /jq
-  - git reset --hard {{ $jqVersion }}
-  - |
-    cat > .gitmodules <<"EOF"
-    [submodule "modules/oniguruma"]
-        path = modules/oniguruma
-        url = {{ .SOURCE_REPO }}/flant/oniguruma.git
-    EOF
-  - git submodule update --init
-  - autoreconf -fi
-  - ./configure CFLAGS=-fPIC --disable-maintainer-mode --enable-all-static --disable-shared --disable-docs --disable-tls --disable-valgrind --with-oniguruma=builtin --prefix=/libjq
-  - make -j4
-  - make install-libLTLIBRARIES install-includeHEADERS
-  - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
-  - cd /
-  - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git
-  - cd /shell-operator
-  - go get -u golang.org/x/net@v0.17.0
-  - go mod tidy
-  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" GOOS=linux go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
