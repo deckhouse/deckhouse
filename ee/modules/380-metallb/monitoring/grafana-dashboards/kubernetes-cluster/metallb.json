@@ -24,8 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 52,
-  "iteration": 1707745212996,
+  "iteration": 1707810347466,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -56,11 +55,11 @@
               },
               {
                 "color": "#EAB839",
-                "value": 0.75
+                "value": 75
               },
               {
                 "color": "red",
-                "value": 0.96
+                "value": 96
               }
             ]
           },
@@ -76,6 +75,32 @@
               {
                 "id": "custom.displayMode",
                 "value": "color-background-solid"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pool"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Pool detail",
+                    "url": "/d/sZzUB4ymk3/?var-ds_prometheus=${ds_prometheus}&var-pool=${__value.raw}&${__url_time_range}"
+                  }
+                ]
               }
             ]
           }
@@ -153,11 +178,31 @@
               "tier 1": true,
               "tier 2": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Time 1": 1,
+              "Time 2": 9,
+              "Value #A": 18,
+              "Value #B": 17,
+              "__name__ 1": 2,
+              "__name__ 2": 10,
+              "container 1": 3,
+              "container 2": 11,
+              "instance 1": 4,
+              "instance 2": 12,
+              "job 1": 5,
+              "job 2": 13,
+              "namespace 1": 6,
+              "namespace 2": 14,
+              "pod 1": 7,
+              "pod 2": 15,
+              "pool": 0,
+              "tier 1": 8,
+              "tier 2": 16
+            },
             "renameByName": {
               "Time 1": "",
-              "Value #A": "Total addresses",
-              "Value #B": "Used addresses",
+              "Value #A": "Total",
+              "Value #B": "Used",
               "instance 2": "",
               "job 2": "",
               "pool": "Pool",
@@ -169,12 +214,12 @@
         {
           "id": "calculateField",
           "options": {
-            "alias": "Usage",
+            "alias": "UsageAbs",
             "binary": {
-              "left": "Used addresses",
+              "left": "Used",
               "operator": "/",
               "reducer": "sum",
-              "right": "Total addresses"
+              "right": "Total"
             },
             "mode": "binary",
             "reduce": {
@@ -183,9 +228,33 @@
           }
         },
         {
-          "id": "merge",
+          "id": "calculateField",
           "options": {
-            "reducers": []
+            "alias": "Usage",
+            "binary": {
+              "left": "UsageAbs",
+              "operator": "*",
+              "reducer": "sum",
+              "right": "100"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Pool",
+                "Used",
+                "Total",
+                "Usage"
+              ]
+            }
           }
         }
       ],
@@ -356,7 +425,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${ds_prometheus}",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -393,6 +465,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
           "expr": "rate(metallb_layer2_gratuitous_sent{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
           "instant": false,
@@ -401,6 +477,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
           "expr": "rate(metallb_layer2_requests_received{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
           "interval": "",
@@ -408,6 +488,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
           "expr": "rate(metallb_layer2_responses_sent{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
           "interval": "",
