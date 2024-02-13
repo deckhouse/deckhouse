@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/300-prometheus/settings-conversion"
+	_ "github.com/deckhouse/deckhouse/modules/340-extended-monitoring/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/settings-conversion"
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/settings-conversion"

@@ -1,26 +1,27 @@
-diff --git a/pkg/registry_checker/indexers.go b/pkg/registry_checker/indexers.go
---- a/pkg/registry_checker/indexers.go	(revision 2f9c6e0cad7662a42ca4953c4c191b270995c7f0)
-+++ b/pkg/registry_checker/indexers.go	(date 1681283516269)
-@@ -18,6 +18,8 @@
+diff --git a/pkg/registry/indexers.go b/pkg/registry/indexers.go
+index 2ddd668..11c489b 100644
+--- a/pkg/registry/indexers.go
++++ b/pkg/registry/indexers.go
+@@ -18,6 +18,8 @@ import (
  const (
  	imageIndexName     = "image"
  	labeledNSIndexName = "labeledNS"
 +
 +	deprecatedExtendedMonitoringNamespaceAnnotationKey = "extended-monitoring.flant.com/enabled"
  )
-
+ 
  type ControllerIndexers struct {
-@@ -75,6 +77,13 @@
- 					return []string{ns.GetName()}, nil
+@@ -76,6 +78,13 @@ func namespaceIndexers(nsLabel string) cache.Indexers {
  				}
  			}
-+
+ 
 +			annotations := ns.GetAnnotations()
 +			if len(annotations) > 0 {
 +				if _, ok := annotations[deprecatedExtendedMonitoringNamespaceAnnotationKey]; ok {
 +					return []string{ns.GetName()}, nil
 +				}
 +			}
-
++
  			return nil, nil
  		},
+ 	}
