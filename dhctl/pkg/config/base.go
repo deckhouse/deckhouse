@@ -44,8 +44,8 @@ const (
 	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
-func LoadConfigFromFile(path string) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(path)
+func LoadConfigFromFile(path string, opts ...ValidateOption) (*MetaConfig, error) {
+	metaConfig, err := ParseConfig(path, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(path string) (*MetaConfig, error) {
+func ParseConfig(path string, opts ...ValidateOption) (*MetaConfig, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
-	return ParseConfigFromData(string(fileContent))
+	return ParseConfigFromData(string(fileContent), opts...)
 }
 
 func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
@@ -175,7 +175,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig.Prepare()
 }
 
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ValidateOptions) error {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -196,7 +196,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 			return err
 		}
 
-		_, err = schemaStore.validate(&docData, opts)
+		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
 			return fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
@@ -205,7 +205,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		return nil
 	}
 
-	_, err = schemaStore.validate(&docData, opts)
+	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
 		return fmt.Errorf("config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
@@ -229,7 +229,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 	return nil
 }
 
-func ParseConfigFromData(configData string) (*MetaConfig, error) {
+func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -237,7 +237,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, opts...); err != nil {
 			return nil, err
 		}
 	}
@@ -249,7 +249,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{}); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, opts...); err != nil {
 			return nil, err
 		}
 	}

@@ -32,6 +32,7 @@ import (
 type Params struct {
 	SSHClient  *ssh.Client
 	StateCache dhctlstate.Cache
+	MetaConfig *config.MetaConfig
 
 	CommanderMode bool
 	*commander.CommanderModeParams
@@ -59,16 +60,18 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+	if c.Params.MetaConfig == nil {
+		c.Params.MetaConfig, err = commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+		}
 	}
 
 	res := &CheckResult{
 		Status: CheckStatusInSync,
 	}
 
-	status, statusDetails, _, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
+	status, statusDetails, _, err := c.checkInfra(ctx, kubeCl, c.Params.MetaConfig, c.TerraformContext)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check infra state: %w", err)
 	}
@@ -81,7 +84,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		}
 	}
 
-	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
+	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, c.Params.MetaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check configuration state: %w", err)
 	}
