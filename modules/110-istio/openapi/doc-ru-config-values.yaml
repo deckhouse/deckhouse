@@ -210,26 +210,26 @@ properties:
           mode:
             description: |
               Режимы работы с репликами:
-              - `Standard` - основан на режиме отказоустойчивости, параметр `highAvailability` ([Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.),
-              - `Static` - в этом режиме вы явно указываете желаемое число реплик,
-              - `HPA` - в данном режиме количество реплик рассчитывается автоматически на основе загрузки CPU.
+              - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability));
+             - `Static` — режим, где количество реплик указывается явно (параметр [static.numReplicas](#parameters-replicasmanagement-static-numreplicas));
+              - `HPA` — режим, где количество реплик рассчитывается автоматически на основе загрузки CPU. Настраивается в секции параметров [vpa](#parameters-replicasmanagement-hpa).
           static:
             description: |
-              Параметры для режима Static.
+              Параметры управления репликами и масштабированием в режиме Static.
             properties:
               numReplicas:
                 description: |
                   Желаемое количество реплик.
           hpa:
             description: |
-              Параметры для режима HPA.
+              Параметры управления репликами и масштабированием в режиме HPA.
             properties:
               minReplicas:
                 description: |
-                  Нижний предел количества реплик.
+                  Минимальное количество реплик.
               maxReplicas:
                 description: |
-                  Верхний предел количества реплик. Не может быть меньше `minReplicas`.
+                  Максимальное количество реплик. Не может быть меньше `minReplicas`.
               cpuTargetAverageUtilization:
                 description: |
                   Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.
