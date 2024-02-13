@@ -1,0 +1,13 @@
+diff --git a/kubernetes.go b/kubernetes.go
+index 8aab004..e9070bc 100644
+--- a/kubernetes.go
++++ b/kubernetes.go
+@@ -607,7 +607,7 @@ func (openVPNPKI *OpenVPNPKI) updateCRLOnDisk() (err error) {
+ 
+ func (openVPNPKI *OpenVPNPKI) secretGenTaKeyAndDHParam() (err error) {
+ 	taKeyPath := "/tmp/ta.key"
+-	cmd := exec.Command("bash", "-c", fmt.Sprintf("/usr/sbin/openvpn --genkey --secret %s", taKeyPath))
++	cmd := exec.Command("bash", "-c", fmt.Sprintf("/usr/sbin/openvpn --genkey secret %s", taKeyPath))
+ 	stdout, err := cmd.CombinedOutput()
+ 	log.Info(fmt.Sprintf("/usr/sbin/openvpn --genkey --secret %s: %s", taKeyPath, string(stdout)))
+ 	if err != nil {

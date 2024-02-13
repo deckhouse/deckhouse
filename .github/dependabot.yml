@@ -448,6 +448,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/500-openvpn/images/openvpn/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/500-upmeter/images/smoke-mini"
   labels:
   - "type/dependencies"
