@@ -433,7 +433,7 @@ properties:
               type: string
       replicasManagement:
         description: |
-          istiod replicas management options.
+          Replication management settings and scaling of istiod.
         type: object
         default: {}
         x-examples:
@@ -455,16 +455,16 @@ properties:
           mode:
             type: string
             description: |
-              The mode for managing replicas:
-              - `Standard` - mode based on `highAvailability` (Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules),
-              - `Static` - where you explicitly specify the desired number of replicas,
-              - `HPA` - the pod count is automatically calculated based on CPU load.
-            enum: ['Standard', 'Static', 'HPA']
+              Replicas management mode:
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
+              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.numReplicas](#parameters-replicasmanagement-static-numreplicas) parameter);
+              - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-replicasmanagement-hpa) parameter section.
+             enum: ['Standard', 'Static', 'HPA']
             default: 'Standard'
           static:
             type: object
             description: |
-              Static replicas management settings.
+              Options for replicas management for the `Static` mode.
             required: ["numReplicas"]
             properties:
               numReplicas:
@@ -475,7 +475,7 @@ properties:
           hpa:
             type: object
             description: |
-              Parameters of the HPA mode.
+              Options for replicas management for the `VPA` mode.
             required: ["minReplicas", "maxReplicas", "cpuTargetAverageUtilization"]
             properties:
               minReplicas:
@@ -494,7 +494,7 @@ properties:
                   The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
       resourcesManagement:
         description: |
-          istiod resources management options.
+          Settings for CPU and memory requests and limits by istiod pods.
         type: object
         default: {}
         x-examples:
@@ -521,30 +521,32 @@ properties:
           mode:
             type: string
             description: |
-              The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+              Resource management mode:
+              - `Static` is a classic one. In it, you specify requests/limits. The parameters of this mode are defined in the [static](#parameters-resourcesmanagement-static) parameter section;
+              - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesmanagement-vpa) parameter section.
             enum: ['VPA', 'Static']
             default: 'VPA'
           vpa:
             type: object
             default: {}
             description: |
-              Parameters of the VPA mode.
+              Resource management options for the `VPA` mode.
             properties:
               mode:
                 type: string
                 description: |
-                  The VPA usage mode.
+                  VPA operating mode.
                 enum: ['Initial', 'Auto']
                 default: 'Auto'
               cpu:
                 type: object
                 default: {}
                 description: |
-                  CPU-related parameters.
+                  CPU-related VPA settings.
                 properties:
                   max:
                     description: |
-                      Maximum allowed CPU requests.
+                      The maximum value that the VPA can set for the CPU requests.
                     default: 2
                     oneOf:
                     - type: string
@@ -552,7 +554,7 @@ properties:
                     - type: number
                   min:
                     description: |
-                      Minimum allowed CPU requests.
+                      The minimum value that the VPA can set for the CPU requests.
                     default: '50m'
                     oneOf:
                     - type: string
@@ -562,16 +564,20 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                      The CPU limits/requests ratio.
+
+                      This ratio is used for calculating the initial CPU limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
               memory:
                 type: object
                 default: {}
                 description: |
-                  The amount of memory requested.
+                  Memory-related VPA settings.
                 properties:
                   max:
                     description: |
-                      Maximum allowed memory requests.
+                      The maximum memory requests the VPA can set.
                     default: '2Gi'
                     oneOf:
                     - type: string
@@ -579,7 +585,7 @@ properties:
                     - type: number
                   min:
                     description: |
-                      Minimum allowed memory requests.
+                      The minimum memory requests the VPA can set.
                     default: '256Mi'
                     oneOf:
                     - type: string
@@ -589,16 +595,20 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                      The memory limits/requests ratio.
+
+                      This ratio is used for calculating the initial memory limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
           static:
             type: object
             description: |
-              Static resource management settings.
+              Resource management options for the `Static` mode.
             properties:
               requests:
                 type: object
                 description: |
-                  Requests configuration.
+                  Resource requests settings for pods.
                 properties:
                   cpu:
                     oneOf:
@@ -606,18 +616,18 @@ properties:
                       pattern: "^[0-9]+m?$"
                     - type: number
                     description: |
-                      CPU requests.
+                      Configuring CPU requests.
                   memory:
                     oneOf:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
                     description: |
-                      Memory requests.
+                      Configuring memory requests.
               limits:
                 type: object
                 description: |
-                  Limits configuration.
+                  Configuring CPU and memory limits.
                 properties:
                   cpu:
                     oneOf:
@@ -625,14 +635,14 @@ properties:
                       pattern: "^[0-9]+m?$"
                     - type: number
                     description: |
-                      CPU limits.
+                      Configuring CPU limits.
                   memory:
                     oneOf:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
                     description: |
-                      Memory limits.
+                      Configuring memory limits.
   nodeSelector:
     type: object
     additionalProperties:
