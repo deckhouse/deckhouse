@@ -176,7 +176,7 @@ The main purpose of the activation is to add a sidecar container to the applicat
 
 The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
 {% alert level="info" %}
-When using Deckhouse version >= 1.55 and the [admission-policy-engine](../015-admission-policy-engine/) module is enabled, the `sidecar-injector` Istio container runs only in `Privileged` mode.
+When using Deckhouse version >= 1.55 and the [admission-policy-engine](../015-admission-policy-engine/) module is enabled, it works in `Baseline` mode by default. In this regard, Istio's init-containers can't configure rules for application's traffic interception, so the Pod's can't start. The solution is either configure the admission-policy-engine module to work in `Restricted` mode or add a label `security.deckhouse.io/pod-policy=privileged` to application's Namespace.
 {% endalert %}
 
 * A label attached to a **namespace** allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
