@@ -57,7 +57,7 @@ type ConnectionConfig struct {
 func ParseConnectionConfig(
 	configData string,
 	schemaStore *SchemaStore,
-	opts ValidateOptions,
+	opts ...ValidateOption,
 ) (*ConnectionConfig, error) {
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 
@@ -72,7 +72,7 @@ func ParseConnectionConfig(
 			return nil, err
 		}
 
-		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -154,5 +154,5 @@ func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
 	}
 
-	return ParseConnectionConfig(string(configData), NewSchemaStore(), ValidateOptions{ValidateExtensions: true})
+	return ParseConnectionConfig(string(configData), NewSchemaStore(), ValidateOptionValidateExtensions(true))
 }

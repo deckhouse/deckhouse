@@ -83,7 +83,7 @@ bin/protoc:
 
 .PHONY: protoc
 protoc:
-	bin/protoc pkg/server/api/hello/hello.proto --go_out=pkg/server --go-grpc_out=pkg/server
+	bin/protoc pkg/server/api/dhctl/dhctl.proto --go_out=pkg/server --go-grpc_out=pkg/server
 
 generate: protoc
 	go generate ./...

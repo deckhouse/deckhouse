@@ -53,7 +53,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	tests := map[string]struct {
 		config      string
 		expected    *ConnectionConfig
-		opts        ValidateOptions
+		opts        []ValidateOption
 		errContains string
 	}{
 		"valid config": {
@@ -87,7 +87,7 @@ func TestParseConnectionConfig(t *testing.T) {
 					},
 				},
 			},
-			opts: ValidateOptions{ValidateExtensions: true},
+			opts: []ValidateOption{ValidateOptionValidateExtensions(true)},
 		},
 		"invalid config: bad ssh key": {
 			config: configFunc(
@@ -96,7 +96,7 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_invalid_rsa",
 			),
 			errContains: "not an encrypted key",
-			opts:        ValidateOptions{ValidateExtensions: true},
+			opts:        []ValidateOption{ValidateOptionValidateExtensions(true)},
 		},
 		"invalid config: no user": {
 			config: configFunc(
@@ -124,7 +124,7 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_rsa",
 				"./mocks/id_passphrase_rsa",
 			),
-			opts:        ValidateOptions{StrictUnmarshal: true},
+			opts:        []ValidateOption{ValidateOptionStrictUnmarshal(true)},
 			errContains: "already set in map",
 		},
 	}
@@ -132,7 +132,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts)
+			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
 				require.Equal(t, tt.expected, config)
