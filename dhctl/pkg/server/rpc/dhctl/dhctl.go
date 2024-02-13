@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+package dhctl
 
-option go_package = "pb/hello";
+import (
+	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+)
 
-package hello;
-
-service Greeter {
-  rpc Hello (HelloRequest) returns (HelloReply) {}
+func New() *Service {
+	return &Service{}
 }
 
-message HelloRequest {}
-
-message HelloReply {}
+type Service struct {
+	pb.UnimplementedDHCTLServer
+}

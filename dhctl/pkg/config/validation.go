@@ -32,8 +32,9 @@ import (
 // It checks the cluster configuration yamls for compliance with the yaml format and schema.
 // Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
 // It can be used as an imported functionality in external modules.
-func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error {
-	if !opts.CommanderMode {
+func ValidateClusterSettingsFormat(settings string, opts ...ValidateOption) error {
+	options := applyOptions(opts...)
+	if !options.commanderMode {
 		panic("ValidateClusterSettingsFormat operation currently supported only in commander mode")
 	}
 
@@ -44,7 +45,7 @@ func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error 
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore, opts)
+		err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err
@@ -69,9 +70,10 @@ func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error 
 func ValidateClusterSettingsChanges(
 	phase phases.OperationPhase,
 	oldSettings, newSettings string,
-	opts ValidateOptions,
+	opts ...ValidateOption,
 ) error {
-	if !opts.CommanderMode {
+	options := applyOptions(opts...)
+	if !options.commanderMode {
 		panic("ValidateClusterSettingsChanges operation currently supported only in commander mode")
 	}
 
@@ -88,14 +90,14 @@ func ValidateClusterSettingsChanges(
 	newDocs := map[SchemaIndex]string{}
 
 	for _, rawDoc := range oldRawDocs {
-		err := setConfigs(schemaStore, oldDocs, rawDoc, opts)
+		err := setConfigs(schemaStore, oldDocs, rawDoc, opts...)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, rawDoc := range newRawDocs {
-		err := setConfigs(schemaStore, newDocs, rawDoc, opts)
+		err := setConfigs(schemaStore, newDocs, rawDoc, opts...)
 		if err != nil {
 			return err
 		}
@@ -125,7 +127,12 @@ func ValidateClusterSettingsChanges(
 	return nil
 }
 
-func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc string, opts ValidateOptions) error {
+func setConfigs(
+	schemaStore *SchemaStore,
+	configs map[SchemaIndex]string,
+	doc string,
+	opts ...ValidateOption,
+) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -133,7 +140,7 @@ func setConfigs(schemaStore *SchemaStore, configs map[SchemaIndex]string, doc st
 
 	docData := []byte(doc)
 
-	index, err := schemaStore.ValidateWithOpts(&docData, opts)
+	index, err := schemaStore.Validate(&docData, opts...)
 	if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 		return err
 	}
