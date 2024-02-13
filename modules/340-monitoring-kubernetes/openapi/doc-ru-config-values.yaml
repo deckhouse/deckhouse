@@ -23,7 +23,7 @@ properties:
     properties:
       kubeStateMetricsMaxCPU:
         description: |
-          Настройки лимита CPU в VPA для kube-state-metrics.
+          Настройка ограничений использования CPU (CPU limits) в VPA для kube-state-metrics.
       kubeStateMetricsMaxMemory:
         description: |
-          Настройки лимита памяти в VPA для kube-state-metrics.
+          Настройка ограничений использования памяти (memory limits) в VPA для kube-state-metrics.
