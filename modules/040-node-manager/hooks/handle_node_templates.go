@@ -194,7 +194,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			}
 
 			// Prevent node deletion by autoscaler
-			if nodeObj.Labels["node.deckhouse.io/type"] == "CloudPermanent" || nodeObj.Labels["node.deckhouse.io/type"] == "Static" {
+			if set.New("CloudPermanent", "CloudStatic", "Static").Has(nodeObj.Labels["node.deckhouse.io/type"]) {
 				nodeObj.Annotations["cluster-autoscaler.kubernetes.io/scale-down-disabled"] = "true"
 			}
 
