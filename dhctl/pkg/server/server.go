@@ -19,23 +19,22 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
-	pbhello "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/hello"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/hello"
+	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 )
 
 // Serve starts GRPC server
@@ -48,6 +47,7 @@ func Serve() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
+	globalLock := &sync.Mutex{}
 
 	log.Info(
 		"starting grpc server",
@@ -68,12 +68,14 @@ func Serve() error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptorLogger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler(log))),
+			logging.UnaryServerInterceptor(interceptors.Logger(log)),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
+			interceptors.UnaryServerSinglefligt(globalLock, log),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptorLogger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler(log))),
+			logging.StreamServerInterceptor(interceptors.Logger(log)),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
+			interceptors.StreamServerSinglefligt(globalLock, log),
 		),
 	)
 
@@ -84,8 +86,11 @@ func Serve() error {
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
+	// services
+	dhctlService := dhctl.New()
+
 	// register services
-	pbhello.RegisterGreeterServer(s, &hello.Service{})
+	pbdhctl.RegisterDHCTLServer(s, dhctlService)
 
 	go func() {
 		<-ctx.Done()
@@ -98,23 +103,6 @@ func Serve() error {
 		return err
 	}
 	return nil
-}
-
-func grpcPanicRecoveryHandler(log *slog.Logger) func(p any) error {
-	return func(p any) error {
-		log.Error(
-			"recovered from panic",
-			slog.Any("panic", p),
-			slog.Any("stack", string(debug.Stack())),
-		)
-		return status.Errorf(codes.Internal, "%s", p)
-	}
-}
-
-func interceptorLogger(log *slog.Logger) logging.Logger {
-	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
-		log.Log(ctx, slog.Level(lvl), msg, fields...)
-	})
 }
 
 func gracefulStop(s *grpc.Server, timeout time.Duration) {
