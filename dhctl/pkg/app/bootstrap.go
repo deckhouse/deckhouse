@@ -25,7 +25,7 @@ var (
 	DevicePath     = ""
 
 	ResourcesPath    = ""
-	ResourcesTimeout = "15m"
+	ResourcesTimeout = 15 * time.Minute
 	DeckhouseTimeout = 15 * time.Minute
 
 	PostBootstrapScriptTimeout = 10 * time.Minute
@@ -78,8 +78,8 @@ Deprecated. Please use --config flag multiple repeatedly for logical resources s
 		StringVar(&ResourcesPath)
 	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("RESOURCES_TIMEOUT")).
-		Default(ResourcesTimeout).
-		StringVar(&ResourcesTimeout)
+		Default(ResourcesTimeout.String()).
+		DurationVar(&ResourcesTimeout)
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}

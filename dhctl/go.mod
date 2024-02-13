@@ -28,6 +28,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/werf/logboek v0.5.5
 	go.cypherpunks.ru/gogost/v5 v5.13.0
+	golang.org/x/crypto v0.21.0
 	golang.org/x/term v0.18.0
 	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.33.0
@@ -106,7 +107,6 @@ require (
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	go.mongodb.org/mongo-driver v1.5.4 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
