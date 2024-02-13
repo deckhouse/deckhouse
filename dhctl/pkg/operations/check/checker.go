@@ -19,8 +19,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -77,7 +75,10 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	res.Status = res.Status.CombineStatus(status)
 
 	if status == CheckStatusDestructiveOutOfSync {
-		res.DestructiveChangeID = uuid.New().String()
+		res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+		}
 	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
