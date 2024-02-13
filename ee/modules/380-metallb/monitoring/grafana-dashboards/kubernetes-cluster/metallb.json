@@ -31,7 +31,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -128,7 +128,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "metallb_allocator_addresses_total",
@@ -139,7 +139,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "metallb_allocator_addresses_in_use_total",
@@ -263,7 +263,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -320,7 +320,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "${ds_prometheus}"
       },
       "fieldConfig": {
         "defaults": {
@@ -371,7 +371,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -467,7 +467,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "expr": "rate(metallb_layer2_gratuitous_sent{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
@@ -479,7 +479,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "expr": "rate(metallb_layer2_requests_received{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
@@ -490,7 +490,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "expr": "rate(metallb_layer2_responses_sent{instance=~\"$layer2instance\"}[5m])",
           "hide": false,
@@ -574,7 +574,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "metallb_allocator_addresses_total",
@@ -586,7 +586,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
           "expr": "metallb_allocator_addresses_in_use_total",
