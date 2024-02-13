@@ -6,8 +6,7 @@ ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 WORKDIR /src/
 COPY /app/ /src/
-RUN apk add --no-cache git && \
-    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./... && \
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./... && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/prometheus-reverse-proxy
 
 RUN chown 64535:64535 prometheus-reverse-proxy

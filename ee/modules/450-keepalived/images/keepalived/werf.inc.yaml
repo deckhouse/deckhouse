@@ -1,10 +1,9 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
 ---
 artifact: {{ .ModuleName }}/build-keepalived
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
   install:
-    - apk add --no-cache gcc git make binutils file-dev glib-dev ipset-dev iptables-dev libmnl-dev libnftnl-dev libnl3-dev musl-dev net-snmp-dev openssl-dev openssl-libs-static pcre2 pcre2-dev autoconf automake zlib-static alpine-sdk linux-headers libmnl-static
     - mkdir build && cd build
     - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
     - cd ./src
@@ -17,12 +16,9 @@ shell:
     - chmod 0700 /opt/keepalived-static/usr/bin/genhash
 ---
 artifact: {{ $.ModuleName }}/python
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - apt-get update
-    - apt-get install -y python3 python3-modules-sqlite3 pip
-    - /usr/bin/pip3 install pyroute2
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir /empty
     - chmod 644 /empty

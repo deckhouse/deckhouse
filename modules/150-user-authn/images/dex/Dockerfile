@@ -1,11 +1,10 @@
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 ARG BASE_DISTROLESS
-FROM $BASE_GOLANG_20_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
 COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch patches/401-password-auth.patch /
 RUN git clone --branch v2.35.3 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \

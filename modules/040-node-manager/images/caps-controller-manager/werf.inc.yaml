@@ -16,7 +16,7 @@ import:
     - '**/*'
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
     to: /src
@@ -36,8 +36,6 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
-    - apk add --no-cache git
   install:
     - cd /src
     - export GOPROXY={{ $.GOPROXY }}
@@ -50,11 +48,7 @@ shell:
 ---
 {{- $csiBinaries := "/usr/bin/ssh /lib64/libnss_*" }}
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ .Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-    - apt-get update
-    - |
-      apt-get install -y openssh-clients
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

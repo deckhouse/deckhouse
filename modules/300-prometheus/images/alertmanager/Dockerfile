@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 
-FROM $BASE_GOLANG_20_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -12,7 +12,6 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
 WORKDIR /alertmanager/
 

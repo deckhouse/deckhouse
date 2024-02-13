@@ -1,10 +1,8 @@
 {{- $version := "4.4" }}
 ---
 artifact: {{ .ModuleName }}/build-chrony-static-artifact
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
-  beforeInstall:
-    - apk --no-cache add linux-headers coreutils gcc make musl-dev libcap-dev libcap-static git bison asciidoctor tini-static
   install:
     - mkdir /src
     - cd /src

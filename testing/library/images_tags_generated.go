@@ -101,7 +101,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
-		"alt":                       "imageHash-common-alt",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher125":    "imageHash-common-csiExternalAttacher125",
 		"csiExternalAttacher126":    "imageHash-common-csiExternalAttacher126",

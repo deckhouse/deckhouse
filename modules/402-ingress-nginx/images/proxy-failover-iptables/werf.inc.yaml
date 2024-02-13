@@ -1,46 +1,47 @@
+{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
 artifact: {{ .ModuleName }}/distroless-proxy-failover-iptables-artifact
-from: {{ .Images.BASE_ALPINE }}
-git:
-- add: /{{ .ModulePath }}modules/402-ingress-nginx/images/proxy-failover-iptables
-  to: /workdir/
-  includePaths:
-  - '**/file-filter'
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - cd /workdir
-    - apk update
-    - apk add rsync
-    - apk fetch -R -o . iptables
-    - mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
-    - mkdir /filtered-apk && rsync -av --include-from=file-filter --include='*/' --exclude '*' /apk/ /filtered-apk/
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
-      for cmd in iptables iptables-save iptables-restore; do
-        ln -f -s /iptables-wrapper "/filtered-apk/sbin/${cmd}"
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
       done
+      # broken symlinks are not imported from the artifact
       touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/failover-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/402-ingress-nginx/images/proxy-failover-iptables/failover/
-  to: /workdir/
+  to: /workdir
   stageDependencies:
     install:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
     - cd /workdir
-    - apk add --no-cache git
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
 ---
 image: {{ $.ModuleName }}/proxy-failover-iptables
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
-  add: /filtered-apk
+  add: /relocate
   to: /
+  before: setup
+- artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
   before: setup
 - artifact: {{ .ModuleName }}/failover-artifact
   add: /workdir/failover

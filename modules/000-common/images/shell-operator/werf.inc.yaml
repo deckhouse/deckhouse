@@ -1,8 +1,8 @@
-{{- $shellOperatorVersion := "v1.3.1"}}
+{{- $shellOperatorVersion := "v1.4.5"}}
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -30,11 +30,10 @@ docker:
   ENTRYPOINT: ["/shell-operator"]
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
-  beforeInstall:
-    - apk add --no-cache build-base gcc git autoconf automake bison flex libtool
   install:
+    - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
     - git clone {{ .SOURCE_REPO }}/flant/jq.git
     - cd /jq
     - git reset --hard {{ $jqVersion }}
@@ -53,6 +52,5 @@ shell:
     - cd /
     - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git
     - cd /shell-operator
-    - go get -u golang.org/x/net@v0.17.0
     - go mod tidy
-    - GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" GOOS=linux go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version=latest'" -tags use_libjq -o shell-operator ./cmd/shell-operator
+    - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version=latest'" -tags use_libjq -o shell-operator ./cmd/shell-operator

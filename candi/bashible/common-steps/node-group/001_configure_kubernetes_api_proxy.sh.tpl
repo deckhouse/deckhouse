@@ -17,9 +17,6 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
-include /etc/nginx/modules/*.conf;
-include /etc/nginx/conf.d/*.conf;
-
 user deckhouse;
 
 error_log stderr notice;
