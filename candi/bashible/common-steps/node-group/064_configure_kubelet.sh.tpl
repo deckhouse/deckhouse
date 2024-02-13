@@ -151,6 +151,14 @@ if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   fi
 fi
 
+function resources_management_memory_units_to_bytes {
+  return=$(numfmt --from=auto --to=none $1)
+  echo -n "${return}"
+}
+
+{{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
+{{- if eq $resourceReservationMode "Auto" }}
+
 # https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
 function dynamic_memory_sizing {
     total_memory=$(free -m|awk '/^Mem:/{print $2}')
@@ -186,26 +194,51 @@ function dynamic_memory_sizing {
     if (($total_memory >= 0)); then # 1% of any memory above 128GB
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.01 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
     fi
-    recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%.0f\n",$1)}')
+    recommended_systemreserved_memory=$(resources_management_memory_units_to_bytes $(echo $recommended_systemreserved_memory | awk '{printf("%.0fMi",$1)}'))
     echo -n "${recommended_systemreserved_memory}"
 }
 
+function dynamic_cpu_sizing {
+  echo -n "70m"
+}
+
+function dynamic_ephemeral_storage_sizing {
+  echo -n "1Gi"
+}
+
+{{- else if eq $resourceReservationMode "Static" }}
+function dynamic_memory_sizing {
+  echo -n "$(resources_management_memory_units_to_bytes {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }})"
+}
+
+function dynamic_cpu_sizing {
+  echo -n "{{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}"
+}
+
+function dynamic_ephemeral_storage_sizing {
+  echo -n "{{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}"
+}
+{{- end }}
+
 function eviction_hard_threshold_memory_available {
   total_memory=$(free -m|awk '/^Mem:/{print $2}')
-  return=$(echo $total_memory 0.01 | awk '{print $1 * $2}' | awk '{printf("%.0f\n",$1)}')
+  return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.01 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
   echo -n "${return}"
 }
 
 function eviction_soft_threshold_memory_available {
   total_memory=$(free -m|awk '/^Mem:/{print $2}')
-  return=$(echo $total_memory 0.02 | awk '{print $1 * $2}' | awk '{printf("%.0f\n",$1)}')
+  return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.02 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
   echo -n "${return}"
 }
 
+{{- $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" false .nodeGroup }}
+{{- if eq $topologyManagerEnabled true }}
 function reserved_memory {
   return=$(echo $(dynamic_memory_sizing) $(eviction_hard_threshold_memory_available) | awk '{print $1 + $2}')
   echo -n "${return}"
 }
+{{- end }}
 
 # CIS becnhmark purposes
 tls_params=""
@@ -254,13 +287,13 @@ eventBurst: 50
 evictionHard:
   imagefs.available: $evictionHardThresholdImagefsAvailable
   imagefs.inodesFree: $evictionHardThresholdImagefsInodesFree
-  memory.available: "$(eviction_hard_threshold_memory_available)Mi"
+  memory.available: "$(eviction_hard_threshold_memory_available)"
   nodefs.available: $evictionHardThresholdNodefsAvailable
   nodefs.inodesFree: $evictionHardThresholdNodefsInodesFree
 evictionSoft:
   imagefs.available: $evictionSoftThresholdImagefsAvailable
   imagefs.inodesFree: $evictionSoftThresholdImagefsInodesFree
-  memory.available: "$(eviction_soft_threshold_memory_available)Mi"
+  memory.available: "$(eviction_soft_threshold_memory_available)"
   nodefs.available: $evictionSoftThresholdNodefsAvailable
   nodefs.inodesFree: $evictionSoftThresholdNodefsInodesFree
 evictionSoftGracePeriod:
@@ -292,7 +325,6 @@ featureGates:
   ValidatingAdmissionPolicy: true
 {{- end }}
   RotateKubeletServerCertificate: true
-{{- $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" false .nodeGroup }}
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
 {{- end }}
@@ -321,17 +353,11 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
-{{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
-{{- if eq $resourceReservationMode "Auto" }}
+{{- if ne $resourceReservationMode "Off" }}
 systemReserved:
-  cpu: 70m
-  memory: "$(dynamic_memory_sizing)Mi"
-  ephemeral-storage: 1Gi
-{{- else if eq $resourceReservationMode "Static" }}
-systemReserved:
-  cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
-  memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
-  ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
+  cpu: "$(dynamic_cpu_sizing)"
+  memory: "$(dynamic_memory_sizing)"
+  ephemeral-storage: "$(dynamic_ephemeral_storage_sizing)"
 {{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
@@ -353,7 +379,7 @@ memoryManagerPolicy: Static
 reservedMemory:
 - numaNode: 0
   limits:
-    memory: "$(reserved_memory)Mi"
+    memory: "$(reserved_memory)"
 topologyManagerScope: {{ dig "kubelet" "topologyManager" "scope" "Container" .nodeGroup | kebabcase }}
 topologyManagerPolicy: {{ dig "kubelet" "topologyManager" "policy" "None" .nodeGroup | kebabcase }}
 {{- end }}
