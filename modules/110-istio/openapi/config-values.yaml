@@ -31,6 +31,13 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
+  sidecarInjectionMode:
+    type: string
+    enum: [Webhook, CNIPlugin]
+    x-examples: ["CNIPlugin"]
+    description: |
+      Uses istio-cni. Allows for solving the issue with sidecar containers when the restricted policy is enabled.
+    default: Webhook
   enableHTTP10:
     type: boolean
     default: false
