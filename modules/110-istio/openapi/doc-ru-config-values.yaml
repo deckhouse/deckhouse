@@ -211,8 +211,8 @@ properties:
             description: |
               Режим работы с репликами:
               - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability));
-              - `Static` — режим, где количество реплик указывается явно (параметр [static.numReplicas](#parameters-replicasmanagement-static-numreplicas));
-              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-replicasmanagement-hpa).
+              - `Static` — режим, где количество реплик указывается явно (параметр [static.numReplicas](#parameters-controlplane-replicasmanagement-static-numreplicas));
+              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
           static:
             description: |
               Параметры управления репликами и масштабированием в режиме Static.
@@ -240,8 +240,8 @@ properties:
           mode:
             description: |
               Режим управления ресурсами:
-              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
-              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-controlplane-resourcesmanagement-static);
+              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-controlplane-resourcesmanagement-vpa).
           vpa:
             description: |
               Параметры управления ресурсами в режиме VPA.

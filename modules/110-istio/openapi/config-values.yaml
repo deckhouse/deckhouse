@@ -457,8 +457,8 @@ properties:
             description: |
               Replicas management mode:
               - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
-              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.numReplicas](#parameters-replicasmanagement-static-numreplicas) parameter);
-              - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-replicasmanagement-hpa) parameter section.
+              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.numReplicas](#parameters-controlplane-replicasmanagement-static-numreplicas) parameter);
+              - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
             enum: ['Standard', 'Static', 'HPA']
             default: 'Standard'
           static:
@@ -522,8 +522,8 @@ properties:
             type: string
             description: |
               Resource management mode:
-              - Allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-resourcesmanagement-static) parameter section;
-              - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesmanagement-vpa) parameter section.
+              - Allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-controlplane-resourcesmanagement-static) parameter section;
+              - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-controlplane-resourcesmanagement-vpa) parameter section.
             enum: ['VPA', 'Static']
             default: 'VPA'
           vpa:
