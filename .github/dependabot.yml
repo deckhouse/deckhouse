@@ -52,7 +52,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/600-flant-integration/images/madison-proxy"
+  directory: "/ee/be/modules/600-flant-integration/images/madison-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -503,7 +503,7 @@ updates:
 
 # pip
 - package-ecosystem: "pip"
-  directory: "/ee/be/modules/600-flant-integration/images/flant-pricing"
+  directory: "/ee/be/modules/600-flant-integration/images/flant-pricing/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
