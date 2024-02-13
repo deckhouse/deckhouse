@@ -41,7 +41,7 @@ cloud-controller-manager/   @RomanenkoDenys @name212
 csi/                        @AleksZimin
 deckhouse-controller/       @yalosev
 dhctl/                      @name212
-docs/                       @z9r5 @nabokihms @konstantin-axenov @MariaMakeeva
+docs/                       @z9r5 @nabokihms @konstantin-axenov
 helm_lib/                   @name212
-crds/                       @nabokihms @konstantin-axenov @z9r5 @MariaMakeeva
-openapi/                    @nabokihms @konstantin-axenov @z9r5 @MariaMakeeva
+crds/                       @nabokihms @konstantin-axenov @z9r5
+openapi/                    @nabokihms @konstantin-axenov @z9r5
