@@ -229,6 +229,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"istio": map[string]interface{}{
 		"apiProxy":          "imageHash-istio-apiProxy",
+		"cniV1x13x7":        "imageHash-istio-cniV1x13x7",
 		"cniV1x16x2":        "imageHash-istio-cniV1x16x2",
 		"cniV1x19x4":        "imageHash-istio-cniV1x19x4",
 		"kiali":             "imageHash-istio-kiali",
