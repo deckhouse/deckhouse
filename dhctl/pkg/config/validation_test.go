@@ -32,8 +32,12 @@ func TestValidateClusterSettingsFormat(t *testing.T) {
 			err := ValidateClusterSettingsFormat(clusterConfigFormat, validateOpts)
 			require.NoError(t, err)
 		})
-		t.Run("resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(resourceFormat, validateOpts)
+		t.Run("resource-1", func(t *testing.T) {
+			err := ValidateClusterSettingsFormat(resourceFormat1, validateOpts)
+			require.NoError(t, err)
+		})
+		t.Run("resource-2", func(t *testing.T) {
+			err := ValidateClusterSettingsFormat(resourceFormat2, validateOpts)
 			require.NoError(t, err)
 		})
 		t.Run("cluster configuration with resource", func(t *testing.T) {
@@ -157,14 +161,19 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"`
-	resourceFormat = `---
+	resourceFormat1 = `---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse-admin
 spec:
   enabled: true`
-	clusterConfigWithResourcesFormat = clusterConfigFormat + "\n" + resourceFormat
+	resourceFormat2 = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: some-name`
+	clusterConfigWithResourcesFormat = clusterConfigFormat + "\n" + resourceFormat1
 	unknownFieldFormat               = `---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
