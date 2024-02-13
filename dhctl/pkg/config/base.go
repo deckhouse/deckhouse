@@ -89,7 +89,7 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(path string) (*MetaConfig, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("loading config file: %v", err)
+		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
 	return ParseConfigFromData(string(fileContent))
@@ -197,7 +197,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 		_, err = schemaStore.validate(&docData, opts)
 		if err != nil {
-			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
@@ -206,12 +206,12 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 	_, err = schemaStore.validate(&docData, opts)
 	if err != nil {
-		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return fmt.Errorf("config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return fmt.Errorf("config unmarshal: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	switch {
