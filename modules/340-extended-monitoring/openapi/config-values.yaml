@@ -22,7 +22,7 @@ properties:
       registry:
         type: object
         description: |
-          <PLACEHOLDER>
+          Connection settings for container registry.
         default: {}
         properties:
           scheme:

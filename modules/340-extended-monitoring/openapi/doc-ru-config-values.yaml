@@ -18,7 +18,7 @@ properties:
               Протокол доступа к container registry.
           tlsConfig:
             description: |
-              <PLACEHOLDER>
+              Настройки подключения к container registry
             properties:
               insecureSkipVerify:
                 description: |
