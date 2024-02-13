@@ -21,7 +21,7 @@ function __config__(){
 configVersion: v1
 kubernetes:
   - name: instances
-    apiVersion: deckhouse.io/v1
+    apiVersion: deckhouse.io/v1alpha1
     kind: StaticInstance
     queue: "instances"
     group: main
