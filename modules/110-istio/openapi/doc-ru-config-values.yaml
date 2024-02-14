@@ -139,7 +139,7 @@ properties:
           mode:
           static:
             description: |
-              Настройки управления ресурсами в режиме `Static`
+              Настройки управления ресурсами в режиме `Static`.
             properties:
               requests:
                 properties:
