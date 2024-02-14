@@ -52,7 +52,6 @@ type helmClient struct {
 // WithTimeout - timeout for helm upgrade/delete. Default: 15 seconds
 func NewClient(namespace string, options ...Option) (Client, error) {
 	opts := &helmOptions{
-		Namespace:  namespace,
 		HistoryMax: 3,
 		Timeout:    time.Duration(15 * float64(time.Second)),
 	}
@@ -75,7 +74,6 @@ func NewClient(namespace string, options ...Option) (Client, error) {
 }
 
 type helmOptions struct {
-	Namespace  string
 	HistoryMax int32
 	Timeout    time.Duration
 }
