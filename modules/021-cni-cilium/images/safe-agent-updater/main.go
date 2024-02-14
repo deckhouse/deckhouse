@@ -141,14 +141,14 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 			currentAgentGeneration,
 		)
 		return currentPod.Name, true, nil
-	} else {
-		log.Infof(
-			"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
-			desiredAgentGeneration,
-			currentAgentGeneration,
-		)
-		return currentPod.Name, false, nil
 	}
+	log.Infof(
+		"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
+		desiredAgentGeneration,
+		currentAgentGeneration,
+	)
+	return currentPod.Name, false, nil
+
 }
 
 func deletePod(kubeClient kubernetes.Interface, podName string) error {

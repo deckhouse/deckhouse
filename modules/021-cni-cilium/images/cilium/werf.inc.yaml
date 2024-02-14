@@ -43,6 +43,10 @@ import:
   add: /out/linux/bash_completion
   to: /etc/bash_completion.d/hubble
   before: install
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
 shell:
   install:
   - groupadd -f cilium
