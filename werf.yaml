@@ -634,6 +634,9 @@ docker:
 shell:
   setup:
   - |
+    apt-get update
+    apt-get install -y gettext
+    rm -rf /var/cache/apt
     cat <<"EOD" > /etc/inputrc
     {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
