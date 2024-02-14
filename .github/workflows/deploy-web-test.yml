@@ -247,7 +247,7 @@ jobs:
 
       # <template: deploy_site_template>
       - name: Deploy site to test
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
@@ -278,7 +278,7 @@ jobs:
       # </template: doc_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to test
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
