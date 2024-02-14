@@ -6,7 +6,7 @@ properties:
     description: |
       Cilium создает идентификаторы безопасности основываясь на лейблах сущностей k8s, чем больше лейблов участвует в этом процессе - тем более детализированно можно настроить доступы.
       Но в кластерах больших объёмов излишняя детализация может создать большую нагрузку, и при помощи опции labelsRegex можно более явно указать - какие лейблы будут использоваться для политик безопасности,
-      а какими следут пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels) 
+      а какими следут пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
 
       Каждый лейбл должен задаваться RegExp-выражением в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
@@ -40,16 +40,16 @@ properties:
       - `Hybrid` - TCP траффик обрабатывается в режиме DSR, а UDP - в режиме SNAT.
   resourcesManagement:
     description: |
-      Настройки управления ресурсами cilium-agent.
+      Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами агента cilium.
     properties:
       mode:
         description: |
-          Режимы управления:
+          Режим управления ресурсами:
           - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
           - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
       vpa:
         description: |
-          Параметры управления ресурсами в режиме VPA.
+          Настройка управления ресурсами в режиме `VPA`.
         properties:
           mode:
             description: |
@@ -67,9 +67,9 @@ properties:
               limitRatio:
                 description: |
                   Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
-                  
+
                   Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
-                  
+
                   Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
           memory:
             description: |
@@ -80,13 +80,13 @@ properties:
                   Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
               max:
                 description: |
-                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).              
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
               limitRatio:
                 description: |
                   Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
-                  
+
                   Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
-                  
+
                   Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
       static:
         description: |
@@ -94,17 +94,17 @@ properties:
         properties:
           requests:
             description: |
-              Настройки реквестов.
+              Настройки запросов ресурсов (requests) подов.
             properties:
               cpu:
                 description: |
                   Настройка запроса CPU (CPU requests).
               memory:
                 description: |
-                  Настройка ограничений (limits) использования CPU и памяти.
+                  Настройка запроса памяти (memory requests).
           limits:
             description: |
-              Настройки лимитов.
+              Настройка ограничений (limits) использования CPU и памяти.
             properties:
               cpu:
                 description: |
