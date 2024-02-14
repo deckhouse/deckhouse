@@ -213,7 +213,7 @@ spec:
       defaultTemplates: ["sidecar", "d8-check-kernel-version"]
 {{- end }}
       templates:
-{{- if ($.Values.global.enabledModules | has "cni-cilium") }}
+{{- if and ($.Values.global.enabledModules | has "cni-cilium") (not (eq $.Values.istio.sidecarInjectionMode "CNIPlugin")) }}
         d8-check-kernel-version: |
           spec:
             initContainers:
