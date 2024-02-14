@@ -56,7 +56,7 @@ properties:
               Режим работы VPA.
           cpu:
             description: |
-              Настройки VPA при работе с CPU.            
+              Настройки VPA при работе с CPU.
             properties:
               min:
                 description: |
