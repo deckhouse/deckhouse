@@ -15,7 +15,7 @@ spec:
 ---
 {{- define "agent_daemonset_template" }}
   {{- $context := index . 0 }}
-  {{- $agent_daemonset_generation := index . 1 | default "undefined"}}
+  {{- $agent_daemonset_generation := index . 1 }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
