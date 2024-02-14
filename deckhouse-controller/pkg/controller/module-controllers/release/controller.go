@@ -470,8 +470,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
 	}
-
-	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
+	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.moduleReleasesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
 	releaseUpdater := newModuleUpdater(c.logger, nConfig, kubeAPI)
 
 	releaseUpdater.PrepareReleases(otherReleases)
@@ -642,12 +641,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			if !releaseUpdater.ApplyPredictedRelease(nil) {
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
-
-			err = releaseUpdater.ChangeUpdatingFlag(false)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, fmt.Errorf("change updating flag: %w", err)
-			}
-
 			return ctrl.Result{}, nil
 		}
 
@@ -658,11 +651,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 		if !releaseUpdater.ApplyPredictedRelease(windows) {
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-
-		err = releaseUpdater.ChangeUpdatingFlag(false)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("change updating flag: %w", err)
 		}
 
 		modulesChangedReason = "a new module release found"
@@ -1182,4 +1170,5 @@ func deepCopyList[T deepCopier[T]](list []T) []T {
 	}
 
 	return result
+
 }
