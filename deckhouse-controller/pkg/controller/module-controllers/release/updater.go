@@ -93,7 +93,7 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 	r.Status.Phase = phase
 	r.Status.Message = msg
 
-	r, err = k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
+	_, err = k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("update release %s status: %w", release.Name, err)
 	}
