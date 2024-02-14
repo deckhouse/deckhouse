@@ -328,7 +328,7 @@ func (e *exporter) buildTLSConfig() (*tls.Config, error) {
 		} else {
 			certPool = x509.NewCertPool()
 		}
-		certPool.AppendCertsFromPEM(ca)
+		certPool.AppendCertsFromPEM([]byte(ca))
 		tlsConfig.RootCAs = certPool
 	}
 
