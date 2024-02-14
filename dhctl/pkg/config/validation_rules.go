@@ -29,15 +29,17 @@ const (
 )
 
 const (
-	xUnsafeRuleUpdateReplicas = "updateReplicas"
-	xUnsafeRuleDeleteZones    = "deleteZones"
+	xUnsafeRuleUpdateReplicas    = "updateReplicas"
+	xUnsafeRuleDeleteZones       = "deleteZones"
+	xUnsafeRuleUpdateMasterImage = "updateMasterImage"
 
 	xRulesSSHPrivateKey = "sshPrivateKey"
 )
 
 var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage) error{
-	xUnsafeRuleUpdateReplicas: UpdateReplicasRule,
-	xUnsafeRuleDeleteZones:    DeleteZonesRule,
+	xUnsafeRuleUpdateReplicas:    UpdateReplicasRule,
+	xUnsafeRuleDeleteZones:       DeleteZonesRule,
+	xUnsafeRuleUpdateMasterImage: UpdateMasterImageRule,
 }
 
 var xRulesValidators = map[string]func(oldValue json.RawMessage) error{
@@ -59,11 +61,14 @@ func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 	}
 
 	if newValue == 0 {
-		return fmt.Errorf("%w: got unacceptable replicas zero value", ErrValidationRuleFailed)
+		return fmt.Errorf("%w: got unacceptable masterNodeGroup.replicas zero value", ErrValidationRuleFailed)
 	}
 
 	if newValue < oldValue && newValue < 2 {
-		return fmt.Errorf("%w: the new replicas value (%d) cannot be less that than 2 (%d)", ErrValidationRuleFailed, newValue, oldValue)
+		return fmt.Errorf(
+			"%w: the new masterNodeGroup.replicas value (%d) cannot be less that than 2 (%d)",
+			ErrValidationRuleFailed, newValue, oldValue,
+		)
 	}
 
 	return nil
@@ -77,32 +82,86 @@ func DeleteZonesRule(oldRaw, newRaw json.RawMessage) error {
 		} `yaml:"masterNodeGroup"`
 	}
 
-	var oldClusterConfig clusterConfig
-	var newClusterConfig clusterConfig
+	var oldConfig clusterConfig
+	var newConfig clusterConfig
 
-	err := yaml.Unmarshal(oldRaw, &oldClusterConfig)
+	err := yaml.Unmarshal(oldRaw, &oldConfig)
 	if err != nil {
 		return err
 	}
 
-	err = yaml.Unmarshal(newRaw, &newClusterConfig)
+	err = yaml.Unmarshal(newRaw, &newConfig)
 	if err != nil {
 		return err
 	}
 
-	if len(newClusterConfig.Zones) >= len(oldClusterConfig.Zones) {
+	if len(newConfig.Zones) >= len(oldConfig.Zones) {
 		return nil
 	}
 
-	if newClusterConfig.MasterNodeGroup.Replicas >= 3 {
+	if newConfig.MasterNodeGroup.Replicas >= 3 {
 		return nil
 	}
 
 	return fmt.Errorf(
-		"%w: can't delete zone if masterNodeGroup.Replicas < 3 (%d)",
+		"%w: can't delete zone if masterNodeGroup.replicas < 3 (%d)",
 		ErrValidationRuleFailed,
-		newClusterConfig.MasterNodeGroup.Replicas,
+		newConfig.MasterNodeGroup.Replicas,
 	)
+}
+
+func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
+	type clusterConfig struct {
+		Replicas      int `yaml:"replicas"`
+		InstanceClass struct {
+			AMI       string `yaml:"ami"`       // AWSClusterConfiguration
+			URN       string `yaml:"urn"`       // AzureClusterConfiguration
+			Image     string `yaml:"image"`     // GCPClusterConfiguration
+			ImageID   string `yaml:"imageID"`   // YandexClusterConfiguration
+			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration
+			Template  string `yaml:"template"`  // VsphereClusterConfiguration
+		} `yaml:"instanceClass"`
+	}
+
+	var oldConfig clusterConfig
+	var newConfig clusterConfig
+
+	err := yaml.Unmarshal(oldRaw, &oldConfig)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(newRaw, &newConfig)
+	if err != nil {
+		return err
+	}
+
+	if oldConfig.Replicas > 1 && newConfig.Replicas > 1 {
+		return nil
+	}
+
+	for _, images := range []struct {
+		old   string
+		new   string
+		field string
+	}{
+		{old: oldConfig.InstanceClass.AMI, new: newConfig.InstanceClass.AMI, field: "ami"},
+		{old: oldConfig.InstanceClass.URN, new: newConfig.InstanceClass.URN, field: "urn"},
+		{old: oldConfig.InstanceClass.Image, new: newConfig.InstanceClass.Image, field: "image"},
+		{old: oldConfig.InstanceClass.ImageID, new: newConfig.InstanceClass.ImageID, field: "imageID"},
+		{old: oldConfig.InstanceClass.ImageName, new: newConfig.InstanceClass.ImageName, field: "imageName"},
+		{old: oldConfig.InstanceClass.Template, new: newConfig.InstanceClass.Template, field: "template"},
+	} {
+		if images.new != "" && images.old != images.new {
+			return fmt.Errorf(
+				"%w: can't update masterNodeGroup.%s if masterNodeGroup.replicas == 1",
+				ErrValidationRuleFailed,
+				images.field,
+			)
+		}
+	}
+
+	return nil
 }
 
 func ValidateSSHPrivateKey(value json.RawMessage) error {

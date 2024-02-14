@@ -106,6 +106,7 @@ apiVersions:
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         x-doc-required: true
+        x-unsafe-rules: [updateMasterImage]
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
         properties:
