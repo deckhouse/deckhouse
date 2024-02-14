@@ -414,6 +414,44 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
+  doc_spellcheck_site:
+    name: Site Spellcheck
+
+    needs:
+      - discover
+    if: needs.discover.outputs.run_doc_changes == 'true'
+    runs-on: ubuntu-latest-4-cores
+    timeout-minutes: 60
+    steps:
+      - name: Install werf
+        uses: werf/actions/install@v1.2
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Spell check
+        run: |
+          make docs-spellcheck-site
+
+  doc_spellcheck_documentation:
+    name: Documentation Spellcheck
+
+    needs:
+      - discover
+    if: needs.discover.outputs.run_doc_changes == 'true'
+    runs-on: ubuntu-latest-4-cores
+    timeout-minutes: 60
+    steps:
+      - name: Install werf
+        uses: werf/actions/install@v1.2
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Spell check
+        run: |
+          make docs-spellcheck-documentation
+
   copyright_validation:
     name: Copyright Validation
 

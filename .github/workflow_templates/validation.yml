@@ -127,6 +127,14 @@ jobs:
     name: Documentation Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
+  doc_spellcheck_site:
+    name: Site Spellcheck
+{!{ tmpl.Exec "spellsheck_template" (slice $ctx "doc_changes" "site") | strings.Indent 4 }!}
+
+  doc_spellcheck_documentation:
+    name: Documentation Spellcheck
+{!{ tmpl.Exec "spellsheck_template" (slice $ctx "doc_changes" "documentation") | strings.Indent 4 }!}
+
   copyright_validation:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
@@ -191,4 +199,26 @@ steps:
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       make lint-{!{ $type }!}
+{!{- end -}!}
+
+{!{/* Template for spellcheck jobs. */}!}
+{!{ define "spellsheck_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $type := index . 1 }!}
+{!{- $target := index . 2 }!}
+needs:
+  - discover
+if: needs.discover.outputs.run_{!{ $type }!} == 'true'
+runs-on: ubuntu-latest-4-cores
+timeout-minutes: 60
+steps:
+  - name: Install werf
+    uses: werf/actions/install@v1.2
+
+  - name: Checkout code
+    uses: actions/checkout@v3
+
+  - name: Spell check
+    run: |
+      make docs-spellcheck-{!{ $target }!}
 {!{- end -}!}
