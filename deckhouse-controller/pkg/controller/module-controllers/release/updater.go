@@ -58,7 +58,9 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseA
 		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister, moduleReleaseLister d8listers.ModuleReleaseLister, externalModulesDir string, symlinksDir string, modulesValidator moduleValidator) *kubeAPI {
+func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister,
+	moduleReleaseLister d8listers.ModuleReleaseLister, externalModulesDir string, symlinksDir string,
+	modulesValidator moduleValidator) *kubeAPI {
 	return &kubeAPI{
 		logger:              logger,
 		d8ClientSet:         d8ClientSet,
