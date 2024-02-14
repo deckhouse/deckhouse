@@ -40,6 +40,8 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - name: "{{ .Env }} version. Merging modules of different releases..."
       shell: |
+        cp -rf /src/be/modules /src >& /dev/null
+        cp -rf /src/se/modules /src >& /dev/null
         cp -rf /src/ee/modules /src >& /dev/null
         cp -rf /src/fe/modules /src >& /dev/null
         cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
