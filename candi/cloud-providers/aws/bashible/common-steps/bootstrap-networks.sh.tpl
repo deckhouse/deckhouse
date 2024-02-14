@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-{{- if or (not (contains "Static" .nodeGroup.nodeType)) (eq .runType "ClusterBootstrap") }}
 mkdir -p /opt/deckhouse/bin
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
@@ -26,4 +25,3 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   mkdir -p /var/lib/bashible
   touch /var/lib/bashible/hosname-set-as-in-aws
 fi
-{{- end }}
