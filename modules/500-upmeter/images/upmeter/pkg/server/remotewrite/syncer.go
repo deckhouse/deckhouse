@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -216,11 +217,19 @@ type exportingConfig struct {
 
 func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exportingConfig {
 	var labels []*prompb.Label
+	var tlsConfig map[string]string
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{
 			Name:  k,
 			Value: v,
 		})
+	}
+
+	tlsConfig["insecure_skip_verify"] = strconv.FormatBool(rw.Spec.Config.TLSConfig.InsecureSkipVerify)
+
+	if rw.Spec.Config.TLSConfig.CA != "" {
+
+		tlsConfig["ca"] = rw.Spec.Config.TLSConfig.CA
 	}
 
 	return exportingConfig{
@@ -230,6 +239,7 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 			BasicAuth:   rw.Spec.Config.BasicAuth,
 			BearerToken: rw.Spec.Config.BearerToken,
 			Headers:     headers,
+			TLSConfig:   tlsConfig,
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
 		labels:   labels,
