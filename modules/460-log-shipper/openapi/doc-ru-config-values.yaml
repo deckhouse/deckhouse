@@ -15,13 +15,15 @@ properties:
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesRequests:
     description: |
-      Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла.
+      Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла (CPU requests, memory requests).
 
       Если модуль `vertical-pod-autoscaler` выключен, максимальные значения становятся значениями по умолчанию.
     properties:
       mode:
         description: |
-          Режим управления ресурсами.
+          Режим управления запросами ресурсов (requests):
+          - `Static` — классический, с помощью явного указания ограничения. Настраивается в секции параметров [static](#parameters-resourcesrequests-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesrequests-vpa).
       vpa:
         description: |
           Параметры управления ресурсами в режиме VPA.

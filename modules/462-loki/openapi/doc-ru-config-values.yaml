@@ -38,7 +38,7 @@ properties:
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesManagement:
     description: |
-      Настройки запросов и ограничений (limits) использования CPU и памяти подами Loki.
+      Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами Loki.
     properties:
       mode:
         description: |
