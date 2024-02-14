@@ -58,11 +58,12 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseA
 		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister, externalModulesDir string, symlinksDir string, modulesValidator moduleValidator) *kubeAPI {
+func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister, moduleReleaseLister d8listers.ModuleReleaseLister, externalModulesDir string, symlinksDir string, modulesValidator moduleValidator) *kubeAPI {
 	return &kubeAPI{
 		logger:              logger,
 		d8ClientSet:         d8ClientSet,
 		moduleSourcesLister: moduleSourcesLister,
+		moduleReleaseLister: moduleReleaseLister,
 		externalModulesDir:  externalModulesDir,
 		symlinksDir:         symlinksDir,
 		modulesValidator:    modulesValidator,
@@ -73,6 +74,7 @@ type kubeAPI struct {
 	logger              logger.Logger
 	d8ClientSet         versioned.Interface
 	moduleSourcesLister d8listers.ModuleSourceLister
+	moduleReleaseLister d8listers.ModuleReleaseLister
 	externalModulesDir  string
 	symlinksDir         string
 	modulesValidator    moduleValidator
@@ -81,8 +83,7 @@ type kubeAPI struct {
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
 	ctx := context.Background()
 
-	// prevents the object has been modified error
-	r, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Get(ctx, release.Name, metav1.GetOptions{})
+	r, err := k.moduleReleaseLister.Get(release.Name)
 	if err != nil {
 		return fmt.Errorf("get release %s: %w", release.Name, err)
 	}
@@ -95,7 +96,6 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 		return fmt.Errorf("update release %s status: %w", release.Name, err)
 	}
 
-	*release = *r
 	return nil
 }
 
