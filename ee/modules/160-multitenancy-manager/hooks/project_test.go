@@ -470,7 +470,7 @@ kind: Namespace
 metadata:
   name: test-project-1
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
 ---
@@ -497,7 +497,7 @@ kind: Namespace
 metadata:
   creationTimestamp: null
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
   name: test-project-1
@@ -514,7 +514,7 @@ kind: Namespace
 metadata:
   name: test-project-1
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
 ---
@@ -553,7 +553,7 @@ metadata:
     foo: bar
   creationTimestamp: null
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
     twotwotwo: nanana
   name: test-project-1
 spec: {}
@@ -569,7 +569,7 @@ kind: Namespace
 metadata:
   name: test-project-1
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
 ---
@@ -610,7 +610,7 @@ kind: Namespace
 metadata:
   creationTimestamp: null
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
     twotwotwo: lalala
   name: test-project-1
 spec: {}

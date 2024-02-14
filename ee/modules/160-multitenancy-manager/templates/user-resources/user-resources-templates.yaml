@@ -148,6 +148,6 @@ kind: Namespace
 metadata:
   name: {{ $projectValues.projectName }}
   labels:
-    d8-module: multitenancy-manager
+    heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
