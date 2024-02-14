@@ -228,7 +228,8 @@ properties:
                     
                     Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
                     
-                    Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).              memory:
+                    Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+                                  memory:
                 min:
                   description: |
                     Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
@@ -261,13 +262,13 @@ properties:
                   cpu:
                     description: |
                       Настройка ограничений (limits) использования CPU и памяти.
-            properties:
-              cpu:
-                description: |
-                  Настройка ограничений использования CPU (CPU limits).
-              memory:
-                description: |
-                  Настройка ограничений использования памяти (memory limits).
+                properties:
+                   cpu:
+                       description: |
+                           Настройка ограничений использования CPU (CPU limits).
+                   memory:
+                        description: |
+                            Настройка ограничений использования памяти (memory limits).
 
   nodeSelector:
     description: |
