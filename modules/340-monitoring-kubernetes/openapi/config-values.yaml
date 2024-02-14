@@ -46,7 +46,7 @@ properties:
   vpa:
     type: object
     description: |
-      VPA settings for `kube-state-metrics` deployment.
+      VPA settings for `kube-state-metrics` pods.
     default: {}
     x-examples:
       - { kubeStateMetricsMaxCPU: "130m", kubeStateMetricsMaxMemory: "115Mi" }
