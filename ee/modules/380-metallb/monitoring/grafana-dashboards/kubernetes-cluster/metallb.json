@@ -24,7 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "iteration": 1707810347466,
+  "id": 32,
+  "iteration": 1707906593583,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -103,12 +104,36 @@
                 ]
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
           }
         ]
       },
       "gridPos": {
         "h": 8,
-        "w": 20,
+        "w": 24,
         "x": 0,
         "y": 0
       },
@@ -259,63 +284,6 @@
         }
       ],
       "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 20,
-        "y": 0
-      },
-      "id": 8,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "pluginVersion": "8.5.13",
-      "targets": [
-        {
-          "expr": "sum(metallb_k8s_client_config_stale_bool)",
-          "format": "time_series",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "client_config_stale",
-          "refId": "A"
-        }
-      ],
-      "title": "Stale config",
-      "type": "gauge"
     },
     {
       "datasource": {
@@ -534,7 +502,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": {},
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "description": "",
       "fill": 1,
       "fillGradient": 0,
@@ -598,7 +569,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Address utilization",
+      "title": "Address utilization (Total)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -637,7 +608,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "main",
           "value": "main"
         },
@@ -656,9 +627,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
@@ -719,6 +694,6 @@
   "timezone": "",
   "title": "Metallb",
   "uid": "sZzUB4ymk2",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }
