@@ -46,17 +46,6 @@ Create internal network and connect it to Edge Gateway.
 * Вы можете загрузить облачные образы дистрибутивов (например, для [Ubuntu](https://cloud-images.ubuntu.com/)) в Каталог и использовать их в дальнейшем при создании машин.
 * Облачный образ должен поддерживать cloud-init.
 
-### Debian
-
-Для Debian нет готового образа в формате OVA поэтому, его необходимо подготовить самостоятельно. Дальнейшие манипуляции производим на локальной машине.
-
-* Скачиваем 'сырой' `genericloud` образ, [пример](https://cloud.debian.org/images/cloud/bullseye/20240104-1616/debian-11-genericcloud-amd64-20240104-1616.tar.xz)
-* РаспаковываемяF полученный архив. Архив содержит единсвенный файл с 'сырым' образом.
-* Устанавливаем qemu-img. Для Ubuntu выполняем команду `sudo apt-get install qemu-utils`.
-* Конвертируем 'сырой' образ в формат `vmdk`: `qemu-img convert -O vmdk debian-11-genericcloud-amd64-20240104-1616.raw out.vmdk`.
-* Скачиваем утилиту [ovftool](https://developer.vmware.com/web/tool/ovf/).
-* Конвертируем vmdk-образ в ova: 
-
 ### Входящий трафик
 
 * Вы должны направить входящий трафик на EDGE router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети.
