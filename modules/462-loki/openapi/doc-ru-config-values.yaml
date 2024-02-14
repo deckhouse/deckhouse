@@ -47,7 +47,7 @@ properties:
           - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
       vpa:
         description: |
-          Параметры управления ресурсами в режиме VPA.
+          Настройка управления ресурсами в режиме `VPA`.
         properties:
           mode:
             description: |
