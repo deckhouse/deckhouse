@@ -166,7 +166,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -432,7 +432,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -698,7 +698,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -964,7 +964,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1230,7 +1230,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
