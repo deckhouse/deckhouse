@@ -35,7 +35,7 @@ shell:
 ---
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 artifact: site-external-artifacts
-fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60 24) }}v1
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 fromImage: site-tools
 shell:
   install:
