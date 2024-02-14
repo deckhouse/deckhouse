@@ -248,7 +248,7 @@ artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-  - /binary_replace.sh -i "/usr/bin/ssh" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/ssh /usr/bin/ssh-agent" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
