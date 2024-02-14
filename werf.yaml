@@ -195,6 +195,7 @@ import:
   to: /
   before: setup
   includePaths:
+  - lib64/libssl.so.1.1
   - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
@@ -248,7 +249,7 @@ artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-  - /binary_replace.sh -i "/usr/bin/ssh" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/ssh /usr/bin/ssh-agent /usr/bin/ssh-add /usr/bin/scp" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
@@ -634,6 +635,9 @@ docker:
 shell:
   setup:
   - |
+    apt-get update
+    apt-get install -y gettext
+    rm -rf /var/cache/apt
     cat <<"EOD" > /etc/inputrc
     {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
