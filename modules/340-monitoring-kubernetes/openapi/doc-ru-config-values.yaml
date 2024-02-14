@@ -19,11 +19,11 @@ properties:
   vpa:
     type: object
     description: |
-      Настройки VPA для деплоймента kube-state-metrics.
+      Настройки VPA для подов `kube-state-metrics`.
     properties:
       kubeStateMetricsMaxCPU:
         description: |
-          Настройка ограничений использования CPU (CPU limits) в VPA для kube-state-metrics.
+          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
       kubeStateMetricsMaxMemory:
         description: |
-          Настройка ограничений использования памяти (memory limits) в VPA для kube-state-metrics.
+          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
