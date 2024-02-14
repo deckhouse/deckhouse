@@ -466,6 +466,6 @@ spec:
 {{- end  }}
 ---
 
-{{ $agent_daemonset_generation := include "agent_daemonset_template" . | sha256sum }}
+{{ $agent_daemonset_generation := include "agent_daemonset_template" (list . "undefined") | sha256sum }}
 
 {{- include "agent_daemonset_template" (list . $agent_daemonset_generation) }}
