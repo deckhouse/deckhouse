@@ -57,7 +57,11 @@ apiServer:
     {{- end }}
     enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
-    runtime-config: "admissionregistration.k8s.io/v1alpha1=true,admissionregistration.k8s.io/v1beta1=true"
+{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
+{{- end }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
