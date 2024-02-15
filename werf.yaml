@@ -195,7 +195,8 @@ import:
   to: /
   before: setup
   includePaths:
-  - lib64/libssl.so.1.1
+  - lib64/libssl.so.*
+  - lib64/libcrypto.so.*
   - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
