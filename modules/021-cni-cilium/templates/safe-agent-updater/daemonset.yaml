@@ -33,7 +33,6 @@ spec:
     metadata:
       annotations:
         configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
-        scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
         app: safe-agent-updater
     spec:
