@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.3.8
+	github.com/flant/addon-operator v1.3.9-0.20240208070816-176cc94991e6
 	github.com/flant/kube-client v1.1.0
 	github.com/flant/shell-operator v1.4.4
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -63,11 +63,11 @@ require (
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
 	github.com/slok/kubewebhook/v2 v2.5.0
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/mod v0.12.0
 	golang.org/x/time v0.5.0
 	k8s.io/cli-runtime v0.28.4
 	k8s.io/code-generator v0.28.4
+	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kubectl v0.28.2
 	sigs.k8s.io/controller-runtime v0.16.3
@@ -203,6 +203,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
@@ -222,7 +223,6 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	k8s.io/component-base v0.28.4 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
-	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	oras.land/oras-go v1.2.4 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
