@@ -48,7 +48,7 @@ properties:
               * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
               * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
               * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/));
-              * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS.
+              * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:

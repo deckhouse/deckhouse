@@ -89,7 +89,7 @@ properties:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
               * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/));
-              * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
+              * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
             - Disabled
