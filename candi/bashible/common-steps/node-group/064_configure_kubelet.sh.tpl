@@ -271,6 +271,9 @@ featureGates:
 {{- if semverCompare "<1.27" .kubernetesVersion }}
   ExpandCSIVolumes: true
 {{- end }}
+{{- if semverCompare ">=1.26" .kubernetesVersion }}
+  ValidatingAdmissionPolicy: true
+{{- end }}
   RotateKubeletServerCertificate: true
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
