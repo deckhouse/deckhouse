@@ -17,11 +17,15 @@ spec:
     kind: Deployment
     name: istiod-{{ $revision }}
   metrics:
+    {{- range $metric := $.Values.istio.controlPlane.replicasManagement.hpa.metrics }}
+      {{- if eq $metric.type "CPU" }}
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: {{ $.Values.istio.controlPlane.replicasManagement.hpa.cpuTargetAverageUtilization }}
+        averageUtilization: {{ $metric.targetAverageUtilization }}
+      {{- end}}
+    {{- end}}
   {{- end}}
 {{- end}}

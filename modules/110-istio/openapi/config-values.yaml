@@ -450,7 +450,9 @@ properties:
           hpa:
             minReplicas: 2
             maxReplicas: 5
-            cpuTargetAverageUtilization: 80
+            metrics:
+            - type: CPU
+              targetAverageUtilization: 80
         properties:
           mode:
             type: string
@@ -476,7 +478,7 @@ properties:
             type: object
             description: |
               Options for replicas management for the `HPA` mode.
-            required: ["minReplicas", "maxReplicas", "cpuTargetAverageUtilization"]
+            required: ["minReplicas", "maxReplicas", "metrics"]
             properties:
               minReplicas:
                 type: number
@@ -488,10 +490,26 @@ properties:
                 minimum: 1
                 description: |
                   The upper limit for the number of replicas to which the HPA can scale up. It cannot be less that `minReplicas`.
-              cpuTargetAverageUtilization:
-                type: number
+              metrics:
+                type: array
                 description: |
-                  The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
+                  The HPA will use these metrics to decide whether to increase or decrease the number of replicates.
+                minItems: 1
+                items:
+                  type: object
+                  required: ["type","targetAverageUtilization"]
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Metric type.
+                      enum: ['CPU']
+                    targetAverageUtilization:
+                      type: number
+                      description: |
+                        The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
+                      minimum: 1
+                      maximum: 100
       resourcesManagement:
         description: |
           Settings for CPU and memory requests and limits by istiod pods.

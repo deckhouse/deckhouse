@@ -230,9 +230,17 @@ properties:
               maxReplicas:
                 description: |
                   Максимальное количество реплик, которое может быть установлено HPA. Не может быть меньше `minReplicas`.
-              cpuTargetAverageUtilization:
+              metrics:
                 description: |
-                  Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.
+                  HPA будет основываться на этих метриках при принятии решения об увеличении или уменьшении количества реплик.
+                items:
+                  properties:
+                    type:
+                      description: |
+                        Тип метрики.
+                    targetAverageUtilization:
+                      description: |
+                        Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.
       resourcesManagement:
         description: |
           Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами istiod.
