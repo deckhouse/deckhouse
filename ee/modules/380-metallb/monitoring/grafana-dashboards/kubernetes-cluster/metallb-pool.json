@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 53,
-  "iteration": 1707814462935,
+  "id": 42,
+  "iteration": 1708010318522,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -85,8 +85,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 14,
-        "w": 24,
+        "h": 10,
+        "w": 17,
         "x": 0,
         "y": 0
       },
@@ -130,6 +130,71 @@
       ],
       "title": "Addresses",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 96
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 7,
+        "x": 17,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "expr": "metallb_allocator_addresses_in_use_total{pool=\"$pool\"} / metallb_allocator_addresses_total{pool=\"$pool\"} * 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Addresses Usage",
+      "type": "gauge"
     }
   ],
   "refresh": "",
@@ -161,12 +226,12 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
-            "my-pool-l2"
+            "frontend-pool"
           ],
           "value": [
-            "my-pool-l2"
+            "frontend-pool"
           ]
         },
         "datasource": {
@@ -228,6 +293,6 @@
   "timezone": "",
   "title": "Metallb / pools",
   "uid": "sZzUB4ymk3",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }
