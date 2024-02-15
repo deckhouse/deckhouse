@@ -64,6 +64,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter",
+	"system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager",
 	"system:serviceaccount:d8-cni-cilium:agent",
 	"system:serviceaccount:d8-cni-cilium:dashboard",
 	"system:serviceaccount:d8-cni-cilium:operator",
