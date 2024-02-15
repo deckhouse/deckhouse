@@ -43,7 +43,7 @@ spec:
                       additionalProperties:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        OpenAPI specification for [template parameters](#projecttemplate-v1alpha1-spec-template).
+                        OpenAPI specification for [parameters](#project-v1alpha2-spec-parameters).
 
                         This is used to check the validity of the parameters that are passed when creating a new project.
                 resourcesTemplate:

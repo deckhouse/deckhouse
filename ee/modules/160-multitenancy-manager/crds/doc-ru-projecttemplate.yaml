@@ -18,7 +18,7 @@ spec:
                   properties:
                     openAPIV3Schema:
                       description: |
-                        Спецификация OpenAPI для [параметров шаблона](#projecttemplate-v1alpha1-spec-template).
+                        Спецификация OpenAPI для [параметров шаблона](#project-v1alpha2-spec-parameters).
 
                         Используется для проверки правильности параметров, передаваемых при создании нового проекта.
                 resourcesTemplate:
