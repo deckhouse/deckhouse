@@ -172,7 +172,7 @@ spec:
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
   {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
-      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.numReplicas }}
+      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.replicas }}
   {{- end }}
   # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}

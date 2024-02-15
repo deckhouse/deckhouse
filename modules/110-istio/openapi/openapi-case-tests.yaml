@@ -4,7 +4,7 @@ positive:
         replicasManagement:
           mode: Static
           static:
-            numReplicas: 3
+            replicas: 3
         resourcesManagement:
           vpa:
             memory:

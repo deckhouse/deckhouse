@@ -440,12 +440,12 @@ properties:
         - mode: Standard
         - mode: Static
           static:
-            numReplicas: 3
+            replicas: 3
         x-doc-examples:
         - mode: Standard
         - mode: Static
           static:
-            numReplicas: 3
+            replicas: 3
         - mode: HPA
           hpa:
             minReplicas: 2
@@ -457,7 +457,7 @@ properties:
             description: |
               Replicas management mode:
               - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
-              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.numReplicas](#parameters-controlplane-replicasmanagement-static-numreplicas) parameter);
+              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
               - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
             enum: ['Standard', 'Static', 'HPA']
             default: 'Standard'
@@ -465,9 +465,9 @@ properties:
             type: object
             description: |
               Options for replicas management for the `Static` mode.
-            required: ["numReplicas"]
+            required: ["replicas"]
             properties:
-              numReplicas:
+              replicas:
                 type: number
                 minimum: 1
                 description: |
