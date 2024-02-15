@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 
-FROM $BASE_GOLANG_20_ALPINE AS build
+FROM $BASE_GOLANG_20_ALPINE_DEV AS build
 ARG GOPROXY
 ARG SOURCE_REPO
 ENV GOPROXY=${GOPROXY} \
@@ -11,7 +11,6 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
-RUN apk add --update --no-cache patch git
 RUN git clone --depth 1 --branch v0.16.4 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
 
 # some patches are applied to dependencies

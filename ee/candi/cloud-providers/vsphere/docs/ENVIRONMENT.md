@@ -113,9 +113,9 @@ It is recommended to use a pre-built cloud image/OVA file provided by the OS ven
 
 Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do this, the following packages must be installed in the image:
 
-* cloud-init
-* open-vm-tools
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (for `cloud-init` versions older than 21.3)
+* `open-vm-tools`
+* `cloud-init`
+* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used)
 
 To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
 

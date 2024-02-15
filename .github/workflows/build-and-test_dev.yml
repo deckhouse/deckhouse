@@ -38,8 +38,6 @@ env:
   # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
-  CRATESPROXY: "${{secrets.CRATESPROXY}}"
-  NPMPROXY: "${{secrets.NPMPROXY}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
@@ -444,7 +442,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -616,7 +614,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -794,7 +792,7 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -852,7 +850,7 @@ jobs:
 
 
       - name: Run main web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -1373,7 +1371,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>

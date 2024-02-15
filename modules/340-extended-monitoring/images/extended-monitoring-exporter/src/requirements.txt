@@ -1,1 +1,1 @@
-git+${SOURCE_REPO}/python-modules/kubernetes.git@v22.6.0
+kubernetes==22.6.0

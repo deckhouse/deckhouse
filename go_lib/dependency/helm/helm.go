@@ -25,6 +25,7 @@ import (
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/postrender"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -36,7 +37,7 @@ import (
 const helmDriver = "secret"
 
 type Client interface {
-	Upgrade(releaseName string, templates, values map[string]interface{}, debug bool) error
+	Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, debug bool, pr ...postrender.PostRenderer) error
 	Delete(releaseName string) error
 }
 
@@ -51,7 +52,6 @@ type helmClient struct {
 // WithTimeout - timeout for helm upgrade/delete. Default: 15 seconds
 func NewClient(namespace string, options ...Option) (Client, error) {
 	opts := &helmOptions{
-		Namespace:  namespace,
 		HistoryMax: 3,
 		Timeout:    time.Duration(15 * float64(time.Second)),
 	}
@@ -74,7 +74,6 @@ func NewClient(namespace string, options ...Option) (Client, error) {
 }
 
 type helmOptions struct {
-	Namespace  string
 	HistoryMax int32
 	Timeout    time.Duration
 }
@@ -93,7 +92,7 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func (client *helmClient) Upgrade(releaseName string, templates, values map[string]interface{}, _ bool) error {
+func (client *helmClient) Upgrade(releaseName, releaseNamespace string, templates, values map[string]interface{}, _ bool, pr ...postrender.PostRenderer) error {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -114,27 +113,32 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
-
 	hashsum := getMD5Hash(templates, values)
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
-	upgradeObject.Namespace = client.options.Namespace
+	upgradeObject.Namespace = releaseNamespace
 	upgradeObject.Install = true
 	upgradeObject.MaxHistory = int(client.options.HistoryMax)
 	upgradeObject.Timeout = client.options.Timeout
 	upgradeObject.Labels = map[string]string{
 		"hashsum": hashsum,
 	}
+	if len(pr) > 0 {
+		upgradeObject.PostRenderer = pr[0]
+	}
 
 	releases, err := action.NewHistory(client.actionConfig).Run(releaseName)
 	if err == driver.ErrReleaseNotFound {
 		installObject := action.NewInstall(client.actionConfig)
-		installObject.Namespace = client.options.Namespace
+		installObject.Namespace = releaseNamespace
 		installObject.Timeout = client.options.Timeout
 		installObject.ReleaseName = releaseName
 		installObject.UseReleaseName = true
 		installObject.Labels = map[string]string{
 			"hashsum": hashsum,
+		}
+		if len(pr) > 0 {
+			installObject.PostRenderer = pr[0]
 		}
 
 		_, err = installObject.Run(ch, values)
@@ -146,7 +150,7 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 		latestRelease := releases[0]
 		val, ok := latestRelease.Labels["hashsum"]
 		if ok {
-			if val == hashsum {
+			if val == hashsum && latestRelease.Info.Status == release.StatusDeployed {
 				klog.Info("the hashes matched")
 				return nil
 			}
@@ -167,6 +171,8 @@ func (client *helmClient) Upgrade(releaseName string, templates, values map[stri
 
 func (client *helmClient) Delete(releaseName string) error {
 	uninstallObject := action.NewUninstall(client.actionConfig)
+	uninstallObject.KeepHistory = false
+	uninstallObject.IgnoreNotFound = true
 
 	if _, err := uninstallObject.Run(releaseName); err != nil {
 		return fmt.Errorf("helm uninstall %s invocation error: %v", releaseName, err)

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -16,7 +17,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/internal"
@@ -49,6 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleProjects))
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
+	postRenderer := new(projectTemplateHelmRenderer)
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 
@@ -88,14 +93,14 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	for projectName, projectValues := range projectValuesSnap {
+		postRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
 		}
 
 		projectTemplateValues := projectTemplateValuesSnap[projectValues.ProjectTemplateName]
 		values := concatValues(projectValues, projectTemplateValues)
-
-		err = helmClient.Upgrade(projectName, resourcesTemplate, values, false)
+		err = helmClient.Upgrade(projectName, projectName, resourcesTemplate, values, false, postRenderer)
 		if err != nil {
 			internal.SetProjectStatusError(input.PatchCollector, projectName, err.Error())
 			input.LogEntry.Errorf("upgrade project \"%v\" error: %v", projectName, err)
@@ -187,4 +192,66 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 	}
 
 	return projectTemplate, nil
+}
+
+type projectTemplateHelmRenderer struct {
+	projectName string
+}
+
+func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
+	ptr.projectName = name
+}
+
+// Run post renderer which will remove all namespaces except the project one
+// or will add a project namespace if it does not exist in manifests
+func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	if ptr.projectName == "" {
+		return renderedManifests, nil
+	}
+
+	builder := strings.Builder{}
+
+	manifests := releaseutil.SplitManifests(renderedManifests.String())
+
+	namespaces := make([]v1.Namespace, 0)
+
+	for _, manifest := range manifests {
+		var ns v1.Namespace
+		err = yaml.Unmarshal([]byte(manifest), &ns)
+		if err != nil {
+			return renderedManifests, err
+		}
+
+		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
+			builder.WriteString("\n---\n" + manifest)
+			continue
+		}
+
+		if ns.Name != ptr.projectName {
+			// drop Namespace from manifests if it's not a project namespace
+			continue
+		}
+
+		namespaces = append(namespaces, ns)
+	}
+
+	result := bytes.NewBuffer(nil)
+
+	for _, ns := range namespaces {
+		if _, ok := ns.GetAnnotations()["multitenancy-boilerplate"]; ok && len(namespaces) > 1 {
+			continue
+		}
+		if ns.Labels == nil {
+			ns.Labels = make(map[string]string, 1)
+		}
+		ns.Labels["heritage"] = "multitenancy-manager"
+		data, _ := yaml.Marshal(ns)
+		result.WriteString("---\n")
+		result.Write(data)
+		break
+	}
+
+	result.WriteString(builder.String())
+
+	return result, nil
 }

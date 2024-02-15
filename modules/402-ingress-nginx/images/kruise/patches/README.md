@@ -23,3 +23,16 @@ Adds an extra spec field `.spec.replicas` which is set by the kruise controller 
 the number of nodes eligible for scheduling the advanced daemonset's pods (cordoned nodes are counted as eligible).
 Adds /scale subresource to advanced daemonset CRD so that a PDB could enforce its policy.
 Adds some extra logic to the kruise controller to deal with relevant PDB's (to make them resync when necessary) and timely update replicas' count in some conrner cases.
+
+### Go mod
+Updates library versions.
+To create this patch run:
+```shell
+go mod edit -go 1.20
+go get -u golang.org/x/net@v0.17.0
+go get -u github.com/docker/distribution@v2.8.3
+go get -u github.com/docker/docker@v20.10.24
+go get -u github.com/opencontainers/runc@v1.1.5
+go get -u gopkg.in/yaml.v3@v3.0.1
+git diff
+```

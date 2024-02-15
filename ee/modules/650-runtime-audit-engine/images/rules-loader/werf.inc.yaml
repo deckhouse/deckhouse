@@ -1,43 +1,51 @@
 ---
-artifact: tini-artifact
-from: {{ $.Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-    - apk update && apk add git cmake gcc make musl-dev
-  install:
-    - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
-    - cd /tini/
-    - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-    - cmake . && make
-    - rm -rf /var/cache/apk/*
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
 - artifact: tini-artifact
   add: /tini/tini-static
   to: /sbin/tini
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3
+  - python3.9
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib/python3
+  to: /usr/lib/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3
+  to: /usr/lib64/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3.9
+  to: /usr/lib64/python3.9
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/local/lib/python3
+  to: /usr/local/lib/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/local/lib64/python3
+  to: /usr/local/lib64/python3
+  before: install
+- artifact: {{ $.ModuleName }}/falco-artifact
+  add: /falco-package
   to: /
   includePaths:
-  - usr/bin/falco
-  - usr/share/falco
-  - usr/local/lib/python3
-  - usr/local/lib64/python3
-  before: setup
+  - usr/bin/
+  - usr/share/
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   stageDependencies:
     install:
     - '**/*'
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get install python3 -y
-  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
 docker:
   ENV:
     SHELL_OPERATOR_HOOKS_DIR: "/hooks"
@@ -46,27 +54,16 @@ docker:
   ENTRYPOINT: ["tini", "--", "/shell-operator"]
   CMD: ["start"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/alt
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /tmp/requirements.txt
+  to: /requirements.txt
   stageDependencies:
     install:
-      - '**/*'
-import:
-- artifact: {{ $.ModuleName }}/falco-artifact
-  add: /falco-package
-  to: /
-  includePaths:
-  - usr/bin/
-  - usr/share/
-  before: install
+    - '**/*'
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get install python3 pip git -y
-  - rm -rf /var/cache/apt /var/lib/apt /var/lib/rpm
   install:
   - export SOURCE_REPO={{ .SOURCE_REPO }}
-  - pip3 install -r /tmp/requirements.txt
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

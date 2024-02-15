@@ -1,22 +1,48 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_SHELL_OPERATOR }}
-fromCacheVersion: "2023-12-21.0"
-shell:
-  beforeInstall:
-  - apk add --no-cache python3 py3-pip
-  install:
-  - pip3 install --break-system-packages -r /tmp/requirements.txt
-  - apk del py3-pip
-  - rm -rf /var/cache/apk/*
-  - rm -f /tmp/requirements.txt
+fromImage: common/shell-operator
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+  includePaths:
+    - '**/*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/lib/python3
+  to: /usr/lib/python3
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/lib64/python3
+  to: /usr/lib64/python3
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/lib64/python3.9
+  to: /usr/lib64/python3.9
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/local/lib/python3
+  to: /usr/local/lib/python3
+  before: setup
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /tmp/requirements.txt
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+
+---
+{{- $pythonBinaries := "/usr/bin/python3" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+    - export SOURCE_REPO={{ .SOURCE_REPO }}
+    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+    - pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - /binary_replace.sh -i "{{ $pythonBinaries }}" -o /relocate

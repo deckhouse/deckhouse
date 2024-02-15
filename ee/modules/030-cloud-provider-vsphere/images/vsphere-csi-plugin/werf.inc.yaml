@@ -16,13 +16,11 @@ docker:
   ENTRYPOINT: ["/bin/vsphere-csi"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -34,14 +32,7 @@ shell:
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs* /sbin/mount.nfs* /sbin/umount.nfs*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                        util-linux \
-                        mount udev parted \
-                        nfs-utils e2fsprogs xfsprogs btrfs-progs
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

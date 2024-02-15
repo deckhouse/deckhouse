@@ -1,6 +1,6 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE
-FROM $BASE_GOLANG_20_ALPINE as artifact
+ARG BASE_GOLANG_20_ALPINE_DEV
+FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
 ARG GOPROXY
 ARG SOURCE_REPO
 
@@ -9,8 +9,6 @@ ENV GOPROXY=${GOPROXY} \
     CGO_ENABLED=0 \
     GOOS=linux \
     GOARCH=amd64
-
-RUN apk add bash git make
 
 WORKDIR /src
 
@@ -37,7 +35,6 @@ COPY --from=artifact /app /
 COPY --from=artifact /etc/nsswitch.conf /etc/
 COPY --from=artifact /src/html /app/html
 COPY --from=artifact /src/templates /app/templates
-COPY --from=artifact /src/entrypoint.sh /
 
 WORKDIR /app
 

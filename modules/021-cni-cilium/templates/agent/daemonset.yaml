@@ -13,22 +13,27 @@ spec:
   {{- end }}
 {{- end }}
 ---
+{{- define "agent_daemonset_template" }}
+  {{- $context := index . 0 }}
+  {{- $agent_daemonset_generation := index . 1 }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: agent
-  namespace: d8-{{ .Chart.Name }}
-  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "agent")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
       app: agent
   updateStrategy:
-    type: RollingUpdate
+    type: OnDelete
   template:
     metadata:
       annotations:
-        configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
+        configmap-checksum: {{ include (print $context.Template.BasePath "/configmap.yaml") $context | sha256sum | quote }}
+        safe-agent-updater-daemonset-generation: {{ $agent_daemonset_generation | quote }}
         container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
@@ -38,14 +43,14 @@ spec:
         app: agent
         module: cni-cilium
     spec:
-      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $context | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         command:
         - cilium-agent
         args:
@@ -166,7 +171,7 @@ spec:
         - name: cilium-config-path
           mountPath: /tmp/cilium/config-map
           readOnly: true
-        {{- if has "virtualization" .Values.global.enabledModules }}
+        {{- if has "virtualization" $context.Values.global.enabledModules }}
         - mountPath: /etc/config
           name: ip-masq-agent
           readOnly: true
@@ -181,10 +186,10 @@ spec:
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
         resources:
-        {{ include "helm_lib_resources_management_pod_resources" (list $.Values.cniCilium.resourcesManagement) | nindent 10 }}
+        {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
         - "--v=2"
@@ -202,7 +207,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-{{ .Chart.Name }}
+                  namespace: d8-{{ $context.Chart.Name }}
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets
@@ -213,16 +218,16 @@ spec:
           name: https-metrics
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" $context | nindent 12 }}
   {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -257,9 +262,9 @@ spec:
               - SYS_PTRACE
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: apply-sysctl-overwrites
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         env:
         - name: BIN_PATH
           value: /opt/cni/bin
@@ -290,9 +295,9 @@ spec:
             mountPath: /hostbin
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: mount-bpf-fs
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         args:
         - 'mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf'
         command:
@@ -308,9 +313,9 @@ spec:
           mountPropagation: Bidirectional
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: clean-cilium-state
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         command:
         - /init-container.sh
         env:
@@ -368,15 +373,15 @@ spec:
           mountPath: /var/run/cilium
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         command:
           - "/install-plugin.sh"
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
           seLinuxOptions:
             level: 's0'
@@ -434,7 +439,7 @@ spec:
       - name: cilium-config-path
         configMap:
           name: cilium-config
-      {{- if has "virtualization" .Values.global.enabledModules }}
+      {{- if has "virtualization" $context.Values.global.enabledModules }}
       - name: ip-masq-agent
         configMap:
           name: ip-masq-agent
@@ -457,3 +462,9 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+{{- end  }}
+---
+
+{{ $agent_daemonset_generation := include "agent_daemonset_template" (list . "undefined") | sha256sum }}
+
+{{- include "agent_daemonset_template" (list . $agent_daemonset_generation) }}
