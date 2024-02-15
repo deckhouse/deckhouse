@@ -273,6 +273,17 @@ function cleanup() {
   destroy_eks_infra || return $?
 }
 
+function chmod_dirs_for_cleanup(){
+  chmod 0666 -R $(pwd)/testing
+  chmod 0666 -R /tmp
+  # temp
+  chmod 0777 -R $cwd
+  chmod 0777 -R $root_wd
+  chmod 0777 -R $bootstrap_log
+  chmod 0777 -R $ssh_private_key_path
+  chmod 0777 -R $(pwd)/
+}
+
 function main() {
    >&2 echo "Start cloud test script"
    if ! prepare_environment ; then
@@ -309,8 +320,10 @@ function main() {
     ;;
   esac
   if [[ $exitCode == 0 ]]; then
+    chmod_dirs_for_cleanup
     echo "E2E test: Success!"
   else
+    chmod_dirs_for_cleanup
     echo "E2E test: fail."
   fi
   exit $exitCode

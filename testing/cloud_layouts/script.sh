@@ -852,6 +852,17 @@ function parse_master_ip_from_log() {
   echo "${master_ip}"
 }
 
+function chmod_dirs_for_cleanup(){
+  chmod 777 -R $(pwd)/testing
+  chmod 777 -R /tmp
+  # temp
+  chmod 777 -R $cwd
+  chmod 777 -R $root_wd
+  chmod 777 -R $bootstrap_log
+  chmod 777 -R $ssh_private_key_path
+  chmod 777 -R $(pwd)/
+}
+
 function main() {
   >&2 echo "Start cloud test script"
   if ! prepare_environment ; then
@@ -883,8 +894,10 @@ function main() {
     ;;
   esac
   if [[ $exitCode == 0 ]]; then
+    chmod_dirs_for_cleanup
     echo "E2E test: Success!"
   else
+    chmod_dirs_for_cleanup
     echo "E2E test: fail."
   fi
   exit $exitCode

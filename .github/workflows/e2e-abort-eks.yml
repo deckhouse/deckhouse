@@ -279,7 +279,6 @@ jobs:
           -e CRI=${CRI} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
-          --user $(id -u):$(id -u) \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -545,7 +544,6 @@ jobs:
           -e CRI=${CRI} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
-          --user $(id -u):$(id -u) \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -811,7 +809,6 @@ jobs:
           -e CRI=${CRI} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
-          --user $(id -u):$(id -u) \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -1077,7 +1074,6 @@ jobs:
           -e CRI=${CRI} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
-          --user $(id -u):$(id -u) \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -1343,7 +1339,6 @@ jobs:
           -e CRI=${CRI} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
-          --user $(id -u):$(id -u) \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 

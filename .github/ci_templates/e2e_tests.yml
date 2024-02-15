@@ -142,7 +142,6 @@ run: |
   -e CRI=${CRI} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
 
@@ -180,7 +179,6 @@ run: |
   -e CRI=${CRI} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
@@ -225,10 +223,6 @@ run: |
 {!{- end }!}
     -v $(pwd)/testing:/deckhouse/testing \
     -v ${TMP_DIR_PATH}:/tmp \
-    --user $(id -u):$(id -u) \
-    -v /etc/group:/etc/group:ro \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/shadow:/etc/shadow:ro \
     -w /deckhouse \
   ${INSTALL_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}

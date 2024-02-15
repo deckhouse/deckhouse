@@ -483,10 +483,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -574,10 +570,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -942,10 +934,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1033,10 +1021,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1401,10 +1385,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1492,10 +1472,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1860,10 +1836,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1951,10 +1923,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2319,10 +2287,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2410,10 +2374,6 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
