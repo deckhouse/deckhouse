@@ -34,7 +34,6 @@ spec:
       annotations:
         configmap-checksum: {{ include (print $context.Template.BasePath "/configmap.yaml") $context | sha256sum | quote }}
         safe-agent-updater-daemonset-generation: {{ $agent_daemonset_generation | quote }}
-        scheduler.alpha.kubernetes.io/critical-pod: ""
         container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
