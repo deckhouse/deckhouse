@@ -495,14 +495,11 @@ data: {}
 apiVersion: v1
 kind: Namespace
 metadata:
-  creationTimestamp: null
   labels:
     heritage: multitenancy-manager
   annotations:
     multitenancy-boilerplate: "true"
   name: test-project-1
-spec: {}
-status: {}
 `, ns)
 	})
 
@@ -534,6 +531,8 @@ kind: ConfigMap
 metadata:
   namespace: test-project-1
   name: tututu
+  labels:
+    heritage: multitenancy-manager
 data: {}
 `
 
@@ -551,13 +550,10 @@ kind: Namespace
 metadata:
   annotations:
     foo: bar
-  creationTimestamp: null
   labels:
     heritage: multitenancy-manager
     twotwotwo: nanana
   name: test-project-1
-spec: {}
-status: {}
 `, ns)
 	})
 
@@ -593,6 +589,8 @@ kind: ConfigMap
 metadata:
   namespace: test-project-1
   name: tututu
+  labels:
+    heritage: multitenancy-manager
 data: {}
 `
 
@@ -608,13 +606,10 @@ data: {}
 apiVersion: v1
 kind: Namespace
 metadata:
-  creationTimestamp: null
   labels:
     heritage: multitenancy-manager
     twotwotwo: lalala
   name: test-project-1
-spec: {}
-status: {}
 `, ns)
 	})
 }

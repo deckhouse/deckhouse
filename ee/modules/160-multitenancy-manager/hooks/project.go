@@ -18,7 +18,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog"
 	"sigs.k8s.io/yaml"
 
@@ -213,26 +213,35 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 	manifests := releaseutil.SplitManifests(renderedManifests.String())
 
-	namespaces := make([]v1.Namespace, 0)
+	namespaces := make([]*unstructured.Unstructured, 0)
 
 	for _, manifest := range manifests {
-		var ns v1.Namespace
-		err = yaml.Unmarshal([]byte(manifest), &ns)
+		var un unstructured.Unstructured
+		err = yaml.Unmarshal([]byte(manifest), &un)
 		if err != nil {
 			return renderedManifests, err
 		}
 
-		if ns.APIVersion != "v1" || ns.Kind != "Namespace" {
-			builder.WriteString("\n---\n" + manifest)
+		// inject multitenancy-manager labels
+		labels := un.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string, 1)
+		}
+		labels["heritage"] = "multitenancy-manager"
+		un.SetLabels(labels)
+
+		if un.GetAPIVersion() != "v1" || un.GetKind() != "Namespace" {
+			data, _ := yaml.Marshal(un.Object)
+			builder.WriteString("\n---\n" + string(data))
 			continue
 		}
 
-		if ns.Name != ptr.projectName {
+		if un.GetName() != ptr.projectName {
 			// drop Namespace from manifests if it's not a project namespace
 			continue
 		}
 
-		namespaces = append(namespaces, ns)
+		namespaces = append(namespaces, &un)
 	}
 
 	result := bytes.NewBuffer(nil)
@@ -241,11 +250,8 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 		if _, ok := ns.GetAnnotations()["multitenancy-boilerplate"]; ok && len(namespaces) > 1 {
 			continue
 		}
-		if ns.Labels == nil {
-			ns.Labels = make(map[string]string, 1)
-		}
-		ns.Labels["heritage"] = "multitenancy-manager"
-		data, _ := yaml.Marshal(ns)
+
+		data, _ := yaml.Marshal(ns.Object)
 		result.WriteString("---\n")
 		result.Write(data)
 		break
