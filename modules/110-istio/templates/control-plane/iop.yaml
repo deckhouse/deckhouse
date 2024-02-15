@@ -211,8 +211,6 @@ spec:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
 {{- if and ($.Values.global.enabledModules | has "cni-cilium") (not (eq $.Values.istio.sidecarInjectionMode "CNIPlugin"))}}
       defaultTemplates: ["sidecar", "d8-check-kernel-version"]
-{{ else }}
-      defaultTemplates: ["sidecar"]
 {{- end }}
       templates:
 {{- if and ($.Values.global.enabledModules | has "cni-cilium") (not (eq $.Values.istio.sidecarInjectionMode "CNIPlugin")) }}
