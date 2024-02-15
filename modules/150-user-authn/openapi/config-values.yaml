@@ -37,7 +37,7 @@ properties:
               The mode of issuing certificates for the Ingress resource.
 
               In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
-              
+
               Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
@@ -166,7 +166,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Dex/kubeconfig-generator will use HTTPS using the certificate from the `d8-system` namespace.
           - `Disabled` — Dex/kubeconfig-generator will work over HTTP only;
-          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
