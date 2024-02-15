@@ -52,12 +52,12 @@ spec:
 
                     Templates are fully compatible with all [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
-                    Read more about [creating an isolated Environment...](usage.html#creating-an-isolated-environment)
+                    Read more about [creating an isolated Environment...](usage.html#creating-a-project)
 
                     The following parameters are available in templates:
                     - `{{ .projectName }}` — the name of the `Project` for which the template is being rendered.
                     - `{{ .projectTemplateName }}` — the name of the `ProjectTemplate`.
-                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersSchema) and defined in the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
+                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) and defined in the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
 
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
                     > as this field is automatically set with the name of the created project.
