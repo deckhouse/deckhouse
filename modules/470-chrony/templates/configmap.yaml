@@ -12,7 +12,7 @@ data:
     driftfile /var/run/chrony/chrony.drift
     makestep 1.0 -1
     rtcsync
-    bindaddress 0.0.0.0
+    bindaddress {{ .HostIP }}
     cmdallow 127/8
 
     {{ if (eq .NTPRole "source") }}

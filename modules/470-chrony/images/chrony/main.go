@@ -41,6 +41,7 @@ type ChronyConfigTemplateData struct {
 	NTPRole              string
 	NTPServers           []string
 	ChronyMastersService string
+	HostIP               string
 }
 
 func main() {
@@ -70,6 +71,7 @@ func main() {
 		NTPRole:              os.Getenv("NTP_ROLE"),
 		NTPServers:           ntpServersList,
 		ChronyMastersService: os.Getenv("CHRONY_MASTERS_SERVICE"),
+		HostIP:               os.Getenv("HOST_IP"),
 	}
 
 	configBuffer := &bytes.Buffer{}
@@ -89,7 +91,7 @@ func main() {
 		log.Fatal(errors.Wrapf(err, "failed to remove %s file", chronydPidFilePath))
 	}
 
-	cmd := exec.Command(chronydPath, "-d", "-s", "-f", chronyConfPath)
+	cmd := exec.Command(chronydPath, "-4", "-d", "-s", "-f", chronyConfPath)
 	cmd.Env = os.Environ()
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
