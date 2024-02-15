@@ -195,7 +195,10 @@ import:
   to: /
   before: setup
   includePaths:
-  - lib64/libssl.so.1.1
+  - lib64/libz.so*
+  - lib64/libexpat.so*
+  - lib64/libssl.so.*
+  - lib64/libcrypto.so.*
   - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
@@ -203,6 +206,7 @@ import:
   - usr/lib/python3
   - usr/lib64/python3
   - usr/lib64/python3.9
+  - usr/lib64/libffi.so*
   - usr/share/vim
   - etc/vim
   - etc/bash_completion.d
