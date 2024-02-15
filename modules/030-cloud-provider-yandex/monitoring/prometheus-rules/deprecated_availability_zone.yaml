@@ -15,8 +15,12 @@
         summary: NodeGroup {{ $labels.node_group }} contains Nodes with deprecated availability zone.
         description: |
           Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
-          You should migrate your Nodes to `ru-central1-a` or `ru-central1-b` zone.
+          You should migrate your Nodes, Disks and LoadBalancers to `ru-central1-a`, `ru-central1-b` or `ru-central1-d` (introduced in v1.56).
           To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
+
+          You can use [Yandex Migration Guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) (mostly applicable to the `ru-central1-d' zone only).
+
+          **IMPORTANT** You cannot migrate public IP addresses between zones. Check out the Yandex Migration Guide for details.
     - alert: NATInstanceWithDeprecatedAvailabilityZone
       expr: |
         d8_cloud_provider_yandex_nat_instance_zone_deprecated > 0
