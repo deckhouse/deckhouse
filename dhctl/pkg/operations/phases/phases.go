@@ -17,24 +17,51 @@ package phases
 import (
 	"errors"
 	"fmt"
+
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type OnPhaseFunc func(completedPhase OperationPhase, completedPhaseState DhctlState, nextPhase OperationPhase, nextPhaseCritical bool) error
 
-type OperationPhase string
+type OperationPhase int
 
 const (
-	BaseInfraPhase                         OperationPhase = "BaseInfra"
-	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"
-	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
-	CreateResourcesPhase                   OperationPhase = "CreateResources"
-	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
-	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
-	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
-	AllNodesPhase                          OperationPhase = "AllNodes"
-	FinalizationPhase                      OperationPhase = "Finalization"
+	UnknownPhase OperationPhase = iota
+	BaseInfraPhase
+	ExecuteBashibleBundlePhase
+	InstallDeckhousePhase
+	CreateResourcesPhase
+	InstallAdditionalMastersAndStaticNodes
+	DeleteResourcesPhase
+	ExecPostBootstrapPhase
+	AllNodesPhase
+	FinalizationPhase
 )
+
+func (p OperationPhase) String() string {
+	switch p {
+	case BaseInfraPhase:
+		return "BaseInfra"
+	case ExecuteBashibleBundlePhase:
+		return "ExecuteBashibleBundle"
+	case InstallDeckhousePhase:
+		return "InstallDeckhouse"
+	case CreateResourcesPhase:
+		return "CreateResources"
+	case InstallAdditionalMastersAndStaticNodes:
+		return "InstallAdditionalMastersAndStaticNodes"
+	case DeleteResourcesPhase:
+		return "DeleteResources"
+	case ExecPostBootstrapPhase:
+		return "ExecPostBootstrap"
+	case AllNodesPhase:
+		return "AllNodes"
+	case FinalizationPhase:
+		return "Finalization"
+	default:
+		return ""
+	}
+}
 
 var (
 	StopOperationCondition = errors.New("StopOperationCondition")
@@ -144,11 +171,11 @@ func (pec *PhasedExecutionContext) CompletePipeline(stateCache dstate.Cache) err
 		return nil
 	}
 	pec.completedPhase = pec.currentPhase
-	if pec.completedPhase == "" {
+	if pec.completedPhase == UnknownPhase {
 		return nil
 	}
 	if pec.pipelineCompletionCounter == 0 {
-		_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false, stateCache)
+		_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, UnknownPhase, false, stateCache)
 		return err
 	}
 	return nil

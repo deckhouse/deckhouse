@@ -77,7 +77,7 @@ func ValidateClusterSettingsChanges(
 		panic("ValidateClusterSettingsChanges operation currently supported only in commander mode")
 	}
 
-	if phase == phases.BaseInfraPhase {
+	if phase < phases.ExecuteBashibleBundlePhase {
 		return nil
 	}
 
