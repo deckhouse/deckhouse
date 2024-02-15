@@ -489,7 +489,9 @@ This feature is available in Enterprise Edition only.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
-### Manually uploading images of third-party Deckhouse modules into an isolated private registry
+### Manually uploading images of Deckhouse modules into an isolated private registry
+
+The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
 1. Run Deckhouse installer version 1.56.0 or higher:
 
@@ -497,13 +499,13 @@ This feature is available in Enterprise Edition only.
    docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.56.0 bash
    ```
 
-   Note that the directory from the host file system is mounted in the installer container. It will store module images and the ModuleSource YAML manifest describing the source of third-party modules.
+   Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
 
-1. Pull module images from their source registry, defined as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`.
+1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `dhctl mirror-modules`.
 
    `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying.
 
-   The following command will pull module images from the source described in the ModuleSource resource located in the `$HOME/module_source.yml` file:
+   The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
    ```shell
    dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
@@ -530,12 +532,12 @@ This feature is available in Enterprise Edition only.
 
    If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
 
-1. After uploading the images to the air-gapped registry, edit the ModuleSource YAML manifest:
+1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest:
 
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
 
-1. Apply the ModuleSource manifest you got in the previous step to the cluster.
+1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 
    ```shell
    kubectl apply -f $HOME/module_source.yml
