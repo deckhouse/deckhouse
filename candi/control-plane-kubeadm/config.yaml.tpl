@@ -3,6 +3,9 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
+{{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
+{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
@@ -54,6 +57,7 @@ apiServer:
     {{- end }}
     enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
+    runtime-config: "admissionregistration.k8s.io/v1alpha1=true,admissionregistration.k8s.io/v1beta1=true"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
