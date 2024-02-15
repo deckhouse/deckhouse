@@ -43,7 +43,7 @@ spec:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
 
-                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha2-spec-parameters) входных параметров шаблона ресурсов.
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
             status:
               properties:
                 message:

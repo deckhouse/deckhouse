@@ -40,7 +40,7 @@ description: Мультитенантность и проекты в Kubernetes.
 
 При создании ресурса [Project](cr.html#project) из определенного [ProjectTemplate](cr.html#projecttemplate) происходит следующее:
 1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [template](cr.html#project-v1alpha2-spec-template) ресурса [Project](cr.html#project);
+1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
 1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 
