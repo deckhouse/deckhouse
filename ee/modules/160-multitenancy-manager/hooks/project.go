@@ -217,8 +217,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 	for _, manifest := range manifests {
 		var un unstructured.Unstructured
-
-		// var ns v1.Namespace
 		err = yaml.Unmarshal([]byte(manifest), &un)
 		if err != nil {
 			return renderedManifests, err
