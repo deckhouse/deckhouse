@@ -140,3 +140,14 @@ spec:
 {{- if $projectTemplateValues.subjects }}
   {{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
 {{- end }}
+
+{{- /* boilerplate namespace, will be removed by PostRender if any other namespace definition exists */}}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $projectValues.projectName }}
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
