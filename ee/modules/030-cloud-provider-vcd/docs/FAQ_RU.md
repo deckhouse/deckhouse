@@ -11,8 +11,8 @@ title: "Cloud provider — vCloud Director: FAQ"
 
 1. Включите DHCP-сервер для внутренней сети.
 
-2. Подготовьте файл с конфигурацией провайдера, заменяя обозначения на валидные для вашего облака:
-```yaml
+1. Подготовьте файл с конфигурацией провайдера, заменяя обозначения на валидные для вашего облака:
+```
 apiVersion: deckhouse.io/v1
 internalNetworkCIDR: <NETWORK_CIRD>
 kind: VCDClusterConfiguration
@@ -39,9 +39,9 @@ virtualApplicationName: <VAPP_NAME>
 virtualDataCenter: <VDC_NAME>
 ```
 Обращаем внимание, что `masterNodeGroup` является обязательным, но его можно оставить как есть.
-3. Кодируем полученый файл в base64.
-4. Создаем секрет с следующим содержимым:
-```yaml
+1. Кодируем полученый файл в base64.
+1. Создаем секрет с следующим содержимым:
+```
 apiVersion: v1
 data:
   cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
@@ -55,7 +55,7 @@ metadata:
   namespace: kube-system
 type: Opaque
 ```
-5. Включаем модуль `cloud-provider-vcd`:
-```shell
+1. Включаем модуль `cloud-provider-vcd`:
+```
 kubectl -n d8-system exec -it deployments/deckhouse -- deckhouse-controller module enable cloud-provider-vcd
 ```
