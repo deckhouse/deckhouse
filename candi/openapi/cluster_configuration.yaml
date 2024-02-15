@@ -141,7 +141,7 @@ apiVersions:
           httpProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: '^https?://[0-9a-zA-Z\.\-:@_]+$'
+            pattern: '^https?://([0-9a-zA-Z\.\-\_]+(\:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$'
             description: |
               Proxy URL for HTTP requests.
 
@@ -152,7 +152,7 @@ apiVersions:
           httpsProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: '^https?://[0-9a-zA-Z\.\-:@_]+$'
+            pattern: '^https?://([0-9a-zA-Z\.\-\_]+(\:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$'
             description: |
               Proxy URL for HTTPS requests.
 
