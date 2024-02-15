@@ -99,7 +99,7 @@ spec:
                   description: |
                     Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
 
-                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha2-spec-parameters) of the template's input parameters.
+                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
                   type: object
             status:
               type: object
