@@ -225,6 +225,13 @@ spec:
           spec:
             containers:
             - name: istio-proxy
+              securityContext:
+                capabilities:
+                  drop:
+                  - all
+                runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
               lifecycle:
                 preStop:
                   exec:
