@@ -36,7 +36,7 @@ properties:
           - `Disabled` — веб-интерфейс Argo CD будет работать только по HTTP;
           - `CertManager` — веб-интерфейс Argo CD будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — веб-интерфейс Argo CD будет работать по HTTPS, используя сертификат из namespace `d8-system`;
-          - `OnlyInURI` — веб-интерфейс Argo CD будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](../../modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — веб-интерфейс Argo CD будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](../../modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
