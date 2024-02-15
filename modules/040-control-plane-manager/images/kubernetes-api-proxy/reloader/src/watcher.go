@@ -134,10 +134,7 @@ func WatchNginxConf() {
 			if event.Name == nginxNewConf {
 				err := nginxReload()
 				if err != nil {
-					SetHealthCheckStatus(false)
 					log.Printf("Failed to reload nginx: %s", err)
-				} else {
-					SetHealthCheckStatus(true)
 				}
 			}
 		case err, ok := <-watcher.Errors:
@@ -145,7 +142,6 @@ func WatchNginxConf() {
 				return
 			}
 
-			SetHealthCheckStatus(false)
 			log.Printf("Watcher error: %s", err)
 		}
 	}
