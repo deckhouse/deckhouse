@@ -37,7 +37,7 @@ const (
 	modulesDir        = "/deckhouse/modules"
 	globalHooksModule = "/deckhouse/global-hooks"
 	// don't forget to update the version in release requirements (release.yaml)
-	DefaultKubernetesVersion = "1.27"
+	DefaultKubernetesVersion = "1.25"
 )
 
 const (
