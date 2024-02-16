@@ -53,7 +53,7 @@
  - **[deckhouse-controller]** fix for `change-registry` helper's handling of registry credentials. [#7095](https://github.com/deckhouse/deckhouse/pull/7095)
  - **[deckhouse-controller]** Fix ModuleConfig validation for configs with empty settings. [#7064](https://github.com/deckhouse/deckhouse/pull/7064)
  - **[descheduler]** Set the number of replicas to 0 if we have only one node. [#5221](https://github.com/deckhouse/deckhouse/pull/5221)
- - **[dhctl]** Change resource creation order. Service accounts will be created before secrets. [#7470](https://github.com/deckhouse/deckhouse/pull/7470)
+ - **[dhctl]** Change the order in which resources are created. Service accounts will be created before secrets. [#7470](https://github.com/deckhouse/deckhouse/pull/7470)
  - **[dhctl]** Mirroring will now include Trivy vulnerability database image. [#7359](https://github.com/deckhouse/deckhouse/pull/7359)
  - **[dhctl]** Skip converge base infra if user does not want converge base infra [#7313](https://github.com/deckhouse/deckhouse/pull/7313)
  - **[dhctl]** Fix skipping preflight check about registry-through-proxy. [#7135](https://github.com/deckhouse/deckhouse/pull/7135)
