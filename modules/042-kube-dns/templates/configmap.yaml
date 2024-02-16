@@ -53,9 +53,9 @@ data:
         loadbalance
         forward . {{ $zone.upstreamNameservers | join " " }} {
     {{- if or (eq ($zone.l4ProtocolMode) "prefer_udp") (not $zone.l4ProtocolMode) }}
-              prefer_udp
+          prefer_udp
     {{- else if eq ($zone.l4ProtocolMode) "force_tcp" }}
-              force_tcp
+          force_tcp
     {{- end }}
         }
     }
