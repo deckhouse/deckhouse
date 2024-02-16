@@ -57,17 +57,17 @@ apiServer:
     {{- end }}
     enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
-{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
-    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
-{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
-    runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
-{{- end }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
+{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
+{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
