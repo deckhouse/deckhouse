@@ -23,7 +23,6 @@ metadata:
 spec:
 {{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
   {{- end }}
-
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -170,7 +169,12 @@ spec:
 
     pilot:
       autoscaleEnabled: false
+  {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
+      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.replicas }}
+  {{- end }}
+  # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
       configNamespace: d8-{{ $.Chart.Name }}
