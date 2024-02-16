@@ -107,18 +107,10 @@ spec:
               path: /healthz
               port: https
               scheme: HTTPS
-          volumeMounts:
-            - name: ccm-controller-config-volume
-              mountPath: /etc/cloud
-              readOnly: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "zvirt_cloud_controller_manager_resources" . | nindent 14 }}
   {{- end }}
-      volumes:
-      - name: ccm-controller-config-volume
-        secret:
-          secretName: cloud-controller-manager
 {{- end }}
