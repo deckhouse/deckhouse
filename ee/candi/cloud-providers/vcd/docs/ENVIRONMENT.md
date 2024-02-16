@@ -54,4 +54,5 @@ Create internal network and connect it to Edge Gateway.
 ### Using the data store
 
 * VCD supports CSI, disks created by CSI is VCD Independent Disks.
+* Guest property `disk.EnableUUID` should be globally enabled for the org.
 * Known limitation - CSI disks cannot support resizing at all.

@@ -58,12 +58,5 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                        util-linux \
-                        mount nvme udev parted \
-                        e2fsprogs xfsprogs btrfs-progs
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
