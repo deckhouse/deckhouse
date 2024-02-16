@@ -39,14 +39,21 @@ import (
 )
 
 const (
-	MinimalUnavailabelK8sVesion = "minimalUnavailabelK8sVesion"
-	MinimalUnavailabelK8sReason = "minimalUnavailabelK8sReason"
+	AutoK8sVersion = "autoK8sVersion"
+	AutoK8sReason  = "autoK8sReason"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/monitoring-kubernetes/auto_k8s_version",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "auto_k8s_version",
+			Crontab: "0 * * * *", // every hour
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "clusterConfiguration",
+			Name:              "kubernetesVersion",
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
@@ -67,38 +74,32 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, err
 	}
 
-	cc := &ClusterConfigurationYaml{}
-
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
 		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 	}
 
-	cc.Content = ccYaml
+	var metaConfig *config.MetaConfig
+	metaConfig, err = config.ParseConfigFromData(string(ccYaml))
+	if err != nil {
+		return nil, err
+	}
 
-	return cc, err
+	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetesVersion, err
 }
 
 func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) error {
-	currentConfig, ok := input.Snapshots["clusterConfiguration"]
-	if !ok || len(currentConfig) == 0 {
-		return errors.New("cluster configuration is empty or invalid")
-	}
-	// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
-	configYamlBytes := currentConfig[0].(*ClusterConfigurationYaml)
-
-	var metaConfig *config.MetaConfig
-	metaConfig, err := config.ParseConfigFromData(string(configYamlBytes.Content))
-	if err != nil {
-		return err
+	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
+	if !ok || len(kubernetesVersion) == 0 {
+		return errors.New("cluster configuration kubernetesVersion is empty or invalid")
 	}
 
-	kubernetesVersionFromMetaConfig, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
-	if err != nil {
-		return err
-	}
-
-	if kubernetesVersionFromMetaConfig == "Automatic" {
+	if kubernetesVersion[0].(string) == "Automatic" {
 		var (
 			unsupportVersion k8sUnsupportedVersion
 			wg               sync.WaitGroup
@@ -146,16 +147,16 @@ func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) err
 
 		k8sVersion, reason := unsupportVersion.get()
 		if k8sVersion != "" {
-			requirements.SaveValue(MinimalUnavailabelK8sVesion, k8sVersion)
-			requirements.SaveValue(MinimalUnavailabelK8sReason, reason)
+			requirements.SaveValue(AutoK8sVersion, k8sVersion)
+			requirements.SaveValue(AutoK8sReason, reason)
 		}
 
 		return nil
 	}
 
 	// unset unavailabel k8s vesion
-	requirements.RemoveValue(MinimalUnavailabelK8sVesion)
-	requirements.RemoveValue(MinimalUnavailabelK8sReason)
+	requirements.RemoveValue(AutoK8sVersion)
+	requirements.RemoveValue(AutoK8sReason)
 
 	return nil
 }

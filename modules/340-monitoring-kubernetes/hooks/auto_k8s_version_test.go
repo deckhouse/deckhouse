@@ -95,15 +95,16 @@ data:
 				f.RunGoHook()
 
 			})
-			It("must have minimalUnavailabelK8sVesion", func() {
+
+			It("must have autoK8sVersion", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				var k8sVersion string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 					k8sVersion = fmt.Sprintf("%v", val)
 				}
 				var reasons []string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+				if val, exists := requirements.GetValue(AutoK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
@@ -123,15 +124,15 @@ data:
 				f.RunGoHook()
 			})
 
-			It("minimalUnavailabelK8sVesion must be empty", func() {
+			It("autoK8sVersion must be empty", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				var k8sVersion string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 					k8sVersion = fmt.Sprintf("%v", val)
 				}
 				var reasons []string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+				if val, exists := requirements.GetValue(AutoK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(BeEmpty())
@@ -145,14 +146,14 @@ data:
 			})
 
 			It("must return error", func() {
-				Expect(f.GoHookError).To(MatchError("cluster configuration is empty or invalid"))
+				Expect(f.GoHookError).To(MatchError("cluster configuration kubernetesVersion is empty or invalid"))
 
 				var k8sVersion string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 					k8sVersion = fmt.Sprintf("%v", val)
 				}
 				var reasons []string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+				if val, exists := requirements.GetValue(AutoK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(BeEmpty())
@@ -164,7 +165,6 @@ data:
 	Context("helm3 release without deprecated apis", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
-			// f.ValuesSetFromYaml("global.clusterConfiguration", []byte(globalClusterConfiguration))
 			var sec corev1.Secret
 			_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
 
@@ -184,15 +184,15 @@ data:
 
 			})
 
-			It("minimalUnavailabelK8sVesion must be empty", func() {
+			It("autoK8sVersion must be empty", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				var k8sVersion string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 					k8sVersion = fmt.Sprintf("%v", val)
 				}
 				var reasons []string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+				if val, exists := requirements.GetValue(AutoK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(BeEmpty())
@@ -205,7 +205,6 @@ data:
 	Context("helm2 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
-			// f.ValuesSetFromYaml("global.clusterConfiguration", []byte(globalClusterConfiguration))
 			var cm corev1.ConfigMap
 			_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
 
@@ -226,15 +225,15 @@ data:
 
 			})
 
-			It("must have minimalUnavailabelK8sVesion", func() {
+			It("must have autoK8sVersion", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				var k8sVersion string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 					k8sVersion = fmt.Sprintf("%v", val)
 				}
 				var reasons []string
-				if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+				if val, exists := requirements.GetValue(AutoK8sReason); exists {
 					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 				}
 				Expect(k8sVersion).To(Equal("1.22.0"))
@@ -267,11 +266,11 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			var k8sVersion string
-			if val, exists := requirements.GetValue(MinimalUnavailabelK8sVesion); exists {
+			if val, exists := requirements.GetValue(AutoK8sVersion); exists {
 				k8sVersion = fmt.Sprintf("%v", val)
 			}
 			var reasons []string
-			if val, exists := requirements.GetValue(MinimalUnavailabelK8sReason); exists {
+			if val, exists := requirements.GetValue(AutoK8sReason); exists {
 				reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
 			}
 			Expect(k8sVersion).To(Equal("1.22.0"))

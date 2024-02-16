@@ -32,7 +32,7 @@ func init() {
 		if err != nil {
 			return false, err
 		}
-		unavailabelVersionStr, exists := getter.Get(hooks.MinimalUnavailabelK8sVesion)
+		unavailabelVersionStr, exists := getter.Get(hooks.AutoK8sVersion)
 		if !exists {
 			return true, nil
 		}
@@ -42,7 +42,7 @@ func init() {
 		}
 
 		if !desiredVersion.LessThan(unavailabelVersion) {
-			if reason, exists := getter.Get(hooks.MinimalUnavailabelK8sReason); exists {
+			if reason, exists := getter.Get(hooks.AutoK8sReason); exists {
 				return false, fmt.Errorf("k8s version is not available because outdated versions of resources are used: %v", reason)
 			}
 
