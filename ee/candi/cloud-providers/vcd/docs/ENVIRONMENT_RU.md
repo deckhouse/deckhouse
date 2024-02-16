@@ -54,5 +54,5 @@ Create internal network and connect it to Edge Gateway.
 ### Использование хранилища
 
 * VCD поддерживает CSI, диски создаются как VCD Independent Disks.
-* Guest property `disk.EnableUUID` должно быть разрешено в организации.
+* Guest property `disk.EnableUUID` должно быть разрешено для используемых темплейтов машин.
 * Известное ограничение - CSI диски не поддерживают ресайз.
