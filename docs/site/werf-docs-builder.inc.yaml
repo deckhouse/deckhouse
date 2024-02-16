@@ -1,5 +1,5 @@
 ---
-image: docs-builder-artifact
+artifact: docs-builder-artifact
 from: {{ .ctx.Images.BASE_GOLANG_20_ALPINE }}
 ansible:
   install:
@@ -28,7 +28,7 @@ from: {{ .ctx.Images.BASE_ALPINE }}
 docker:
   WORKDIR: /app
 import:
-  - image: docs-builder-artifact
+  - artifact: docs-builder-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
