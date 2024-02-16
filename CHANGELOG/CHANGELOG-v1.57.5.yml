@@ -4,7 +4,9 @@ cni-cilium:
       pull_request: https://github.com/deckhouse/deckhouse/pull/7479
 dhctl:
   fixes:
-    - summary: Change resource creation order. Service accounts will be created before secrets.
+    - summary: >-
+        Change the order in which resources are created. Service accounts will be created before
+        secrets.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7470
 log-shipper:
   fixes:
