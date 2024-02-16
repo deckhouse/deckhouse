@@ -1,5 +1,5 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index 805314e..1b5cd29 100644
+index 805314e..09c23dd 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
 @@ -19,6 +19,7 @@ package aws
@@ -10,7 +10,18 @@ index 805314e..1b5cd29 100644
  	"fmt"
  	"io"
  	"net"
-@@ -1677,7 +1678,9 @@ func (c *Cloud) NodeAddressesByProviderID(ctx context.Context, providerID string
+@@ -832,7 +833,9 @@ func InstanceIDIndexFunc(obj interface{}) ([]string, error) {
+ 		return []string{""}, nil
+ 	}
+ 	instanceID, err := KubernetesInstanceID(node.Spec.ProviderID).MapToAWSInstanceID()
+-	if err != nil {
++	if stderrors.Is(err, errStaticNode) {
++		return []string{""}, nil
++	} else if err != nil {
+ 		return []string{""}, fmt.Errorf("error mapping node %q's provider ID %q to instance ID: %v", node.Name, node.Spec.ProviderID, err)
+ 	}
+ 	return []string{string(instanceID)}, nil
+@@ -1677,7 +1680,9 @@ func (c *Cloud) NodeAddressesByProviderID(ctx context.Context, providerID string
  // If false is returned with no error, the instance will be immediately deleted by the cloud controller manager.
  func (c *Cloud) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
  	instanceID, err := KubernetesInstanceID(providerID).MapToAWSInstanceID()
