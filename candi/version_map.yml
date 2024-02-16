@@ -24,6 +24,7 @@ k8s:
       vsphere: v1.25.0
       azure: v1.25.22
       gcp: ccm/v25.3.0
+      zvirt: v0.1.0
     csi:
       openstack: v1.25.3
       provisioner: v3.4.1
