@@ -1,0 +1,52 @@
+diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
+index 1b2f5aa..950522d 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -19,6 +19,7 @@ package aws
+ import (
+ 	"context"
+ 	"errors"
++	stderrors "errors"
+ 	"fmt"
+ 	"io"
+ 	"net"
+@@ -1660,7 +1661,9 @@ func (c *Cloud) NodeAddressesByProviderID(ctx context.Context, providerID string
+ // If false is returned with no error, the instance will be immediately deleted by the cloud controller manager.
+ func (c *Cloud) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
+ 	instanceID, err := KubernetesInstanceID(providerID).MapToAWSInstanceID()
+-	if err != nil {
++	if stderrors.Is(err, errStaticNode) {
++		return true, nil
++	} else if err != nil {
+ 		return false, err
+ 	}
+ 
+diff --git a/pkg/providers/v1/instances.go b/pkg/providers/v1/instances.go
+index ed3aad1..89989c7 100644
+--- a/pkg/providers/v1/instances.go
++++ b/pkg/providers/v1/instances.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package aws
+ 
+ import (
++	stderrors "errors"
+ 	"fmt"
+ 	"net/url"
+ 	"regexp"
+@@ -52,10 +53,16 @@ func (i InstanceID) awsString() *string {
+ //   - <awsInstanceId>
+ type KubernetesInstanceID string
+ 
++var errStaticNode = stderrors.New("static Node detected")
++
+ // MapToAWSInstanceID extracts the InstanceID from the KubernetesInstanceID
+ func (name KubernetesInstanceID) MapToAWSInstanceID() (InstanceID, error) {
+ 	s := string(name)
+ 
++	if strings.HasPrefix(s, "static://") {
++		return "", errStaticNode
++	}
++
+ 	if !strings.HasPrefix(s, "aws://") {
+ 		// Assume a bare aws volume id (vol-1234...)
+ 		// Build a URL with an empty host (AZ)

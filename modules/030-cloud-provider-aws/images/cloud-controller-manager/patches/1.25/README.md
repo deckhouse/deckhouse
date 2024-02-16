@@ -12,3 +12,7 @@ Ability to create LoadBalancer with type `none`. LoadBalancer with this type wil
 ## 003-dont-delete-ingress-sg-rules-elb.patch
 
 We shouldn't delete Ingress SG rule, if it allows access from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs.
+
+## 004-ignore-static-nodes.patch
+
+This patch is for our case when we want to have a static Nodes in the cluster, managed by aws cloud provider.
