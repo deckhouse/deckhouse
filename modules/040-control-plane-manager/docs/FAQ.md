@@ -282,9 +282,6 @@ Repeat the steps below for **each master node one by one**, starting with the no
 ## How do I switch to a different OS image in a single-master cluster?
 
 1. Convert your single-master cluster to a multi-master one, as described in [the guide on adding master nodes to a cluster](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master).
-
-   > In addition to increasing the number of replicas, you can also specify the image with the required OS version using the `masterNode.instanceClass` parameter.
-
 1. Update the master nodes following the [instructions](#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster).
 1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master).
 
