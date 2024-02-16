@@ -13,14 +13,9 @@ properties:
     type: string
     description: |
       The mode defines the L4 protocol for communicating with the upstream DNS server:
-      - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response was truncated, because it exceeded 512 bytes(**and only in this case**), the request will be retried over TCP.
+      - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response exceeded 512 bytes and was truncated(**in this and only this case**), the request will be retried over TCP.
       - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
       - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
-
-      {% alert %}
-        Based on RFC 1035, DNS messages carried by UDP are restricted to 512 bytes (not counting the IP or UDP headers). Longer messages are truncated and the TC bit is set in the header.
-        And based on RFC 5966, when the dns-client receives truncated response, it takes the TC flag as an indication that it should retry over TCP instead.
-      {% endalert %}
     enum: [PreferUDP, ForceTCP, Standard]
     default: PreferUDP
   hosts:
@@ -76,7 +71,7 @@ properties:
           type: string
           description: |
             The mode defines the L4 protocol for communicating with the upstream DNS server:
-            - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response was truncated, because it exceeded 512 bytes(**and only in this case**), the request will be retried over TCP.
+            - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response exceeded 512 bytes and was truncated(**in this and only this case**), the request will be retried over TCP.
             - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
             - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
           enum: [PreferUDP, ForceTCP, Standard]
