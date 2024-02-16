@@ -14,7 +14,7 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 ## Как зарезервировать публичный IP-адрес?
 
-Для использования в `externalIPAddresses` и `natInstanceExternalAddress` (также может быть использован для хоста бастиона) выполните следующую команду:
+Для использования в `externalIPAddresses` и `natInstanceExternalAddress` (также может быть использован для bastion-хоста) выполните следующую команду:
 
 ```shell
 $ yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -73,13 +73,13 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
 
 ## Как создать кластер в новом VPC и развернуть bastion-хост для доступа к узлам?
 
-1. Выполнить bootstrap базовой инфраструктуры кластера:
+1. Выполните bootstrap базовой инфраструктуры кластера:
 
    ```shell
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Создать bastion-хост:
+2. Создайте bastion-хост:
 
    ```shell
    yc compute instance create \
@@ -94,7 +94,7 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
    --public-address 178.154.226.159
    ```
 
-3. Продолжить установку кластера с указанием данных бастиона. На вопрос про кэш Terraform ответить `y`:
+3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кэш Terraform ответьте `y`:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \

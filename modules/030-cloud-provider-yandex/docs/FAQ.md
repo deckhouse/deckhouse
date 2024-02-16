@@ -14,7 +14,7 @@ The annotation links the LoadBalancer with the appropriate Subnet.
 
 ## How to reserve a public IP address?
 
-This on is used in `externalIPAddresses` and `natInstanceExternalAddress`. Also it can be used for bastion-host.
+This on is used in `externalIPAddresses` and `natInstanceExternalAddress`. It also can be used for a bastion host.
 
 ```shell
 $ yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -79,7 +79,7 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Create bastion host:
+2. Create a bastion host:
 
    ```shell
    yc compute instance create \
@@ -94,7 +94,7 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
    --public-address 178.154.226.159
    ```
 
-3. Continue installing the cluster with options about bastion, enter `y` when asked about the Terraform cache:
+3. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
