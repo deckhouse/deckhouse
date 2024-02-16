@@ -76,5 +76,7 @@ resource "vcd_vapp_vm" "node" {
     "public-keys"         = var.providerClusterConfiguration.sshPublicKey
     "user-data"           = var.cloudConfig
     "disk.EnableUUID"     = "1"
+    # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
+    "initscript"          = "vmware-toolbox-cmd config set deployPkg wait-cloudinit-timeout 0"
   }
 }
