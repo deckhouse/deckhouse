@@ -26,9 +26,9 @@ data:
         }
         prometheus 127.0.0.1:9153
         forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }} {
-{{- if or (eq (.Values.kubeDns.l4ProtocolMode) "prefer_udp") (not .Values.kubeDns.l4ProtocolMode) }}
+{{- if or (eq (.Values.kubeDns.l4ProtocolMode) "PreferUDP") (not .Values.kubeDns.l4ProtocolMode) }}
           prefer_udp
-{{- else if eq (.Values.kubeDns.l4ProtocolMode) "force_tcp" }}
+{{- else if eq (.Values.kubeDns.l4ProtocolMode) "ForceTCP" }}
           force_tcp
 {{- end }}
         }
@@ -52,9 +52,9 @@ data:
         reload
         loadbalance
         forward . {{ $zone.upstreamNameservers | join " " }} {
-    {{- if or (eq ($zone.l4ProtocolMode) "prefer_udp") (not $zone.l4ProtocolMode) }}
+    {{- if or (eq ($zone.l4ProtocolMode) "PreferUDP") (not $zone.l4ProtocolMode) }}
           prefer_udp
-    {{- else if eq ($zone.l4ProtocolMode) "force_tcp" }}
+    {{- else if eq ($zone.l4ProtocolMode) "ForceTCP" }}
           force_tcp
     {{- end }}
         }

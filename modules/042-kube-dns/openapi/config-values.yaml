@@ -12,15 +12,17 @@ properties:
   l4ProtocolMode:
     type: string
     description: |
-      `prefer_udp` - Uses UDP to communicate with an upstream server, even if the original request came over TCP. However, if the dns-response was truncated, because it exceeded 512 bytes(**and only in this case**), the request will be retried over TCP.
-      `force_tcp` - Always uses TCP to communicate with an upstream server, even if the original request comes in over UDP.
-      `standard` - Uses the same protocol (TCP or UDP) as the original request to communicate with an upstream server.
+      The mode defines the L4 protocol for communicating with the upstream DNS server:
+      - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response was truncated, because it exceeded 512 bytes(**and only in this case**), the request will be retried over TCP.
+      - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
+      - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
+
       {% alert %}
-      Based on RFC 1035, DNS messages carried by UDP are restricted to 512 bytes (not counting the IP or UDP headers). Longer messages are truncated and the TC bit is set in the header.
-      And based on RFC 5966, when the dns-client receives truncated response, it takes the TC flag as an indication that it should retry over TCP instead.
+        Based on RFC 1035, DNS messages carried by UDP are restricted to 512 bytes (not counting the IP or UDP headers). Longer messages are truncated and the TC bit is set in the header.
+        And based on RFC 5966, when the dns-client receives truncated response, it takes the TC flag as an indication that it should retry over TCP instead.
       {% endalert %}
-    enum: [prefer_udp, force_tcp, standard]
-    default: prefer_udp
+    enum: [PreferUDP, ForceTCP, Standard]
+    default: PreferUDP
   hosts:
     description: |
       A static list of hosts similar to that of `/etc/hosts`.
@@ -73,11 +75,12 @@ properties:
         l4ProtocolMode:
           type: string
           description: |
-            `prefer_udp` - Uses UDP to communicate with an upstream server, even if the original request came over TCP. However, if the dns-response was truncated (because it exceeded 512 bytes)(**and only in this case**), the request will be retried over TCP.
-            `force_tcp` - Always uses TCP to communicate with an upstream server, even if the original request comes in over UDP.
-            `standard` - To communicate with an upstream server using the same protocol (TCP or UDP) as the original request.
-          enum: [prefer_udp, force_tcp, standard]
-          default: prefer_udp
+            The mode defines the L4 protocol for communicating with the upstream DNS server:
+            - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the dns-response was truncated, because it exceeded 512 bytes(**and only in this case**), the request will be retried over TCP.
+            - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
+            - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
+          enum: [PreferUDP, ForceTCP, Standard]
+          default: PreferUDP
   enableLogs:
     description: |
       Enable CoreDNS logging.
