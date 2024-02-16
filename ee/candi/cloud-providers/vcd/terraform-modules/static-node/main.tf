@@ -70,13 +70,16 @@ resource "vcd_vapp_vm" "node" {
     ]
   }
 
+  # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
+  customization {
+    initscript          = "vmware-toolbox-cmd config set deployPkg wait-cloudinit-timeout 0"
+  }
+
   guest_properties = {
     "instance-id"         = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
     "local-hostname"      = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
     "public-keys"         = var.providerClusterConfiguration.sshPublicKey
     "user-data"           = var.cloudConfig
     "disk.EnableUUID"     = "1"
-    # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
-    "initscript"          = "vmware-toolbox-cmd config set deployPkg wait-cloudinit-timeout 0"
   }
 }
