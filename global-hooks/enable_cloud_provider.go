@@ -32,7 +32,7 @@ var cloudProviderNameToModule = map[string]string{
 	"Yandex":    "cloudProviderYandex",
 	"vSphere":   "cloudProviderVsphere",
 	"Azure":     "cloudProviderAzure",
-	"Zvirt":     "cloudProviderZvirt",
+	"zVirt":     "cloudProviderZvirt",
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
