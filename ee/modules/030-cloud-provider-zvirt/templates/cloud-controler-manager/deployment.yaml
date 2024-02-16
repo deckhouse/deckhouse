@@ -111,9 +111,6 @@ spec:
             - name: ccm-controller-config-volume
               mountPath: /etc/cloud
               readOnly: true
-            - name: vcd-credentials-volume
-              mountPath: /etc/kubernetes/zvirt/basic-auth
-              readOnly: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
@@ -123,8 +120,5 @@ spec:
       volumes:
       - name: ccm-controller-config-volume
         secret:
-          secretName: ccm-controller-manager
-      - name: vcd-credentials-volume
-        secret:
-          secretName: vcd-credentials
+          secretName: cloud-controller-manager
 {{- end }}
