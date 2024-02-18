@@ -338,29 +338,31 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
-* `Docker Bearer Token Realm` must be enabled.
-* Docker proxy repository must be pre-created.
-* `Allow anonymous docker pull` must be enabled.
+* `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
+* Docker **proxy** repository must be pre-created:
+  * `Allow anonymous docker pull` must be enabled. This option enable Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+  * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
-  * The Nexus role with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions must be created.
-  * The Nexus user must be created with the above role granted.
-* `Maximum metadata age` for the created repository must be set to 0.
+  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
+    * `nx-repository-view-docker-<repo>-browse`
+    * `nx-repository-view-docker-<repo>-read`
+  * The user (*Administration* -> *Security* -> *Users*) must be created with the above role granted.
 
-Configuration:
+**Configuration**:
 
-* Enable `Docker Bearer Token Realm`:
+* Enable `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
   ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
-* Create a docker proxy repository pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
+* Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
 
-* Fill in the fields on the Create page  as follows:
+* Fill in the fields on the Create page as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/en/anonymous-access.html). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
-  * `Maximum Metadata Age` must be set to 0.
+  * `Maximum Metadata Age` must be set to `0`.
   * `Authentication` must be enabled if you plan to use Deckhouse Enterprise Edition and the related fields must be set as follows:
     * `Authentication Type` must be set to `Username`.
     * `Username` must be set to `license-token`.
@@ -371,11 +373,11 @@ Configuration:
   ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Configure Nexus access control to allow Nexus access to the created repository:
-  * Create a Nexus role with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
+  * Create a **Nexus** role (*Administration* -> *Security* -> *Roles*) with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
 
     ![Create a Nexus role](images/registry/nexus/nexus-role.png)
 
-  * Create a Nexus user with the role above granted.
+  * Create a user with the role above granted.
 
     ![Create a Nexus user](images/registry/nexus/nexus-user.png)
 
