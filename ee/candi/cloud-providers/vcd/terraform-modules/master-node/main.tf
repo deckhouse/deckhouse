@@ -85,7 +85,7 @@ resource "vcd_vapp_vm" "master" {
 
   # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
   customization {
-    initscript          = "vmware-toolbox-cmd config set deployPkg wait-cloudinit-timeout 0"
+    initscript          = "rm -f /sbin/telinit"
   }
 
   guest_properties = merge({
