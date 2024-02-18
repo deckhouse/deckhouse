@@ -83,13 +83,6 @@ resource "vcd_vapp_vm" "master" {
     ]
   }
 
-  # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
-  # vmware-guest-tools uses telinit to reboot node and we removes telinit on the bootstrap phase
-  # to prevent unwanted reboots during bootstrap process. Later we return telinit back by bashible step
-  customization {
-    initscript          = "mv -f /sbin/telinit /sbin/telinit.removed"
-  }
-
   guest_properties = merge({
     "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
     "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])

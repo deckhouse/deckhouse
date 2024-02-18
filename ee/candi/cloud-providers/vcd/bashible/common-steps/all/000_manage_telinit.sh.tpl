@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# To fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684.
+# Vmware-guest-tools uses telinit to reboot node and we removes telinit on the bootstrap phase
+# to prevent unwanted reboots during bootstrap process. Later we return telinit back.
+if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  mv -f /sbin/telinit /sbin/telinit.removed
+  exit 0
+fi
+
 if [ -f /sbin/telinit.removed ]; then
   mv -f /sbin/telinit.removed /sbin/telinit
 fi
