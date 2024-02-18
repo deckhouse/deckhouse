@@ -14,6 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ ! -f /sbin/telinit ]; then
-  ln -s /bin/systemctl /sbin/telinit
+if [ -f /sbin/telinit.removed ]; then
+  mv -f /sbin/telinit.removed /sbin/telinit
 fi

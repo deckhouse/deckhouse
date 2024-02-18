@@ -71,8 +71,10 @@ resource "vcd_vapp_vm" "node" {
   }
 
   # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
+  # vmware-guest-tools uses telinit to reboot node and we removes telinit on the bootstrap phase
+  # to prevent unwanted reboots during bootstrap process. Later we return telinit back by bashible step
   customization {
-    initscript          = "rm -f /sbin/telinit"
+    initscript          = "mv -f /sbin/telinit /sbin/telinit.removed"
   }
 
   guest_properties = {
