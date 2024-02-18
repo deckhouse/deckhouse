@@ -49,7 +49,7 @@ vsphere:
 vcd:
   namespace: vmware
   type: vcd
-  version: 3.10.0
+  version: 3.11.0
   artifact: terraform-provider-vcd-artifact
   artifactBinary: terraform-provider-vcd
   destinationBinary: terraform-provider-vcd
