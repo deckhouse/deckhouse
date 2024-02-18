@@ -339,8 +339,8 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
-* Docker **proxy** repository must be pre-created:
-  * `Allow anonymous docker pull` must be enabled. This option enable Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+* Docker **proxy** repository must be pre-created (*Administration* -> *Repository* -> *Repositories*):
+  * `Allow anonymous docker pull` must be enabled. This option enable Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
   * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
   * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
