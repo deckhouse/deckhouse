@@ -7,10 +7,6 @@ locals {
   template = split("/", local.master_instance_class.template)[1]
   ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.master_instance_class, "placementPolicy", "")
-  # to fix cloud-init bug https://github.com/vmware/open-vm-tools/issues/684
-  # vmware-guest-tools uses telinit to reboot node and we removes telinit on the bootstrap phase
-  # to prevent unwanted reboots during bootstrap process. Later we return telinit back by bashible step
-  cloud_config = base64encode(format("%s%s", base64decode(var.cloudConfig), "\nbootcmd:\n- mv -f /sbin/telinit /sbin/telinit.removed"))
 }
 
 
@@ -92,5 +88,5 @@ resource "vcd_vapp_vm" "master" {
     "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])
     "public-keys"         = var.providerClusterConfiguration.sshPublicKey
     "disk.EnableUUID"     = "1"
-  }, length(var.cloudConfig) > 0 ? {"user-data" = local.cloud_config} : {} )
+  }, length(var.cloudConfig) > 0 ? {"user-data" = var.cloudConfig} : {} )
 }
