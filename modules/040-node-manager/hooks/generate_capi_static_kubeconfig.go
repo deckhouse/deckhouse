@@ -58,12 +58,15 @@ func handleCreateCAPIStaticKubeconfig(input *go_hook.HookInput, dc dependency.Co
 
 	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {
 		capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
-		err := generateStaticKubeconfigSecret(input, dc, hookParam{
-			serviceAccount: clusterAPICloudServiceAccountName,
-			cluster:        capiClusterName,
-		})
-		if err != nil {
-			return err
+		if capiClusterName != "" {
+			err := generateStaticKubeconfigSecret(input, dc, hookParam{
+				serviceAccount: clusterAPICloudServiceAccountName,
+				cluster:        capiClusterName,
+			})
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 
