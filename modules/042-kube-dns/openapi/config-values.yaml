@@ -38,6 +38,7 @@ properties:
       - zone: example.com
         upstreamNameservers: ['8.8.8.8']
         cacheTTLSeconds: 3600
+        transportProtocolMode: PreferUDP
     description: |
       A list of additional zones CoreDNS should be authoritative for.
     type: array
