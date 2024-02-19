@@ -88,6 +88,11 @@ func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	var min, max int32
 
+	if ng.Spec.StaticInstances != nil {
+		count := ng.Spec.StaticInstances.Count
+		min, max = count, count
+	}
+
 	if ng.Spec.CloudInstances.MinPerZone != nil {
 		min = *ng.Spec.CloudInstances.MinPerZone
 	}
