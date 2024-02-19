@@ -35,10 +35,9 @@ import (
 )
 
 const (
-	clusterAPINamespace                = "d8-cloud-instance-manager"
-	clusterAPIStaticServiceAccountName = "caps-controller-manager"
-	clusterAPIStaticClusterName        = "static"
-	clusterAPICloudServiceAccountName  = "capi-controller-manager"
+	clusterAPINamespace          = "d8-cloud-instance-manager"
+	clusterAPIStaticClusterName  = "static"
+	clusterAPIServiceAccountName = "capi-controller-manager"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,27 +53,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleCreateCAPIStaticKubeconfig(input *go_hook.HookInput, dc dependency.Container) error {
 	capiEnabledRaw := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
-	capsEnabledRaw := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
 
 	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {
 		capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
-		if capiClusterName != "" {
-			err := generateStaticKubeconfigSecret(input, dc, hookParam{
-				serviceAccount: clusterAPICloudServiceAccountName,
-				cluster:        capiClusterName,
-			})
-
-			if err != nil {
-				return err
-			}
+		if capiClusterName == "" {
+			capiClusterName = clusterAPIStaticClusterName
 		}
-	}
 
-	if capsEnabledRaw.Exists() && capsEnabledRaw.Bool() {
 		err := generateStaticKubeconfigSecret(input, dc, hookParam{
-			serviceAccount: clusterAPIStaticServiceAccountName,
-			cluster:        clusterAPIStaticClusterName,
+			serviceAccount: clusterAPIServiceAccountName,
+			cluster:        capiClusterName,
 		})
+
 		if err != nil {
 			return err
 		}
