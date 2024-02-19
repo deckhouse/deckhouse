@@ -25,8 +25,6 @@ function hook::run() {
   for i in `seq 0 $((CONTEXT_LENGTH - 1))`; do
     export BINDING_CONTEXT_CURRENT_INDEX="${i}"
     export BINDING_CONTEXT_CURRENT_BINDING=$(context::jq -r '.binding // "unknown"')
-    echo $BINDING_CONTEXT_CURRENT_BINDING
-    context::jq -r '.'
     case "${BINDING_CONTEXT_CURRENT_BINDING}" in
     "beforeAll")
       HANDLERS="__on_before_all"
