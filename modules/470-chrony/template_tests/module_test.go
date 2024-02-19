@@ -96,6 +96,14 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
           {
             "name": "CHRONY_MASTERS_SERVICE",
             "value": "chrony-masters.d8-chrony.svc.cluster.local"
+          },
+          {
+            "name": "HOST_IP",
+            "valueFrom": {
+              "fieldRef": {
+                "fieldPath": "status.hostIP"
+              }
+            }
           }
         ]
 `))
@@ -112,6 +120,14 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
           {
             "name": "NTP_SERVERS",
             "value": "pool.ntp.org. ntp.ubuntu.com."
+          },
+          {
+            "name": "HOST_IP",
+            "valueFrom": {
+              "fieldRef": {
+                "fieldPath": "status.hostIP"
+              }
+            }
           }
         ]
 `))

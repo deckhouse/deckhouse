@@ -14,7 +14,7 @@ The annotation links the LoadBalancer with the appropriate Subnet.
 
 ## How to reserve a public IP address?
 
-This on is used in `externalIPAddresses` and `natInstanceExternalAddress`.
+This on is used in `externalIPAddresses` and `natInstanceExternalAddress`. It also can be used for a bastion host.
 
 ```shell
 $ yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -70,3 +70,33 @@ You can find out the `nodeNetworkCIDR` of the cluster using the command below:
 ```shell
 kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
+
+## How do I create a cluster in a new VPC and set up bastion host to access the nodes?
+
+1. Bootstrap the base-infrastructure of the cluster:
+
+   ```shell
+   dhctl bootstrap-phase base-infra --config config.yml
+   ```
+
+2. Create a bastion host:
+
+   ```shell
+   yc compute instance create \
+   --name bastion \
+   --hostname bastion \
+   --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
+   --memory 2 \
+   --cores 2 \
+   --core-fraction 100 \
+   --ssh-key ~/.ssh/id_rsa.pub \
+   --zone ru-central1-a \
+   --public-address 178.154.226.159
+   ```
+
+3. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
+
+   ```shell
+   dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+   ```

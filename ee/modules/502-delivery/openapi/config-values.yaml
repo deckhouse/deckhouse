@@ -54,7 +54,7 @@ properties:
           - `Disabled` — Argo CD web-interface will work over HTTP only;
           - `CertManager` — Argo CD web-interface will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Argo CD web-interface will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — Argo CD web-interface will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Argo CD web-interface will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

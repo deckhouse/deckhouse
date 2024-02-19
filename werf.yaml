@@ -195,6 +195,10 @@ import:
   to: /
   before: setup
   includePaths:
+  - lib64/libz.so*
+  - lib64/libexpat.so*
+  - lib64/libssl.so.*
+  - lib64/libcrypto.so.*
   - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
@@ -202,6 +206,7 @@ import:
   - usr/lib/python3
   - usr/lib64/python3
   - usr/lib64/python3.9
+  - usr/lib64/libffi.so*
   - usr/share/vim
   - etc/vim
   - etc/bash_completion.d
@@ -248,7 +253,7 @@ artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-  - /binary_replace.sh -i "/usr/bin/ssh" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/ssh /usr/bin/ssh-agent /usr/bin/ssh-add /usr/bin/scp" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
@@ -634,6 +639,9 @@ docker:
 shell:
   setup:
   - |
+    apt-get update
+    apt-get install -y gettext
+    rm -rf /var/cache/apt
     cat <<"EOD" > /etc/inputrc
     {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD

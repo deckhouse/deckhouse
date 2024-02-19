@@ -65,16 +65,14 @@ func (s *SSH) Cmd() *exec.Cmd {
 	//   ANSIBLE_SSH_ARGS="${ANSIBLE_SSH_ARGS:-"-C
 	//   -o ControlMaster=auto
 	//  -o ControlPersist=600s"}
-	//
-	// -o StrictHostKeyChecking=accept-new
-	// -o UserKnownHostsFile=$(pwd)/.konverge/$terraform_workspace/.ssh_known_hosts"
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPersist=600s",
-		"-o", "StrictHostKeyChecking=accept-new",
-		"-o", "UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "ServerAliveInterval=10",
 		"-o", "ServerAliveCountMax=3",
 		"-o", "ConnectTimeout=15",

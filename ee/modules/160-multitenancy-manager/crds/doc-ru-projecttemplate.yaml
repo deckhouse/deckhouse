@@ -18,7 +18,7 @@ spec:
                   properties:
                     openAPIV3Schema:
                       description: |
-                        Спецификация OpenAPI для [параметров шаблона](#projecttemplate-v1alpha1-spec-template).
+                        Спецификация OpenAPI для [параметров шаблона](#project-v1alpha2-spec-parameters).
 
                         Используется для проверки правильности параметров, передаваемых при создании нового проекта.
                 resourcesTemplate:
@@ -27,7 +27,7 @@ spec:
 
                     Шаблоны полностью совместимы со всеми [функциями `helm`](https://helm.sh/docs/chart_template_guide/function_list/).
 
-                    Узнайте больше о [создании изолированной среды...](usage.html#создание-изолированного-окружения)
+                    Узнайте больше о [создании изолированной среды...](usage.html#создание-проекта)
 
                     В шаблонах доступны следующие параметры:
                     - `{{ .projectName }}` — имя `Project`, для которого рендерится шаблон.

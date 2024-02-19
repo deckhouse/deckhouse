@@ -4,7 +4,6 @@
 
 
  - All containers that use `spotify/scratch` image will be restarted (almost all Deckhouse containers).
- - Deckhouse will not upgrade if `linstor` module is enabled.
  - Deckhouse will not upgrade if the istio version in the cluster is lower than `1.16`.
  - The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
 
@@ -53,6 +52,7 @@
  - **[deckhouse-controller]** fix for `change-registry` helper's handling of registry credentials. [#7095](https://github.com/deckhouse/deckhouse/pull/7095)
  - **[deckhouse-controller]** Fix ModuleConfig validation for configs with empty settings. [#7064](https://github.com/deckhouse/deckhouse/pull/7064)
  - **[descheduler]** Set the number of replicas to 0 if we have only one node. [#5221](https://github.com/deckhouse/deckhouse/pull/5221)
+ - **[dhctl]** Change the order in which resources are created. Service accounts will be created before secrets. [#7470](https://github.com/deckhouse/deckhouse/pull/7470)
  - **[dhctl]** Mirroring will now include Trivy vulnerability database image. [#7359](https://github.com/deckhouse/deckhouse/pull/7359)
  - **[dhctl]** Skip converge base infra if user does not want converge base infra [#7313](https://github.com/deckhouse/deckhouse/pull/7313)
  - **[dhctl]** Fix skipping preflight check about registry-through-proxy. [#7135](https://github.com/deckhouse/deckhouse/pull/7135)
@@ -71,6 +71,7 @@
  - **[monitoring-kubernetes]** Fix AppArmor rule in `kubelet-eviction-thresholds-exporter`. [#6711](https://github.com/deckhouse/deckhouse/pull/6711)
  - **[network-gateway]** Fix distroless build. [#7250](https://github.com/deckhouse/deckhouse/pull/7250)
  - **[network-policy-engine]** Module images are based on a distroless image. [#6460](https://github.com/deckhouse/deckhouse/pull/6460)
+ - **[node-manager]** Fix panic when the vSphere driver creates a disk. [#7465](https://github.com/deckhouse/deckhouse/pull/7465)
  - **[node-manager]** Add RBAC rules for kube-rbac-proxy in capi-controller-manager. [#6854](https://github.com/deckhouse/deckhouse/pull/6854)
  - **[operator-trivy]** Fix `node-collector` image. [#7329](https://github.com/deckhouse/deckhouse/pull/7329)
  - **[operator-trivy]** CIS compliance checks are now available immediately after activating the module. [#6951](https://github.com/deckhouse/deckhouse/pull/6951)
@@ -101,7 +102,6 @@
  - **[keepalived]** keepalived is now based on a distroless image. [#6962](https://github.com/deckhouse/deckhouse/pull/6962)
     keepalived pods will restart.
  - **[linstor]** Disable Deckhouse update while `legacy` linstor module is enabled. [#7088](https://github.com/deckhouse/deckhouse/pull/7088)
-    Deckhouse will not upgrade if `linstor` module is enabled.
  - **[linstor]** Add a validating webhook to prevent the linstor module from being enabled. [#7086](https://github.com/deckhouse/deckhouse/pull/7086)
     The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
  - **[monitoring-kubernetes]** Move `helm` module to `monitoring-kubernetes` module. [#6726](https://github.com/deckhouse/deckhouse/pull/6726)

@@ -23,9 +23,9 @@ if [ -f modules_menu_skip ]; then
   modules_skip_list=$(cat modules_menu_skip)
 fi
 
-for module_revision_path in $(find ${MODULES_DIR} -regex '.*/docs/README.md' -print | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|ee/|fe/)?modules/([^/]+)/.*\$#\1\2#" | sort -t/ -k 2.4 ); do
+for module_revision_path in $(find ${MODULES_DIR} -regex '.*/docs/README.md' -print | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|be/|se/|ee/|fe/)?modules/([^/]+)/.*\$#\1\2#" | sort -t/ -k 2.4 ); do
   skip=false
-  module_path=$(echo $module_revision_path | sed -E 's#ce/|ee/|fe/##')
+  module_path=$(echo $module_revision_path | sed -E 's#ce/|be/|se/|ee/|fe/##')
   # Skip unnecessary modules
   for skip_item in $modules_skip_list ; do
     if [[ $skip_item == $module_path ]] ; then skip=true; break; fi

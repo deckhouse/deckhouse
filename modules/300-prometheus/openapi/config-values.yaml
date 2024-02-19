@@ -149,7 +149,7 @@ properties:
           - `Disabled` — Grafana/Prometheus will work over HTTP only;
           - `CertManager` — Grafana/Prometheus will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Grafana/Prometheus will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
@@ -182,6 +182,8 @@ properties:
       - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
       - {updateMode: "Off"}
     default: {updateMode: "Initial"}
+    description: |
+      VPA settings for pods.
     properties:
       maxCPU:
         oneOf:
@@ -190,7 +192,7 @@ properties:
           - type: number
         x-examples: ["3"]
         description: |
-          The maximum CPU requests set by the VPA controller for the main Prometheus Pods.
+          The maximum value that the VPA can set for the CPU requests for the main Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       maxMemory:
@@ -200,7 +202,7 @@ properties:
           - type: number
         x-examples: ["3Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the main Prometheus Pods.
+          The maximum memory requests the VPA can set for the main Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxCPU:
@@ -210,7 +212,7 @@ properties:
           - type: number
         x-examples: [0.1]
         description: |
-          The maximum CPU requests set by the VPA controller for the Longterm Prometheus Pods.
+          The maximum value that the VPA can set for the Longterm Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxMemory:
@@ -220,13 +222,13 @@ properties:
           - type: number
         x-examples: ["4Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the longterm Prometheus Pods.
+          The maximum memory requests the VPA can set for the longterm Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       updateMode:
         type: string
         description: |
-          The Pod update mode.
+          The VPA usage mode.
         default: "Initial"
         enum:
           - "Initial"

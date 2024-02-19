@@ -6,10 +6,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"bytes"
+	"testing"
+
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
@@ -450,3 +456,160 @@ spec:
         {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
     ---
 `
+
+func TestPostRenderer(t *testing.T) {
+	pr := new(projectTemplateHelmRenderer)
+	pr.SetProject("test-project-1")
+	buf := bytes.NewBuffer(nil)
+
+	t.Run("without desired namespace", func(t *testing.T) {
+		mfs := `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+  name: test-project-1
+`, ns)
+	})
+
+	t.Run("with desired namespace", func(t *testing.T) {
+		mfs := `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    twotwotwo: nanana
+  annotations:
+    foo: bar
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+  labels:
+    heritage: multitenancy-manager
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    foo: bar
+  labels:
+    heritage: multitenancy-manager
+    twotwotwo: nanana
+  name: test-project-1
+`, ns)
+	})
+
+	t.Run("with a few namespaces", func(t *testing.T) {
+		mfs := `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-invalid
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-project-1
+  labels:
+    twotwotwo: lalala
+---
+# Source: test-project-1/user-resources-templates.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test-project-1
+  name: tututu
+  labels:
+    heritage: multitenancy-manager
+data: {}
+`
+
+		buf.Reset()
+		buf.WriteString(mfs)
+
+		result, err := pr.Run(buf)
+		require.NoError(t, err)
+		mm := releaseutil.SplitManifests(result.String())
+		assert.Len(t, mm, 2)
+		ns := mm["manifest-0"]
+		assert.YAMLEq(t, `
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    twotwotwo: lalala
+  name: test-project-1
+`, ns)
+	})
+}

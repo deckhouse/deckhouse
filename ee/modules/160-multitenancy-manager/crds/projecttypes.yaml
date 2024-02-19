@@ -53,7 +53,7 @@ spec:
                   description: |
                     Resource templates in `helm` format to be created when setting up a new environment.
 
-                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
+                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-a-project)...
 
                     The following values are also available in templates:
                     - `{{ .projectName }}` — the name of the `Project` (environment) for which the template is being rendered.

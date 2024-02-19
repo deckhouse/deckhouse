@@ -85,7 +85,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    > Необходимо изменить не только шаблон, но и схему входных параметров под него.
    >
    > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
-4. Измените имя шаблона в поле [.metadata.name](cr.html#projecttemplate-v1alpha1-metadata-name).
+4. Измените имя шаблона в поле `.metadata.name`.
 5. Примените полученный шаблон командой:
 
    ```shell

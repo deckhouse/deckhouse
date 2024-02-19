@@ -92,6 +92,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"builderRuntimeArtifact": "imageHash-cniCilium-builderRuntimeArtifact",
 		"cilium":                 "imageHash-cniCilium-cilium",
 		"operator":               "imageHash-cniCilium-operator",
+		"safeAgentUpdater":       "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
@@ -183,9 +184,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"docsBuilder": map[string]interface{}{
 		"docsBuilder": "imageHash-docsBuilder-docsBuilder",
-	},
-	"docsBuilderArtifact": map[string]interface{}{
-		"docsBuilderArtifact": "imageHash-docsBuilderArtifact-docsBuilderArtifact",
 	},
 	"documentation": map[string]interface{}{
 		"web": "imageHash-documentation-web",
