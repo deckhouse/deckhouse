@@ -2,9 +2,9 @@ ARG DISTRO
 FROM $DISTRO
 COPY additional_tools/alt/binary_replace.sh /
 RUN apt-get update &&\
-    apt-get install -y GeoIP-Lite-Country autoconf automake bash bash-completion bpftool btrfs-progs ca-certificates \
+    apt-get install -y GeoIP-Lite-Country autoconf automake bash bash-completion bind-utils bpftool btrfs-progs ca-certificates \
     ceph ceph-devel ceph-fuse clang15.0 cmake conntrack-tools curl diffutils dos2unix doxygen e2fsprogs elfutils-devel \
-    flex gcc gcc-c++ git glibc glibc-devel glibc-devel-static grep gsettings-desktop-schemas gsettings-desktop-schemas-data \
+    flex gcc gcc-c++ gettext git glibc glibc-devel glibc-devel-static grep gsettings-desktop-schemas gsettings-desktop-schemas-data \
     inotify-tools iproute2 ipset iptables iptables-nft jq libGeoIP libGeoIP-devel libICE libSM libX11 libX11-locales libXau \
     libXdmcp libXext libXpm libXt libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libdav1d libde265 libdeflate \
     libedit-devel libfontconfig1 libfreetype libgd3 libgd3-devel libgdbm-devel libgdk-pixbuf libgdk-pixbuf-locales libgio libgraphite2 \

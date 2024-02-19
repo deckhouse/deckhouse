@@ -19,7 +19,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables* /usr/bin/inotifywait" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /usr/bin/inotifywait" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
