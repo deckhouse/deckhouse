@@ -25,7 +25,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 42,
-  "iteration": 1708010318522,
+  "iteration": 1708331262271,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -195,7 +195,7 @@
           "refId": "A"
         }
       ],
-      "title": "Addresses Usage",
+      "title": "Pool Usage",
       "type": "gauge"
     }
   ],
@@ -228,7 +228,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "frontend-pool"
           ],
