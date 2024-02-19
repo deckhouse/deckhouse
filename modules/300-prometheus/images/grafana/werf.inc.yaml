@@ -181,12 +181,6 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: install
-  includePaths:
-  - '**/*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /
   to: /
   includePaths:
