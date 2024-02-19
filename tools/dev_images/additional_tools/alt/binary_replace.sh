@@ -14,10 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeuo pipefail
+shopt -s failglob
+
 function Help() {
    # Display Help
    echo "Copy binaries and their libraries to a folder"
-   echo "Only one input parameter allowed (-f or -i) !!!" 
+   echo "Only one input parameter allowed (-f or -i) !!!"
    echo
    echo "Syntax: scriptTemplate [-h|f|i|o]"
    echo "options:"
@@ -26,7 +29,7 @@ function Help() {
    echo '      List of binaryes should be in double quotes, -i "/bin/chmod /bin/mount" '
    echo "o     Output directory (Default value: '/relocate')"
    echo "h     Print this help"
-   echo 
+   echo
    echo
 }
 
@@ -71,7 +74,7 @@ function relocate() {
 function relocate_item() {
   local file=$1
   local new_place="${RDIR}$(dirname ${file})"
-  
+
   mkdir -p ${new_place}
   cp -a ${file} ${new_place}
 
@@ -85,7 +88,7 @@ function relocate_item() {
 function get_binary_path () {
   local bin
   BINARY_LIST=()
-  
+
   for bin in "$@"; do
     if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
       continue
