@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -35,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 )
 
 const (
@@ -43,13 +43,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/monitoring-kubernetes/auto_k8s_version",
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "auto_k8s_version",
-			Crontab: "0 * * * *", // every hour
-		},
-	},
+	Queue: "/modules/monitoring-kubernetes/auto_k8s_version_secret",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "kubernetesVersion",
@@ -60,11 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(clusterConfiguration))
-
-type ClusterConfigurationYaml struct {
-	Content []byte
-}
+}, dependency.WithExternalDependencies(clusterConfigurationBySecret))
 
 func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
@@ -92,7 +82,11 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	return kubernetesVersion, err
 }
 
-func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) error {
+func clusterConfigurationBySecret(input *go_hook.HookInput, dc dependency.Container) error {
+	return clusterConfiguration(input, dc, helmreleases.IntetvalHours1)
+}
+
+func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container, interval helmreleases.Intetval) error {
 	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
 	if ok && len(kubernetesVersion) > 0 && kubernetesVersion[0].(string) == "Automatic" {
 		var (
@@ -104,7 +98,8 @@ func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) err
 		// this give as ability to handle in memory only objectBatchSize * 2 amount of helm releases
 		// because this counter also used as a limit to apiserver
 		// we have `objectBatchSize` (10) objects in channel and max `objectBatchSize` (10) objects in goroutine waiting for channel
-		releasesC := make(chan *release, objectBatchSize)
+		// releasesC := make(chan *release, objectBatchSize)
+		releasesC := make(chan *helmreleases.Release, objectBatchSize)
 		doneC := make(chan bool)
 
 		go unsupportVersion.runReleaseVerify(input, releasesC, doneC)
@@ -115,29 +110,10 @@ func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) err
 			return err
 		}
 
-		wg.Add(2)
 		go func() {
-			defer wg.Done()
-			var err error
-			_, err = getHelm3Releases(ctx, client, releasesC)
-			if err != nil {
-				input.LogEntry.Error(err)
-				return
-			}
+			_, _, err = helmreleases.GetHelmReleases(ctx, client, releasesC, helmreleases.IntetvalImmediately)
 		}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			_, err = getHelm2Releases(ctx, client, releasesC)
-			if err != nil {
-				input.LogEntry.Error(err)
-				return
-			}
-		}()
-
-		wg.Wait()
-		close(releasesC)
 		<-doneC
 
 		k8sVersion, reason := unsupportVersion.get()
@@ -171,7 +147,7 @@ type k8sUnsupportedVersion struct {
 	reasons    map[string]struct{}
 }
 
-func (uv *k8sUnsupportedVersion) runReleaseVerify(input *go_hook.HookInput, releasesC <-chan *release, doneC chan<- bool) {
+func (uv *k8sUnsupportedVersion) runReleaseVerify(input *go_hook.HookInput, releasesC <-chan *helmreleases.Release, doneC chan<- bool) {
 	defer func() {
 		doneC <- true
 	}()
