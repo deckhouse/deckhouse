@@ -1,5 +1,6 @@
-{{- if and .Values.nodeManager.internal.capiControllerManagerEnabled .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
-{{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
+{{- if and .Values.nodeManager.internal.capiControllerManagerEnabled (hasKey .Values.nodeManager.internal "cloudProvider") }}
+  {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
+  {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
 
 
 {{- include "capi_infrastructure_cluster" . }}
@@ -61,6 +62,7 @@ spec:
     - type: Ready
       status: "False"
       timeout: 5m
+  {{- end }}
 {{- end }}
 
 
