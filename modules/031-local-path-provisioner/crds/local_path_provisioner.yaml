@@ -35,8 +35,8 @@ spec:
                 description: |
                   Select nodeGroups for storageClass allowedTopologies.
                 x-doc-examples:
-                - master
-                - worker
+                - - master
+                  - worker
               path:
                 type: string
                 description: |
