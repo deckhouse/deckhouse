@@ -64,6 +64,9 @@ func ParseConnectionConfig(
 	config := &ConnectionConfig{}
 
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
 		docData := []byte(doc)
 
 		var index SchemaIndex

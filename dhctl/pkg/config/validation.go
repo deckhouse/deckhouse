@@ -66,6 +66,9 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
 		docData := []byte(doc)
 
 		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, &unstructured.Unstructured{})
@@ -97,6 +100,10 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 	var initConfigDocsCount int
 
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
+
 		docData := []byte(doc)
 
 		var index SchemaIndex
@@ -149,6 +156,10 @@ func ValidateClusterConfiguration(
 	var clusterConfig *ClusterConfig
 
 	for _, doc := range clusterConfigurationDocs {
+		if doc == "" {
+			continue
+		}
+
 		docData := []byte(doc)
 
 		var index SchemaIndex
@@ -217,6 +228,10 @@ func ValidateProviderSpecificClusterConfiguration(
 	var clusterConfigDocsCount int
 
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
+
 		docData := []byte(doc)
 
 		var index SchemaIndex
@@ -265,6 +280,10 @@ func ValidateClusterSettingsFormat(settings string, opts ...ValidateOption) erro
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
+
 		err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
@@ -310,6 +329,9 @@ func ValidateClusterSettingsChanges(
 	newDocs := map[SchemaIndex]string{}
 
 	for _, rawDoc := range oldRawDocs {
+		if rawDoc == "" {
+			continue
+		}
 		err := setConfigs(schemaStore, oldDocs, rawDoc, opts...)
 		if err != nil {
 			return err
@@ -317,6 +339,9 @@ func ValidateClusterSettingsChanges(
 	}
 
 	for _, rawDoc := range newRawDocs {
+		if rawDoc == "" {
+			continue
+		}
 		err := setConfigs(schemaStore, newDocs, rawDoc, opts...)
 		if err != nil {
 			return err

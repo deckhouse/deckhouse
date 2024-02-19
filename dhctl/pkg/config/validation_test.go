@@ -30,6 +30,7 @@ func TestValidateResources(t *testing.T) {
 	}{
 		"ok": {
 			config: `
+---
 apiVersion: vendor.k8s.io/v1
 kind: SomeKind
 metadata:
@@ -38,7 +39,8 @@ metadata:
 apiVersion: vendor.k8s.io/v2
 kind: AnotherKind
 metadata:
-  name: ok`,
+  name: ok
+---`,
 		},
 		"empty kind": {
 			config: `
@@ -91,6 +93,8 @@ func TestValidateInitConfiguration(t *testing.T) {
 	}{
 		"ok": {
 			config: `
+---
+---
 # https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -117,6 +121,7 @@ metadata:
   name: global
 spec:
   enabled: true
+---
 `,
 		},
 		"no init config": {

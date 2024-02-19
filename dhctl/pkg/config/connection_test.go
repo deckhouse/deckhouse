@@ -146,6 +146,7 @@ func TestParseConnectionConfig(t *testing.T) {
 }
 
 var validSSHConfig = `
+---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHConfig
 sshUser: ubuntu
