@@ -13,7 +13,7 @@ properties:
     type: string
     description: |
       The mode defines the transport protocol for communicating with the upstream DNS server:
-      - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the DNS response exceeded 512 bytes, it will be truncated and marked with the TC bit, as specified in [RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1). Then based on [RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966), the request will be resent over TCP. If there are any other UDP problems, the request will not be resent over TCP.
+      - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the DNS response exceeded 512 bytes, it will be truncated and marked with the TC bit by upstream, as specified in [RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1). Then based on [RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966), the request will be resent over TCP. If there are any other UDP issues, the request will not be resent over TCP.
       - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
       - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
     enum: [PreferUDP, ForceTCP, Standard]
@@ -72,7 +72,7 @@ properties:
           type: string
           description: |
             The mode defines the transport protocol for communicating with the upstream DNS server:
-            - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the DNS response exceeded 512 bytes, it will be truncated and marked with the TC bit, as specified in [RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1). Then based on [RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966), the request will be resent over TCP. If there are any other UDP problems, the request will not be resent over TCP.
+            - `PreferUDP` - Uses UDP, even if the original request came over TCP. However, if the DNS response exceeded 512 bytes, it will be truncated and marked with the TC bit by upstream, as specified in [RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1). Then based on [RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966), the request will be resent over TCP. If there are any other UDP issues, the request will not be resent over TCP.
             - `ForceTCP` - Always uses TCP, even if the original request comes in over UDP.
             - `Standard` - Uses the same protocol (TCP or UDP) as the original request.
           enum: [PreferUDP, ForceTCP, Standard]
