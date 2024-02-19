@@ -174,13 +174,8 @@ shell:
   - chmod 0700 ./bin/grafana-server
   - chmod 0700 ./bin/grafana-cli
 ---
-{{ $binariesList := "/usr/lib64/* /usr/lib/*" }}
----
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
+from: {{ $.Images.BASE_ALT }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -191,6 +186,13 @@ import:
   before: install
   includePaths:
   - '**/*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  includePaths:
+  - usr/lib
+  - usr/lib64
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
