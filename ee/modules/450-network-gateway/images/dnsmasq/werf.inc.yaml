@@ -26,6 +26,9 @@ import:
     add: /usr/lib64/python3.9
     before: install
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3/site-packages
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/local/lib/python3/site-packages
     before: install
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
