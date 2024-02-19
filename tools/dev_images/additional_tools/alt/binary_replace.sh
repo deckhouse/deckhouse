@@ -14,24 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeuo pipefail
+shopt -s failglob
+
+FILE_TEMPLATE_BINS=""
+TEMPLATE_BINS=""
+RDIR=""
+
 function Help() {
    # Display Help
    echo "Copy binaries and their libraries to a folder"
-   echo "Only one input parameter allowed (-f or -i) !!!" 
+   echo "Only one input parameter allowed (-f or -i) !!!"
    echo
    echo "Syntax: scriptTemplate [-h|f|i|o]"
    echo "options:"
-   echo "f     Files with paths to binaryes; Support mask like /sbin/m*"
-   echo "i     Paths to binaryes separated by space; Support mask like /sbin/m*; Example: /bin/chmod /bin/mount /sbin/m*"
-   echo '      List of binaryes should be in double quotes, -i "/bin/chmod /bin/mount" '
+   echo "f     Files with paths to binaries; Support mask like /sbin/m*"
+   echo "i     Paths to binaries separated by space; Support mask like /sbin/m*; Example: /bin/chmod /bin/mount /sbin/m*"
+   echo '      List of binaries should be in double quotes, -i "/bin/chmod /bin/mount" '
    echo "o     Output directory (Default value: '/relocate')"
    echo "h     Print this help"
-   echo 
+   echo
    echo
 }
 
 while getopts ":h:i:f:o:" option; do
-   case $option in
+    case $option in
       h) # display Help
          Help
          exit;;
@@ -47,7 +54,7 @@ while getopts ":h:i:f:o:" option; do
       \?)
         echo "Error: Invalid option"
         exit;;
-   esac
+    esac
 done
 
 if [[ -z $RDIR ]];then
@@ -71,7 +78,7 @@ function relocate() {
 function relocate_item() {
   local file=$1
   local new_place="${RDIR}$(dirname ${file})"
-  
+
   mkdir -p ${new_place}
   cp -a ${file} ${new_place}
 
@@ -85,7 +92,7 @@ function relocate_item() {
 function get_binary_path () {
   local bin
   BINARY_LIST=()
-  
+
   for bin in "$@"; do
     if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
       continue

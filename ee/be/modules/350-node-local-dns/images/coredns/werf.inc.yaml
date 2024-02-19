@@ -39,7 +39,7 @@ shell:
   - chmod -R 0700 /src/coredns
   - chown -R 64535:64535 /src/coredns
 ---
-{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables*" }}
+{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
