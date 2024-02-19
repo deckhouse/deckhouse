@@ -217,13 +217,13 @@ type exportingConfig struct {
 
 func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exportingConfig {
 	var labels []*prompb.Label
-	var tlsConfig map[string]string
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{
 			Name:  k,
 			Value: v,
 		})
 	}
+	tlsConfig := make(map[string]string)
 
 	tlsConfig["insecure_skip_verify"] = strconv.FormatBool(rw.Spec.Config.TLSConfig.InsecureSkipVerify)
 
