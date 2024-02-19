@@ -27,7 +27,7 @@ data:
         }
         prometheus 127.0.0.1:9153
         forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }} {
-{{- if ne $.Values.kubeDns.transportProtocolMode "Standard" }}
+{{- if ne $.Values.kubeDns.transportProtocolMode "KeepOriginal" }}
           {{ get $transportProtocolModeDict $.Values.kubeDns.transportProtocolMode }}
 {{- end }}
         }
@@ -51,7 +51,7 @@ data:
         reload
         loadbalance
         forward . {{ $zone.upstreamNameservers | join " " }} {
-    {{- if ne $zone.transportProtocolMode "Standard" }}
+    {{- if ne $zone.transportProtocolMode "KeepOriginal" }}
           {{ get $transportProtocolModeDict $zone.transportProtocolMode }}
     {{- end }}
         }
