@@ -36,3 +36,7 @@ go get -u github.com/opencontainers/runc@v1.1.5
 go get -u gopkg.in/yaml.v3@v3.0.1
 git diff
 ```
+
+### Add label selector to scale
+Adds .status.labelSelector field to the daemonset crd and implements updating this status field with a serialized label selector in string form (required to implement VPA for advanced daemonsets).
+(this patch should go along wth Add pdb patch)
