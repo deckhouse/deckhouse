@@ -45,6 +45,9 @@ apiVersion: v1
 kind: Node
 metadata:
   name: node-3
+  labels:
+    node.deckhouse.io/group: worker
+    node.deckhouse.io/type: Static
 spec:
   providerID: ""
 ---
@@ -70,6 +73,16 @@ metadata:
   labels:
     node.deckhouse.io/group: worker
     node.deckhouse.io/type: Static
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-7
+  labels:
+    node.deckhouse.io/group: worker
+    node.deckhouse.io/type: CloudStatic
+spec:
+  providerID: ""
 `
 	)
 
@@ -101,6 +114,7 @@ metadata:
 			Expect(f.KubernetesGlobalResource("Node", "node-4").Field("spec.providerID").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("Node", "node-5").Field("spec.providerID").String()).To(Equal(`super-provider`))
 			Expect(f.KubernetesGlobalResource("Node", "node-6").Field("spec.providerID").String()).To(Equal(`static://`))
+			Expect(f.KubernetesGlobalResource("Node", "node-7").Field("spec.providerID").String()).To(BeEmpty())
 		})
 	})
 })
