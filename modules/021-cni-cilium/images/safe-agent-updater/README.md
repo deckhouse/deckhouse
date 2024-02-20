@@ -32,7 +32,7 @@ The logic of `safe-agent-updater` application is as follows:
 - Wait until the new agent Pod starts correctly and enters Ready status.
 - Exit with exit 0
 
-== Total
+== Summary
 
 We get the following behavior:
 - When an agent image is updated, its pods are not restarted until the new image is loaded on the node.
