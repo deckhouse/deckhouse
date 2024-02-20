@@ -58,6 +58,7 @@ spec:
         - --run-service-proxy=false
         - --metrics-path=/metrics
         - --metrics-port=10445
+        - --metrics-addr=$(HOST_IP)
         - --health-port=10444
         ports:
         - containerPort: 10445
@@ -67,6 +68,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         livenessProbe:
           httpGet:
             path: /healthz
