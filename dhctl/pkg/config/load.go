@@ -227,7 +227,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
-func (s *SchemaStore) ValidateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOptions) error {
+func (s *SchemaStore) ValidateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
 	return s.validateWithIndexOpts(index, doc, opts...)
 }
 
@@ -240,7 +240,8 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	return s.validateWithIndexOpts(index, doc)
 }
 
-func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOptions) error {
+func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
 			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
@@ -299,8 +300,11 @@ func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opt
 		return ErrSchemaNotFound
 	}
 
-	isValid, err := openAPIValidate(&docForValidate, schema, opts...)
+	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
+		if options.commanderMode {
+			return fmt.Errorf("%q document validation failed: %w", index.String(), err)
+		}
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
 
@@ -347,8 +351,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema, opts ...ValidateOption) (isValid bool, multiErr error) {
-	options := applyOptions(opts...)
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (isValid bool, multiErr error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}

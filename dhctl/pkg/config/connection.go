@@ -64,12 +64,15 @@ func ParseConnectionConfig(
 	config := &ConnectionConfig{}
 
 	for _, doc := range docs {
+		if doc == "" {
+			continue
+		}
 		docData := []byte(doc)
 
 		var index SchemaIndex
 		err := yaml.Unmarshal(docData, &index)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal connection config: %w", err)
 		}
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
@@ -80,27 +83,27 @@ func ParseConnectionConfig(
 		switch index.Kind {
 		case SSHConfigKind:
 			if config.SSHConfig != nil {
-				return nil, fmt.Errorf("only one SSHConfig expected")
+				return nil, fmt.Errorf("only one %q expected", SSHConfigKind)
 			}
 
 			var sshConfig *SSHConfig
 			if err = yaml.Unmarshal([]byte(doc), &sshConfig); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal SSHConfig: %w\n---\n%s\n", err, doc)
+				return nil, fmt.Errorf("unable to unmarshal %q: %w\n---\n%s\n", SSHConfigKind, err, doc)
 			}
 			config.SSHConfig = sshConfig
 		case SSHConfigHostKind:
 			var sshHost SSHHost
 			if err = yaml.Unmarshal([]byte(doc), &sshHost); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal SSHHost: %w\n---\n%s\n", err, doc)
+				return nil, fmt.Errorf("unable to unmarshal %q: %w\n---\n%s\n", SSHConfigHostKind, err, doc)
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
 		default:
-			return nil, fmt.Errorf("unknown kind %q, expected SSHConfig or SSHHost", index.Kind)
+			return nil, fmt.Errorf("unknown kind %q, expected %q or %q", index.Kind, SSHConfigKind, SSHConfigHostKind)
 		}
 	}
 
 	if config.SSHConfig == nil {
-		return nil, fmt.Errorf("SSHConfig required")
+		return nil, fmt.Errorf("%q required", SSHConfigKind)
 	}
 
 	return config, nil
