@@ -353,7 +353,7 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
-{{- if ne $resourceReservationMode "Off" }}
+{{- if or (eq $resourceReservationMode "Auto") (eq $resourceReservationMode "Static") }}
 systemReserved:
   cpu: "$(dynamic_cpu_sizing)"
   memory: "$(dynamic_memory_sizing)"
