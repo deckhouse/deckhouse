@@ -7,6 +7,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
     - cd /src
