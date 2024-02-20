@@ -207,6 +207,11 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
 
+	if instanceTypes == nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
+	}
+
 	sort.SliceStable(instanceTypes, func(i, j int) bool {
 		return instanceTypes[i].Name < instanceTypes[j].Name
 	})
@@ -333,6 +338,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 	c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 
 	if discoveryData == nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return
 	}
 
@@ -440,6 +446,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 		if len(disksMeta) == 0 {
 			c.logger.Infoln("No disks found")
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
+			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 			return
 		}
 
