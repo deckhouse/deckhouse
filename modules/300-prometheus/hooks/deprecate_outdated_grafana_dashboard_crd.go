@@ -97,8 +97,8 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 				)
 			}
 			panelType := panel.Get("type").String()
-			if !isInternalPanelType(panelType) {
-				input.MetricsCollector.Set("d8_grafana_dashboards_external_plugin",
+			if evaluateDeprecatedPlugin(panelType) {
+				input.MetricsCollector.Set("d8_grafana_dashboards_deprecated_plugin",
 					1, map[string]string{
 						"dashboard": sanitizeLabelName(dashboard),
 						"panel":     sanitizeLabelName(panelTitle),
@@ -185,46 +185,15 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 	return "", false
 }
 
-var internalPanelTypes = []string{
-	"row", // row is not a plugin type, but panel type also
-	"alertGroups",
-	"alertlist",
-	"annolist",
-	"barchart",
-	"bargauge",
-	"candlestick",
-	"canvas",
-	"dashlist",
-	"datagrid",
-	"debug",
-	"flamegraph",
-	"gauge",
-	"geomap",
-	"gettingstarted",
-	"graph",
-	"heatmap",
-	"histogram",
-	"live",
-	"logs",
-	"news",
-	"nodeGraph",
-	"piechart",
-	"singlestat", "stat",
-	"state-timeline",
-	"status-history",
-	"table",
-	"table-old",
-	"text",
-	"timeseries",
-	"traces",
-	"trend",
-	"welcome",
-	"xychart",
-}
+var (
+	deprecatedPlugins = []string{
+		"flant-statusmap-panel",
+	}
+)
 
-func isInternalPanelType(panelType string) bool {
-	for _, internalPanelType := range internalPanelTypes {
-		if internalPanelType == panelType {
+func evaluateDeprecatedPlugin(plugin string) bool {
+	for _, deprecatedPlugin := range deprecatedPlugins {
+		if deprecatedPlugin == plugin {
 			return true
 		}
 	}

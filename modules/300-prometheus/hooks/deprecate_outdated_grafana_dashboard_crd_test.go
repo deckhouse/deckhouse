@@ -68,7 +68,6 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 77,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -110,9 +109,8 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_datasource_uid"
+        "uid": "P0D6E4079E36703EB"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -169,7 +167,7 @@ spec:
         "x": 0,
         "y": 0
       },
-      "id": 6,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [],
@@ -185,7 +183,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__interval_rv])",
           "refId": "A"
@@ -202,19 +200,78 @@ spec:
       "type": "timeseries"
     },
     {
+      "cards": {
+        "cardHSpacing": 2,
+        "cardMinWidth": 5,
+        "cardVSpacing": 2
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGnYlRd",
+        "defaultColor": "#757575",
+        "exponent": 0.5,
+        "mode": "spectrum",
+        "thresholds": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "hideBranding": false,
+      "highlightCards": true,
+      "id": 15,
+      "legend": {
+        "show": true
+      },
+      "nullPointMode": "as empty",
+      "pageSize": 15,
+      "seriesFilterIndex": -1,
+      "statusmap": {
+        "ConfigVersion": "v1"
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__interval_rv])",
           "refId": "A"
         }
       ],
       "title": "Plugin Single Panel",
-      "type": "unknown_plugin",
-      "version": 1
+      "tooltip": {
+        "extraInfo": "",
+        "freezeOnClick": true,
+        "items": [],
+        "show": true,
+        "showExtraInfo": false,
+        "showItems": false
+      },
+      "type": "flant-statusmap-panel",
+      "useMax": true,
+      "usingPagination": false,
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "maxWidth": -1,
+        "minWidth": -1,
+        "show": true
+      },
+      "yAxisSort": "metrics",
+      "yLabel": {
+        "delimiter": "",
+        "labelTemplate": "",
+        "usingSplitLabel": false
+      }
     },
     {
       "gridPos": {
@@ -265,9 +322,8 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_datasource_uid"
+        "uid": "P0D6E4079E36703EB"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -319,12 +375,12 @@ spec:
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 9
       },
-      "id": 2,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [],
@@ -340,7 +396,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__interval_sx3])",
           "refId": "A"
@@ -357,19 +413,78 @@ spec:
       "type": "timeseries"
     },
     {
+      "cards": {
+        "cardHSpacing": 2,
+        "cardMinWidth": 5,
+        "cardVSpacing": 2
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGnYlRd",
+        "defaultColor": "#757575",
+        "exponent": 0.5,
+        "mode": "spectrum",
+        "thresholds": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "hideBranding": false,
+      "highlightCards": true,
+      "id": 9,
+      "legend": {
+        "show": true
+      },
+      "nullPointMode": "as empty",
+      "pageSize": 15,
+      "seriesFilterIndex": -1,
+      "statusmap": {
+        "ConfigVersion": "v1"
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__interval_sx4])",
           "refId": "A"
         }
       ],
       "title": "Plugin Panel Inside Row",
-      "type": "unknown_plugin",
-      "version": 1
+      "tooltip": {
+        "extraInfo": "",
+        "freezeOnClick": true,
+        "items": [],
+        "show": true,
+        "showExtraInfo": false,
+        "showItems": false
+      },
+      "type": "flant-statusmap-panel",
+      "useMax": true,
+      "usingPagination": false,
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "maxWidth": -1,
+        "minWidth": -1,
+        "show": true
+      },
+      "yAxisSort": "metrics",
+      "yLabel": {
+        "delimiter": "",
+        "labelTemplate": "",
+        "usingSplitLabel": false
+      }
     }
   ],
   "schemaVersion": 36,
@@ -379,14 +494,14 @@ spec:
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Test",
   "uid": "test",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
   }'
 `, 1))
@@ -415,11 +530,11 @@ spec:
 					"panel":     "plugin_single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_external_plugin"))
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
 				Expect(m[3].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
-					"plugin":    "unknown_plugin",
+					"plugin":    "flant-statusmap-panel",
 				}))
 				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[4].Labels).To(Equal(map[string]string{
@@ -439,11 +554,11 @@ spec:
 					"panel":     "plugin_panel_inside_row",
 					"interval":  "interval_sx4",
 				}))
-				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_external_plugin"))
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
 				Expect(m[7].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",
-					"plugin":    "unknown_plugin",
+					"plugin":    "flant-statusmap-panel",
 				}))
 			})
 
@@ -496,13 +611,14 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 77,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "datasource": {},
-      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -559,7 +675,7 @@ spec:
         "x": 0,
         "y": 0
       },
-      "id": 6,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [],
@@ -575,7 +691,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
@@ -586,40 +702,18 @@ spec:
       "type": "timeseries"
     },
     {
-      "datasource": {},
-      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "fillOpacity": 70,
+            "lineWidth": 1
           },
           "mappings": [],
           "thresholds": {
@@ -644,13 +738,15 @@ spec:
         "x": 12,
         "y": 0
       },
-      "id": 7,
+      "id": 15,
       "options": {
+        "colWidth": 0.9,
         "legend": {
-          "calcs": [],
           "displayMode": "list",
           "placement": "bottom"
         },
+        "rowHeight": 0.9,
+        "showValue": "auto",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -660,14 +756,14 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
         }
       ],
       "title": "Plugin Single Panel",
-      "type": "timeseries"
+      "type": "status-history"
     },
     {
       "gridPos": {
@@ -681,8 +777,10 @@ spec:
       "type": "row"
     },
     {
-      "datasource": {},
-      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -734,12 +832,12 @@ spec:
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 9
       },
-      "id": 2,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [],
@@ -755,7 +853,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
@@ -770,39 +868,14 @@ spec:
         "type": "prometheus",
         "uid": "P0D6E4079E36703EB"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "fillOpacity": 70,
+            "lineWidth": 1
           },
           "mappings": [],
           "thresholds": {
@@ -822,18 +895,20 @@ spec:
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 9
       },
-      "id": 8,
+      "id": 9,
       "options": {
+        "colWidth": 0.9,
         "legend": {
-          "calcs": [],
           "displayMode": "list",
           "placement": "bottom"
         },
+        "rowHeight": 0.9,
+        "showValue": "auto",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -843,14 +918,14 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
+            "uid": "P0D6E4079E36703EB"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
         }
       ],
       "title": "Plugin Panel Inside Row",
-      "type": "timeseries"
+      "type": "status-history"
     }
   ],
   "schemaVersion": 36,
@@ -860,14 +935,14 @@ spec:
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Test",
   "uid": "test",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
   }'
 `, 1))
