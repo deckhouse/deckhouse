@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") }}
+{{- if or (contains "Static" .nodeGroup.nodeType) (eq .runType "ClusterBootstrap") }}
 bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 #!/bin/bash
 
