@@ -132,6 +132,7 @@ func TestParseConnectionConfig(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -145,6 +146,7 @@ func TestParseConnectionConfig(t *testing.T) {
 }
 
 var validSSHConfig = `
+---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHConfig
 sshUser: ubuntu
