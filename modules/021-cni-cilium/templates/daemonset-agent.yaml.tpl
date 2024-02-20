@@ -304,6 +304,8 @@ spec:
         command:
         - /init-container.sh
         env:
+        - name: test
+          value: "test"
         - name: CILIUM_ALL_STATE
           valueFrom:
             configMapKeyRef:
