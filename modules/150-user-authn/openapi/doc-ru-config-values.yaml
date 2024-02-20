@@ -32,7 +32,7 @@ properties:
 
                   В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике повредит ранее сгенерированные kubectl-конфиги.
         addKubeconfigGeneratorEntry:
-          description: 'Если указать `false` будет скрыта запись в kubeconfig-generator'
+          description: 'Если указать `false` будет удалена запись в kubeconfig-generator'
   kubeconfigGenerator:
     description: |
       Массив, в котором указываются дополнительные способы доступа к API-серверу.

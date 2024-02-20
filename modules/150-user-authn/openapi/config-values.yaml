@@ -56,7 +56,7 @@ properties:
       addKubeconfigGeneratorEntry:
         type: boolean
         default: true
-        description: 'Setting it to `false` will hide an entry in kubeconfig-generator'
+        description: 'Setting it to `false` will remove an entry in kubeconfig-generator'
   kubeconfigGenerator:
     type: array
     description: |
