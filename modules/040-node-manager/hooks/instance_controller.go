@@ -40,7 +40,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		ExecutionMinInterval: 1 * time.Second,
 		ExecutionBurst:       2,
 	},
-	Queue: "/modules/node-manager/instance_controller",
+	AllowFailure: true,
+	Queue:        "/modules/node-manager/instance_controller",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "instances",

@@ -41,6 +41,7 @@ const (
 	LastAppliedNodeTemplateAnnotation = "node-manager.deckhouse.io/last-applied-node-template"
 	NodeUnininitalizedTaintKey        = "node.deckhouse.io/uninitialized"
 	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
+	clusterAPIAnnotationKey           = "cluster.x-k8s.io/machine"
 )
 
 type NodeSettings struct {
@@ -50,6 +51,8 @@ type NodeSettings struct {
 	Annotations map[string]string
 	Labels      map[string]string
 	Taints      []v1.Taint
+
+	IsClusterAPINode bool
 }
 
 // Hook will be executed when NodeType or NodeTemplate are changed.
@@ -81,13 +84,15 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if err != nil {
 		return nil, err
 	}
+	_, isClusterAPINode := nodeObj.Annotations[clusterAPIAnnotationKey]
 
 	settings := NodeSettings{
-		Name:        nodeObj.Name,
-		NodeGroup:   nodeObj.Labels[NodeGroupNameLabel],
-		Labels:      nodeObj.Labels,
-		Annotations: nodeObj.Annotations,
-		Taints:      nodeObj.Spec.Taints,
+		Name:             nodeObj.Name,
+		NodeGroup:        nodeObj.Labels[NodeGroupNameLabel],
+		Labels:           nodeObj.Labels,
+		Annotations:      nodeObj.Annotations,
+		Taints:           nodeObj.Spec.Taints,
+		IsClusterAPINode: isClusterAPINode,
 	}
 
 	return settings, nil
@@ -172,6 +177,15 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 
 			if nodeGroup.NodeType == ngv1.NodeTypeCloudEphemeral {
 				fixCloudNodeTaints(nodeObj, nodeGroup)
+				// cluster api does not apply template
+				// in the future we need to write our own bootstrap provider
+				// which it will set node template
+				if node.IsClusterAPINode {
+					err = applyNodeTemplate(nodeObj, node, nodeGroup)
+					if err != nil {
+						return nil, err
+					}
+				}
 			} else {
 				err = applyNodeTemplate(nodeObj, node, nodeGroup)
 				if err != nil {

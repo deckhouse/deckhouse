@@ -32,6 +32,18 @@ rules:
   - get
   - list
   - watch
+# cluster api
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machinedeployments
+  - machines
+  - machinesets
+  - machinedeployments/scale
+  verbs:
+  - get
+  - list
+  - watch
 # leader election
 - apiGroups: [""]
   resources: ["endpoints"]
@@ -49,6 +61,16 @@ rules:
   verbs: ["get", "update", "patch", "delete"]
 - apiGroups:
   - machine.sapcloud.io
+  resources:
+  - machinedeployments
+  - machines
+  - machinedeployments/scale
+  verbs:
+  - patch
+  - update
+# cluster api
+- apiGroups:
+  - cluster.x-k8s.io
   resources:
   - machinedeployments
   - machines
@@ -136,6 +158,14 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "update", "patch"]
+# cluster api
+- apiGroups: ["cluster.x-k8s.io"]
+  resources:
+  - machinedeployments
+  - machines
+  - machinesets
+  - machinedeployments/scale
+  verbs: ["get", "list", "watch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

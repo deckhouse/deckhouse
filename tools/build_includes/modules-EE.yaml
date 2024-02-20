@@ -39,6 +39,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-vcd
+  to: /deckhouse/modules/030-cloud-provider-vcd
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-vsphere
   to: /deckhouse/modules/030-cloud-provider-vsphere
   stageDependencies:
@@ -51,6 +56,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/vcd
+  to: /deckhouse/modules/040-node-manager/capi/vcd
   stageDependencies:
     setup:
         - '**/*.go'

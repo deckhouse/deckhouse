@@ -166,6 +166,7 @@ spec:
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -207,4 +208,5 @@ spec:
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng6").Field("spec.replicas").String()).To(Equal("5"))
 		})
 	})
+	// TODO add tests for CAPI machineDeployments
 })

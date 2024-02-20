@@ -35,6 +35,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
@@ -104,6 +105,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			FilterFunc: updStatusFilterMachine,
+		},
+		{
+			Name:                   "capi_instances",
+			WaitForSynchronization: pointer.Bool(false),
+			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			Kind:                   "Machine",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: updStatusFilterCapiMachine,
 		},
 		{
 			Name:                   "nodes",
@@ -220,6 +233,18 @@ func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return nodeGroup, nil
 }
 
+func updStatusFilterCapiMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	machine := capiv1beta1.Machine{}
+	err := sdk.FromUnstructured(obj, &machine)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeGroup := machine.Labels["node-group"]
+
+	return nodeGroup, nil
+}
+
 // returns count of zones for current cluster
 func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec corev1.Secret
@@ -275,6 +300,16 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	// count instances of each node group
 	instances := make(map[string]int32)
 	snap = input.Snapshots["instances"]
+	for _, res := range snap {
+		instanceNodeGroup := res.(string)
+		if count, ok := instances[instanceNodeGroup]; ok {
+			count++
+			instances[instanceNodeGroup] = count
+		} else {
+			instances[instanceNodeGroup] = 1
+		}
+	}
+	snap = input.Snapshots["capi_instances"]
 	for _, res := range snap {
 		instanceNodeGroup := res.(string)
 		if count, ok := instances[instanceNodeGroup]; ok {

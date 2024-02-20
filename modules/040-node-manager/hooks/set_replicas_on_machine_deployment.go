@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -42,6 +43,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: setReplicasFilterMD,
 		},
+
+		{
+			Name:                   "capi_mds",
+			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			Kind:                   "MachineDeployment",
+			WaitForSynchronization: pointer.Bool(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: capiSetReplicasFilterMD,
+		},
+
 		{
 			Name:                   "ngs",
 			ApiVersion:             "deckhouse.io/v1",
@@ -73,6 +88,11 @@ func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	var min, max int32
 
+	if ng.Spec.StaticInstances != nil {
+		count := ng.Spec.StaticInstances.Count
+		min, max = count, count
+	}
+
 	if ng.Spec.CloudInstances.MinPerZone != nil {
 		min = *ng.Spec.CloudInstances.MinPerZone
 	}
@@ -103,16 +123,28 @@ func setReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}, nil
 }
 
-func handleSetReplicas(input *go_hook.HookInput) error {
-	nodeGroups := make(map[string]setReplicasNodeGroup)
+func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var md v1beta1.MachineDeployment
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		ng := sn.(setReplicasNodeGroup)
-		nodeGroups[ng.Name] = ng
+	err := sdk.FromUnstructured(obj, &md)
+	if err != nil {
+		return nil, err
 	}
 
-	snap = input.Snapshots["mds"]
+	var replicas int32
+	if md.Spec.Replicas != nil {
+		replicas = *md.Spec.Replicas
+	}
+
+	return setReplicasMachineDeployment{
+		Name:      md.Name,
+		NodeGroup: md.Labels["node-group"],
+		Replicas:  replicas,
+	}, nil
+}
+
+func calculateReplicasAndPatchMachineDeployment(
+	input *go_hook.HookInput, snap []go_hook.FilterResult, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) {
 	for _, sn := range snap {
 		md := sn.(setReplicasMachineDeployment)
 
@@ -149,8 +181,21 @@ func handleSetReplicas(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name)
+		input.PatchCollector.MergePatch(patch, apiGroup, "MachineDeployment", "d8-cloud-instance-manager", md.Name)
 	}
+}
+
+func handleSetReplicas(input *go_hook.HookInput) error {
+	nodeGroups := make(map[string]setReplicasNodeGroup)
+
+	snap := input.Snapshots["ngs"]
+	for _, sn := range snap {
+		ng := sn.(setReplicasNodeGroup)
+		nodeGroups[ng.Name] = ng
+	}
+
+	calculateReplicasAndPatchMachineDeployment(input, input.Snapshots["mds"], nodeGroups, "machine.sapcloud.io/v1alpha1")
+	calculateReplicasAndPatchMachineDeployment(input, input.Snapshots["capi_mds"], nodeGroups, "cluster.x-k8s.io/v1beta1")
 
 	return nil
 }

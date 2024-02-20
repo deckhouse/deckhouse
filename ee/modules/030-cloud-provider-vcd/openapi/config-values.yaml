@@ -1,0 +1,28 @@
+type: object
+properties:
+  storageClass:
+    type: object
+    default: {}
+    description: |
+      The module automatically creates StorageClasses that are available in OpenStack.
+    properties:
+      exclude:
+        type: array
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        items:
+          type: string
+        x-examples:
+          - [".*-hdd", "iscsi-fast"]
+      default:
+        type: string
+        x-examples:
+          - "ceph-ssd"
+        description: |
+          The name of StorageClass that will be used in the cluster by default.
+
+          If the parameter is omitted, the default StorageClass is either:
+            * an arbitrary StorageClass present in the cluster that has the default annotation;
+            * storageClass for default Storage Profile;
+            * the first StorageClass created by the module.
+

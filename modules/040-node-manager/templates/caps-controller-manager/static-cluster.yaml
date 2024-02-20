@@ -1,5 +1,5 @@
-{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 {{- $prefix := "static" }}
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 {{- $provider := "static" }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1

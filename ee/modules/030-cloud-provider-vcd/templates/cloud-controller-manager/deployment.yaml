@@ -1,0 +1,130 @@
+{{- define "vcd_cloud_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- if $ccmImage }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "vcd-cloud-controller-manager"
+      minAllowed:
+        {{- include "vcd_cloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+  annotations:
+    checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-controller-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: Default
+      serviceAccountName: cloud-controller-manager
+      containers:
+        - name: vcd-cloud-controller-manager
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ $ccmImage }}
+          args:
+          - --leader-elect=true
+          - --cloud-config=/etc/cloud/cloud-config
+          - --cloud-provider=vmware-cloud-director
+          - --allow-untagged-cloud=true
+          - --configure-cloud-routes=false
+          - --controllers=cloud-node,cloud-node-lifecycle
+          - --bind-address=$(HOST_IP)
+          - --secure-port=10471
+          - --v=4
+          env:
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          ports:
+          - name: https
+            containerPort: 10471
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          volumeMounts:
+            - name: ccm-controller-config-volume
+              mountPath: /etc/cloud
+              readOnly: true
+            - name: vcd-credentials-volume
+              mountPath: /etc/kubernetes/vcloud/basic-auth
+              readOnly: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "vcd_cloud_controller_manager_resources" . | nindent 14 }}
+  {{- end }}
+      volumes:
+      - name: ccm-controller-config-volume
+        secret:
+          secretName: ccm-controller-manager
+      - name: vcd-credentials-volume
+        secret:
+          secretName: vcd-credentials
+{{- end }}

@@ -8,7 +8,7 @@
   {{- $annotations := dict -}}
 
   {{- $volume_expansion_mode_offline := false -}}
-  {{- range $module_name := list "cloud-provider-azure" "cloud-provider-yandex" "cloud-provider-vsphere" }}
+  {{- range $module_name := list "cloud-provider-azure" "cloud-provider-yandex" "cloud-provider-vsphere" "cloud-provider-vcd"}}
     {{- if has $module_name $context.Values.global.enabledModules }}
       {{- $volume_expansion_mode_offline = true }}
     {{- end }}
