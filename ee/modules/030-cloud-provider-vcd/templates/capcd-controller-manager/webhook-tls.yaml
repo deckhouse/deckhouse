@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: capcd-controller-manager-webhook-tls
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+data:
+  ca.crt: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca | b64enc }}
+  tls.crt: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.crt | b64enc }}
+  tls.key: {{ .Values.cloudProviderVcd.internal.capcdControllerManagerWebhookCert.key | b64enc }}

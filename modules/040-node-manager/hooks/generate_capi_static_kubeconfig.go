@@ -1,12 +1,9 @@
 /*
 Copyright 2023 Flant JSC
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,43 +36,44 @@ import (
 
 const (
 	clusterAPINamespace          = "d8-cloud-instance-manager"
-	clusterAPIServiceAccountName = "capi-controller-manager"
 	clusterAPIStaticClusterName  = "static"
+	clusterAPIServiceAccountName = "capi-controller-manager"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/capi",
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "node_group",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "NodeGroup",
-			FilterFunc: staticInstancesNodeGroupFilter,
-		},
-	},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
+	Queue:        "/modules/node-manager",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "capi_static_kubeconfig_secret",
 			Crontab: "0 1 * * *",
 		},
 	},
-}, dependency.WithExternalDependencies(generateStaticKubeconfigSecret))
+}, dependency.WithExternalDependencies(handleCreateCAPIStaticKubeconfig))
 
-func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container) error {
-	var hasStaticInstancesField bool
+func handleCreateCAPIStaticKubeconfig(input *go_hook.HookInput, dc dependency.Container) error {
+	capiEnabledRaw := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
 
-	nodeGroupSnapshots := input.Snapshots["node_group"]
-	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
-		hasStaticInstancesField = nodeGroupSnapshot.(bool)
-		if hasStaticInstancesField {
-			break // we need at least one NodeGroup with staticInstances field
+	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {
+		capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
+		if capiClusterName == "" {
+			capiClusterName = clusterAPIStaticClusterName
+		}
+
+		err := generateStaticKubeconfigSecret(input, dc, hookParam{
+			serviceAccount: clusterAPIServiceAccountName,
+			cluster:        capiClusterName,
+		})
+
+		if err != nil {
+			return err
 		}
 	}
 
-	if !hasStaticInstancesField {
-		return nil
-	}
+	return nil
+}
 
+func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container, params hookParam) error {
 	restConfig, err := dc.GetClientConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to get kubeconfig")
@@ -86,7 +84,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to get k8s client")
 	}
 
-	err = createCAPIServiceAccount(k8sClient)
+	err = createCAPIServiceAccount(k8sClient, params.serviceAccount)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Cluster API service account")
 	}
@@ -107,7 +105,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to issue certificate")
 	}
 
-	config, err := kubeconfig.New(clusterAPIStaticClusterName, restConfig.Host, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
+	config, err := kubeconfig.New(params.cluster, restConfig.Host, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
 	}
@@ -117,7 +115,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to serialize kubeconfig to yaml")
 	}
 
-	secret := kubeconfig.GenerateSecret(clusterAPIStaticClusterName, clusterAPINamespace, configYAML)
+	secret := kubeconfig.GenerateSecret(params.cluster, clusterAPINamespace, configYAML)
 
 	secretUnstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
 	if err != nil {
@@ -129,19 +127,41 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 	return nil
 }
 
-func createCAPIServiceAccount(k8sClient k8s.Client) error {
+func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
+	namespace := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "d8-cloud-instance-manager",
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "node-manager",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+		},
+	}
+
+	_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterAPIServiceAccountName,
+			Name:      saName,
 			Namespace: clusterAPINamespace,
 		},
 	}
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
+	_, err = k8sClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return errors.Wrap(err, "failed to create service account")

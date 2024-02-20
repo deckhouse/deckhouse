@@ -1,0 +1,15 @@
+diff --git a/pkg/ccm/instances.go b/pkg/ccm/instances.go
+index 541e5fc..5704ac1 100644
+--- a/pkg/ccm/instances.go
++++ b/pkg/ccm/instances.go
+@@ -146,6 +146,10 @@ func (i *instances) CurrentNodeName(ctx context.Context, hostName string) (types
+ func (i *instances) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
+ 	klog.Infof("instances.InstanceExistsByProviderID() called with provider ID [%s]", providerID)
+ 
++	if providerID == "static://" {
++		return true, nil
++	}
++
+ 	vmUUID := getUUIDFromProviderID(providerID)
+ 	_, err := i.vmInfoCache.GetByUUID(vmUUID)
+ 	if err != nil {

@@ -56,6 +56,26 @@ spec:
   staticInstances: {}
 status: {}
 `
+		capsEnableCm = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+data:
+  enable: "true"
+`
+		capsDisableCm = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+data:
+  enable: "false"
+`
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},"nodeManager":{"internal": {}}}`, `{}`)
@@ -110,6 +130,75 @@ status: {}
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").String()).To(Equal("true"))
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").String()).To(Equal("true"))
+		})
+	})
+
+	Context("Cluster with capi provider but without static node group", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "cluster-name")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; capi flag should set and caps flag should not set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with capi provider and with static node group with staticInstances field", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "cluster-name")
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStaticWithStaticInstances))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; capi flags should set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with capi provider and with static node group without staticInstances field", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "cluster-name")
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStatic))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; capi flag should set and caps flag should not set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with capi provider and with caps enabled cm", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "cluster-name")
+			f.BindingContexts.Set(f.KubeStateSet(capsEnableCm))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; capi flag should set and caps flag should not set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with capi provider and with caps disable cm", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "cluster-name")
+			f.BindingContexts.Set(f.KubeStateSet(capsDisableCm))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; capi flag should set and caps flag should not set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.capsControllerManagerEnabled").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerEnabled").Bool()).To(BeTrue())
 		})
 	})
 })

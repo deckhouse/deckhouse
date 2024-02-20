@@ -11,12 +11,6 @@ bashible: &bashible
     '7':
     '8':
     '9':
-  altlinux:
-    'p10':
-    '10':
-    '10.0':
-    '10.1':
-    '10.2':
 k8s:
   '1.25':
     status: available

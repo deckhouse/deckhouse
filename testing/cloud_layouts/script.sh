@@ -614,7 +614,7 @@ ENDSSH
 
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
-  for ((i=1; i<=10; i++)); do
+  for ((i=1; i<=20; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C

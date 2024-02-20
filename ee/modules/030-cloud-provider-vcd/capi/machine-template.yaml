@@ -1,0 +1,25 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: VCDMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo using for keep machine template after rollout
+    # see this https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+    {{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+      diskSize: {{ mul (.nodeGroup.instanceClass.rootDiskSizeGb) 1024 1024 1024 }}
+    {{- end }}
+    {{- if .nodeGroup.instanceClass.sizingPolicy }}
+      sizingPolicy: {{ .nodeGroup.instanceClass.sizingPolicy | quote }}
+    {{- end }}
+    {{- if .nodeGroup.instanceClass.placementPolicy }}
+      placementPolicy: {{ .nodeGroup.instanceClass.placementPolicy | quote }}
+    {{- end }}
+      storageProfile: {{ .nodeGroup.instanceClass.storageProfile | quote }}
+      template: {{ .nodeGroup.instanceClass.template | quote }}
