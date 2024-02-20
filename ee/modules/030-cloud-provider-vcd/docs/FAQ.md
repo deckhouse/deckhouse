@@ -1,10 +1,10 @@
 ---
-title: "Cloud provider — vCloud Director: FAQ"
+title: "Cloud provider — VMware Cloud Director: FAQ"
 ---
 
 ## How do I create a hybrid cluster?
 
-A hybrid cluster combines bare metal and vCloud Director nodes. To create such a cluster, you will need an L2 network between all nodes of the cluster.
+A hybrid cluster combines bare metal and VMware Cloud Director nodes. To create such a cluster, you will need an L2 network between all nodes of the cluster.
 
 To create a hybrid cluster, you need to:
 
@@ -13,7 +13,6 @@ To create a hybrid cluster, you need to:
 1. Prepare a file with the provider configuration, replacing the designations with those valid for your cloud
 
 ```yaml
-
 apiVersion: deckhouse.io/v1
 internalNetworkCIDR: <NETWORK_CIRD>
 kind: VCDClusterConfiguration

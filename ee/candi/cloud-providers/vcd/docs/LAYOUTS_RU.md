@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider - VMware vSphere: схемы размещения"
-description: "Описание схем размещения и взаимодействия ресурсов в VMware vSphere при работе облачного провайдера Deckhouse."
+title: "Cloud provider - VMware Cloud Director: схемы размещения"
+description: "Описание схем размещения и взаимодействия ресурсов в VMware Cloud Director при работе облачного провайдера Deckhouse."
 ---
 
 ## Standard

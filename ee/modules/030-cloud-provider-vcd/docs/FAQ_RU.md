@@ -1,10 +1,10 @@
 ---
-title: "Cloud provider — vCloud Director: FAQ"
+title: "Cloud provider — VMware Cloud Director: FAQ"
 ---
 
 ## Как поднять гибридный кластер?
 
-Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы vCloud Director. Для создания такого кластера
+Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы VMware Cloud Director. Для создания такого кластера
 необходимо наличие L2-сети между всеми узлами кластера.
 
 Чтобы поднять гибридный кластер, необходимо:
@@ -14,7 +14,6 @@ title: "Cloud provider — vCloud Director: FAQ"
 1. Подготовьте файл с конфигурацией провайдера, заменяя обозначения на валидные для вашего облака:
 
 ```yaml
-
 apiVersion: deckhouse.io/v1
 internalNetworkCIDR: <NETWORK_CIRD>
 kind: VCDClusterConfiguration

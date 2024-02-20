@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider - Vcloud Director: Layouts"
-description: "Schemes of placement and interaction of resources in Vcloud Director when working with the Deckhouse cloud provider."
+title: "Cloud provider - VMware Cloud Director: Layouts"
+description: "Schemes of placement and interaction of resources in VMware Cloud Director when working with the Deckhouse cloud provider."
 ---
 
 ## Standard

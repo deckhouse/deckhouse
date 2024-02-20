@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider — Vcloud Director: Preparing environment"
-description: "Configuring Vcloud Director for Deckhouse cloud provider operation."
+title: "Cloud provider — VMware Cloud Director: Preparing environment"
+description: "Configuring VMware Cloud Director for Deckhouse cloud provider operation."
 ---
 
 <!-- AUTHOR! Don't forget to update getting started if necessary -->
@@ -19,27 +19,27 @@ description: "Configuring Vcloud Director for Deckhouse cloud provider operation
 
 Create internal network and connect it to Edge Gateway.
 
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
-[](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
+![Adding network, step 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
+![Adding network, step 2](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
+![Adding network, step 3](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
+![Adding network, step 4](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
+![Adding network, step 5](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
+![Adding network, step 6](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
 
 ### Adding vApp
 
-[](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
+![Adding vApp step 1](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
+![Adding vApp step 2](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
 
 ### Adding internal network to vApp
 
-[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+![Adding internal network to vApp, step 1](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+![Adding internal network to vApp, step 2](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
 ### Setup DNAT rules on EDGE gateway
 
-[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
-[](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
+![Setup DNAT rules on EDGE gateway, step 1](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+![Setup DNAT rules on EDGE gateway, step 2](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
 ## Catalog
 

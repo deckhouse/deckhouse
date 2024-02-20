@@ -1,10 +1,10 @@
 ---
-title: "Cloud provider — vCloud Director: examples"
+title: "Cloud provider — VMware Cloud Director: examples"
 ---
 
-Below is an example configuration for a vCloud Director cloud provider.
+Below is an example configuration for a VMware Cloud Director cloud provider.
 
-## An example of the `VsphereInstanceClass` custom resource
+## An example of the `VCDInstanceClass` custom resource
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

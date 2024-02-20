@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — vCloud Director vSphere: Custom Resources"
+title: "Cloud provider — VMware Cloud Director: Custom Resources"
 ---
 
 <!-- SCHEMA -->

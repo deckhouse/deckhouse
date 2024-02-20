@@ -291,6 +291,46 @@ entries:
                   url: /modules/030-cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
+            - title: VMware Cloud Director
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/030-cloud-provider-vcd/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/030-cloud-provider-vcd/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/030-cloud-provider-vcd/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/030-cloud-provider-vcd/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/030-cloud-provider-vcd/configuration.html
+                    - title: Custom Resources
+                      url: /modules/030-cloud-provider-vcd/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/030-cloud-provider-vcd/examples.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-vcd/faq.html
             - title: Yandex Cloud
               folders:
                 - title:
