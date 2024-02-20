@@ -68,6 +68,7 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 80,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -109,7 +110,7 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -183,7 +184,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__interval_rv])",
           "refId": "A"
@@ -216,7 +217,7 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "gridPos": {
         "h": 8,
@@ -240,7 +241,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__interval_rv])",
           "refId": "A"
@@ -322,7 +323,7 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -396,7 +397,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__interval_sx3])",
           "refId": "A"
@@ -429,7 +430,7 @@ spec:
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "gridPos": {
         "h": 8,
@@ -453,7 +454,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__interval_sx4])",
           "refId": "A"
@@ -501,7 +502,7 @@ spec:
   "timezone": "",
   "title": "Test",
   "uid": "test",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
   }'
 `, 1))
@@ -611,13 +612,14 @@ spec:
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 80,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -691,7 +693,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
@@ -704,7 +706,7 @@ spec:
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -756,7 +758,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
@@ -779,7 +781,7 @@ spec:
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -853,7 +855,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
@@ -866,7 +868,7 @@ spec:
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "prometheus_datasource_uid"
       },
       "fieldConfig": {
         "defaults": {
@@ -918,7 +920,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "prometheus_datasource_uid"
           },
           "expr": "rate(metric_name[$__rate_interval])",
           "refId": "A"
