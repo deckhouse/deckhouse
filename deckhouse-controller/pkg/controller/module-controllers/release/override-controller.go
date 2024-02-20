@@ -265,7 +265,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms), c.metricStorage)
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()

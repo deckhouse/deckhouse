@@ -290,6 +290,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		c.logger.Fatal("failed to wait for caches to sync")
 	}
 
+	err := c.registerMetrics()
+	if err != nil {
+		c.logger.Errorf("register metrics: %v", err)
+	}
+
 	c.logger.Infof("Starting workers count: %d", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
@@ -581,10 +586,15 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{Requeue: true}, err
 			}
 
-			md := c.newModuleDownloader(ms)
-			err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+			ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 			if err != nil {
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+			}
+
+			err = c.updateModuleReleaseDownloadStatistic(release, ds)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
 			}
 
 			moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
@@ -1013,7 +1023,7 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			continue
 		}
 
-		md := c.newModuleDownloader(ms)
+		md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 		_, moduleDef, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			c.logger.Warnf("Couldn't get module %s pull override definition: %s", moduleName, err)
@@ -1087,8 +1097,8 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 		return fmt.Errorf("ModuleSource %v is absent. Skipping restoration of the module %v", moduleSource, moduleName)
 	}
 
-	md := c.newModuleDownloader(ms)
-	err = md.DownloadByModuleVersion(moduleName, moduleVersion)
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("Download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
 	}
@@ -1181,7 +1191,7 @@ func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleR
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := c.newModuleDownloader(ms)
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
 		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 		if err != nil {
@@ -1229,6 +1239,31 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 	return nil
 }
 
-func (c *Controller) newModuleDownloader(ms *v1alpha1.ModuleSource) *downloader.ModuleDownloader {
-	return downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms), c.metricStorage)
+func (c *Controller) updateModuleReleaseDownloadStatistic(release *v1alpha1.ModuleRelease, ds *downloader.DownloadStatistic) error {
+	ctx := context.Background()
+
+	release.Status.Size = ds.Size
+	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
+
+	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+	return err
+}
+
+func (c *Controller) registerMetrics() error {
+	releases, err := c.moduleReleasesLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for _, release := range releases {
+		l := map[string]string{
+			"version": release.Spec.Version.String(),
+			"module":  release.Spec.ModuleName,
+		}
+
+		c.metricStorage.CounterAdd("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
+		c.metricStorage.CounterAdd("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
+	}
+
+	return nil
 }

@@ -333,7 +333,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	modulesChecksums := c.getModuleSourceChecksum(ms.Name)
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts, c.metricStorage)
+	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts)
 
 	// get all policies regardless of their labels
 	policies, err := c.moduleUpdatePoliciesLister.List(labels.Everything())
