@@ -42,13 +42,13 @@ const (
 	fetchSecretsInterval = 3 * time.Second
 )
 
-type Intetval int64
+type Interval int64
 
 const (
-	IntetvalImmediately Intetval = 0
-	IntetvalMinutes15   Intetval = 15
-	IntetvalMinutes30   Intetval = 30
-	IntetvalHours1      Intetval = 60
+	IntervalImmediately Interval = 0
+	IntervalMinutes15   Interval = 15
+	IntervalMinutes30   Interval = 30
+	IntervalHours1      Interval = 60
 )
 
 type Release struct {
@@ -60,7 +60,7 @@ type Release struct {
 	HelmVersion string `json:"-"`
 }
 
-func GetHelmReleases(ctx context.Context, client k8s.Client, releasesC chan<- *Release, intetval Intetval) (helm3Releases, helm2Releases uint32, err error) {
+func GetHelmReleases(ctx context.Context, client k8s.Client, releasesC chan<- *Release, interval Interval) (helm3Releases, helm2Releases uint32, err error) {
 	var (
 		wg                 sync.WaitGroup
 		helm3ReleasesCount uint32
@@ -69,10 +69,10 @@ func GetHelmReleases(ctx context.Context, client k8s.Client, releasesC chan<- *R
 		releasesBuffChan = make(chan *Release, objectBatchSize)
 	)
 
-	if helm3Releases, helm2Releases, b, err := releasescache.GetInstance().Get(time.Duration(intetval) * time.Minute); err != nil {
+	if helm3Releases, helm2Releases, b, err := releasescache.GetInstance().Get(time.Duration(interval) * time.Minute); err != nil {
 		releases := []Release{}
 		dec := gob.NewDecoder(bytes.NewBuffer(b))
-		dec.Decode(&releases)
+		_ = dec.Decode(&releases)
 
 		for _, release := range releases {
 			releasesC <- &release
@@ -113,7 +113,7 @@ func GetHelmReleases(ctx context.Context, client k8s.Client, releasesC chan<- *R
 
 		var buff bytes.Buffer
 		enc := gob.NewEncoder(&buff)
-		enc.Encode(releases)
+		_ = enc.Encode(releases)
 		releasescache.GetInstance().Set(helm3ReleasesCount, helm2ReleasesCount, buff.Bytes())
 
 		close(releasesC)

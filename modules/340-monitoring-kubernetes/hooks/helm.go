@@ -99,6 +99,9 @@ func init() {
 	}
 }
 
+// maximum time deep for cached releases. Variable required for overriding in tests.
+var helmReleasesInterval = helmreleases.IntervalHours1
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/monitoring-kubernetes/helm_releases",
 	Schedule: []go_hook.ScheduleConfig{
@@ -110,9 +113,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{
 		Order: 1,
 	},
-}, dependency.WithExternalDependencies(handleHelmReleases))
+}, dependency.WithExternalDependencies(handleHelmReleasesByShedule))
 
-func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
+func handleHelmReleasesByShedule(input *go_hook.HookInput, dc dependency.Container) error {
+	return handleHelmReleases(input, dc, helmReleasesInterval)
+}
+
+func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container, interval helmreleases.Interval) error {
 	var (
 		totalHelm3Releases uint32
 		totalHelm2Releases uint32
@@ -145,7 +152,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	go func() {
-		totalHelm3Releases, totalHelm2Releases, err = helmreleases.GetHelmReleases(ctx, client, releasesC, helmreleases.IntetvalImmediately)
+		totalHelm3Releases, totalHelm2Releases, err = helmreleases.GetHelmReleases(ctx, client, releasesC, interval)
 	}()
 	<-doneC
 

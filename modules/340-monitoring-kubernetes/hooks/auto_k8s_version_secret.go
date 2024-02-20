@@ -42,6 +42,9 @@ const (
 	AutoK8sReason  = "autoK8sReason"
 )
 
+// maximum time deep for cached releases. Variable required for overriding in tests.
+var autoK8sVersionSecretInterval = helmreleases.IntervalHours1
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/monitoring-kubernetes/auto_k8s_version_secret",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -83,16 +86,13 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func clusterConfigurationBySecret(input *go_hook.HookInput, dc dependency.Container) error {
-	return clusterConfiguration(input, dc, helmreleases.IntetvalHours1)
+	return clusterConfiguration(input, dc, autoK8sVersionSecretInterval)
 }
 
-func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container, interval helmreleases.Intetval) error {
+func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container, interval helmreleases.Interval) error {
 	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
 	if ok && len(kubernetesVersion) > 0 && kubernetesVersion[0].(string) == "Automatic" {
-		var (
-			unsupportVersion k8sUnsupportedVersion
-			wg               sync.WaitGroup
-		)
+		var unsupportVersion k8sUnsupportedVersion
 
 		// create buffered channel == objectBatchSize
 		// this give as ability to handle in memory only objectBatchSize * 2 amount of helm releases
@@ -111,7 +111,7 @@ func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container, int
 		}
 
 		go func() {
-			_, _, err = helmreleases.GetHelmReleases(ctx, client, releasesC, helmreleases.IntetvalImmediately)
+			_, _, err = helmreleases.GetHelmReleases(ctx, client, releasesC, interval)
 		}()
 
 		<-doneC

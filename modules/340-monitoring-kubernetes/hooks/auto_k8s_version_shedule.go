@@ -17,11 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -49,5 +50,5 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(clusterConfigurationBySchedule))
 
 func clusterConfigurationBySchedule(input *go_hook.HookInput, dc dependency.Container) error {
-	return clusterConfiguration(input, dc, helmreleases.IntetvalImmediately)
+	return clusterConfiguration(input, dc, helmreleases.IntervalImmediately)
 }

@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-type cache struct {
+type Cache struct {
 	m             sync.RWMutex
 	timemark      int64
 	val           []byte
@@ -30,28 +30,30 @@ type cache struct {
 	helm2Releases uint32
 }
 
-var ch cache
+var ch Cache
 
-func GetInstance() *cache {
+func GetInstance() *Cache {
 	return &ch
 }
 
-func (c *cache) Set(helm3Releases, helm2Releases uint32, val []byte) {
+func (c *Cache) Set(helm3Releases, helm2Releases uint32, val []byte) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	ch.timemark = time.Now().Unix()
-	copy(ch.val, val)
-	ch.helm3Releases = helm3Releases
-	ch.helm2Releases = helm2Releases
+	c.timemark = time.Now().Unix()
+	c.val = make([]byte, len(val))
+	copy(c.val, val)
+	c.helm3Releases = helm3Releases
+	c.helm2Releases = helm2Releases
 }
 
-func (c *cache) Get(ttl time.Duration) (helm3Releases, helm2Releases uint32, val []byte, err error) {
+func (c *Cache) Get(ttl time.Duration) (helm3Releases, helm2Releases uint32, val []byte, err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
 	timeDeep := time.Now().Add(-ttl).Unix()
 	if ttl == 0 || c.timemark > timeDeep {
+		val = make([]byte, len(c.val))
 		copy(val, c.val)
 		return ch.helm3Releases, ch.helm2Releases, val, nil
 	}
