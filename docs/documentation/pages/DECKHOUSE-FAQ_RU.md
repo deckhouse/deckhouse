@@ -10,21 +10,21 @@ Deckhouse настраивается с помощью глобальных на
 
 1. Выведите глобальные настройки:
 
-```shell
-kubectl get mc global -o yaml
-```
+  ```shell
+  kubectl get mc global -o yaml
+  ```
 
-2. Выведите список состояния всех модулей (доступно для Deckhouse версии 1.47+):
+1. Выведите список состояния всех модулей (доступно для Deckhouse версии 1.47+):
 
-```shell
-kubectl get modules
-```
+  ```shell
+  kubectl get modules
+  ```
 
-3. Выведите настройки модуля `user-authn`:
+1. Выведите настройки модуля `user-authn`:
 
-```shell
-kubectl get moduleconfigs user-authn -o yaml
-```
+  ```shell
+  kubectl get moduleconfigs user-authn -o yaml
+  ```
 
 ## Как найти документацию по установленной у меня версии?
 
@@ -174,14 +174,16 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 {% alert level="info" %}
 Возможные варианты действий, если что-то пошло не так:
+
 1. Проверьте логи, используя следующую команду:
 
-  ```shell
-  kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
-  ```
+   ```shell
+   kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+   ```
 
-2. Соберите [отладочную информацию](modules/002-deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
-3. Попросите помощи у [сообщества](https://deckhouse.ru/community/about.html).
+1. Соберите [отладочную информацию](modules/002-deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
+   
+1. Попросите помощи у [сообщества](https://deckhouse.ru/community/about.html).
 {% endalert %}
 
 ### Как узнать, что для кластера доступна новая версия?
@@ -239,9 +241,9 @@ Patch-релизы (например, обновление на версию `1.
 
 1. Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) нужный канал обновлений.
 
-2. Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse.
+1. Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse.
 
-3. Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
+1. Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
 
   Пример получения IP-адреса хранилища образов Deckhouse на узле:
 
@@ -588,10 +590,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
 1. Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
 
-  ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
+   ```shell
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
     | .metadata.namespace + "\t" + .metadata.name' -r
-  ```
+   ```
 
 ### Как создать кластер и запустить Deckhouse без использования каналов обновлений?
 
@@ -614,22 +616,22 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
 2. Установите Squid (здесь и далее примеры для Ubuntu):
 
-  ```shell
-  apt-get install squid
-  ```
+   ```shell
+   apt-get install squid
+   ```
 
 3. Создайте файл конфигурации Squid:
 
-  ```shell
-  cat <<EOF > /etc/squid/squid.conf
-  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
-  auth_param basic realm proxy
-  acl authenticated proxy_auth REQUIRED
-  http_access allow authenticated
+   ```shell
+   cat <<EOF > /etc/squid/squid.conf
+   auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
+   auth_param basic realm proxy
+   acl authenticated proxy_auth REQUIRED
+   http_access allow authenticated
 
-  # Choose the port you want. Below we set it to default 3128.
-  http_port 3128
-  ```
+   # Choose the port you want. Below we set it to default 3128.
+   http_port 3128
+   ```
 
 4. Создайте пользователя и пароль для аутентификации на proxy-сервере:
 
@@ -641,10 +643,10 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 5. Запустите Squid и включите его автоматический запуск при загрузке сервера:
 
-  ```shell
-  systemctl restart squid
-  systemctl enable squid
-  ```
+   ```shell
+   systemctl restart squid
+   systemctl enable squid
+   ```
 
 {% endofftopic %}
 
@@ -869,6 +871,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 ### Как обновить версию Kubernetes в кластере?
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
+
 1. Выполните команду:
 
    ```shell
