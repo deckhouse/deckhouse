@@ -1,0 +1,23 @@
+---
+image: {{ .ModuleName }}/flant-pricing
+fromImage: common/shell-operator
+git:
+- add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install -y python3 python3-module-pip curl
+    - apt-get clean
+  install:
+    - python3 -m pip install -r /src/requirements.txt
+docker:
+  ENTRYPOINT: ["/shell-operator"]
