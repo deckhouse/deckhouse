@@ -1,3 +1,4 @@
+{{- $transportProtocolModeDict := dict "PreferUDP" "prefer_udp" "ForceTCP" "force_tcp" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -26,7 +27,9 @@ data:
         }
         prometheus 127.0.0.1:9153
         forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }} {
-          prefer_udp
+{{- if ne $.Values.kubeDns.transportProtocolMode "KeepOriginal" }}
+          {{ get $transportProtocolModeDict $.Values.kubeDns.transportProtocolMode }}
+{{- end }}
         }
         cache 30
         loop
@@ -48,7 +51,9 @@ data:
         reload
         loadbalance
         forward . {{ $zone.upstreamNameservers | join " " }} {
-          prefer_udp
+    {{- if ne $zone.transportProtocolMode "KeepOriginal" }}
+          {{ get $transportProtocolModeDict $zone.transportProtocolMode }}
+    {{- end }}
         }
     }
   {{- end }}
