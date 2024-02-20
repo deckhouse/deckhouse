@@ -852,15 +852,22 @@ function parse_master_ip_from_log() {
   echo "${master_ip}"
 }
 
-function chmod_dirs_for_cleanup(){
-  chmod 777 -R $(pwd)/testing
+function chmod_dirs_for_cleanup() {
+  chmod 777 -R "$(pwd)/testing"
   chmod 777 -R /tmp
-  # temp
-  chmod 777 -R $cwd
-  chmod 777 -R $root_wd
-  chmod 777 -R $bootstrap_log
-  chmod 777 -R $ssh_private_key_path
-  chmod 777 -R $(pwd)/
+  chmod 777 -R "$cwd"
+  chmod 777 -R "$root_wd"
+  chmod 777 -R "$bootstrap_log"
+  chmod 777 -R "$ssh_private_key_path"
+  echo "chmod for dirs Success"
+
+  chown 1000:1000 -R "$(pwd)/testing"
+  chmod 1000:1000 -R /tmp
+  chmod 1000:1000 -R "$cwd"
+  chmod 1000:1000 -R "$root_wd"
+  chmod 1000:1000 -R "$bootstrap_log"
+  chmod 1000:1000 -R "$ssh_private_key_path"
+  echo "chmod for dirs Success"
 }
 
 function main() {
@@ -894,12 +901,12 @@ function main() {
     ;;
   esac
   if [[ $exitCode == 0 ]]; then
-    chmod_dirs_for_cleanup
     echo "E2E test: Success!"
   else
-    chmod_dirs_for_cleanup
     echo "E2E test: fail."
   fi
+
+  chmod_dirs_for_cleanup
   exit $exitCode
 }
 
