@@ -10,7 +10,7 @@ variable "providerClusterConfiguration" {
 
   validation {
     condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
-    error_message = "Invalid internalNetworkCIDR in VsphereClusterConfiguration."
+    error_message = "Invalid internalNetworkCIDR in VCDClusterConfiguration."
   }
 
   validation {
