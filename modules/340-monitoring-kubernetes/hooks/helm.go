@@ -102,9 +102,7 @@ const (
 	fetchSecretsInterval = 3 * time.Second
 )
 
-var (
-	helmStorage unsupportedVersionsStore
-)
+var helmStorage unsupportedVersionsStore
 
 func init() {
 	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &helmStorage)
