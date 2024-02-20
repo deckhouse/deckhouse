@@ -74,26 +74,20 @@ data:
 
 	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {}}}", "{}")
 	Context("helm3 release with deprecated versions", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			var sec corev1.Secret
-			_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
-
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				Secrets("appns").
-				Create(context.TODO(), &sec, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
-
-		})
-
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
-				f.RunGoHook()
 
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("appns").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				f.RunGoHook()
 			})
 
 			It("must have autoK8sVersion", func() {
@@ -121,6 +115,14 @@ data:
 		Context("check for kubernetesVersion: \"1.25\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("appns").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
 				f.RunGoHook()
 			})
 
@@ -142,6 +144,15 @@ data:
 
 		Context("check for empty \"ClusterConfiguration\"", func() {
 			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("appns").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
 				f.RunGoHook()
 			})
 
@@ -163,25 +174,20 @@ data:
 	})
 
 	Context("helm3 release without deprecated apis", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			var sec corev1.Secret
-			_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
-
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				Secrets("default").
-				Create(context.TODO(), &sec, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
-			f.RunGoHook()
-		})
-
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
-				f.RunGoHook()
 
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("default").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				f.RunGoHook()
 			})
 
 			It("autoK8sVersion must be empty", func() {
@@ -199,28 +205,22 @@ data:
 				Expect(reasons).To(BeEmpty())
 			})
 		})
-
 	})
 
 	Context("helm2 release with deprecated versions", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			var cm corev1.ConfigMap
-			_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
-
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				ConfigMaps("default").
-				Create(context.TODO(), &cm, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
-			f.RunGoHook()
-
-		})
-
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
+				var cm corev1.ConfigMap
+				_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					ConfigMaps("default").
+					Create(context.TODO(), &cm, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
 				f.RunGoHook()
 
 			})
@@ -247,7 +247,8 @@ data:
 
 	Context("release with doubled fields", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
+			f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
 			var sec corev1.Secret
 			_ = yaml.Unmarshal([]byte(releaseWithDoubleFields), &sec)
 
@@ -256,8 +257,7 @@ data:
 				Secrets("default").
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
-			f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
 			f.RunGoHook()
 
 		})
