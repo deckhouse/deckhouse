@@ -26,7 +26,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone https://github.com/deckhouse/zvirt-cloud-controller-manager.git /src
     - cd /src
-    # - git checkout {{ $value.ccm.zvirt }}
+    - git checkout main
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
     - chown 64535:64535 /zvirt-cloud-controller-manager
     - chmod 0755 /zvirt-cloud-controller-manager
