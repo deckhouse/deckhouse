@@ -282,6 +282,12 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - SSH authentication keys;
   - config file;
   - resource file, etc.
+- `<RELEASE_CHANNEL>` - Dechkouse [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case. Should match with the option set in `config.yml`:
+  - Alpha - `alpha`
+  - Beta - `beta`
+  - EarlyAccess - `early-access`
+  - Stable - `stable`
+  - RockSolid - `rock-solid`
 
 Here is an example of a command to run the installer container for Deckhouse CE:
 
