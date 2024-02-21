@@ -88,7 +88,6 @@ func NewController(
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
-	metricStorage *metric_storage.MetricStorage,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -108,7 +107,6 @@ func NewController(
 		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
-		metricStorage:              metricStorage,
 
 		logger: lg,
 

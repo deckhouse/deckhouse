@@ -592,7 +592,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
 			}
 
-			err = c.updateModuleReleaseDownloadStatistic(release, ds)
+			release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
 			if err != nil {
 				return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
 			}
@@ -1239,14 +1239,13 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 	return nil
 }
 
-func (c *Controller) updateModuleReleaseDownloadStatistic(release *v1alpha1.ModuleRelease, ds *downloader.DownloadStatistic) error {
-	ctx := context.Background()
+func (c *Controller) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
+	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
 
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
-	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
-	return err
+	return c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
 }
 
 func (c *Controller) registerMetrics() error {

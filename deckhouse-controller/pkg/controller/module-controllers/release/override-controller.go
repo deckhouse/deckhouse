@@ -76,7 +76,6 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	modulesValidator moduleValidator,
-	metricStorage *metric_storage.MetricStorage,
 ) *ModulePullOverrideController {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -100,7 +99,6 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		metricStorage:      metricStorage,
 	}
 
 	_, err := modulePullOverridesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
