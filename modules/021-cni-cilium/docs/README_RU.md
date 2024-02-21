@@ -9,8 +9,11 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 1. Сервисы с типом `NodePort` и `LoadBalancer` не работают с hostNetwork-эндпоинтами в LB-режиме `DSR`. Переключитесь на режим `SNAT`, если это требуется.
 2. `HostPort` поды биндятся только [к одному IP](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один из них, предпочитая «серые» IP-адреса «белым».
+
+1. Сервисам с типом `NodePort` и `LoadBalancer` не подходят эндпоинты в режиме `DSR`, работающие с hostNetwork. Если это необходимо, переключитесь на режим `SNAT`.
+2. Поды `HostPort` связываются только [c одним IP](https://github.com/deckhouse/deckhouse/issues/3035). Если операционная система имеет несколько интерфейсов/IP адресов, Cilium выберет один из них и предпочтет использовать «серые» IP адреса («серые» IP - это IP адреса, которые не видны из интернета, в отличие от «белых»).
 3. Требования к ядру:
-   * Для работы модуля `cni-cilium` необходимо ядро Linux версии >= `5.7`.
+   * Для работы модуля `cni-cilium` необходимо ядро Linux не ниже версии `5.7`.
    * Для работы модуля `cni-cilium` совместно с модулем [istio](../110-istio/), [openvpn](../500-openvpn/) или [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) необходимо ядро Linux версии >= `5.7`.
 4. Проблемы совместимости с ОС:
    * Ubuntu:
@@ -25,9 +28,9 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 ## Заметка о CiliumClusterwideNetworkPolicies
 
 1. Убедитесь, что вы применили первичный набор объектов `CiliumClusterwideNetworkPolicy`, поставив конфигурационную опцию `policyAuditMode` в `true`.
-   Отсутствие опции может привести к некорректной работе control plane или потере доступа ко всем узлам кластера по SSH.
-   Вы можете удалить опцию после применения всех `CiliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
-2. Убедитесь, что вы применили следующее правило. В противном случае control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса conntrack таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
+Отсутствие опции может привести к некорректной работе control plane или потере доступа ко всем узлам кластера по SSH.
+Можно удалить опцию после применения всех объектов `CiliumClusterwideNetworkPolicy` и проверки корректности их работы в Hubble UI.
+2. Убедитесь, что применено следующее правило. В ином случае control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса conntrack таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
 
    ```yaml
    apiVersion: "cilium.io/v2"
