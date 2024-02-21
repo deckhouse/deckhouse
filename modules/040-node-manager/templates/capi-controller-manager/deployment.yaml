@@ -70,7 +70,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: capi-controller-manager
       terminationGracePeriodSeconds: 10
-      hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
@@ -84,7 +83,7 @@ spec:
         - --leader-elect
         - --metrics-bind-addr=127.0.0.1:8083
         - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
-        - --health-addr=$(HOST_IP):9442
+        - --health-addr=$(POD_IP):9442
         - --webhook-port=9443
         livenessProbe:
           httpGet:
@@ -113,10 +112,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.uid
-        - name: HOST_IP
+        - name: POD_IP
           valueFrom:
             fieldRef:
-              fieldPath: status.hostIP
+              fieldPath: status.podIP
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         imagePullPolicy: IfNotPresent
         ports:
