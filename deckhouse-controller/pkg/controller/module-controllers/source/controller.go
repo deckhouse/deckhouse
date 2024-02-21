@@ -27,7 +27,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +63,6 @@ type Controller struct {
 	moduleUpdatePoliciesSynced cache.InformerSynced
 	modulePullOverridesLister  d8listers.ModulePullOverrideLister
 	modulePullOverridesSynced  cache.InformerSynced
-	metricStorage              *metric_storage.MetricStorage
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
