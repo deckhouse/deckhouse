@@ -282,7 +282,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - SSH authentication keys;
   - config file;
   - resource file, etc.
-- `<RELEASE_CHANNEL>` - Deckhouse [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case. Should match with the option set in `config.yml`:
+- `<RELEASE_CHANNEL>` — Deckhouse [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case. Should match with the option set in `config.yml`:
   - Alpha - `alpha`
   - Beta - `beta`
   - EarlyAccess - `early-access`
