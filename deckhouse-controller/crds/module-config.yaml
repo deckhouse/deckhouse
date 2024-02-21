@@ -58,25 +58,19 @@ spec:
             status:
               type: object
               properties:
-                state:
-                  type: string
-                  description: "Module enabled state"
                 version:
                   type: string
                   description: "Version of settings schema in use"
-                status:
+                message:
                   type: string
-                  description: "Module state explanation, version warning or last error"
-                type:
-                  type: string
-                  description: "Type of module: embedded or external module"
+                  description: "Additional information"
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: State
-          type: string
+        - name: Enabled
+          type: boolean
           description: "Module enabled state"
-          jsonPath: .status.state
+          jsonPath: .spec.enabled
         - name: Version
           type: string
           description: "Version of settings schema in use"
@@ -89,11 +83,7 @@ spec:
             in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
             lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
           jsonPath: .metadata.creationTimestamp
-        - name: Type
+        - name: Message
           type: string
-          description: "Type of module: embedded or external module"
-          jsonPath: .status.type
-        - name: Status
-          type: string
-          description: "Module state explanation, version warning or last error"
-          jsonPath: .status.status
+          description: "Additional information"
+          jsonPath: .status.message
