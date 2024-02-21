@@ -1260,8 +1260,8 @@ func (c *Controller) registerMetrics() error {
 			"module":  release.Spec.ModuleName,
 		}
 
-		c.metricStorage.CounterAdd("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
-		c.metricStorage.CounterAdd("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
+		c.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
+		c.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
 	}
 
 	return nil
