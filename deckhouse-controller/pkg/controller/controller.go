@@ -222,31 +222,13 @@ func (dml *DeckhouseController) handleEnabledModule(m *models.DeckhouseModule, e
 		}
 
 		obj.Properties.State = "Disabled"
+		obj.Status.Status = "Disabled"
 		if enable {
 			obj.Properties.State = "Enabled"
+			obj.Status.Status = "Enabled"
 		}
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, obj, v1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-
-		// Update ModuleConfig if exists
-		mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return nil
-			}
-
-			return err
-		}
-
-		mc.Status.Status = "Disabled"
-		if enable {
-			mc.Status.Status = "Enabled"
-		}
-
-		_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(dml.ctx, mc, v1.UpdateOptions{})
 
 		return err
 	})

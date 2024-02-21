@@ -40,6 +40,7 @@ type ModulesGetter interface {
 type ModuleInterface interface {
 	Create(ctx context.Context, module *v1alpha1.Module, opts v1.CreateOptions) (*v1alpha1.Module, error)
 	Update(ctx context.Context, module *v1alpha1.Module, opts v1.UpdateOptions) (*v1alpha1.Module, error)
+	UpdateStatus(ctx context.Context, module *v1alpha1.Module, opts v1.UpdateOptions) (*v1alpha1.Module, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Module, error)
@@ -121,6 +122,21 @@ func (c *modules) Update(ctx context.Context, module *v1alpha1.Module, opts v1.U
 	err = c.client.Put().
 		Resource("modules").
 		Name(module.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(module).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *modules) UpdateStatus(ctx context.Context, module *v1alpha1.Module, opts v1.UpdateOptions) (result *v1alpha1.Module, err error) {
+	result = &v1alpha1.Module{}
+	err = c.client.Put().
+		Resource("modules").
+		Name(module.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(module).
 		Do(ctx).

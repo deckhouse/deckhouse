@@ -39,6 +39,8 @@ type Module struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Properties ModuleProperties `json:"properties,omitempty"`
+
+	Status ModuleStatus `json:"status,omitempty"`
 }
 
 type ModuleProperties struct {
@@ -48,7 +50,15 @@ type ModuleProperties struct {
 	Description string `json:"description,omitempty"`
 }
 
+type ModuleStatus struct {
+	Status string `json:"status"`
+}
+
 type moduleKind struct{}
+
+func (in *ModuleStatus) GetObjectKind() schema.ObjectKind {
+	return &moduleKind{}
+}
 
 func (mk *moduleKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (mk *moduleKind) GroupVersionKind() schema.GroupVersionKind {
