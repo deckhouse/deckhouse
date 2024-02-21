@@ -78,7 +78,10 @@ spec:
                 apiVersion: v1
                 fieldPath: metadata.namespace
           - name: CLUSTER_DOMAIN
+            {{- if .Values.global.clusterConfiguration }}
             value: {{ .Values.global.clusterConfiguration.clusterDomain }}
+            {{else}}
+            {{end}}
         ports:
           - containerPort: 8081
             name: http
