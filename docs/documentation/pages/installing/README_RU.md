@@ -284,11 +284,11 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - файл конфигурации;
   - файл ресурсов и т. д.
 - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
-  - Alpha - `alpha`
-  - Beta - `beta`
-  - EarlyAccess - `early-access`
-  - Stable - `stable`
-  - RockSolid - `rock-solid`
+  - `alpha` — для канала обновлений *Alpha*;
+  - `beta` — для канала обновлений *Beta*;
+  - `early-access` — для канала обновлений *Early Access*;
+  - `stable` — для канала обновлений *Stable*;
+  - `rock-solid` — для канала обновлений *Rock Solid*.
 
 Пример запуска контейнера инсталлятора Deckhouse CE:
 
