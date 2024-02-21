@@ -78,11 +78,7 @@ spec:
                 apiVersion: v1
                 fieldPath: metadata.namespace
           - name: CLUSTER_DOMAIN
-          {{- if .Values.global.clusterConfiguration }}
-            value: {{ .Values.global.clusterConfiguration.clusterDomain }}
-          {{else}}
-            value: "cluster.local"
-          {{end}}
+            value: {{ $.Values.global.discovery.clusterDomain | quote }}
         ports:
           - containerPort: 8081
             name: http
