@@ -20,7 +20,7 @@ mount:
 shell:
   beforeInstall:
     - apt update && apt install ca-certificates git
-  installCacheVersion: "2024-02-19"
+  installCacheVersion: "2024-02-21"
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}

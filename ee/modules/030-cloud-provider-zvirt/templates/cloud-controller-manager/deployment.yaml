@@ -81,7 +81,6 @@ spec:
           image: {{ $ccmImage }}
           args:
           - --leader-elect=true
-          - --cloud-config=/etc/cloud/cloud-config
           - --cloud-provider=zvirt
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
@@ -94,6 +93,14 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
+          - name: ZVIRT_API_URL
+            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.server | quote }}
+          - name: ZVIRT_USERNAME
+            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.username | quote }}
+          - name: ZVIRT_PASSWORD
+            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.password | quote }}
+          - name: ZVIRT_INSECURE
+            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.insecur | quote }}
           ports:
           - name: https
             containerPort: 10471
@@ -120,11 +127,4 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "zvirt_cloud_controller_manager_resources" . | nindent 14 }}
   {{- end }}
-      volumes:
-      - name: ccm-controller-config-volume
-        secret:
-          secretName: cloud-controller-manager
-      - name: zvirt-credentials-volume
-        secret:
-          secretName: zvirt-credentials
 {{- end }}
