@@ -20,13 +20,12 @@ mount:
 shell:
   beforeInstall:
     - apt update && apt install ca-certificates git
-  installCacheVersion: "2024-02-22.2"
+  installCacheVersion: "2024-02-22.3"
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - git clone https://github.com/deckhouse/zvirt-cloud-controller-manager.git /src
     - cd /src
-    - git pull
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
     - chown 64535:64535 /zvirt-cloud-controller-manager
     - chmod 0755 /zvirt-cloud-controller-manager
