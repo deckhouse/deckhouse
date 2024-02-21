@@ -70,6 +70,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cni-cilium:agent",
 	"system:serviceaccount:d8-cni-cilium:dashboard",
 	"system:serviceaccount:d8-cni-cilium:operator",
+	"system:serviceaccount:d8-cni-cilium:policy-validator",
 	"system:serviceaccount:d8-cni-cilium:relay",
 	"system:serviceaccount:d8-cni-cilium:safe-agent-updater",
 	"system:serviceaccount:d8-cni-cilium:ui",

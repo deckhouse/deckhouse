@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: policy-validator
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:policy-validator
+  {{ include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - cilium.io
+    resources:
+      - ciliumloadbalancerippools
+      - ciliumbgppeeringpolicies
+      - ciliumclusterwideenvoyconfigs
+      - ciliumclusterwidenetworkpolicies
+      - ciliumegressgatewaypolicies
+      - ciliumendpoints
+      - ciliumendpointslices
+      - ciliumenvoyconfigs
+      - ciliumidentities
+      - ciliumlocalredirectpolicies
+      - ciliumnetworkpolicies
+      - ciliumnodes
+      - ciliumnodeconfigs
+      - ciliumcidrgroups
+      - ciliuml2announcementpolicies
+      - ciliumpodippools
+      - ciliumnetworkpolicies/status
+      - ciliumclusterwidenetworkpolicies/status
+      - ciliumendpoints/status
+      - ciliumendpoints
+      - ciliuml2announcementpolicies/status
+    verbs:
+      - list
+      - get
+      - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:policy-validator
+  {{ include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: policy-validator
+    namespace: d8-{{ .Chart.Name }}
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:policy-validator
+  apiGroup: rbac.authorization.k8s.io

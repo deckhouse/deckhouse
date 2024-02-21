@@ -1,0 +1,67 @@
+
+{{- define "validator_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
+  name: policy-validator
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: policy-validator
+  template:
+    metadata:
+      annotations:
+        configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: policy-validator
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+          - args:
+            - --config-dir=/tmp/cilium/config-map
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: CILIUM_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          image: {{ include "helm_lib_module_image" (list . "policyValidator") }}
+          name: policy-validator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9115
+            periodSeconds: 60
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          resources:
+            requests:
+              {{- include "validator_resources" . | nindent 12 }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Always
+      serviceAccount: policy-validator
+      serviceAccountName: policy-validator
+      volumes:
+        - name: tmp
+          emptyDir: {}
