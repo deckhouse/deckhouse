@@ -306,10 +306,14 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
-        - "--health-port={{ $livenessProbePort }}"
+        - "--http-endpoint=$(HOST_IP):{{ $livenessProbePort }}"
         env:
         - name: ADDRESS
           value: /csi/csi.sock
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
