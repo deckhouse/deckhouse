@@ -359,7 +359,7 @@ spec:
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
     # Refer to https://deckhouse.io/documentation/v1/modules/650-runtime-audit-engine/examples.html
-    {{- if .parameters.enabledAudit }}
+    {{- if .parameters.runtimeAuditEnabled }}
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
