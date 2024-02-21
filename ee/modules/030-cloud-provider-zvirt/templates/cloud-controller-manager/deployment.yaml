@@ -114,13 +114,6 @@ spec:
               path: /healthz
               port: https
               scheme: HTTPS
-          volumeMounts:
-            - name: ccm-controller-config-volume
-              mountPath: /etc/cloud
-              readOnly: true
-            - name: zvirt-credentials-volume
-              mountPath: /etc/kubernetes/zvirt/basic-auth
-              readOnly: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
