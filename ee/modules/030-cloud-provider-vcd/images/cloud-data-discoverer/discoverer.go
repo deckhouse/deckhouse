@@ -108,7 +108,7 @@ func (c *Config) client() (*govcd.VCDClient, error) {
 func NewDiscoverer(logger *log.Entry) *Discoverer {
 	config, err := parseEnvToConfig()
 	if err != nil {
-		logger.Fatalf("Cannnot get opts from env: %v", err)
+		logger.Fatalf("Cannot get opts from env: %v", err)
 	}
 
 	return &Discoverer{
@@ -298,6 +298,11 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 	instanceTypes = removeDuplicatesInstanceTypes(instanceTypes)
 	return instanceTypes, nil
+}
+
+// NotImplemented
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	return []v1alpha1.DiskMeta{}, nil
 }
 
 // removeDuplicates removes duplicates from slice and sort it
