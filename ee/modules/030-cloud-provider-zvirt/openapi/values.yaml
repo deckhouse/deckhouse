@@ -55,7 +55,7 @@ properties:
         properties:
           apiVersion:
             type: string
-            enum: [deckhouse.io/V1, deckhouse.io/V1alpha1]
+            enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
           kind:
             type: string
             enum: [ZvirtClusterConfiguration]
