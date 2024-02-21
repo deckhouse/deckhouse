@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,8 +61,6 @@ type ModulePullOverrideController struct {
 	workqueue workqueue.RateLimitingInterface
 
 	logger logger.Logger
-
-	metricStorage *metric_storage.MetricStorage
 
 	modulesValidator   moduleValidator
 	externalModulesDir string
