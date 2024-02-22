@@ -35,10 +35,6 @@ variable "template_name" {
   description = "VM template name"
 }
 
-variable "instance_os" {
-  description = "OS type of the VM"
-}
-
 variable "instance_cpu_cores" {
   description = "VM instance CPU cores count"
   default     = 4
