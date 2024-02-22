@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"k8s.io/klog"
 	"time"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
