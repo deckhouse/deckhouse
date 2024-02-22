@@ -26,6 +26,9 @@ properties:
               ca:
                 description: |
                   Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      forceCheckDisabledControllers:
+        description: |
+          Список типов контроллеров, для которых нужно проводить проверку, даже если количество реплик подов равно 0 или контроллер находится в состоянии `suspend` например `Deployment` или `*` для всех типов контроллеров.
   events:
     description: |
       Настройки для мониторинга event'ов в кластере Kubernetes.
