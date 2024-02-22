@@ -638,6 +638,10 @@ module Jekyll
                         activeStatus = ""
                     end
 
+                     if get_hash_value(item,'deprecated') then
+                         result.push(sprintf('<p><strong>%s</strong></p>',get_i18n_term('deprecated_resource')))
+                     end
+
                     description = ''
                     if get_hash_value(item,'schema','openAPIV3Schema','description') then
                        if    input['i18n'][@context.registers[:page]["lang"]] and
