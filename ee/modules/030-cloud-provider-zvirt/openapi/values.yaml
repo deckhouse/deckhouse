@@ -21,7 +21,6 @@ properties:
           ```
         x-doc-search: |
           ProviderClusterConfiguration
-        x-unsafe-rules: [deleteZones]
         x-examples:
           - apiVersion: deckhouse.io/v1
             kind: ZvirtClusterConfiguration
