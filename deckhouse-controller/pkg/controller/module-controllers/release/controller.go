@@ -1241,7 +1241,6 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 
 func (c *Controller) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
 	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
-
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
