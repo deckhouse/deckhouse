@@ -11,7 +11,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: policy-validator
   namespace: d8-cni-cilium
-  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -33,7 +33,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
   name: policy-validator
   namespace: d8-cni-cilium
 spec:
@@ -114,7 +114,7 @@ kind: PodDisruptionBudget
 metadata:
   name: policy-validator
   namespace: d8-cni-cilium
-  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "policy-validator")) | nindent 2 }}
 spec:
   minAvailable: 0
   selector:
