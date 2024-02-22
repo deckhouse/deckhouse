@@ -340,7 +340,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 * `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
 * Docker **proxy** repository must be pre-created (*Administration* -> *Repository* -> *Repositories*):
-  * `Allow anonymous docker pull` must be enabled. This option enable Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled. This option enables Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access*, and the `anonymous` user is not granted access rights to the created repository.
   * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
   * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
@@ -359,7 +359,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 * Fill in the fields on the Create page as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to work. Note, however, that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless it is explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user is not granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
   * `Maximum Metadata Age` must be set to `0`.
