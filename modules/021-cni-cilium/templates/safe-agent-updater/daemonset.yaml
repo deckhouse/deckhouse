@@ -32,7 +32,7 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-checksum: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
+        safe-agent-updater-daemonset-generation: {{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
       labels:
         app: safe-agent-updater
     spec:
