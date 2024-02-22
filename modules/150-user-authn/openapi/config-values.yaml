@@ -53,6 +53,10 @@ properties:
                   If you are using certificates issued by the `cert-manager` module and Let's Encrypt in your cluster, you should set an empty string `""` as the value.
 
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
+      addKubeconfigGeneratorEntry:
+        type: boolean
+        default: true
+        description: 'Setting it to `false` will remove an entry in kubeconfig-generator'
   kubeconfigGenerator:
     type: array
     description: |
