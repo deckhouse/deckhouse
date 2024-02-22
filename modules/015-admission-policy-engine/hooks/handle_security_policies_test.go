@@ -108,6 +108,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						"rule": "RunAsAny"
 					},
 					"readOnlyRootFilesystem": true,
+					"automountServiceAccountToken": true,
 					"allowedClusterRoles": [
 						"*"
 					],
@@ -209,6 +210,7 @@ spec:
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
+    automountServiceAccountToken: true
     allowedClusterRoles: ["*"]
     runAsGroup:
       ranges:

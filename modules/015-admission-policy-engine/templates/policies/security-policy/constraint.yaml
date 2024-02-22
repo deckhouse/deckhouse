@@ -18,6 +18,9 @@
   {{- if hasKey $cr.spec.policies "readOnlyRootFilesystem" }}
     {{- include "read_only_root_filesystem" (list $context $cr) }}
   {{- end }}
+  {{- if not $cr.spec.policies.automountServiceAccountToken }}
+    {{- include "automount_service_account_token" (list $context $cr) }}
+  {{- end }}
   {{- if hasKey $cr.spec.policies "allowedClusterRoles" }}
     {{- include "allowed_cluster_roles" (list $context $cr) }}
   {{- end }}
@@ -50,9 +53,6 @@
   {{- end }}
   {{- if or (hasKey $cr.spec.policies "seccompProfiles") }}
     {{- include "seccomp_profiles" (list $context $cr) }}
-  {{- end }}
-  {{- if hasKey $cr.spec.policies "automountServiceAccountToken" }}
-    {{- include "automount_service_account_token" (list $context $cr) }}
   {{- end }}
 {{- end }}
 
@@ -176,7 +176,7 @@ spec:
   {{- $cr := index . 1 }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sPSPAutomountServiceAccountTokenPod
+kind: D8AutomountServiceAccountTokenPod
 metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
