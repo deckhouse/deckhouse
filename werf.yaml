@@ -215,6 +215,12 @@ import:
   - usr/bin/vim-console
 
   {{- include "base components imports" . }}
+
+- artifact: registrypackages/d8-curl-artifact-8-2-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+
 ansible:
   beforeInstall:
   {{- include "base components" . | nindent 2 }}
