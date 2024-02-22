@@ -274,11 +274,19 @@ function cleanup() {
 }
 
 function chmod_dirs_for_cleanup() {
-  chmod -f -R 777 "$(pwd)/testing" || true
-  chmod -f -R 777 "/deckhouse/testing" || true
-  chmod -f -R 777 /tmp || true
+  if [ -n $USER_RUNNER_ID]; then
+    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+    chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+    chown -R $USER_RUNNER_ID /tmp || true
+  else
+    chmod -f -R 777 "$(pwd)/testing" || true
+    chmod -f -R 777 "/deckhouse/testing" || true
+    chmod -f -R 777 /tmp || true
+  fi
+
   echo "Rights and owner changed"
 }
+
 
 function main() {
    >&2 echo "Start cloud test script"

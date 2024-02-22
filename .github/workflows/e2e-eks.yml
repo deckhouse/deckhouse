@@ -454,6 +454,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -483,6 +486,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -518,6 +522,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id}
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -588,6 +593,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -601,6 +609,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -937,6 +946,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -966,6 +978,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1001,6 +1014,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id}
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1071,6 +1085,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -1084,6 +1101,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1420,6 +1438,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -1449,6 +1470,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1484,6 +1506,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id}
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1554,6 +1577,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -1567,6 +1593,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1903,6 +1930,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -1932,6 +1962,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -1967,6 +1998,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id}
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -2037,6 +2069,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -2050,6 +2085,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -2386,6 +2422,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -2415,6 +2454,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -2450,6 +2490,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id}
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
@@ -2520,6 +2561,9 @@ jobs:
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -2533,6 +2577,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
