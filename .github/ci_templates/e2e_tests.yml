@@ -182,7 +182,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
-  -e USER_RUNNER_ID=${user_runner_id}
+  -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
@@ -227,7 +227,7 @@ run: |
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
 {!{- end }!}
-    -e USER_RUNNER_ID=${user_runner_id}
+    -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v ${TMP_DIR_PATH}:/tmp \
     -w /deckhouse \

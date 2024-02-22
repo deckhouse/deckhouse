@@ -274,7 +274,7 @@ function cleanup() {
 }
 
 function chmod_dirs_for_cleanup() {
-  if [ -n $USER_RUNNER_ID]; then
+  if [ -n $USER_RUNNER_ID ]; then
     chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
