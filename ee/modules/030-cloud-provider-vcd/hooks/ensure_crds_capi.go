@@ -9,4 +9,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-vcd/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-vcd/crds/external/*.yaml")
