@@ -51,6 +51,10 @@ ci:
       pull_request: https://github.com/deckhouse/deckhouse/pull/7511
     - summary: fix e2e tests
       pull_request: https://github.com/deckhouse/deckhouse/pull/7502
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix the path in the `ensure_crds` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7610
 cloud-provider-vsphere:
   fixes:
     - summary: Update requirements for VM template in the documentation.
