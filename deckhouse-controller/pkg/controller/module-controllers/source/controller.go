@@ -523,6 +523,7 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			ModuleName: moduleName,
 			Version:    semver.MustParse(result.ModuleVersion),
 			Weight:     result.ModuleWeight,
+			Changelog:  result.Changelog,
 		},
 	}
 

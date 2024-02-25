@@ -83,6 +83,7 @@ type ModuleReleaseSpec struct {
 
 	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
 	Requirements map[string]string `json:"requirements,omitempty"`
+	Changelog    map[string]any    `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
