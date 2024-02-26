@@ -216,6 +216,11 @@ import:
 
   {{- include "base components imports" . }}
 
+- image: common/distroless
+  add: /etc/ssl
+  to: /etc/ssl
+  before: setup
+
 - artifact: registrypackages/d8-curl-artifact-8-2-1
   add: /d8-curl
   to: /usr/bin/curl
