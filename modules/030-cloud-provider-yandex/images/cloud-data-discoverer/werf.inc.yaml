@@ -48,7 +48,7 @@ git:
       - go.mod
       - go.sum
     setup:
-      - go_lib/**/*.go
+      - "**/*.go"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
