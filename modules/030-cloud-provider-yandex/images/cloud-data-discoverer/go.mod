@@ -1,6 +1,6 @@
 module main
 
-go 1.21.4
+go 1.21
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
