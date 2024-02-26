@@ -43,7 +43,7 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 			continue
 		}
 
-		switch hdr.Name {
+		switch strings.ToLower(hdr.Name) {
 		case "version.json":
 			_, err = io.Copy(rr.versionReader, tr)
 			if err != nil {
