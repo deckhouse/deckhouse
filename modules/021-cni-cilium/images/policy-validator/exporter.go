@@ -19,12 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"k8s.io/klog"
 	"time"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 
 	"github.com/cilium/cilium/pkg/defaults"
 	v2_validation "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2/validator"
@@ -95,8 +95,11 @@ func (e *Exporter) startScheduled(t time.Duration) {
 			if err != nil {
 				result = 1
 			}
+			klog.Warningf("validate ploicy failed: %+v\n", err)
+			allMetrics := make([]prometheus.Metric, 0, 1)
 			v1 := prometheus.MustNewConstMetric(cnpMetricDesc, prometheus.GaugeValue, float64(result))
-			e.metrics = append(e.metrics, v1)
+			allMetrics = append(allMetrics, v1)
+			e.metrics = allMetrics
 		}
 	}
 }
