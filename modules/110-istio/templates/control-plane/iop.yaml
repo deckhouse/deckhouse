@@ -117,15 +117,6 @@ spec:
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
 
-  {{- if eq $.Values.istio.sidecarInjectionMode "Webhook" }}
-      istio_cni:
-        enabled: false
-  {{- end }}
-  {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
-      istio_cni:
-        enabled: true
-  {{- end }}
-
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
       {{- range $multicluster := $.Values.istio.internal.multiclusters }}
@@ -177,6 +168,14 @@ spec:
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
+    {{- if eq $.Values.istio.sidecarInjectionMode "Webhook" }}
+    istio_cni:
+      enabled: false
+    {{- end }}
+    {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+    istio_cni:
+      enabled: true
+    {{- end }}
     pilot:
       autoscaleEnabled: false
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
