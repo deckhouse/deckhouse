@@ -44,11 +44,12 @@ spec:
 
 В организации GitHub необходимо создать новое приложение.
 
-Для этого необходимо перейти в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+2. Полученные `Client ID` и `Client Secret` укажите в custom resource [DexProvider](cr.html#dexprovider).
 
-В том случае, если организация GitHub находится под управлением клиента, необходимо перейти в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и запросить подтверждение нажатием на `Send Request`. После попросить клиента подтвердить запрос, который придет к нему на email.
+3. Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите на `Send Request` для подтверждения.
+4. Попросите клиента подтвердить запрос, который придет к нему на электронную почту.
 
 ### GitLab
 
@@ -71,10 +72,10 @@ spec:
 
 В GitLab проекта необходимо создать новое приложение.
 
-Для этого необходимо:
-* **self-hosted**: перейти в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейти в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
-* (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
+Для этого:
+1. **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
+2. **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+3. (для GitLab версии 16 и выше) включите опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
 
 Полученные `Application ID` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
@@ -100,9 +101,11 @@ spec:
 
 В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
 
-Для этого необходимо перейти в `Applications` -> `Add application`.
+Для этого:
 
-Полученные `Application Name` и `Password` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+1. Перейдите в `Applications` -> `Add application`.
+
+2. Полученные `Application Name` и `Password` укажите в custom resource [DexProvider](cr.html#dexprovider).
 
 Группы CROWD указываются в lowercase-формате для custom resource `DexProvider`.
 
@@ -127,9 +130,11 @@ spec:
 
 Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
 
-Для этого необходимо перейти в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешить доступ для `Account: Read` и `Workspace membership: Read`.
+Для этого:
 
-Полученные `Key` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+1. Перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
+
+2. Полученные `Key` и `Secret` укажите в custom resource [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
 
@@ -191,13 +196,13 @@ spec:
 
 Для настройки аутентификации необходимо завести в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль необходимо указать в полях `bindDN` и `bindPW` custom resource [DexProvider](cr.html#dexprovider).
-1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В поле `bindPW` необходимо указывать пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+1. Путь до пользователя и пароль укажите в полях `bindDN` и `bindPW` custom resource [DexProvider](cr.html#dexprovider).
+Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
+2. В поле `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Данный вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи oauth2-proxy.
+Этот вариант настройки подходит тем приложениям, которые имеют возможность использовать oauth2-аутентификацию без помощи oauth2-proxy.
 Чтобы позволить подобным приложениям взаимодействовать с Dex, используется custom resource [`DexClient`](cr.html#dexclient).
 
 {% raw %}
