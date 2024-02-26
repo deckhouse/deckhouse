@@ -4,27 +4,27 @@ title: "Модуль snapshot-controller: примеры конфигураци�
 
 ### Использование снапшотов
 
-Чтобы использовать снапшоты, необходимо указать конкретный `VolumeSnapshotClass`.
-Чтобы получить список доступных VolumeSnapshotClass в вашем кластере, выполните:
+Чтобы использовать снапшоты, указажите конкретный `VolumeSnapshotClass`.
+1. Чтобы получить список доступных VolumeSnapshotClass в вашем кластере, выполните:
 
-```shell
-kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
-```
+    ```shell
+   kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
+   ```
 
-Затем вы сможете использовать VolumeSnapshotClass для создания снапшота из существующего тома:
+2. Используйте VolumeSnapshotClass для создания снапшота из существующего тома:
 
-```yaml
-apiVersion: snapshot.storage.k8s.io/v1
-kind: VolumeSnapshot
-metadata:
-  name: my-first-snapshot
-spec:
-  volumeSnapshotClassName: linstor
-  source:
-    persistentVolumeClaimName: my-first-volume
-```
+   ```yaml
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-first-snapshot
+   spec:
+     volumeSnapshotClassName: linstor
+     source:
+       persistentVolumeClaimName: my-first-volume
+   ```
 
-Спустя небольшой промежуток времени снапшот будет готов:
+Через небольшой промежуток времени снапшот будет готов:
 
 ```yaml
 $ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-snapshot
@@ -40,7 +40,7 @@ Status:
   Restore Size:                        500Mi
 ```
 
-Вы можете восстановить содержимое этого снапшота, создав новый PVC. Для этого необходимо указать снапшот в качестве источника:
+Вы можете восстановить содержимое этого снапшота, создав новый PVC. Для этого укажите снапшот в качестве источника:
 
 ```yaml
 apiVersion: v1
