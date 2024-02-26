@@ -274,17 +274,18 @@ function cleanup() {
 }
 
 function chmod_dirs_for_cleanup() {
+
   if [ -n $USER_RUNNER_ID ]; then
+    echo "Fix temp directories owner before cleanup ..."
     chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
+    echo "Fix temp directories permissions before cleanup ..."
     chmod -f -R 777 "$(pwd)/testing" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
-
-  echo "Rights and owner changed"
 }
 
 
