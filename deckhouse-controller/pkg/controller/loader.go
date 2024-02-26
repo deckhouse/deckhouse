@@ -40,6 +40,10 @@ var (
 	}
 )
 
+func (dml *DeckhouseController) LoadModule(_, _ string) (*modules.BasicModule, error) {
+	return nil, fmt.Errorf("not implemented yet")
+}
+
 func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	result := make([]*modules.BasicModule, 0, len(dml.deckhouseModules))
 
