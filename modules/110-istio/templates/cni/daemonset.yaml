@@ -1,5 +1,5 @@
 {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
-{{- $version := get $.Values.istio.globalVersion }}
+{{- $version := $.Values.istio.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 ---
