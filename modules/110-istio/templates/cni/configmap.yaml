@@ -9,7 +9,6 @@ data:
     \"kube-system\" ]\n  }\n}"
 kind: ConfigMap
 metadata:
-  labels:
-    app: istio-cni
   name: istio-cni-config
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "istio-cni-node")) | nindent 2 }}
 {{- end }}
