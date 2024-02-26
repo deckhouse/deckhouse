@@ -24,6 +24,7 @@ k8s:
       vsphere: v1.25.0
       azure: v1.25.22
       gcp: ccm/v25.3.0
+      zvirt: v0.1.0
     csi:
       openstack: v1.25.3
       provisioner: v3.4.1
@@ -44,6 +45,7 @@ k8s:
       vsphere: v1.26.0
       azure: v1.26.17
       gcp: ccm/v26.0.4
+      zvirt: v0.1.0
     csi:
       openstack: v1.26.1
       provisioner: v3.4.1
@@ -64,6 +66,7 @@ k8s:
       vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
       azure: v1.27.11
       gcp: ccm/v27.1.0
+      zvirt: v0.1.0
     csi:
       openstack: v1.27.1
       provisioner: v3.5.0
@@ -84,6 +87,7 @@ k8s:
       vsphere: v1.28.0
       azure: v1.28.3
       gcp: ccm/v27.1.6
+      zvirt: v0.1.0
     csi:
       openstack: v1.28.0
       provisioner: v3.6.0
@@ -104,6 +108,7 @@ k8s:
       vsphere: v1.29.0
       azure: v1.29.0
       gcp: ccm/v29.0.0
+      zvirt: v0.1.0
     csi:
       openstack: v1.29.0
       provisioner: v4.0.0
