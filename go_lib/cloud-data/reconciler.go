@@ -207,6 +207,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
 
+	c.logger.Infof("InstanceTypes: %v", instanceTypes)
 	if instanceTypes == nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return
