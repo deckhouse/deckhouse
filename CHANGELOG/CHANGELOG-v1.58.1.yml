@@ -1,0 +1,16 @@
+cni-cilium:
+  fixes:
+    - summary: Improve `safe-agent-updater`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7576
+      impact: Cilium-agent pods may be reloaded.
+deckhouse-controller:
+  fixes:
+    - summary: Add CA certificates to the standard `/etc/ssl/` path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7625
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions
+        (`1.7.*`).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7622
+
