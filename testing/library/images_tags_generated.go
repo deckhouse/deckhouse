@@ -103,6 +103,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
+	"cloudProviderZvirt": map[string]interface{}{
+		"cloudControllerManager125": "imageHash-cloudProviderZvirt-cloudControllerManager125",
+		"cloudControllerManager126": "imageHash-cloudProviderZvirt-cloudControllerManager126",
+		"cloudControllerManager127": "imageHash-cloudProviderZvirt-cloudControllerManager127",
+		"cloudControllerManager128": "imageHash-cloudProviderZvirt-cloudControllerManager128",
+		"cloudControllerManager129": "imageHash-cloudProviderZvirt-cloudControllerManager129",
+	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
 		"baseCiliumDev":      "imageHash-cniCilium-baseCiliumDev",
@@ -401,6 +408,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerAzure":     "imageHash-terraformManager-terraformManagerAzure",
 		"terraformManagerGcp":       "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerOpenstack": "imageHash-terraformManager-terraformManagerOpenstack",
+		"terraformManagerOvirt":     "imageHash-terraformManager-terraformManagerOvirt",
 		"terraformManagerVcd":       "imageHash-terraformManager-terraformManagerVcd",
 		"terraformManagerVsphere":   "imageHash-terraformManager-terraformManagerVsphere",
 		"terraformManagerYandex":    "imageHash-terraformManager-terraformManagerYandex",

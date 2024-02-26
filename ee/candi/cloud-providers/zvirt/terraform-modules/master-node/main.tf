@@ -62,6 +62,6 @@ resource "ovirt_vm_start" "master_vm" {
   #stop_behavior = "stop"
   force_stop = true
 
-  depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment]
+  depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment, ovirt_disk_resize.master_boot_disk_resize]
 }
 
