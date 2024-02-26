@@ -4,25 +4,25 @@ title: "Cloud provider — Yandex Cloud"
 
 Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).
 
-Функционал модуля `cloud-provider-yandex`:
-- Управляет ресурсами Yandex Cloud с помощью модуля `cloud-controller-manager`:
-  * Создает сетевые маршруты для сети `PodNetwork` на стороне Yandex Cloud.
-  * Актуализирует метаданные Yandex Cloud Instances и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в Yandex Cloud.
-- Заказывает диски в Yandex Cloud с помощью компонента `CSI storage`.
-- Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
-- Включает необходимый CNI (использует [simple bridge](../../modules/035-cni-simple-bridge/)).
+Функции модуля `cloud-provider-yandex`:
+- Управление ресурсами Yandex Cloud с помощью модуля `cloud-controller-manager`:
+  * Создание сетевых маршрутов для сети `PodNetwork` на стороне Yandex Cloud.
+  * Актуализация метаданных Yandex Cloud Instances и Kubernetes Nodes. Удаление из Kubernetes узлов, которых уже нет в Yandex Cloud.
+- Заказ дисков в Yandex Cloud с помощью компонента `CSI storage`.
+- Регистрация в модуле [node-manager](../../modules/040-node-manager/) для использования [YandexInstanceClass'ы](cr.html#yandexinstanceclass) при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
+- Включение необходимого CNI (который использует [simple bridge](../../modules/035-cni-simple-bridge/)).
 
 ## Интеграция с Yandex Cloud
 
 ### Настройка групп безопасности
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Kubernetes Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создает [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Kubernetes Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
 
 {% alert level="danger" %}
 Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
 {% endalert %}
 
-Здесь приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
@@ -45,7 +45,7 @@ title: "Cloud provider — Yandex Cloud"
 
 ### Интеграция с Yandex Lockbox
 
-С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) вы можете настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
+С помощью инструмента [External Secrets Operator](https://github.com/external-secrets/external-secrets) можно настроить синхронизацию секретов [Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/concepts/) с секретами кластера Deckhouse Kubernetes Platform.
 
 Приведенную инструкцию следует рассматривать как *Быстрый старт*. Для использования интеграции в продуктивных средах ознакомьтесь со следующими ресурсами:
 
@@ -82,24 +82,23 @@ title: "Cloud provider — Yandex Cloud"
 
    Обратите внимание, что вам может понадобиться задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
 
-   Скачайте и распакуйте чарт:
+   * Скачайте и распакуйте чарт:
 
-   ```shell
-   helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
-     --version 0.5.5 \
-     --untar
-   ```
+     ```shell
+     helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
+       --version 0.5.5 \
+       --untar
+     ```
 
-   Установите Helm-чарт:
+   * Установите Helm-чарт:
 
-   ```shell
-   helm install -n external-secrets --create-namespace \
-     --set-file auth.json=authorized-key.json \
-     external-secrets ./external-secrets/
-   ```
+     ```shell
+     helm install -n external-secrets --create-namespace \
+       --set-file auth.json=authorized-key.json \
+       external-secrets ./external-secrets/
+     ```
 
-   Где:
-   - `authorized-key.json` — название файла с авторизованным ключом из шага 2.
+    Где `authorized-key.json` — название файла с авторизованным ключом из шага 2.
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
@@ -187,7 +186,7 @@ title: "Cloud provider — Yandex Cloud"
 
 ### Интеграция с Yandex Managed Service for Prometheus
 
-С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
+С помощью данной интеграции можно использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
 
 #### Запись метрик
 
@@ -247,6 +246,6 @@ title: "Cloud provider — Yandex Cloud"
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+   Также можно указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
 
 Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
