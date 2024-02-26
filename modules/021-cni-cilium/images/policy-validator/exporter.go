@@ -94,8 +94,8 @@ func (e *Exporter) startScheduled(t time.Duration) {
 			result := 0
 			if err != nil {
 				result = 1
+				klog.Warningf("validate ploicy failed: %+v\n", err)
 			}
-			klog.Warningf("validate ploicy failed: %+v\n", err)
 			allMetrics := make([]prometheus.Metric, 0, 1)
 			v1 := prometheus.MustNewConstMetric(cnpMetricDesc, prometheus.GaugeValue, float64(result))
 			allMetrics = append(allMetrics, v1)
