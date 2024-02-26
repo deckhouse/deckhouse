@@ -59,14 +59,9 @@ spec:
     - name: istio-egressgateway
       enabled: false
 
-  {{- if eq $.Values.istio.sidecarInjectionMode "Webhook" }}
+    # We deploy istio-cni by ourselves
     cni:
       enabled: false
-  {{- end }}
-  {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
-    cni:
-      enabled: true
-  {{- end }}
 
     istiodRemote:
       enabled: false
@@ -122,6 +117,15 @@ spec:
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
 
+  {{- if eq $.Values.istio.sidecarInjectionMode "Webhook" }}
+      istio_cni:
+        enabled: false
+  {{- end }}
+  {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+      istio_cni:
+        enabled: true
+  {{- end }}
+
   {{- if $.Values.istio.multicluster.enabled }}
       meshNetworks:
       {{- range $multicluster := $.Values.istio.internal.multiclusters }}
@@ -172,10 +176,6 @@ spec:
             memory: 10Mi
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
-
-
-    cni:
-      image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix )) }}
 
     pilot:
       autoscaleEnabled: false
