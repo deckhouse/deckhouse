@@ -29,7 +29,7 @@ git:
   - '**/*.patch'
   stageDependencies:
     install:
-    - '**/*.patch'
+    - '**/*'
 shell:
   install:
   - export NODE_MAJOR=20
