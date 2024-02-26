@@ -36,6 +36,8 @@
  - **[cert-manager]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[chrony]** Avoid listening on all addresses and listen on the host IP address. [#7519](https://github.com/deckhouse/deckhouse/pull/7519)
  - **[chrony]** Fix the incorrect path in the `NTPDaemonOnNodeDoesNotSynchronizeTime` alert. [#7507](https://github.com/deckhouse/deckhouse/pull/7507)
+ - **[cni-cilium]** Improve `safe-agent-updater`. [#7576](https://github.com/deckhouse/deckhouse/pull/7576)
+    Cilium-agent pods may be reloaded.
  - **[cni-cilium]** Adding safe-agent-updater. [#7333](https://github.com/deckhouse/deckhouse/pull/7333)
     Cilium-agent pods will restart.
  - **[common]** Fix k8s patches for 1.28 and 1.29. [#7537](https://github.com/deckhouse/deckhouse/pull/7537)
@@ -46,6 +48,7 @@
  - **[dashboard]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
+ - **[deckhouse-controller]** Add CA certificates to the standard `/etc/ssl/` path. [#7625](https://github.com/deckhouse/deckhouse/pull/7625)
  - **[dhctl]** Set version field for the `install-data` ConfigMap in the `dhctl bootstrap-phase install-deckhouse` command. [#7493](https://github.com/deckhouse/deckhouse/pull/7493)
  - **[dhctl]** Ignore a master node SSH fingerprint. [#7360](https://github.com/deckhouse/deckhouse/pull/7360)
  - **[docs]** Istio and `admission-policy-engine` restrictions clarifications. [#7398](https://github.com/deckhouse/deckhouse/pull/7398)
@@ -60,6 +63,7 @@
  - **[kube-dns]** Increased sts-pods-hosts-appender-webhook wait timeout [#7389](https://github.com/deckhouse/deckhouse/pull/7389)
  - **[metallb]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-custom]** Add the `reserved_domain_nodes` metrics. [#7361](https://github.com/deckhouse/deckhouse/pull/7361)
+ - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
  - **[monitoring-kubernetes]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-kubernetes-control-plane]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[multitenancy-manager]** All Pods of a project for which the value "dedicatedNodeName" is defined must run only on the Node with the corresponding taint key. [#6864](https://github.com/deckhouse/deckhouse/pull/6864)
