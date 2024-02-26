@@ -1,0 +1,15 @@
+{{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+---
+apiVersion: v1
+data:
+  cni_network_config: "{\n  \"cniVersion\": \"0.3.1\",\n  \"name\": \"istio-cni\",\n
+    \ \"type\": \"istio-cni\",\n  \"log_level\": \"debug\",\n  \"log_uds_address\":
+    \"__LOG_UDS_ADDRESS__\",\n  \n  \"kubernetes\": {\n      \"kubeconfig\": \"__KUBECONFIG_FILEPATH__\",\n
+    \     \"cni_bin_dir\": \"/opt/cni/bin\",\n      \"exclude_namespaces\": [ \"istio-system\",
+    \"kube-system\" ]\n  }\n}"
+kind: ConfigMap
+metadata:
+  labels:
+    app: istio-cni
+  name: istio-cni-config
+{{- end }}
