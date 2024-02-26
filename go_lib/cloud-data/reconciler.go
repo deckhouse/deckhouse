@@ -208,6 +208,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	c.logger.Infof("InstanceTypes: %v", instanceTypes)
 	if instanceTypes == nil {
+		c.logger.Infoln("INSIDE IF STATEMENT")
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return
 	}
