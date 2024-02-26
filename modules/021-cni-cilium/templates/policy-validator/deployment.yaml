@@ -21,12 +21,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: policy-validator
-        minAllowed:
-        {{- include "exporter_resources" . | nindent 10 }}
-        maxAllowed:
-          cpu: 300m
-          memory: 256Mi
+    - containerName: policy-validator
+      minAllowed:
+      {{- include "exporter_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 300m
+        memory: 256Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
