@@ -36,6 +36,7 @@ git:
       - go.sum
     setup:
       - "**/*.go"
+      - "*.go"
 - add: /go_lib/cloud-data
   to: /deckhouse/go_lib/cloud-data
   excludePaths:
@@ -49,6 +50,7 @@ git:
       - go.sum
     setup:
       - "**/*.go"
+      - "*.go"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
