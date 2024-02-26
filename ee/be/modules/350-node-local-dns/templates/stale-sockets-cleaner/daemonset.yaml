@@ -82,7 +82,7 @@ spec:
               fieldPath: spec.nodeName
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "stale_sockets_cleaner_resources" . | nindent 12 }}
 {{- end }}
