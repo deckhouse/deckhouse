@@ -144,7 +144,12 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			// Proceed converge operation
 
 		case check.CheckStatusDestructiveOutOfSync:
-			destructiveChangeApproved := c.Params.ApproveDestructiveChangeID == checkRes.DestructiveChangeID
+			// TODO(dhctl-for-commander): calculate real DestructiveChangeID and check it
+			// TODO(dhctl-for-commander): if user confirmed this change id, then proceed converge operation
+			destructiveChangeApproved := false
+			if c.Params.ApproveDestructiveChangeID != "" {
+				destructiveChangeApproved = true
+			}
 
 			if !destructiveChangeApproved {
 				// Terminate converge with check result
