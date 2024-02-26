@@ -413,6 +413,7 @@ git:
   - testing
   - go.mod
   - go.sum
+  - editions.yaml
   excludePaths:
   {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
   - docs
