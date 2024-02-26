@@ -176,6 +176,9 @@ spec:
     istio_cni:
       enabled: true
     {{- end }}
+    cni:
+      image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix )) }}
+
     pilot:
       autoscaleEnabled: false
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
