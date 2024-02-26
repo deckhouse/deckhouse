@@ -1,0 +1,227 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      providerClusterConfiguration:
+        type: object
+        additionalProperties: false
+        description: |
+          Describes the configuration of a cloud cluster in zVirt.
+
+          Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+          Run the following command to change the configuration in a running cluster:
+
+          ```shell
+          kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          ```
+        x-doc-search: |
+          ProviderClusterConfiguration
+        x-examples:
+          - apiVersion: deckhouse.io/v1
+            kind: ZvirtClusterConfiguration
+            layout: Standard
+            masterNodeGroup:
+              replicas: 1
+              instanceClass:
+                clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
+                numCPUs: 4
+                memory: 8192
+                template: debian-bookworm
+                os: debian_9
+                vmType: high_performance
+                vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                nicName: "nic1"
+                storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
+            nodeGroups:
+              - name: worker
+                replicas: 1
+                instanceClass:
+                  clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
+                  numCPUs: 4
+                  memory: 8192
+                  template: debian-bookworm
+            provider:
+              server: '<SERVER>'
+              username: '<USERNAME>'
+              password: '<PASSWORD>'
+              insecure: true
+        required: [apiVersion, kind, masterNodeGroup, layout, provider]
+        properties:
+          apiVersion:
+            type: string
+            enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+          kind:
+            type: string
+            enum: [ZvirtClusterConfiguration]
+          sshPublicKey:
+            type: string
+            description: A public key for accessing nodes.
+          masterNodeGroup:
+            type: object
+            additionalProperties: false
+            required: [replicas, instanceClass]
+            description: |
+              The definition of the master's NodeGroup.
+
+              > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+            properties:
+              replicas:
+                type: integer
+                minimum: 1
+                description: |
+                  The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+                x-unsafe-rules: [updateReplicas]
+              instanceClass:
+                type: object
+                additionalProperties: false
+                required: [clusterId, numCPUs, memory, template]
+                description: |
+                  Partial contents of the fields of the
+                properties: &instanceClassProperties
+                  clusterId:
+                    type: string
+                    description: |
+                      cluster id.
+                    example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                  numCPUs:
+                    type: integer
+                    description: |
+                      Count of vCPUs to allocate to zVirt VirtualMachines.
+                    example: 2
+                  memory:
+                    type: integer
+                    description: |
+                      Memory in MiB to allocate to zVirt VirtualMachines.
+                    example: 8192
+                  template:
+                    type: string
+                    description: |
+                      Template name to be cloned.
+                    example: debian-bookworm
+                  os:
+                    type: string
+                    description: |
+                      OS type.
+                    example: debian_9
+                  vmType:
+                    type: string
+                    description: |
+                      Load profile.
+                    example: high_performance
+                  vnicProfileId:
+                    type: string
+                    description: |
+                      vNIC profile id.
+                    example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                  nicName:
+                    type: string
+                    description: |
+                      vNIC name.
+                    example: "nic1"
+                  storageDomainId:
+                    type: string
+                    description: |
+                      Storage domain id.
+                    example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+          nodeGroups:
+            type: array
+            description: |
+              An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+            items:
+              type: object
+              required: [name, replicas, instanceClass]
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the NodeGroup to use for generating node names.
+                replicas:
+                  type: integer
+                  description: |
+                    The number of nodes to create.
+                nodeTemplate:
+                  description: |
+                    Parameters of Node objects in Kubernetes to add after registering the node.
+                  properties:
+                    labels:
+                      type: object
+                      description: |
+                        A list of labels to attach to cluster resources.
+
+                        The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                      - environment: production
+                        app: warp-drive-ai
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |
+                        The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                      - ai.fleet.com/discombobulate: "true"
+                      additionalProperties:
+                        type: string
+                    taints:
+                      type: array
+                      description: |
+                        The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                        > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                      x-examples:
+                      - - effect: NoExecute
+                          key: ship-class
+                          value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                          key:
+                            type: string
+                          value:
+                            type: string
+                instanceClass:
+                  type: object
+                  additionalProperties: false
+                  required: [clusterId, numCPUs, memory, template]
+                  description: |
+                    Partial contents of the fields of the.
+                  properties:
+                    <<: *instanceClassProperties
+          layout:
+            type: string
+            description: |
+              The way resources are located in the cloud.
+
+              Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+            x-unsafe: true
+          provider:
+            type: object
+            additionalProperties: false
+            description: Parameters for connecting to the vCenter.
+            properties:
+              server:
+                type: string
+                description: The host or the IP address of the vCenter server.
+              username:
+                type: string
+                description: The login ID.
+              password:
+                type: string
+                description: The user's password.
+              insecure:
+                type: boolean
+                description:  Set to `true` if vCenter has a self-signed certificate.
+                x-doc-default: false
+            required:
+            - server
+            - username
+            - password
+
