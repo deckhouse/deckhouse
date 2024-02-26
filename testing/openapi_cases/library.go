@@ -73,17 +73,45 @@ func (t *TestCases) HaveHelmValuesCases() bool {
 	return len(t.Positive.HelmValues) > 0 || len(t.Negative.HelmValues) > 0
 }
 
+type edition struct {
+	Name       string `yaml:"name,omitempty"`
+	ModulesDir string `yaml:"modulesDir,omitempty"`
+}
+
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+func getPossiblePathToModules() []string {
+	content, err := os.ReadFile("/deckhouse/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	modulesDir := make([]string, 0)
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+		modulesDir = append(modulesDir, fmt.Sprintf("/deckhouse/%s/*/openapi", ed.ModulesDir))
+	}
+
+	return modulesDir
+}
+
 func GetAllOpenAPIDirs() ([]string, error) {
 	var (
 		dirs        []string
 		openAPIDirs []string
 	)
 
-	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/openapi",
-		"/deckhouse/ee/modules/*/openapi",
-		"/deckhouse/ee/fe/modules/*/openapi",
-	} {
+	for _, possibleDir := range getPossiblePathToModules() {
 		globDirs, err := filepath.Glob(possibleDir)
 		if err != nil {
 			return nil, err
