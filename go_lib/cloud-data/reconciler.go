@@ -428,33 +428,27 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	c.logger.Infoln("Start orphaned disks discovery step")
 	defer c.logger.Infoln("Finish orphaned disks discovery step")
 
-	for i := 1; i <= 3; i++ {
-		if i > 1 {
-			c.logger.Infoln("Waiting 3 seconds before next attempt")
-			time.Sleep(3 * time.Second)
-		}
+	retryFunc(3, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		disksMeta, err := c.discoverer.DisksMeta(cctx)
 		if err != nil {
-			c.logger.Errorf("Getting disks meta error: %v\n", err)
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(1.0)
-			continue
+			return fmt.Errorf("Getting disks meta error: %v\n", err)
 		}
 
 		if len(disksMeta) == 0 {
 			c.logger.Infoln("No disks found")
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
 			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-			return
+			return nil
 		}
 
 		persistentVolumes, err := c.k8sClient.CoreV1().PersistentVolumes().List(cctx, metav1.ListOptions{})
 		if err != nil {
-			c.logger.Errorf("Attempt %d. Failed to get PersistentVolumes from cluster: %v", i, err)
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(1.0)
-			continue
+			return fmt.Errorf("Failed to get PersistentVolumes from cluster: %v", err)
 		}
 
 		c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
@@ -473,9 +467,33 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 		}
 
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-		return
-	}
+		return nil
+	})
 
 	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+}
+
+type retryable func() error
+
+var errMaxRetriesReached = fmt.Errorf("exceeded retry limit")
+
+func retryFunc(attempts int, sleep int, logger *log.Entry, fn retryable) error {
+	var err error
+
+	for i := 0; i < attempts; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+
+		logger.Errorf("Attempt %d of %d. %v", i+1, attempts, err)
+
+		if i < attempts {
+			logger.Infof("Waiting %d seconds before next attempt", sleep)
+			time.Sleep(time.Duration(sleep) * time.Second)
+		}
+	}
+
+	return fmt.Errorf("%v: %w", err, errMaxRetriesReached)
 }
