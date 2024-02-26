@@ -24,8 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -292,7 +291,6 @@ func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Uns
 			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 			return nil, err
 		}
-
 	}
 
 	data.InstanceTypes = instanceTypes
@@ -464,7 +462,6 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 			if !persistentVolumeNames.Has(disk.Name) {
 				c.orphanedDiskMetric.WithLabelValues(disk.ID, disk.Name).Set(1.0)
 			}
-
 		}
 
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
