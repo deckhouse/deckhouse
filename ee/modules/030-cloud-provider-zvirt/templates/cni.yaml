@@ -6,8 +6,8 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-{{- if hasKey .Values.cloudProviderVcd.internal "cniSecretData" }}
-  {{- .Values.cloudProviderVcd.internal.cniSecretData | b64dec | nindent 2 }}
+{{- if hasKey .Values.cloudProviderZvirt.internal "cniSecretData" }}
+  {{- .Values.cloudProviderZvirt.internal.cniSecretData | b64dec | nindent 2 }}
 {{- else }}
   cni: {{ b64enc "cilium" | quote }}
   cilium: {{ b64enc "{\"mode\": \"DirectWithNodeRoutes\"}" | quote }}
