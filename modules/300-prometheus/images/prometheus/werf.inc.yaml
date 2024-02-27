@@ -13,6 +13,7 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+fromCacheVersion: 2024022701
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -28,7 +29,7 @@ git:
   - '**/*.patch'
   stageDependencies:
     install:
-    - '**/*.patch'
+    - '**/*'
 shell:
   install:
   - export NODE_MAJOR=20
@@ -42,7 +43,7 @@ shell:
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
   - go mod tidy
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /prometheus/prometheus
   - mkdir -p /consoles
@@ -69,6 +70,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2024022701
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /prometheus/prometheus/prometheus
