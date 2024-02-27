@@ -51,32 +51,31 @@
 
             {%- if edition[1].excludeModules contains moduleName %}
                <img src="{{ notsupported_img_url }}">
-               {% continue %}
-            {%- endif %}
-
-            {%- if module[1].parameters-ee and (editionsWeight[currentEdition] < editionsWeight['ee'])  <%}
-              {%- assign parametersList = '' %}
-              {%- for parameter in module[1].parameters-ee %}
-                {%- case parameter[1]['resourceType'] %}
-                  {%- when "crd" %}
-                    {%- assign resourceFile = 'cr.html' %}
-                  {%- when "moduleConfig" %}
-                    {%- assign resourceFile = 'configuration.html' %}
-                  {%- when "clusterConfig" %}
-                    {%- assign resourceFile = 'cluster_configuration.html' %}
-                  {%- else %}
-                    {%- assign resourceFile = '' %}
-                {%- endcase -%}
-
-                {%- capture parameterLink %}<a
-                  href='{{ module[1]['path'] }}{{ resourceFile }}#{{ parameter[1]['linkAnchor'] }}'>{{ parameter[1]['title'] }}</a>{% endcapture %}
-                {%- assign parametersList = parametersList | append: parameterLink %}
-                {%- unless forloop.last %}{%- assign parametersList = parametersList | append: "<br />" %}{% endunless %}
-              {%- endfor %}
-              <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
-                                                 data-tippy-content="{{ site.data.i18n.comparison['except_parameters'][page.lang] }}{{ parametersList }}"></span>
             {%- else %}
-              <img src="{{ supported_img_url }}">
+               {%- if module[1].parameters-ee and (editionsWeight[currentEdition] < editionsWeight['ee'])  <%}
+                 {%- assign parametersList = '' %}
+                 {%- for parameter in module[1].parameters-ee %}
+                   {%- case parameter[1]['resourceType'] %}
+                     {%- when "crd" %}
+                       {%- assign resourceFile = 'cr.html' %}
+                     {%- when "moduleConfig" %}
+                       {%- assign resourceFile = 'configuration.html' %}
+                     {%- when "clusterConfig" %}
+                       {%- assign resourceFile = 'cluster_configuration.html' %}
+                     {%- else %}
+                       {%- assign resourceFile = '' %}
+                   {%- endcase -%}
+
+                   {%- capture parameterLink %}<a
+                     href='{{ module[1]['path'] }}{{ resourceFile }}#{{ parameter[1]['linkAnchor'] }}'>{{ parameter[1]['title'] }}</a>{% endcapture %}
+                   {%- assign parametersList = parametersList | append: parameterLink %}
+                   {%- unless forloop.last %}{%- assign parametersList = parametersList | append: "<br />" %}{% endunless %}
+                 {%- endfor %}
+                 <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
+                                                    data-tippy-content="{{ site.data.i18n.comparison['except_parameters'][page.lang] }}{{ parametersList }}"></span>
+               {%- else %}
+                 <img src="{{ supported_img_url }}">
+               {%- endif %}
             {%- endif %}
 
           {%- else %}
@@ -84,46 +83,6 @@
           {%- endif %}
         </td>
       {%- endfor %}
-
-<!-- CE -->
-<!--      <td style="text-align: center; width: 170px;">
-        {%- if module[1].edition == 'ee' or module[1].edition == 'fe' %}
-          <img src="{{ notsupported_img_url }}">
-        {%- else %}
-          {%- if module[1].parameters-ee %}
-            {%- assign parametersList = '' %}
-            {%- for parameter in module[1].parameters-ee %}
-              {%- case parameter[1]['resourceType'] %}
-                {%- when "crd" %}
-                  {%- assign resourceFile = 'cr.html' %}
-                {%- when "moduleConfig" %}
-                  {%- assign resourceFile = 'configuration.html' %}
-                {%- when "clusterConfig" %}
-                  {%- assign resourceFile = 'cluster_configuration.html' %}
-                {%- else %}
-                  {%- assign resourceFile = '' %}
-              {%- endcase -%}
-
-              {%- capture parameterLink %}<a
-                href='{{ module[1]['path'] }}{{ resourceFile }}#{{ parameter[1]['linkAnchor'] }}'>{{ parameter[1]['title'] }}</a>{% endcapture %}
-              {%- assign parametersList = parametersList | append: parameterLink %}
-              {%- unless forloop.last %}{%- assign parametersList = parametersList | append: "<br />" %}{% endunless %}
-            {%- endfor %}
-            <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
-                                               data-tippy-content="{{ site.data.i18n.comparison['except_parameters'][page.lang] }}{{ parametersList }}"></span>
-          {%- else %}
-            <img src="{{ supported_img_url }}">
-          {%- endif %}
-        {%- endif %}
-      </td> -->
-      <!-- EE -->
-<!---      <td style="text-align: center; width: 170px;">
-        {%- if module[1].edition == 'ee' or module[1].edition == 'ce' %}
-          <img src="{{ supported_img_url }}">
-        {%- else %}
-          <img src="{{ notsupported_img_url }}">
-        {%- endif %}
-      </td> -->
     </tr>
   {%- endfor %}
 
