@@ -442,6 +442,17 @@ func (in *ModuleReleaseSpec) DeepCopyInto(out *ModuleReleaseSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.Changelog != nil {
+		in, out := &in.Changelog, &out.Changelog
+		*out = make(map[string]interface{}, len(*in))
+		for key, val := range *in {
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				(*out)[key] = val.DeepCopyany()
+			}
+		}
+	}
 	return
 }
 
