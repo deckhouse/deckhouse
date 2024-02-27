@@ -219,9 +219,9 @@ func destroySocket(sockId netlink.SocketID) error {
 	// Do the query
 	err = s.Send(req)
 	if err != nil {
-		fmt.Printf("[StaleSockCleaner] error in destroying socket: %v", sockId)
+		return fmt.Errorf("[StaleSockCleaner] error in destroying socket: %v", sockId)
 	}
-	return err
+	return nil
 }
 
 // Below handlers are adapted from netlink/socket_linux.go

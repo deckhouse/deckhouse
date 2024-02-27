@@ -46,32 +46,15 @@ spec:
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- /*
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
-      */}}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: stale-sockets-cleaner
       containers:
       - name: stale-sockets-cleaner
-        {{- /*
-          UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
-        */}}
-        securityContext:
-          allowPrivilegeEscalation: true
-          capabilities:
-            add:
-            - DAC_OVERRIDE
-            - NET_RAW
-            - NET_ADMIN
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-          runAsGroup: 0
-          runAsNonRoot: false
-          runAsUser: 0
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "staleSocketsCleaner") }}
         command: ["/stale-sockets-cleaner"]
         env:
