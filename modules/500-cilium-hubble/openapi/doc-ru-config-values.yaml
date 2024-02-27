@@ -11,12 +11,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `nodeSelector` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `tolerations` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к веб-интерфейсу Hubble.
@@ -51,21 +51,21 @@ properties:
       mode:
         description: |
           Режимы работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer, заданному в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
           - `Disabled` — доступ только по HTTP.
-          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед веб-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — доступ по HTTP с внешним HTTPS-балансером. Он терминирует HTTPS, и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         description: "Настройки для certmanager."
         properties:
           clusterIssuerName:
             description: |
-              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+              Тип ClusterIssuer, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но можно определить свои).
       customCertificate:
         description: Настройки для использования пользовательского сертификата.
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса Hubble.
+              Имя Secret в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса Hubble.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
