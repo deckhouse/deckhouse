@@ -54,6 +54,12 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 	statusMsgs := make([]string, 0)
 
 	mod := s.moduleManager.GetModule(module.GetName())
+	// return error if module manager doesn't have such a module
+	if mod == nil {
+		return ModuleStatus{
+			Status: "Error: failed to fetch module metadata",
+		}
+	}
 
 	// Calculate state and status.
 	if s.moduleManager.IsModuleEnabled(module.GetName()) {
