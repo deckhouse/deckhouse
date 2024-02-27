@@ -29,8 +29,7 @@ import (
 // We need to set cni-exclusive: "false" to avoid a conflict writing to /etc/cni/net.d/*.conflist.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/cni-cilium/set-exclusive",
+	Queue: "/modules/cni-cilium/set-exclusive",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "istio-cni-daemonset",
