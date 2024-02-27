@@ -278,6 +278,7 @@ shell:
 
 ---
 image: dev-prebuild
+fromCacheVersion: 20240227
 fromImage: common-base
 git:
 - add: /
