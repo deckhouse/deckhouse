@@ -1,7 +1,7 @@
-# Based on https://github.com/istio/istio/blob/1.19.4/pilot/docker/Dockerfile.pilot
+# Based on https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.pilot
 ARG BASE_UBUNTU
 
-FROM docker.io/istio/pilot:1.19.4@sha256:3289a16de31ac194c98d0f8a2e810741a149e3133909c68502b0b9214db31a59 as artifact
+FROM docker.io/istio/pilot:1.19.7@sha256:c5feddb54bdc58ddb8b5ed462547b4a673f2b9c5163fe42cec0c0f0115c4c360 as artifact
 
 FROM $BASE_UBUNTU
 RUN apt-get update && \
