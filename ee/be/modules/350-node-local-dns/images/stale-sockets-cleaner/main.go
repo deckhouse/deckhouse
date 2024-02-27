@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -82,6 +83,9 @@ func main() {
 			log.Errorf("[StaleSockCleaner] Failed to get IP of the nld Pod. Error: %v", err)
 			continue
 		}
+		if nldPodIPOnSameNode == nil {
+			continue
+		}
 
 		// Get all UDP sockets on node
 		allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
@@ -117,7 +121,11 @@ func main() {
 					)
 					err := destroySocket(sock.ID)
 					if err != nil {
-						log.Errorf("[StaleSockCleaner] Failed destroy socket. Error: %v", err)
+						if errors.Is(err, unix.EOPNOTSUPP) {
+							log.Fatalf("[StaleSockCleaner] Failed to destroy the socket becase this is not supported by underlying kernel. Error: %v", err)
+						} else {
+							log.Errorf("[StaleSockCleaner] Failed to destroy the socket. Error: %v", err)
+						}
 					}
 					log.Infof(
 						"[StaleSockCleaner] Socket %s:%v -> %s:%v successfully destroed",
