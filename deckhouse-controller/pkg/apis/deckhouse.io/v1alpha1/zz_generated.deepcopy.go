@@ -469,6 +469,7 @@ func (in *ModuleReleaseSpec) DeepCopy() *ModuleReleaseSpec {
 func (in *ModuleReleaseStatus) DeepCopyInto(out *ModuleReleaseStatus) {
 	*out = *in
 	in.TransitionTime.DeepCopyInto(&out.TransitionTime)
+	out.PullDuration = in.PullDuration
 	return
 }
 
