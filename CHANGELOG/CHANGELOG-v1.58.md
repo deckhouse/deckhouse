@@ -41,6 +41,8 @@
  - **[cni-cilium]** Adding safe-agent-updater. [#7333](https://github.com/deckhouse/deckhouse/pull/7333)
     Cilium-agent pods will restart.
  - **[common]** Fix k8s patches for 1.28 and 1.29. [#7537](https://github.com/deckhouse/deckhouse/pull/7537)
+ - **[control-plane-manager]** Fix race reading between the deckhouse pod status and the `minUsedControlPlaneKubernetesVersion` variable. [#7637](https://github.com/deckhouse/deckhouse/pull/7637)
+    Prevents the Deckhouse version update error from being skipped.
  - **[control-plane-manager]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
  - **[control-plane-manager]** Automatic Kubernetes version update will be aborted by an error if any resource in the cluster does not support the new Kubernetes version. [#7401](https://github.com/deckhouse/deckhouse/pull/7401)
  - **[control-plane-manager]** Fix serviceaccounts generation in `basicAuditPolicy`. [#7342](https://github.com/deckhouse/deckhouse/pull/7342)
@@ -80,6 +82,8 @@
  - **[openvpn]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[operator-prometheus]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[operator-trivy]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[prometheus]** Fix validating webhook build for promtool work. [#7636](https://github.com/deckhouse/deckhouse/pull/7636)
+ - **[prometheus]** Fix Prometheus build to return sample limit patch. [#7636](https://github.com/deckhouse/deckhouse/pull/7636)
  - **[prometheus]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[prometheus]** Update Prometheus version from `v2.44.0` to `v2.45.2`. [#7195](https://github.com/deckhouse/deckhouse/pull/7195)
  - **[runtime-audit-engine]** Remove the `trusted_sa` macros in Falco rules. [#7241](https://github.com/deckhouse/deckhouse/pull/7241)
