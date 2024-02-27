@@ -324,7 +324,7 @@ function node_os_image_metrics() {
               [
                 "(?:(r)ed (h)at (e)nterprise (l)inux.*(7|8))",
                 "(?:(centos).*(7|8))",
-                "(?:(debian).*(9|10|11))",
+                "(?:(debian).*(10|11|12))",
                 "(?:(ubuntu).*(18.04|20.04|22.04))",
                 "(?:(rocky).*(8|9))",
                 "(?:(almalinux).*(7|8))",
