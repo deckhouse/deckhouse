@@ -21,7 +21,7 @@ spec:
                 requirements:
                   description: Структура содержащая требования, необходимые для применения релиза.
                 changelog:
-                  description: Изменения модуля в данном релизе.
+                  description: Список изменений модуля в данном релизе.
             status:
               properties:
                 phase:
