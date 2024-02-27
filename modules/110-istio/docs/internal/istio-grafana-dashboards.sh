@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ISTIO_VER=${1:-1.19.4}
+ISTIO_VER=${1:-1.19.7}
 
 git clone --depth 1  --branch "${ISTIO_VER}" git@github.com:istio/istio.git 2>/dev/null
 
