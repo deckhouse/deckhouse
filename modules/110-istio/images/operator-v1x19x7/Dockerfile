@@ -1,6 +1,6 @@
-# Based on https://github.com/istio/istio/blob/1.19.4/operator/docker/Dockerfile.operator
+# Based on https://github.com/istio/istio/blob/1.19.7/operator/docker/Dockerfile.operator
 ARG BASE_UBUNTU
-FROM docker.io/istio/operator:1.19.4@sha256:ee35f3a47b24b43110f9ef4fae3cc9b9d5284c4da362d231002e3ea72a4b0461 as artifact
+FROM docker.io/istio/operator:1.19.7@sha256:f7f371476a2224fe55ff4e7c8b31773e2c048da255bb634075666f88fa7cb990 as artifact
 
 FROM $BASE_UBUNTU
 
