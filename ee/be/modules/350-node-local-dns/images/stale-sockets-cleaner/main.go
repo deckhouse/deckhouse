@@ -47,8 +47,6 @@ var (
 func main() {
 	log.Infof("[StaleSockCleaner] Start")
 
-	// Add check CONFIG_INET_DIAG_DESTROY in kernel
-
 	// Init kubeClient
 	config, _ := rest.InClusterConfig()
 	kubeClient, err := kubernetes.NewForConfig(config)
@@ -75,6 +73,7 @@ func main() {
 		podCIDROnSameNode.String(),
 	)
 
+	// Main loop
 	for {
 		time.Sleep(scanInterval)
 		// Get ip of pod node-local-dns running on the node

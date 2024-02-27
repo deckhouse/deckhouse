@@ -25,8 +25,6 @@ shell:
   - export CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-sockets-cleaner .
-  # - chown 64535:64535 /src/stale-sockets-cleaner
-  # - chmod 0700 /src/stale-sockets-cleaner
   - chmod +x /src/stale-sockets-cleaner
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
@@ -37,5 +35,4 @@ import:
   to: /stale-sockets-cleaner
   before: install
 docker:
-  # USER: 64535
   ENTRYPOINT: ["/stale-sockets-cleaner"]
