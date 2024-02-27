@@ -109,7 +109,6 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
-      priorityClassName: system-node-critical
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       restartPolicy: Always
       serviceAccountName: istio-cni-node
