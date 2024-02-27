@@ -51,7 +51,6 @@ const (
 	DefaultStaticInstanceBootstrapTimeout = 20 * time.Minute
 	DefaultStaticInstanceCleanupTimeout   = 10 * time.Minute
 	RequeueForStaticInstancePending       = 10 * time.Second
-	RequeueForStaticInstanceBootstrapping = 60 * time.Second
 	RequeueForStaticInstanceCleaning      = 30 * time.Second
 	RequeueForStaticMachineDeleting       = 5 * time.Second
 )
@@ -210,12 +209,12 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		r.Recorder.SendNormalEvent(instanceScope.Instance, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", machineScope.StaticMachine.Name))
 		r.Recorder.SendNormalEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", instanceScope.Instance.Name))
 
-		err = r.HostClient.Bootstrap(ctx, instanceScope)
+		result, err := r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
 		}
 
-		return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
+		return result, nil
 	}
 
 	return r.reconcileStaticInstancePhase(ctx, instanceScope)
@@ -361,12 +360,12 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 			return ctrl.Result{}, errors.New("timed out waiting to bootstrap StaticInstance")
 		}
 
-		err := r.HostClient.Bootstrap(ctx, instanceScope)
+		result, err := r.HostClient.Bootstrap(ctx, instanceScope)
 		if err != nil {
 			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
 		}
 
-		return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
+		return result, nil
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		instanceScope.MachineScope.SetReady()
 
