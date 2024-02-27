@@ -42,7 +42,7 @@ shell:
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
   - go mod tidy
-  - find /patches -name '*.patch' | xargs git apply
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /prometheus/prometheus
   - mkdir -p /consoles
