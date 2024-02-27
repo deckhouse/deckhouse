@@ -4,13 +4,10 @@ type:
   - instruction
 ---
 
-## Установка еще одного prometheus-operator в кластер
+## Установка дополнительного prometheus-operator в кластер
 
-Пользователю может понадобится установить в кластер еще один prometheus-operator,
-чтобы добавить Prometheus'ы или alertmanager'ы в кластер.
+Пользователю может понадобиться установка дополнительного prometheus-operator в кластер (для добавления Prometheus или alertmanager).
 
-1. Чтобы не пересекаться с prometheus-operator из Deckhouse, необходимо указать флаг
-   `--deny-namespaces=d8-monitoring` для пользовательской инсталляции prometheus-operator.
+1. Чтобы не пересекаться с prometheus-operator из Deckhouse, укажите флаг `--deny-namespaces=d8-monitoring` для пользовательской инсталляции prometheus-operator.
 
-2. Prometheus-operator из Deckhouse следит за ресурсами правил и мониторов только в пространствах имен
-   с меткой `heritage: deckhouse`. Не устанавливайте эту метку на пользовательские пространства имен.
+2. Prometheus-operator из Deckhouse должен следить за ресурсами правил и мониторов только в пространствах имен с меткой `heritage: deckhouse`. Не ставьте эту метку на пользовательские пространства имен.
