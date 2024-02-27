@@ -123,7 +123,6 @@ ansible:
     - name: "Convert editions structure"
       shell: |
         /usr/local/bin/yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
-        exit 1
       args:
         warn: false
         executable: /bin/bash
