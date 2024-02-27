@@ -1,5 +1,5 @@
 diff --git a/discovery/kubernetes/pod.go b/discovery/kubernetes/pod.go
-index 396720c22..faf28654a 100644
+index 732cf52ad..3080f013b 100644
 --- a/discovery/kubernetes/pod.go
 +++ b/discovery/kubernetes/pod.go
 @@ -299,6 +299,7 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
@@ -19,7 +19,7 @@ index 396720c22..faf28654a 100644
  				podContainerIDLabel:           lv(cID),
  				podContainerImageLabel:        lv(c.Image),
 diff --git a/discovery/kubernetes/service.go b/discovery/kubernetes/service.go
-index a19f06e7d..f19f6e3bb 100644
+index 40e17679e..32e3ea46c 100644
 --- a/discovery/kubernetes/service.go
 +++ b/discovery/kubernetes/service.go
 @@ -193,6 +193,7 @@ func (s *Service) buildService(svc *apiv1.Service) *targetgroup.Group {
@@ -31,10 +31,10 @@ index a19f06e7d..f19f6e3bb 100644
  			servicePortNumberLabel:   lv(strconv.FormatInt(int64(port.Port), 10)),
  			servicePortProtocolLabel: lv(string(port.Protocol)),
 diff --git a/scrape/scrape.go b/scrape/scrape.go
-index f38527ff3..e8a14a2a0 100644
+index 8c4cc51e7..e7bff4dcb 100644
 --- a/scrape/scrape.go
 +++ b/scrape/scrape.go
-@@ -305,6 +305,11 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, jitterSeed
+@@ -314,6 +314,11 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, offsetSeed
  		}
  		opts.target.SetMetadataStore(cache)
 
@@ -46,17 +46,17 @@ index f38527ff3..e8a14a2a0 100644
  		return newScrapeLoop(
  			ctx,
  			opts.scraper,
-@@ -318,7 +323,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, jitterSeed
+@@ -327,7 +332,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, offsetSeed
  			cache,
- 			jitterSeed,
+ 			offsetSeed,
  			opts.honorTimestamps,
 -			opts.sampleLimit,
 +			limit,
+ 			opts.bucketLimit,
  			opts.labelLimits,
  			opts.interval,
- 			opts.timeout,
 diff --git a/scrape/target.go b/scrape/target.go
-index f250910c1..1c505d0a4 100644
+index a655e8541..fbd437e01 100644
 --- a/scrape/target.go
 +++ b/scrape/target.go
 @@ -18,6 +18,7 @@ import (
@@ -67,7 +67,7 @@ index f250910c1..1c505d0a4 100644
  	"strings"
  	"sync"
  	"time"
-@@ -517,3 +518,15 @@ func TargetsFromGroup(tg *targetgroup.Group, cfg *config.ScrapeConfig, noDefault
+@@ -546,3 +547,15 @@ func TargetsFromGroup(tg *targetgroup.Group, cfg *config.ScrapeConfig, noDefault
  	}
  	return targets, failures
  }
