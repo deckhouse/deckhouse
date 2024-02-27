@@ -82,6 +82,7 @@ metadata:
     {{- end }}
   {{- end }}
   annotations:
+    a: b
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
