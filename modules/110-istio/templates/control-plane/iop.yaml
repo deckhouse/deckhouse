@@ -1,9 +1,15 @@
 {{- define "module_pod_security_context_run_as_user_deckhouse" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - all
   runAsNonRoot: true
   runAsUser: 64535
   runAsGroup: 64535
+  seccompProfile:
+    type: RuntimeDefault
 {{- end }}
 
 {{- define "module_init_container_check_linux_kernel"  }}
