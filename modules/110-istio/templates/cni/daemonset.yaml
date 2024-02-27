@@ -7,7 +7,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: istio-cni-node
-  namespace: d8-istio
+  namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node")) | nindent 2 }}
 spec:
   revisionHistoryLimit: 10
