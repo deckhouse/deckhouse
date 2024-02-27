@@ -32,7 +32,7 @@ spec:
 
 ## Запись данных Prometheus в longterm storage
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью custom resource `PrometheusRemoteWrite`.
+У Prometheus существует поддержка данных remote_write из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка этого механизма реализована с помощью custom ресурса `PrometheusRemoteWrite`.
 
 ### Пример минимального PrometheusRemoteWrite
 
@@ -68,11 +68,11 @@ spec:
 
 ## Подключение Prometheus к сторонней Grafana
 
-У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Все, что нужно, — создать дополнительный `Ingress`-ресурс.
+Создайте дополнительный Ingress-ресурс, чтобы разрешить подключение к Prometheus с использованием сертификатов для `ingress-nginx-controller` в качестве клиентских сертификатов.
 
-> В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
+> В представленном ниже примере предполагается, что Secret `example-com-tls` существует в `namespace d8-monitoring`.
 >
-> Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие в вашем случае.
+> Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие для вас.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -118,22 +118,21 @@ data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 
-Далее остается только добавить data source в Grafana:
+Добавьте `data source` в Grafana:
 
-**В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**
-
-<img src="../../images/300-prometheus/prometheus_connect_settings.png" height="500">
+> В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>` например:
+> <img src="../../images/300-prometheus/prometheus_connect_settings.png" height="500">
 
 * **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`.
 
-* **Огромный минус** подключения таким способом — необходимость создания Ingress-ресурса в системном namespace'е.
+* **Не рекомендуется** подключение таким способом — необходимость создания Ingress-ресурса в системном namespace.
 Deckhouse **не гарантирует** сохранение работоспособности данной схемы подключения в связи с его активными постоянными обновлениями.
 
-* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например для федерации Prometheus.
+* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например, для федерации Prometheus.
 
 ## Подключение стороннего приложения к Prometheus
 
-Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
+Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения создайте `ServiceAccount` с необходимыми правами.
 
 ```yaml
 ---
@@ -167,7 +166,7 @@ subjects:
   namespace: default
 ```
 
-Далее сделаем запрос, используя `curl`:
+Запросите, используя `curl`:
 
 ```yaml
 apiVersion: batch/v1
@@ -211,7 +210,7 @@ stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-Задеплойте custom resource `CustomAlertManager`:
+Разверните custom resource `CustomAlertManager`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
