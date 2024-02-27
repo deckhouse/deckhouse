@@ -56,6 +56,7 @@
  - **[docs]** Istio and `admission-policy-engine` restrictions clarifications. [#7398](https://github.com/deckhouse/deckhouse/pull/7398)
  - **[docs]** Add support for Astra Linux `1.7.5`. [#7396](https://github.com/deckhouse/deckhouse/pull/7396)
  - **[extended-monitoring]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
  - **[flant-integration]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.

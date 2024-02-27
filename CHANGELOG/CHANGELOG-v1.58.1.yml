@@ -14,6 +14,10 @@ deckhouse-controller:
   fixes:
     - summary: Add CA certificates to the standard `/etc/ssl/` path.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7625
+external-module-manager:
+  fixes:
+    - summary: Fix panic at a module status update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7648
 monitoring-kubernetes:
   fixes:
     - summary: >-
