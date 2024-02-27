@@ -3,6 +3,13 @@ cni-cilium:
     - summary: Improve `safe-agent-updater`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7576
       impact: Cilium-agent pods may be reloaded.
+control-plane-manager:
+  fixes:
+    - summary: >-
+        Fix race reading between the deckhouse pod status and the
+        `minUsedControlPlaneKubernetesVersion` variable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7637
+      impact: Prevents the Deckhouse version update error from being skipped.
 deckhouse-controller:
   fixes:
     - summary: Add CA certificates to the standard `/etc/ssl/` path.
@@ -13,4 +20,10 @@ monitoring-kubernetes:
         Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions
         (`1.7.*`).
       pull_request: https://github.com/deckhouse/deckhouse/pull/7622
+prometheus:
+  fixes:
+    - summary: Fix validating webhook build for promtool work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7636
+    - summary: Fix Prometheus build to return sample limit patch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7636
 
