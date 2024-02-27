@@ -189,7 +189,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		}
 
 		if line.Level == "error" || line.Output == "stderr" {
-			log.InfoF("Warning during Deckhouse converge", line.String())
+			log.InfoF("Warning during Deckhouse converge: %s", line.String())
 		}
 		return true
 	})
