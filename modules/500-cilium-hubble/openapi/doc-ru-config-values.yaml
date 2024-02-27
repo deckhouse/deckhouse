@@ -60,7 +60,7 @@ properties:
         properties:
           clusterIssuerName:
             description: |
-              Тип ClusterIssuer, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но можно определить свои).
+              Тип ClusterIssuer, используемого для заказа SSL-сертификата. В данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
       customCertificate:
         description: Настройки для использования пользовательского сертификата.
         properties:

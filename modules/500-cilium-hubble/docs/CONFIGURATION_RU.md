@@ -11,9 +11,9 @@ title: "Модуль cilium-hubble: настройки"
 ## Аутентификация
 
 По умолчанию используется модуль [user-authn](/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через `externalAuthentication`.  
-Если эти варианты отключены, модуль включит базовую атунтификацию со сгенерированным паролем.
+Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
-Откройте сгенерированный пароль командой:
+Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
