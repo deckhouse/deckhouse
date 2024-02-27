@@ -97,6 +97,7 @@ spec:
             requests:
               cpu: 100m
               memory: 100Mi
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
@@ -111,7 +112,7 @@ spec:
         kubernetes.io/os: linux
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       restartPolicy: Always
-      serviceAccountName: istio-cni-node
+      serviceAccountName: cni
       schedulerName: default-scheduler
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       terminationGracePeriodSeconds: 5
