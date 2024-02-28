@@ -89,7 +89,7 @@ func main() {
 		// Get all UDP sockets on node
 		allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
 		if err != nil {
-			log.Errorf("[StaleSockCleaner] Failed get UPD sockets. Error: %v", err)
+			log.Errorf("[StaleSockCleaner] Failed get UDP sockets. Error: %v", err)
 		}
 
 		/*
@@ -113,7 +113,7 @@ func main() {
 						nldDstPort,
 					)
 					log.Infof(
-						"[StaleSockCleaner] Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroed.",
+						"[StaleSockCleaner] Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroyed.",
 						nldPodNameOnSameNode,
 						nldPodIPOnSameNode.String(),
 						sock.ID.Destination.String(),
@@ -121,13 +121,13 @@ func main() {
 					err := destroySocket(sock.ID)
 					if err != nil {
 						if errors.Is(err, unix.EOPNOTSUPP) {
-							log.Fatalf("[StaleSockCleaner] Failed to destroy the socket becase this is not supported by underlying kernel. Error: %v", err)
+							log.Fatalf("[StaleSockCleaner] Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
 						} else {
 							log.Errorf("[StaleSockCleaner] Failed to destroy the socket. Error: %v", err)
 						}
 					}
 					log.Infof(
-						"[StaleSockCleaner] Socket %s:%v -> %s:%v successfully destroed",
+						"[StaleSockCleaner] Socket %s:%v -> %s:%v successfully destroyed",
 						sock.ID.Source.String(),
 						sock.ID.SourcePort,
 						sock.ID.Destination.String(),
@@ -185,7 +185,7 @@ func getNLDPodNameIP(kubeClient kubernetes.Interface, nodeName string) (string, 
 		)
 	case len(nldPodsOnSameNode.Items) > 1:
 		return "", nil, fmt.Errorf(
-			"[StaleSockCleaner] There are more than one running agent pods on node %s",
+			"[StaleSockCleaner] There are more than one running node-local-dns pods on node %s",
 			nodeName,
 		)
 	}
@@ -218,7 +218,7 @@ func destroySocket(sockId netlink.SocketID) error {
 	// Do the query
 	err = s.Send(req)
 	if err != nil {
-		return fmt.Errorf("[StaleSockCleaner] error in destroying socket: %v", sockId)
+		return fmt.Errorf("[StaleSockCleaner] error destroying socket: %v", sockId)
 	}
 	return nil
 }
