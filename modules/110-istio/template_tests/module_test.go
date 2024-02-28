@@ -95,6 +95,8 @@ const istioValues = `
     auth:
       externalAuthentication: {}
     outboundTrafficPolicyMode: AllowAny
+    dataPlane:
+      trafficRedirectionInSetupMode: CNIPlugin
     sidecar:
       includeOutboundIPRanges: ["10.0.0.0/24"]
       excludeOutboundIPRanges: ["1.2.3.4/32"]
