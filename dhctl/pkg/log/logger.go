@@ -75,8 +75,9 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		"-stderrthreshold=FATAL",
 	}
 
+	severity := "-v=1"
 	if opts.IsDebug {
-		args = append(args, "-v=10")
+		severity = "-v=10"
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		logrus.SetLevel(logrus.DebugLevel)
@@ -84,6 +85,7 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		logrus.SetOutput(defaultLogger)
 	}
 
+	args = append(args, severity)
 	_ = klogFlagSet.Parse(args)
 }
 
