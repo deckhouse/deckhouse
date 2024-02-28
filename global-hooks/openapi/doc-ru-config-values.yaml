@@ -29,6 +29,8 @@ properties:
           **Нельзя** использовать в кластере DNS-имена (создавать соответствующие Ingress-ресурсы), подпадающие под указанный шаблон! Это может вызвать пересечения с создаваемыми Deckhouse Ingress-ресурсами.
 
           Если параметр не указан, Ingress-ресурсы создаваться не будут.
+
+          **Внимание: домен не должен совпадать с [clusterDomain](https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
       placement:
         description: |
           Настройки, определяющие расположение компонентов модулей Deckhouse по умолчанию.

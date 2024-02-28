@@ -10,6 +10,8 @@ lang: ru
 В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон DNS-имен, с учетом которого некоторые модули Deckhouse создают Ingress-ресурсы.
 
 Если у вас нет возможности заводить wildcard-записи DNS, для тестирования можно воспользоваться сервисом [sslip.io](https://sslip.io) или его аналогами.
+
+Домен не должен совпадать с [clusterDomain](.installing/configuration.html#clusterconfiguration-clusterdomain)!
 {% endalert %}
 
 Пример ресурса `ModuleConfig/global`:

@@ -44,6 +44,8 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           If this parameter is omitted, no Ingress resources will be created.
+
+          **Important: domain must be different from [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:
