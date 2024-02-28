@@ -1,4 +1,4 @@
-{{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+{{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
@@ -40,14 +40,13 @@ spec:
   selector:
     matchLabels:
       app: istio-cni-node
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
-      annotations:
-        ambient.istio.io/redirection: disabled
-        prometheus.io/path: /metrics
-        prometheus.io/port: "15014"
-        prometheus.io/scrape: "true"
-        sidecar.istio.io/inject: "false"
       labels:
         app: istio-cni-node
         sidecar.istio.io/inject: "false"
@@ -55,7 +54,8 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-        - args:
+        - name: install-cni
+          args:
             - --log_output_level=default:info
           command:
             - install-cni
@@ -110,7 +110,6 @@ spec:
                   resource: limits.cpu
           image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix)) }}
           imagePullPolicy: IfNotPresent
-          name: install-cni
           readinessProbe:
             failureThreshold: 3
             httpGet:
@@ -137,19 +136,13 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
-      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       restartPolicy: Always
       serviceAccountName: cni
       schedulerName: default-scheduler
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       terminationGracePeriodSeconds: 5
-      tolerations:
-        - effect: NoSchedule
-          operator: Exists
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - effect: NoExecute
-          operator: Exists
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       volumes:
         - hostPath:
             path: /opt/cni/bin
@@ -163,13 +156,4 @@ spec:
             path: /var/run/istio-cni
             type: ""
           name: cni-log-dir
-        - hostPath:
-            path: /var/run/netns
-            type: ""
-          name: cni-netns-dir
-  updateStrategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-    type: RollingUpdate
 {{- end }}

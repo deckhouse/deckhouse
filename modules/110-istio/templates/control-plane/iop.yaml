@@ -196,11 +196,11 @@ spec:
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
-    {{- if eq $.Values.istio.sidecarInjectionMode "Webhook" }}
+    {{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "InitContainer" }}
     istio_cni:
       enabled: false
     {{- end }}
-    {{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+    {{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "CNIPlugin" }}
     istio_cni:
       enabled: true
     {{- end }}

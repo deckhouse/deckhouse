@@ -1,4 +1,4 @@
-{{- if eq $.Values.istio.sidecarInjectionMode "CNIPlugin" }}
+{{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "CNIPlugin" }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -16,7 +16,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - namespaces
       - namespaces
       - pods
     verbs:

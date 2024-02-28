@@ -31,13 +31,6 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
-  sidecarInjectionMode:
-    type: string
-    enum: [Webhook, CNIPlugin]
-    x-examples: ["CNIPlugin"]
-    description: |
-      Uses istio-cni. Allows for solving the issue with sidecar containers when the restricted policy is enabled.
-    default: Webhook
   enableHTTP10:
     type: boolean
     default: false
@@ -214,6 +207,23 @@ properties:
         - {}
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  dataPlane:
+    type: object
+    description: Settings fot Istio data plane
+    default: {}
+    properties:
+      trafficRedirectionInSetupMode:
+        type: string
+        enum: [ InitContainer, CNIPlugin ]
+        x-examples: [ "CNIPlugin" ]
+        description: |
+          How to configure trafficRedirection in the Pod Network of applications for further interception of requests in Istio.
+          In the classic mode, the InitContainer sidecar-injector adds an init-container to application pods,
+          which configures trafficRedirection at the start of the pod. Since this requires superuser rights,
+          this mode does not work if one of the strict modes is enabled in the admission-policy-engine.
+          In the CNIPlugin mode, the setting of the network environment for Pods is handled by the CNI plugin,
+          which operates on each node and does not require privileges at the Pod manifest level.
+        default: InitContainer
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.
