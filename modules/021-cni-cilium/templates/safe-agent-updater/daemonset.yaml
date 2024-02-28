@@ -45,11 +45,20 @@ spec:
       serviceAccountName: safe-agent-updater
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
-      - name: prepull-image
+      - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
         command:
         - "/usr/bin/true"
+        terminationMessagePolicy: FallbackToLogsOnError
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: prepull-image-kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
+        command:
+        - "/bin/true"
         terminationMessagePolicy: FallbackToLogsOnError
         resources:
           requests:
