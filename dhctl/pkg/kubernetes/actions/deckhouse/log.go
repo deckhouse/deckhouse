@@ -77,6 +77,10 @@ func isErrorLine(line *logLine) bool {
 			// often we get only one error message per module
 			// it confuses users and we want hide it
 			"is not supported by cluster",
+			// all bootstrapped cloud clusters has this message
+			// it is normal because wait_for_all_master_nodes_to_become_initialized hook
+			// blocks main queue with this error
+			"waiting for master nodes to become initialized by cloud provider",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
