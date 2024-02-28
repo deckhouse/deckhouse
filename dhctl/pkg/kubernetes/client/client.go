@@ -16,8 +16,6 @@ package client
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	klient "github.com/flant/kube-client/client"
@@ -25,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -80,8 +77,6 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(5, 10)
-	// pass all klog messages to our logger
-	klog.SetOutputBySeverity("INFO", &klogWriter{})
 
 	switch {
 	case params.KubeConfigInCluster:
@@ -143,28 +138,4 @@ func AppKubernetesInitParams() *KubernetesInitParams {
 		KubeConfigContext:   app.KubeConfigContext,
 		KubeConfigInCluster: app.KubeConfigInCluster,
 	}
-}
-
-type klogWriter struct{}
-
-func (w *klogWriter) Write(msg []byte) (n int, err error) {
-	msgStr := string(msg)
-
-	// suppress throttling log from klog
-	if strings.Contains(msgStr, "due to client-side throttling, not priority and fairness") {
-		return 0, nil
-	}
-
-	switch msg[0] {
-	case 'W':
-		log.WarnLn(msgStr)
-	case 'E':
-		log.ErrorLn(msgStr)
-	case 'F':
-		log.ErrorLn(msgStr)
-		os.Exit(1)
-	default:
-		log.InfoLn(msgStr)
-	}
-	return 0, nil
 }

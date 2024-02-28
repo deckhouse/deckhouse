@@ -24,12 +24,13 @@ import (
 
 	"k8s.io/klog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (
@@ -65,16 +66,25 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
+
+	// klog
+	klogFlagSet := flag.NewFlagSet("klog", flag.ContinueOnError)
+	klog.InitFlags(klogFlagSet)
+	args := []string{
+		"-logtostderr=false",
+		"-stderrthreshold=FATAL",
+	}
+
 	if opts.IsDebug {
+		args = append(args, "-v=10")
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		logrus.SetLevel(logrus.DebugLevel)
-		klog.InitFlags(nil)
-		_ = flag.CommandLine.Parse([]string{"-v=10"})
-
 		// Wrap them with our default logger
 		logrus.SetOutput(defaultLogger)
 	}
+
+	_ = klogFlagSet.Parse(args)
 }
 
 type ProcessLogger interface {
