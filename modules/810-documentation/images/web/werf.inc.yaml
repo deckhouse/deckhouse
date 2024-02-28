@@ -223,5 +223,13 @@ git:
     setup: ['**/*']
   includePaths:
   - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/be
+  to: /comparison/be
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) (dict "ctx" . "mode" "module") }}

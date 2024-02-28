@@ -15,13 +15,14 @@
     {%- for edition in site.data.editions %}
       {%- if edition[0] == 'fe' %}{% continue %}{% endif %}
       <th style="text-align: center">{{ edition[0] | upcase }}</th>
-    {% endfor %}
+    {%- endfor %}
   </tr>
   </thead>
   <tbody>
   {%- for module in modules %}
     {%- assign modulePath = module[1].path %}
     {%- assign moduleName = module[0] %}
+    {%- assign moduleEdition = module[1].edition %}
     {%- assign moduleIsExternal = false %}
 
     {%- if siteD8Edition == 'ce' and module[1].edition != 'ce' %}
@@ -32,8 +33,16 @@
       {%- assign moduleIsExternal = true %}
     {%- endif %}
 
+    {%- if editionsWeight[moduleEdition] <= editionsWeight[siteD8Edition] %}
+       {%- if site.data.editions[siteD8Edition].excludeModules contains moduleName %}
+         {%- assign moduleIsExternal = true %}
+       {%- endif %}
+    {%- else %}
+      {%- assign moduleIsExternal = true %}
+    {%- endif %}
+
     {%- if moduleIsExternal %}
-      {%- assign modulePath = module[1].path | prepend: '/documentation/' | prepend: page.lang | prepend: site.url %}
+      {%- assign modulePath = module[1].path | prepend: '/documentation/v1/' | prepend: site.urls[page.lang] %}
     {%- endif %}
 
     <tr>
@@ -45,7 +54,6 @@
       {%- for edition in site.data.editions %}
         {%- if edition[0] == 'fe' %}{% continue %}{% endif %}
         {% assign currentEdition = edition[0] %}
-        {% assign moduleEdition = module[1].edition %}
         <td style="text-align: center; width: 170px;">
           {%- if editionsWeight[moduleEdition] <= editionsWeight[currentEdition] %}
 
