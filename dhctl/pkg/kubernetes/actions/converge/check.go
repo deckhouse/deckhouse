@@ -52,20 +52,23 @@ type NodeGroupCheckResult struct {
 	Status string `json:"status,omitempty"`
 }
 
+type TerraformPlan map[string]any
+
 type Statistics struct {
 	Node          []NodeCheckResult      `json:"nodes,omitempty"`
 	NodeTemplates []NodeGroupCheckResult `json:"node_templates,omitempty"`
 	Cluster       ClusterCheckResult     `json:"cluster,omitempty"`
+	TerraformPlan TerraformPlan          `json:"terraform_plan,omitempty"`
 }
 
-func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, *terraform.BaseInfrastructureDestructiveChanges, error) {
+func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
 	clusterState, err := GetClusterStateFromCluster(kubeCl)
 	if err != nil {
-		return terraform.PlanHasNoChanges, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 	}
 
 	if clusterState == nil {
-		return terraform.PlanHasNoChanges, nil, fmt.Errorf("kubernetes cluster has no state")
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("kubernetes cluster has no state")
 	}
 
 	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.CheckBaseInfraRunnerOptions{
@@ -107,16 +110,18 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 
 	var allErrs *multierror.Error
 
-	clusterChanged, destructiveChanges, err := checkClusterState(kubeCl, metaConfig, terraformContext, opts)
+	clusterChanged, terraformPlan, destructiveChanges, err := checkClusterState(kubeCl, metaConfig, terraformContext, opts)
 	switch {
 	case err != nil:
 		statistics.Cluster.Status = ErrorStatus
 		allErrs = multierror.Append(allErrs, err)
 	case clusterChanged == terraform.PlanHasChanges:
 		statistics.Cluster.Status = ChangedStatus
+		statistics.TerraformPlan = terraformPlan
 	case clusterChanged == terraform.PlanHasDestructiveChanges:
 		statistics.Cluster.Status = DestructiveStatus
 		statistics.Cluster.DestructiveChanges = destructiveChanges
+		statistics.TerraformPlan = terraformPlan
 	}
 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
