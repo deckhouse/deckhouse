@@ -81,7 +81,7 @@ func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(5, 10)
 	// pass all klog messages to our logger
-	klog.SetOutput(&klogWriter{})
+	klog.SetOutputBySeverity("INFO", &klogWriter{})
 
 	switch {
 	case params.KubeConfigInCluster:
