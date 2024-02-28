@@ -22,13 +22,12 @@ import (
 	"io"
 	"os"
 
-	"k8s.io/klog"
-
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
+	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
