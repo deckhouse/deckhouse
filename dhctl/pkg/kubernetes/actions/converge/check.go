@@ -52,21 +52,23 @@ type NodeGroupCheckResult struct {
 	Status string `json:"status,omitempty"`
 }
 
+type TerraformPlan map[string]any
+
 type Statistics struct {
 	Node          []NodeCheckResult      `json:"nodes,omitempty"`
 	NodeTemplates []NodeGroupCheckResult `json:"node_templates,omitempty"`
 	Cluster       ClusterCheckResult     `json:"cluster,omitempty"`
-	TerraformPlan string                 `json:"terraform_plan,omitempty"`
+	TerraformPlan TerraformPlan          `json:"terraform_plan,omitempty"`
 }
 
-func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, string, *terraform.BaseInfrastructureDestructiveChanges, error) {
+func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
 	clusterState, err := GetClusterStateFromCluster(kubeCl)
 	if err != nil {
-		return terraform.PlanHasNoChanges, "", nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 	}
 
 	if clusterState == nil {
-		return terraform.PlanHasNoChanges, "", nil, fmt.Errorf("kubernetes cluster has no state")
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("kubernetes cluster has no state")
 	}
 
 	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.CheckBaseInfraRunnerOptions{

@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -152,8 +153,11 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				require.NoError(t, err)
 			}
 
+			var expectedPlan map[string]any
+			require.NoError(t, json.Unmarshal(tc.showResp.resp, &expectedPlan))
+
 			require.Equal(t, tc.expectedRes, res)
-			require.Equal(t, string(tc.showResp.resp), plan)
+			require.Equal(t, expectedPlan, plan)
 		})
 	}
 }
