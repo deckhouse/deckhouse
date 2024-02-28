@@ -4,8 +4,20 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. Так как на master-узле по умолчанию работает только ограниченный набор системных компонентов, для полноценной работы кластера необходимо <a href="/documentation/latest/modules/040-node-manager/examples.html#добавление-статического-узла-в-кластер">добавить в кластер</a> хотя бы один worker-узел.
 
-{% offtopic title="Если вам достаточно одного master-узла..." %}
-<div>
+<div class="tabs">
+        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
+        Добавление worker-узла в кластер
+        </a>
+        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
+        Если достаточно одного master-узла
+        </a>
+</div>
+
+<div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>Если вы развернули кластер <strong>для ознакомительных целей</strong>, то кластера из одного узла может быть достаточно. Для того чтобы разрешить остальным компонентам Deckhouse работать на master-узле, необходимо снять с master-узла taint, выполнив на нем следующую команду:</p>
 
 <div markdown="0">
@@ -14,13 +26,34 @@
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
+
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-deckhouse
+spec:
+  nodeGroups:
+  - master
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
+<p>Укажите что созданный StorageClass должен использоваться как StorageClass по умолчанию, добавив аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code></p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
 </div>
 
-<p><strong>Выполнять дальнейшие шаги по добавлению нового узла в кластер не нужно!</strong></p>
 </div>
-{%- endofftopic %}
 
-Добавьте узел в кластер:
+<div id="block_layout_worker" class="tabs__content_worker">
+<p>Добавьте узел в кластер:</p>
 
 <ul>
   <li>
@@ -85,6 +118,7 @@ echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
 </ul>
 
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
+</div>
 
 Прежде чем продолжить:
 <ul><li><p>Если вы добавляли дополнительные узлы в кластер, убедитесь что они находятся в статусе <code>Ready</code>.</p>

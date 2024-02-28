@@ -4,8 +4,20 @@
 
 At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
 
-{% offtopic title="If a single master node is all you need…" %}
-<div>
+<div class="tabs">
+        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
+        Adding a worker node to a cluster
+        </a>
+        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
+        If one master node is enough
+        </a>
+</div>
+
+<div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>A single-node cluster may be sufficient for <strong>familiarization purposes</strong>. In this case, you do not need to add more nodes to the cluster. To permit the other Deckhouse components to run on the master node, remove the taint from the master node by running the following command on it:</p>
 
 <div markdown="0">
@@ -16,11 +28,32 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
 </div>
 
-<p><strong>Note that you do not need to follow the steps below on how to add a new node to the cluster.</strong></p>
-</div>
-{%- endofftopic %}
+<p>Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-deckhouse
+spec:
+  nodeGroups:
+  - master
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
 
-Add a new node to the cluster:
+<p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
+</div>
+
+<div id="block_layout_worker" class="tabs__content_worker">
+<p>Add a new node to the cluster:</p>
 
 <ul>
   <li>
@@ -75,7 +108,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-b
 {% endsnippetcut %}
   </li>
   <li>
-    On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:    
+    On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:
 {% snippetcut %}
 ```bash
 echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
@@ -85,6 +118,7 @@ echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
 </ul>
 
 <p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
+</div>
 
 Before you go further:
 <ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
