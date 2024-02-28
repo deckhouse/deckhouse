@@ -1,6 +1,9 @@
 {{- if ne $.Env "development" -}}
 {{- $_ := set . "Env" "EE" }}
 {{- end }}
+
+{{- $_ := set . "YQ4_VERSION" "v4.9.6" }}
+
 ---
 project: deckhouse-web
 configVersion: 1
@@ -41,11 +44,15 @@ docker:
     LC_ALL: en_US.UTF-8
 ansible:
   install:
-    - shell: |
+    - name: "Install tools"
+      shell: |
         apk add rsync jq
+        wget https://github.com/mikefarah/yq/releases/download/{{ .YQ4_VERSION }}/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    - name: "Update system rubygems and install gem bundler"
+      shell: |
         gem update --system 3.2.3
         gem install bundler -v 2.4.3
-    - name: "Install Dependencies"
+    - name: "Install dependencies"
       shell: bundle install
       args:
         executable: /bin/bash
@@ -135,6 +142,13 @@ ansible:
     - name: "Make the supported OS & K8S version array"
       shell: |
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
+    - name: "Convert editions structure"
+      shell: |
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
       args:
         warn: false
         executable: /bin/bash
