@@ -36,7 +36,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node")) | nindent 2 }}
 spec:
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: istio-cni-node

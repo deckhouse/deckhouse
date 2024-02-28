@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// If istio-cni is enabled and DaemonSet istio-cni is created.
-// We need to set cni-exclusive: "false" to avoid a conflict writing to /etc/cni/net.d/*.conflist.
+// If istio-cni in istio module is enabled, which means the istio-cni-node DaemonSet is created,
+// we need to set the cilium-agent's cni-exclusive setting to "false" to avoid writing conflicts to the /etc/cni/net.d/*.conflist file.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -45,15 +45,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: daemonsetFilter,
 		},
 	},
-}, setExclusiveMode)
+}, discoveryIsIstioCNIEnabled)
 
 func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
 }
 
-func setExclusiveMode(input *go_hook.HookInput) error {
-	istioCniDaemonSet := input.Snapshots["istio-cni-daemonset"]
-	if len(istioCniDaemonSet) < 1 {
+func discoveryIsIstioCNIEnabled(input *go_hook.HookInput) error {
+	istioCniDaemonSets := input.Snapshots["istio-cni-daemonset"]
+	if len(istioCniDaemonSets) == 0 {
 		input.Values.Set("cniCilium.internal.isIstioCNIEnabled", false)
 	} else {
 		input.Values.Set("cniCilium.internal.isIstioCNIEnabled", true)
