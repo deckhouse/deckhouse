@@ -72,6 +72,7 @@ type SecurityPolicySpec struct {
 		} `json:"allowedFlexVolumes,omitempty"`
 		AllowedVolumes         []string           `json:"allowedVolumes,omitempty"`
 		ReadOnlyRootFilesystem bool               `json:"readOnlyRootFilesystem,omitempty"`
+		AllowedClusterRoles    []string           `json:"allowedClusterRoles,omitempty"`
 		FsGroup                *SelectUIDStrategy `json:"fsGroup,omitempty"`
 		RunAsUser              *SelectUIDStrategy `json:"runAsUser,omitempty"`
 		RunAsGroup             *SelectUIDStrategy `json:"runAsGroup,omitempty"`

@@ -165,6 +165,8 @@ spec:
                             description: "Значения для SELinux user-меток."
                     allowedVolumes:
                       description: "Список volume-плагинов, доступных к использованию."
+                    allowedClusterRoles:
+                      description: "TODO"
                 match:
                   properties:
                     namespaceSelector:

@@ -339,6 +339,11 @@ spec:
                     readOnlyRootFilesystem:
                       type: boolean
                       description: "Defines if it's possible to run containers with non-read only file system."
+                    allowedClusterRoles:
+                      type: array
+                      description: "TODO"
+                      items:
+                        type: string
                     seccompProfiles:
                       type: object
                       description: "This field specifies the list of allowed profiles that may be set for the Pod or container’s seccomp annotations."
