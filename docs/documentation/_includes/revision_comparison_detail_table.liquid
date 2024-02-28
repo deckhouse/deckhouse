@@ -2,94 +2,111 @@
 {%- assign supported_img_url = '/images/icons/supported.svg' %}
 {%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
 {%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
-{%- assign revision = 'fe' %}
+{%- assign siteD8Edition = 'fe' %}
+{%- assign editionsWeight = site.data.editions-weight %}
 {%- if site.mode == 'module' and site.d8Revision %}
-{%- assign revision = site.d8Revision | downcase %}
+  {%- assign siteD8Edition = site.d8Revision | downcase %}
 {%- endif %}
 
 <table markdown="0">
-<thead>
+  <thead>
+  <tr>
+    <th style="text-align: center"></th>
+    {%- for edition in site.data.editions %}
+      {%- if edition[0] == 'fe' %}{% continue %}{% endif %}
+      <th style="text-align: center">{{ edition[0] | upcase }}</th>
+    {%- endfor %}
+  </tr>
+  </thead>
+  <tbody>
+  {%- for module in modules %}
+    {%- assign modulePath = module[1].path %}
+    {%- assign moduleName = module[0] %}
+    {%- assign moduleEdition = module[1].edition %}
+    {%- assign moduleIsExternal = false %}
+
+    {%- if siteD8Edition == 'ce' and module[1].edition != 'ce' %}
+      {%- assign moduleIsExternal = true %}
+    {%- endif %}
+
+    {%- if siteD8Edition == 'ee' and module[1].edition == 'fe' %}
+      {%- assign moduleIsExternal = true %}
+    {%- endif %}
+
+    {%- if editionsWeight[moduleEdition] <= editionsWeight[siteD8Edition] %}
+       {%- if site.data.editions[siteD8Edition].excludeModules contains moduleName %}
+         {%- assign moduleIsExternal = true %}
+       {%- endif %}
+    {%- else %}
+      {%- assign moduleIsExternal = true %}
+    {%- endif %}
+
+    {%- if moduleIsExternal %}
+      {%- assign modulePath = module[1].path | prepend: '/documentation/v1/' | prepend: site.urls[page.lang] %}
+    {%- endif %}
+
     <tr>
-      <th style="text-align: center"></th>
-      <th style="text-align: center">CE/BE</th>
-      <th style="text-align: center"><a style="color: #fff;" href="{{ site.url }}/products/enterprise_edition.html">EE</a></th>
+      <td style="text-align: left">
+        <a href="{{ modulePath }}"
+          {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+        >{{ moduleName }}</a>
+      </td>
+      {%- for edition in site.data.editions %}
+        {%- if edition[0] == 'fe' %}{% continue %}{% endif %}
+        {% assign currentEdition = edition[0] %}
+        <td style="text-align: center; width: 170px;">
+          {%- if editionsWeight[moduleEdition] <= editionsWeight[currentEdition] %}
+
+            {%- if edition[1].excludeModules contains moduleName %}
+               <img src="{{ notsupported_img_url }}">
+            {%- else %}
+               {%- if module[1].parameters-ee and (editionsWeight[currentEdition] < editionsWeight['ee'])  <%}
+                 {%- assign parametersList = '' %}
+                 {%- for parameter in module[1].parameters-ee %}
+                   {%- case parameter[1]['resourceType'] %}
+                     {%- when "crd" %}
+                       {%- assign resourceFile = 'cr.html' %}
+                     {%- when "moduleConfig" %}
+                       {%- assign resourceFile = 'configuration.html' %}
+                     {%- when "clusterConfig" %}
+                       {%- assign resourceFile = 'cluster_configuration.html' %}
+                     {%- else %}
+                       {%- assign resourceFile = '' %}
+                   {%- endcase -%}
+
+                   {%- capture parameterLink %}<a
+                     href='{{ module[1]['path'] }}{{ resourceFile }}#{{ parameter[1]['linkAnchor'] }}'>{{ parameter[1]['title'] }}</a>{% endcapture %}
+                   {%- assign parametersList = parametersList | append: parameterLink %}
+                   {%- unless forloop.last %}{%- assign parametersList = parametersList | append: "<br />" %}{% endunless %}
+                 {%- endfor %}
+                 <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
+                                                    data-tippy-content="{{ site.data.i18n.comparison['except_parameters'][page.lang] }}{{ parametersList }}"></span>
+               {%- else %}
+                 <img src="{{ supported_img_url }}">
+               {%- endif %}
+            {%- endif %}
+
+          {%- else %}
+            <img src="{{ notsupported_img_url }}">
+          {%- endif %}
+        </td>
+      {%- endfor %}
     </tr>
-</thead>
-<tbody>
-{%- for module in modules %}
-{%- assign modulePath = module[1].path %}
-{%- assign moduleName = module[0] %}
-{%- assign moduleIsExternal = false %}
+  {%- endfor %}
 
-{%- if revision == 'ce' and module[1].revision != 'ce' %}
-{%- assign moduleIsExternal = true %}
-{%- endif %}
-
-{%- if revision == 'ee' and module[1].revision == 'fe' %}
-{%- assign moduleIsExternal = true %}
-{%- endif %}
-
-{%- if moduleIsExternal %}
-{%- assign modulePath = module[1].path | prepend: '/documentation/' | prepend: page.lang | prepend: site.url %}
-{%- endif %}
-
-<tr>
-  <td style="text-align: left">
-    <a href="{{ modulePath }}"
-    {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
-    >{{ moduleName }}</a>
-  </td>
-  <td style="text-align: center; width: 170px;"><!-- CE -->
-      {%- if module[1].revision == 'ee' or module[1].revision == 'fe'  %}
-      <img src="{{ notsupported_img_url }}">
-      {%- else %}
-        {%- if module[1].parameters-ee %}
-          {%- assign parametersList = '' %}
-          {%- for parameter in module[1].parameters-ee %}
-            {%- case parameter[1]['resourceType'] %}
-              {%- when "crd" %}
-                {%- assign resourceFile = 'cr.html' %}
-              {%- when "moduleConfig" %}
-                {%- assign resourceFile = 'configuration.html' %}
-              {%- when "clusterConfig" %}
-                {%- assign resourceFile = 'cluster_configuration.html' %}
-              {%- else %}
-                {%- assign resourceFile = '' %}
-            {%- endcase -%}
-
-            {%- capture parameterLink  %}<a href='{{ module[1]['path'] }}{{ resourceFile }}#{{ parameter[1]['linkAnchor'] }}'>{{ parameter[1]['title'] }}</a>{% endcapture %}
-            {%- assign parametersList = parametersList |  append: parameterLink %}
-            {%- unless forloop.last %}{%- assign parametersList = parametersList |  append: "<br />" %}{% endunless %}
-          {%- endfor %}
-          <span class="table__asterisk"><img src="{{ partially_supported_img_url }}" data-tippy-content="{{ site.data.i18n.comparison['except_parameters'][page.lang] }}{{ parametersList }}"></span>
-        {%- else %}
-          <img src="{{ supported_img_url }}">
-        {%- endif %}
-      {%- endif %}
-  </td>
-  <td style="text-align: center; width: 170px;"><!-- EE -->
-      {%- if module[1].revision == 'ee' or module[1].revision == 'ce'  %}
-      <img src="{{ supported_img_url }}">
-      {%- else %}
-      <img src="{{ notsupported_img_url }}">
-      {%- endif %}
-  </td>
-</tr>
-{%- endfor %}
-
-</tbody>
+  </tbody>
 </table>
 
 <script type="text/javascript">
-$(document).ready(function () {
+  $(document).ready(function () {
     tippy('[data-tippy-content]', {
-        interactive: true,
-        placement: 'left',
-        interactiveDebounce: 75,
-        maxWidth: 900,
-        theme: 'comparison',
-        allowHTML: true,
-        arrow: false,
-      });
-});
+      interactive: true,
+      placement: 'left',
+      interactiveDebounce: 75,
+      maxWidth: 900,
+      theme: 'comparison',
+      allowHTML: true,
+      arrow: false,
+    });
+  });
 </script>

@@ -279,6 +279,12 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /editions.yaml
+  to: /srv/jekyll-data/documentation/_data/editions-source.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 - add: /dhctl/pkg/config/base.go
   to: /srv/jekyll-data/documentation/_data/dhctl-base.go
   owner: jekyll
