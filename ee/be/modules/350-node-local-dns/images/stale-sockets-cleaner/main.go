@@ -44,6 +44,16 @@ var (
 	networkOrder = binary.BigEndian
 )
 
+/*
+When cni-cilium and node-local-dns are enabled, and pod node-local-dns has been restarted, we may encounter problems with dns.
+This is because the udp socket remains active in the application pods until the ip address of the pod, which has already been deleted.
+To prevent this problem, we perform the following actions:
+- We get the name and PodCidr of the node on which the application is running
+- Then every 30 seconds
+  - We get the current IP address of the node-local-dns pod
+  - We get all UDP sockets on the node, and look among them for those with dst_port 53, and dsp_ip belongs to PodCidr, but it is not equal to the current ip address of the node-local-dns pod
+  - If we find such sockets, then we delete them.
+*/
 func main() {
 	log.Infof("[StaleSockCleaner] Start")
 
@@ -77,7 +87,7 @@ func main() {
 	for {
 		time.Sleep(scanInterval)
 		// Get ip of pod node-local-dns running on the node
-		nldPodNameOnSameNode, nldPodIPOnSameNode, err := getNLDPodNameIP(kubeClient, currentNodeName)
+		nldPodNameOnSameNode, nldPodIPOnSameNode, err := getNLDPodNameAndIPByNodeName(kubeClient, currentNodeName)
 		if err != nil {
 			log.Errorf("[StaleSockCleaner] Failed to get IP of the nld Pod. Error: %v", err)
 			continue
@@ -96,7 +106,7 @@ func main() {
 			For each socket check:
 			- If DST Port is equal to nldDstPort?
 			- Is DST IP contained in podCIDR?
-			- Isn't DST IP equal to nldIP?
+			- Isn't DST IP equal to nldPodIP?
 			If all checks are true, then delete such socket
 		*/
 		for _, sock := range allUDPSockets {
@@ -104,7 +114,7 @@ func main() {
 				podCIDROnSameNode.Contains(sock.ID.Destination) {
 				if !sock.ID.Destination.Equal(nldPodIPOnSameNode) {
 					log.Infof(
-						"[StaleSockCleaner] Finded socket %s:%v -> %s:%v, where dst_ip is contained in the podCIDR (%s) and dst_port is equal %v.",
+						"[StaleSockCleaner] Found socket %s:%v -> %s:%v, where dst_ip is contained in the podCIDR (%s) and dst_port is equal %v.",
 						sock.ID.Source.String(),
 						sock.ID.SourcePort,
 						sock.ID.Destination.String(),
@@ -162,8 +172,8 @@ func getPodCIDR(kubeClient kubernetes.Interface, nodeName string) (*net.IPNet, e
 	return podCIDR, nil
 }
 
-// Get current Pod IP by Node name
-func getNLDPodNameIP(kubeClient kubernetes.Interface, nodeName string) (string, net.IP, error) {
+// Get current Pod Name and IP by Node name
+func getNLDPodNameAndIPByNodeName(kubeClient kubernetes.Interface, nodeName string) (string, net.IP, error) {
 	nldPodsOnSameNode, err := kubeClient.CoreV1().Pods(nldNS).List(
 		context.TODO(),
 		metav1.ListOptions{
