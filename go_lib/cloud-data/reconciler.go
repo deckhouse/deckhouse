@@ -206,23 +206,16 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
 
-	c.logger.Infof("InstanceTypes: %v", instanceTypes)
-	if instanceTypes == nil {
-		c.logger.Infoln("INSIDE IF STATEMENT")
-		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-		return
-	}
+	// if instanceTypes == nil {
+	// 	c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+	// 	return
+	// }
 
 	sort.SliceStable(instanceTypes, func(i, j int) bool {
 		return instanceTypes[i].Name < instanceTypes[j].Name
 	})
 
-	for i := 1; i <= 3; i++ {
-		if i > 1 {
-			c.logger.Infoln("Waiting 3 seconds before next attempt")
-			time.Sleep(3 * time.Second)
-		}
-
+	err = retryFunc(3, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		data, errGetting := c.k8sDynamicClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
 		cancel()
@@ -231,7 +224,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 			o, err := c.instanceTypesCloudDiscoveryUnstructured(nil, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
-				return
+				return err
 			}
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
@@ -239,8 +232,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
-				continue
+				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
 
 			errGetting = nil
@@ -248,7 +240,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 			o, err := c.instanceTypesCloudDiscoveryUnstructured(data, instanceTypes)
 			if err != nil {
 				// return because we have error in conversion
-				return
+				return err
 			}
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
@@ -256,22 +248,22 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
-				continue
+				return fmt.Errorf("Cannot update cloud data resource: %v", err)
 			}
 		}
 
 		if errGetting != nil {
-			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
-			continue
+			return fmt.Errorf("Cannot update cloud data resource: %v", errGetting)
 		}
 
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-		return
-	}
+		return nil
+	})
 
-	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	if err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	}
 }
 
 func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
@@ -428,14 +420,14 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	c.logger.Infoln("Start orphaned disks discovery step")
 	defer c.logger.Infoln("Finish orphaned disks discovery step")
 
-	retryFunc(3, 3, c.logger, func() error {
+	err := retryFunc(3, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		disksMeta, err := c.discoverer.DisksMeta(cctx)
 		if err != nil {
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(1.0)
-			return fmt.Errorf("Getting disks meta error: %v\n", err)
+			return fmt.Errorf("Getting disks meta error: %v", err)
 		}
 
 		if len(disksMeta) == 0 {
@@ -469,8 +461,10 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 		return nil
 	})
 
-	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	if err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	}
 }
 
 type retryable func() error
