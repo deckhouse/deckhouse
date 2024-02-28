@@ -519,7 +519,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
+	if _, ok := node.Annotations[drainingAnnotationKey]; ok {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -533,7 +533,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
+	if _, ok := node.Annotations[drainedAnnotationKey]; ok {
 		isDrained = true
 	}
 
@@ -575,6 +575,12 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved && node.IsDisruptionRequired && node.IsDraining:
 		return "DrainingForDisruption"
 
+	case node.IsDraining:
+		return "Draining"
+
+	case node.IsDrained:
+		return "Drained"
+
 	case node.IsApproved && node.IsDisruptionRequired && ng.Disruptions.ApprovalMode == "Automatic":
 		return "WaitingForDisruptionApproval"
 
@@ -605,7 +611,7 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 }
 
 var metricStatuses = []string{
-	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
+	"WaitingForApproval", "Approved", "DrainingForDisruption", "Draining", "Drained", "WaitingForDisruptionApproval",
 	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 }
 

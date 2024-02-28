@@ -22,12 +22,14 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -196,6 +198,51 @@ data:
 			Expect(ev.Field("type").String()).To(Equal("Warning"))
 			Expect(ev.Field("regarding.kind").String()).To(Equal("Node"))
 			Expect(ev.Field("regarding.name").String()).To(Equal("foo-1"))
+		})
+	})
+
+	Context("simulate error metrics", func() {
+		BeforeEach(func() {
+
+			st := f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: foo-2
+  labels:
+    node.deckhouse.io/group: "master"
+  annotations:
+    update.node.deckhouse.io/draining: "bashible"
+`)
+			f.BindingContexts.Set(st)
+			testMoveNodesToStaticClient(f)
+			f.RunHook()
+		})
+
+		It("Should generate metrics", func() {
+			k8sClient := f.BindingContextController.FakeCluster().Client
+			node1Core, _ := k8sClient.CoreV1().Nodes().Get(context.Background(), "foo-2", v1.GetOptions{})
+			Expect(node1Core.Spec.Unschedulable).To(BeTrue())
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Node", "foo-2").Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "foo-2").Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeTrue())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_node_draining",
+				Action: "expire",
+			}))
+
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_node_draining",
+				Action: "set",
+				Value:  pointer.Float64(1.0),
+				Labels: map[string]string{
+					"node":    "foo-2",
+					"message": "unable to parse requirement: <nil>: Invalid value: \"a:\": name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')",
+				},
+			}))
 		})
 	})
 })
