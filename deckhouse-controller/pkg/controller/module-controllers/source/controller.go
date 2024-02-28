@@ -523,7 +523,7 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			ModuleName: moduleName,
 			Version:    semver.MustParse(result.ModuleVersion),
 			Weight:     result.ModuleWeight,
-			Changelog:  result.Changelog,
+			Changelog:  newEntityMap(result.Changelog),
 		},
 	}
 
@@ -548,6 +548,14 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 		return err
 	}
 	return nil
+}
+
+func newEntityMap(m map[string]any) map[string]v1alpha1.Entity {
+	result := make(map[string]v1alpha1.Entity, len(m))
+	for k, v := range m {
+		result[k] = v1alpha1.NewEntity(v)
+	}
+	return result
 }
 
 func (c *Controller) saveSourceChecksums(msName string, checksums moduleChecksum) {
