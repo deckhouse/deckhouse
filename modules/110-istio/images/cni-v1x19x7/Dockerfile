@@ -1,6 +1,6 @@
-# Based on https://github.com/istio/istio/blob/1.19.4/cni/deployments/kubernetes/Dockerfile.install-cni
+# Based on https://github.com/istio/istio/blob/1.19.7/cni/deployments/kubernetes/Dockerfile.install-cni
 ARG BASE_UBUNTU
-FROM docker.io/istio/install-cni:1.19.4@sha256:f27f76993f46db2827b2381daf66d9354ac3a34d4040eecc1375819c8eb085ad as artifact
+FROM docker.io/istio/install-cni:1.19.7@sha256:94b0b7728cfaeb0595afbcd69aad05f8c4fbda2dbfdbeddb25d12934c0f673b1 as artifact
 
 FROM $BASE_UBUNTU
 

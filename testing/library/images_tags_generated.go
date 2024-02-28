@@ -232,7 +232,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cniV1x12x6":        "imageHash-istio-cniV1x12x6",
 		"cniV1x13x7":        "imageHash-istio-cniV1x13x7",
 		"cniV1x16x2":        "imageHash-istio-cniV1x16x2",
-		"cniV1x19x4":        "imageHash-istio-cniV1x19x4",
+		"cniV1x19x7":        "imageHash-istio-cniV1x19x7",
 		"kiali":             "imageHash-istio-kiali",
 		"metadataDiscovery": "imageHash-istio-metadataDiscovery",
 		"metadataExporter":  "imageHash-istio-metadataExporter",
