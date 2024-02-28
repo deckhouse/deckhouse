@@ -76,39 +76,25 @@ func (mr *ModuleRelease) GetModuleSource() string {
 	return mr.Labels["source"]
 }
 
-func NewEntity(val any) Entity {
-	return Entity{val: val}
-}
+type Changelog map[string]any
 
-type Entity struct {
-	val any
-}
-
-var _ json.Marshaler = (*Entity)(nil)
-var _ json.Unmarshaler = (*Entity)(nil)
-
-func (e *Entity) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &e.val)
-}
-
-func (e *Entity) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.val)
-}
-
-func (e *Entity) DeepCopyInto(out *Entity) {
-	if out == nil {
-		return
+func (c Changelog) DeepCopy() Changelog {
+	if c == nil {
+		return nil
 	}
 
-	data, err := e.MarshalJSON()
+	data, err := json.Marshal(c)
 	if err != nil {
 		panic(err)
 	}
 
-	err = out.UnmarshalJSON(data)
+	var out Changelog
+	err = json.Unmarshal(data, &out)
 	if err != nil {
 		panic(err)
 	}
+
+	return out
 }
 
 type ModuleReleaseSpec struct {
@@ -118,7 +104,7 @@ type ModuleReleaseSpec struct {
 
 	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
 	Requirements map[string]string `json:"requirements,omitempty"`
-	Changelog    map[string]Entity `json:"changelog,omitempty"`
+	Changelog    Changelog         `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
