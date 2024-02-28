@@ -87,6 +87,31 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 
 	args = append(args, severity)
 	_ = klogFlagSet.Parse(args)
+
+	klog.SetOutputBySeverity("INFO", &writer{})
+}
+
+type writer struct {
+}
+
+func (w *writer) Write(msg []byte) (n int, err error) {
+	if len(msg) == 0 {
+		return 0, nil
+	}
+	switch msg[0] {
+	case 'W':
+		defaultLogger.LogWarnLn(string(msg))
+	case 'E':
+		defaultLogger.LogErrorLn(string(msg))
+	case 'F':
+
+		defaultLogger.LogErrorLn(string(msg))
+		os.Exit(1)
+	default:
+
+		defaultLogger.LogInfoLn(string(msg))
+	}
+	return 0, nil
 }
 
 type ProcessLogger interface {
