@@ -262,7 +262,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Errorf("Cannot update cloud data resource: %v. See error messages below.", err)
 	}
 }
 
@@ -482,7 +482,7 @@ func retryFunc(attempts int, sleep int, logger *log.Entry, fn retryable) error {
 
 		logger.Errorf("Attempt %d of %d. %v", i+1, attempts, err)
 
-		if i < attempts {
+		if i < attempts-1 {
 			logger.Infof("Waiting %d seconds before next attempt", sleep)
 			time.Sleep(time.Duration(sleep) * time.Second)
 		}
