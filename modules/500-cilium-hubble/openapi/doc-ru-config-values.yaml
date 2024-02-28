@@ -54,7 +54,7 @@ properties:
           - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer, заданному в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
           - `Disabled` — доступ только по HTTP.
-          - `OnlyInURI` — доступ по HTTP с внешним HTTPS-балансером. Он терминирует HTTPS, и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — доступ по HTTP с внешним HTTPS-балансировщиком. Балансировщик терминирует HTTPS, и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         description: "Настройки для certmanager."
         properties:

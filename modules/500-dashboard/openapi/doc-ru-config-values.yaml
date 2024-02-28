@@ -48,7 +48,7 @@ properties:
           * `CertManager` — dashboard работает по HTTPS и заказывает сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — dashboard работает по HTTPS, используя сертификат из пространства имен `d8-system`;
           * `Disabled` — dashboard работает только по HTTP;
-          * `OnlyInURI` — dashboard работает по HTTP с внешним HTTPS-балансировщиком. Он терминирует HTTPS, и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) генерируются с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          * `OnlyInURI` — dashboard работает по HTTP с внешним HTTPS-балансировщиком. Балансировщик терминирует HTTPS, и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) генерируются с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
