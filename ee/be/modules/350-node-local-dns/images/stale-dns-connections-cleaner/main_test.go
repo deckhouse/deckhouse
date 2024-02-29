@@ -4,3 +4,181 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 */
 
 package main
+
+import (
+	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/client-go/kubernetes/fake"
+
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+const (
+	testNodeName = "testcluster-worker-02334ee2-7694f-h9zgk"
+)
+
+func TestGetPodCIDR(t *testing.T) {
+	testCases := []struct {
+		name             string
+		nodeName         string
+		k8sObjects       []runtime.Object
+		expectPodCIDRStr string
+		expectSuccess    bool
+	}{
+		{
+			name:             "Node_doesnt_exist",
+			nodeName:         testNodeName,
+			k8sObjects:       []runtime.Object{},
+			expectPodCIDRStr: "10.111.1.0/24",
+			expectSuccess:    false,
+		},
+		{
+			name:     "Node_exist_but_PodCIDR_doesnt",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+					Spec: v1.NodeSpec{
+						PodCIDR: "",
+					},
+				},
+			},
+			expectPodCIDRStr: "10.111.1.0/24",
+			expectSuccess:    false,
+		},
+		{
+			name:     "Node_and_PodCIDR_exist",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+					Spec: v1.NodeSpec{
+						PodCIDR: "10.111.1.0/24",
+					},
+				},
+			},
+			expectPodCIDRStr: "10.111.1.0/24",
+			expectSuccess:    true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			PodCIDR, err := getPodCIDR(fakeClientset, test.nodeName)
+
+			switch test.expectSuccess {
+			case false:
+				if err == nil {
+					t.Fatalf("expected error but received none")
+				} else {
+					t.Logf("expected error and got it: %v", err)
+				}
+			case true:
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				} else {
+					if test.expectPodCIDRStr != PodCIDR.String() {
+						t.Fatalf("podCIDR is not equal to the expected value")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGetNLDPodNameAndIPByNodeName(t *testing.T) {
+	testCases := []struct {
+		name           string
+		nodeName       string
+		k8sObjects     []runtime.Object
+		expectPodIPStr string
+		expectPodName  string
+		expectSuccess  bool
+	}{
+		{
+			name:           "Pod_does_not_exist",
+			nodeName:       testNodeName,
+			k8sObjects:     []runtime.Object{},
+			expectPodIPStr: "10.111.1.42",
+			expectPodName:  "node-local-dns-12345",
+			expectSuccess:  false,
+		},
+		{
+			name:     "Pod_exist_but_doesn't_have_IP",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node-local-dns-12345",
+						Namespace: nldNS,
+						Labels: map[string]string{
+							"app": "node-local-dns",
+						},
+					},
+					Spec: v1.PodSpec{
+						NodeName: testNodeName,
+					},
+				},
+			},
+			expectPodIPStr: "",
+			expectPodName:  "node-local-dns-12345",
+			expectSuccess:  true,
+		},
+		{
+			name:     "Pod_exist_and_have_IP",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node-local-dns-12345",
+						Namespace: nldNS,
+						Labels: map[string]string{
+							"app": "node-local-dns",
+						},
+					},
+					Spec: v1.PodSpec{
+						NodeName: testNodeName,
+					},
+					Status: v1.PodStatus{
+						PodIP: "10.111.1.42",
+					},
+				},
+			},
+			expectPodIPStr: "10.111.1.42",
+			expectPodName:  "node-local-dns-12345",
+			expectSuccess:  true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			podName, podIP, err := getNLDPodNameAndIPByNodeName(fakeClientset, test.nodeName)
+
+			switch test.expectSuccess {
+			case false:
+				if err == nil {
+					t.Fatalf("expected error but received none")
+				} else {
+					t.Logf("expected error and got it: %v", err)
+				}
+			case true:
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				} else {
+					if test.expectPodName != podName {
+						t.Fatalf("podName is not equal to the expected value")
+					} else if test.expectPodIPStr != podIP.String() {
+						t.Fatalf("podIP is not equal to the expected value")
+					}
+				}
+			}
+		})
+	}
+}
