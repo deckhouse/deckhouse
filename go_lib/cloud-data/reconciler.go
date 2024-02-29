@@ -206,10 +206,10 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
 
-	// if instanceTypes == nil {
-	// 	c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-	// 	return
-	// }
+	if instanceTypes == nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+		return
+	}
 
 	sort.SliceStable(instanceTypes, func(i, j int) bool {
 		return instanceTypes[i].Name < instanceTypes[j].Name
@@ -262,7 +262,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorf("Cannot update cloud data resource: %v. See error messages below.", err)
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
@@ -334,12 +334,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		return
 	}
 
-	for i := 1; i <= 3; i++ {
-		if i > 1 {
-			c.logger.Infoln("Waiting 3 seconds before next attempt")
-			time.Sleep(3 * time.Second)
-		}
-
+	err = retryFunc(3, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		secret, errGetting := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-cloud-provider-discovery-data", metav1.GetOptions{})
 		cancel()
@@ -350,8 +345,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
-				continue
+				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
 
 			errGetting = nil
@@ -365,22 +359,22 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 			cancel()
 
 			if err != nil {
-				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
-				continue
+				return fmt.Errorf("Cannot update cloud data resource: %v", err)
 			}
 		}
 
 		if errGetting != nil {
-			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
-			continue
+			return fmt.Errorf("Cannot get cloud data resource: %v", errGetting)
 		}
 
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
-		return
-	}
+		return nil
+	})
 
-	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	if err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+	}
 }
 
 func (c *Reconciler) createSecretWithDiscoveryData(discoveryData []byte) *v1.Secret {
