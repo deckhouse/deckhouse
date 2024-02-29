@@ -155,6 +155,15 @@ func (d *Discoverer) getStorageDomains(
 	return sd, nil
 }
 
+// NotImplemented
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	return []v1alpha1.DiskMeta{}, nil
+}
+
+func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
+	return []v1alpha1.InstanceType{}, nil
+}
+
 func mergeStorageDomains(
 	sds []v1alpha1.ZvirtStorageDomain,
 	cloudSds []ovirtclient.StorageDomain,
