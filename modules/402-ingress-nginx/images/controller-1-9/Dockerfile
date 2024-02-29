@@ -67,9 +67,6 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
     make && \
     make install && \
-    cp -f /usr/local/pcre/include/* /usr/include && \
-    rm -f /lib64/libpcre* && \
-    cp -f /usr/local/pcre/lib/*.so* /lib64 && \
     cd / && \
     patch build.sh < nginx-build.patch && \
     /build.sh
