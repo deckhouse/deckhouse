@@ -212,7 +212,7 @@ properties:
     description: Settings fot Istio data plane
     default: {}
     properties:
-      trafficRedirectionInSetupMode:
+      trafficRedirectionSetupMode:
         type: string
         enum: [ InitContainer, CNIPlugin ]
         x-examples: [ "CNIPlugin" ]

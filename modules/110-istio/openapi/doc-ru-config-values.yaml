@@ -107,7 +107,7 @@ properties:
   dataPlane:
     description: Settings fot Istio data plane
     properties:
-      trafficRedirectionInSetupMode:
+      trafficRedirectionSetupMode:
         description: |
           Каким образом производить настройку trafficRedirection в Pod Network приложений для дальнейшего перехвата запросов в Istio.
           В классическом режиме InitContainer sidecar-injector добавляет подам приложений init-container,

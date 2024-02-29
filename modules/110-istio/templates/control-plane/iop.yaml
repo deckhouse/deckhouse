@@ -196,16 +196,12 @@ spec:
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
-    {{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "InitContainer" }}
     istio_cni:
+    {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+      enabled: true
+    {{- else }}
       enabled: false
     {{- end }}
-    {{- if eq $.Values.istio.dataPlane.trafficRedirectionInSetupMode "CNIPlugin" }}
-    istio_cni:
-      enabled: true
-    {{- end }}
-    cni:
-      image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix )) }}
 
     pilot:
       autoscaleEnabled: false
