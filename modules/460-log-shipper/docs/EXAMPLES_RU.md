@@ -29,7 +29,7 @@ spec:
 
 ## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
+Чтение логов подов из namespace `whispers` только с лэйблом `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -99,7 +99,7 @@ spec:
 
 ## Чтение только подов в указанном namespace и с определенным label
 
-Пример чтения только подов, имеющих label `app=booking`, в namespace `test-whispers`:
+Пример чтения только подов, имеющих лейбл `app=booking`, в namespace `test-whispers`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -126,44 +126,44 @@ spec:
 
 ## Переход с Promtail на Log-Shipper
 
-В ранее используемом URL Loki требуется убрать путь `/loki/api/v1/push`.
+В используемом URL Loki необходимо убрать путь `/loki/api/v1/push`.
 
 **Vector** сам добавит этот путь при работе с Loki.
 
 ## Работа с Grafana Cloud
 
-Данная документация подразумевает, что у вас уже [создан ключ API](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+1. [Создайте ключ API](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
+2. Закодируйте в base64 токен доступа к Grafana Cloud.
 
 ![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
 
-```bash
-echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
-```
+   ```bash
+   echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
+   ```
 
-Затем нужно создать **ClusterLogDestination**
+3. Создайте **ClusterLogDestination**
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  loki:
-    auth:
-      password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
-      strategy: Basic
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ClusterLogDestination
+   metadata:
+     name: loki-storage
+   spec:
+     loki:
+       auth:
+         password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
+         strategy: Basic
       user: "<YOUR-GRAFANACLOUD-USER>"
-    endpoint: <YOUR-GRAFANACLOUD-URL> # Например https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-0.grafana.net
-  type: Loki
-```
+       endpoint: <YOUR-GRAFANACLOUD-URL> # Например https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-   0.grafana.net
+     type: Loki
+   ```
 
-Теперь можно создать PodLogginConfig или ClusterPodLoggingConfig и отправлять логи в **Grafana Cloud**.
+4. Создайте PodLogginConfig или ClusterPodLoggingConfig и отправьте логи в **Grafana Cloud**.
 
 ## Добавление Loki в Deckhouse Grafana
 
-Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+Существует возможность работы с Loki из встроенной в Deckhouse Grafana. Добавьте [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -182,8 +182,7 @@ spec:
 
 ## Поддержка Elasticsearch < 6.X
 
-Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
-Сделать это можно следующим образом:
+Для Elasticsearch < 6.0 включите поддержку `doc_type` индексов, следующим образом:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -235,32 +234,32 @@ spec:
     service: "{{ service_name }}"
 ```
 
-1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
-2. Новое поле метаданных `service` используется в шаблоне индекса.
+Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
+Новое поле метаданных `service` используется в шаблоне индекса.
 
 ## Пример интеграции со Splunk
 
 Существует возможность отсылать события из Deckhouse в Splunk.
 
-1. Endpoint должен быть таким же, как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
-3. Укажите индекс Splunk для хранения логов, например `logs`.
+Endpoint должен быть таким же, как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например `https://prd-p-xxxxxx.splunkcloud.com:8088`.
+1. Чтобы добавить token доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
+2. Укажите индекс Splunk для хранения логов, например `logs`.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: splunk
-spec:
-  type: Splunk
-  splunk:
-    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
-    token: xxxx-xxxx-xxxx
-    index: logs
-    tls:
-      verifyCertificate: false
-      verifyHostname: false
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ClusterLogDestination
+   metadata:
+     name: splunk
+   spec:
+     type: Splunk
+     splunk:
+       endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
+       token: xxxx-xxxx-xxxx
+       index: logs
+       tls:
+         verifyCertificate: false
+         verifyHostname: false
+   ```
 
 {% endraw %}
 {% alert -%}
@@ -275,7 +274,7 @@ extraLabels:
 
 ## Простой пример Logstash
 
-Чтобы отправлять логи в Logstash, на стороне Logstash должен быть настроен входящий поток `tcp` и его кодек должен быть `json`.
+Чтобы отправлять логи в Logstash, на стороне Logstash должен быть настроен входящий поток `tcp` и его кодек формируется в `json`.
 
 Пример минимальной конфигурации Logstash:
 
@@ -306,41 +305,41 @@ spec:
 
 ## Сбор событий Kubernetes
 
-События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
+События Kubernetes могут быть собраны log-shipper, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
 
-Включите events-exporter, изменив параметры модуля `extended-monitoring`:
+1. Включите events-exporter, изменив параметры модуля `extended-monitoring`:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: extended-monitoring
-spec:
-  version: 1
-  settings:
-    events:
-      exporterEnabled: true
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: extended-monitoring
+   spec:
+     version: 1
+     settings:
+       events:
+         exporterEnabled: true
+   ```
 
-Выложите в кластер следующий `ClusterLoggingConfig`, чтобы собирать сообщения с пода `events-exporter`:
+2. Выложите в кластер следующий `ClusterLoggingConfig`, чтобы собирать сообщения с пода `events-exporter`:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLoggingConfig
-metadata:
-  name: kubernetes-events
-spec:
-  type: KubernetesPods
-  kubernetesPods:
-    labelSelector:
-      matchLabels:
-        app: events-exporter
-    namespaceSelector:
-      matchNames:
-      - d8-monitoring
-  destinationRefs:
-  - loki-storage
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ClusterLoggingConfig
+   metadata:
+     name: kubernetes-events
+   spec:
+     type: KubernetesPods
+     kubernetesPods:
+       labelSelector:
+         matchLabels:
+           app: events-exporter
+       namespaceSelector:
+         matchNames:
+         - d8-monitoring
+     destinationRefs:
+     - loki-storage
+   ```
 
 ## Фильтрация логов
 
@@ -429,7 +428,7 @@ spec:
 
 {% endraw %}
 {% alert -%}
-Если вам нужны только логи одного пода или малой группы подов, постарайтесь использовать настройки `kubernetesPods`, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+Если необходимы логи одного пода или малой группы подов, используйте настройки `kubernetesPods`, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
 {%- endalert %}
 {% raw %}
 
@@ -453,8 +452,8 @@ spec:
 
 ## Исключить поды и namespace'ы, используя label
 
-Существует преднастроенный label для исключения определенных подов и namespace'ов: `log-shipper.deckhouse.io/exclude=true`.
-Он помогает остановить сбор логов с подов и namespace'ов без изменения глобальной конфигурации.
+Существует преднастроенный лэйбл для исключения определенных подов и namespace: `log-shipper.deckhouse.io/exclude=true`.
+Он помогает остановить сбор логов из подов и namespace без изменения глобальной конфигурации.
 
 ```yaml
 ---
