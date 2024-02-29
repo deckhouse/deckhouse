@@ -145,9 +145,9 @@ RUN bash -eu -c ' \
     chown -R www-data.www-data ${dir}; \
   done' \
 
-  COPY --from base-alt /usr/lib64 /chroot/usr
-  COPY --from base-alt /lib64 /chroot
-  COPY --from nginx-builder /usr/local/pcre /usr/local
+  COPY --from=base-alt /usr/lib64 /chroot/usr
+  COPY --from=base-alt /lib64 /chroot
+  COPY --from=nginx-builder /usr/local/pcre /usr/local
 
   && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share \
   && cp /etc/passwd /etc/group /etc/hosts /chroot/etc/ \
