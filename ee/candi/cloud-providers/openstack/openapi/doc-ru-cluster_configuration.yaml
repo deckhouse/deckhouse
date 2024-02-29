@@ -101,10 +101,10 @@ apiVersions:
             properties:
               policy:
                 description: |
-                  Политика определит как распределить инстансы по гипервизорам.
+                  Политика, которая распределит инстансы на разных гипервизорах.
 
-                  - `AntiAffinity` — разместите инстансы на разных гипервизорах в соответствии с политикой Deckhouse Kubernetes Platform.
-                  - `ManuallyManaged` — разместите инстансы на разных гипервизорах в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
+                  - `AntiAffinity` — разместите инстансы в соответствии с политикой Deckhouse Kubernetes Platform.
+                  - `ManuallyManaged` — разместите инстансы в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
               manuallyManaged:
                 properties:
                   id:
