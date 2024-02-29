@@ -97,7 +97,7 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 }
 
 func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute.Disk, error) {
-	diskList, err := d.sdk.Compute().Disk().List(context.Background(), &compute.ListDisksRequest{
+	diskList, err := d.sdk.Compute().Disk().List(ctx, &compute.ListDisksRequest{
 		FolderId: d.folderID,
 	})
 	if err != nil {
