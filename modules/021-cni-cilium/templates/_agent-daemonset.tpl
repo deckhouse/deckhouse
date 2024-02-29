@@ -210,7 +210,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
         image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         env:

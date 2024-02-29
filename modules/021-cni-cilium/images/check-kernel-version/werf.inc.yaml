@@ -2,9 +2,9 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: common/kube-rbac-proxy
-  add: /kube-rbac-proxy
-  to: /kube-rbac-proxy
+- image: common/check-kernel-version
+  add: /src/check-kernel-version
+  to: /check-kernel-version
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate/bin/true
