@@ -12,7 +12,6 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
-
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
@@ -25,7 +24,6 @@ RUN cd / && \
     git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv \
     && cd lua-iconv/ \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
-
 
 # Build ingress controller, debug tool and pre-stop hook
 FROM $BASE_GOLANG_21_BULLSEYE_DEV as controller-builder
@@ -104,7 +102,6 @@ COPY patches/auth-cookie-always.patch /
 # copy complete set of libs
 COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
 COPY --from=base-alt /lib64 /chroot/lib64
-COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
@@ -156,7 +153,21 @@ RUN bash -eu -c ' \
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
-  && ln -s /chroot/etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
+  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
+  && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
+  && cp -a /lib64/libcrypt.* /chroot/lib64/ \
+  && cp -a /lib64/libcrypto.* /chroot/lib64/ \
+  && cp -a /lib64/libpcre* /chroot/lib64/ \
+  && cp -a /lib64/libssl* /chroot/lib64/ \
+  && cp -a /lib64/libz.* /chroot/lib64/ \
+  && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
+  && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
+  && cp -a /lib64/ld-* /chroot/lib64/ \
+  && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
+  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
+  && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
+  && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
   && cp -a /usr/local/lib /chroot/usr/local/ \
@@ -166,10 +177,15 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
   && cp -a /usr/local/nginx /chroot/usr/local/ \
   # replace pcre with version with jit support
-  && rm -f /chroot/lib64/libpcre* \
-  && cp -f /usr/local/pcre/lib/*.so* /chroot/lib64
+  && rm -f /chroot/lib64/libpcre*
+
+COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
-RUN cd / \
+
+RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
+  # fix simlink to proper pcre jit version
+  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
+  && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch
