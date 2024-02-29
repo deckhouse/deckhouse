@@ -100,6 +100,11 @@ COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
 
+# copy complete set of libs
+COPY --from=base-alt /usr/lib64 /chroot/usr
+COPY --from=base-alt /lib64 /chroot
+COPY --from=nginx-builder /usr/local/pcre /usr/local
+
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
     -s /sbin/nologin -c www-data www-data \
@@ -144,11 +149,6 @@ RUN bash -eu -c ' \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
-
-  COPY --from=base-alt /usr/lib64 /chroot/usr
-  COPY --from=base-alt /lib64 /chroot
-  COPY --from=nginx-builder /usr/local/pcre /usr/local
-
   && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share \
   && cp /etc/passwd /etc/group /etc/hosts /chroot/etc/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
