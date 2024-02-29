@@ -18,12 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	klient "github.com/flant/kube-client/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -77,7 +76,7 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 // Init initializes kubernetes client
 func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()
-	kubeClient.WithRateLimiterSettings(5, 10)
+	kubeClient.WithRateLimiterSettings(30, 60)
 
 	switch {
 	case params.KubeConfigInCluster:
