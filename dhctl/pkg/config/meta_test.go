@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-
 	"testing"
 	"text/template"
 
@@ -122,6 +121,15 @@ masterNodeGroup:
     diskSizeGB: 50
     externalIPAddresses:
       - Auto
+nodeGroups:
+  - name: worker
+    replicas: 1
+    instanceClass:
+      cores: 4
+      memory: 8192
+      imageID: id
+      externalIPAddresses:
+        - "Auto"
 sshPublicKey: ssh-rsa AAAA
 nodeNetworkCIDR: 10.100.0.0/21
 provider:
@@ -439,5 +447,44 @@ func TestEnrichProxyData(t *testing.T) {
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
+	})
+}
+
+func TestFindTerraNodeGroup(t *testing.T) {
+	t.Run("node exists", func(t *testing.T) {
+		user, password := "user", "password"
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"dockerCfg":  generateDockerCfg("r.example.com", user, password),
+			"imagesRepo": "r.example.com/deckhouse/ce/",
+		})
+
+		ng := cfg.FindTerraNodeGroup("worker")
+		require.JSONEq(t, `
+			{
+			   "instanceClass":{
+				  "cores":4,
+				  "externalIPAddresses":[
+					 "Auto"
+				  ],
+				  "imageID":"id",
+				  "memory":8192,
+				  "platform":"standard-v2"
+			   },
+			   "name":"worker",
+			   "replicas":1
+			}`,
+			string(ng),
+		)
+	})
+
+	t.Run("node does not exist", func(t *testing.T) {
+		user, password := "user", "password"
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"dockerCfg":  generateDockerCfg("r.example.com", user, password),
+			"imagesRepo": "r.example.com/deckhouse/ce/",
+		})
+
+		ng := cfg.FindTerraNodeGroup("worker-1")
+		require.Nil(t, ng)
 	})
 }
