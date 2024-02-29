@@ -184,7 +184,7 @@ COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot
 
 RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
   # fix simlink to proper pcre jit version
-  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
+  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
