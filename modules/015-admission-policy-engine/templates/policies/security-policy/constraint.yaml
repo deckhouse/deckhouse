@@ -181,7 +181,8 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - kinds: ["RoleBinding"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["RoleBinding"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:

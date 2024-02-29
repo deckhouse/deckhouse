@@ -6,8 +6,8 @@ spec:
   enforcementAction: deny
   match:
     kinds:
-    - kinds:
-      - RoleBinding
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["RoleBinding"]
     namespaceSelector:
       matchLabels:
         enforce: mypolicy
