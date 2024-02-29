@@ -1,4 +1,4 @@
-module stale-sockets-cleaner
+module stale-dns-connections-cleaner
 
 go 1.21
 

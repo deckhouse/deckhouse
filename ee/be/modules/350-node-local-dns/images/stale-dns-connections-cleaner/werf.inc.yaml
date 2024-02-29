@@ -24,15 +24,15 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - export CGO_ENABLED=0
   - cd /src
-  - go build -ldflags="-s -w" -o stale-sockets-cleaner .
-  - chmod +x /src/stale-sockets-cleaner
+  - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
+  - chmod +x /src/stale-dns-connections-cleaner
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/stale-sockets-cleaner
-  to: /stale-sockets-cleaner
+  add: /src/stale-dns-connections-cleaner
+  to: /stale-dns-connections-cleaner
   before: install
 docker:
-  ENTRYPOINT: ["/stale-sockets-cleaner"]
+  ENTRYPOINT: ["/stale-dns-connections-cleaner"]

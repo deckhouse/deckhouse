@@ -44,41 +44,42 @@ var (
 	networkOrder = binary.BigEndian
 )
 
-/*
-When cni-cilium and node-local-dns are enabled, and pod node-local-dns has been restarted, we may encounter problems with dns.
-This is because the udp socket remains active in the application pods until the ip address of the pod, which has already been deleted.
-To prevent this problem, we perform the following actions:
-- We get the name and PodCidr of the node on which the application is running
-- Then every 30 seconds
-  - We get the current IP address of the node-local-dns pod
-  - We get all UDP sockets on the node, and look among them for those with dst_port 53, and dsp_ip belongs to PodCidr, but it is not equal to the current ip address of the node-local-dns pod
-  - If we find such sockets, then we delete them.
-*/
 func main() {
-	log.Infof("[StaleSockCleaner] Start")
+	log.Infof("Start")
+	log.Infof(
+		"This is a workaround for issue https://github.com/cilium/cilium/issues/31012.\n" +
+			"When both the cni-cilium and node-local-dns modules are enabled, and the node-local-dns pod has been restarted, stale DNS connections may occur.\n" +
+			"This is due to the UDP socket remaining active in the application pods with the destination IP address of the old node-local-dns pod, which has already been deleted.\n" +
+			"To prevent this problem, the following actions are taken:\n" +
+			"- Obtain the name and PodCidr of the node where the application is running.\n" +
+			"- Then every 30 seconds:\n" +
+			"  - Retrieve the current IP address of the node-local-dns pod.\n" +
+			"  - Retrieve all UDP sockets on the node and search for those with dst_port 53 and dsp_ip belonging to PodCidr, but not equal to the current IP address of the node-local-dns pod.\n" +
+			"  - If such sockets are found, delete them.",
+	)
 
 	// Init kubeClient
 	config, _ := rest.InClusterConfig()
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("[StaleSockCleaner] Failed to init kubeClient. Error: %v", err)
+		log.Fatalf("Failed to init kubeClient. Error: %v", err)
 	}
-	log.Infof("[StaleSockCleaner] kubeClient successfully inited")
+	log.Infof("kubeClient successfully inited")
 
 	// Get name of node
 	currentNodeName := os.Getenv("NODE_NAME")
 	if len(currentNodeName) == 0 {
-		log.Fatalf("[StaleSockCleaner] Failed to get env NODE_NAME.")
+		log.Fatalf("Failed to get env NODE_NAME.")
 	}
-	log.Infof("[StaleSockCleaner] The current node name is %s", currentNodeName)
+	log.Infof("The current node name is %s", currentNodeName)
 
 	// Get podCIDR of the node
 	podCIDROnSameNode, err := getPodCIDR(kubeClient, currentNodeName)
 	if err != nil {
-		log.Fatalf("[StaleSockCleaner] Failed to get PodCIDR of the node. Error: %v", err)
+		log.Fatalf("Failed to get PodCIDR of the node. Error: %v", err)
 	}
 	log.Infof(
-		"[StaleSockCleaner] podCIDR on node %s is %s",
+		"podCIDR on node %s is %s",
 		currentNodeName,
 		podCIDROnSameNode.String(),
 	)
@@ -89,62 +90,72 @@ func main() {
 		// Get ip of pod node-local-dns running on the node
 		nldPodNameOnSameNode, nldPodIPOnSameNode, err := getNLDPodNameAndIPByNodeName(kubeClient, currentNodeName)
 		if err != nil {
-			log.Errorf("[StaleSockCleaner] Failed to get IP of the nld Pod. Error: %v", err)
+			log.Errorf("Failed to get IP of the nld Pod. Error: %v", err)
 			continue
 		}
 		if nldPodIPOnSameNode == nil {
+			log.Errorf("The IP address has not yet been assigned to the pod.")
 			continue
 		}
 
 		// Get all UDP sockets on node
 		allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
 		if err != nil {
-			log.Errorf("[StaleSockCleaner] Failed get UDP sockets. Error: %v", err)
+			log.Errorf("Failed get UDP sockets. Error: %v", err)
 		}
 
 		/*
 			For each socket check:
 			- If DST Port is equal to nldDstPort?
-			- Is DST IP contained in podCIDR?
+			- Is DST IP belongs to podCIDR?
 			- Isn't DST IP equal to nldPodIP?
 			If all checks are true, then delete such socket
 		*/
 		for _, sock := range allUDPSockets {
-			if sock.ID.DestinationPort == nldDstPort &&
-				podCIDROnSameNode.Contains(sock.ID.Destination) {
-				if !sock.ID.Destination.Equal(nldPodIPOnSameNode) {
-					log.Infof(
-						"[StaleSockCleaner] Found socket %s:%v -> %s:%v, where dst_ip is contained in the podCIDR (%s) and dst_port is equal %v.",
-						sock.ID.Source.String(),
-						sock.ID.SourcePort,
-						sock.ID.Destination.String(),
-						sock.ID.DestinationPort,
-						podCIDROnSameNode.String(),
-						nldDstPort,
-					)
-					log.Infof(
-						"[StaleSockCleaner] Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroyed.",
-						nldPodNameOnSameNode,
-						nldPodIPOnSameNode.String(),
-						sock.ID.Destination.String(),
-					)
-					err := destroySocket(sock.ID)
-					if err != nil {
-						if errors.Is(err, unix.EOPNOTSUPP) {
-							log.Fatalf("[StaleSockCleaner] Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
-						} else {
-							log.Errorf("[StaleSockCleaner] Failed to destroy the socket. Error: %v", err)
-						}
-					}
-					log.Infof(
-						"[StaleSockCleaner] Socket %s:%v -> %s:%v successfully destroyed",
-						sock.ID.Source.String(),
-						sock.ID.SourcePort,
-						sock.ID.Destination.String(),
-						sock.ID.DestinationPort,
-					)
+			if !(sock.ID.DestinationPort == nldDstPort) {
+				// this is not dns connection
+				continue
+			}
+			if !podCIDROnSameNode.Contains(sock.ID.Destination) {
+				// this connection is not to our node's PodCIDR
+				continue
+			}
+			if sock.ID.Destination.Equal(nldPodIPOnSameNode) {
+				// this connection to working node-local-dns Pod, appropriate one
+				continue
+			}
+			// the others sockets are inappropriate, let's drop them
+
+			log.Infof(
+				"Found socket %s:%v -> %s:%v, where dst_ip is belongs to the podCIDR (%s) and dst_port is equal %v.",
+				sock.ID.Source.String(),
+				sock.ID.SourcePort,
+				sock.ID.Destination.String(),
+				sock.ID.DestinationPort,
+				podCIDROnSameNode.String(),
+				nldDstPort,
+			)
+			log.Infof(
+				"Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroyed.",
+				nldPodNameOnSameNode,
+				nldPodIPOnSameNode.String(),
+				sock.ID.Destination.String(),
+			)
+			err := destroySocket(sock.ID)
+			if err != nil {
+				if errors.Is(err, unix.EOPNOTSUPP) {
+					log.Fatalf("Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
+				} else {
+					log.Errorf("Failed to destroy the socket. Error: %v", err)
 				}
 			}
+			log.Infof(
+				"Socket %s:%v -> %s:%v successfully destroyed",
+				sock.ID.Source.String(),
+				sock.ID.SourcePort,
+				sock.ID.Destination.String(),
+				sock.ID.DestinationPort,
+			)
 		}
 	}
 }
@@ -158,14 +169,14 @@ func getPodCIDR(kubeClient kubernetes.Interface, nodeName string) (*net.IPNet, e
 	)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"[StaleSockCleaner] Failed to get node. Error: %v",
+			"Failed to get node. Error: %v",
 			err,
 		)
 	}
 	_, podCIDR, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"[StaleSockCleaner] Failed to transform PodCIDR from String to net.IPNet. Error: %v",
+			"Failed to transform PodCIDR from String to net.IPNet. Error: %v",
 			err,
 		)
 	}
@@ -183,19 +194,19 @@ func getNLDPodNameAndIPByNodeName(kubeClient kubernetes.Interface, nodeName stri
 	)
 	if err != nil {
 		return "", nil, fmt.Errorf(
-			"[StaleSockCleaner] Failed to list pods on same node. Error: %v",
+			"Failed to list pods on same node. Error: %v",
 			err,
 		)
 	}
 	switch {
 	case len(nldPodsOnSameNode.Items) == 0:
 		return "", nil, fmt.Errorf(
-			"[StaleSockCleaner] There aren't agent pods on node %s",
+			"There aren't agent pods on node %s",
 			nodeName,
 		)
 	case len(nldPodsOnSameNode.Items) > 1:
 		return "", nil, fmt.Errorf(
-			"[StaleSockCleaner] There are more than one running node-local-dns pods on node %s",
+			"There are more than one running node-local-dns pods on node %s",
 			nodeName,
 		)
 	}
@@ -210,7 +221,7 @@ func destroySocket(sockId netlink.SocketID) error {
 	s, err := nl.Subscribe(unix.NETLINK_INET_DIAG)
 	if err != nil {
 		return fmt.Errorf(
-			"[StaleSockCleaner] Failed create a new netlink request. Error: %v",
+			"Failed create a new netlink request. Error: %v",
 			err,
 		)
 	}
@@ -228,7 +239,7 @@ func destroySocket(sockId netlink.SocketID) error {
 	// Do the query
 	err = s.Send(req)
 	if err != nil {
-		return fmt.Errorf("[StaleSockCleaner] error destroying socket: %v", sockId)
+		return fmt.Errorf("Error destroying socket: %v", sockId)
 	}
 	return nil
 }
