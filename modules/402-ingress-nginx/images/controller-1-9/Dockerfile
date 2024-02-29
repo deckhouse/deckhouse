@@ -70,6 +70,7 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make && \
     make install && \
     cp -f /usr/local/pcre/include/* /usr/include && \
+    rm -f /lib64/libpcre* && \
     cp -f /usr/local/pcre/lib/*.so* /lib64 && \
     cd / && \
     patch build.sh < nginx-build.patch && \
@@ -103,7 +104,7 @@ COPY patches/auth-cookie-always.patch /
 # copy complete set of libs
 COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
 COPY --from=base-alt /lib64 /chroot/lib64
-COPY --from=nginx-builder /usr/local/pcre /usr/local/pcre
+COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
