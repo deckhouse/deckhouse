@@ -69,9 +69,8 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
     make && \
     make install && \
-    cp -p /usr/local/pcre/include/* /usr/include && \
-    rm -f /lib64/libpcre* && \
-    cp -p /usr/local/pcre/lib/*.so* /chroot/lib64 && \
+    cp -f /usr/local/pcre/include/* /usr/include && \
+    cp -f /usr/local/pcre/lib/*.so* /chroot/lib64 && \
     cd / && \
     patch build.sh < nginx-build.patch && \
     /build.sh
@@ -167,7 +166,7 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/nginx /chroot/usr/local/ \
   # replace pcre with version with jit support
   && rm -f /chroot/lib64/libpcre* \
-  && cp -p /usr/local/pcre/lib/*.so* /chroot/lib64
+  && cp -f /usr/local/pcre/lib/*.so* /chroot/lib64
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 RUN cd / \
   && patch -p1 < /balancer-lua.patch \
