@@ -15,6 +15,7 @@ export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
 {% endsnippetcut %}
 
 Создайте service account:
+На этом этапе выдается [clientSecret](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) по умолчанию на 1 год. Официальная документация для [обновления сертификата](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate)
 {% snippetcut %}
 ```shell
 az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "account_name"

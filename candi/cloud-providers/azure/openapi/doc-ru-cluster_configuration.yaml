@@ -208,7 +208,7 @@ apiVersions:
               Идентификатор клиента.
           clientSecret:
             description: |
-              Secret клиента.
+              Secret клиента. Выдается по умолчанию: на 1 год.
           tenantId:
             description: |
               Идентификатор tenant'а.
