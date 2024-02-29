@@ -4,6 +4,7 @@ ARG BASE_ALPINE_DEV
 ARG BASE_GOLANG_21_BULLSEYE_DEV
 ARG CONTROLLER_BRANCH=controller-v1.9.5
 
+FROM $BASE_ALT as base-alt
 
 # Build dumb-init binary
 FROM $BASE_ALPINE_DEV as dumb-init-builder
@@ -65,9 +66,11 @@ COPY patches/nginx-build.patch /
 # build pcre library with jit support due to lack of jit support in standard alt pcre library
 RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     cd pcre && \
-    ./configure --prefix=/usr --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit --libdir=/lib64 --includedir=/usr/include && \
+    ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
     make && \
     make install && \
+    cp -p /usr/local/pcre/include/* /usr/include && \
+    cp -p /usr/local/pcre/lib/* /lib64 && \
     cd / && \
     patch build.sh < nginx-build.patch && \
     /build.sh
@@ -141,6 +144,11 @@ RUN bash -eu -c ' \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
+
+  COPY --from base-alt /usr/lib64 /chroot/usr
+  COPY --from base-alt /lib64 /chroot
+  COPY --from nginx-builder /usr/local/pcre /usr/local
+
   && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share \
   && cp /etc/passwd /etc/group /etc/hosts /chroot/etc/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
@@ -149,25 +157,6 @@ RUN bash -eu -c ' \
   && mkdir -p /chroot/etc/nginx/geoip \
   && ln -s /chroot/etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypt.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypto.* /chroot/lib64/ \
-  && cp -a /lib64/libssl* /chroot/lib64/ \
-  && cp -a /lib64/libz.* /chroot/lib64/ \
-  && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
-  && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
-  && cp -a /lib64/ld-* /chroot/lib64/ \
-  && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
-  && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
-  && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
   && cp -a /usr/local/lib /chroot/usr/local/ \
   && cp -a /usr/local/share/lua* /chroot/usr/local/share/ \
@@ -175,7 +164,9 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
   && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
   && cp -a /usr/local/nginx /chroot/usr/local/
-COPY --from=nginx-builder /lib64/libpcre* /chroot/lib64/
+  # replace pcre with version with jit support
+  && rm -f /chroot/lib64/libpcre* \
+  && cp -p /usr/local/pcre/lib/*.so* /chroot/lib64
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 RUN cd / \
   && patch -p1 < /balancer-lua.patch \
