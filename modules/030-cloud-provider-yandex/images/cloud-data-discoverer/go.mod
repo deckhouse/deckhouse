@@ -1,4 +1,4 @@
-module main
+module discoverer
 
 go 1.19
 
