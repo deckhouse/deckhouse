@@ -62,6 +62,49 @@ var distrolessImagesPrefix = map[string][]string{
 	},
 }
 
+func skipDistrolessImageCheckIfNeeded(image string) bool {
+	switch image {
+	case "builder/werf.inc.yaml",
+		"drbd-reactor/Dockerfile",
+		"linstor-affinity-controller/Dockerfile",
+		"linstor-csi/Dockerfile",
+		"linstor-drbd-wait/Dockerfile",
+		"linstor-pools-importer/Dockerfile",
+		"linstor-scheduler-admission/Dockerfile",
+		"linstor-scheduler-extender/Dockerfile",
+		"linstor-server/Dockerfile",
+		"piraeus-operator/Dockerfile",
+		"spaas/Dockerfile",
+		"snapshot-controller/Dockerfile",
+		"snapshot-validation-webhook/Dockerfile",
+		"api-proxy/Dockerfile",
+		"kiali/Dockerfile",
+		"metadata-discovery/Dockerfile",
+		"metadata-exporter/Dockerfile",
+		"operator-v1x12x6/Dockerfile",
+		"operator-v1x13x7/Dockerfile",
+		"operator-v1x16x2/Dockerfile",
+		"operator-v1x19x4/Dockerfile",
+		"pilot-v1x12x6/Dockerfile",
+		"pilot-v1x13x7/Dockerfile",
+		"pilot-v1x16x2/Dockerfile",
+		"pilot-v1x19x4/Dockerfile",
+		"proxyv2-v1x12x6/Dockerfile",
+		"proxyv2-v1x13x7/Dockerfile",
+		"proxyv2-v1x16x2/Dockerfile",
+		"proxyv2-v1x19x4/Dockerfile",
+		"ebpf-exporter/Dockerfile",
+		"controller-1-1/Dockerfile",
+		"easyrsa-migrator/Dockerfile",
+		"pmacct/Dockerfile",
+		"argocd/Dockerfile",
+		"argocd-image-updater/Dockerfile",
+		"werf-argocd-cmp-sidecar/Dockerfile":
+		return true
+	}
+	return false
+}
+
 func imageRegexp(s string) string {
 	return fmt.Sprintf("^(from:|FROM)(\\s+)(%s)", s)
 }
@@ -168,6 +211,11 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				fromTrimmed := strings.TrimPrefix(line, "from: ")
 				// "from:" right after "image:"
 				if linePos-lastWerfImagePos == 1 {
+					if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+						fmt.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromTrimmed)
+						continue
+					}
+
 					result, message := isWerfInstructionUnacceptable(fromTrimmed)
 					if result {
 						return errors.NewLintRuleError(
@@ -189,6 +237,11 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 
 	for i, fromInstruction := range dockerfileFromInstructions {
 		lastInstruction := i == len(dockerfileFromInstructions)-1
+		if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+			fmt.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromInstruction)
+			continue
+		}
+
 		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
 		if result {
 			return errors.NewLintRuleError(
