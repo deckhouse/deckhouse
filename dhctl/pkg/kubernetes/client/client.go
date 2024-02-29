@@ -76,7 +76,7 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 // Init initializes kubernetes client
 func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()
-	kubeClient.WithRateLimiterSettings(15, 30)
+	kubeClient.WithRateLimiterSettings(30, 60)
 
 	switch {
 	case params.KubeConfigInCluster:
