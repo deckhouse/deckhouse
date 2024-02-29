@@ -360,6 +360,14 @@ apiVersions:
         x-examples:
           - "dev/test"
         x-unsafe: true
+      vmFolderExists:
+        type: boolean
+        default: false
+        description: |
+          Set the value to true if the path specified in vmFolderPath exists.
+        x-examples:
+          - "dev/test"
+        x-unsafe: true
       region:
         type: string
         description: |
