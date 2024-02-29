@@ -51,6 +51,17 @@ var regexPatterns = map[string]string{
 	`$BASE_SCRATCH`:          imageRegexp(`scratch:[\d.]+`),
 }
 
+var distrolessImagesPrefix = map[string][]string{
+	"werf": {
+		"{{ .Images.BASE_DISTROLESS",
+		"{{ $.Images.BASE_ALT",
+	},
+	"docker": {
+		"$BASE_DISTROLESS",
+		"$BASE_ALT",
+	},
+}
+
 func imageRegexp(s string) string {
 	return fmt.Sprintf("^(from:|FROM)(\\s+)(%s)", s)
 }
@@ -193,9 +204,8 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 }
 
 func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !strings.HasPrefix(from, `{{ .Images.BASE_DISTROLESS`) &&
-		!strings.HasPrefix(from, `{{ $.Images.BASE_DISTROLESS`) {
-		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
+	if !checkDistrolessPrefix(from, distrolessImagesPrefix["werf"]) {
+		return true, "`from:` parameter for `image:` should be one of our BASE_DISTROLESS images"
 	}
 	return false, ""
 }
@@ -206,7 +216,7 @@ func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string)
 	}
 
 	if final {
-		if !strings.HasPrefix(from, "$BASE_DISTROLESS") {
+		if !checkDistrolessPrefix(from, distrolessImagesPrefix["docker"]) {
 			return true, "Last `FROM` instruction should use one of our $BASE_DISTROLESS images"
 		}
 	} else {
@@ -216,4 +226,15 @@ func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string)
 		}
 	}
 	return false, ""
+}
+
+func checkDistrolessPrefix(str string, in []string) bool {
+	result := false
+	for _, pattern := range in {
+		if strings.HasPrefix(str, pattern) {
+			result = true
+			break
+		}
+	}
+	return result
 }
