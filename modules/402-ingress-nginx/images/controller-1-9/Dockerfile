@@ -53,7 +53,6 @@ RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/in
     patch -p1 < /geoip.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
-
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder
 ARG CONTROLLER_BRANCH
@@ -63,9 +62,15 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
-RUN patch build.sh < nginx-build.patch
-RUN /build.sh
-
+# build pcre library with jit support due to lack of jit support in standard alt pcre library
+RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+    cd pcre && \
+    ./configure --prefix=/usr --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit --libdir=/lib64 --includedir=/usr/include && \
+    make && \
+    make install && \
+    cd / && \
+    patch build.sh < nginx-build.patch && \
+    /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.9.5":
@@ -158,13 +163,15 @@ RUN bash -eu -c ' \
   && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
   && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libbrotlienc.* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
   && cp -a /usr/local/lib /chroot/usr/local/ \
   && cp -a /usr/local/share/lua* /chroot/usr/local/share/ \
   && cp -a /usr/local/lib64 /chroot/usr/local/ \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
-  && cp -a /usr/local/modsecurity/lib /chroot/usr/local/modsecurity/ \
+  && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
   && cp -a /usr/local/nginx /chroot/usr/local/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 RUN cd / \
