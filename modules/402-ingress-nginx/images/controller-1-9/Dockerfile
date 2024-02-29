@@ -101,9 +101,9 @@ COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
 
 # copy complete set of libs
-COPY --from=base-alt /usr/lib64 /chroot/usr
-COPY --from=base-alt /lib64 /chroot
-COPY --from=nginx-builder /usr/local/pcre /usr/local
+COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
+COPY --from=base-alt /lib64 /chroot/lib64
+COPY --from=nginx-builder /usr/local/pcre /usr/local/pcre
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
