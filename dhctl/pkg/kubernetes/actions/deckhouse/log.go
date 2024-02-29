@@ -80,7 +80,7 @@ func isErrorLine(line *logLine) bool {
 			// all bootstrapped cloud clusters has this message
 			// it is normal because wait_for_all_master_nodes_to_become_initialized hook
 			// blocks main queue with this error
-			"waiting for master nodes to become initialized by cloud provider",
+			"timeout waiting for master nodes",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
