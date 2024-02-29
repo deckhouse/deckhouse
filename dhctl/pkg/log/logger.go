@@ -22,12 +22,13 @@ import (
 	"io"
 	"os"
 
+	"k8s.io/klog"
+
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
-	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -65,52 +66,16 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
-
-	// klog
-	klogFlagSet := flag.NewFlagSet("klog", flag.ContinueOnError)
-	klog.InitFlags(klogFlagSet)
-	args := []string{
-		"-logtostderr=false",
-		"-stderrthreshold=FATAL",
-	}
-
-	severity := "-v=1"
 	if opts.IsDebug {
-		severity = "-v=10"
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		logrus.SetLevel(logrus.DebugLevel)
+		klog.InitFlags(nil)
+		_ = flag.CommandLine.Parse([]string{"-v=10"})
+
 		// Wrap them with our default logger
 		logrus.SetOutput(defaultLogger)
 	}
-
-	args = append(args, severity)
-	_ = klogFlagSet.Parse(args)
-
-	klog.SetOutputBySeverity("INFO", &writer{})
-}
-
-type writer struct {
-}
-
-func (w *writer) Write(msg []byte) (n int, err error) {
-	if len(msg) == 0 {
-		return 0, nil
-	}
-	switch msg[0] {
-	case 'W':
-		defaultLogger.LogWarnLn(string(msg))
-	case 'E':
-		defaultLogger.LogErrorLn(string(msg))
-	case 'F':
-
-		defaultLogger.LogErrorLn(string(msg))
-		os.Exit(1)
-	default:
-
-		defaultLogger.LogInfoLn(string(msg))
-	}
-	return 0, nil
 }
 
 type ProcessLogger interface {
