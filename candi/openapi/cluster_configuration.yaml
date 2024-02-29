@@ -93,7 +93,10 @@ apiVersions:
           > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
       clusterDomain:
         type: string
-        description: Cluster domain (used for local routing).
+        description: |
+          Cluster domain (used for local routing).
+
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
         default: "cluster.local"
       defaultCRI:
         type: string
