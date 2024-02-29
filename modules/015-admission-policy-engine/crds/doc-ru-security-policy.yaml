@@ -166,7 +166,7 @@ spec:
                     allowedVolumes:
                       description: "Список volume-плагинов, доступных к использованию."
                     allowedClusterRoles:
-                      description: "TODO"
+                      description: "Список разрешенных ролей кластера для связывания с пользователями."
                 match:
                   properties:
                     namespaceSelector:

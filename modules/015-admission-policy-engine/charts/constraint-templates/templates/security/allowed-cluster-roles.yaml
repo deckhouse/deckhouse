@@ -10,7 +10,7 @@ metadata:
     metadata.gatekeeper.sh/title: "Allowed cluster roles"
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
-      TODO
+      Controls what cluster roles are allowed to be bind to users.
 spec:
   crd:
     spec:
@@ -20,11 +20,11 @@ spec:
         openAPIV3Schema:
           type: object
           description: >-
-            TODO
+            Controls what cluster roles are allowed to be bind to users.
           properties:
             allowedClusterRoles:
               type: array
-              description: "The list of allowed cluster roles."
+              description: "A list of allowed cluster roles to bind to users."
               items:
                 type: string
   targets:
@@ -40,7 +40,7 @@ spec:
           roleRefName := input.review.object.roleRef.name
           not input_parameters_allowed_roles(allowedRoles, roleRefName)
 
-          msg := sprintf("ClusterRole %v is not in list of allowed roles %v", [roleRefName, allowedRoles])
+          msg := sprintf("ClusterRole \"%v\" is not in list of allowed roles %v", [roleRefName, allowedRoles])
         }
 
         get_allowed_roles(arg) = out {
