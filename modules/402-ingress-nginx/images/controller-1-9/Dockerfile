@@ -154,16 +154,20 @@ RUN bash -eu -c ' \
   && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
   && cp -a /lib64/libcrypt.* /chroot/lib64/ \
   && cp -a /lib64/libcrypto.* /chroot/lib64/ \
-  && cp -a /lib64/libpcre* /chroot/lib64/ \
   && cp -a /lib64/libssl* /chroot/lib64/ \
   && cp -a /lib64/libz.* /chroot/lib64/ \
-  && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
   && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
   && cp -a /lib64/ld-* /chroot/lib64/ \
   && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
   && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
   && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
+  && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
