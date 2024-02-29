@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: common/check-kernel-version
-  add: /src/check-kernel-version
+  add: /check-kernel-version
   to: /check-kernel-version
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
