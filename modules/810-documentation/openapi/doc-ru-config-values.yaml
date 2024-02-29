@@ -4,7 +4,7 @@ properties:
     description: |
       Класс Ingress-контроллера веб-интерфейса документации.
 
-      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+      Опциональный параметр. По умолчанию используется глобальное значение `modules.ingressClass`.
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к веб-интерфейсу документации.
@@ -29,42 +29,42 @@ properties:
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
 
-          > **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
+          > **Внимание!** При использовании совместно с модулем `user-authn` добавьте разрешенные группы в соответствующее поле в настройках `DexProvider`.
   https:
     description: |
       Тип используемого сертификата.
 
-      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+      При использовании этого параметра глобальные настройки `global.modules.https` будут переопределены.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из namespace `d8-system`.
           - `Disabled` — доступ только по HTTP.
-          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед веб-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS, и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — доступ по HTTP с внешним HTTPS-балансировщиком. Балансировщик терминирует HTTPS, и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) генерируются с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
-        description: "Настройки для certmanager."
+        description: Настройки для certmanager.
         properties:
           clusterIssuerName:
             description: |
-              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+              Тип ClusterIssuer, используемого для заказа SSL-сертификата. Доступны типы `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но можно определить свои.
       customCertificate:
         description: Настройки для использования пользовательского сертификата.
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса документации.
+              Имя Secret в namespace `d8-system` для веб-интерфейса документации.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `nodeSelector` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `tolerations` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
