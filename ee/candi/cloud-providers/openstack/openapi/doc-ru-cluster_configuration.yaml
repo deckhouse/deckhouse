@@ -103,7 +103,7 @@ apiVersions:
                 description: |
                   Политика, которая распределит инстансы на разных гипервизорах.
 
-                  - `AntiAffinity` — разместите инстансы в соответствии с политикой Deckhouse Kubernetes Platform.
+                  - `AntiAffinity` — разместите инстансы в соответствии с политиками Deckhouse Kubernetes Platform.
                   - `ManuallyManaged` — разместите инстансы в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
               manuallyManaged:
                 properties:
