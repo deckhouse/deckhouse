@@ -451,7 +451,7 @@ func TestEnrichProxyData(t *testing.T) {
 }
 
 func TestFindTerraNodeGroup(t *testing.T) {
-	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
+	t.Run("node exists", func(t *testing.T) {
 		user, password := "user", "password"
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"dockerCfg":  generateDockerCfg("r.example.com", user, password),
@@ -475,5 +475,16 @@ func TestFindTerraNodeGroup(t *testing.T) {
 			}`,
 			string(ng),
 		)
+	})
+
+	t.Run("node does not exist", func(t *testing.T) {
+		user, password := "user", "password"
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"dockerCfg":  generateDockerCfg("r.example.com", user, password),
+			"imagesRepo": "r.example.com/deckhouse/ce/",
+		})
+
+		ng := cfg.FindTerraNodeGroup("worker-1")
+		require.Nil(t, ng)
 	})
 }
