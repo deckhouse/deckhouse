@@ -27,16 +27,30 @@ import (
 
 func TestNodeOSVersionRequirement(t *testing.T) {
 	requirements.RemoveValue(minUbuntuVersionValuesKey)
+	requirements.RemoveValue(minDebianVersionValuesKey)
 	t.Run("requirement met", func(t *testing.T) {
 		requirements.SaveValue(minUbuntuVersionValuesKey, "18.4.5")
-		ok, err := requirements.CheckRequirement(requirementsKey, "18.04")
+		ok, err := requirements.CheckRequirement(requirementsUbuntuKey, "18.04")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+	t.Run("requirement met", func(t *testing.T) {
+		requirements.SaveValue(minDebianVersionValuesKey, "11")
+		ok, err := requirements.CheckRequirement(requirementsDebianKey, "10")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(minUbuntuVersionValuesKey, "16.4.5")
-		ok, err := requirements.CheckRequirement(requirementsKey, "18.04")
+		ok, err := requirements.CheckRequirement(requirementsUbuntuKey, "18.04")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("requirement failed", func(t *testing.T) {
+		requirements.SaveValue(minDebianVersionValuesKey, "9")
+		ok, err := requirements.CheckRequirement(requirementsDebianKey, "10")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
