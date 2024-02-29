@@ -70,7 +70,7 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make && \
     make install && \
     cp -f /usr/local/pcre/include/* /usr/include && \
-    cp -f /usr/local/pcre/lib/*.so* /chroot/lib64 && \
+    cp -f /usr/local/pcre/lib/*.so* /lib64 && \
     cd / && \
     patch build.sh < nginx-build.patch && \
     /build.sh
