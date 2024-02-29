@@ -19,6 +19,7 @@ package modules
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -212,7 +213,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				// "from:" right after "image:"
 				if linePos-lastWerfImagePos == 1 {
 					if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
-						fmt.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromTrimmed)
+						log.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromTrimmed)
 						continue
 					}
 
@@ -238,7 +239,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 	for i, fromInstruction := range dockerfileFromInstructions {
 		lastInstruction := i == len(dockerfileFromInstructions)-1
 		if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
-			fmt.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromInstruction)
+			log.Printf("SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n", name, relativeFilePath, fromInstruction)
 			continue
 		}
 
