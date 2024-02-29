@@ -163,7 +163,7 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/lib64 /chroot/usr/local/ \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
   && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
-  && cp -a /usr/local/nginx /chroot/usr/local/
+  && cp -a /usr/local/nginx /chroot/usr/local/ \
   # replace pcre with version with jit support
   && rm -f /chroot/lib64/libpcre* \
   && cp -p /usr/local/pcre/lib/*.so* /chroot/lib64
