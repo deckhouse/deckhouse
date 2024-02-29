@@ -95,6 +95,21 @@ apiVersions:
               Полезные команды:
               - `openstack availability zone list` — получить список зон доступности.
               - `openstack volume type list` — получить список типов дисков.
+          serverGroup:
+            description: |
+              OpenStack объект `ServerGroup` создаст группу инстансов на разных гипервизорах. Это повысит отказоустойчивость кластера.
+            properties:
+              policy:
+                description: |
+                  Политика определит как распределить инстансы по гипервизорам.
+
+                  - `AntiAffinity` — разместите инстансы на разных гипервизорах в соответствии с политикой Deckhouse Kubernetes Platform.
+                  - `ManuallyManaged` — разместите инстансы на разных гипервизорах в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
+              manuallyManaged:
+                properties:
+                  id:
+                    description: |
+                      Идентификатор существующего объекта `ServerGroup`, управляемого за пределами Deckhouse Kubernetes Platform.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
