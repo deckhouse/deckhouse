@@ -190,15 +190,27 @@ func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
 }
 
 func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
-	for index, ng := range m.TerraNodeGroupSpecs {
-		if ng.Name == nodeGroupName {
+	for _, ngs := range m.TerraNodeGroupSpecs {
+		if ngs.Name == nodeGroupName {
 			var terraNodeGroups []json.RawMessage
 			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
 			if err != nil {
-				log.ErrorLn(err)
+				log.ErrorLn(fmt.Sprintf("unmarshalling nodeGroups config: %v", err))
 				return nil
 			}
-			return terraNodeGroups[index]
+
+			for _, terraNodeGroup := range terraNodeGroups {
+				var ng TerraNodeGroupSpec
+				err = json.Unmarshal(terraNodeGroup, &ng)
+				if err != nil {
+					log.ErrorLn(fmt.Sprintf("unmarshalling nodeGroup name: %v", err))
+					return nil
+				}
+
+				if ng.Name == nodeGroupName {
+					return terraNodeGroup
+				}
+			}
 		}
 	}
 	return nil
