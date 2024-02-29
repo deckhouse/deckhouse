@@ -16,6 +16,7 @@ export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
 
 Create a service account:
 This step issues a default [clientSecret](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-provider-clientsecret): for 1 year. Official documentation for [certificate renewal](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate)
+
 {% snippetcut %}
 ```shell
 az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "account_name"
