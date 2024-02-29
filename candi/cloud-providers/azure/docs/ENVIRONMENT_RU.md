@@ -20,7 +20,7 @@ description: "Настройка Azure для работы облачного п
    az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
    ```
 
-   > На этом этапе выдается [clientSecret](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) по умолчанию на 1 год. Официальная документация для [обновления сертификата](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate)
+   > На этом этапе выдается [clientSecret](cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) по умолчанию на один год. Подробнее об обновления сертификата читайте в [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
 
 Для дальнейшей работы с утилитой `az` необходимо авторизоваться, используя данные (login, password, tenant) созданного service account:
 

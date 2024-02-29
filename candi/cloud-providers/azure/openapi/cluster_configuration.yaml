@@ -365,7 +365,7 @@ apiVersions:
             type: string
           clientSecret:
             description: |
-              The client's secret. Issued by default: for 1 year.
+              The client's secret. Issued by default for one year.
             type: string
           tenantId:
             description: |
