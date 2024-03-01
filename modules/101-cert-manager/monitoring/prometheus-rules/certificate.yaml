@@ -46,3 +46,16 @@
 
         It can affect certificates ordering and prolongation. Check certmanager logs for more info.
         `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager`
+  
+  - alert: CertmanagerCertificateIssuerChanged
+    expr: |
+      count by (name, exported_namespace) (max by (name, exported_namespace, issuer_name, issuer_kind) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"})) > 1
+    for: 15m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
+      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer was changed, probably cert-manager restart needed to update exporter state.
