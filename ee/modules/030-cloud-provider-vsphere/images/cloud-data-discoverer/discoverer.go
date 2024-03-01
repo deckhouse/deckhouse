@@ -12,11 +12,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
+	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -61,18 +65,31 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Failed to build connection url: %v", err)
 	}
 
-	govmomiClient, err := govmomi.NewClient(context.TODO(), parsedURL, insecureFlag)
+	soapClient := soap.NewClient(parsedURL, insecureFlag)
+	vimClient, err := vim25.NewClient(context.TODO(), soapClient)
 	if err != nil {
-		logger.Fatalf("Failed to create govmomi client: %v", err)
+		logger.Fatalf("Failed to create vimClient client: %v", err)
 	}
 
-	if !govmomiClient.IsVC() {
+	if !vimClient.IsVC() {
 		logger.Fatalf("Created client not connected to vCenter")
+	}
+
+	// vSphere connection is timed out after 30 minutes of inactivity.
+	vimClient.RoundTripper = session.KeepAlive(vimClient.RoundTripper, 10*time.Minute)
+	govmomiClient := &govmomi.Client{
+		Client:         vimClient,
+		SessionManager: session.NewManager(vimClient),
+	}
+
+	err = govmomiClient.SessionManager.Login(context.TODO(), parsedURL.User)
+	if err != nil {
+		logger.Fatalf("Failed to login with provided credentials: %v", err)
 	}
 
 	cnsClient, err := cns.NewClient(context.TODO(), govmomiClient.Client)
 	if err != nil {
-		fmt.Printf("failed to create CNS client: %v", err)
+		logger.Fatalf("Failed to create CNS client: %v", err)
 	}
 
 	return &Discoverer{
