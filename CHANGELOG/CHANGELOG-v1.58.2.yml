@@ -7,4 +7,12 @@ ingress-nginx:
     - summary: Add libraries to the final image.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7666
       impact: Ingress nginx controller will restart.
+log-shipper:
+  fixes:
+    - summary: Add missing ca-certs to prevent errors with HTTPS connections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7686
+openvpn:
+  fixes:
+    - summary: Add missing ca-certs to prevent errors with HTTPS connections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7686
 
