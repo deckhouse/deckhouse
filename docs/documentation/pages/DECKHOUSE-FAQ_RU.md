@@ -244,22 +244,22 @@ Patch-релизы (например, обновление на версию `1.
 
 3. Получите и сравните IP-адреса хранилища образов Deckhouse (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse. Они должны совпадать.
 
-  Пример получения IP-адреса хранилища образов Deckhouse на узле:
+      Пример получения IP-адреса хранилища образов Deckhouse на узле:
 
-  ```shell
-  $ getent ahosts registry.deckhouse.ru
-  185.193.90.38    STREAM registry.deckhouse.ru
-  185.193.90.38    DGRAM
-  185.193.90.38    RAW
-  ```
+      ```shell
+      $ getent ahosts registry.deckhouse.ru
+      185.193.90.38    STREAM registry.deckhouse.ru
+      185.193.90.38    DGRAM
+      185.193.90.38    RAW
+      ```
 
-  Пример получения IP-адреса хранилища образов Deckhouse в поде Deckhouse:
-  
-  ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.ru
-  185.193.90.38    STREAM registry.deckhouse.ru
-  185.193.90.38    DGRAM  registry.deckhouse.ru
-  ```
+      Пример получения IP-адреса хранилища образов Deckhouse в поде Deckhouse:
+
+      ```shell
+      $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.ru
+      185.193.90.38    STREAM registry.deckhouse.ru
+      185.193.90.38    DGRAM  registry.deckhouse.ru
+      ```
   
 4. Если полученные IP-адреса не совпадают, проверьте настройки DNS на узле.
 
@@ -360,50 +360,50 @@ Deckhouse поддерживает работу только с Bearer token-с�
   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
 3. Заполните поля страницы создания следующим образом:
-* `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
-* `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
-* `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/en/anonymous-access.html) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в *Settings* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
-* `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
-* `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
-* `Maximum Metadata Age` должно быть равно 0.
-* Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
-  - `Authentication Type` должно иметь значение `Username`.
-  - `Username` должно иметь значение `license-token`.
-  - `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
+   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
+   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
+   * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/en/anonymous-access.html) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в *Settings* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
+   * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
+   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
+   * `Maximum Metadata Age` должно быть равно 0.
+   * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+   - `Authentication Type` должно иметь значение `Username`.
+   - `Username` должно иметь значение `license-token`.
+   - `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
 
-  ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
-  ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
-  ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
+   ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
+   ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
+   ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
 
 4. Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
-* Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+   * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
 
-    ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
+      ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
 
-* Создайте пользователя Nexus с ролью, созданной выше.
+   * Создайте пользователя Nexus с ролью, созданной выше.
 
-    ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
+      ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
 
 ### Особенности настройки Harbor
 
 Необходимо использовать [Harbor](https://github.com/goharbor/harbor), как Proxy Cache.
 
 1. Настройте Registry:
-* `Administration -> Registries -> New Endpoint`.
-* `Provider`: `Docker Registry`.
-* `Name` — укажите любое, на ваше усмотрение.
-* `Endpoint URL`: `https://registry.deckhouse.ru`.
-* Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
+   * `Administration -> Registries -> New Endpoint`.
+   * `Provider`: `Docker Registry`.
+   * `Name` — укажите любое, на ваше усмотрение.
+   * `Endpoint URL`: `https://registry.deckhouse.ru`.
+   * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
 
-  ![Настройка Registry](images/registry/harbor/harbor1.png)
+   ![Настройка Registry](images/registry/harbor/harbor1.png)
 
 2. Создайте новый проект:
-* `Projects -> New Project`.
-* `Project Name` будет частью URL. Используйте любой, например, `d8s`.
-* `Access Level`: `Public`.
-* `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
+   * `Projects -> New Project`.
+   * `Project Name` будет частью URL. Используйте любой, например, `d8s`.
+   * `Access Level`: `Public`.
+   * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
 
-  ![Создание нового проекта](images/registry/harbor/harbor2.png)
+   ![Создание нового проекта](images/registry/harbor/harbor2.png)
 
 В результате настройки, образы Deckhouse станут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
@@ -486,7 +486,6 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
    > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse/ee).
    > Перед запуском команды убедитесь, что этот путь существует и у используемой учетной записи есть права на запись.
-
    > Если ваш registry не требует авторизации, флаги `--registry-login`/`--registry-password` указывать не нужно.
 
 1. После загрузки образов в изолированный registry можно переходить к установке Deckhouse (доступно только в Enterprise Edition). Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
@@ -634,11 +633,11 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 4. Создайте пользователя и пароль для аутентификации на proxy-сервере:
 
-  Пример для пользователя `test` с паролем `test` (обязательно измените):
+   Пример для пользователя `test` с паролем `test` (обязательно измените):
 
-   ```shell
-   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
-   ```
+      ```shell
+      echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
+      ```
 
 5. Запустите Squid и включите его автоматический запуск при загрузке сервера:
 

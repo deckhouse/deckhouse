@@ -158,10 +158,10 @@ title: "Модуль operator-prometheus"
 ![Как обрабатываются Custome Resources с rule](../../images/200-operator-prometheus/rules.png)
 
 1. Prometheus Operator следит за PrometheusRule'ами (подходящими под указанный в ресурсе `prometheus` `ruleSelector`).
-2. Если появился новый PrometheusRule (или был удален существующий) — Prometheus Operator обновляет `prometheus.yaml` (также обрабатывает его по логике совпадающей с обработкой Service Monitor'ов, которая описана выше).
-3. Как в случае добавления/удаления PrometheusRule'а, так и при изменении содержимого PrometheusRule'а, Prometheus Operator обновляет ConfigMap `prometheus-main-rulefiles-0`.
-4. Штатными средствами самого Kubernetes данные из ConfigMap помещаются в поде.
-5. Изменение файла отслеживает `prometheus-config-reloader`, который:
+1. Если появился новый PrometheusRule (или был удален существующий) — Prometheus Operator обновляет `prometheus.yaml` (также обрабатывает его по логике совпадающей с обработкой Service Monitor'ов, которая описана выше).
+1. Как в случае добавления/удаления PrometheusRule'а, так и при изменении содержимого PrometheusRule'а, Prometheus Operator обновляет ConfigMap `prometheus-main-rulefiles-0`.
+1. Штатными средствами самого Kubernetes данные из ConfigMap помещаются в поде.
+1. Изменение файла отслеживает `prometheus-config-reloader`, который:
 * скачивает изменившиеся ConfigMap'ы в директорию rules (это `emptyDir`);
 * по HTTP отправляет запрос Prometheus'у на перезагрузку.
-6. Prometheus перечитывает конфигурационный файл и отмечает изменившиеся *rules*.
+1. Prometheus перечитывает конфигурационный файл и отмечает изменившиеся *rules*.
