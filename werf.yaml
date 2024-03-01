@@ -632,7 +632,7 @@ import:
   to: /
   before: setup
   includePaths:
-  - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+  - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/share/vim
   - etc/vim
