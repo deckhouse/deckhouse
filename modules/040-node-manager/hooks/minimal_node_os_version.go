@@ -89,7 +89,7 @@ func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
 			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(s.(string))[1])
 			if err != nil {
 				return err
-			} 
+			}
 			if minDebianVersion == nil || ctrlDebianVersion.LessThan(minUbuntuVersion) {
 				minDebianVersion = ctrlDebianVersion
 			}
