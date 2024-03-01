@@ -222,6 +222,9 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	if err != nil {
 		return nil, err
 	}
+	if release.Status == nil {
+		release.Status = &v1alpha1.DeckhouseReleaseStatus{}
+	}
 
 	var annotationFlags updater.DeckhouseReleaseAnnotationsFlags
 
