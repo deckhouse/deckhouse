@@ -15,8 +15,11 @@ export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
 {% endsnippetcut %}
 
 Create a service account:
+
 {% snippetcut %}
 ```shell
 az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "account_name"
 ```
 {% endsnippetcut %}
+
+At this step, a service account will be created, with a secret (used in the [clientSecret](/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) parameter of the `AzureClusterConfiguration` resource) validity period of one year without automatic renewal. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
