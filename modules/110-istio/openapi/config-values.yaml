@@ -217,7 +217,7 @@ properties:
         enum: [ InitContainer, CNIPlugin ]
         x-examples: [ "CNIPlugin" ]
         description: |
-          How to configure trafficRedirection in the Pod Network of applications for further interception of requests in Istio.
+          Configuring trafficRedirection in the Pod Network of applications for further interception of requests in Istio.
           In the classic mode, the InitContainer sidecar-injector adds an init-container to application pods,
           which configures trafficRedirection at the start of the pod. Since this requires superuser rights,
           this mode does not work if one of the strict modes is enabled in the admission-policy-engine.
