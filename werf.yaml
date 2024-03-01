@@ -199,7 +199,7 @@ import:
   - lib64/libexpat.so*
   - lib64/libssl.so.*
   - lib64/libcrypto.so.*
-  - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+  - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
   - usr/bin/python3.9
