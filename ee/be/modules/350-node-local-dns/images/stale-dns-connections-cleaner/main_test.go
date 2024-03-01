@@ -127,7 +127,7 @@ func TestGetNLDPodNameAndIPByNodeName(t *testing.T) {
 					},
 				},
 			},
-			expectPodIPStr: "",
+			expectPodIPStr: "<nil>",
 			expectPodName:  "node-local-dns-12345",
 			expectSuccess:  true,
 		},
@@ -175,7 +175,7 @@ func TestGetNLDPodNameAndIPByNodeName(t *testing.T) {
 					if test.expectPodName != podName {
 						t.Fatalf("podName is not equal to the expected value")
 					} else if test.expectPodIPStr != podIP.String() {
-						t.Fatalf("podIP is not equal to the expected value")
+						t.Fatalf("podIP(%v) is not equal to the expected value(%v).", podIP.String(), test.expectPodIPStr)
 					}
 				}
 			}
