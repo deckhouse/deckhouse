@@ -165,7 +165,7 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			errContains: `unknown kind "ClusterConfiguration", expected "InitConfiguration" or "ModuleConfig"`,
+			errContains: `unknown kind "ClusterConfiguration", expected one of ("InitConfiguration", "ModuleConfig")`,
 		},
 	}
 
