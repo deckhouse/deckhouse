@@ -59,6 +59,8 @@
  - **[flant-integration]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ - **[ingress-nginx]** Add libraries to the final image. [#7666](https://github.com/deckhouse/deckhouse/pull/7666)
+    Ingress nginx controller will restart.
  - **[ingress-nginx]** Fix `/tmp` access rights for controller v1.6. [#7498](https://github.com/deckhouse/deckhouse/pull/7498)
  - **[istio]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
  - **[kube-dns]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
@@ -114,6 +116,8 @@
  - **[deckhouse-controller]** Update module values if the corresponding moduleSource was updated. [#7096](https://github.com/deckhouse/deckhouse/pull/7096)
  - **[external-module-manager]** Restore modules from ModulePullOverride objects. [#7266](https://github.com/deckhouse/deckhouse/pull/7266)
  - **[ingress-nginx]** Add missing tests. [#7392](https://github.com/deckhouse/deckhouse/pull/7392)
+ - **[istio]** Bump istio version to `1.19.7`. [#7584](https://github.com/deckhouse/deckhouse/pull/7584)
+    The Istio control plane will restart. User workloads will not restart automaticaly, you will have to restart them eventually.
  - **[istio]** Add the ability to use more than 2 replicas of `istiod` pods and autoscaling. [#7421](https://github.com/deckhouse/deckhouse/pull/7421)
  - **[local-path-provisioner]** Bump to version `0.0.26`. [#7283](https://github.com/deckhouse/deckhouse/pull/7283)
  - **[multitenancy-manager]** Don't render the ProjectType resource in the documentation as it has been deprecated. [#7595](https://github.com/deckhouse/deckhouse/pull/7595)
