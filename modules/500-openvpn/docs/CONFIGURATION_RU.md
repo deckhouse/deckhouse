@@ -6,15 +6,15 @@ title: "Модуль openvpn: настройки"
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](../150-user-authn/). Также можно настроить аутентификацию с помощью параметра [externalAuthentication](#parameters-auth-externalauthentication). Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
+По умолчанию используется модуль [user-authn](../150-user-authn/). Также можно настроить аутентификацию с помощью параметра [externalAuthentication](#parameters-auth-externalauthentication). Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
-Посмотреть сгенерированный пароль можно командой:
+Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
-Чтобы сгенерировать новый пароль, нужно удалить Secret:
+Чтобы сгенерировать новый пароль, удалите Secret:
 
 ```shell
 kubectl -n d8-openvpn delete secret/basic-auth

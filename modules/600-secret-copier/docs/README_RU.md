@@ -2,25 +2,25 @@
 title: "Модуль secret-copier"
 ---
 
-Данный модуль отвечает за копирование Secret'ов во все namespace'ы.
+Модуль отвечает за копирование Secret во все namespace.
 
-Нам данный модуль полезен тем, чтобы не копировать каждый раз в CI Secret'ы для пуллинга образов и заказа RBD в Ceph.
+Модуль сам скопирует в CI Secret для пуллинга образов и заказа RBD в Ceph.
 
 ### Как работает
 
-Данный модуль следит за изменениями Secret'ов в namespace `default` с лейблом `secret-copier.deckhouse.io/enabled: ""`.
-* При создании такого Secret'а он будет скопирован во все namespace.
-* При изменении Secret'а его новое содержимое будет раскопировано во все namespace.
-* При удалении Secret'а он будет удален из всех namespace.
-* При изменении скопированного Secret'а в прикладном namespace тот будет перезаписан оригинальным содержимым.
-* При создании любого namespace в него копируются все Secret'ы из default namespace с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+Модуль следит за изменениями Secret в namespace `default` с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+* При создании такого Secret модуль скопирует его во все namespace.
+* При изменении Secret модуль скопирует его новое содержимое во все namespace.
+* При удалении Secret модуль удалит его из всех namespace.
+* При изменении скопированного Secret в прикладном namespace модуль перезапишет его оригинальным содержимым.
+* При создании любого namespace в него копируются все Secret из namespace `default` с лейблом `secret-copier.deckhouse.io/enabled: ""`.
 
-Кроме этого, каждую ночь Secret'ы будут повторно синхронизированы и приведены к состоянию в default namespace.
+Кроме этого, каждую ночь модуль повторно проверяет все Secret и приводит их к состоянию в namespace `default`.
 
-### Что нужно настроить?
+### Что нужно настроить
 
-Чтобы все заработало, достаточно создать в default namespace Secret с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+Чтобы все заработало, создайте в namespace `default` Secret с лейблом `secret-copier.deckhouse.io/enabled: ""`.
 
-### Как ограничить список namespace'ов, в которые будет производиться копирование?
+### Как ограничить список namespace, в которые модуль копирует Secret
 
-Задайте label–селектор в значении аннотации `secret-copier.deckhouse.io/target-namespace-selector`. Например: `secret-copier.deckhouse.io/target-namespace-selector: "app=custom"`. Модуль создаст копию этого Secret'а во всех пространствах имен, соответствующих заданному label–селектору.
+Задайте label–селектор в значении аннотации `secret-copier.deckhouse.io/target-namespace-selector`. Например: `secret-copier.deckhouse.io/target-namespace-selector: "app=custom"`. Модуль создаст копию этого Secret во всех namespace, соответствующих этому label–селектору.

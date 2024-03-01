@@ -136,11 +136,11 @@ spec:
 
 2. Закодируйте в base64 токен доступа к Grafana Cloud.
 
-![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
+    ![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
 
-   ```bash
-   echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
-   ```
+    ```bash
+    echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
+    ```
 
 3. Создайте **ClusterLogDestination**
 

@@ -4,7 +4,7 @@ title: "Модуль namespace-configurator: примеры"
 
 ## Пример
 
-Этот пример добавит лейбл `extended-monitoring.deckhouse.io/enabled=true` и аннотацию `foo=bar` к каждому namespace, начинающемуся с `prod-` или `infra-`, за исключением `infra-test`.
+Добавьте лейбл `extended-monitoring.deckhouse.io/enabled=true` и аннотацию `foo=bar` к каждому namespace, начинающемуся с `prod-` или `infra-`, за исключением `infra-test`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

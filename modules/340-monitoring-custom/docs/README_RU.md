@@ -17,12 +17,12 @@ search: prometheus
 Порту, с которого собираются метрики, укажите имя `http-metrics` и `https-metrics` для подключения по HTTP или HTTPS.
 
   Если это невозможно (например, порт уже определен и назван другим именем), необходимо воспользоваться аннотациями:
-  * `prometheus.deckhouse.io/port: номер_порта` — для указания порта;
-  * `prometheus.deckhouse.io/tls: "true"` — если сбор метрик будет проходить по HTTPS.
+* `prometheus.deckhouse.io/port: номер_порта` — для указания порта;
+* `prometheus.deckhouse.io/tls: "true"` — если сбор метрик будет проходить по HTTPS.
 
   > **Важно!** При указании аннотации на Service в качестве значения порта необходимо использовать `targetPort`. Это означает, что порт`targetPort` открыт и слушается приложением.
 
-  - Пример 1:
+- Пример 1:
 
     ```yaml
     ports:
@@ -30,7 +30,7 @@ search: prometheus
       containerPort: 443
     ```
 
-  - Пример 2:
+- Пример 2:
 
     ```yaml
     annotations:
