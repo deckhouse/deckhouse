@@ -51,7 +51,11 @@ properties:
         x-examples:
           - ["Deployment", "StatefulSet"]
         description: |
-          A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended. Acceptable values include `Deployment`, `StatefulSet`, `DaemonSet`, `Cronjob` or `*` for all kinds (this option is case-insensitive).
+          A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended.
+          
+          The option is case-insensitive.
+          
+          Specify `*` to check all controller kinds.
         items:
           type: string
           enum:
