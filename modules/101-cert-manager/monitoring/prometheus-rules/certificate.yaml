@@ -57,5 +57,5 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
-      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer was changed, probably cert-manager restart needed to update exporter state.
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer has changed
+      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer has changed, probably cert-manager restart needed to update exporter state.
