@@ -109,7 +109,7 @@ properties:
     properties:
       trafficRedirectionSetupMode:
         description: |
-          Каким образом производить настройку trafficRedirection в Pod Network приложений для дальнейшего перехвата запросов в Istio.
+          Настройка trafficRedirection в сети Pod Network в приложениях для дальнейшего перехвата запросов с помощью Istio.
           В классическом режиме InitContainer sidecar-injector добавляет подам приложений init-container,
           который настраивает trafficRedirection при старте пода. Для этого режима требуются расширенные права, так как он не работает
           если в компоненте admission-policy-engine включены строгие режимы безопасности.
