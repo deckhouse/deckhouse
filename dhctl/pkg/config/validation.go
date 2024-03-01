@@ -77,7 +77,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 
 		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, &unstructured.Unstructured{})
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 
 		if gvk.Version == "" {
@@ -93,7 +93,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 }
 
 // ValidateInitConfiguration parses and validates cluster InitConfiguration.
-// It requires at one doc with InitConfiguration kind.
+// It requires one doc with InitConfiguration kind.
 func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
@@ -113,7 +113,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 		var index SchemaIndex
 		err := yaml.Unmarshal(docData, &index)
 		if err != nil {
-			return fmt.Errorf("unmarshal init configuration: %w", err)
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 
 		switch index.Kind {
@@ -124,15 +124,18 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 			}
 			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 			if err != nil {
-				return err
+				return fmt.Errorf("validate %q: %w", InitConfigurationKind, err)
 			}
 		case ModuleConfigKind:
 			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 			if err != nil {
-				return err
+				return fmt.Errorf("validate %q: %w", ModuleConfigKind, err)
 			}
 		default:
-			return fmt.Errorf("unknown kind %q, expected %q or %q", index.Kind, InitConfigurationKind, ModuleConfigKind)
+			return fmt.Errorf(
+				"unknown kind %q, expected one of (%q, %q)",
+				index.Kind, InitConfigurationKind, ModuleConfigKind,
+			)
 		}
 	}
 
@@ -144,7 +147,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 }
 
 // ValidateClusterConfiguration parses and validates cluster ClusterConfiguration.
-// It requires at one doc with ClusterConfiguration kind.
+// It requires one doc with ClusterConfiguration kind.
 // Returns data that needs to validate ProviderSpecificClusterConfiguration.
 func ValidateClusterConfiguration(
 	clusterConfigData string,
@@ -169,7 +172,7 @@ func ValidateClusterConfiguration(
 		var index SchemaIndex
 		err := yaml.Unmarshal(docData, &index)
 		if err != nil {
-			return ClusterConfig{}, fmt.Errorf("unmarshal cluster configuration: %w", err)
+			return ClusterConfig{}, fmt.Errorf("unmarshal: %w", err)
 		}
 
 		switch index.Kind {
@@ -180,11 +183,11 @@ func ValidateClusterConfiguration(
 
 			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 			if err != nil {
-				return ClusterConfig{}, err
+				return ClusterConfig{}, fmt.Errorf("validate %q: %w", ClusterConfigurationKind, err)
 			}
 
 			if err = yaml.Unmarshal([]byte(doc), &clusterConfig); err != nil {
-				return ClusterConfig{}, fmt.Errorf("unable to unmarshal %q: %w\n---\n%s\n", ClusterConfigurationKind, err, doc)
+				return ClusterConfig{}, fmt.Errorf("unmarshal %q: %w", ClusterConfigurationKind, err)
 			}
 		default:
 			return ClusterConfig{}, fmt.Errorf("unknown kind %q, expected %q", index.Kind, InitConfigurationKind)
@@ -241,7 +244,7 @@ func ValidateProviderSpecificClusterConfiguration(
 		var index SchemaIndex
 		err := yaml.Unmarshal(docData, &index)
 		if err != nil {
-			return fmt.Errorf("unmarshal init configuration: %w", err)
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 
 		switch index.Kind {
@@ -252,7 +255,7 @@ func ValidateProviderSpecificClusterConfiguration(
 			}
 			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 			if err != nil {
-				return err
+				return fmt.Errorf("validate %q: %w", providerKind, err)
 			}
 		default:
 			return fmt.Errorf("unknown kind %q, expected %q", index.Kind, providerKind)
