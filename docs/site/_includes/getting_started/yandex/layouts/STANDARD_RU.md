@@ -2,5 +2,5 @@
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 {% alert level="danger" %}
-В данной схеме размещения узлы не будут иметь публичных адресов, а будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud.
+В данной схеме размещения узлы не будут иметь публичных IP-адресов, а будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud.
 {% endalert %}
