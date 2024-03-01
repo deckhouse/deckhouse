@@ -9,6 +9,8 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+- name: OVIRT_CONFIG
+  value: /etc/cloud/cloud-config
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -40,6 +42,8 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+- name: OVIRT_CONFIG
+  value: /etc/cloud/cloud-config
 {{- end }}
 
 {{- define "csi_node_volumes" }}
