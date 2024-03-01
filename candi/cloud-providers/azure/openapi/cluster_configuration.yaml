@@ -366,6 +366,8 @@ apiVersions:
           clientSecret:
             description: |
               The client's secret.
+
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
             type: string
           tenantId:
             description: |
