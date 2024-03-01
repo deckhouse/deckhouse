@@ -129,7 +129,7 @@ properties:
             properties:
               secretName:
                 description: |
-                  Имя Secret в namespace `d8-system`, который будет использоваться для smoke-mini.
+                  Имя секрета (Secret) в пространстве имен `d8-system`, который будет использоваться для smoke-mini.
 
                   Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   disabledProbes:
