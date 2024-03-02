@@ -126,7 +126,7 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	return nil
 }
 
-func (dml *DeckhouseController) ReloadModule(_, _ string) (*modules.BasicModule, error) {
+func (dml *DeckhouseController) LoadModule(_, _ string) (*modules.BasicModule, error) {
 	return nil, fmt.Errorf("not implemented yet")
 }
 
