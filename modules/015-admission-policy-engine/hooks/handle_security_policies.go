@@ -123,6 +123,10 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
 		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
 	}
+	// Having rules allowing '*' volumes makes no sense
+	if hasItem(sp.Spec.Policies.AllowedClusterRoles, "*") {
+		sp.Spec.Policies.AllowedClusterRoles = nil
+	}
 }
 
 type securityPolicy struct {

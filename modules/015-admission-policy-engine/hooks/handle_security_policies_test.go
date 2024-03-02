@@ -108,6 +108,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						"rule": "RunAsAny"
 					},
 					"readOnlyRootFilesystem": true,
+					"allowedClusterRoles": [
+						"*"
+					],
 					"requiredDropCapabilities": [
 						"ALL"
 					],
@@ -206,6 +209,7 @@ spec:
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
+    allowedClusterRoles: ["*"]
     runAsGroup:
       ranges:
       - max: 500
