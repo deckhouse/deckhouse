@@ -54,6 +54,10 @@ spec:
                   additionalProperties:
                     type: string
                   description: Deckhouse release requirements.
+                changelog:
+                  type: object
+                  description: Release's changelog for module.
+                  x-kubernetes-preserve-unknown-fields: true
             status:
               type: object
               properties:
