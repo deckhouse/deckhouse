@@ -111,7 +111,7 @@ const (
 	approvalAnnotation     = "modules.deckhouse.io/approved"
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
-	manualApprovalRequired = "Waiting for manual approval"
+	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
 	waitingForWindow       = "Release is waiting for the update window: %s"
 	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
 	namespace              = "d8-system"
@@ -519,7 +519,9 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 
 				return ctrl.Result{Requeue: true}, err
 			}
+			// defer restart
 			modulesChangedReason = "one of modules is not enabled"
+			defer c.emitRestart(modulesChangedReason)
 		}
 	}
 
@@ -608,6 +610,10 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 					return ctrl.Result{Requeue: true}, e
 				}
 			}
+			// disable target module hooks so as not to invoke them before restart
+			if c.modulesValidator.GetModule(moduleName) != nil {
+				c.modulesValidator.DisableModuleHooks(moduleName)
+			}
 			// after deploying a new release, mark previous one (if any) as superseded
 			if pred.currentReleaseIndex >= 0 {
 				release := pred.releases[pred.currentReleaseIndex]
@@ -619,7 +625,11 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				}
 			}
 
-			modulesChangedReason = "a new module release found"
+			// defer restart
+			if modulesChangedReason == "" {
+				modulesChangedReason = "a new module release found"
+				defer c.emitRestart(modulesChangedReason)
+			}
 
 			release.Status.Phase = v1alpha1.PhaseDeployed
 			release.Status.Message = ""
@@ -633,10 +643,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
-	}
-
-	if modulesChangedReason != "" {
-		c.emitRestart(modulesChangedReason)
 	}
 
 	return ctrl.Result{}, nil
@@ -1152,6 +1158,8 @@ func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
 type moduleValidator interface {
 	ValidateModule(m *addonmodules.BasicModule) error
 	GetValuesValidator() *validation.ValuesValidator
+	DisableModuleHooks(moduleName string)
+	GetModule(moduleName string) *addonmodules.BasicModule
 }
 
 func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
