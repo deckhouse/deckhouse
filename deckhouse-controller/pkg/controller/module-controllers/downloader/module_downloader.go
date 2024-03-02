@@ -63,6 +63,7 @@ type ModuleDownloadResult struct {
 	ModuleWeight  uint32
 
 	ModuleDefinition *models.DeckhouseModuleDefinition
+	Changelog        map[string]any
 }
 
 // DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
@@ -109,13 +110,14 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
 	res := ModuleDownloadResult{}
-	moduleVersion, checksum, err := md.fetchModuleVersionFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
+	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
 		return res, err
 	}
 
 	res.Checksum = checksum
 	res.ModuleVersion = moduleVersion
+	res.Changelog = changelog
 
 	// module was not updated
 	if moduleVersion == "" {
@@ -261,32 +263,33 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) er
 	}
 }
 
-func (md *ModuleDownloader) fetchModuleVersionFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) ( /* moduleVersion */ string /*newChecksum*/, string, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
+	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
 	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
-		return "", "", fmt.Errorf("fetch release image error: %v", err)
+		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
 	}
 
 	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return "", "", fmt.Errorf("fetch image error: %v", err)
+		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
 	}
 
 	digest, err := img.Digest()
 	if err != nil {
-		return "", "", fmt.Errorf("fetch digest error: %v", err)
+		return "", "", nil, fmt.Errorf("fetch digest error: %v", err)
 	}
 
 	if moduleChecksum == digest.String() {
-		return "", moduleChecksum, nil
+		return "", moduleChecksum, nil, nil
 	}
 
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
 	if err != nil {
-		return "", digest.String(), fmt.Errorf("fetch release metadata error: %v", err)
+		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
 	}
 
-	return "v" + moduleMetadata.Version.String(), digest.String(), nil
+	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 
 func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
@@ -350,45 +353,34 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleRele
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
-	buf := bytes.NewBuffer(nil)
+	rr := &releaseReader{
+		versionReader:   bytes.NewBuffer(nil),
+		changelogReader: bytes.NewBuffer(nil),
+	}
 
-	err := untarMetadata(rc, buf)
+	err := rr.untarMetadata(rc)
 	if err != nil {
 		return meta, err
 	}
 
-	err = json.Unmarshal(buf.Bytes(), &meta)
-
-	return meta, err
-}
-
-func untarMetadata(rc io.ReadCloser, rw io.Writer) error {
-	tr := tar.NewReader(rc)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of archive
-			return nil
-		}
+	if rr.versionReader.Len() > 0 {
+		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return err
-		}
-		if strings.HasPrefix(hdr.Name, ".werf") {
-			continue
-		}
-
-		switch hdr.Name {
-		case "version.json":
-			_, err = io.Copy(rw, tr)
-			if err != nil {
-				return err
-			}
-			return nil
-
-		default:
-			continue
+			return meta, err
 		}
 	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			meta.Changelog = make(map[string]any)
+			return meta, nil
+		}
+		meta.Changelog = changelog
+	}
+
+	return meta, err
 }
 
 func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
@@ -436,6 +428,8 @@ func isRel(candidate, target string) bool {
 
 type moduleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
+
+	Changelog map[string]any
 }
 
 // Inject registry to module values

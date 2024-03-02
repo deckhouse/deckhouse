@@ -20,6 +20,8 @@ spec:
                   description: Время, до которого отложено обновление.
                 requirements:
                   description: Структура содержащая требования, необходимые для применения релиза.
+                changelog:
+                  description: Список изменений модуля в данном релизе.
             status:
               properties:
                 phase:
