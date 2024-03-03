@@ -243,13 +243,13 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
 
 .PHONY: docs-spellcheck-site
-docs-spellcheck-site: ## Check the spelling in the documentation site part (werf is required to build the containers)
+docs-spellcheck-site: ## Check the spelling in the main site part (werf is required to build the containers)
   ##~ Options: filename="target-file" (Specify the path to a specific file)
   ##~ Options: type="plain_text" (Displays HTML stripped of tags. Use only with filename option!)
 	sh ./tools/spelling/spell_check_site.sh $(filename) $(type)
 
 .PHONY: docs-spellcheck-documentation
-docs-spellcheck-documentation: ## Check the spelling in the documentation site part (werf is required to build the containers)
+docs-spellcheck-documentation: ## Check the spelling in the documentation part (werf is required to build the containers)
   ##~ Options: filename="target-file" (Specify the path to a specific file)
   ##~ Options: type="plain_text" (Displays HTML stripped of tags. Use only with filename option!)
 	sh ./tools/spelling/spell_check_documentation.sh $(filename) $(type)

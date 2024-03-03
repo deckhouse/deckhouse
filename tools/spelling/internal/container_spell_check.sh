@@ -1,23 +1,23 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
 str=$'\n'
 ex_result=0
 
-language="ru_RU,en_US,dev_OPS"
+language="/temp/dictionaries/ru_RU,/temp/dictionaries/en_US,/temp/dictionaries/dev_OPS"
 
 if [ -n "$1" ]; then
   arg_target_page=$1
 fi
 
-cp /usr/share/hunspell/en_US.aff  /usr/share/hunspell/en_US.aff.orig
-cp /usr/share/hunspell/en_US.dic  /usr/share/hunspell/en_US.dic.orig
-iconv --from ISO8859-1 /usr/share/hunspell/en_US.aff.orig > /usr/share/hunspell/en_US.aff
-iconv --from ISO8859-1 /usr/share/hunspell/en_US.dic.orig > /usr/share/hunspell/en_US.dic
-rm /usr/share/hunspell/en_US.aff.orig
-rm /usr/share/hunspell/en_US.dic.orig
-sed -i 's/SET ISO8859-1/SET UTF-8/' /usr/share/hunspell/en_US.aff
+#cp /usr/share/hunspell/en_US.aff  /usr/share/hunspell/en_US.aff.orig
+#cp /usr/share/hunspell/en_US.dic  /usr/share/hunspell/en_US.dic.orig
+#iconv --from ISO8859-1 /usr/share/hunspell/en_US.aff.orig > /usr/share/hunspell/en_US.aff
+#iconv --from ISO8859-1 /usr/share/hunspell/en_US.dic.orig > /usr/share/hunspell/en_US.dic
+#rm /usr/share/hunspell/en_US.aff.orig
+#rm /usr/share/hunspell/en_US.dic.orig
+#sed -i 's/SET ISO8859-1/SET UTF-8/' /usr/share/hunspell/en_US.aff
 
 echo "Checking docs..."
 
@@ -37,7 +37,7 @@ if [ -n "$1" ]; then
 __EOF__
       if [ "$check" -eq 1 ]; then
         echo "Checking $arg_target_page..."
-        result=$(python3 clear_html_from_code.py $arg_target_page | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | html2text -utf8 | sed '/^$/d' | hunspell -d $language -l)
+        result=$(python3 clear_html_from_code.py $arg_target_page | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | sed '/^$/d' | hunspell -d $language -l)
         if [ -n "$result" ]; then
           echo $result | sed 's/\s\+/\n/g'
         fi
@@ -47,20 +47,21 @@ __EOF__
     fi
   fi
 else
+
   for file in `find ./ -type f -name "*.html"`
   do
     check=1
-    if test -f "filesignore"; then
+    if test -f "/temp/internal/filesignore"; then
       while read y; do
         if [[ "$file" =~ "$y" ]]; then
           unset check
           check=0
         fi
       done <<-__EOF__
-  $(cat ./filesignore)
+  $(cat /temp/internal/filesignore)
 __EOF__
       if [ "$check" -eq 1 ]; then
-        result=$(python3 clear_html_from_code.py $file | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | html2text -utf8 | sed '/^$/d' | hunspell -d $language -l)
+        result=$(python3 /temp/internal/clear_html_from_code.py $file | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | sed '/^$/d' | hunspell -d $language -l -H)
         if [ -n "$result" ]; then
           unset ex_result
           ex_result=1

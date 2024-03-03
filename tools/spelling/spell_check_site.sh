@@ -12,9 +12,9 @@ fi
 
 script=$(cat <<EOF
 cd /spelling && \
-  ./container_spell_check.sh $arg_target_page $arg_get_plain_text
+  /temp/internal/container_spell_check.sh $arg_target_page $arg_get_plain_text
 EOF
 )
 
 cd docs/site/
-werf run docs-spell-checker --dev --env development --docker-options="--entrypoint=bash" -- -c "$script"
+werf run docs-spell-checker --dev --env development  --docker-options="--entrypoint=sh" -- -c "$script"
