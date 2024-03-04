@@ -15,6 +15,8 @@
 package v1alpha1
 
 type ZvirtCloudProviderDiscoveryData struct {
+	APIVersion     string               `json:"apiVersion,omitempty"`
+	Kind           string               `json:"kind,omitempty"`
 	StorageDomains []ZvirtStorageDomain `json:"storageDomains,omitempty"`
 }
 
