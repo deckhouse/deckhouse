@@ -130,10 +130,15 @@ func getReleaseChannelVersionFromRegistry(mirrorCtx *Context, releaseChannel str
 	}
 
 	releaseInfo := &struct {
-		Version string `json:"version"`
+		Version   string `json:"version"`
+		Suspended bool   `json:"suspend"`
 	}{}
 	if err = json.Unmarshal(versionJSON.Bytes(), releaseInfo); err != nil {
 		return nil, fmt.Errorf("cannot find release channel version: %w", err)
+	}
+
+	if releaseInfo.Suspended {
+		return nil, fmt.Errorf("Cannot mirror Deckhouse: source registry contains suspended release channel %q, try again later", releaseChannel)
 	}
 
 	ver, err := semver.NewVersion(releaseInfo.Version)
