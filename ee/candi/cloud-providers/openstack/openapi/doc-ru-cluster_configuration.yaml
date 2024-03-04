@@ -101,7 +101,7 @@ apiVersions:
             properties:
               policy:
                 description: |
-                  Политика распределения инстансов.
+                  Политика распределения инстансов:
 
                   - `AntiAffinity` — размещает инстансы на разных гипервизорах.
                   - `ManuallyManaged` — позволяет указать существующую ServerGroup по идентификатору.
