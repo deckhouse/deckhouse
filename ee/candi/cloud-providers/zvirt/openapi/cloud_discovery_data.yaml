@@ -12,7 +12,7 @@ apiVersions:
       kind:
         type: string
         enum: [ZvirtCloudProviderDiscoveryData]
-      storageProfiles:
+      storageDomains:
         type: array
         items:
           type: object
