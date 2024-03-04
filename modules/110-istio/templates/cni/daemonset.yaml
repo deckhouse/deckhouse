@@ -149,17 +149,17 @@ spec:
                 fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
-                  upstreams:
-                  - upstream: http://127.0.0.1:15014/metrics
-                    path: /metrics
-                    authorization:
-                      resourceAttributes:
-                        namespace: d8-{{ .Chart.Name }}
-                        apiGroup: apps
-                        apiVersion: v1
-                        resource: daemonsets
-                        subresource: prometheus-metrics
-                        name: istio-cni-node
+              upstreams:
+              - upstream: http://127.0.0.1:15014/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ .Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: istio-cni-node
           ports:
             - containerPort: 9734
               name: https-metrics
