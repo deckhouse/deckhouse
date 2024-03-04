@@ -10,7 +10,7 @@
         <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        Кластер из двух узлов
+        Кластер из нескольких узлов
         </a>
         <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
