@@ -125,8 +125,6 @@ spec:
               cpu: 100m
               memory: 100Mi
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
