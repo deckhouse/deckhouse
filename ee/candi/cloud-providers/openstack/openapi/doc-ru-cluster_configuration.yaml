@@ -104,12 +104,12 @@ apiVersions:
                   Политика распределения инстансов.
 
                   - `AntiAffinity` — размещает инстансы на разных гипервизорах.
-                  - `ManuallyManaged` — размещает инстансы в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
+                  - `ManuallyManaged` — позволяет указать существующую ServerGroup по идентификатору.
               manuallyManaged:
                 properties:
                   id:
                     description: |
-                      Идентификатор объекта `ServerGroup`, управляемого за пределами Deckhouse Kubernetes Platform.
+                      Идентификатор объекта ServerGroup.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
