@@ -170,6 +170,12 @@ func mergeStorageDomains(
 ) []v1alpha1.ZvirtStorageDomain {
 	result := []v1alpha1.ZvirtStorageDomain{}
 	for _, sd := range cloudSds {
+		logrus.Infof(
+			"StorageDomain: name=%s type=%s IsEnabled=%v\n",
+			sd.Name(),
+			string(sd.StorageType()),
+			sd.Status() == ovirtclient.StorageDomainStatusActive,
+		)
 		result = append(result, v1alpha1.ZvirtStorageDomain{
 			Name:      sd.Name(),
 			Type:      string(sd.StorageType()),
