@@ -52,10 +52,8 @@ properties:
           - ["Deployment", "StatefulSet"]
         description: |
           A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended.
-          
-          The option is case-insensitive.
-          
-          Specify `*` to check all controller kinds.
+
+          Specify `All` to check all controller kinds.
         items:
           type: string
           enum:
@@ -63,11 +61,7 @@ properties:
             - StatefulSet
             - DaemonSet
             - CronJob
-            - deployment
-            - statefulset
-            - daemonset
-            - cronjob
-            - "*"
+            - All
   events:
     type: object
     default: {}
