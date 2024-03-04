@@ -1436,11 +1436,12 @@ select#contact-select {
 
 .dimmer-block-content {
   &.disabled {
+    // REMOVE BEFORE MERGE. TODO
     display: block;
-    opacity: .3;
-    pointer-events: none;
-    user-select: none;
-    filter: blur(4px);
+    //opacity: .3;
+    //pointer-events: none;
+    //user-select: none;
+    //filter: blur(4px);
   }
 }
 
