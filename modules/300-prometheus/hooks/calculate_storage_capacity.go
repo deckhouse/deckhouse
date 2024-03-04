@@ -29,7 +29,7 @@ import (
 )
 
 const defaultDiskSizeGiB = 40
-const retentionPercent = 80
+const retentionPercent = 85
 const maxFreeSpaceGiB = 50
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
