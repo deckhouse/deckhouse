@@ -8,7 +8,6 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

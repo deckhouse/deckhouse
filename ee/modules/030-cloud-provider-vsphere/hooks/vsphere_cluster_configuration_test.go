@@ -93,6 +93,7 @@ provider:
   password: test
   insecure: true
 vmFolderPath: test
+vmFolderExists: true
 regionTagCategory: test
 zoneTagCategory: test
 region: test
