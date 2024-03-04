@@ -63,6 +63,18 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            host: 127.0.0.1
+            port: 9000
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            host: 127.0.0.1
+            port: 9000
+            scheme: HTTP
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
