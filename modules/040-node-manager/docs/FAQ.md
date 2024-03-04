@@ -156,7 +156,7 @@ Applying the changes will take some time.
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
-> **Note!** Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-drbd/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
+> **Note!** Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
 
 1. Delete the node from the Kubernetes cluster:
 
