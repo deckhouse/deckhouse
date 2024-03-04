@@ -25,8 +25,11 @@ import (
 )
 
 const (
-	requirementsKey     = "istioVer"
-	minVersionValuesKey = "istio:minimalVersion"
+	requirementsKey          = "istioVer"
+	k8sKey                   = "k8s"
+	minVersionValuesKey      = "istio:minimalVersion"
+	operatorK8sMaxVersionKey = "istio:minimalVersionK8sMaximal"
+	k8sVersionKey            = "istio:k8sVersion"
 )
 
 func init() {
@@ -52,5 +55,35 @@ func init() {
 		return true, nil
 	}
 
+	checkMaximalK8sVersioForOperator := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		desiredVersion, err := semver.NewVersion(requirementValue)
+		if err != nil {
+			return false, err
+		}
+
+		maximalK8sVersionForOperatorRaw, exists := getter.Get(operatorK8sMaxVersionKey)
+		if !exists {
+			return false, nil
+		}
+		maximalK8sVersionForOperatorStr := maximalK8sVersionForOperatorRaw.(string)
+		maximalVersionForOperator, err := semver.NewVersion(maximalK8sVersionForOperatorStr)
+		if err != nil {
+			return false, err
+		}
+
+		// use k8sVersion here only for check if it 'Automatic'
+		k8sVersion, exists := getter.Get(k8sVersionKey)
+		if !exists {
+			return false, nil
+		}
+
+		if k8sVersion.(string) == "Automatic" && maximalVersionForOperator.LessThan(desiredVersion) {
+			return false, fmt.Errorf("maximum version k8s for operator is '%s', you want install '%s' k8s ver", maximalK8sVersionForOperatorStr, requirementValue)
+		}
+
+		return true, nil
+	}
+
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
+	requirements.RegisterCheck(k8sKey, checkMaximalK8sVersioForOperator)
 }

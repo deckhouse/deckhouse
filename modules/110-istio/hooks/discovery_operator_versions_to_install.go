@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -33,7 +34,9 @@ import (
 )
 
 const (
-	minVersionValuesKey = "istio:minimalVersion"
+	minVersionValuesKey      = "istio:minimalVersion"
+	operatorK8sMinVersionKey = "istio:minimalVersionK8sMinimal"
+	operatorK8sMaxVersionKey = "istio:minimalVersionK8sMaximal"
 )
 
 type IstioOperatorCrdInfo struct {
@@ -74,6 +77,10 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
+	// Get array of compatibility k8s versions for every operator version
+	k8sCompatibleVersions := make(map[string][]string)
+	_ = json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions)
+
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, versionResult := range versionsToInstallResult {
 		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
@@ -112,9 +119,30 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	}
 	if minVersion == nil {
 		requirements.RemoveValue(minVersionValuesKey)
+		requirements.RemoveValue(operatorK8sMinVersionKey)
+		requirements.RemoveValue(operatorK8sMaxVersionKey)
 	} else {
 		requirements.SaveValue(minVersionValuesKey, minVersion.String())
+		minVer, maxVer := getMinAndMaxVersionsFromCompMap(k8sCompatibleVersions, minVersion.String())
+		requirements.SaveValue(operatorK8sMinVersionKey, minVer)
+		requirements.SaveValue(operatorK8sMaxVersionKey, maxVer)
 	}
 
 	return nil
+}
+
+// Use the fact compatability versions array is ["1.18", "1.19", "1.20", "1.21"] and key is like "1.19.3"
+func getMinAndMaxVersionsFromCompMap(cmpMap map[string][]string, key string) (string, string) {
+	v := strings.Split(key, ".")
+	if len(v) < 2 {
+		return "", ""
+	}
+	keySuffix := v[0] + "." + v[1]
+
+	if values, ok := cmpMap[keySuffix]; ok {
+		if len(values) > 1 {
+			return values[0], values[len(values)-1]
+		}
+	}
+	return "", ""
 }
