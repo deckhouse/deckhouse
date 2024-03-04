@@ -74,7 +74,7 @@
                   echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
                   ```
 
-              1. Run installer:
+              1. Run the installer:
 
                   ```
                   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
