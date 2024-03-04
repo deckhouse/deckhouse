@@ -433,7 +433,7 @@ apiVersions:
         type: array
         items:
           type: string
-          pattern: '^(\w+):(\w+)$'
+          pattern: '^([a-zA-Z0-9_\-]+):([a-zA-Z0-9_\-\*\?]+)$'
         minItems: 1
         description: |
           A list containing additional policy actions for IAM roles.
