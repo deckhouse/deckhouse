@@ -26,7 +26,7 @@ If you have metric flapping problems which lead to unwanted scales, there are op
 
 ## What scaling type should I prefer?
 
-1. The typical use-cases of a [classic](#classic-resource-consumption-based-scaling) type are pretty obvious.
+1. An example of the [classical type](#classic-resource-consumption-based-scaling).
 1. Suppose you have a single application, the source of metrics is located inside the namespace, and it is associated with one of the objects. In this case, we recommend using the [custom](#custom-metrics-based-scaling) namespace-scoped metrics.
 1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the application namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") Deployment.
 1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the application namespace. These can be, for example, cloud provider or SaaS-related metrics.
