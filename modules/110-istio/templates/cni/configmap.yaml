@@ -12,7 +12,7 @@ data:
       "cniVersion": "0.3.1",
       "name": "istio-cni",
       "type": "istio-cni",
-      "log_level": "debug",
+      "log_level": "info",
       "log_uds_address": "__LOG_UDS_ADDRESS__",
       "kubernetes": {
         "kubeconfig": "__KUBECONFIG_FILEPATH__",

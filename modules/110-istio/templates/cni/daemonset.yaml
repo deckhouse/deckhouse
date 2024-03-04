@@ -99,18 +99,17 @@ spec:
                   fieldPath: spec.nodeName
             - name: LOG_LEVEL
               value: debug
-            - name: GOMEMLIMIT
-              valueFrom:
-                resourceFieldRef:
-                  divisor: "0"
-                  resource: limits.memory
-            - name: GOMAXPROCS
-              valueFrom:
-                resourceFieldRef:
-                  divisor: "0"
-                  resource: limits.cpu
           image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix)) }}
           imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
           readinessProbe:
             failureThreshold: 3
             httpGet:
