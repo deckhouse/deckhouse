@@ -17,5 +17,7 @@
   to: /deckhouse/candi/cloud-providers/vsphere
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
-- add: /ee/fe/candi/bashible
-  to: /deckhouse/candi/bashible
+- add: /ee/fe/candi/bashible/bashbooster/02_log.sh
+  to: /deckhouse/candi/bashible/bashbooster/02_log.sh
+- add: /ee/fe/candi/bashible/common-steps/all
+  to: /deckhouse/candi/bashible/common-steps/all
