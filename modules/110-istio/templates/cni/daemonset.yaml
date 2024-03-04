@@ -167,8 +167,6 @@ spec:
             requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       dnsPolicy: ClusterFirst
-      nodeSelector:
-        kubernetes.io/os: linux
       restartPolicy: Always
       serviceAccountName: cni
       terminationGracePeriodSeconds: 5
