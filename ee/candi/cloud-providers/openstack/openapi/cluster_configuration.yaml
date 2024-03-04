@@ -200,7 +200,7 @@ apiVersions:
           serverGroup:
             type: object
             description: |
-              The OpenStack `ServerGroup` object is used to create a group of instances that are placed on different hypervisors. This allows you to increase the fault tolerance of the cluster.
+              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
             required: [policy]
             properties:
               policy:

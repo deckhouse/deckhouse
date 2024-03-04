@@ -97,14 +97,14 @@ apiVersions:
               - `openstack volume type list` — получить список типов дисков.
           serverGroup:
             description: |
-              OpenStack объект `ServerGroup` создаст группу инстансов на разных гипервизорах. Это повысит отказоустойчивость кластера.
+              ServerGroup объединяет инстансы в группу. Инстансы в такой группе будут размещены либо на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволит повысить отказоустойчивость кластера.
             properties:
               policy:
                 description: |
                   Политика, которая распределит инстансы на разных гипервизорах.
 
-                  - `AntiAffinity` — разместите инстансы в соответствии с политикой Deckhouse Kubernetes Platform.
-                  - `ManuallyManaged` — разместите инстансы в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
+                  - `AntiAffinity` — размещает инстансы на разных гипервизорах.
+                  - `ManuallyManaged` — размещает инстансы в соответствии с политикой, управляемой за пределами Deckhouse Kubernetes Platform.
               manuallyManaged:
                 properties:
                   id:
