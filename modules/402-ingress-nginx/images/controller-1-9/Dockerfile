@@ -161,6 +161,12 @@ RUN bash -eu -c ' \
   && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
