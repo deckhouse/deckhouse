@@ -340,6 +340,45 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+  vcd:
+    iconPath: images/icons/platforms/vmware-vcd.png
+    ee_only: true
+    type: cloud
+    name:
+      en: VMware Cloud Director
+      ru: VMware Cloud Director
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
+      ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
+    layout:
+      code: standard
+      name: Standard
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   yandex:
     iconPath: images/icons/platforms/yandex_cloud.png
     layout:
