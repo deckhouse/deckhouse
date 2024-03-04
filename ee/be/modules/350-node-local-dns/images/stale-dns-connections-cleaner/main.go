@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
+	"os/signal"
 	"syscall"
 	"time"
 
@@ -28,16 +30,28 @@ import (
 )
 
 const (
-	nldNS               string = "kube-system"
-	nldLabelSelector    string = "app=node-local-dns"
-	nldDstPort          uint16 = 53
-	scanInterval               = 30 * time.Second
-	sizeofSocketID             = 0x30
-	sizeofSocketRequest        = sizeofSocketID + 0x8
-	SOCK_DESTROY               = 21
-	familyIPv4                 = syscall.AF_INET
-	protoUDP                   = unix.IPPROTO_UDP
+	nldNS            string = "kube-system"
+	nldLabelSelector string = "app=node-local-dns"
+	nldDstPort       uint16 = 53
+	scanInterval            = 30 * time.Second
+	listenAddress           = "127.0.0.1:9000"
+	// netlink const
+	familyIPv4          = syscall.AF_INET
+	protoUDP            = unix.IPPROTO_UDP
+	sizeofSocketID      = 0x30
+	sizeofSocketRequest = sizeofSocketID + 0x8
+	sockDestroy         = 21
 )
+
+type ConnectionsCleaner struct {
+	kubeClient       kubernetes.Interface
+	checkInterval    time.Duration
+	listenAddress    string
+	dstPort          uint16
+	nameSpace        string
+	podLabelSelector string
+	nodeName         string
+}
 
 var (
 	native       = nl.NativeEndian()
@@ -46,6 +60,7 @@ var (
 
 func main() {
 	log.Infof("Start")
+	defer log.Infof("Stop")
 	log.Infof("This is a workaround for issue https://github.com/cilium/cilium/issues/31012.")
 	log.Infof("When both the cni-cilium and node-local-dns modules are enabled, and the node-local-dns pod has been restarted, stale DNS connections may occur.")
 	log.Infof("This is due to the UDP socket remaining active in the application pods with the destination IP address of the old node-local-dns pod, which has already been deleted.")
@@ -71,8 +86,49 @@ func main() {
 	}
 	log.Infof("The current node name is %s", currentNodeName)
 
+	// Create a new instance of ConnectionsCleaner
+	nldCC := &ConnectionsCleaner{
+		kubeClient:       kubeClient,
+		checkInterval:    scanInterval,
+		listenAddress:    listenAddress,
+		dstPort:          nldDstPort,
+		nameSpace:        nldNS,
+		podLabelSelector: nldLabelSelector,
+		nodeName:         currentNodeName,
+	}
+
+	log.Infof("Address: %v", nldCC.listenAddress)
+	log.Infof("Checks interval: %v", nldCC.checkInterval)
+
+	// channels to stop converge loop
+	doneCh := make(chan struct{})
+
+	httpServer := nldCC.getHTTPServer()
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		log.Infof("Signal received: %v. Exiting.\n", <-signalChan)
+		cancel()
+		log.Infoln("Waiting for stop reconcile loop...")
+		<-doneCh
+
+		ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
+		defer cancel()
+
+		log.Infoln("Shutdown ...")
+
+		err := httpServer.Shutdown(ctx)
+		if err != nil {
+			log.Fatalf("Error occurred while closing the server: %v\n", err)
+		}
+		os.Exit(0)
+	}()
+
 	// Get podCIDR of the node
-	podCIDROnSameNode, err := getPodCIDR(kubeClient, currentNodeName)
+	podCIDROnSameNode, err := nldCC.getPodCIDR(rootCtx)
 	if err != nil {
 		log.Fatalf("Failed to get PodCIDR of the node. Error: %v", err)
 	}
@@ -82,99 +138,144 @@ func main() {
 		podCIDROnSameNode.String(),
 	)
 
-	// Main loop
+	go nldCC.checkAndDestroyLoop(rootCtx, doneCh, podCIDROnSameNode)
+
+	err = httpServer.ListenAndServe()
+	if !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
+}
+
+// #########################################################################
+// =========================================================================
+// Generate HTTPServer conf
+func (cc *ConnectionsCleaner) getHTTPServer() *http.Server {
+	indexPageContent := fmt.Sprintf(`<html>
+             <head><title>Stale-dns-connections-cleaner</title></head>
+             <body>
+             <h1> Check connections every %s</h1>
+             </body>
+             </html>`, cc.checkInterval.String())
+
+	router := http.NewServeMux()
+	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(indexPageContent))
+	})
+
+	return &http.Server{Addr: cc.listenAddress, Handler: router, ReadHeaderTimeout: 30 * time.Second}
+}
+
+// Main loop
+func (cc *ConnectionsCleaner) checkAndDestroyLoop(ctx context.Context, doneCh chan<- struct{}, podCIDR *net.IPNet) {
+	cc.checkAndDestroy(ctx, podCIDR)
+
+	ticker := time.NewTicker(cc.checkInterval)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(scanInterval)
-		// Get ip of pod node-local-dns running on the node
-		nldPodNameOnSameNode, nldPodIPOnSameNode, err := getNLDPodNameAndIPByNodeName(kubeClient, currentNodeName)
-		if err != nil {
-			log.Errorf("Failed to get IP of the nld Pod. Error: %v", err)
-			continue
-		}
-		if nldPodIPOnSameNode == nil {
-			log.Errorf("The IP address has not yet been assigned to the pod.")
-			continue
-		}
-
-		// Get all UDP sockets on node
-		allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
-		if err != nil {
-			log.Errorf("Failed get UDP sockets. Error: %v", err)
-		}
-
-		/*
-			For each socket check:
-			- If DST Port is equal to nldDstPort?
-			- Is DST IP belongs to podCIDR?
-			- Isn't DST IP equal to nldPodIP?
-			If all checks are true, then delete such socket
-		*/
-		for _, sock := range allUDPSockets {
-			if !(sock.ID.DestinationPort == nldDstPort) {
-				// this is not dns connection
-				continue
-			}
-			if !podCIDROnSameNode.Contains(sock.ID.Destination) {
-				// this connection is not to our node's PodCIDR
-				continue
-			}
-			if sock.ID.Destination.Equal(nldPodIPOnSameNode) {
-				// this connection to working node-local-dns Pod, appropriate one
-				continue
-			}
-			// the others sockets are inappropriate, let's drop them
-
-			log.Infof(
-				"Found socket %s:%v -> %s:%v, where dst_ip is belongs to the podCIDR (%s) and dst_port is equal %v.",
-				sock.ID.Source.String(),
-				sock.ID.SourcePort,
-				sock.ID.Destination.String(),
-				sock.ID.DestinationPort,
-				podCIDROnSameNode.String(),
-				nldDstPort,
-			)
-			log.Infof(
-				"Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroyed.",
-				nldPodNameOnSameNode,
-				nldPodIPOnSameNode.String(),
-				sock.ID.Destination.String(),
-			)
-			err := destroySocket(sock.ID)
-			if err != nil {
-				if errors.Is(err, unix.EOPNOTSUPP) {
-					log.Fatalf("Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
-				} else {
-					log.Errorf("Failed to destroy the socket. Error: %v", err)
-				}
-			}
-			log.Infof(
-				"Socket %s:%v -> %s:%v successfully destroyed",
-				sock.ID.Source.String(),
-				sock.ID.SourcePort,
-				sock.ID.Destination.String(),
-				sock.ID.DestinationPort,
-			)
+		select {
+		case <-ticker.C:
+			cc.checkAndDestroy(ctx, podCIDR)
+		case <-ctx.Done():
+			doneCh <- struct{}{}
+			return
 		}
 	}
 }
 
+// Check the connections and if they are stuck, remove them.
+func (cc *ConnectionsCleaner) checkAndDestroy(ctx context.Context, podCIDR *net.IPNet) {
+	nldPodNameOnSameNode, nldPodIPOnSameNode, err := cc.getNLDPodNameAndIPByNodeName(ctx)
+	if err != nil {
+		log.Errorf("Failed to get IP of the nld Pod. Error: %v", err)
+		return
+	}
+	if nldPodIPOnSameNode == nil {
+		log.Errorf("The IP address has not yet been assigned to the pod.")
+		return
+	}
+
+	// Get all UDP sockets on node
+	allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
+	if err != nil {
+		log.Errorf("Failed get UDP sockets. Error: %v", err)
+	}
+
+	/*
+		For each socket check:
+		- If DST Port is equal to nldDstPort?
+		- Is DST IP belongs to podCIDR?
+		- Isn't DST IP equal to nldPodIP?
+		If all checks are true, then delete such socket
+	*/
+	for _, sock := range allUDPSockets {
+		if !(sock.ID.DestinationPort == cc.dstPort) {
+			// this is not dns connection
+			continue
+		}
+		if !podCIDR.Contains(sock.ID.Destination) {
+			// this connection is not to our node's PodCIDR
+			continue
+		}
+		if sock.ID.Destination.Equal(nldPodIPOnSameNode) {
+			// this connection to working node-local-dns Pod, appropriate one
+			continue
+		}
+		// the others sockets are inappropriate, let's drop them
+
+		log.Infof(
+			"Found socket %s:%v -> %s:%v, where dst_ip is belongs to the podCIDR (%s) and dst_port is equal %v.",
+			sock.ID.Source.String(),
+			sock.ID.SourcePort,
+			sock.ID.Destination.String(),
+			sock.ID.DestinationPort,
+			podCIDR.String(),
+			cc.dstPort,
+		)
+		log.Infof(
+			"Pod %s has ip %s. dst ip from socket(%s) is not equal to the ip of pod. So this socket will be destroyed.",
+			nldPodNameOnSameNode,
+			nldPodIPOnSameNode.String(),
+			sock.ID.Destination.String(),
+		)
+		err := destroySocket(sock.ID)
+		if err != nil {
+			if errors.Is(err, unix.EOPNOTSUPP) {
+				log.Fatalf("Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
+			} else {
+				log.Errorf("Failed to destroy the socket. Error: %v", err)
+			}
+		}
+		log.Infof(
+			"Socket %s:%v -> %s:%v successfully destroyed",
+			sock.ID.Source.String(),
+			sock.ID.SourcePort,
+			sock.ID.Destination.String(),
+			sock.ID.DestinationPort,
+		)
+	}
+}
+
 // Get podCIDR of node by Node name
-func getPodCIDR(kubeClient kubernetes.Interface, nodeName string) (*net.IPNet, error) {
-	node, err := kubeClient.CoreV1().Nodes().Get(
-		context.TODO(),
-		nodeName,
+func (cc *ConnectionsCleaner) getPodCIDR(ctx context.Context) (*net.IPNet, error) {
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	node, err := cc.kubeClient.CoreV1().Nodes().Get(
+		cctx,
+		cc.nodeName,
 		metav1.GetOptions{},
 	)
+	cancel()
 	if err != nil {
 		return nil, fmt.Errorf(
-			"Failed to get node. Error: %v",
+			"failed to get node. Error: %v",
 			err,
 		)
 	}
 	_, podCIDR, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"Failed to transform PodCIDR from String to net.IPNet. Error: %v",
+			"failed to transform PodCIDR from String to net.IPNet. Error: %v",
 			err,
 		)
 	}
@@ -182,30 +283,32 @@ func getPodCIDR(kubeClient kubernetes.Interface, nodeName string) (*net.IPNet, e
 }
 
 // Get current Pod Name and IP by Node name
-func getNLDPodNameAndIPByNodeName(kubeClient kubernetes.Interface, nodeName string) (string, net.IP, error) {
-	nldPodsOnSameNode, err := kubeClient.CoreV1().Pods(nldNS).List(
-		context.TODO(),
+func (cc *ConnectionsCleaner) getNLDPodNameAndIPByNodeName(ctx context.Context) (string, net.IP, error) {
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	nldPodsOnSameNode, err := cc.kubeClient.CoreV1().Pods(cc.nameSpace).List(
+		cctx,
 		metav1.ListOptions{
-			LabelSelector: nldLabelSelector,
-			FieldSelector: "spec.nodeName=" + nodeName,
+			LabelSelector: cc.podLabelSelector,
+			FieldSelector: "spec.nodeName=" + cc.nodeName,
 		},
 	)
+	cancel()
 	if err != nil {
 		return "", nil, fmt.Errorf(
-			"Failed to list pods on same node. Error: %v",
+			"failed to list pods on same node. Error: %v",
 			err,
 		)
 	}
 	switch {
 	case len(nldPodsOnSameNode.Items) == 0:
 		return "", nil, fmt.Errorf(
-			"There aren't agent pods on node %s",
-			nodeName,
+			"there aren't agent pods on node %s",
+			cc.nodeName,
 		)
 	case len(nldPodsOnSameNode.Items) > 1:
 		return "", nil, fmt.Errorf(
-			"There are more than one running node-local-dns pods on node %s",
-			nodeName,
+			"there are more than one running node-local-dns pods on node %s",
+			cc.nodeName,
 		)
 	}
 	currentPod := nldPodsOnSameNode.Items[0]
@@ -219,14 +322,14 @@ func destroySocket(sockId netlink.SocketID) error {
 	s, err := nl.Subscribe(unix.NETLINK_INET_DIAG)
 	if err != nil {
 		return fmt.Errorf(
-			"Failed create a new netlink request. Error: %v",
+			"failed create a new netlink request. Error: %v",
 			err,
 		)
 	}
 	defer s.Close()
 
 	// Construct the request
-	req := nl.NewNetlinkRequest(SOCK_DESTROY, unix.NLM_F_REQUEST)
+	req := nl.NewNetlinkRequest(sockDestroy, unix.NLM_F_REQUEST)
 	req.AddData(&socketRequest{
 		Family:   familyIPv4,
 		Protocol: protoUDP,
@@ -237,7 +340,7 @@ func destroySocket(sockId netlink.SocketID) error {
 	// Do the query
 	err = s.Send(req)
 	if err != nil {
-		return fmt.Errorf("Error destroying socket: %v", sockId)
+		return fmt.Errorf("error destroying socket: %v", sockId)
 	}
 	return nil
 }

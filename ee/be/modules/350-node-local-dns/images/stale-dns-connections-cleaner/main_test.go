@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -71,7 +72,18 @@ func TestGetPodCIDR(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
-			PodCIDR, err := getPodCIDR(fakeClientset, test.nodeName)
+			nldCCTest := &ConnectionsCleaner{
+				kubeClient:       fakeClientset,
+				checkInterval:    scanInterval,
+				listenAddress:    listenAddress,
+				dstPort:          nldDstPort,
+				nameSpace:        nldNS,
+				podLabelSelector: nldLabelSelector,
+				nodeName:         testNodeName,
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			PodCIDR, err := nldCCTest.getPodCIDR(ctx)
+			cancel()
 
 			switch test.expectSuccess {
 			case false:
@@ -159,7 +171,18 @@ func TestGetNLDPodNameAndIPByNodeName(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
-			podName, podIP, err := getNLDPodNameAndIPByNodeName(fakeClientset, test.nodeName)
+			nldCCTest := &ConnectionsCleaner{
+				kubeClient:       fakeClientset,
+				checkInterval:    scanInterval,
+				listenAddress:    listenAddress,
+				dstPort:          nldDstPort,
+				nameSpace:        nldNS,
+				podLabelSelector: nldLabelSelector,
+				nodeName:         testNodeName,
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			podName, podIP, err := nldCCTest.getNLDPodNameAndIPByNodeName(ctx)
+			cancel()
 
 			switch test.expectSuccess {
 			case false:
