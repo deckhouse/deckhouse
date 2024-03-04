@@ -146,8 +146,6 @@ func main() {
 	}
 }
 
-// #########################################################################
-// =========================================================================
 // Generate HTTPServer conf
 func (cc *ConnectionsCleaner) getHTTPServer() *http.Server {
 	indexPageContent := fmt.Sprintf(`<html>
