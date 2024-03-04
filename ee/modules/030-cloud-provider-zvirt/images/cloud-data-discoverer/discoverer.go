@@ -74,7 +74,7 @@ func newCloudConfig() (*CloudConfig, error) {
 	return cloudConfig, nil
 }
 
-// Client Creates a vCD client
+// Client Creates a zvirt client
 func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
 	logger := ovirtclientlog.NewGoLogger(log.Default())
 
@@ -125,7 +125,7 @@ func (d *Discoverer) DiscoveryData(
 
 	zvirtClient, err := d.config.client()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create vcd client: %v", err)
+		return nil, fmt.Errorf("failed to create zvirt client: %v", err)
 	}
 
 	sd, err := d.getStorageDomains(ctx, zvirtClient)
