@@ -110,6 +110,10 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 			sp.Spec.Policies.SupplementalGroups = nil
 		}
 	}
+	if sp.Spec.Policies.AutomountServiceAccountToken == nil {
+		sp.Spec.Policies.AutomountServiceAccountToken = newTrue()
+	}
+
 	// 'Unmasked' procMount doesn't require a constraint
 	if sp.Spec.Policies.AllowedProcMount == "Unmasked" {
 		sp.Spec.Policies.AllowedProcMount = ""
@@ -130,8 +134,15 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 }
 
 type securityPolicy struct {
-	Metadata struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Metadata   struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
+}
+
+func newTrue() *bool {
+	b := true
+	return &b
 }

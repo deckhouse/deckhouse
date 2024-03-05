@@ -72,8 +72,8 @@ type SecurityPolicySpec struct {
 		} `json:"allowedFlexVolumes,omitempty"`
 		AllowedVolumes               []string           `json:"allowedVolumes,omitempty"`
 		ReadOnlyRootFilesystem       bool               `json:"readOnlyRootFilesystem,omitempty"`
-		AutomountServiceAccountToken bool               `json:"automountServiceAccountToken,omitempty"`
-		AllowedClusterRoles    []string           `json:"allowedClusterRoles,omitempty"`
+		AutomountServiceAccountToken *bool              `json:"automountServiceAccountToken,omitempty"`
+		AllowedClusterRoles          []string           `json:"allowedClusterRoles,omitempty"`
 		FsGroup                      *SelectUIDStrategy `json:"fsGroup,omitempty"`
 		RunAsUser                    *SelectUIDStrategy `json:"runAsUser,omitempty"`
 		RunAsGroup                   *SelectUIDStrategy `json:"runAsGroup,omitempty"`

@@ -341,6 +341,7 @@ spec:
                       description: "Defines if it's possible to run containers with non-read only file system."
                     automountServiceAccountToken:
                       type: boolean
+                      default: true
                       description: "Defines if it's possible to run pods with enabled automountServiceAccountToken."
                     allowedClusterRoles:
                       type: array
