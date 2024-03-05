@@ -21,9 +21,12 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go get -u golang.org/x/net@v0.17.0
-    - go get -u google.golang.org/grpc@v1.56.3
+    {{- if semverCompare "<1.29" $version }}
+    - go get golang.org/x/net@v0.17.0
+    - go get google.golang.org/grpc@v1.56.3
+    - go mod tidy
     - go mod vendor
+    {{- end }}
     - make build
     - cp bin/livenessprobe /livenessprobe
     - chown 64535:64535 /livenessprobe
