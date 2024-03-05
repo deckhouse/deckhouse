@@ -114,10 +114,6 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
 	res := ModuleDownloadResult{}
 
-	defer measure.Duration(func(d time.Duration) {
-		md.metricStorage.CounterAdd("{PREFIX}module_pull_metadata_seconds_total", d.Seconds(), map[string]string{"channel": releaseChannel})
-	})()
-
 	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
 		return res, err

@@ -112,7 +112,7 @@ type ModuleReleaseStatus struct {
 	Approved       bool            `json:"approved"`
 	TransitionTime metav1.Time     `json:"transitionTime,omitempty"`
 	Message        string          `json:"message"`
-	Size           int             `json:"size"`
+	Size           uint32          `json:"size"`
 	PullDuration   metav1.Duration `json:"pullDuration"`
 }
 
