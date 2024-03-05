@@ -79,6 +79,7 @@ spec:
                       enum:
                         - 'Auto'
                         - 'Manual'
+                        - 'Ignore'
                     windows:
                       type: array
                       description: |

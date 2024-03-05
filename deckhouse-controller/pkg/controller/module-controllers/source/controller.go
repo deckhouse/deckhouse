@@ -412,6 +412,10 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 	av.Policy = policy.Name
 
+	if policy.Spec.Update.Mode == "Ignore" {
+		return "", av, nil
+	}
+
 	downloadResult, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
 	if err != nil {
 		return "", av, err
@@ -575,7 +579,7 @@ func (c *Controller) updateModuleSourceStatus(msCopy *v1alpha1.ModuleSource) err
 func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
 	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
-	var found, partiallyFound bool
+	var found bool
 
 	for _, policy := range policies {
 		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
@@ -596,19 +600,11 @@ func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []
 				}
 				found = true
 				matchedPolicy = policy
-			} else if sourceLabelExists && selectorSourceName == sourceName {
-				partiallyFound = true
 			}
 		}
 	}
 
 	if !found {
-		if partiallyFound {
-			// cover the case, when only some modules from a ModuleSource are loaded
-			// and we have to skip the others
-			return nil, ErrNoPolicyFound
-		}
-
 		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
 		return &v1alpha1.ModuleUpdatePolicy{
 			TypeMeta: metav1.TypeMeta{
@@ -616,7 +612,7 @@ func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []
 				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "deckhouse-embedded",
+				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
 			},
 			Spec: *c.deckhouseEmbeddedPolicy,
 		}, nil

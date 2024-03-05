@@ -116,6 +116,7 @@ const (
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
+	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
 	waitingForWindow       = "Release is waiting for the update window: %s"
 	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
 	namespace              = "d8-system"
@@ -557,14 +558,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		// if release has associated update policy
 		if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
 			var policy *v1alpha1.ModuleUpdatePolicy
-			if policyName == "deckhouse-embedded" {
+			if policyName == "" {
 				policy = &v1alpha1.ModuleUpdatePolicy{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
 						APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "deckhouse-embedded",
+						Name: "",
 					},
 					Spec: *c.deckhouseEmbeddedPolicy,
 				}
@@ -579,8 +580,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 				}
 			}
 
-			// if policy mode manual
-			if policy.Spec.Update.Mode == "Manual" {
+			switch policy.Spec.Update.Mode {
+			case "Ignore":
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+
+			case "Manual":
 				if !isReleaseApproved(release) {
 					if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
 						return ctrl.Result{Requeue: true}, e
@@ -588,14 +595,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 				}
 				release.Status.Approved = true
-			}
 
-			// if policy mode auto
-			if policy.Spec.Update.Mode == "Auto" && !policy.Spec.Update.Windows.IsAllowed(ts) {
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
-					return ctrl.Result{Requeue: true}, e
+			case "Auto":
+				if !policy.Spec.Update.Windows.IsAllowed(ts) {
+					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
+						return ctrl.Result{Requeue: true}, e
+					}
+					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
 			// download desired module version
