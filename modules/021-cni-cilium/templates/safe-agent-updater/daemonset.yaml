@@ -12,7 +12,12 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "safe-agent-updater" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "safe-agent-updater" "pause" .Values.cniCilium.resourcesManagement ) | nindent 2}}
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: safe-agent-updater
+  updatePolicy:
+    updateMode: "Off"
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -44,12 +49,21 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: safe-agent-updater
       initContainers:
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
-      - name: prepull-image
+      {{- include "module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
+      - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
         command:
         - "/usr/bin/true"
+        terminationMessagePolicy: FallbackToLogsOnError
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: prepull-image-kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
+        command:
+        - "/bin/true"
         terminationMessagePolicy: FallbackToLogsOnError
         resources:
           requests:
@@ -71,9 +85,29 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- include "safe_agent_updater_resources" . | nindent 12 }}
       containers:
-      - name: pause
+      - name: pause-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        command:
+        - /pause
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "1Mi"
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: pause-check-linux-kernel
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "checkKernelVersion") }}
+        command:
+        - /pause
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "1Mi"
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: pause-kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
         command:
         - /pause
         resources:

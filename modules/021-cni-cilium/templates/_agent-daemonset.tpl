@@ -174,7 +174,7 @@ spec:
         {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
+        image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
         - "--v=2"
@@ -210,7 +210,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
         image: {{ include "helm_lib_module_image" (list $context "cilium") }}
         env:
