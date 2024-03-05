@@ -79,6 +79,12 @@ spec:
                   type: boolean
                   description: |
                     The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
+                size:
+                  type: integer
+                  description: Size of module image.
+                pullDuration:
+                  type: string
+                  description: Module loading duration.
       subresources:
         status: {}
       additionalPrinterColumns:

@@ -32,6 +32,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -80,6 +81,7 @@ type Controller struct {
 	modulePullOverridesSynced  cache.InformerSynced
 	leaseLister                coordinationv1.LeaseLister
 	leaseInformer              cache.SharedIndexInformer
+	metricStorage              *metric_storage.MetricStorage
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -126,6 +128,7 @@ func NewController(ks kubernetes.Interface,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	mv moduleValidator,
 	httpClient d8http.Client,
+	metricStorage *metric_storage.MetricStorage,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -160,6 +163,7 @@ func NewController(ks kubernetes.Interface,
 		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
 		leaseLister:                leaseLister,
 		leaseInformer:              leaseInformer,
+		metricStorage:              metricStorage,
 		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
 		leaseWorkqueue:             workqueue.NewRateLimitingQueue(ratelimiter),
 		logger:                     lg,
@@ -284,6 +288,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced,
 		c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced, c.leaseInformer.HasSynced); !ok {
 		c.logger.Fatal("failed to wait for caches to sync")
+	}
+
+	err := c.registerMetrics()
+	if err != nil {
+		c.logger.Errorf("register metrics: %v", err)
 	}
 
 	c.logger.Infof("Starting workers count: %d", workers)
@@ -578,9 +587,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 
 			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-			err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+			ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 			if err != nil {
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+			}
+
+			release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
 			}
 
 			moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
@@ -1084,7 +1098,7 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 	}
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	err = md.DownloadByModuleVersion(moduleName, moduleVersion)
+	_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("Download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
 	}
@@ -1220,6 +1234,33 @@ func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDo
 	err = c.docsBuilder.BuildDocumentation(baseAddr)
 	if err != nil {
 		return fmt.Errorf("build documentation: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Controller) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
+	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
+	release.Status.Size = ds.Size
+	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
+
+	return c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+}
+
+func (c *Controller) registerMetrics() error {
+	releases, err := c.moduleReleasesLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for _, release := range releases {
+		l := map[string]string{
+			"version": release.Spec.Version.String(),
+			"module":  release.Spec.ModuleName,
+		}
+
+		c.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
+		c.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
 	}
 
 	return nil
