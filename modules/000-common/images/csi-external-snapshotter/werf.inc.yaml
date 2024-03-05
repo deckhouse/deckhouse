@@ -21,8 +21,11 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go get -u google.golang.org/grpc@v1.56.3 && \
+    {{- if semverCompare "<1.29" $version }}
+    - go get google.golang.org/grpc@v1.56.3 && \
+    - go mod tidy && \
     - go mod vendor && \
+    {{- end }}
     - make build
     - cp bin/csi-snapshotter /csi-snapshotter
     - chown 64535:64535 /csi-snapshotter

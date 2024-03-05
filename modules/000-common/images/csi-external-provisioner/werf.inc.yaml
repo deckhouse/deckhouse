@@ -22,8 +22,8 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     {{- if semverCompare "<1.29" $version }}
-    - go get -u golang.org/x/net@v0.17.0
-    - go get -u google.golang.org/grpc@v1.56.3
+    - go get golang.org/x/net@v0.17.0
+    - go get google.golang.org/grpc@v1.56.3
     - go mod tidy
     - go mod vendor
     - go mod edit -dropreplace google.golang.org/grpc
