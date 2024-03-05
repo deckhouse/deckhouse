@@ -11,7 +11,7 @@ reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 parameters:
-  storageDomainName: {{ $storageClass.storageDomainName | quote }}
+  storageDomainName: {{ $storageClass.storageDomain | quote }}
   thinProvisioning: "true"
   fsType: {{ $storageClass.fsType | quote }}
 {{- end }}
