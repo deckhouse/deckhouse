@@ -30,8 +30,8 @@ RUN chown 64535:64535 url-exec-prober
 RUN chmod 0700 url-exec-prober
 
 FROM $BASE_DISTROLESS
-COPY --from=artifact /src/oauth2-proxy /bin/oauth2_proxy
+COPY --from=artifact /src/oauth2-proxy /bin/oauth2-proxy
 COPY --from=artifact /url-exec-prober-src/url-exec-prober /
 
-ENTRYPOINT [ "/bin/oauth2_proxy" ]
+ENTRYPOINT [ "/bin/oauth2-proxy" ]
 CMD [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
