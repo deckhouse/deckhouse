@@ -1,0 +1,14 @@
+candi:
+  fixes:
+    - summary: Fix additionalRolePolicies regex.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7696
+ingress-nginx:
+  fixes:
+    - summary: Fix missed libs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7717
+      impact: Ingress controller will restart.
+prometheus:
+  fixes:
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7694
+
