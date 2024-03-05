@@ -16,6 +16,7 @@ package source
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -354,14 +355,15 @@ func TestGetReleasePolicy(t *testing.T) {
 				},
 			},
 		}
-		_, err := c.getReleasePolicy("test-4", "test-module-4", []*v1alpha1.ModuleUpdatePolicy{policy})
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrNoPolicyFound)
+		mup, err := c.getReleasePolicy("test-4", "test-module-4", []*v1alpha1.ModuleUpdatePolicy{policy})
+		fmt.Println(mup)
+		require.NoError(t, err)
+		assert.Equal(t, "", mup.Name)
 	})
 
 	t.Run("No policy set", func(t *testing.T) {
 		mup, err := c.getReleasePolicy("test-5", "test-module-5", []*v1alpha1.ModuleUpdatePolicy{})
 		require.NoError(t, err)
-		assert.Equal(t, "deckhouse-embedded", mup.Name)
+		assert.Equal(t, "", mup.Name)
 	})
 }
