@@ -27,6 +27,7 @@
 
 
  - **[admission-policy-engine]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
+ - **[candi]** Fix additionalRolePolicies regex. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
  - **[candi]** Add the `tzdata` package to the bootstrap script on AltLinux `10.0`. [#7403](https://github.com/deckhouse/deckhouse/pull/7403)
  - **[candi]** Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
     Fix error with two sequental containerd restarts on version change. Set LimitNOFILE=1048576. [#7390](https://github.com/deckhouse/deckhouse/pull/7390)
@@ -59,6 +60,8 @@
  - **[flant-integration]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ - **[ingress-nginx]** Fix missed libs. [#7717](https://github.com/deckhouse/deckhouse/pull/7717)
+    Ingress controller will restart.
  - **[ingress-nginx]** Add libraries to the final image. [#7666](https://github.com/deckhouse/deckhouse/pull/7666)
     Ingress nginx controller will restart.
  - **[ingress-nginx]** Fix `/tmp` access rights for controller v1.6. [#7498](https://github.com/deckhouse/deckhouse/pull/7498)
@@ -123,4 +126,5 @@
  - **[istio]** Add the ability to use more than 2 replicas of `istiod` pods and autoscaling. [#7421](https://github.com/deckhouse/deckhouse/pull/7421)
  - **[local-path-provisioner]** Bump to version `0.0.26`. [#7283](https://github.com/deckhouse/deckhouse/pull/7283)
  - **[multitenancy-manager]** Don't render the ProjectType resource in the documentation as it has been deprecated. [#7595](https://github.com/deckhouse/deckhouse/pull/7595)
+ - **[network-policy-engine]** Deny module setup if the cni-cilium module is enabled [#7687](https://github.com/deckhouse/deckhouse/pull/7687)
 
