@@ -101,7 +101,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "vcd_cloud_data_discoverer_resources" . | nindent 12 }}
+            {{- include "zvirt_cloud_data_discoverer_resources" . | nindent 12 }}
           {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -128,7 +128,7 @@ spec:
                 path: /
                 authorization:
                   resourceAttributes:
-                    namespace: d8-cloud-provider-vcd
+                    namespace: d8-cloud-provider-zvirt
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments

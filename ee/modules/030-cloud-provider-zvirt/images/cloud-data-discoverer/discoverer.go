@@ -178,10 +178,16 @@ func mergeStorageDomains(
 			sd.Status() == ovirtclient.StorageDomainStatusActive,
 			sd.Status(),
 		)
+
+		status := sd.Status() == ovirtclient.StorageDomainStatusActive
+		if sd.Status() == ovirtclient.StorageDomainStatus("") && sd.ExternalStatus() == ovirtclient.StorageDomainExternalStatusOk {
+			status = true
+		}
+
 		result = append(result, v1alpha1.ZvirtStorageDomain{
 			Name:      sd.Name(),
 			Type:      string(sd.StorageType()),
-			IsEnabled: sd.Status() == ovirtclient.StorageDomainStatusActive,
+			IsEnabled: status,
 			IsDefault: false,
 		})
 	}
