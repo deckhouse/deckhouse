@@ -364,7 +364,7 @@ apiVersions:
         type: boolean
         default: false
         description: |
-          Set the value to true if the path specified in vmFolderPath exists.
+          Set the value to true if the path specified in vmFolderPath exists. Installing more than one cluster in a folder is not possible.
         x-examples:
           - "dev/test"
         x-unsafe: true
