@@ -18,18 +18,16 @@ package requirements
 
 import (
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
-	requirementsKey          = "istioVer"
-	k8sKey                   = "k8s"
-	minVersionValuesKey      = "istio:minimalVersion"
-	operatorK8sMaxVersionKey = "istio:minimalVersionK8sMaximal"
-	k8sVersionKey            = "istio:k8sVersion"
+	requirementsKey                  = "istioVer"
+	k8sKey                           = "k8s"
+	minVersionValuesKey              = "istio:minimalVersion"
+	k8sVersionKey                    = "istio:isK8sVersionAutomatic"
+	compatibilityOperatorToK8sVerKey = "istio:compatibilityOperatorToK8sVer"
 )
 
 func init() {
@@ -56,29 +54,40 @@ func init() {
 	}
 
 	checkMaximalK8sVersioForOperator := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		desiredVersion, err := semver.NewVersion(requirementValue)
-		if err != nil {
-			return false, err
-		}
+		desiredVersion := requirementValue
 
-		maximalK8sVersionForOperatorRaw, exists := getter.Get(operatorK8sMaxVersionKey)
+		currentIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
-			return false, nil
+			return true, nil
 		}
-		maximalK8sVersionForOperatorStr := maximalK8sVersionForOperatorRaw.(string)
-		maximalVersionForOperator, err := semver.NewVersion(maximalK8sVersionForOperatorStr)
-		if err != nil {
-			return false, err
-		}
+		currentMinIstioVersionStr := currentIstioVersionRaw.(string)
 
-		// use k8sVersion here only for check if it 'Automatic'
-		k8sVersion, exists := getter.Get(k8sVersionKey)
+		isAtomaticK8sVerRaw, exists := getter.Get(k8sVersionKey)
 		if !exists {
-			return false, nil
+			return true, nil
+		}
+		isAtomaticK8sVer := isAtomaticK8sVerRaw.(bool)
+
+		compatibilityMapRaw, exists := getter.Get(compatibilityOperatorToK8sVerKey)
+		if !exists {
+			return true, nil
+		}
+		compatibilityMap, ok := compatibilityMapRaw.(map[string][]string)
+		if !ok {
+			return true, nil
 		}
 
-		if k8sVersion.(string) == "Automatic" && maximalVersionForOperator.LessThan(desiredVersion) {
-			return false, fmt.Errorf("maximum version k8s for operator is '%s', you want install '%s' k8s ver", maximalK8sVersionForOperatorStr, requirementValue)
+		// If k8s version is set to Automatic in cluster
+		if isAtomaticK8sVer {
+			if version, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
+				for _, ver := range version {
+					// If k8s version in compatibility list of operator version
+					if desiredVersion == ver {
+						return true, nil
+					}
+				}
+				return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", desiredVersion, currentMinIstioVersionStr)
+			}
 		}
 
 		return true, nil

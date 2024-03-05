@@ -32,17 +32,11 @@ import (
 )
 
 const (
-	k8sVersionKey = "istio:k8sVersion"
+	k8sVersionKey = "istio:isK8sVersionAutomatic"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: lib.Queue("discovery"),
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "auto_k8s_version",
-			Crontab: "0 * * * *", // every hour
-		},
-	},
+	Queue: lib.Queue("istio-k8s-auto-discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "kubernetesVersion",
@@ -53,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(clusterConfiguration))
+}, dependency.WithExternalDependencies(discoveryIsK8sVersionAutomatic))
 
 func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
@@ -81,13 +75,13 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	return kubernetesVersion, err
 }
 
-func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) error {
+func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput, dc dependency.Container) error {
 	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
 	if !ok || len(kubernetesVersion) == 0 {
 		return errors.New("cluster configuration kubernetesVersion is empty or invalid")
 	}
 
-	requirements.SaveValue(k8sVersionKey, kubernetesVersion[0].(string))
+	requirements.SaveValue(k8sVersionKey, kubernetesVersion[0].(string) == "Automatic")
 
 	return nil
 }
