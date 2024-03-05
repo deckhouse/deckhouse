@@ -17,6 +17,6 @@ package downloader
 import "time"
 
 type DownloadStatistic struct {
-	Size         int
+	Size         uint32
 	PullDuration time.Duration
 }

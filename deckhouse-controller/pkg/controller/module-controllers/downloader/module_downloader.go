@@ -224,7 +224,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 			return ds, nil
 		}
 
-		ds.Size += int(hdr.Size)
+		ds.Size += uint32(hdr.Size)
 
 		if err != nil {
 			return nil, fmt.Errorf("tar reader next: %w", err)
