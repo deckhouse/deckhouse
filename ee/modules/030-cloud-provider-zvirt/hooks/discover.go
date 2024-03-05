@@ -97,6 +97,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			storageClasses = append(storageClasses, storageClass{
 				Name:          sc.Name,
 				StorageDomain: sc.Parameters["storageDomain"],
+				FsType:        sc.Parameters["fsType"],
 			})
 		}
 
@@ -133,7 +134,7 @@ func handleDiscoveryDataVolumeTypes(
 ) {
 	var defaultSCName string
 
-	volumeTypesMap := make(map[string]string, len(volumeTypes))
+	volumeTypesMap := make(map[string]storageClass, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {
 		if !volumeType.IsEnabled {
@@ -144,7 +145,11 @@ func handleDiscoveryDataVolumeTypes(
 			defaultSCName = getStorageClassName(volumeType.Name)
 		}
 
-		volumeTypesMap[getStorageClassName(volumeType.Name)] = volumeType.Name
+		volumeTypesMap[getStorageClassName(volumeType.Name)] = storageClass{
+			Name:          getStorageClassName(volumeType.Name),
+			StorageDomain: volumeType.Name,
+			FsType:        volumeType.Type,
+		}
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
@@ -162,8 +167,9 @@ func handleDiscoveryDataVolumeTypes(
 	storageClasses := make([]storageClass, 0, len(volumeTypes))
 	for name, sp := range volumeTypesMap {
 		sc := storageClass{
-			StorageDomain: sp,
+			StorageDomain: sp.StorageDomain,
 			Name:          name,
+			FsType:        sp.FsType,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -219,4 +225,5 @@ func setStorageClassesValues(
 type storageClass struct {
 	Name          string `json:"name"`
 	StorageDomain string `json:"storageDomain"`
+	FsType        string `json:"fsType"`
 }
