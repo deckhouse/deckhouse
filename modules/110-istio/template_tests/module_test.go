@@ -90,13 +90,13 @@ const istioValues = `
         key: mykey
         root: myroot
         chain: mychain
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
       auth:
         password: qqq
     auth:
       externalAuthentication: {}
     outboundTrafficPolicyMode: AllowAny
-    dataPlane:
-      trafficRedirectionSetupMode: CNIPlugin
     sidecar:
       includeOutboundIPRanges: ["10.0.0.0/24"]
       excludeOutboundIPRanges: ["1.2.3.4/32"]

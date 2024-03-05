@@ -211,16 +211,6 @@ properties:
     type: object
     description: Settings fot Istio data plane
     default: {}
-    properties:
-      trafficRedirectionSetupMode:
-        type: string
-        enum: [ InitContainer, CNIPlugin ]
-        x-examples: [ "CNIPlugin" ]
-        description: |
-          Managing application traffic redirection modes using Istio in the Pod Network.
-          - `InitContainer` — the classic mode, in which `sidecar-injector` adds an init container to application pods, configuring traffic redirection at the start of the pod. This mode requires superuser rights and does not work if one of the strict modes is enabled in the `admission-policy-engine` module.
-          - `CNIPlugin` — In this mode, the CNI plugin, which runs on each cluster node and does not require privileges at the pod manifest level, is responsible for configuring the pod network environment.
-        default: InitContainer
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.

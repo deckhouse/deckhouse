@@ -199,7 +199,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     istio_cni:
-    {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+    {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
       enabled: true
     {{- else }}
       enabled: false

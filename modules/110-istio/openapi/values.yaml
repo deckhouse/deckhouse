@@ -39,6 +39,19 @@ properties:
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
+      dataPlane:
+        type: object
+        default: {}
+        properties:
+          trafficRedirectionSetupMode:
+            type: string
+            description: |
+              Managing application traffic redirection modes using Istio in the Pod Network.
+              - `InitContainer` — the classic mode, in which `sidecar-injector` adds an init container to application pods, configuring traffic redirection at the start of the pod. This mode requires superuser rights and does not work if one of the strict modes is enabled in the `admission-policy-engine` module.
+              - `CNIPlugin` — In this mode, the CNI plugin, which runs on each cluster node and does not require privileges at the pod manifest level, is responsible for configuring the pod network environment.
+            default: "CNIPlugin"
+            enum: ["CNIPlugin", "InitContainer"]
+            x-examples: ["CNIPlugin", "InitContainer"]
       ca:
         type: object
         default: {}
