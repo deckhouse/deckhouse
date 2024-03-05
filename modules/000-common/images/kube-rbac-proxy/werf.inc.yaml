@@ -29,9 +29,9 @@ shell:
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod edit -go 1.20
-  - go get -u golang.org/x/net@v0.17.0
-  - go get -u github.com/prometheus/client_golang@v1.17.0
-  - go get -u github.com/gogo/protobuf@v1.3.2
+  - go get golang.org/x/net@v0.17.0
+  - go get github.com/prometheus/client_golang@v1.17.0
+  - go get github.com/gogo/protobuf@v1.3.2
   - go mod tidy
   - make build
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
