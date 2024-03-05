@@ -19,7 +19,6 @@ for i in /sys/class/net/!(${configured_ifnames_pattern%?}); do
   mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
 
   netmask=$(((0xFFFFFFFF << (32 - net_prefix)) & 0xFFFFFFFF))
-
   test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
 }
 
