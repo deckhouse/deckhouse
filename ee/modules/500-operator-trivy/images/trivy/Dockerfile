@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
 ARG BASE_GOLANG_20_BULLSEYE
 
-FROM golang:1.22 AS build
+FROM $BASE_GOLANG_20_BULLSEYE AS build
 # Also check operator image version and admission-policy-engine module trivy-provider image "github.com/aquasecurity/trivy" library version
 ARG TRIVY_VERSION=flant-stable
 ARG TRIVY_DB_VERSION=flant-stable
