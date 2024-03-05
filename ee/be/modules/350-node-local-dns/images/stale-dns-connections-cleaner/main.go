@@ -72,7 +72,10 @@ func main() {
 	log.Infof("  - If such sockets are found, delete them.")
 
 	// Init kubeClient
-	config, _ := rest.InClusterConfig()
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("failed to init kubeClient config. Error: %v", err)
+	}
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Fatalf("Failed to init kubeClient. Error: %v", err)
@@ -161,7 +164,7 @@ func (cc *ConnectionsCleaner) getHTTPServer() *http.Server {
 		_, _ = w.Write([]byte(indexPageContent))
 	})
 
-	return &http.Server{Addr: cc.listenAddress, Handler: router, ReadHeaderTimeout: 30 * time.Second}
+	return &http.Server{Addr: cc.listenAddress, Handler: router, ReadHeaderTimeout: cc.checkInterval}
 }
 
 // Main loop
@@ -241,9 +244,8 @@ func (cc *ConnectionsCleaner) checkAndDestroy(ctx context.Context, podCIDR *net.
 		if err != nil {
 			if errors.Is(err, unix.EOPNOTSUPP) {
 				log.Fatalf("Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
-			} else {
-				log.Errorf("Failed to destroy the socket. Error: %v", err)
 			}
+			log.Errorf("Failed to destroy the socket. Error: %v", err)
 		}
 		log.Infof(
 			"Socket %s:%v -> %s:%v successfully destroyed",
@@ -283,6 +285,7 @@ func (cc *ConnectionsCleaner) getPodCIDR(ctx context.Context) (*net.IPNet, error
 // Get current Pod Name and IP by Node name
 func (cc *ConnectionsCleaner) getNLDPodNameAndIPByNodeName(ctx context.Context) (string, net.IP, error) {
 	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	nldPodsOnSameNode, err := cc.kubeClient.CoreV1().Pods(cc.nameSpace).List(
 		cctx,
 		metav1.ListOptions{
@@ -290,7 +293,6 @@ func (cc *ConnectionsCleaner) getNLDPodNameAndIPByNodeName(ctx context.Context) 
 			FieldSelector: "spec.nodeName=" + cc.nodeName,
 		},
 	)
-	cancel()
 	if err != nil {
 		return "", nil, fmt.Errorf(
 			"failed to list pods on same node. Error: %v",
