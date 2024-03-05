@@ -25,8 +25,10 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/shell-operator/pkg/utils/measure"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
@@ -87,7 +89,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, nil
 	}
 
-	err = md.fetchAndCopyModuleByVersion(moduleName, imageTag, moduleStorePath)
+	_, err = md.fetchAndCopyModuleByVersion(moduleName, imageTag, moduleStorePath)
 	if err != nil {
 		return "", nil, err
 	}
@@ -97,10 +99,11 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 	return digest.String(), def, nil
 }
 
-func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) error {
+func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) (*DownloadStatistic, error) {
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
 	}
+
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
@@ -110,6 +113,7 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
 	res := ModuleDownloadResult{}
+
 	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
 	if err != nil {
 		return res, err
@@ -162,49 +166,54 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, e
 	return regCli.Image(imageTag)
 }
 
-func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) error {
+func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
 	_ = os.RemoveAll(moduleStorePath)
 
-	err := md.copyModuleToFS(moduleStorePath, img)
+	ds, err := md.copyModuleToFS(moduleStorePath, img)
 	if err != nil {
-		return fmt.Errorf("copy module error: %v", err)
+		return nil, fmt.Errorf("copy module error: %v", err)
 	}
 
 	// inject registry to values
 	err = InjectRegistryToModuleValues(moduleStorePath, md.ms)
 	if err != nil {
-		return fmt.Errorf("inject registry error: %v", err)
+		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
 
-	return nil
+	return ds, nil
 }
 
-func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) error {
+func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) (*DownloadStatistic, error) {
 	// TODO: if module exists on fs - skip this step
 
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	return md.storeModule(moduleVersionPath, img)
 }
 
-func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) error {
+func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) (*DownloadStatistic, error) {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
-	err := md.copyLayersToFS(rootPath, rc)
+	ds, err := md.copyLayersToFS(rootPath, rc)
 	if err != nil {
-		return fmt.Errorf("copy tar to fs: %w", err)
+		return nil, fmt.Errorf("copy tar to fs: %w", err)
 	}
 
-	return nil
+	return ds, nil
 }
 
-func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) error {
+func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*DownloadStatistic, error) {
+	ds := new(DownloadStatistic)
+	defer measure.Duration(func(d time.Duration) {
+		ds.PullDuration = d
+	})()
+
 	if err := os.MkdirAll(rootPath, 0o700); err != nil {
-		return fmt.Errorf("mkdir root path: %w", err)
+		return nil, fmt.Errorf("mkdir root path: %w", err)
 	}
 
 	tr := tar.NewReader(rc)
@@ -212,53 +221,56 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) er
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			// end of archive
-			return nil
+			return ds, nil
 		}
+
+		ds.Size += uint32(hdr.Size)
+
 		if err != nil {
-			return fmt.Errorf("tar reader next: %w", err)
+			return nil, fmt.Errorf("tar reader next: %w", err)
 		}
 
 		if strings.Contains(hdr.Name, "..") {
 			// CWE-22 check, prevents path traversal
-			return fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
+			return nil, fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
 		}
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0o700); err != nil {
-				return err
+				return nil, err
 			}
 		case tar.TypeReg:
 			outFile, err := os.Create(path.Join(rootPath, hdr.Name))
 			if err != nil {
-				return fmt.Errorf("create file: %w", err)
+				return nil, fmt.Errorf("create file: %w", err)
 			}
 			if _, err := io.Copy(outFile, tr); err != nil {
 				outFile.Close()
-				return fmt.Errorf("copy: %w", err)
+				return nil, fmt.Errorf("copy: %w", err)
 			}
 			outFile.Close()
 
 			err = os.Chmod(outFile.Name(), os.FileMode(hdr.Mode)&0o700) // remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err != nil {
-				return fmt.Errorf("chmod: %w", err)
+				return nil, fmt.Errorf("chmod: %w", err)
 			}
 		case tar.TypeSymlink:
 			link := path.Join(rootPath, hdr.Name)
 			if isRel(hdr.Linkname, link) && isRel(hdr.Name, link) {
 				if err := os.Symlink(hdr.Linkname, link); err != nil {
-					return fmt.Errorf("create symlink: %w", err)
+					return nil, fmt.Errorf("create symlink: %w", err)
 				}
 			}
 
 		case tar.TypeLink:
 			err := os.Link(path.Join(rootPath, hdr.Linkname), path.Join(rootPath, hdr.Name))
 			if err != nil {
-				return fmt.Errorf("create hardlink: %w", err)
+				return nil, fmt.Errorf("create hardlink: %w", err)
 			}
 
 		default:
-			return errors.New("unknown tar type")
+			return nil, errors.New("unknown tar type")
 		}
 	}
 }

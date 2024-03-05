@@ -108,10 +108,12 @@ type ModuleReleaseSpec struct {
 }
 
 type ModuleReleaseStatus struct {
-	Phase          string      `json:"phase,omitempty"`
-	Approved       bool        `json:"approved"`
-	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
-	Message        string      `json:"message"`
+	Phase          string          `json:"phase,omitempty"`
+	Approved       bool            `json:"approved"`
+	TransitionTime metav1.Time     `json:"transitionTime,omitempty"`
+	Message        string          `json:"message"`
+	Size           uint32          `json:"size"`
+	PullDuration   metav1.Duration `json:"pullDuration"`
 }
 
 type moduleReleaseKind struct{}
