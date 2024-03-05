@@ -43,6 +43,8 @@ COPY patches/fix-cleanup.patch /
 COPY patches/geoip.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
+    # jaegertracing hunter deps
+    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -150,24 +152,23 @@ RUN bash -eu -c ' \
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypt.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypto.* /chroot/lib64/ \
-  && cp -a /lib64/libssl* /chroot/lib64/ \
-  && cp -a /lib64/libz.* /chroot/lib64/ \
-  && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
-  && cp -a /lib64/ld-* /chroot/lib64/ \
-  && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
+  && cp -a /lib64/* /chroot/lib64/ \
   && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
   && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
