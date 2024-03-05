@@ -178,7 +178,7 @@ func mergeStorageDomains(
 			sd.Status() == ovirtclient.StorageDomainStatusActive,
 			sd.Status(),
 		)
-
+		// status may be unknown if external status has arrived
 		status := sd.Status() == ovirtclient.StorageDomainStatusActive
 		if sd.Status() == ovirtclient.StorageDomainStatus("") && sd.ExternalStatus() == ovirtclient.StorageDomainExternalStatusOk {
 			status = true

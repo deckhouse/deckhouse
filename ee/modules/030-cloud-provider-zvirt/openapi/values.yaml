@@ -264,6 +264,8 @@ properties:
         items:
           type: object
           properties:
+            name:
+              type: string
             storageDomain:
               type: string
             fsType:
