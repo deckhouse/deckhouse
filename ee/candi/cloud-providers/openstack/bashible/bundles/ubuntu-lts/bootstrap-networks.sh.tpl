@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 {{- /*
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */}}
 shopt -s extglob
@@ -32,60 +32,40 @@ network:
   version: 2
   ethernets:
     $cim_dev:
-      dhcp4: true
       dhcp4-overrides:
-        use-hostname: false
         route-metric: $metric
-        use-dns: false
-        use-ntp: false
       match:
         macaddress: $mac
 BOOTSTRAP_NETWORK_EOF
 }
 
-{{- if .normal }}
-{{-   if .normal.apiserverEndpoints }}
 ip_route_show_default_output=$(ip -json route show default)
-count_default=$(echo $ip_route_show_default_output | jq length)
+count_default=$(ip -json route show default | jq length)
 if [[ "$count_default" != "1" ]]; then
-  cim_dev=""
-  apiserverEndpoint={{ index (.normal.apiserverEndpoints | first | split ":") "_0" }}
-  ip_addr=$(ip -json addr)
-  for i in  { 1 .. $count_default }; do
-    i_dev=$(echo $ip_route_show_default_output | jq -r .[$i-1].dev)
-    i_addr_info=$(echo $ip_addr | jq '.[] | select(.ifname == "'$i_dev'") | .addr_info')
-    i_count_addr_info=$(echo $i_addr_info | jq length)
-    for j in { 1 .. $i_count_addr_info}; do
-      j_local=$(echo $i_addr_info | jq -r .[$j-1].local)
-      j_prefixlen=$(echo $i_addr_info | jq -r .[$j-1].prefixlen)
-      if is_ip_in_cidr "$apiserverEndpoint" "$j_local/$j_prefixlen"; then
-        cim_dev=$i_dev
-      fi
-    done
+  configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+  for mac in $configured_macs; do
+    ifname="$(echo "$ip_route_show_default_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
+    if [[ "$ifname" =! "" ]]; then
+      configured_ifnames_pattern+="$ifname"
+    fi
   done
-  if [[ "$cim_dev" != "" ]]; then
-    metric=$(echo $ip_route_show_default_output | jq '.[] | select(.dev == "'$cim_dev'") | .metric')
-    cim_metric=""
-    cim_mac=""
-    for i in  { 1 .. $count_default }; do
-      i_dev=$(echo $ip_route_show_default_output | jq -r .[$i-1].dev)
-      if [[ "$i_dev" != "$cim_dev"]]; then
-        i_metric=$(echo $ip_route_show_default_output | jq '.[] | select(.dev == "'$i_dev'") | .metric')
-        if [[ "$i_metric" == "$metric" ]]; then
-          cim_mac=$(echo $ip_addr | jq -r '.[] | select(.ifname == "'$cim_dev'") | .address')
-          cim_metric=$(expr $metric + 100)
-        fi
-      fi
-    done
-    if [[ "$cim_metric" != "" ]]; then
-      cat_file "$cim_dev" "$cim_metric" "$cim_mac"
-      netplan generate
-      netplan apply
+  count_configured_ifnames=$(echo $configured_ifnames_pattern | wc -l)
+  if [[ "$count_configured_ifnames" != "1" ]]; then
+    check_metric=$(grep -Po '(?<=route-metric: ).+' /etc/netplan/50-cloud-init.yaml | wc -l)
+    if [[ "$check_metric" != "0" ]]; then
+      metric=100
+      for i in $configured_ifnames_pattern; do
+        cim_dev=$i
+        cim_mac="$(echo "$ip_route_show_default_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
+        cim_metric=$metric
+        metric=$(expr $metric + 100)
+        cat_file "$cim_dev" "$cim_metric" "$cim_mac"
+        netplan generate
+        netplan apply
+      done
     fi
   fi
 fi
-{{-   end }}
-{{- end }}
 
 set +x
 shopt -u extglob
