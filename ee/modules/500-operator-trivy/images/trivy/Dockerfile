@@ -15,12 +15,13 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 RUN git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git && \
-    git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git && \
-    cd trivy
+    git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git &&
 
-RUN go mod download
+WORKDIR trivy
 
-RUN go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
+RUN go mod tidy && go mod vendor
+
+RUN go build -mod vendor -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
 
 RUN chown 64535:64535 trivy
 RUN chmod 0700 trivy
