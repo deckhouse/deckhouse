@@ -19,5 +19,5 @@
   to: /deckhouse/candi/cloud-providers/vcd
 - add: /ee/fe/candi/bashible/bashbooster/02_log.sh
   to: /deckhouse/candi/bashible/bashbooster/02_log.sh
-- add: /ee/fe/candi/bashible/common-steps/all
-  to: /deckhouse/candi/bashible/common-steps/all
+- add: /ee/fe/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
+  to: /deckhouse/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
