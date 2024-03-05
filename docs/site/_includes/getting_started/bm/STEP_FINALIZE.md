@@ -10,7 +10,7 @@ Select one of the two options below to continue installing the cluster:
         <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        A cluster of two nodes
+        A cluster of several nodes
         </a>
         <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
