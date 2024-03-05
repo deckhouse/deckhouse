@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
