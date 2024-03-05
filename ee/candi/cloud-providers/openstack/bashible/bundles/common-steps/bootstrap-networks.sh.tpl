@@ -1,26 +1,13 @@
 #!/bin/bash
 {{- /*
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */}}
 shopt -s extglob
 
-configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-for mac in $configured_macs; do
-  ifname="$(ip -o link show | grep "link/ether $mac" | cut -d ":" -f2 | tr -d " ")|"
-  configured_ifnames_pattern+="$ifname"
-done
-for i in /sys/class/net/!(${configured_ifnames_pattern%?}); do
-  if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio.*' 1>/dev/null 2>&1; then
-    continue
-  fi
-
-  ifname=$(basename "$i")
-  mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
-
-  netmask=$(((0xFFFFFFFF << (32 - net_prefix)) & 0xFFFFFFFF))
-  test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
-}
+if ! which netplan 2>/dev/null 1>&2; then
+  exit 0
+fi
 
 function cat_file() {
   cat_dev=$1
@@ -38,12 +25,11 @@ network:
 BOOTSTRAP_NETWORK_EOF
 }
 
-ip_addr_show_output=$(ip -json addr show)
-count_default=$(ip -json route show default | jq length)
+count_default=$(ip route show default | wc -l)
 if [[ "$count_default" -gt "1" ]]; then
   configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
   for mac in $configured_macs; do
-    ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')"
+    ifname="$(ip -o link show | grep "link/ether $mac" | cut -d ":" -f2 | tr -d " ")"
     if [[ "$ifname" != "" ]]; then
       configured_ifnames_pattern+="$ifname "
     fi
@@ -57,7 +43,7 @@ if [[ "$count_default" -gt "1" ]]; then
       metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
-        cim_mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$cim_dev" '.[] | select(.ifname == $ifname) | .address')"
+        cim_mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
         cim_metric=$metric
         metric=$((metric + 100))
         cat_file "$cim_dev" "$cim_metric" "$cim_mac"
