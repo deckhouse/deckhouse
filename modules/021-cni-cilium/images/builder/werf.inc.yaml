@@ -2,6 +2,9 @@
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
+artifact: {{ $.ModuleName }}/golang-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+---
 # #####################################################################
 # Build artifact (based on runtime-artifact)(based on Ubuntu)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/builder/Dockerfile
@@ -13,7 +16,7 @@ import:
   add: /usr/local/bin/llvm-objcopy
   to: /bin
   before: install
-- image: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+- artifact: {{ $.ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
