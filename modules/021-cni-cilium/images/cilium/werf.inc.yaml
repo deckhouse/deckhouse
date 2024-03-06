@@ -1,17 +1,32 @@
+{{- $ciliumVersion := "1.14.5" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+---
+# #####################################################################
+# Artifact with repo cilium/cilium
+---
+artifact: {{ $.ModuleName }}/cilium-src
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache git
+  install:
+  - mkdir -p /go/src/github.com/cilium/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
 ---
 # #####################################################################
 # Build cilium-agent binaries
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+artifact: {{ $.ModuleName }}/cilium-builder-artifact
 fromImage: {{ $.ModuleName }}/builder-artifact
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/cilium/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
 import:
-- artifact: {{ $.ModuleName }}/builder-src
+- artifact: {{ $.ModuleName }}/cilium-src
   add: /go/src/github.com/cilium/cilium
   to: /go/src/github.com/cilium/cilium
   before: install
@@ -28,72 +43,3 @@ shell:
   - mv LICENSE.all /tmp/install/LICENSE.all
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
 ---
-# #####################################################################
-# Old Main Image
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: {{ $.ModuleName }}/builder-runtime-artifact
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-  add: /tmp/install
-  to: /
-  before: install
-- artifact: {{ $.ModuleName }}/builder-envoy-artifact
-  add: /usr/bin/cilium-envoy
-  to: /usr/bin/cilium-envoy
-  before: install
-- artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
-  before: install
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
-shell:
-  install:
-  - groupadd -f cilium
-  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
-  - rm -rf /go
-docker:
-  ENV:
-    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
-    INITSYSTEM: SYSTEMD
-    HUBBLE_COMPAT: legacy-json-output
-  WORKDIR: "/home/cilium"
-  CMD: ["/usr/bin/cilium"]
----
-# #####################################################################
-# New Main Image (Distroless)
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-distroless
-fromImage: {{ $.ModuleName }}/builder-distroless-runtime-artifact
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-  add: /tmp/install
-  to: /
-  before: install
-- artifact: {{ $.ModuleName }}/builder-envoy-artifact
-  add: /usr/bin/cilium-envoy
-  to: /usr/bin/cilium-envoy
-  before: install
-- artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- artifact: {{ $.ModuleName }}/builder-hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
-  before: install
-docker:
-  ENV:
-    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
-    INITSYSTEM: SYSTEMD
-    HUBBLE_COMPAT: legacy-json-output
-    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  WORKDIR: "/home/cilium"
-  CMD: ["/usr/bin/cilium"]

@@ -1,0 +1,4 @@
+---
+artifact: {{ $.ModuleName }}/llvm-artifact
+from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
+---

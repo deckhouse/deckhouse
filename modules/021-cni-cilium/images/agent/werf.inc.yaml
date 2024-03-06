@@ -1,0 +1,69 @@
+# #####################################################################
+# Old Main Image
+---
+image: {{ $.ModuleName }}/agent
+fromImage: {{ $.ModuleName }}/runtime-artifact
+import:
+- artifact: {{ $.ModuleName }}/cilium-builder-artifact
+  add: /tmp/install
+  to: /
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /usr/bin/cilium-envoy
+  to: /usr/bin/cilium-envoy
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /hubble
+  to: /usr/bin/hubble
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /bash_completion
+  to: /etc/bash_completion.d/hubble
+  before: install
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+shell:
+  install:
+  - groupadd -f cilium
+  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+  - rm -rf /go
+docker:
+  ENV:
+    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+    INITSYSTEM: SYSTEMD
+    HUBBLE_COMPAT: legacy-json-output
+  WORKDIR: "/home/cilium"
+  CMD: ["/usr/bin/cilium"]
+---
+# #####################################################################
+# New Main Image (Distroless)
+---
+image: {{ $.ModuleName }}/agent-distroless
+fromImage: {{ $.ModuleName }}/runtime-distroless-artifact
+import:
+- artifact: {{ $.ModuleName }}/cilium-builder-artifact
+  add: /tmp/install
+  to: /
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /usr/bin/cilium-envoy
+  to: /usr/bin/cilium-envoy
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /hubble
+  to: /usr/bin/hubble
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /bash_completion
+  to: /etc/bash_completion.d/hubble
+  before: install
+docker:
+  ENV:
+    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+    INITSYSTEM: SYSTEMD
+    HUBBLE_COMPAT: legacy-json-output
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  WORKDIR: "/home/cilium"
+  CMD: ["/usr/bin/cilium"]

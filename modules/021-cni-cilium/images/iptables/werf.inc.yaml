@@ -1,0 +1,4 @@
+---
+artifact: {{ $.ModuleName }}/iptables-artifact
+from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
+---

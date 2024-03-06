@@ -1,0 +1,4 @@
+---
+artifact: {{ $.ModuleName }}/bpftool-artifact
+from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
+---

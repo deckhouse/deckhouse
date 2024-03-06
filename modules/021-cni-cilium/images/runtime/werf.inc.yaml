@@ -1,0 +1,140 @@
+# #####################################################################
+# Runtime artifact (for build)(based on Ubuntu)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+---
+image: {{ $.ModuleName }}/runtime-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+import:
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+- artifact: {{ $.ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-src
+  add: /go/src/github.com/cilium/cilium/images/runtime/
+  to: /go/src/github.com/cilium/cilium/images/runtime
+  before: install
+  includePaths:
+  - iptables-wrapper-installer.sh
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get upgrade -y
+  - apt-get install -y jq curl tzdata strace
+  install:
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update
+  - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+  - apt-get install -y --no-install-recommends bash-completion iproute2 iptables ipset kmod ca-certificates
+  - apt-get purge --auto-remove
+  - apt-get clean
+  - rm -rf /var/lib/apt/lists/*
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - ./iptables-wrapper-installer.sh --no-sanity-check
+---
+# #####################################################################
+# Binaries artifact for distroless (based on runtime-artifact)(based on Ubuntu)
+---
+# clang dependencies
+{{ $binaries := "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
+# from base install script
+{{ $binaries := cat $binaries "/usr/bin/jq /usr/bin/curl" }}
+# for debug
+{{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
+# shell-scripts dependencies
+{{ $binaries := cat $binaries "/bin/bash /bin/sh /bin/echo /bin/printf /bin/sed /bin/awk /bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
+{{ $binaries := cat $binaries "/bin/cat /bin/head /bin/cut /bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+# kmod
+{{ $binaries := cat $binaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
+# iproute2
+{{ $binaries := cat $binaries "/bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat " }}
+{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr sbin/arpd /usr/sbin/genl" }}
+# iptables
+{{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
+{{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
+---
+artifact: {{ $.ModuleName }}/runtime-binaries-artifact
+fromImage: {{ $.ModuleName }}/runtime-artifact
+import:
+- image: common/alt
+  add: /binary_replace.sh
+  to: /binary_replace.sh
+  before: install
+shell:
+  install:
+    - chmod +x /binary_replace.sh
+    - mkdir -p /relocate
+    - ln -f -s /usr/bin /relocate/test_bin_ln
+    - ln -f -s /usr/sbin /relocate/test_sbin_ln
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/usr/sbin/${cmd}"
+        ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+      done
+      # broken symlinks are not imported from the artifact
+      touch /usr/sbin/iptables-wrapper
+---
+# #####################################################################
+# Final Runtime Image (Distroless)
+---
+image: {{ $.ModuleName }}/runtime-distroless-artifact
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/runtime-binaries-artifact
+  add: /usr/share/zoneinfo/Etc/UTC
+  to: /etc/localtime
+  before: install
+- artifact: {{ $.ModuleName }}/runtime-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+- artifact: {{ $.ModuleName }}/runtime-binaries-artifact
+  add: /usr/lib/x86_64-linux-gnu/xtables/
+  to: /usr/lib/x86_64-linux-gnu/xtables
+  before: install
+- artifact: {{ $.ModuleName }}/runtime-binaries-artifact
+  add: /usr/sbin/iptables-wrapper
+  to: /usr/sbin/iptables-wrapper
+  before: install
+---
