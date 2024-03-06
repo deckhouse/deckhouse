@@ -89,7 +89,7 @@ spec:
     - name: istio-egressgateway
       enabled: false
 
-    # We deploy istio-cni by ourselves
+    # We're deploying the istio-cni DS with module templates.
     cni:
       enabled: false
 
@@ -199,11 +199,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     istio_cni:
-    {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
-      enabled: true
-    {{- else }}
-      enabled: false
-    {{- end }}
+      enabled: {{ eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 
     pilot:
       autoscaleEnabled: false
@@ -238,18 +234,20 @@ spec:
       injectedAnnotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
-      defaultTemplates: ["sidecar", "d8-check-kernel-version", "d8-seccomp"]
+      defaultTemplates: ["sidecar", "d8-seccomp", "d8-check-kernel-version"]
 {{ else }}
       defaultTemplates: ["sidecar", "d8-seccomp"]
 {{- end }}
       templates:
         d8-seccomp: |
           spec:
+            {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
             initContainers:
             - name: istio-validation
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
+            {{- end }}
             containers:
             - name: istio-proxy
               securityContext:

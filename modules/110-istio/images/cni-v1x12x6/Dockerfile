@@ -1,4 +1,4 @@
-# Based on https://github.com/istio/istio/blob/1.19.4/cni/deployments/kubernetes/Dockerfile.install-cni
+# Based on https://github.com/istio/istio/blob/1.12.6/cni/deployments/kubernetes/Dockerfile.install-cni
 ARG BASE_ALPINE
 FROM docker.io/istio/install-cni:1.12.6@sha256:53a0b30defa86096ffca33432fa9f2d7aa26fce8a18644e6d41da79bb0126074 as artifact
 

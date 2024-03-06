@@ -28,6 +28,10 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
+// There is CNIPlugin trafficRedirectionSetupMode in Istio module by default
+// To change this mode to InitContainer we should create secret
+// d8-istio-configuration in d8-istio namespace with trafficRedirectionSetupMode key
+// $ kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=init
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        lib.Queue("istio-cni"),

@@ -1,3 +1,8 @@
+{{- define "istio_cni_resources" }}
+cpu: 100m
+memory: 100Mi
+{{- end }}
+
 {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
@@ -121,8 +126,7 @@ spec:
             timeoutSeconds: 1
           resources:
             requests:
-              cpu: 100m
-              memory: 100Mi
+              {{- include "istio_cni_resources" . | nindent 14 }}
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
           volumeMounts:
             - mountPath: /host/opt/cni/bin
