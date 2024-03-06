@@ -71,7 +71,8 @@ func setInternalIstioCniMode(input *go_hook.HookInput) error {
 
 	if len(snapshot) == 1 && snapshot[0].(bool) {
 		input.Values.Set("istio.internal.dataPlane.trafficRedirectionSetupMode", "InitContainer")
+		return nil
 	}
-
+	input.Values.Set("istio.internal.dataPlane.trafficRedirectionSetupMode", "CNIPlugin")
 	return nil
 }
