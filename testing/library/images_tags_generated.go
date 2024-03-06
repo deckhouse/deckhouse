@@ -109,9 +109,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"checkKernelVersion":        "imageHash-cniCilium-checkKernelVersion",
 		"kubeRbacProxy":             "imageHash-cniCilium-kubeRbacProxy",
 		"operator":                  "imageHash-cniCilium-operator",
-		"safeAgentUpdater":          "imageHash-cniCilium-safeAgentUpdater",
 		"runtimeArtifact":           "imageHash-cniCilium-runtimeArtifact",
 		"runtimeDistrolessArtifact": "imageHash-cniCilium-runtimeDistrolessArtifact",
+		"safeAgentUpdater":          "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
