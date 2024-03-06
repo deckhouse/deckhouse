@@ -27,6 +27,7 @@ type ModuleManager interface {
 	IsModuleEnabled(modName string) bool
 	GetModule(modName string) *modules.BasicModule
 	GetModuleNames() []string
+	GetEnabledModuleNames() []string
 	GetValuesValidator() *validation.ValuesValidator
 	ValidateModule(module *modules.BasicModule) error
 }

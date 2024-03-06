@@ -21,6 +21,7 @@ import (
 
 	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -35,6 +36,7 @@ import (
 type ModuleConfigBackend struct {
 	mcKubeClient     *versioned.Clientset
 	deckhouseConfigC chan<- utils.Values
+	moduleEventC     chan events.ModuleEvent
 	logger           logger.Logger
 }
 
@@ -47,9 +49,9 @@ func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger logge
 	}
 
 	return &ModuleConfigBackend{
-		mcClient,
-		deckhouseConfigC,
-		logger,
+		mcKubeClient:     mcClient,
+		deckhouseConfigC: deckhouseConfigC,
+		logger:           logger,
 	}
 }
 
@@ -59,6 +61,14 @@ func (mc ModuleConfigBackend) handleDeckhouseConfig(moduleName string, val utils
 	}
 
 	mc.deckhouseConfigC <- val
+}
+
+func (mc *ModuleConfigBackend) GetEventsChannel() chan events.ModuleEvent {
+	if mc.moduleEventC == nil {
+		mc.moduleEventC = make(chan events.ModuleEvent, 50)
+	}
+
+	return mc.moduleEventC
 }
 
 func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan config.Event) {
@@ -115,6 +125,12 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 		mc.handleDeckhouseConfig(obj.Name, values)
 	}
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
+	if mc.moduleEventC != nil {
+		mc.moduleEventC <- events.ModuleEvent{
+			ModuleName: obj.Name,
+			EventType:  events.ModuleConfigChanged,
+		}
+	}
 }
 
 func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
