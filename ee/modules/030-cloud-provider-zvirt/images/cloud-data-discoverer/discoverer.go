@@ -15,6 +15,7 @@ import (
 	"strconv"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -155,13 +156,71 @@ func (d *Discoverer) getStorageDomains(
 	return sd, nil
 }
 
-// NotImplemented
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	return []v1alpha1.DiskMeta{}, nil
+	zvirtClient, err := d.config.client()
+	if err != nil {
+		return nil, err
+	}
+
+	disks, err := zvirtClient.ListDisks(getRetryStrategy(ctx)...)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(disks) == 0 {
+		return []v1alpha1.DiskMeta{}, nil
+	}
+
+	diskMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
+	for _, disk := range disks {
+		diskMeta = append(diskMeta, v1alpha1.DiskMeta{
+			ID:   string(disk.ID()),
+			Name: disk.Alias(),
+		})
+	}
+
+	return diskMeta, nil
 }
 
-func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
-	return []v1alpha1.InstanceType{}, nil
+func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
+	zvirtClient, err := d.config.client()
+	if err != nil {
+		return nil, err
+	}
+	vms, err := zvirtClient.ListVMs(getRetryStrategy(ctx)...)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(vms) == 0 {
+		return []v1alpha1.InstanceType{}, nil
+	}
+
+	instanceTypes := make([]v1alpha1.InstanceType, 0, len(vms))
+
+	for _, vm := range vms {
+		name := vm.Name()
+		cpu := vm.CPU()
+		if cpu == nil {
+			logrus.Warnf("VM %s, Cannot get CPU count", name)
+			continue
+		}
+		cpuTopo := cpu.Topo()
+		if cpuTopo == nil {
+			logrus.Warnf("VM %s, Cannot get CPU count", name)
+			continue
+		}
+		var cpuCount, memory int64
+		memory = vm.Memory()
+		cpuCount = int64(cpuTopo.Cores())
+		instanceTypes = append(instanceTypes, v1alpha1.InstanceType{
+			Name:     name,
+			CPU:      resource.MustParse(strconv.FormatInt(cpuCount, 10)),
+			Memory:   resource.MustParse(strconv.FormatInt(memory, 10) + "Mi"),
+			RootDisk: resource.MustParse("0Gi"),
+		})
+	}
+	return instanceTypes, nil
 }
 
 func mergeStorageDomains(
@@ -169,27 +228,29 @@ func mergeStorageDomains(
 	cloudSds []ovirtclient.StorageDomain,
 ) []v1alpha1.ZvirtStorageDomain {
 	result := []v1alpha1.ZvirtStorageDomain{}
+	cloudSdsMap := make(map[string]v1alpha1.ZvirtStorageDomain)
 	for _, sd := range cloudSds {
-		logrus.Infof("%+v", sd)
-		logrus.Infof(
-			"StorageDomain: name=%s type=%s IsEnabled=%v status=%s\n",
-			sd.Name(),
-			string(sd.StorageType()),
-			sd.Status() == ovirtclient.StorageDomainStatusActive,
-			sd.Status(),
-		)
 		// status may be unknown if external status has arrived
 		status := sd.Status() == ovirtclient.StorageDomainStatusActive
 		if sd.Status() == ovirtclient.StorageDomainStatus("") && sd.ExternalStatus() == ovirtclient.StorageDomainExternalStatusOk {
 			status = true
 		}
 
-		result = append(result, v1alpha1.ZvirtStorageDomain{
+		cloudSdsMap[sd.Name()] = v1alpha1.ZvirtStorageDomain{
 			Name:      sd.Name(),
 			Type:      string(sd.StorageType()),
 			IsEnabled: status,
 			IsDefault: false,
-		})
+		}
+
+		result = append(result, cloudSdsMap[sd.Name()])
+	}
+
+	for _, sd := range sds {
+		if _, ok := cloudSdsMap[sd.Name]; ok {
+			continue
+		}
+		result = append(result, sd)
 	}
 
 	sort.SliceStable(result, func(i, j int) bool {
