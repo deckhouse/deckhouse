@@ -34,7 +34,7 @@ import (
 
 const (
 	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMapVer"
+	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

@@ -29,7 +29,7 @@ const (
 	k8sKey                        = "k8s"
 	minVersionValuesKey           = "istio:minimalVersion"
 	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMapVer"
+	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMap"
 )
 
 func init() {
