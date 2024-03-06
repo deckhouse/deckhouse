@@ -174,7 +174,8 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	doc := resource.Object
 	gvk := resource.GVK
 
-	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5*time.Second).Run(func() error {
+	// Wait up to 10 minutes
+	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 60, 10*time.Second).Run(func() error {
 		gvr, err := c.kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
 		if err != nil {
 			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
