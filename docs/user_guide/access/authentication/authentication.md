@@ -379,26 +379,6 @@ title: "Модуль user-authn: FAQ"
 3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../500-upmeter/), потому что права доступа к Upmeter не такие проработанные.
 С другой стороны, для [Kubernetes Dashboard](../500-dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
 
-## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
-
-Сгенерировать `kubeconfig` для удаленного доступа к кластеру через `kubectl` можно через веб-интерфейс `kubeconfigurator`.
-
-Настройте параметр [publishAPI](configuration.html#parameters-publishapi):
-- Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
-
-  ```shell
-  kubectl edit mc user-authn
-  ```
-
-- Добавьте следующую секцию в блок `settings` и сохраните изменения:
-
-  ```yaml
-  publishAPI:
-    enable: true
-  ```
-
-Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
-
 ### Настройка kube-apiserver
 
 С помощью функционала модуля [control-plane-manager](../../modules/040-control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
