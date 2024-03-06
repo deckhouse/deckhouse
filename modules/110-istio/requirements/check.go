@@ -28,7 +28,7 @@ const (
 	requirementsKey                  = "istioVer"
 	k8sKey                           = "k8s"
 	minVersionValuesKey              = "istio:minimalVersion"
-	k8sVersionKey                    = "istio:isK8sVersionAutomatic"
+	isK8sVersionAutomaticKey         = "istio:isK8sVersionAutomatic"
 	compatibilityOperatorToK8sVerKey = "istio:compatibilityOperatorToK8sVer"
 )
 
@@ -64,11 +64,15 @@ func init() {
 		}
 		currentMinIstioVersionStr := currentIstioVersionRaw.(string)
 
-		isAtomaticK8sVerRaw, exists := getter.Get(k8sVersionKey)
+		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
 		if !exists {
 			return true, nil
 		}
 		isAtomaticK8sVer := isAtomaticK8sVerRaw.(bool)
+		// Only if k8s version is set to Automatic in cluster
+		if !isAtomaticK8sVer {
+			return true, nil
+		}
 
 		compatibilityMapRaw, exists := getter.Get(compatibilityOperatorToK8sVerKey)
 		if !exists {
@@ -79,17 +83,14 @@ func init() {
 			return true, nil
 		}
 
-		// If k8s version is set to Automatic in cluster
-		if isAtomaticK8sVer {
-			if version, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
-				for _, ver := range version {
-					// If k8s version in compatibility list of operator version
-					if desiredVersion == ver {
-						return true, nil
-					}
+		if versions, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
+			for _, version := range versions {
+				// If k8s version in compatibility list of operator version
+				if desiredVersion == version {
+					return true, nil
 				}
-				return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", desiredVersion, currentMinIstioVersionStr)
 			}
+			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", desiredVersion, currentMinIstioVersionStr)
 		}
 
 		return true, nil

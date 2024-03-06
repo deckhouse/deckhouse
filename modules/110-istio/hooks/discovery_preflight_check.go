@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	k8sVersionKey = "istio:isK8sVersionAutomatic"
+	isK8sVersionAutomaticKey = "istio:isK8sVersionAutomatic"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -82,7 +82,7 @@ func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
 		return errors.New("cluster configuration kubernetesVersion is empty or invalid")
 	}
 
-	requirements.SaveValue(k8sVersionKey, kubernetesVersion[0].(string) == "Automatic")
+	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersion[0].(string) == "Automatic")
 
 	return nil
 }
