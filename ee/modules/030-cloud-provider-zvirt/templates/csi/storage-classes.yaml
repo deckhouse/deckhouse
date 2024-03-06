@@ -13,5 +13,4 @@ volumeBindingMode: WaitForFirstConsumer
 parameters:
   storageDomainName: {{ $storageClass.storageDomain | quote }}
   thinProvisioning: "true"
-  fsType: {{ $storageClass.fsType | quote }}
 {{- end }}
