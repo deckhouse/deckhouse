@@ -141,8 +141,10 @@ spec:
                                 description: "Максимальное значение диапазона."
                     readOnlyRootFilesystem:
                       description: "Определяет необходимость запуска контейнеров с корневой файловой системой, доступной только для чтения"
+                    automountServiceAccountToken:
+                      description: Определяет запуск подов с автоматически cмонтированным токеном сервисного аккаунта.
                     seccompProfiles:
-                      description: "Определяет список доступных к использованию seccomp-профилей."
+                      description: Определяет список доступных seccomp-профилей.
                       properties:
                         allowedProfiles:
                           description: "Список seccomp-профилей, доступных к использованию."
