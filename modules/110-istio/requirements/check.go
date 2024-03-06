@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	requirementsKey                  = "istioVer"
-	k8sKey                           = "k8s"
-	minVersionValuesKey              = "istio:minimalVersion"
-	isK8sVersionAutomaticKey         = "istio:isK8sVersionAutomatic"
-	compatibilityOperatorToK8sVerKey = "istio:compatibilityOperatorToK8sVer"
+	requirementsKey               = "istioVer"
+	k8sKey                        = "k8s"
+	minVersionValuesKey           = "istio:minimalVersion"
+	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
+	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMapVer"
 )
 
 func init() {
@@ -74,7 +74,7 @@ func init() {
 			return true, nil
 		}
 
-		compatibilityMapRaw, exists := getter.Get(compatibilityOperatorToK8sVerKey)
+		compatibilityMapRaw, exists := getter.Get(istioToK8sCompatibilityMapKey)
 		if !exists {
 			return true, nil
 		}
