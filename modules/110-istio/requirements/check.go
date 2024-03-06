@@ -34,7 +34,7 @@ const (
 
 func init() {
 	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		desiredVersion, err := semver.NewVersion(requirementValue)
+		comingK8sVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
@@ -48,15 +48,15 @@ func init() {
 			return false, err
 		}
 
-		if currentVersion.LessThan(desiredVersion) {
+		if currentVersion.LessThan(comingK8sVersion) {
 			return false, fmt.Errorf("installed Istio version '%s' is lower than required", currentVersionStr)
 		}
 
 		return true, nil
 	}
 
-	checkMaximalK8sVersioForOperator := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		desiredVersion := requirementValue
+	checkMaximalK8sVersionForOperator := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		comingK8sVersion := requirementValue
 
 		currentIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
@@ -83,19 +83,19 @@ func init() {
 			return true, nil
 		}
 
-		if versions, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
-			for _, version := range versions {
+		if k8sVersions, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
+			for _, k8sVersion := range k8sVersions {
 				// If k8s version in compatibility list of operator version
-				if desiredVersion == version {
+				if comingK8sVersion == k8sVersion {
 					return true, nil
 				}
 			}
-			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", desiredVersion, currentMinIstioVersionStr)
+			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", comingK8sVersion, currentMinIstioVersionStr)
 		}
 
 		return true, nil
 	}
 
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
-	requirements.RegisterCheck(k8sKey, checkMaximalK8sVersioForOperator)
+	requirements.RegisterCheck(k8sKey, checkMaximalK8sVersionForOperator)
 }

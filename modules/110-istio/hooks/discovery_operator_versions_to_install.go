@@ -79,7 +79,6 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	// Get array of compatibility k8s versions for every operator version
 	k8sCompatibleVersions := make(map[string][]string)
 	_ = json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions)
-	requirements.SaveValue(compatibilityOperatorToK8sVerKey, k8sCompatibleVersions)
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, versionResult := range versionsToInstallResult {
