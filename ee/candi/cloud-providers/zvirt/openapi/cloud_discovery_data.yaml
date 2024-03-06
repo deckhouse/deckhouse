@@ -21,9 +21,6 @@ apiVersions:
             name:
               type: string
               minLength: 1
-            type:
-              type: string
-              minLength: 1
             isEnabled:
               type: boolean
             isDefaul:

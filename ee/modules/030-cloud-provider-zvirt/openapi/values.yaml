@@ -251,9 +251,6 @@ properties:
                 name:
                   type: string
                   minLength: 1
-                type:
-                  type: string
-                  minLength: 1
                 isEnabled:
                   type: boolean
                 isDefault:
@@ -267,8 +264,6 @@ properties:
             name:
               type: string
             storageDomain:
-              type: string
-            fsType:
               type: string
       defaultStorageClass:
         type: string

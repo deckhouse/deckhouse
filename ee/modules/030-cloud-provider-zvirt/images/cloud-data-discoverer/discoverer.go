@@ -238,7 +238,6 @@ func mergeStorageDomains(
 
 		cloudSdsMap[sd.Name()] = v1alpha1.ZvirtStorageDomain{
 			Name:      sd.Name(),
-			Type:      string(sd.StorageType()),
 			IsEnabled: status,
 			IsDefault: false,
 		}

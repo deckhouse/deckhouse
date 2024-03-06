@@ -97,7 +97,6 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			storageClasses = append(storageClasses, storageClass{
 				Name:          sc.Name,
 				StorageDomain: sc.Parameters["storageDomain"],
-				FsType:        sc.Parameters["fsType"],
 			})
 		}
 
@@ -148,7 +147,6 @@ func handleDiscoveryDataVolumeTypes(
 		volumeTypesMap[getStorageClassName(volumeType.Name)] = storageClass{
 			Name:          getStorageClassName(volumeType.Name),
 			StorageDomain: volumeType.Name,
-			FsType:        volumeType.Type,
 		}
 	}
 
@@ -169,7 +167,6 @@ func handleDiscoveryDataVolumeTypes(
 		sc := storageClass{
 			StorageDomain: sp.StorageDomain,
 			Name:          name,
-			FsType:        sp.FsType,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -225,5 +222,4 @@ func setStorageClassesValues(
 type storageClass struct {
 	Name          string `json:"name"`
 	StorageDomain string `json:"storageDomain"`
-	FsType        string `json:"fsType"`
 }
