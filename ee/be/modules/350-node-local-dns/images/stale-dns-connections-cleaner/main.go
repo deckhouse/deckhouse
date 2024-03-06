@@ -201,6 +201,7 @@ func (cc *ConnectionsCleaner) checkAndDestroy(ctx context.Context, podCIDR *net.
 	allUDPSockets, err := netlink.SocketDiagUDP(familyIPv4)
 	if err != nil {
 		log.Errorf("Failed get UDP sockets. Error: %v", err)
+		return
 	}
 
 	/*
@@ -246,6 +247,7 @@ func (cc *ConnectionsCleaner) checkAndDestroy(ctx context.Context, podCIDR *net.
 				log.Fatalf("Failed to destroy the socket because this is not supported by underlying kernel. Error: %v", err)
 			}
 			log.Errorf("Failed to destroy the socket. Error: %v", err)
+			continue
 		}
 		log.Infof(
 			"Socket %s:%v -> %s:%v successfully destroyed",
