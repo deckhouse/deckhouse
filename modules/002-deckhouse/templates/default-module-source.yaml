@@ -1,3 +1,4 @@
+{{- if .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -12,3 +13,4 @@ spec:
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
     repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}
+{{- end }}
