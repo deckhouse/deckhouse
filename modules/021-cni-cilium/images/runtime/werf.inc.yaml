@@ -80,11 +80,14 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/runtime-binaries-artifact
 fromImage: {{ $.ModuleName }}/runtime-artifact
-import:
-- artifact: {{ $.ModuleName }}/alt-artifact
-  add: /binary_replace.sh
-  to: /binary_replace.sh
-  before: install
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  includePaths:
+  - binary_replace.sh
+  stageDependencies:
+    install:
+    - binary_replace.sh
 shell:
   install:
     - chmod +x /binary_replace.sh
