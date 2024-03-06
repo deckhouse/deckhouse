@@ -71,7 +71,6 @@ sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount whe
 {{- end }}
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
-sysctl -w kernel.panic=10
 sysctl -w kernel.panic_on_oops=1
 
 # we use tee for work with globs

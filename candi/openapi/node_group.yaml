@@ -164,6 +164,7 @@ spec:
               required:
                 - nodeType
               properties:
+
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -2091,6 +2092,22 @@ spec:
                         Maximum number of concurrently updating nodes.
 
                         Can be set as absolute count or as a percent of total nodes.
+                fencing:
+                  type: object
+                  description: |
+                    Enable fencing controller for this group.
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - "Disabled"
+                        - "Watchdog"
+                      x-doc-default: Disabled
+                      default: Disabled
+                      description: |
+                        Supported fencing modes:
+                        * Disabled - fencing is disabled.
+                        * Watchdog - use watchdog kernel module for fencing.
               oneOf:
                 - properties:
                     nodeType:

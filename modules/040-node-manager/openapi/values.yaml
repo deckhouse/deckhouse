@@ -6,6 +6,7 @@ properties:
     type: object
     default: {}
     properties:
+
       capiControllerManagerWebhookCert:
         type: object
         default: { }
@@ -335,6 +336,10 @@ properties:
               type: object
               additionalProperties: true
             kubelet:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
