@@ -16,7 +16,7 @@ RUN mkdir -p /src/kube-state-metrics && \
 WORKDIR /src/kube-state-metrics
 RUN go mod edit -go 1.20 \
     && go get golang.org/x/net@v0.17.0 \
-    && go get github.com/emicklei/go-restful@v2.16.0 \
+    && go get github.com/emicklei/go-restful@v2.16.0+incompatible \
     && go mod tidy \
     && make build-local && \
     chown -R 64535:64535 /src/kube-state-metrics && \
