@@ -20,8 +20,10 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 )
 
 func readFileFromImage(img v1.Image, fileName string) (*bytes.Buffer, error) {
@@ -65,4 +67,25 @@ func readFileFromImage(img v1.Image, fileName string) (*bytes.Buffer, error) {
 	}
 
 	return nil, fmt.Errorf("%s: %w", fileName, fs.ErrNotExist)
+}
+
+func getImageFromLayoutByTag(l layout.Path, tag string) (v1.Image, error) {
+	index, err := l.ImageIndex()
+	if err != nil {
+		return nil, err
+	}
+	indexManifest, err := index.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, imageManifest := range indexManifest.Manifests {
+		for key, value := range imageManifest.Annotations {
+			if key == "org.opencontainers.image.ref.name" && strings.HasSuffix(value, ":"+tag) {
+				return index.Image(imageManifest.Digest)
+			}
+		}
+	}
+
+	return nil, nil
 }
