@@ -55,7 +55,7 @@ func init() {
 		return true, nil
 	}
 
-	checkMaximalK8sVersionForOperator := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkIstioAndK8sVersionsCompatibility := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		comingK8sVersion := requirementValue
 
 		currentIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
@@ -85,17 +85,17 @@ func init() {
 
 		if k8sVersions, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
 			for _, k8sVersion := range k8sVersions {
-				// If k8s version in compatibility list of operator version
+				// If k8s version is in compatibility list
 				if comingK8sVersion == k8sVersion {
 					return true, nil
 				}
 			}
-			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with operator version '%s'", comingK8sVersion, currentMinIstioVersionStr)
+			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with Istio version '%s'", comingK8sVersion, currentMinIstioVersionStr)
 		}
 
 		return true, nil
 	}
 
 	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
-	requirements.RegisterCheck(k8sKey, checkMaximalK8sVersionForOperator)
+	requirements.RegisterCheck(k8sKey, checkIstioAndK8sVersionsCompatibility)
 }
