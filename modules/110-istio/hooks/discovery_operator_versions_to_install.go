@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -34,8 +33,7 @@ import (
 )
 
 const (
-	minVersionValuesKey              = "istio:minimalVersion"
-	compatibilityOperatorToK8sVerKey = "istio:compatibilityOperatorToK8sVer"
+	minVersionValuesKey = "istio:minimalVersion"
 )
 
 type IstioOperatorCrdInfo struct {
@@ -75,10 +73,6 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	var unsupportedRevisions = make([]string, 0)
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
-
-	// Get array of compatibility k8s versions for every operator version
-	k8sCompatibleVersions := make(map[string][]string)
-	_ = json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions)
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, versionResult := range versionsToInstallResult {
