@@ -295,6 +295,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v%[1]s
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 `, version.String()))
 	}
 

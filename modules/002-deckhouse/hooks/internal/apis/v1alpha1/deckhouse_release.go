@@ -53,7 +53,7 @@ type DeckhouseRelease struct {
 
 	Spec DeckhouseReleaseSpec `json:"spec"`
 
-	Status *DeckhouseReleaseStatus `json:"status,omitempty"`
+	Status DeckhouseReleaseStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen=false

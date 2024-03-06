@@ -66,6 +66,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v1.57.3
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 `,
 		},
 		{
@@ -95,6 +99,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v1.56.12
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 `,
 		},
 		{
@@ -126,6 +134,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v1.56.12
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -146,6 +158,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v1.57.5
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -166,6 +182,10 @@ spec:
     k8s: 1.23.0
     nodesMinimalOSVersionUbuntu: '18.04'
   version: v1.58.1
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
 `,
 		},
 	}
