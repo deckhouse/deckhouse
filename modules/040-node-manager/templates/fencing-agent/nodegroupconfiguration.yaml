@@ -1,0 +1,85 @@
+{{ $ctx := . }}
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{ if hasKey $ng "fencing" }}
+    {{ $mode := dig "fencing" "mode" "" $ng  }}
+    {{ if eq $mode "Watchdog" }}
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: enable-watchdog-for-{{ $ng.name }}-nodegroup.sh
+  labels:
+    app: fencing-agent
+spec:
+  weight: 99
+  nodeGroups: ["{{ $ng.name }}"]
+  bundles: ["*"]
+  content: |
+    bb-sync-file /etc/udev/rules.d/60-watchdog.rules - <<"EOF"
+    KERNEL=="watchdog*", OWNER="64535", GROUP="root", MODE="0660"
+    EOF
+
+    bb-event-on 'nodegroup-watchdog-service-changed' '_nodegroup_watchdog_service'
+    function _nodegroup_watchdog_service() {
+      systemctl daemon-reload
+      systemctl restart nodegroup-watchdog.service
+      systemctl enable --now nodegroup-watchdog.service
+    }
+
+    bb-sync-file /etc/systemd/system/nodegroup-watchdog.service - nodegroup-watchdog-service-changed <<"EOF"
+    [Unit]
+    Description=Nodegroup watchdog manager service
+    After=multi-user.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/opt/deckhouse/bin/nodegroup-watchdog.sh start
+    ExecStop=/opt/deckhouse/bin/nodegroup-watchdog.sh stop
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+    bb-sync-file /opt/deckhouse/bin/nodegroup-watchdog.sh - nodegroup-watchdog-service-changed <<-"EOF"
+    #!/bin/bash
+
+    WD="/dev/watchdog"
+
+    start_wd() {
+      if [ -d "${WD}" ]; then
+        ls -lha /dev/watchdog* 2>/dev/null
+        rm -rf "${WD}"
+      fi
+      modprobe softdog soft_margin=60 soft_panic=1
+    }
+
+    stop_wd() {
+      while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
+        fuser "${WD}" -k -TERM
+        sleep 1
+      done
+
+      rmmod softdog
+    }
+
+    case "$1" in
+        start)
+            start_wd
+            ;;
+        stop)
+            stop_wd
+            ;;
+        *)
+            echo "Usage: $0 [start|stop]"
+            exit 1
+            ;;
+    esac
+    EOF
+
+    chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
+
+    {{- end }}
+  {{- end }}
+{{- end }}
