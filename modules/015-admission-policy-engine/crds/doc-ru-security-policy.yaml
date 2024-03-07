@@ -40,7 +40,7 @@ spec:
                     allowHostNetwork:
                       description: Разрешает контейнерам доступ к Network-пространству имен хоста.
                     allowedHostPorts:
-                      description: Cписок диапазонов портов хоста (hostPort), разрешенных для использования в контейнере.
+                      description: Cписок диапазонов портов хоста (hostPort), разрешенных для использования в контейнерах.
                       items:
                         properties:
                           min:
