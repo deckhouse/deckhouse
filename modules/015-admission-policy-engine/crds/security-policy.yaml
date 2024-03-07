@@ -90,7 +90,10 @@ spec:
                     - Dryrun
                 policies:
                   type: object
-                  description: empty
+                  description: |
+                    Container parameters that the policy will check for compliance:
+                    - You can specify allowed ranges of values. For example, a list of capabilities or a range of host ports (`hostPort`) for containers.
+                    - You can grant access to containers or impose a condition. For example, check that all containers have a read-only root filesystem.
                   properties:
                     allowedHostPaths:
                       type: array
@@ -417,7 +420,7 @@ spec:
                           - vsphereVolume
                 match:
                   type: object
-                  description: empty
+                  description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.
                   required: ["namespaceSelector"]
                   properties:
                     namespaceSelector:
