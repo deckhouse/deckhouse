@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	requirementsKey               = "istioVer"
-	k8sKey                        = "k8s"
-	minVersionValuesKey           = "istio:minimalVersion"
-	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMap"
+	requirementIstioMinimalVersionKey = "istioMinimalVersion"
+	requirementDefaultK8sKey          = "k8s"
+	minVersionValuesKey               = "istio:minimalVersion"
+	isK8sVersionAutomaticKey          = "istio:isK8sVersionAutomatic"
+	istioToK8sCompatibilityMapKey     = "istio:istioToK8sCompatibilityMap"
 )
 
 func init() {
@@ -56,17 +56,17 @@ func init() {
 	}
 
 	checkIstioAndK8sVersionsCompatibility := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		comingK8sVersion := requirementValue
+		comingDefaultK8sVersion := requirementValue
 
 		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
-			return true, nil
+			return false, fmt.Errorf("%s key is not registred", minVersionValuesKey)
 		}
 		currentMinIstioVersionStr := currentMinIstioVersionRaw.(string)
 
 		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
 		if !exists {
-			return true, nil
+			return false, fmt.Errorf("%s key is not registred", isK8sVersionAutomaticKey)
 		}
 		isAtomaticK8sVer := isAtomaticK8sVerRaw.(bool)
 		// Only if k8s version is set to Automatic in cluster
@@ -76,26 +76,26 @@ func init() {
 
 		compatibilityMapRaw, exists := getter.Get(istioToK8sCompatibilityMapKey)
 		if !exists {
-			return true, nil
+			return false, fmt.Errorf("%s key is not registred", istioToK8sCompatibilityMapKey)
 		}
 		compatibilityMap, ok := compatibilityMapRaw.(map[string][]string)
 		if !ok {
-			return true, nil
+			return false, fmt.Errorf("%s key format is incorrect", istioToK8sCompatibilityMapKey)
 		}
 
-		if k8sVersions, ok := compatibilityMap[currentMinIstioVersionStr]; ok {
-			for _, k8sVersion := range k8sVersions {
-				// If k8s version is in compatibility list
-				if comingK8sVersion == k8sVersion {
-					return true, nil
-				}
+		k8sVersions, ok := compatibilityMap[currentMinIstioVersionStr]
+		if !ok {
+			return false, fmt.Errorf("can't find compatible k8s versions for Istio v%s", currentMinIstioVersionStr)
+		}
+		for _, k8sVersion := range k8sVersions {
+			// If k8s version is in compatibility list
+			if comingDefaultK8sVersion == k8sVersion {
+				return true, nil
 			}
-			return false, fmt.Errorf("after update kubernetes version '%s' will be incompatible with Istio version '%s'", comingK8sVersion, currentMinIstioVersionStr)
 		}
-
-		return true, nil
+		return false, fmt.Errorf("in coming release default kubernetes version '%s' will be incompatible with Istio version '%s'", comingDefaultK8sVersion, currentMinIstioVersionStr)
 	}
 
-	requirements.RegisterCheck(requirementsKey, checkMinimalIstioVersionFunc)
-	requirements.RegisterCheck(k8sKey, checkIstioAndK8sVersionsCompatibility)
+	requirements.RegisterCheck(requirementIstioMinimalVersionKey, checkMinimalIstioVersionFunc)
+	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibility)
 }
