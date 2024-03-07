@@ -1,6 +1,6 @@
----
-artifact: {{ $.ModuleName }}/llvm-artifact
-from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
+{{- $llvmRev := "llvmorg-10.0.0" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on compilers)
@@ -8,6 +8,34 @@ from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256
 # Corresponding commit bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28 (https://github.com/cilium/image-tools/tree/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # Based on https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/checkout-llvm.sh
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
 # #####################################################################
 ---
-
+image: {{ $.ModuleName }}/llvm-artifact
+fromImage: {{ $.ModuleName }}/compilers-artifact
+shell:
+  beforeInstall:
+  - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
+  - cd /src/llvm
+  - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
+  - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
+  - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
+  - cd -
+  install:
+  - mkdir -p /src/llvm/llvm/build-native
+  - cd /src/llvm/llvm/build-native
+  - |
+    cmake .. -G "Ninja" \
+      -DLLVM_TARGETS_TO_BUILD="BPF" \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      -DBUILD_SHARED_LIBS="OFF" \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DLLVM_BUILD_RUNTIME="OFF" \
+      -DCMAKE_INSTALL_PREFIX="/usr/local"
+  - ninja clang llc llvm-objcopy
+  - strip bin/clang
+  - strip bin/llc
+  - strip bin/llvm-objcopy
+  - mkdir -p /out/linux/amd64/bin
+  - cp bin/clang bin/llc bin/llvm-objcopy /out/linux/amd64/bin

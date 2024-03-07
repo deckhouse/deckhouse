@@ -17,8 +17,8 @@ shell:
   beforeInstall:
   - apk add --no-cache make git binutils
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - mkdir -p /go/src/github.com/cilium/hubble
   - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
   - cd /go/src/github.com/cilium/hubble
