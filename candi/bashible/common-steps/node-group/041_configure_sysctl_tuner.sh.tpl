@@ -72,15 +72,16 @@ sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount whe
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic_on_oops=1
+
 # fencing settings
-{{- if not (hasKey .nodeGroup "fencing") }}
-sysctl -w kernel.panic=10
-{{- else }}
+{{- if hasKey .nodeGroup "fencing" }}
   {{- if eq .nodeGroup.fencing.type "Watchdog" }}
 sysctl -w kernel.panic=0
   {{- else }}
 sysctl -w kernel.panic=10
   {{- end }}
+{{- else }}
+sysctl -w kernel.panic=10
 {{- end }}
 
 # we use tee for work with globs
