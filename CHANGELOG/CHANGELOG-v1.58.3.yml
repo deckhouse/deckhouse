@@ -1,13 +1,13 @@
 candi:
   fixes:
-    - summary: Fix additionalRolePolicies regex.
+    - summary: Fix regex validation pattern of the `additionalRolePolicies` field.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7696
 dhctl:
   features:
     - summary: Generate `DeckhouseRelease` manifests for mirrored releases.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7697
   fixes:
-    - summary: mirror will avoid mirroring versions that were not yet released.
+    - summary: Avoid mirroring versions in `dhctl mirror` that were not yet released.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7716
 ingress-nginx:
   fixes:
