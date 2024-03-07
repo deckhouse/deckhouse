@@ -98,6 +98,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager127": "imageHash-cloudProviderYandex-cloudControllerManager127",
 		"cloudControllerManager128": "imageHash-cloudProviderYandex-cloudControllerManager128",
 		"cloudControllerManager129": "imageHash-cloudProviderYandex-cloudControllerManager129",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderYandex-cloudDataDiscoverer",
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
