@@ -431,7 +431,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return nil
 		}
 
-		err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
+		localBootstraper := func(f func() error) error {
+			if b.CommanderMode {
+				return f()
+			}
+			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(f)
+		}
+
+		err := localBootstraper(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
