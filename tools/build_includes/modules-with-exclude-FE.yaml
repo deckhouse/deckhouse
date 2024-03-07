@@ -77,6 +77,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se/modules/010-metallb-crd
+  to: /deckhouse/modules/010-metallb-crd
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   excludePaths:
@@ -339,6 +352,97 @@
     - .build.yaml
 - add: /ee/modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/381-l2-load-balancer
+  to: /deckhouse/modules/381-l2-load-balancer
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
+  to: /deckhouse/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/crds/ingress-nginx.yaml
+  to: /deckhouse/modules/402-ingress-nginx/crds/ingress-nginx.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/docs/EXAMPLES.md
+  to: /deckhouse/modules/402-ingress-nginx/docs/EXAMPLES.md
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/docs/EXAMPLES_RU.md
+  to: /deckhouse/modules/402-ingress-nginx/docs/EXAMPLES_RU.md
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/templates/controller-l2
+  to: /deckhouse/modules/402-ingress-nginx/templates/controller-l2
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/402-ingress-nginx/template_tests/l2lb_test.go
+  to: /deckhouse/modules/402-ingress-nginx/template_tests/l2lb_test.go
   excludePaths:
     - docs
     - README.md

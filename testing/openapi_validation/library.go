@@ -36,6 +36,12 @@ const (
 	parserConcurrentCount = 50
 )
 
+var (
+	modulesWithCRDEditions = map[string]struct{}{
+		"402-ingress-nginx": {},
+	}
+)
+
 type fileValidation struct {
 	filePath string
 
@@ -161,6 +167,19 @@ func isCRD(data map[interface{}]interface{}) bool {
 	return true
 }
 
+func isModuleUsesCRDEditions(fileName string) bool {
+	pathParts := strings.Split(fileName, "/")
+	if len(pathParts) < 2 {
+		return false
+	}
+	for keyFileName := range modulesWithCRDEditions {
+		if pathParts[1] == keyFileName {
+			return true
+		}
+	}
+	return false
+}
+
 func isDechkouseCRD(data map[interface{}]interface{}) bool {
 	kind, ok := data["kind"].(string)
 	if !ok {
@@ -212,8 +231,18 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 		},
 		resultC: resultC,
 	}
+
 	if isDechkouseCRD(data) {
 		fileParser.parseForWrongKeys(data)
+
+		// If modules has same CRD files in different editions(ce, ee)
+		if isModuleUsesCRDEditions(fileName) {
+			parentCRDFile := "/deckhouse/ee/" + fileName
+			if _, err := os.Stat(parentCRDFile); !os.IsNotExist(err) {
+				parentCRD := getFileYAMLContent(parentCRDFile)
+				fileParser.keyValidators["crd-editions"] = validators.NewExtendedCRDValidator().WithParentCRD(parentCRD)
+			}
+		}
 	}
 	go fileParser.startParsing(data, resultC)
 }
