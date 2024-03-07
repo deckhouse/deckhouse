@@ -165,11 +165,11 @@ func resolveStatisticsStatus(status string) CheckStatus {
 		// NOTE: Regular out-of-sync state, which can be fixed by the converge run
 		return CheckStatusOutOfSync
 	case converge.DestructiveStatus:
-		// NOTE: Critical error, cannot be healed by the converge run
+		// NOTE: Something will be destroyed by the converge run, such change should be approved
 		return CheckStatusDestructiveOutOfSync
 	case converge.AbandonedStatus:
-		// NOTE: Excess node — treat as out-of-sync for now
-		return CheckStatusOutOfSync
+		// NOTE: Excess node — treat as destructive out-of-sync, because this node will be destroyed during converge run
+		return CheckStatusDestructiveOutOfSync
 	case converge.AbsentStatus:
 		// NOTE: Lost node — treat as out-of-sync for now
 		return CheckStatusOutOfSync
