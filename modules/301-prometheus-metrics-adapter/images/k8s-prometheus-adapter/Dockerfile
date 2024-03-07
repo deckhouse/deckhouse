@@ -9,10 +9,10 @@ ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 RUN git clone --depth 1 --branch v0.9.1 ${SOURCE_REPO}/kubernetes-sigs/prometheus-adapter.git .
 
-RUN go get -u golang.org/x/net@v0.17.0 \
-    && go get -u github.com/prometheus/client_golang@v1.11.1 \
-    && go get -u gopkg.in/yaml.v3@v3.0.1 \
-    && go get -u github.com/emicklei/go-restful@v2.16.0 \
+RUN go get golang.org/x/net@v0.17.0 \
+    && go get github.com/prometheus/client_golang@v1.11.1 \
+    && go get gopkg.in/yaml.v3@v3.0.1 \
+    && go get github.com/emicklei/go-restful@v2.16.0+incompatible \
     && go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o adapter ./cmd/adapter/adapter.go
 

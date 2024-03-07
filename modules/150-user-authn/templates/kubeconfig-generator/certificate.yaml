@@ -1,4 +1,4 @@
-{{- if and (.Values.global.modules.publicDomainTemplate) (or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator)) }}
+{{- if and (.Values.global.modules.publicDomainTemplate) (or (and (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

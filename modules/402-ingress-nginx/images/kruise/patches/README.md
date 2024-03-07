@@ -29,10 +29,15 @@ Updates library versions.
 To create this patch run:
 ```shell
 go mod edit -go 1.20
-go get -u golang.org/x/net@v0.17.0
-go get -u github.com/docker/distribution@v2.8.3
-go get -u github.com/docker/docker@v20.10.24
-go get -u github.com/opencontainers/runc@v1.1.5
-go get -u gopkg.in/yaml.v3@v3.0.1
+go get golang.org/x/net@v0.17.0
+go get github.com/docker/distribution@v2.8.3
+go get github.com/docker/docker@v20.10.24
+go get github.com/opencontainers/runc@v1.1.5
+go get gopkg.in/yaml.v3@v3.0.1
+go mod tidy
 git diff
 ```
+
+### Add label selector to scale
+Adds .status.labelSelector field to the daemonset crd and implements updating this status field with a serialized label selector in string form (required to implement VPA for advanced daemonsets).
+(this patch should go along wth Add pdb patch)

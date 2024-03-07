@@ -20,6 +20,8 @@ spec:
                   description: Время, до которого отложено обновление.
                 requirements:
                   description: Структура содержащая требования, необходимые для применения релиза.
+                changelog:
+                  description: Список изменений модуля в данном релизе.
             status:
               properties:
                 phase:
@@ -31,6 +33,10 @@ spec:
                 approved:
                   description: |
                     Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
+                size:
+                  description: Размер образа модуля.
+                pullDuration:
+                  description: Время загрузки модуля.
       subresources:
         status: {}
       additionalPrinterColumns:

@@ -1,0 +1,26 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: common/check-kernel-version
+  add: /check-kernel-version
+  to: /check-kernel-version
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate/bin/true
+  to: /bin/true
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+docker:
+  ENTRYPOINT: [ "/check-kernel-version" ]
+---
+{{- $binaries := "/bin/true" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+ setup:
+   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

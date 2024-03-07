@@ -54,6 +54,12 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 	statusMsgs := make([]string, 0)
 
 	mod := s.moduleManager.GetModule(module.GetName())
+	// return error if module manager doesn't have such a module
+	if mod == nil {
+		return ModuleStatus{
+			Status: "Error: failed to fetch module metadata",
+		}
+	}
 
 	// Calculate state and status.
 	if s.moduleManager.IsModuleEnabled(module.GetName()) {
@@ -73,7 +79,8 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 			// However, there are too many addon-operator internals involved.
 			// We should consider moving these statuses to the `Module` resource,
 			// which is directly controlled by addon-operator.
-			if mod.GetPhase() == modules.CanRunHelm {
+			switch mod.GetPhase() {
+			case modules.CanRunHelm:
 				statusMsgs = append(statusMsgs, "Ready")
 				// enrich status message with a notification that module config has something to say
 				if cfg != nil {
@@ -82,7 +89,9 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 						statusMsgs = append(statusMsgs, "Info: module configuration reports some remarks")
 					}
 				}
-			} else {
+			case modules.HooksDisabled:
+				statusMsgs = append(statusMsgs, "Pending: hooks are disabled")
+			default:
 				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
 			}
 		}

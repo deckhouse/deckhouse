@@ -68,15 +68,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					}
 				},
 				"policies": {
-					"allowHostIPC": true,
-					"allowHostNetwork": false,
-					"allowHostPID": false,
-					"allowPrivilegeEscalation": false,
-					"allowPrivileged": false,
 					"allowedAppArmor": [
 						"runtime/default"
 					],
-					"allowedCapabilities": [],
 					"allowedFlexVolumes": [
 						{
 							"driver": "vmware"
@@ -94,32 +88,22 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 							"min": 10
 						}
 					],
-					"allowedProcMount": "Unmasked",
 					"allowedUnsafeSysctls": [
 						"*"
 					],
-					"allowedVolumes": [
-						"*"
-					],
+					"allowHostIPC": true,
+					"allowHostNetwork": false,
+					"allowHostPID": false,
+					"allowPrivileged": false,
+					"allowPrivilegeEscalation": false,
+					"automountServiceAccountToken": true,
 					"forbiddenSysctls": [
 						"user/example"
 					],
-					"fsGroup": {
-						"rule": "RunAsAny"
-					},
 					"readOnlyRootFilesystem": true,
 					"requiredDropCapabilities": [
 						"ALL"
 					],
-					"runAsGroup": {
-						"ranges": [
-							{
-								"max": 500,
-								"min": 300
-							}
-						],
-						"rule": "RunAsAny"
-					},
 					"runAsUser": {
 						"ranges": [
 							{
@@ -128,6 +112,15 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 							}
 						],
 						"rule": "MustRunAs"
+					},
+					"seccompProfiles": {
+						"allowedLocalhostFiles": [
+							"*"
+						],
+						"allowedProfiles": [
+							"RuntimeDefault",
+							"Localhost"
+						]
 					},
 					"seLinux": [
 						{
@@ -139,15 +132,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 							"type": "type"
 						}
 					],
-					"seccompProfiles": {
-						"allowedLocalhostFiles": [
-							"*"
-						],
-						"allowedProfiles": [
-							"RuntimeDefault",
-							"Localhost"
-						]
-					},
 					"supplementalGroups": {
 						"ranges": [
 							{
@@ -158,8 +142,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						"rule": "MustRunAs"
 					}
 				}
-			}`
-			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("spec").String()).To(MatchJSON(expectedSpec))
+			}
+			`
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[0].Get("spec").String()).To(MatchJSON(expectedSpec))
 			const expectedStatus = `{
 				"deckhouse": {
 					"observed": {
@@ -206,6 +191,7 @@ spec:
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
+    allowedClusterRoles: ["*"]
     runAsGroup:
       ranges:
       - max: 500

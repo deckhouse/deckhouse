@@ -196,6 +196,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-data-discoverer"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-yandex/images/cloud-metrics-exporter"
   labels:
   - "type/dependencies"
@@ -269,15 +278,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/early-oom/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/041-linstor/images/linstor-pools-importer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

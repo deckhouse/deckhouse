@@ -70,15 +70,17 @@ type SecurityPolicySpec struct {
 		AllowedFlexVolumes       []struct {
 			Driver string `json:"driver"`
 		} `json:"allowedFlexVolumes,omitempty"`
-		AllowedVolumes         []string           `json:"allowedVolumes,omitempty"`
-		ReadOnlyRootFilesystem bool               `json:"readOnlyRootFilesystem,omitempty"`
-		FsGroup                *SelectUIDStrategy `json:"fsGroup,omitempty"`
-		RunAsUser              *SelectUIDStrategy `json:"runAsUser,omitempty"`
-		RunAsGroup             *SelectUIDStrategy `json:"runAsGroup,omitempty"`
-		SupplementalGroups     *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
-		AllowedUnsafeSysctls   []string           `json:"allowedUnsafeSysctls,omitempty"`
-		ForbiddenSysctls       []string           `json:"forbiddenSysctls,omitempty"`
-		SeccompProfiles        struct {
+		AllowedVolumes               []string           `json:"allowedVolumes,omitempty"`
+		ReadOnlyRootFilesystem       bool               `json:"readOnlyRootFilesystem,omitempty"`
+		AutomountServiceAccountToken *bool              `json:"automountServiceAccountToken,omitempty"`
+		AllowedClusterRoles          []string           `json:"allowedClusterRoles,omitempty"`
+		FsGroup                      *SelectUIDStrategy `json:"fsGroup,omitempty"`
+		RunAsUser                    *SelectUIDStrategy `json:"runAsUser,omitempty"`
+		RunAsGroup                   *SelectUIDStrategy `json:"runAsGroup,omitempty"`
+		SupplementalGroups           *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
+		AllowedUnsafeSysctls         []string           `json:"allowedUnsafeSysctls,omitempty"`
+		ForbiddenSysctls             []string           `json:"forbiddenSysctls,omitempty"`
+		SeccompProfiles              struct {
 			AllowedProfiles       []string `json:"allowedProfiles,omitempty"`
 			AllowedLocalhostFiles []string `json:"allowedLocalhostFiles,omitempty"`
 		} `json:"seccompProfiles,omitempty"`

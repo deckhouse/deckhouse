@@ -97,6 +97,7 @@
 | **Spec For High Availability** |
 | [helm_lib_pod_anti_affinity_for_ha](#helm_lib_pod_anti_affinity_for_ha) |
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
+| [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
 
 ## Envs For Proxy
@@ -1054,6 +1055,16 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha
+
+ returns deployment with custom strategy and replicas for ha components running on master nodes 
+
+#### Usage
+
+`{{ include "helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha" (list . (dict "strategy" "strategy_type")) }} `
+
 
 
 ### helm_lib_deployment_strategy_and_replicas_for_ha

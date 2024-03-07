@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +67,7 @@ type DeckhouseController struct {
 	modulePullOverrideController *release.ModulePullOverrideController
 }
 
-func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager) (*DeckhouseController, error) {
+func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 		informerFactory:              informerFactory,
 		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage),
 		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
 	}, nil
 }
@@ -124,10 +124,6 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	go dml.modulePullOverrideController.Run(dml.ctx, 1)
 
 	return nil
-}
-
-func (dml *DeckhouseController) ReloadModule(_, _ string) (*modules.BasicModule, error) {
-	return nil, fmt.Errorf("not implemented yet")
 }
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {

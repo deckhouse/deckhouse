@@ -79,7 +79,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
 - add: /ee/candi/cloud-providers/openstack/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
@@ -275,6 +275,12 @@
   - verticalpodautoscalercheckpoint.yaml
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /editions.yaml
+  to: /srv/jekyll-data/documentation/_data/editions-source.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:

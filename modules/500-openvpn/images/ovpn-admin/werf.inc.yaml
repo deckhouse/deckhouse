@@ -7,6 +7,8 @@ shell:
     - apt-get update
     - apt-get install -y openvpn
     - /binary_replace.sh -i "/usr/sbin/openvpn /bin/bash" -o /relocate
+    - mkdir -p /relocate/etc
+    - cp -pr /etc/pki /relocate/etc
 ---
 artifact: {{ .ModuleName }}/ovpn-admin-backend-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}

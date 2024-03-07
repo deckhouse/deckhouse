@@ -73,9 +73,14 @@ func isErrorLine(line *logLine) bool {
 			// We cannot skip this error in hook,
 			// because kube version needs for next installation steps
 			"Not found k8s versions",
-			// hook with creating master run immediately after deploy crd
-			// and we can get this message one time
-			"Create object: deckhouse.io/v1/NodeGroup//master: apiVersion 'deckhouse.io/v1', kind 'NodeGroup' is not supported by cluster",
+			// we can race between creating resources and deploy crds
+			// often we get only one error message per module
+			// it confuses users and we want hide it
+			"is not supported by cluster",
+			// all bootstrapped cloud clusters has this message
+			// it is normal because wait_for_all_master_nodes_to_become_initialized hook
+			// blocks main queue with this error
+			"timeout waiting for master nodes",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
@@ -188,7 +193,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		}
 
 		if line.Level == "error" || line.Output == "stderr" {
-			log.ErrorF(line.String())
+			log.InfoF("Warning during Deckhouse converge: %s", line.String())
 		}
 		return true
 	})

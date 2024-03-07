@@ -3,7 +3,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (and (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

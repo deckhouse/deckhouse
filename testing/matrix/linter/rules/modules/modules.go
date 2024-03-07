@@ -143,15 +143,43 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
+type edition struct {
+	Name       string `yaml:"name,omitempty"`
+	ModulesDir string `yaml:"modulesDir,omitempty"`
+}
+
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+func getPossiblePathToModules() []string {
+	content, err := os.ReadFile("/deckhouse/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	modulesDir := make([]string, 0)
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+		modulesDir = append(modulesDir, fmt.Sprintf("/deckhouse/%s", ed.ModulesDir))
+	}
+
+	return modulesDir
+}
+
 func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []utils.Module, err error) {
 	var possibleModulesPaths []string
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
-		possibleModulesPaths = []string{
-			"/deckhouse/modules",
-			"/deckhouse/ee/modules",
-			"/deckhouse/ee/fe/modules",
-		}
+		possibleModulesPaths = getPossiblePathToModules()
 	} else {
 		possibleModulesPaths = strings.Split(modulesDir, ":")
 	}

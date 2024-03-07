@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -53,6 +54,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			  }
 			}
 }`, `{}`)
+	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "yes")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
@@ -301,9 +303,10 @@ spec:
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
-		It("Should remove deckhouse pod", func() {
+		It("Should set restart annotation to the deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-system", "deckhouse-6f46df5bd7-nk4j7").Exists()).To(BeFalse())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.metadata.annotations.kubectl\\.kubernetes\\.io/restartedAt").String()).To(BeEquivalentTo("2021-01-01T13:30:00Z"))
 		})
 	})
 

@@ -4,13 +4,13 @@ ARG BASE_ALPINE_DEV
 ARG BASE_GOLANG_21_BULLSEYE_DEV
 ARG CONTROLLER_BRANCH=controller-v1.9.5
 
+FROM $BASE_ALT as base-alt
 
 # Build dumb-init binary
 FROM $BASE_ALPINE_DEV as dumb-init-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
-
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
@@ -24,7 +24,6 @@ RUN cd / && \
     git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv \
     && cd lua-iconv/ \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
-
 
 # Build ingress controller, debug tool and pre-stop hook
 FROM $BASE_GOLANG_21_BULLSEYE_DEV as controller-builder
@@ -44,6 +43,8 @@ COPY patches/fix-cleanup.patch /
 COPY patches/geoip.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
+    # jaegertracing hunter deps
+    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -52,7 +53,6 @@ RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/in
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /geoip.patch && \
     make GO111MODULE=on USE_DOCKER=false build
-
 
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder
@@ -63,9 +63,15 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
-RUN patch build.sh < nginx-build.patch
-RUN /build.sh
-
+RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+    # build pcre library with jit support due to lack of jit support in standard alt pcre library
+    cd pcre && \
+    ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
+    make && \
+    make install && \
+    cd / && \
+    patch build.sh < nginx-build.patch && \
+    /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.9.5":
@@ -91,6 +97,10 @@ COPY --from=luarocks-builder /usr/share/lua/5.1/protoc.lua /usr/local/share/lua/
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
+
+# copy complete set of libs
+COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
+COPY --from=base-alt /lib64 /chroot/lib64
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
@@ -142,32 +152,40 @@ RUN bash -eu -c ' \
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
-  && ln -s /chroot/etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
-  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypt.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypto.* /chroot/lib64/ \
-  && cp -a /lib64/libpcre* /chroot/lib64/ \
-  && cp -a /lib64/libssl* /chroot/lib64/ \
-  && cp -a /lib64/libz.* /chroot/lib64/ \
+  && cp -a /lib64/* /chroot/lib64/ \
   && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
-  && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
-  && cp -a /lib64/ld-* /chroot/lib64/ \
-  && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
+  && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
+  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
   && cp -a /usr/local/lib /chroot/usr/local/ \
   && cp -a /usr/local/share/lua* /chroot/usr/local/share/ \
   && cp -a /usr/local/lib64 /chroot/usr/local/ \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
-  && cp -a /usr/local/modsecurity/lib /chroot/usr/local/modsecurity/ \
-  && cp -a /usr/local/nginx /chroot/usr/local/
+  && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
+  && cp -a /usr/local/nginx /chroot/usr/local/ \
+  # replace pcre with version with jit support
+  && rm -f /chroot/lib64/libpcre*
+
+COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
-RUN cd / \
+
+RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
+  # fix simlink to proper pcre jit version
+  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
+  && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch
