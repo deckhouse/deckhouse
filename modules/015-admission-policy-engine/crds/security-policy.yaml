@@ -90,6 +90,7 @@ spec:
                     - Dryrun
                 policies:
                   type: object
+                  description: empty
                   properties:
                     allowedHostPaths:
                       type: array
@@ -416,6 +417,7 @@ spec:
                           - vsphereVolume
                 match:
                   type: object
+                  description: empty
                   required: ["namespaceSelector"]
                   properties:
                     namespaceSelector:

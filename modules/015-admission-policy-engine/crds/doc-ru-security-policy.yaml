@@ -18,6 +18,7 @@ spec:
                     - `Warn` — отсутствие действия, аналогично `Dryrun`. Содержит информацию об ограничении (constraint), которое вызвало бы запрет, если бы было использовано действие `Deny`."
                 policies:
                   type: object
+                  description: пусто
                   properties:
                     allowedHostPaths:
                       description: Список префиксов путей, разрешенных для монтирования в контейнерах. Если список пуст, то можно использовать любой путь.
@@ -169,6 +170,7 @@ spec:
                     allowedVolumes:
                       description: Список разрешенных volume-плагинов.
                 match:
+                  description: пустой
                   properties:
                     namespaceSelector:
                       description: Указывает селектор пространства имен для фильтрации объектов.
