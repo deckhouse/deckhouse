@@ -93,10 +93,10 @@ spec:
               scheme: HTTPS
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "mimir_resources" . | nindent 12 }}
-            {{- end }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "mimir_resources" . | nindent 14 }}
+              {{- end }}
         - name: promxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "promxy") }}
@@ -121,10 +121,10 @@ spec:
               scheme: HTTPS
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "promxy_resources" . | nindent 12 }}
-            {{- end }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "promxy_resources" . | nindent 14 }}
+              {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -179,10 +179,10 @@ spec:
                   path: /promxy/ready
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-            {{- end }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+              {{- end }}
       volumes:
         - name: aggregating-proxy-config
           configMap:

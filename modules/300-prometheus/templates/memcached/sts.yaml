@@ -68,10 +68,8 @@ spec:
             timeoutSeconds: 1
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "memcached_resources" . | nindent 12 }}
-{{- end }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- include "memcached_resources" . | nindent 14 }}
         - name: exporter
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "memcachedExporter") }}
@@ -82,7 +80,7 @@ spec:
               protocol: TCP
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
               cpu: 10m
               memory: 64Mi
             limits:
