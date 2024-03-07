@@ -133,6 +133,7 @@
     cilium-operator pods will restart.
  - **[deckhouse-controller]** Update module values if the corresponding moduleSource was updated. [#7096](https://github.com/deckhouse/deckhouse/pull/7096)
  - **[external-module-manager]** Restore modules from ModulePullOverride objects. [#7266](https://github.com/deckhouse/deckhouse/pull/7266)
+ - **[ingress-nginx]** Remove duplicate lines in controller image. [#7745](https://github.com/deckhouse/deckhouse/pull/7745)
  - **[ingress-nginx]** Add missing tests. [#7392](https://github.com/deckhouse/deckhouse/pull/7392)
  - **[istio]** Bump istio version to `1.19.7`. [#7584](https://github.com/deckhouse/deckhouse/pull/7584)
     The Istio control plane will restart. User workloads will not restart automaticaly, you will have to restart them eventually.
