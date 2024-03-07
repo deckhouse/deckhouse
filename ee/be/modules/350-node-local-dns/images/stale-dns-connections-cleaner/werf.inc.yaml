@@ -21,8 +21,8 @@ shell:
   - cd /src
   - go mod download
   setup:
-  - export GOOS=linux GOARCH=amd64
-  - export CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
   - chmod +x /src/stale-dns-connections-cleaner
