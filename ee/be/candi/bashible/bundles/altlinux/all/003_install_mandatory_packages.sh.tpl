@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # TODO/RESOLVEME : apt-transport-https
-SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo nfs-clients nfs-utils nfs-stats tzdata"
+SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo nfs-clients nfs-utils nfs-stats tzdata coreutils"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack-tools vim-console"
 
 bb-apt-rpm-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
