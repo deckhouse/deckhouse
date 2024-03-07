@@ -51,7 +51,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
   7. Create a user and assign the above role to it.
 * A tag from the tag category in `regionTagCategory` (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
 
-## List of privileges for using the module
+## List of required privileges
 
 > Read [the documentation](environment.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
 
