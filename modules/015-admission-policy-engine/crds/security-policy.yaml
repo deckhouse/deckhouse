@@ -242,7 +242,7 @@ spec:
                         type: string
                     fsGroup:
                       type: object
-                      description: Specifies what fs groups are allowed to be used by the security context.
+                      description: Specifies what `fsGroup` values are allowed to be used by the security context.
                       required: ["rule"]
                       properties:
                         rule:
