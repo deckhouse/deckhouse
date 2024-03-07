@@ -33,8 +33,8 @@ const (
 )
 
 func init() {
-	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		comingK8sVersion, err := semver.NewVersion(requirementValue)
+	checkMinimalIstioVersionFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		minimalIstioVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
@@ -48,7 +48,7 @@ func init() {
 			return false, err
 		}
 
-		if currentVersion.LessThan(comingK8sVersion) {
+		if currentVersion.LessThan(minimalIstioVersion) {
 			return false, fmt.Errorf("installed Istio version '%s' is lower than required", currentVersionStr)
 		}
 
@@ -58,11 +58,11 @@ func init() {
 	checkIstioAndK8sVersionsCompatibility := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		comingK8sVersion := requirementValue
 
-		currentIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
+		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
 			return true, nil
 		}
-		currentMinIstioVersionStr := currentIstioVersionRaw.(string)
+		currentMinIstioVersionStr := currentMinIstioVersionRaw.(string)
 
 		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
 		if !exists {
@@ -96,6 +96,6 @@ func init() {
 		return true, nil
 	}
 
-	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
+	requirements.RegisterCheck(requirementsKey, checkMinimalIstioVersionFunc)
 	requirements.RegisterCheck(k8sKey, checkIstioAndK8sVersionsCompatibility)
 }
