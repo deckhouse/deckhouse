@@ -19,16 +19,16 @@ spec:
       - jsonPath: .status.deckhouse.synced
         name: Synced
         type: string
-        description: Status message if current version of the security policy was processed by the operator.
+        description: The status message if current version of the security policy was processed by the operator.
       - name: Observed
         jsonPath: .status.deckhouse.observed.lastTimestamp
         type: string
-        description: Timestamp when the resource was observed by the operator last time.
+        description: The timestamp when the resource was observed by the operator last time.
         priority: 1
       - name: Processed
         jsonPath: .status.deckhouse.processed.lastTimestamp
         type: string
-        description: Timestamp when the resource was processed by the operator last time.
+        description: The timestamp when the resource was processed by the operator last time.
         priority: 1
       served: true
       storage: true
@@ -41,7 +41,7 @@ spec:
           description: |
             Describes a security policy for a cluster.
 
-            Each CustomResource `SecurityPolicy` describes rules for objects in a cluster.
+            Each CustomResource `SecurityPolicy` describes rules for objects in the cluster.
           properties:
             status:
               type: object
@@ -58,7 +58,7 @@ spec:
                       properties:
                         lastTimestamp:
                           type: string
-                          description: Last timestamp when a change of the resource was noted by the operator.
+                          description: The last timestamp when a change of the resource was noted by the operator.
                         checkSum:
                           type: string
                           description: The checksum of last observed resource.
@@ -68,7 +68,7 @@ spec:
                       properties:
                         lastTimestamp:
                           type: string
-                          description: Last timestamp when the resource was applied in the cluster.
+                          description: The last timestamp when the resource was applied in the cluster.
                         checkSum:
                           type: string
                           description: The checksum of last applied resource.
@@ -80,10 +80,10 @@ spec:
                   type: string
                   default: "Deny"
                   description: |
-                    The enforcement action to control what to do with the result of the constraint.
+                    The enforcement action as a result of the constraint:
                     - `Deny` — Deny action.
-                    - `Dryrun` — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
-                    - `Warn` — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
+                    - `Warn` — No action, similar to `Dryrun`. Provides information about the constraint that would cause the denial if the `Deny` action were used.
                   enum:
                     - Warn
                     - Deny
@@ -93,7 +93,7 @@ spec:
                   properties:
                     allowedHostPaths:
                       type: array
-                      description: "The list of allowed hostpath prefixes. An empty list means any path can be used."
+                      description: The list of allowed hostpath prefixes. An empty list means any path can be used.
                       x-doc-examples: [{"pathPrefix":"/dev", "readOnly": true}]
                       items:
                         type: object
@@ -102,7 +102,7 @@ spec:
                           pathPrefix:
                             type: string
                             description: |
-                              Path prefix that the host volume must match.
+                              The path prefix that the host volume must match.
 
                               It does not support the `*` mask. Trailing slashes are trimmed when validating the path prefix with a host path.
 
@@ -110,37 +110,37 @@ spec:
                           readOnly:
                             type: boolean
                             default: false
-                            description: "When set to true, will allow host volumes matching the [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix) only if all the volume mounts are readOnly."
+                            description: When set to true, allows host volumes matching the [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix) only if all the volume mounts are read-only.
                     allowHostIPC:
                       type: boolean
-                      description: "Allows sharing the host's IPC namespace with containers."
+                      description: Allows sharing the host's IPC namespace with containers.
                     allowHostPID:
                       type: boolean
-                      description: "Allows sharing the host's PID namespace with containers."
+                      description: Allows sharing the host's PID namespace with containers.
                     allowHostNetwork:
                       type: boolean
-                      description: "Allows containers to use the host's network."
+                      description: Allows containers to use the host's network.
                     allowedHostPorts:
                       type: array
-                      description: "The list of `hostPort` ranges allowed by the rule."
+                      description: The list of `hostPort` ranges allowed by the rule.
                       items:
                         type: object
                         properties:
                           min:
                             type: integer
-                            description: "Min value for the `hostPort`"
+                            description: Min value for the `hostPort`.
                           max:
                             type: integer
-                            description: "Max value for the `hostPort`"
+                            description: Max value for the `hostPort`.
                     allowPrivileged:
                       type: boolean
-                      description: "Allows running containers in a privileged mode."
+                      description: Allows running containers in a privileged mode.
                     allowPrivilegeEscalation:
                       type: boolean
-                      description: "Allows container processes to gain more privileges than its parent process."
+                      description: Allows container processes to gain more privileges than its parent process.
                     allowedProcMount:
                       type: string
-                      description: "The allowed `/proc` mount type for containers."
+                      description: Allows `/proc` mount type for containers.
                       x-doc-examples: ["Unmasked."]
                       enum:
                         - Default
@@ -148,13 +148,13 @@ spec:
                     allowedCapabilities:
                       type: array
                       description: |
-                        List of capabilities that containers are able to use.
+                        The list of capabilities that containers are able to use.
 
-                        To allow all capabilities you may use `ALL`.
+                        To allow all capabilities use `ALL`.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
-                        description: "Allowed linux capabilities."
+                        description: Allowed linux capabilities.
                         enum: &caps
                           - ALL
                           - SETPCAP
@@ -197,37 +197,37 @@ spec:
                     requiredDropCapabilities:
                       type: array
                       description: |
-                        The set of capabilities that have to be dropped from containers.
+                        The list of capabilities that have to be dropped from containers.
 
-                        To exclude all capabilities you may use `ALL`'.
+                        To exclude all capabilities use `ALL`'.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
-                        description: "Linux capabilities to drop from containers' specs."
+                        description: Linux capabilities to drop from containers' specs.
                         enum: *caps
                     allowedAppArmor:
                       type: array
                       description: |
-                        List of allowed AppArmor profiles for use by containers.
+                        The list of AppArmor profiles that are allowed to be used by containers.
                       x-doc-examples: ["runtime/default", "unconfined"]
                       items:
                         type: string
-                        description: "AppArmor profile."
+                        description: An AppArmor profile.
                     allowedFlexVolumes:
                       type: array
-                      description: "Whitelist of allowed Flex Volume drivers."
+                      description: The list of Flex Volume drivers that are allowed to be used by containers.
                       items:
                         type: object
                         properties:
                           driver:
                             type: string
-                            description: "A driver name."
+                            description: A driver name.
                     allowedUnsafeSysctls:
                       type: array
                       description: |
                         The list of explicitly allowed unsafe sysctls.
 
-                        To allow all unsafe sysctls you may use `*`.
+                        To allow all unsafe sysctls use `*`.
                       x-doc-examples: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
@@ -242,144 +242,144 @@ spec:
                         type: string
                     fsGroup:
                       type: object
-                      description: "Specifies what fs group is allowed to be used by the security context."
+                      description: Specifies what fs groups are allowed to be used by the security context.
                       required: ["rule"]
                       properties:
                         rule:
                           type: string
-                          description: "Specifes the strategy of the fs group selection."
+                          description: Specifes the strategy of the fs group selection.
                           enum:
                             - MustRunAs
                             - MayRunAs
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the fs group ID to use with MustRunAs."
+                          description: The list of ID ranges for fs groups that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:
                               min:
                                 type: integer
-                                description: "Min ID value."
+                                description: Min ID value.
                               max:
                                 type: integer
-                                description: "Max ID value."
+                                description: Max ID value.
                     runAsUser:
                       type: object
-                      description: "Specifies what `runAsUser` value is allowed to be used by the security context."
+                      description: Specifies what `runAsUser` values are allowed to be used by the security context.
                       required: ["rule"]
                       properties:
                         rule:
                           type: string
-                          description: "Specifies the strategy of the user ID selection."
+                          description: Specifies the strategy of the user ID selection.
                           enum:
                             - MustRunAs
                             - MustRunAsNonRoot
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the user ID to use with `MustRunAs`."
+                          description: The list of user ID ranges that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:
                               min:
                                 type: integer
-                                description: "Min ID value."
+                                description: Min ID value.
                               max:
                                 type: integer
-                                description: "Max ID value."
+                                description: Max ID value.
                     runAsGroup:
                       type: object
-                      description: "Specifies what `runAsGroup` value is allowed to be used by the security context."
+                      description: Specifies what `runAsGroup` values are allowed to be used by the security context.
                       required: ["rule"]
                       properties:
                         rule:
                           type: string
-                          description: "Specifies the strategy of the group ID selection."
+                          description: Specifies the strategy of the group ID selection.
                           enum:
                             - MustRunAs
                             - MayRunAs
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the group ID to use with `MustRunAs`."
+                          description: The list of group ID ranges that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:
                               min:
                                 type: integer
-                                description: "Min ID value."
+                                description: Min ID value.
                               max:
                                 type: integer
-                                description: "Max ID value."
+                                description: Max ID value.
                     supplementalGroups:
                       type: object
-                      description: "Specifies what supplemental groups are allowed to be used by the security context."
+                      description: Specifies what supplemental groups are allowed to be used by the security context.
                       required: ["rule"]
                       properties:
                         rule:
                           type: string
-                          description: "Specifies the strategy of the supplemental group ID selection."
+                          description: Specifies the strategy of the supplemental group ID selection.
                           enum:
                             - MustRunAs
                             - MayRunAs
                             - RunAsAny
                         ranges:
                           type: array
-                          description: "List of acceptable ranges for the supplemental group ID to use with MustRunAs."
+                          description: The list of supplemental group ID ranges that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:
                               min:
                                 type: integer
-                                description: "Min ID value."
+                                description: Min ID value.
                               max:
                                 type: integer
-                                description: "Max ID value."
+                                description: Max ID value.
                     readOnlyRootFilesystem:
                       type: boolean
-                      description: "Defines if it's possible to run containers with non-read only file system."
+                      description: When set to true, only pods where the root filesystem is read-only in all containers are allowed to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
                     automountServiceAccountToken:
                       type: boolean
-                      description: "Controls the ability of any Pod to enable automountServiceAccountToken."
+                      description: Allows pods to run with `automountServiceAccountToken` enabled.
                     seccompProfiles:
                       type: object
-                      description: "This field specifies the list of allowed profiles that may be set for the Pod or container’s seccomp annotations."
+                      description: Specifies the list of allowed profiles that can be set for the Pod or container's seccomp annotations.
                       properties:
                         allowedProfiles:
                           type: array
-                          description: "The list of allowed profile values for seccomp on Pods/containers."
+                          description: The list of allowed profile values for seccomp on Pods/containers.
                           items:
                             type: string
                         allowedLocalhostFiles:
                           type: array
                           description: |
-                            When using `securityContext` naming scheme for seccomp and including `Localhost` this array holds the allowed profile JSON files.
+                            Defines the local seccomp profiles (in JSON format) that are allowed after specifying `Localhost` in the `allowedProfiles` parameter.
 
                             An empty list prohibits the use of any local profiles.
                           items:
                             type: string
                     seLinux:
                       type: array
-                      description: "Specifies what SElinux labels are allowed to be set in the security context."
+                      description: Specifies what SElinux labels are allowed to be set in the security context.
                       items:
                         type: object
                         properties:
                           level:
                             type: string
-                            description: "Level is SELinux level label that applies to the container."
+                            description: A SELinux level label that applies to the container.
                           role:
                             type: string
-                            description: "Role is SELinux role label that applies to the container."
+                            description: A SELinux role label that applies to the container.
                           type:
                             type: string
-                            description: "Type is SELinux type label that applies to the container."
+                            description: A SELinux type label that applies to the container.
                           user:
                             type: string
-                            description: "User is SELinux user label that applies to the container."
+                            description: A SELinux user label that applies to the container.
                     allowedVolumes:
                       type: array
-                      description: "The set of volume plugins allowed to use."
+                      description: The set of volume plugins allowed to use.
                       x-doc-examples: ["hostPath", "persistentVolumeClaim"]
                       items:
                         type: string
@@ -428,12 +428,12 @@ spec:
                       properties:
                         matchNames:
                           type: array
-                          description: "Include only a particular set of namespaces. Supports glob pattern."
+                          description: Includes only a particular set of namespaces. Supports glob pattern.
                           items:
                             type: string
                         excludeNames:
                           type: array
-                          description: "Include all namespaces except a particular set. Support glob pattern."
+                          description: Includes all namespaces except a particular set. Support glob pattern.
                           items:
                             type: string
                         labelSelector:
@@ -448,13 +448,13 @@ spec:
                           properties:
                             matchLabels:
                               type: object
-                              description: List of labels which a namespace should have.
+                              description: The list of labels which a namespace should have.
                               x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                               additionalProperties:
                                 type: string
                             matchExpressions:
                               type: array
-                              description: List of label expressions for namespaces.
+                              description: The list of label expressions for namespaces.
                               x-doc-examples:
                               - - key: tier
                                   operator: In
@@ -494,13 +494,13 @@ spec:
                       properties:
                         matchLabels:
                           type: object
-                          description: List of labels which Pod should have.
+                          description: The list of labels which Pod should have.
                           x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
                         matchExpressions:
                           type: array
-                          description: List of label expressions for Pods.
+                          description: The list of label expressions for Pods.
                           x-doc-examples:
                           - - key: tier
                               operator: In
