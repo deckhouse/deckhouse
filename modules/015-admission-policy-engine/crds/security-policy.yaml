@@ -227,7 +227,7 @@ spec:
                       description: |
                         The list of explicitly allowed unsafe sysctls.
 
-                        To allow all unsafe sysctls use `*`.
+                        To allow all unsafe sysctls, use `*`.
                       x-doc-examples: ["kernel.msg*", "net.core.somaxconn"]
                       items:
                         type: string
@@ -247,14 +247,14 @@ spec:
                       properties:
                         rule:
                           type: string
-                          description: Specifes the strategy of the fs group selection.
+                          description: Specifies the strategy of the `fsGroup` selection.
                           enum:
                             - MustRunAs
                             - MayRunAs
                             - RunAsAny
                         ranges:
                           type: array
-                          description: The list of ID ranges for fs groups that are allowed in `MustRunAs' mode.
+                          description: The list of ID ranges for `fsGroup` that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:

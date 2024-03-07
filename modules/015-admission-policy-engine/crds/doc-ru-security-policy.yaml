@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает политику безопасности для кластера.
 
-            Каждый кастомный ресурс `SecurityPolicy` задает правила для объектов в кластере.
+            Каждый customResource `SecurityPolicy` задает правила для объектов в кластере.
           properties:
             spec:
               properties:
@@ -32,7 +32,7 @@ spec:
                               Например, префикс `/foo` разрешает пути `/foo`, `/foo/` и `/foo/bar`. Напротив, пути `/food` или `/etc/foo` будут недоступны.
                           readOnly:
                             description: |
-                              Проверяет, что все `volumeMount`, попадающие в префикс (параметр [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (`readOnly: true`).
+                              Проверяет, что все `volumeMount`, попадающие в префикс (с параметром [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (`readOnly: true`).
                     allowHostIPC:
                       description: Разрешает контейнерам доступ к IPC-пространству имен хоста.
                     allowHostPID:
@@ -40,7 +40,7 @@ spec:
                     allowHostNetwork:
                       description: Разрешает контейнерам доступ к Network-пространству имен хоста.
                     allowedHostPorts:
-                      description: Cписок разрешенных диапазонов портов для хоста.
+                      description: Cписок диапазонов портов хоста (hostPort), разрешенных для использования в контейнере.
                       items:
                         properties:
                           min:
@@ -66,7 +66,7 @@ spec:
                     allowedAppArmor:
                       type: array
                       description: |
-                        Список разрешенных профилей AppArmor.
+                        Список разрешенных для контейнеров профилей AppArmor.
                       example: ["runtime/default", "unconfined"]
                       items:
                         type: string
@@ -176,7 +176,7 @@ spec:
                         matchNames:
                           description: Выбирает пространства имен, соответсвующие списку. Использование шаблонов (`.*`) допустимо.
                         excludeNames:
-                          description: Выбирает все пространства имен, которых нет в списке. Использование шаблонов (`.*`) допустимо.
+                          description: Выбирает все пространства имен, которых нет в списке.  Допускается использование шаблонов (glob patterns).
                         labelSelector:
                           description: |
                             Указывает селектор меток для фильтрации пространств имен.
