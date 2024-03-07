@@ -6,30 +6,40 @@
   - includes:
     - installed packages from repo: binutils git
     - src of gops
-    - binaries `gops` (builded from src)
+    - binaries of gops (builded from src)
 - `+` `cni-plugins`
   - based on `BASE_GOLANG_21_ALPINE` image
   - includes:
     - installed packages from repo: binutils git
     - src of cni-plugins
-    - binaries `cni-plugins` (builded from src)
+    - binaries of cni-plugins (builded from src)
 - `+` `hubble`
   - based on `BASE_GOLANG_20_ALPINE` image
   - includes:
     - installed packages from repo: binutils git make
     - src of hubble
-    - binaries `hubble` (builded from src)
+    - binaries hubble-cli (builded from src)
 - *todo* `bpftool`
-- *todo* `iptables`
+  - based on `compilers` image
+  - includes:
+  ```
+  - ?? libelf1
+  ```
 - *todo* `llvm`
-
+  - based on `compilers` image
+  - includes:
+- *todo* `iptables`
+  - based on `ubuntu:22.04` image
+  - includes:
+    - installed packages from repo: debian-archive-keyring apt-src ca-certificates
+    - loaded from repo src of iptables 1.8.8-1 and builded deb-package
 - *todo* `cilium-envoy`
 - `+` `cilium`
   - based on `builder` image
   - includes:
     - src of cilium
     - patches
-    - binaries `cilium` (builded from src)
+    - binaries of cilium (builded from src)
     - shell-scripts from cilium src: init-container.sh install-plugin.sh cni-uninstall.sh
 
 
@@ -52,13 +62,17 @@
     - binaries from image `llvm`
     - binaries from image `BASE_GOLANG_20_BULLSEYE`
     - installed packages from repo: gcc g++ libc6-dev binutils coreutils curl gcc libc6-dev git make patch unzip
-    - binaries protoc and plugins `(!!! loaded from internet)`
+    - binaries and plugins of protoc `(!!! loaded from internet)`
   ```
   - ?? libelf1, libmnl0
   - ?? WORKDIR /go/src/github.com/cilium/cilium
   - ?? protoc 22.3
   ```
-- *todo* `compilers`
+- `compilers`
+  - based on `BASE_UBUNTU` image
+  - includes:
+    - installed packages from repo
+    - binaries of bazel and wrapper shell-scripts `(!!! loaded from internet)`
 
 
 ### Build final images (used in helm-templates)

@@ -1,18 +1,11 @@
----
-artifact: {{ $.ModuleName }}/alt-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
----
 # #####################################################################
-# Runtime artifact (for build)(based on Ubuntu)
+# Runtime artifact (based on Ubuntu)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
 ---
 image: {{ $.ModuleName }}/runtime-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 import:
-- artifact: {{ $.ModuleName }}/iptables-artifact
-  add: /iptables
-  to: /iptables
-  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
@@ -31,6 +24,10 @@ import:
 - artifact: {{ $.ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
   before: install
 - artifact: {{ $.ModuleName }}/cilium-src
   add: /go/src/github.com/cilium/cilium/images/runtime/
