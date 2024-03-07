@@ -18,7 +18,7 @@ TFADM_PUB='cert-authority,principals="tfadm" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAA
 for HOME_DIR in $(cut -f6 -d ':' /etc/passwd |sort |uniq); do
 		AUTHORIZED_KEYS_PATH="${HOME_DIR}/.ssh/authorized_keys"
 		if [ $(grep -lirs "${TFADM_OLD_PUB}" ${AUTHORIZED_KEYS_PATH}) ]; then
-			bb-log-info "Old tfadm key was found in '${AUTHORIZED_KEYS_PATH},  updating..."
+			bb-log-info "Old tfadm key was found in '${AUTHORIZED_KEYS_PATH}',  updating..."
 			sed -i "s|${TFADM_OLD_PUB}|$TFADM_PUB|g" "${AUTHORIZED_KEYS_PATH}"
 		fi
 done
