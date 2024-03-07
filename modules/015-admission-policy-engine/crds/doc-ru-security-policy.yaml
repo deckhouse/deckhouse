@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает политику безопасности для кластера.
 
-            Каждый customResource `SecurityPolicy` задает правила для объектов в кластере.
+            Каждый custom resource `SecurityPolicy` задает правила для объектов в кластере.
           properties:
             spec:
               properties:
