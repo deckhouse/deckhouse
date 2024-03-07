@@ -10,7 +10,7 @@
 | bare-metal-сервер | Сервер bare metal |  |
 | inventory-файл | Файл inventory или инвентарный файл |  |
 | bootstrap-скрипт | Скрипт bootstrap |  |
-| update | Обновление |  |
+| update | Обновление (видела еще плавающее обновление - rolling update) |  |
 | Gateway | Шлюз |  |
 | tenant | арендатор или оставить англицизм |  |
 | Internet | интернет с маленькой буквы  |  |
