@@ -150,7 +150,7 @@ spec:
                       description: |
                         The list of capabilities that containers are able to use.
 
-                        To allow all capabilities use `ALL`.
+                        To allow all capabilities, use `ALL`.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
@@ -199,7 +199,7 @@ spec:
                       description: |
                         The list of capabilities that have to be dropped from containers.
 
-                        To exclude all capabilities use `ALL`'.
+                        To exclude all capabilities, use `ALL`'.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
