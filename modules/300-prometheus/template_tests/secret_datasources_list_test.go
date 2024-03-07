@@ -21,8 +21,13 @@ import (
 	"fmt"
 	"strings"
 
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
+	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
