@@ -72,6 +72,16 @@ sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount whe
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic_on_oops=1
+# fencing settings
+{{- if not (hasKey .nodeGroup "fencing") }}
+sysctl -w kernel.panic=10
+{{- else }}
+  {{- if eq .nodeGroup.fencing.type "Watchdog" }}
+sysctl -w kernel.panic=0
+  {{- else }}
+sysctl -w kernel.panic=10
+  {{- end }}
+{{- end }}
 
 # we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
