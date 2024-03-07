@@ -6,4 +6,4 @@ KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethto
 
 bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
-bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"

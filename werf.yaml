@@ -556,6 +556,14 @@ git:
     setup:
     - "**/*.go"
     - Makefile
+- add: /go_lib/registry-packages-proxy
+  to: /go_lib/registry-packages-proxy
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

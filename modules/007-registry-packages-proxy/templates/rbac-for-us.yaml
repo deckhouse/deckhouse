@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-registry-packages-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:registry-packages-proxy:registry-packages-proxy:secret-reader
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  resourceNames:
+    - deckhouse-registry
+  verbs:
+    - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:registry-packages-proxy:registry-packages-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:registry-packages-proxy:registry-packages-proxy:secret-reader
+subjects:
+  - kind: ServiceAccount
+    name: registry-packages-proxy
+    namespace: d8-registry-packages-proxy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:registry-packages-proxy:registry-packages-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - "deckhouse.io"
+    resources:
+      - modulesources
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:registry-packages-proxy:registry-packages-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:registry-packages-proxy:registry-packages-proxy
+subjects:
+  - kind: ServiceAccount
+    name: registry-packages-proxy
+    namespace: d8-registry-packages-proxy

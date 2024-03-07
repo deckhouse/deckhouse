@@ -504,48 +504,20 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 }
 
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
 	log.DebugF("registry data: %v\n", m.Registry)
 
+	ret := m.Registry.ConvertToMap()
+
 	if m.Registry.DockerCfg != "" {
-		bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
+		auth, err := m.Registry.Auth()
 		if err != nil {
-			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+			return nil, err
 		}
 
-		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-		err = json.Unmarshal(bytes, &dc)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-		}
-
-		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			switch {
-			case registry.Auth != "":
-				registryAuth = registry.Auth
-			case registry.Username != "" && registry.Password != "":
-				auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-			default:
-				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, m.Registry.Address)
-			}
-		}
+		ret["auth"] = auth
 	}
 
-	ret := m.Registry.ConvertToMap()
-	ret["auth"] = registryAuth
+	ret["packagesProxyEndpoints"] = []string{"127.0.0.1:5080"}
 
 	return ret, nil
 }
@@ -637,6 +609,46 @@ func (r *RegistryData) ConvertToMap() map[string]interface{} {
 		"ca":        r.CA,
 		"dockerCfg": r.DockerCfg,
 	}
+}
+
+func (r *RegistryData) Auth() (string, error) {
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth     string `json:"auth"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
+	if err != nil {
+		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+	}
+
+	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
+	err = json.Unmarshal(bytes, &dc)
+	if err != nil {
+		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+	}
+
+	if registry, ok := dc.Auths[r.Address]; ok {
+		switch {
+		case registry.Auth != "":
+			registryAuth = registry.Auth
+		case registry.Username != "" && registry.Password != "":
+			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
+			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+		default:
+			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
+		}
+	}
+
+	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
