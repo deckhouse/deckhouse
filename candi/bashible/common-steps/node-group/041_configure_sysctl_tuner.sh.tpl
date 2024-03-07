@@ -73,9 +73,11 @@ sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount whe
 sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic_on_oops=1
 
-# fencing settings
+
+# node name {{ .nodeGroup.name }}
 {{- if hasKey .nodeGroup "fencing" }}
-  {{- if eq .nodeGroup.fencing.type "Watchdog" }}
+  {{- if eq .nodeGroup.fencing.mode "Watchdog" }}
+# fencing settings
 sysctl -w kernel.panic=0
   {{- else }}
 sysctl -w kernel.panic=10
