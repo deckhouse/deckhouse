@@ -6,7 +6,7 @@
 | Namespace  | Пространство имен |  |
 | Label | Лэйбл или Метка |  |
 | Annotations | Аннотации |  |
-| custom resources | Кастомизированные ресурсы |  |
+| custom resources | Кастомизированные ресурсы, кастомные ресурсы |  |
 | bare-metal-сервер | Сервер bare metal |  |
 | inventory-файл | Файл inventory или инвентарный файл |  |
 | bootstrap-скрипт | Скрипт bootstrap |  |
