@@ -12,7 +12,7 @@
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
 # #####################################################################
 ---
-image: {{ $.ModuleName }}/llvm-artifact
+artifact: {{ $.ModuleName }}/llvm-artifact
 fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
