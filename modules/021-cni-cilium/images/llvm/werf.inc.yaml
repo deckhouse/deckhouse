@@ -2,3 +2,12 @@
 artifact: {{ $.ModuleName }}/llvm-artifact
 from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
 ---
+# #####################################################################
+# Build LLVM binaries (based on compilers)
+# Original IMAGE_TAG is a8c542efc076b62ba683e7699c0013adb6955f0f
+# Corresponding commit bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28 (https://github.com/cilium/image-tools/tree/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# Based on https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
+# #####################################################################
+---
+

@@ -21,7 +21,8 @@ shell:
     EOF
   - apt-get update
   - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
-  - apt-get install -y --no-install-recommends \
+  - |
+    apt-get install -y --no-install-recommends \
     automake \
     binutils \
     bison \
