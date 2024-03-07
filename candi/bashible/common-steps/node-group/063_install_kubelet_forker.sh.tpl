@@ -46,7 +46,7 @@ done
 
 
 {{- if hasKey .nodeGroup "fencing" }}
-  {{- if eq .nodeGroup.fencing.mode "Watchdog" }}
+  {{ if eq .nodeGroup.fencing.mode "Watchdog" }}
 # fencing settings
 sysctl -w kernel.panic=0
   {{- end }}
