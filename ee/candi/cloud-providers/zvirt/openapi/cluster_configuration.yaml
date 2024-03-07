@@ -77,12 +77,12 @@ apiVersions:
             additionalProperties: false
             required: [clusterId, numCPUs, memory, template]
             description: |
-              Partial contents of the fields of the
+              Partial contents of the fields of the [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties
               clusterId:
                 type: string
                 description: |
-                  cluster id.
+                  Cluster id.
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               numCPUs:
                 type: integer
@@ -94,6 +94,9 @@ apiVersions:
                 description: |
                   Memory in MiB to allocate to zVirt VirtualMachines.
                 example: 8192
+              rootDiskSize:
+                description: |
+                  Root disk size in GiB to use in zVirt VirtualMachines.
               template:
                 type: string
                 description: |
@@ -196,16 +199,16 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-zvirt/layouts.html) about possible provider layouts.
         x-unsafe: true
       provider:
         type: object
         additionalProperties: false
-        description: Parameters for connecting to the vCenter.
+        description: Parameters for connecting to the Zvirt.
         properties:
           server:
             type: string
-            description: The host or the IP address of the vCenter server.
+            description: The host or the IP address of the zvirt server.
           username:
             type: string
             description: The login ID.
@@ -214,7 +217,7 @@ apiVersions:
             description: The user's password.
           insecure:
             type: boolean
-            description:  Set to `true` if vCenter has a self-signed certificate.
+            description:  Set to `true` if Zvirt has a self-signed certificate.
             x-doc-default: false
         required:
         - server
