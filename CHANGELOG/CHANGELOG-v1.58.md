@@ -4,6 +4,7 @@
 
 
  - All Deckhouse containers will restart.
+ - Ingress controller will restart.
 
 ## Features
 
@@ -28,7 +29,7 @@
 
 
  - **[admission-policy-engine]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
- - **[candi]** Fix additionalRolePolicies regex. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
+ - **[candi]** Fix regex validation pattern of the `additionalRolePolicies` field. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
  - **[candi]** Add the `tzdata` package to the bootstrap script on AltLinux `10.0`. [#7403](https://github.com/deckhouse/deckhouse/pull/7403)
  - **[candi]** Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
     Fix error with two sequental containerd restarts on version change. Set LimitNOFILE=1048576. [#7390](https://github.com/deckhouse/deckhouse/pull/7390)
@@ -53,7 +54,7 @@
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
  - **[deckhouse-controller]** Add CA certificates to the standard `/etc/ssl/` path. [#7625](https://github.com/deckhouse/deckhouse/pull/7625)
- - **[dhctl]** mirror will avoid mirroring versions that were not yet released. [#7716](https://github.com/deckhouse/deckhouse/pull/7716)
+ - **[dhctl]** Avoid mirroring versions in `dhctl mirror` that were not yet released. [#7716](https://github.com/deckhouse/deckhouse/pull/7716)
  - **[dhctl]** Set version field for the `install-data` ConfigMap in the `dhctl bootstrap-phase install-deckhouse` command. [#7493](https://github.com/deckhouse/deckhouse/pull/7493)
  - **[dhctl]** Ignore a master node SSH fingerprint. [#7360](https://github.com/deckhouse/deckhouse/pull/7360)
  - **[docs]** Istio and `admission-policy-engine` restrictions clarifications. [#7398](https://github.com/deckhouse/deckhouse/pull/7398)
