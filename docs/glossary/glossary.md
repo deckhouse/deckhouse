@@ -25,6 +25,33 @@
 | priority level |  Уровень приоритета определяет порядок обработки ресурсов в кластере Kubernetes. Ресурсы с более высоким приоритетом обрабатываются первыми, а с более низким - последними.|  |
 | single-master | Одномастерная архитектура - это конфигурация, в которой есть один главный узел, управляющий кластером, и несколько подчиненных узлов, исполняющих задачи. |  |
 | multi-master|  Мультимастерная архитектура предполагает наличие нескольких главных узлов, каждый из которых может обрабатывать запросы и управлять кластером.|  |
+| cluster-autoscaler | | |
+| service account | | |
+| drain узла | | |
+| flavor | | |
+| manager | | |
+| location | | |
+| DaemonSet speaker | | |
+| effect | | |
+| taint | | |
+| Toleration | | |
+| lease | | |
+| webhook | | |
+| responder | | |
+| claim | | |
+| recommender | | |
+| plugin | | |
+| namespace | | |
+| member | | |
+| bundle | | |
+| inlet | | |
+| mesh | | |
+| relabel | | |
+| event | | |
+| header | | |
+| controller | | |
+| upstream | | |
+| endpoint | | |
 
 [ссылка в Фигму](https://www.figma.com/file/pJOXVgTxgBAGoOjzu0oAkJ/Deckhouse-Kubernetes-Platform?type=whiteboard&node-id=1-14)
 
