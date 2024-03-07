@@ -45,3 +45,4 @@ userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
+registryPackagesProxyEnabled: true

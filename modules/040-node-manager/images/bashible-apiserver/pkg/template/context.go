@@ -318,7 +318,7 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 				continue
 			}
 			input.FromMap(data)
-			c.contextBuilder.SetRegistryData(input.toRegistry())
+			c.contextBuilder.SetRegistryData(input.toRegistry(c.contextBuilder.clusterInputData.APIServerEndpoints, c.contextBuilder.clusterInputData.RegistryPackagesProxyClientToken))
 			c.registrySynced = true
 			c.saveChecksum("registry", checksum)
 			c.update("secret: registry")

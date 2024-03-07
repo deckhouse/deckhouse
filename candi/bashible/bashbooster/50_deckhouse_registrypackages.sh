@@ -105,6 +105,69 @@ bb-rp-fetch-manifests() {
     "${URLs[@]}"
 }
 
+# Fetch a package using python.
+# bb-rp-proxy-fetch-blob digest output_file_path
+bb-rp-proxy-fetch-blob() {
+  python3 <<EOF
+import random
+import socket
+import ssl
+import urllib.request
+
+socket.setdefaulttimeout(10)
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
+endpoints = "${REGISTRY_PACKAGES_PROXY_ENDPOINTS}".split(",")
+
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+endpoint = random.choice(endpoints)
+
+scheme = "http"
+
+if "${REGISTRY_PACKAGES_PROXY_TOKEN}" != "":
+  scheme = "https"
+  opener = urllib.request.build_opener()
+  opener.addheaders = [('Authorization', 'Bearer ${REGISTRY_PACKAGES_PROXY_TOKEN}')]
+  urllib.request.install_opener(opener)
+
+url = f'{scheme}://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
+urllib.request.urlretrieve(url, "$2")
+EOF
+}
+
+# Fetch digests from registry and save to file
+# bb-rp-proxy-fetch-blobs map[blob_digest]output_file_path [repository]
+#
+# This function uses the PACKAGES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-rp-proxy-fetch-blobs() {
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    mkdir -p "${PACKAGE_DIR}"
+    bb-rp-proxy-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+  done
+}
+
+# Unpack packages and run install script
+# bb-package-install package:digest
+bb-package-install() {
+  local BB_RP_INSTALL_FETCH_FROM_PROXY="true"
+
+  bb-rp-install "$@"
+}
+
+# Unpack package from module image and run install script
+# bb-package-module-install package:digest repository
+bb-package-module-install() {
+  local MODULE_PACKAGE=$1
+  local REPOSITORY=$2
+
+  bb-package-install $MODULE_PACKAGE
+}
+
 # Fetch digests from registry and save to file
 # bb-rp-fetch-blobs map[blob_digest]output_file_path
 #
@@ -158,30 +221,39 @@ bb-rp-fetch() {
     return 0
   fi
 
-  bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
-  trap 'bb-log-error "Failed to fetch manifests"' ERR
-  bb-rp-fetch-manifests PACKAGES_MAP
-  trap - ERR
+  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" != "true" ]]; then
+    bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+    trap 'bb-log-error "Failed to fetch manifests"' ERR
+    bb-rp-fetch-manifests PACKAGES_MAP
+    trap - ERR
 
-  declare -A BLOB_FILES_MAP
-  local PACKAGE_DIGEST
-  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
-    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
-    jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" > "${PACKAGE_DIR}/top_layer_digest"
-    BLOB_FILES_MAP[$(cat "${PACKAGE_DIR}/top_layer_digest")]="${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
-  done
+    declare -A BLOB_FILES_MAP
+    local PACKAGE_DIGEST
+    for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+      local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+      jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" > "${PACKAGE_DIR}/top_layer_digest"
+      BLOB_FILES_MAP[$(cat "${PACKAGE_DIR}/top_layer_digest")]="${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+    done
+  fi
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
   trap 'bb-log-error "Failed to fetch packages"' ERR
-  bb-rp-fetch-blobs BLOB_FILES_MAP
+  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" == "true" ]]; then
+    bb-rp-proxy-fetch-blobs PACKAGES_MAP
+  else
+    bb-rp-fetch-blobs BLOB_FILES_MAP
+  fi
   trap - ERR
   bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
 }
 
-
 # Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
+  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" != "true" ]]; then
+    bb-log-deprecated 'bb-package-install'
+  fi
+
   local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
@@ -238,6 +310,8 @@ bb-rp-install() {
 # Unpack package from module image and run install script
 # bb-rp-module-install package:digest registry_auth scheme registry_address registry_path
 bb-rp-module-install() {
+  bb-log-deprecated 'bb-package-module-install'
+
   local MODULE_PACKAGE=$1
   local REGISTRY_AUTH=$2
   local SCHEME=$3

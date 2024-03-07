@@ -20,6 +20,8 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +30,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -38,9 +42,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 const (
@@ -157,6 +164,71 @@ func CheckBashibleBundle(sshClient *ssh.Client) bool {
 		return nil
 	})
 	return bashibleUpToDate
+}
+
+func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
+	tun := sshCl.ReverseTunnel("5080:127.0.0.1:5080")
+	err := tun.Up()
+	if err != nil {
+		return nil, err
+	}
+
+	return tun, nil
+}
+
+type registryClientConfigGetter struct {
+	registry.ClientConfig
+}
+
+func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientConfigGetter, error) {
+	auth, err := config.Auth()
+	if err != nil {
+		return nil, fmt.Errorf("registry auth: %v", err)
+	}
+
+	return &registryClientConfigGetter{
+		ClientConfig: registry.ClientConfig{
+			Repository: strings.Join([]string{config.Address, config.Path}, "/"),
+			Scheme:     config.Scheme,
+			CA:         config.CA,
+			Auth:       auth,
+		},
+	}, nil
+}
+
+func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
+	return &r.ClientConfig, nil
+}
+
+func StartRegistryPackagesProxy(config config.RegistryData) error {
+	listener, err := net.Listen("tcp", "127.0.0.1:5080")
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	clientConfigGetter, err := newRegistryClientConfigGetter(config)
+	if err != nil {
+		return fmt.Errorf("failed to create registry client config getter: %v", err)
+	}
+
+	server, err := proxy.NewProxy(listener, http.NewServeMux(), clientConfigGetter, proxy.Options{
+		Logger: logrus.NewEntry(logger),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create registry packages proxy: %v", err)
+	}
+
+	go func() {
+		err = server.Serve()
+		if err != nil {
+			log.ErrorF("registry packages proxy serve: %v", err)
+		}
+	}()
+
+	return nil
 }
 
 func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
