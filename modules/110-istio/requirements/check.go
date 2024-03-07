@@ -93,7 +93,7 @@ func init() {
 				return true, nil
 			}
 		}
-		return false, fmt.Errorf("in coming release default kubernetes version '%s' will be incompatible with Istio version '%s'", comingDefaultK8sVersion, currentMinIstioVersionStr)
+		return false, fmt.Errorf("in coming release the default kubernetes version '%s' will be incompatible with Istio version '%s'", comingDefaultK8sVersion, currentMinIstioVersionStr)
 	}
 
 	requirements.RegisterCheck(requirementIstioMinimalVersionKey, checkMinimalIstioVersionFunc)
