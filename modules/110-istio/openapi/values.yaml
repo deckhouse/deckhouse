@@ -52,7 +52,7 @@ properties:
               There is CNIPlugin trafficRedirectionSetupMode in Istio module by default
               To change this mode to InitContainer we should create secret
               d8-istio-configuration in d8-istio namespace with trafficRedirectionSetupMode key
-              kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=init
+              kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=InitContainer
             default: "CNIPlugin"
             enum: ["CNIPlugin", "InitContainer"]
             x-examples: ["CNIPlugin", "InitContainer"]

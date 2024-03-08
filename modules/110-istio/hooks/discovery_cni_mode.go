@@ -31,7 +31,7 @@ import (
 // There is CNIPlugin trafficRedirectionSetupMode in Istio module by default
 // To change this mode to InitContainer we should create secret
 // d8-istio-configuration in d8-istio namespace with trafficRedirectionSetupMode key
-// $ kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=init
+// $ kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=InitContainer
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        lib.Queue("istio-cni"),
@@ -60,7 +60,8 @@ func applyDiscoveryIstioCniModeFilter(obj *unstructured.Unstructured) (go_hook.F
 		return false, fmt.Errorf("cannot convert secret to struct: %v", err)
 	}
 
-	if _, ok := secret.Data["trafficRedirectionSetupMode"]; ok {
+	mode, ok := secret.Data["trafficRedirectionSetupMode"]
+	if ok && string(mode[:]) == "InitContainer" {
 		return true, nil
 	}
 	return false, nil
