@@ -61,7 +61,7 @@ func applyDiscoveryIstioCniModeFilter(obj *unstructured.Unstructured) (go_hook.F
 	}
 
 	mode, ok := secret.Data["trafficRedirectionSetupMode"]
-	if ok && string(mode[:]) == "InitContainer" {
+	if ok && string(mode) == "InitContainer" {
 		return true, nil
 	}
 	return false, nil
