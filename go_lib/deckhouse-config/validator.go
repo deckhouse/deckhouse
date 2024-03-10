@@ -157,7 +157,7 @@ func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult 
 		return result
 	}
 
-	if cfg.Spec.Settings.GetEnabled() == "false" {
+	if cfg.Spec.Enabled != nil && !(*cfg.Spec.Enabled) {
 		return result
 	}
 
