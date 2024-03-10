@@ -183,6 +183,8 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
   && echo -e "/usr/local/lib\n/usr/local/lib64" > /etc/ld.so.conf.d/local.conf \
   && ldconfig
+  # fix simlink to proper pcre jit version
+  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
 
 RUN cd / && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
