@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/go-openapi/spec"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
@@ -153,6 +154,7 @@ func (c *ConfigValidator) ConvertToLatest(cfg *v1alpha1.ModuleConfig) Validation
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
 func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult {
 	result := c.ConvertToLatest(cfg)
+	log.Infof("%+v\n", result) //TODO: remove this
 	if result.HasError() {
 		return result
 	}
