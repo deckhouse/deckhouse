@@ -3,8 +3,8 @@ ARG BASE_GOLANG_19_BULLSEYE
 
 FROM $BASE_GOLANG_19_BULLSEYE AS build
 # Also check operator image version and admission-policy-engine module trivy-provider image "github.com/aquasecurity/trivy" library version
-ARG TRIVY_VERSION=feature/add-alt-linux
-ARG TRIVY_DB_VERSION=feature/add-alt-linux
+ARG TRIVY_VERSION=feature/add-new-os
+ARG TRIVY_DB_VERSION=feature/add-new-os
 ARG GOPROXY
 ARG SOURCE_REPO
 ENV GOPROXY=${GOPROXY} \
