@@ -17,6 +17,7 @@ fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
+  - git config --global user.email "builder@deckhouse.io"
   - cd /src/llvm
   - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
   - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
