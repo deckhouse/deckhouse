@@ -12,13 +12,13 @@
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/llvm-artifact
+artifact: {{ $.ModuleName }}/llvm-builder-artifact
 fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
-  - git config --global user.email "builder@deckhouse.io"
   - cd /src/llvm
+  - git config --global user.email "builder@deckhouse.io"
   - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
   - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
   - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
@@ -40,3 +40,15 @@ shell:
   - strip bin/llvm-objcopy
   - mkdir -p /out/linux/amd64/bin
   - cp bin/clang bin/llc bin/llvm-objcopy /out/linux/amd64/bin
+---
+artifact: {{ $.ModuleName }}/llvm-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+import:
+- artifact: {{ $.ModuleName }}/llvm-builder-artifact
+  add: /out/linux/amd64/bin
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+  - llvm-objcopy
