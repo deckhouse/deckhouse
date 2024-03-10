@@ -100,9 +100,15 @@ RUN apt-get update && apt-get install -y \
 COPY --from=artifact /src/images/nginx/rootfs/ /
 COPY patches/nginx-build.patch /
 
-RUN patch build.sh < nginx-build.patch
-
-RUN /build.sh
+RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+    # build pcre library with jit support due to lack of jit support in standard alt pcre library
+    cd pcre && \
+    ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
+    make && \
+    make install && \
+    cd / && \
+    patch build.sh < nginx-build.patch && \
+    /build.sh
 
 # Final image
 FROM $BASE_ALT
@@ -138,7 +144,7 @@ COPY patches/auth-cookie-always.patch /
 COPY rootfs /
 
 RUN apt-get update \
-  && apt-get install -y openssl pcre zlib libGeoIP curl ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 nano tzdata diffutils libcap glibc-gconv-modules \
+  && apt-get install -y openssl pcre zlib libGeoIP curl ca-certificates patch yajl liblmdb libxml2 libmaxminddb libyaml-cpp0 nano tzdata diffutils libcap glibc-gconv-modules libbrotlienc \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \
@@ -158,6 +164,10 @@ RUN apt-get update \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done'
+
+# replace pcre with version with jit support
+RUN rm -f /lib64/libpcre*
+COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 
 RUN echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /etc/ld-musl-x86_64.path \
   && chmod 1777 /tmp \
