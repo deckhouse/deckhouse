@@ -165,6 +165,18 @@ spec:
 `,
 			expectInvalid,
 		},
+		{
+			"empty spec.settings with enabled: false",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: false
+`,
+			expectValid,
+		},
 	}
 
 	for _, tt := range tests {

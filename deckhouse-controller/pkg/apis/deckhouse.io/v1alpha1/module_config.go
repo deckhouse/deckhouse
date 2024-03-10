@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strconv"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -78,6 +80,16 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 		*out = *clone
 		return
 	}
+}
+
+func (v SettingsValues) GetEnabled() string {
+	val, ok := v["enabled"]
+	boolVal, isBool := val.(bool)
+	if !ok || !isBool {
+		return "n/d"
+	}
+
+	return strconv.FormatBool(boolVal)
 }
 
 type ModuleConfigSpec struct {
