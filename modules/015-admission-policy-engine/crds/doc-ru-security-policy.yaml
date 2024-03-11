@@ -60,12 +60,14 @@ spec:
 
                         Используйте `ALL`, чтобы разрешить все привилегии.
                       items:
-                        description: Список привилегий (linux capabilities).
+                        description: Привилегия (linux capability).
                     requiredDropCapabilities:
                       description: |
                         Список привилегий (linux capabilities), обязательных к исключению.
 
                         Используйте `ALL`, чтобы исключить все привилегии.
+                      items:
+                        description: Привилегия (linux capability).
                     allowedAppArmor:
                       type: array
                       description: |
