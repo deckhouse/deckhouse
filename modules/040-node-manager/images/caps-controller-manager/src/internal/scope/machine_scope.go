@@ -18,10 +18,11 @@ package scope
 
 import (
 	"context"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -29,6 +30,17 @@ import (
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 )
+
+var allowBootstrapRequirement *labels.Requirement
+
+func init() {
+	var err error
+
+	allowBootstrapRequirement, err = labels.NewRequirement("node.deckhouse.io/allow-bootstrap", selection.NotIn, []string{"false"})
+	if err != nil {
+		panic(err.Error())
+	}
+}
 
 // MachineScope defines a scope defined around a machine and its cluster.
 type MachineScope struct {
@@ -122,7 +134,7 @@ func (m *MachineScope) HasFailed() bool {
 // LabelSelector returns a label selector for the StaticMachine.
 func (m *MachineScope) LabelSelector() (labels.Selector, error) {
 	if m.StaticMachine.Spec.LabelSelector == nil {
-		return labels.Everything(), nil
+		return labels.NewSelector().Add(*allowBootstrapRequirement), nil
 	}
 
 	labelSelector, err := metav1.LabelSelectorAsSelector(m.StaticMachine.Spec.LabelSelector)
@@ -130,7 +142,15 @@ func (m *MachineScope) LabelSelector() (labels.Selector, error) {
 		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
 	}
 
-	return labelSelector, nil
+	requirements, _ := labelSelector.Requirements()
+
+	for _, requirement := range requirements {
+		if requirement.Key() == allowBootstrapRequirement.Key() {
+			return nil, errors.New("label selector requirement for the 'node.deckhouse.io/allow-bootstrap' key can't be added manually")
+		}
+	}
+
+	return labelSelector.Add(*allowBootstrapRequirement), nil
 }
 
 // Close the MachineScope by updating the machine spec and status.

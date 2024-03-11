@@ -129,7 +129,11 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to delete the corresponding  [Instance](cr.html#instance) resource, and then the `StaticInstance` will be deleted automatically.
+To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
+1. Wait until the `StaticInstance` status becomes `Pending`.
+1. Delete the `StaticInstance`.
+1. Decrease the `NodeGroup.spec.staticInstances.count` field by 1.
 
 ### How do I change the IP address of a StaticInstance?
 
