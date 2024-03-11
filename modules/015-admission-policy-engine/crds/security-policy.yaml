@@ -41,7 +41,7 @@ spec:
           description: |
             Describes a security policy for a cluster.
 
-            Each custom resource `SecurityPolicy` describes rules for objects in the cluster.
+            Each `SecurityPolicy` custom resource describes rules for the objects in the cluster.
           properties:
             status:
               type: object
