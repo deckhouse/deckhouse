@@ -1,5 +1,5 @@
 {{ $trivyServerURL := printf "http://trivy-server.d8-%s:4954" .Chart.Name | quote }}
-{{ $dbRepository := printf "%s/security/trivy-test-db" .Values.global.modulesImages.registry.base | quote }}
+{{ $dbRepository := printf "%s/security/trivy-db" .Values.global.modulesImages.registry.base | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
