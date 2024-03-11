@@ -1,31 +1,31 @@
 modules/150-user-authn/docs/USAGE_RU.md
 
+
+
+1. Создать новый проект в Deckhouse.
+2. Подключиться к проекту.
+3. Настроить подключение к кластеру Kubernetes.
+4. Запустить необходимые приложения и сервисы, используя Deckhouse как платформу для управления и автоматизации развертывания приложений.
+5. Настроить аутентификацию и авторизацию для доступа к Deckhouse, используя встроенные механизмы аутентификации или внешние системы управления доступом, такие как LDAP, Active Directory...
+
+Для аутентификации:
+
+Для настройки аутентификации в Deckhouse пользователю необходимо выполнить следующие действия (команды для примера):
+
+* Создать учетную запись для аутентификации с помощью команды deckhouse user create.
+* Настроить аутентификацию с использованием LDAP, Active Directory, или другой системы аутентификации с помощью команд deckhouse auth ldap configure или deckhouse auth active-directory configure соответственно.
+* Задать параметры аутентификации для Deckhouse через конфигурационный файл или с помощью команд deckhouse config ldap set и deckhouse config active-directory set соответственно.
+* Разрешить использование аутентификации на уровне кластера Kubernetes с помощью команды kubectl auth can-i.
+* Назначить права доступа пользователям и группам с помощью команд kubectl auth reconcile и kubectl auth add-scope.
+* Протестировать аутентификацию, используя команду deckhouse auth test.
+* Обновить конфигурацию кластера Kubernetes с использованием команды kubectl apply.
+* Переподключиться к кластеру с помощью команды deckhouse connect.
+* Убедиться, что аутентификация работает корректно, используя команды kubectl get secrets и kubectl describe secret.
+
 ---
 title: "Модуль user-authn: примеры конфигурации"
 ---
 
-## Пример конфигурации модуля
-
-{% raw %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: user-authn
-spec:
-  version: 1
-  enabled: true
-  settings:
-    kubeconfigGenerator:
-    - id: direct
-      masterURI: https://159.89.5.247:6443
-      description: "Direct access to kubernetes API"
-    publishAPI:
-      enable: true
-```
-
-{% endraw %}
 
 ## Примеры настройки провайдера
 
@@ -190,6 +190,8 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
+
+**Переделать под юзера (поменять склонение)**
 
 Для настройки аутентификации необходимо завести в LDAP read-only-пользователя (service account).
 
