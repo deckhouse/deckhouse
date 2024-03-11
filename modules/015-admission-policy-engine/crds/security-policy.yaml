@@ -58,7 +58,7 @@ spec:
                       properties:
                         lastTimestamp:
                           type: string
-                          description: The last timestamp when a change of the resource was noted by the operator.
+                          description: A timestamp of when the operator last noted a change to the resource.
                         checkSum:
                           type: string
                           description: The checksum of last observed resource.
