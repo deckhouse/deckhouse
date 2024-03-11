@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -111,7 +112,6 @@ type deckhousePodInfo struct {
 	Namespace string `json:"namespace"`
 	Image     string `json:"image"`
 	ImageID   string `json:"imageID"`
-	Ready     bool   `json:"ready"`
 }
 
 const (
@@ -149,12 +149,12 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	// if values key does not exist, then cluster is just bootstrapping
 	clusterBootstrapping := !input.Values.Exists("global.clusterIsBootstrapped")
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePods[0].Ready, clusterBootstrapping)
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(), clusterBootstrapping)
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if deckhousePods[0].Ready {
+	if isDeckhousePodReady() {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -342,11 +342,8 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		imageName = pod.Spec.Containers[0].Image
 	}
 
-	var ready bool
-
 	if len(pod.Status.ContainerStatuses) > 0 {
 		imageID = pod.Status.ContainerStatuses[0].ImageID
-		ready = pod.Status.ContainerStatuses[0].Ready
 	}
 
 	return deckhousePodInfo{
@@ -354,7 +351,6 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		ImageID:   imageID,
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
-		Ready:     ready,
 	}, nil
 }
 
@@ -461,4 +457,15 @@ func getDeckhousePods(snap []go_hook.FilterResult) ([]deckhousePodInfo, error) {
 	}
 
 	return deckhousePods, nil
+}
+
+func isDeckhousePodReady() bool {
+	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+
+	resp, err := http.Get(fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	return true
 }
