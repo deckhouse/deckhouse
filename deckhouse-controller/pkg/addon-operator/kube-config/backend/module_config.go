@@ -33,13 +33,14 @@ import (
 )
 
 type ModuleConfigBackend struct {
-	mcKubeClient *versioned.Clientset
-	logger       logger.Logger
+	mcKubeClient     *versioned.Clientset
+	deckhouseConfigC chan<- utils.Values
+	logger           logger.Logger
 }
 
 // New returns native(Deckhouse) implementation for addon-operator's KubeConfigManager which works directly with
 // deckhouse.io/ModuleConfig, avoiding moving configs to the ConfigMap
-func New(config *rest.Config, logger logger.Logger) *ModuleConfigBackend {
+func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger logger.Logger) *ModuleConfigBackend {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		panic(err)
@@ -47,8 +48,17 @@ func New(config *rest.Config, logger logger.Logger) *ModuleConfigBackend {
 
 	return &ModuleConfigBackend{
 		mcClient,
+		deckhouseConfigC,
 		logger,
 	}
+}
+
+func (mc ModuleConfigBackend) handleDeckhouseConfig(moduleName string, val utils.Values) {
+	if moduleName != "deckhouse" {
+		return
+	}
+
+	mc.deckhouseConfigC <- val
 }
 
 func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan config.Event) {
@@ -102,6 +112,7 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			ModuleConfig: *mcfg,
 			Checksum:     mcfg.Checksum(),
 		}
+		mc.handleDeckhouseConfig(obj.Name, values)
 	}
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
 }
@@ -133,6 +144,7 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 				ModuleConfig: *mcfg,
 				Checksum:     mcfg.Checksum(),
 			}
+			mc.handleDeckhouseConfig(item.Name, values)
 		}
 	}
 

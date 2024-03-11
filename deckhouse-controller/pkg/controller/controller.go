@@ -32,7 +32,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
@@ -58,7 +60,8 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModules map[string]string
+	sourceModules           map[string]string
+	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
 
 	// separate controllers
 	informerFactory              externalversions.SharedInformerFactory
@@ -85,6 +88,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 
 	httpClient := d8http.NewClient()
+	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	}
 
 	return &DeckhouseController{
 		ctx:        ctx,
@@ -92,17 +101,20 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		dirs:       utils.SplitToPaths(mm.ModulesDir),
 		mm:         mm,
 
-		deckhouseModules: make(map[string]*models.DeckhouseModule),
-		sourceModules:    make(map[string]string),
+		deckhouseModules:        make(map[string]*models.DeckhouseModule),
+		sourceModules:           make(map[string]string),
+		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 
 		informerFactory:              informerFactory,
-		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage),
+		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, embeddedDeckhousePolicy),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage, embeddedDeckhousePolicy),
 		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
 	}, nil
 }
 
-func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
+// Start runs preflight checks and load all deckhouse modules from the FS
+// it doesn't start controllers for ModuleSource/ModuleRelease objects
+func (dml *DeckhouseController) Start(ec chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	dml.informerFactory.Start(dml.ctx.Done())
 
 	err := dml.moduleReleaseController.RunPreflightCheck(dml.ctx)
@@ -118,12 +130,38 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	}
 
 	go dml.runEventLoop(ec)
+	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
 
+	return nil
+}
+
+// RunControllers function starts all child controllers linked with Modules
+func (dml *DeckhouseController) RunControllers() {
 	go dml.moduleSourceController.Run(dml.ctx, 3)
 	go dml.moduleReleaseController.Run(dml.ctx, 3)
 	go dml.modulePullOverrideController.Run(dml.ctx, 1)
+}
 
-	return nil
+func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
+	for {
+		cfg := <-deckhouseConfigC
+
+		b, _ := cfg.AsBytes("yaml")
+		mups := &v1alpha1.ModuleUpdatePolicySpec{
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: "Auto",
+			},
+			ReleaseChannel: "Stable",
+		}
+		err := yaml.Unmarshal(b, mups)
+		if err != nil {
+			log.Errorf("Error occurred during the Deckhouse embedded policy build: %s", err)
+			continue
+		}
+		dml.embeddedDeckhousePolicy.ReleaseChannel = mups.ReleaseChannel
+		dml.embeddedDeckhousePolicy.Update.Mode = mups.Update.Mode
+		dml.embeddedDeckhousePolicy.Update.Windows = mups.Update.Windows
+	}
 }
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
