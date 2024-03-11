@@ -59,7 +59,8 @@ k8s:
     clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.27.1
-      yandex: v0.27.0
+      # todo change after test
+      yandex: add-logs-for-load-balanser-operation
       aws: v1.27.1
       vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
       azure: v1.27.11

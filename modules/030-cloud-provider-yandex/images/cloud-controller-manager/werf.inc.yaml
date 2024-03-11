@@ -35,8 +35,7 @@ shell:
   install:
     - git clone https://github.com/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
-    # todo change after testing
-    - git checkout add-logs-for-load-balanser-operation
+    - git checkout {{ $value.ccm.yandex }}
     - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
     - chown 64535:64535 /src/yandex-cloud-controller-manager
