@@ -286,3 +286,9 @@ spec:
 ```
 
 {% endraw %}
+
+## How do I limit user rights to specific namespaces?
+
+Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+
+By default, the user is assigned the role User, the description of its permissions is provided [`here`](../../140-user-authz/readme.html#default-access-list-for-each-role).
