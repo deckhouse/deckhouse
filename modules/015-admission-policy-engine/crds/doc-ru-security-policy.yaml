@@ -69,7 +69,7 @@ spec:
                       description: |
                         Список привилегий (linux capabilities), обязательных к исключению.
 
-                        Используйте `ALL` для исключения всех привилегий.
+                        Используйте `ALL`, чтобы исключить все привилегии.
                     allowedAppArmor:
                       type: array
                       description: |
