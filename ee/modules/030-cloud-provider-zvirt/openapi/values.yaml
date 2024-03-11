@@ -226,4 +226,44 @@ properties:
             - server
             - username
             - password
-
+      providerDiscoveryData:
+        type: object
+        additionalProperties: false
+        required: [ apiVersion, kind ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: ZvirtCloudProviderDiscoveryData
+          storageDomains:
+          - name: Default
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ ZvirtCloudProviderDiscoveryData ]
+          storageDomains:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                isEnabled:
+                  type: boolean
+                isDefault:
+                  type: boolean
+            description: List of storage classes.
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            storageDomain:
+              type: string
+      defaultStorageClass:
+        type: string
