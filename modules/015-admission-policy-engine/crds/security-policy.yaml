@@ -152,13 +152,13 @@ spec:
                     allowedCapabilities:
                       type: array
                       description: |
-                        The list of capabilities that containers are able to use.
+                        The list of capabilities that the containers are permitted to use.
 
                         To allow all capabilities, use `ALL`.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
-                        description: Allowed linux capabilities.
+                        description: The allowed Linux capabilities.
                         enum: &caps
                           - ALL
                           - SETPCAP
@@ -201,25 +201,25 @@ spec:
                     requiredDropCapabilities:
                       type: array
                       description: |
-                        The list of capabilities that have to be dropped from containers.
+                        The list of capabilities that have to be dropped from the containers.
 
                         To exclude all capabilities, use `ALL`'.
                       x-doc-examples: ["SETGID", "SETUID", "NET_BIND_SERVICE"]
                       items:
                         type: string
-                        description: Linux capabilities to drop from containers' specs.
+                        description: Linux capabilities to drop from the containers' specs.
                         enum: *caps
                     allowedAppArmor:
                       type: array
                       description: |
-                        The list of AppArmor profiles that are allowed to be used by containers.
+                        The list of AppArmor profiles the containers are permitted to use.
                       x-doc-examples: ["runtime/default", "unconfined"]
                       items:
                         type: string
                         description: An AppArmor profile.
                     allowedFlexVolumes:
                       type: array
-                      description: The list of Flex Volume drivers that are allowed to be used by containers.
+                      description: The list of Flex Volume drivers the containers are permitted to use.
                       items:
                         type: object
                         properties:
@@ -246,7 +246,7 @@ spec:
                         type: string
                     fsGroup:
                       type: object
-                      description: Specifies what `fsGroup` values are allowed to be used by the security context.
+                      description: Specifies which `fsGroup` values the security context is permitted to use.
                       required: ["rule"]
                       properties:
                         rule:
@@ -258,7 +258,7 @@ spec:
                             - RunAsAny
                         ranges:
                           type: array
-                          description: The list of ID ranges for `fsGroup` that are allowed in `MustRunAs' mode.
+                          description: The list of `fsGroup` ID ranges that are allowed in `MustRunAs' mode.
                           items:
                             type: object
                             properties:
@@ -270,7 +270,7 @@ spec:
                                 description: Max ID value.
                     runAsUser:
                       type: object
-                      description: Specifies what `runAsUser` values are allowed to be used by the security context.
+                      description: Specifies which `runAsUser` values the security context is permitted to use.
                       required: ["rule"]
                       properties:
                         rule:
@@ -294,7 +294,7 @@ spec:
                                 description: Max ID value.
                     runAsGroup:
                       type: object
-                      description: Specifies what `runAsGroup` values are allowed to be used by the security context.
+                      description: Specifies which `runAsGroup` values the security context is permitted to use.
                       required: ["rule"]
                       properties:
                         rule:
@@ -342,7 +342,7 @@ spec:
                                 description: Max ID value.
                     readOnlyRootFilesystem:
                       type: boolean
-                      description: When set to true, only pods where the root filesystem is read-only in all containers are allowed to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
+                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
                     automountServiceAccountToken:
                       type: boolean
                       description: Allows pods to run with `automountServiceAccountToken` enabled.
@@ -358,14 +358,14 @@ spec:
                         allowedLocalhostFiles:
                           type: array
                           description: |
-                            Defines the local seccomp profiles (in JSON format) that are allowed after specifying `Localhost` in the `allowedProfiles` parameter.
+                            Defines the local seccomp profiles (in JSON format) that can be used if `Localhost` is set in the `allowedProfiles` parameter.
 
                             An empty list prohibits the use of any local profiles.
                           items:
                             type: string
                     seLinux:
                       type: array
-                      description: Specifies what SElinux labels are allowed to be set in the security context.
+                      description: Specifies which SElinux labels the security context is permitted to use.
                       items:
                         type: object
                         properties:
@@ -383,7 +383,7 @@ spec:
                             description: A SELinux user label that applies to the container.
                     allowedVolumes:
                       type: array
-                      description: The set of volume plugins allowed to use.
+                      description: The set of the permitted volume plugins.
                       x-doc-examples: ["hostPath", "persistentVolumeClaim"]
                       items:
                         type: string
@@ -453,7 +453,7 @@ spec:
                           properties:
                             matchLabels:
                               type: object
-                              description: The list of labels which a namespace should have.
+                              description: The list of the labels that the namespace should have.
                               x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                               additionalProperties:
                                 type: string
@@ -499,7 +499,7 @@ spec:
                       properties:
                         matchLabels:
                           type: object
-                          description: The list of labels which Pod should have.
+                          description: The list of the labels that the Pod should have.
                           x-doc-examples: [{ "foo": "bar", "baz": "who" }]
                           additionalProperties:
                             type: string
