@@ -55,7 +55,7 @@ func init() {
 		return true, nil
 	}
 
-	checkIstioAndK8sVersionsCompatibility := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkIstioAndK8sVersionsCompatibilityFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		comingDefaultK8sVersion := requirementValue
 
 		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
@@ -97,5 +97,5 @@ func init() {
 	}
 
 	requirements.RegisterCheck(requirementIstioMinimalVersionKey, checkMinimalIstioVersionFunc)
-	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibility)
+	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibilityFunc)
 }
