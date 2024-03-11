@@ -1,3 +1,8 @@
+
+#---
+#artifact: {{ $.ModuleName }}/llvm-artifact
+#from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
+#---
 {{- $llvmRev := "llvmorg-10.0.0" }}
 # Source repo  settings. Delete after clone repo to fox
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
@@ -10,6 +15,7 @@
 # Based on https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/checkout-llvm.sh
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
+# Original compilers IMAGE_TAG is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/llvm-builder-artifact
