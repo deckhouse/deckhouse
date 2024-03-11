@@ -12,5 +12,4 @@ allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   storageDomainName: {{ $storageClass.storageDomain | quote }}
-  thinProvisioning: "true"
 {{- end }}

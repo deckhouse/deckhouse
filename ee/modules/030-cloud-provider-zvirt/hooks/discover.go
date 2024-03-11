@@ -81,7 +81,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		input.LogEntry.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.LogEntry.Warn("failed to find storage classes for 'named-disk.csi.cloud-director.vmware.com' provisioner")
+			input.LogEntry.Warn("failed to find storage classes for zvirt provisioner")
 
 			return nil
 		}

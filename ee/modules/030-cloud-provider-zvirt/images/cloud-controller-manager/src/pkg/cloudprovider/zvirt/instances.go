@@ -132,11 +132,9 @@ func (zc *Cloud) extractNodeAddressesFromVM(ctx context.Context, vm ovirtclient.
 		})
 	}
 
-	vmHostname := zc.zvirtService.ComputeSvc.GetVMHostName(ctx, vm)
-
 	nodeAddress = append(nodeAddress, v1.NodeAddress{
 		Type:    v1.NodeHostName,
-		Address: vmHostname,
+		Address: vm.Name(),
 	})
 
 	return nodeAddress, nil

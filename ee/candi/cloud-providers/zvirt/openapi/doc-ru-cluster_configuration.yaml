@@ -5,7 +5,7 @@ apiVersions:
     type: object
     additionalProperties: false
     description: |
-    x-      Описывает конфигурацию облачного кластера в OpenStack.
+    x-      Описывает конфигурацию облачного кластера в Zvirt.
 
       Используется cloud-провайдером, если control plane кластера размещен в облаке.
 
@@ -44,7 +44,7 @@ apiVersions:
                   Память в MiB для выделения виртуальным машинам zVirt VirtualMachines.
               template:
                 description: |
-                  Имя шаблона, который будет клонирован.
+                  Имя шаблона, который будет использован при заказе виртуальных машин.
               os:
                 description: |
                   Тип ОС.
@@ -53,7 +53,7 @@ apiVersions:
                   Нагрузочный профиль.
               vnicProfileId:
                 description: |
-                  vNIC профиль id.
+                  ID профиля vNIC.
               nicName:
                 description: |
                   vNIC имя.
