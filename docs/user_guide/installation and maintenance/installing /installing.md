@@ -16,9 +16,7 @@ lang: ru
 
 ____________
 
-<div class="docs__information warning active">
-Страница находится в активной разработке и может содержать неполную информацию. Ниже приведена обзорная информация об этапах установки Deckhouse. Рекомендуем воспользоваться разделом [Быстрый старт](/gs/), где вы сможете найти пошаговые инструкции.
-</div>
+
 
 Инсталлятор Deckhouse доступен в виде образа контейнера. В основе инсталлятора лежит утилита [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
 * создание и настройка объектов в облачной инфраструктуре с помощью Terraform;
@@ -64,13 +62,7 @@ YAML-файл конфигурации установки содержит па�
   
   Ресурсы конфигурации облачных провайдеров содержат такие параметры, как параметры доступа к облачной инфраструктуре (параметры аутентификации), тип и параметры схемы размещения ресурсов, параметры сети, параметры создаваемых групп узлов.
 
-  Список ресурсов конфигурации поддерживаемых облачных провайдеров:
-  - [AWSClusterConfiguration](../modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-  - [AzureClusterConfiguration](../modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-  - [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-  - [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-  - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-  - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud.
+
 
 - `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
