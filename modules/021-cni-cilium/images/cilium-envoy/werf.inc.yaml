@@ -1,8 +1,8 @@
 # #####################################################################
-# Build envoy binaries
-# Based on
-# https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+# Build cilium-envoy binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
+from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
 ---

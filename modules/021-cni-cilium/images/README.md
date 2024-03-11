@@ -2,32 +2,30 @@
 
 ### Build utility binaries
 - `+` `gops`
-  - based on `BASE_GOLANG_20_ALPINE` image
+  - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
-    - installed packages from repo: binutils git
     - src of gops
     - binaries of gops (builded from src)
 - `+` `cni-plugins`
-  - based on `BASE_GOLANG_21_ALPINE` image
+  - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
-    - installed packages from repo: binutils git
     - src of cni-plugins
     - binaries of cni-plugins (builded from src)
 - `+` `hubble`
-  - based on `BASE_GOLANG_20_ALPINE` image
+  - based on `BASE_GOLANG_20_BULLSEYE_DEV` image
   - includes:
-    - installed packages from repo: binutils git make
     - src of hubble
     - binaries hubble-cli (builded from src)
-- *todo* `bpftool`
+- `+` `bpftool`
   - based on `compilers` image
   - includes:
-  ```
-  - ?? libelf1
-  ```
-- *todo* `llvm`
+    - src of bpf-next
+    - binaries bpftool (builded from src)
+- `+` `llvm`
   - based on `compilers` image
   - includes:
+    - src of llvm
+    - binaries clang, llc, llvm-objcopy (builded from src)
 - *todo* `iptables`
   - based on `ubuntu:22.04` image
   - includes:
