@@ -78,7 +78,7 @@ while [ "$patch_pending" = true ] ; do
       sleep 1
     done
 
-    machine_name="${DECK_NODE_HOSTNAME}"
+    machine_name="${D8_NODE_HOSTNAME}"
     if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
       machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
     fi
