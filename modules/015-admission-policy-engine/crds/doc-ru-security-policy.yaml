@@ -64,7 +64,7 @@ spec:
                       description: |
                         Список привилегий (linux capabilities), доступных контейнерам.
 
-                        Используйте `ALL` для разрешения всех привилегий.
+                        Используйте `ALL`, чтобы разрешить все привилегии.
                     requiredDropCapabilities:
                       description: |
                         Список привилегий (linux capabilities), обязательных к исключению.
