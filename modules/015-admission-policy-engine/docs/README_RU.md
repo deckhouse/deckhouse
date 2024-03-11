@@ -40,7 +40,7 @@ kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 kubectl label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 ```
 
-Предлагаемые модулем политики могут быть расширены. Примеры расширения политик можно найти в [FAQ](faq.html).  
+Предлагаемые модулем политики могут быть расширены. Примеры расширения политик можно найти в [FAQ](faq.html).
 
 ### Операционные политики
 
