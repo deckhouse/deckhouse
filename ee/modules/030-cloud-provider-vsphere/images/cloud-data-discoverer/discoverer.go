@@ -26,16 +26,21 @@ import (
 )
 
 type Discoverer struct {
-	logger        *log.Entry
-	clusterUUID   string
-	govmomiClient *govmomi.Client
-	cnsClient     *cns.Client
+	logger               *log.Entry
+	clusterUUID          string
+	csiCompatibilityFlag string
+	govmomiClient        *govmomi.Client
+	cnsClient            *cns.Client
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	if clusterUUID == "" {
 		logger.Fatalf("Cannot get CLUSTER_UUID env")
+	}
+	csiCompatibilityFlag := os.Getenv("CSI_COMPATIBILITY_FLAG")
+	if csiCompatibilityFlag == "" {
+		logger.Fatalf("Cannot get CSI_COMPATIBILITY_FLAG env")
 	}
 
 	host := os.Getenv("GOVMOMI_HOST")
@@ -93,10 +98,11 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	}
 
 	return &Discoverer{
-		logger:        logger,
-		clusterUUID:   clusterUUID,
-		govmomiClient: govmomiClient,
-		cnsClient:     cnsClient,
+		logger:               logger,
+		clusterUUID:          clusterUUID,
+		csiCompatibilityFlag: csiCompatibilityFlag,
+		govmomiClient:        govmomiClient,
+		cnsClient:            cnsClient,
 	}
 }
 
@@ -111,6 +117,11 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	if d.csiCompatibilityFlag != "none" {
+		d.logger.Warnln("Skipping orphaned disks discovery: \"legacy\" CSI driver in-use")
+		return []v1alpha1.DiskMeta{}, nil
+	}
+
 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disks: %v", err)

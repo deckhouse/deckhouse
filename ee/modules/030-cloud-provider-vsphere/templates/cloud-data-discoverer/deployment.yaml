@@ -101,6 +101,8 @@ spec:
               key: insecure
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
+        - name: CSI_COMPATIBILITY_FLAG
+          value: {{ .Values.cloudProviderVsphere.internal.compatibilityFlag | quote }}
         livenessProbe:
           httpGet:
             path: /healthz
