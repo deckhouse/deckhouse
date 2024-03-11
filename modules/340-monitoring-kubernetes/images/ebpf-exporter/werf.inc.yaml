@@ -1,5 +1,5 @@
 ---
-artifact: {{ .ModuleName }}/entrypoint-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
@@ -59,7 +59,7 @@ shell:
 {{ $copyFiles := "/sbin/setcap" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ .Images.BASE_ALT_DEV }}
 shell:
   beforeInstall:
     - apt-get update
@@ -70,7 +70,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
   add: /entrypoint/entrypoint
   to: /usr/local/bin/entrypoint
   before: install
