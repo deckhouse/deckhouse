@@ -89,7 +89,13 @@
 | | | |
 
 ## Ссылка в Фигму с графикой
-[ссылка в Фигму](https://www.figma.com/file/pJOXVgTxgBAGoOjzu0oAkJ/Deckhouse-Kubernetes-Platform?type=whiteboard&node-id=1-14)
+
+[Ссылка в Фигму](https://www.figma.com/file/pJOXVgTxgBAGoOjzu0oAkJ/Deckhouse-Kubernetes-Platform?type=whiteboard&node-id=1-14)
 
 ## Полезные ссылки
+
 [Стандартизированный глоссарий для Kubernetes](https://kubernetes.io/ru/docs/reference/glossary/?fundamental=true)
+
+## Ссылка на Редполитику
+
+Ссылка на git [Редполитики](https://fox.flant.com/docs/company/-/commit/0cea3835ac219fc56002ecac2ee0777cae1b3b21)
