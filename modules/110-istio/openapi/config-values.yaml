@@ -207,10 +207,6 @@ properties:
         - {}
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
-  dataPlane:
-    type: object
-    description: Settings fot Istio data plane
-    default: {}
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.

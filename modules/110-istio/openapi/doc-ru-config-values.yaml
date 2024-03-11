@@ -104,8 +104,6 @@ properties:
               Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
               Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
-  dataPlane:
-    description: Settings fot Istio data plane
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:
