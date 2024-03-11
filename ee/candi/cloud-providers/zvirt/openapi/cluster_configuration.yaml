@@ -86,7 +86,7 @@ apiVersions:
               clusterId:
                 type: string
                 description: |
-                  cluster id.
+                  Cluster id.
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               numCPUs:
                 type: integer
