@@ -5,11 +5,11 @@ entries:
         en: Overview
         ru: Введение в документацию
       url: /deckhouse-overview.html
-    - title: Deckhouse
+    - title: Deckhouse Kubernetes Platform
       folders:
         - title:
-            en: How to install?
-            ru: Как установить?
+            en: Platform installation
+            ru: Установка платформы
           folders:
             - title:
                 en: Description
@@ -20,8 +20,8 @@ entries:
                 ru: Настройки
               url: /installing/configuration.html
         - title:
-            en: How to configure?
-            ru: Как настроить?
+            en: Platform configuration
+            ru: Настройка платформы
           folders:
             - title:
                 en: Description
@@ -33,6 +33,38 @@ entries:
               url: /deckhouse-configure-global.html
             - title: Custom Resources
               url: /cr.html
+        - title:
+            en: Module development
+            ru: Разработка модуля
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /module-development/
+            - title:
+                en: Module structure
+                ru: Структура модуля
+              url: /module-development/structure/
+            - title:
+                en: Building and publication
+                ru: Сборка и публикация
+              url: /module-development/build/
+            - title:
+                en: Running in the cluster
+                ru: Запуск в кластере
+              url: /module-development/run/
+            - title:
+                en: Versioning
+                ru: Версионирование
+              url: /module-development/versioning/
+            - title:
+                en: Debug
+                ru: Отладка
+              url: /module-development/troubleshooting/
+            - title:
+                en: Example
+                ru: Пример
+              url: /module-development/example/
         - title:
             en: Release channels
             ru: Каналы обновлений
