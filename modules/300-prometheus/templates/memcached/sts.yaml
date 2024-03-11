@@ -32,7 +32,7 @@ spec:
   selector:
     matchLabels:
       app: memcached
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 1 2) }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   template:
     metadata:
       labels:
