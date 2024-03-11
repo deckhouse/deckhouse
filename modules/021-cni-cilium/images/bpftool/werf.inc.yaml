@@ -4,7 +4,7 @@
 #---
 {{- $bpftoolRev := "93270357daa949e4bed375b40d0a100ce04f3399" }}
 # Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://git.kernel.org" }}
+{{- $_ := set . "SOURCE_REPO" "https://kernel.googlesource.com" }}
 ---
 # #####################################################################
 # Build BPFTOOL binaries (based on compilers)
@@ -19,8 +19,9 @@ artifact: {{ $.ModuleName }}/bpftool-builder-artifact
 fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
-  - git clone --depth 1 --branch "{{ $bpftoolRev }}" {{ $.SOURCE_REPO }}/pub/scm/linux/kernel/git/bpf/bpf-next.git /src/linux
+  - git clone {{ $.SOURCE_REPO }}/pub/scm/linux/kernel/git/bpf/bpf-next.git /src/linux
   - cd /src/linux
+  - git checkout {{ $bpftoolRev }}
   install:
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"
