@@ -91,9 +91,7 @@ spec:
                 policies:
                   type: object
                   description: |
-                    Container parameters that the policy will check for compliance:
-                    - You can specify allowed value ranges. For example, a list of capabilities or a range of host ports (`hostPort`) for containers.
-                    - You can grant access to the containers or impose a condition. For example, you can check if all the containers have a read-only root filesystem.
+                    Policies that pods and containers must comply with.
                   properties:
                     allowedHostPaths:
                       type: array
