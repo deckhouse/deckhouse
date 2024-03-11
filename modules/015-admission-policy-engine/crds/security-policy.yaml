@@ -23,7 +23,7 @@ spec:
       - name: Observed
         jsonPath: .status.deckhouse.observed.lastTimestamp
         type: string
-        description: The timestamp when the resource was observed by the operator last time.
+        description: A timestamp of when the resource was last observed by the operator.
         priority: 1
       - name: Processed
         jsonPath: .status.deckhouse.processed.lastTimestamp
