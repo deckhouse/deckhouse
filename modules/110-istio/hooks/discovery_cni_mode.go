@@ -61,17 +61,17 @@ func applyDiscoveryIstioCniModeFilter(obj *unstructured.Unstructured) (go_hook.F
 	}
 
 	mode, ok := secret.Data["trafficRedirectionSetupMode"]
-	if ok && string(mode) == "InitContainer" {
-		return "InitContainer", nil
+	if !ok {
+		return "", fmt.Errorf("cannot get `mode` key from Secret %s", secret.Name)
 	}
-	return "CNIPlugin", nil
+	return string(mode), nil
 }
 
 func setInternalIstioCniMode(input *go_hook.HookInput) error {
-	snapshot := input.Snapshots["istio-cni"]
+	snapshots := input.Snapshots["istio-cni"]
 
-	if len(snapshot) == 1 {
-		input.Values.Set("istio.internal.dataPlane.trafficRedirectionSetupMode", snapshot[0].(string))
+	if len(snapshots) == 1 && snapshots[0].(string) != "" {
+		input.Values.Set("istio.internal.dataPlane.trafficRedirectionSetupMode", snapshots[0].(string))
 		return nil
 	}
 	input.Values.Set("istio.internal.dataPlane.trafficRedirectionSetupMode", "CNIPlugin")
