@@ -106,7 +106,7 @@ spec:
                           pathPrefix:
                             type: string
                             description: |
-                              The path prefix that the host volume must match.
+                              The path prefix to match against the host volume.
 
                               It does not support the `*` mask. Trailing slashes are trimmed when validating the path prefix with a host path.
 
