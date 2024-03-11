@@ -92,8 +92,8 @@ spec:
                   type: object
                   description: |
                     Container parameters that the policy will check for compliance:
-                    - You can specify allowed ranges of values. For example, a list of capabilities or a range of host ports (`hostPort`) for containers.
-                    - You can grant access to containers or impose a condition. For example, check that all containers have a read-only root filesystem.
+                    - You can specify allowed value ranges. For example, a list of capabilities or a range of host ports (`hostPort`) for containers.
+                    - You can grant access to the containers or impose a condition. For example, you can check if all the containers have a read-only root filesystem.
                   properties:
                     allowedHostPaths:
                       type: array
