@@ -114,7 +114,7 @@ spec:
                           readOnly:
                             type: boolean
                             default: false
-                            description: When set to true, allows host volumes matching the [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix) only if all the volume mounts are read-only.
+                            description: When set to true, allows host volumes to be matched against the [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix) only if all the volume mounts are read-only.
                     allowHostIPC:
                       type: boolean
                       description: Allows sharing the host's IPC namespace with containers.
