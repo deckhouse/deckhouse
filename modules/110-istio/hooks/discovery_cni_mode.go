@@ -62,7 +62,7 @@ func applyDiscoveryIstioCniModeFilter(obj *unstructured.Unstructured) (go_hook.F
 
 	mode, ok := secret.Data["trafficRedirectionSetupMode"]
 	if !ok {
-		return "", fmt.Errorf("cannot get `mode` key from Secret %s", secret.Name)
+		return "", fmt.Errorf("cannot get `trafficRedirectionSetupMode` key from Secret %s", secret.Name)
 	}
 	return string(mode), nil
 }
