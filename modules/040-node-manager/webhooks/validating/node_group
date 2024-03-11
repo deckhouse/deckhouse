@@ -227,6 +227,13 @@ EOF
     return 0
   fi
 
+  # check topologyManager.enabled
+  if context::jq -e -r '.review.request.object.spec.kubelet.resourceReservation.mode == "Off" and .review.request.object.spec.kubelet.topologyManager.enabled == true' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager.enabled to work"}
+EOF
+    return 0
+  fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
