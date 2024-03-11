@@ -28,7 +28,7 @@ spec:
       - name: Processed
         jsonPath: .status.deckhouse.processed.lastTimestamp
         type: string
-        description: The timestamp when the resource was processed by the operator last time.
+        description: A timestamp of when the resource was last processed by the operator.
         priority: 1
       served: true
       storage: true
