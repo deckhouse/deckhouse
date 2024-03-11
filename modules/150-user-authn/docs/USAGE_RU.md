@@ -283,3 +283,9 @@ spec:
 ```
 
 {% endraw %}
+
+## Как ограничить права пользователю конкретными namespace?
+
+Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+
+По умолчанию пользователь получает роль `User`, описание прав которого предаставлено [`здесь`](../../140-user-authz/readme.html#список-доступа-для-каждой-роли-модуля-по-умолчанию)
