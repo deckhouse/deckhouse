@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -27,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 )
 
 const (
@@ -70,14 +73,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: fencingControllerLeaseFilter,
 		},
-		{
-			Name:       podsSnapshot,
-			ApiVersion: "v1",
-			Kind:       "Pod",
-			FilterFunc: fencingControllerPodFilter,
-		},
 	},
-}, fencingControllerHandler)
+}, dependency.WithExternalDependencies(fencingControllerHandler))
 
 type fencingControllerNodeResult struct {
 	Name          string
@@ -134,7 +131,7 @@ func fencingControllerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}, nil
 }
 
-func fencingControllerHandler(input *go_hook.HookInput) error {
+func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	if len(input.Snapshots[nodesSnapshot]) == 0 {
 		// No nodes with enabled fencing -> nothing to do
 		return nil
@@ -170,17 +167,35 @@ func fencingControllerHandler(input *go_hook.HookInput) error {
 
 	input.LogEntry.Warnf("Going to kill %d nodes", nodeToKillCount)
 
-	// kill pods
-	for _, pRaw := range input.Snapshots[podsSnapshot] {
-		p := pRaw.(fencingControllerPodResult)
-		if _, ok := nodesToKill[p.NodeName]; ok {
-			input.LogEntry.Warnf("Delete pod %s in namespace %s on node %s", p.Name, p.Namespace, p.NodeName)
-			input.PatchCollector.Delete("v1", "Pod", p.Namespace, p.Name, object_patch.InBackground())
-		}
+	// create k8s client to delete pods
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		input.LogEntry.Errorf("%v", err)
+		return err
 	}
+
+	// kubeClient.CoreV1()
+	// kubeClient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+	// 	FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": "xxx"}).String(),
+	// })
+
+	// // kill pods
+	// for _, pRaw := range input.Snapshots[podsSnapshot] {
+	// 	p := pRaw.(fencingControllerPodResult)
+	// 	if _, ok := nodesToKill[p.NodeName]; ok {
+	// 		input.LogEntry.Warnf("Delete pod %s in namespace %s on node %s", p.Name, p.Namespace, p.NodeName)
+	// 		input.PatchCollector.Delete("v1", "Pod", p.Namespace, p.Name, object_patch.InBackground())
+	// 	}
+	// }
 
 	// kill nodes
 	for node := range nodesToKill {
+		input.LogEntry.Warnf("Delete all pods from node	 %s", node)
+		err := kubeClient.CoreV1().Pods("").DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String()})
+		if err != nil {
+			input.LogEntry.Errorf("%v", err)
+			continue
+		}
 		input.LogEntry.Warnf("Delete node %s", node)
 		input.PatchCollector.Delete("v1", "Node", "", node, object_patch.InBackground())
 	}
