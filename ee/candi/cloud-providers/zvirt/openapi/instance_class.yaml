@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of zVirt VirtualMachines used by `` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+            Parameters of a group of zVirt VirtualMachines used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:

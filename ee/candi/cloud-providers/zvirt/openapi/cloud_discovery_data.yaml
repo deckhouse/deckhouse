@@ -12,3 +12,17 @@ apiVersions:
       kind:
         type: string
         enum: [ZvirtCloudProviderDiscoveryData]
+      storageDomains:
+        type: array
+        items:
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+              minLength: 1
+            isEnabled:
+              type: boolean
+            isDefaul:
+              type: boolean
+        description: List of storage classes.
