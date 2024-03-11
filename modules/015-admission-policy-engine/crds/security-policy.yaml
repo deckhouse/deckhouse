@@ -80,7 +80,7 @@ spec:
                   type: string
                   default: "Deny"
                   description: |
-                    The enforcement action as a result of the constraint:
+                    An enforcement action as a result of the constraint:
                     - `Deny` — Deny action.
                     - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
                     - `Warn` — No action, similar to `Dryrun`. Provides information about the constraint that would cause the denial if the `Deny` action were used.
