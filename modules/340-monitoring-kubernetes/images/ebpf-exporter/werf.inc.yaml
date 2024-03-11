@@ -1,4 +1,23 @@
 ---
+artifact: {{ .ModuleName }}/entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /entrypoint
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /entrypoint
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o entrypoint main.go
+  - chown -R 64535:64535 /entrypoint/
+  - chmod 0700 /entrypoint/entrypoint
+---
 artifact: {{ .ModuleName }}/build-artifact
 from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
 git:
@@ -51,6 +70,10 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-artifact
+  add: /entrypoint/entrypoint
+  to: /usr/local/bin/entrypoint
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -69,4 +92,4 @@ import:
   - '**/*.yaml'
   - '**/*.o'
 docker:
-  ENTRYPOINT: ["/usr/local/bin/ebpf_exporter"]
+  ENTRYPOINT: ["/usr/local/bin/entrypoint"]

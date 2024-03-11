@@ -60,10 +60,15 @@ spec:
       - image: {{ include "helm_lib_module_image" (list . "ebpfExporter") }}
         name: ebpf-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        args:
-        - --config.dir=/metrics
-        - --config.names=oomkill
-        - --web.listen-address=127.0.0.1:9435
+        env:
+        - name: EBPF_EXPORTER_BIN_PATH
+          value: "/usr/local/bin/ebpf_exporter"
+        - name: EBPF_EXPORTER_CONFIG_DIR
+          value: "/metrics"
+        - name: EBPF_EXPORTER_CONFIG_NAMES
+          value: "oomkill"
+        - name: EBPF_EXPORTER_LISTEN_ADDRESS
+          value: "127.0.0.1:9435"
         volumeMounts:
         - name: host-sys
           mountPath: /sys
