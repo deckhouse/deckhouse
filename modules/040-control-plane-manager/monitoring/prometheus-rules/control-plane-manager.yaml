@@ -36,7 +36,7 @@
 
   - alert: D8KubernetesVersionIsDeprecated
     for: 10m
-    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.25"}) == 1
+    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.24"}) == 1
     labels:
       severity_level: "7"
       tier: cluster
@@ -47,7 +47,7 @@
       description: |-
         Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
 
-        Please migrate to the next kubernetes version (at least 1.26)
+        Please migrate to the next kubernetes version (at least 1.25)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
