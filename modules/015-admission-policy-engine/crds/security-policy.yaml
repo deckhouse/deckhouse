@@ -68,7 +68,7 @@ spec:
                       properties:
                         lastTimestamp:
                           type: string
-                          description: The last timestamp when the resource was applied in the cluster.
+                          description: A timestamp of when the resource was last applied in the cluster.
                         checkSum:
                           type: string
                           description: The checksum of last applied resource.
