@@ -19,7 +19,7 @@ spec:
       - jsonPath: .status.deckhouse.synced
         name: Synced
         type: string
-        description: The status message if current version of the security policy was processed by the operator.
+        description: A status message that is shown if the current version of the security policy has been processed by the operator.
       - name: Observed
         jsonPath: .status.deckhouse.observed.lastTimestamp
         type: string
