@@ -78,7 +78,7 @@ spec:
               properties:
                 enforcementAction:
                   type: string
-                  default: "Deny"
+                  default: Deny
                   description: |
                     An enforcement action as a result of the constraint:
                     - `Deny` — Deny action.
