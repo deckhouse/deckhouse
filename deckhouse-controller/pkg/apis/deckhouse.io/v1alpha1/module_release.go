@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -63,6 +62,85 @@ type ModuleRelease struct {
 	Spec ModuleReleaseSpec `json:"spec"`
 
 	Status ModuleReleaseStatus `json:"status,omitempty"`
+}
+
+func (mr *ModuleRelease) GetVersion() *semver.Version {
+	return mr.Spec.Version
+}
+
+func (mr *ModuleRelease) GetName() string {
+	return mr.Name
+}
+
+func (mr *ModuleRelease) GetApplyAfter() *time.Time {
+	return &mr.Spec.ApplyAfter.Time
+}
+
+func (mr *ModuleRelease) GetRequirements() map[string]string {
+	return mr.Spec.Requirements
+}
+
+func (mr *ModuleRelease) GetChangelogLink() string {
+	return ""
+}
+
+func (mr *ModuleRelease) GetCooldownUntil() *time.Time {
+	return nil
+}
+
+func (mr *ModuleRelease) GetApproved() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetDisruptions() []string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetDisruptionApproved() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetPhase() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetForce() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetApplyNow() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) SetApprovedStatus(b bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetSuspend() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetManuallyApproved() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetApprovedStatus() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (mr *ModuleRelease) GetMessage() string {
+	//TODO implement me
+	panic("implement me")
 }
 
 // GetModuleSource returns module source for this release
@@ -140,36 +218,6 @@ func (in *ModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
 func (f *moduleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModuleReleaseGVK
-}
-
-// Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
-type Duration struct {
-	time.Duration
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		var err error
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
 }
 
 // +k8s:deepcopy-gen=true
