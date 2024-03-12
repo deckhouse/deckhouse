@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 var (
@@ -55,9 +57,9 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string   `json:"source"`
-	ImageTag     string   `json:"imageTag"`
-	ScanInterval Duration `json:"scanInterval"`
+	Source       string          `json:"source"`
+	ImageTag     string          `json:"imageTag"`
+	ScanInterval libapi.Duration `json:"scanInterval"`
 }
 
 type ModulePullOverrideStatus struct {

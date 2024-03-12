@@ -43,8 +43,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
+	d8updater "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 const (
@@ -124,12 +126,12 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.Values.Set("deckhouse.internal.releaseVersionImageHash", newImageHash)
 
 	snap := input.Snapshots["releases"]
-	releases := make([]updater.DeckhouseRelease, 0, len(snap))
+	releases := make([]*d8updater.DeckhouseRelease, 0, len(snap))
 	for _, rl := range snap {
-		releases = append(releases, rl.(updater.DeckhouseRelease))
+		releases = append(releases, rl.(*d8updater.DeckhouseRelease))
 	}
 
-	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
+	sort.Sort(sort.Reverse(updater.ByVersion[*d8updater.DeckhouseRelease](releases)))
 	input.MetricsCollector.Expire(metricUpdatingFailedGroup)
 
 releaseLoop:
@@ -429,9 +431,9 @@ type releaseMetadata struct {
 }
 
 type canarySettings struct {
-	Enabled  bool              `json:"enabled"`
-	Waves    uint              `json:"waves"`
-	Interval v1alpha1.Duration `json:"interval"` // in minutes
+	Enabled  bool            `json:"enabled"`
+	Waves    uint            `json:"waves"`
+	Interval libapi.Duration `json:"interval"` // in minutes
 }
 
 func getCA(input *go_hook.HookInput) string {
