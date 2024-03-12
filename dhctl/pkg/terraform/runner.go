@@ -628,6 +628,8 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	return exitCode, err
 }
 
+type TerraformPlan map[string]any
+
 type PlanDestructiveChanges struct {
 	ResourcesDeleted   []ValueChange `json:"resources_deleted,omitempty"`
 	ResourcesRecreated []ValueChange `json:"resourced_recreated,omitempty"`
