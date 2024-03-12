@@ -26,7 +26,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	coordinationv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -86,12 +85,6 @@ type fencingControllerLeaseResult struct {
 	RenewTime time.Time
 }
 
-type fencingControllerPodResult struct {
-	Name      string
-	Namespace string
-	NodeName  string
-}
-
 func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var res fencingControllerNodeResult
 
@@ -115,19 +108,6 @@ func fencingControllerLeaseFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return fencingControllerLeaseResult{
 		NodeName:  *lease.Spec.HolderIdentity,
 		RenewTime: lease.Spec.RenewTime.Time,
-	}, nil
-}
-
-func fencingControllerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var pod corev1.Pod
-	err := sdk.FromUnstructured(obj, &pod)
-	if err != nil {
-		return nil, err
-	}
-	return fencingControllerPodResult{
-		Name:      pod.Name,
-		Namespace: pod.Namespace,
-		NodeName:  pod.Spec.NodeName,
 	}, nil
 }
 
@@ -190,12 +170,26 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 
 	// kill nodes
 	for node := range nodesToKill {
-		input.LogEntry.Warnf("Delete all pods from node	 %s", node)
-		err := kubeClient.CoreV1().Pods("").DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String()})
+		input.LogEntry.Warnf("Delete all pods from node %s", node)
+		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
+			context.TODO(),
+			metav1.ListOptions{
+				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String(),
+			},
+		)
 		if err != nil {
-			input.LogEntry.Errorf("%v", err)
+			input.LogEntry.Errorf("Can't list pods: %v", err)
 			continue
 		}
+
+		for _, pod := range podsToDelete.Items {
+			input.LogEntry.Warnf("Delete pod %s in namespace %s on node %s", pod.Name, pod.Namespace, pod.Spec.NodeName)
+			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				input.LogEntry.Errorf("Can't delete pod %s: %v", pod.Name, err)
+			}
+		}
+
 		input.LogEntry.Warnf("Delete node %s", node)
 		input.PatchCollector.Delete("v1", "Node", "", node, object_patch.InBackground())
 	}
