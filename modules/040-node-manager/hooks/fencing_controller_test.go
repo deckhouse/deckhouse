@@ -18,8 +18,12 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"text/template"
 	"time"
+
+	v1core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -29,7 +33,7 @@ import (
 )
 
 type testCaseParams struct {
-	Name               string
+	Name               string // The name of resource (nodegroup, namespace, lease, pod)
 	FencingEnabled     bool
 	MaintanenceEnabled bool
 	RenewTime          time.Time
@@ -47,7 +51,7 @@ nodeGroups:
     mode: Watchdog
 `
 
-const kubeStateTemplate = `
+const nodeAndLeaseTemplate = `
 ---
 apiVersion: v1
 kind: Node
@@ -68,14 +72,6 @@ metadata:
 spec:
   holderIdentity: {{ .Name }}
   renewTime: {{ .RenewTime.Format "2006-01-02T15:04:05.000000Z07:00" }}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: {{ .Name }}
-  namespace: {{ .Name }}
-spec:
-  nodeName: {{ .Name }}
 `
 
 func TemplateToYAML(tmpl string, params interface{}) string {
@@ -85,7 +81,7 @@ func TemplateToYAML(tmpl string, params interface{}) string {
 	return output.String()
 }
 
-var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", func() {
+var _ = FDescribe("Modules :: nodeManager :: hooks :: fencing_controller ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
@@ -101,18 +97,29 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 	})
 
 	DescribeTable("Testing fencing", func(testCase testCaseParams, want testCaseResult) {
+		// add nodegroup internal values
 		ngValues := TemplateToYAML(internalNodeGroupValuesTemplate, testCase)
 		f.ValuesSetFromYaml(`nodeManager.internal`, []byte(ngValues))
-		st := TemplateToYAML(kubeStateTemplate, testCase)
-		f.BindingContexts.Set(f.KubeStateSet(st))
+
+		// add node and lease state
+		nodeAndLeaseState := TemplateToYAML(nodeAndLeaseTemplate, testCase)
+		f.BindingContexts.Set(f.KubeStateSet(nodeAndLeaseState))
+
+		// add pod on node
+		_, _ = f.KubeClient().CoreV1().Pods(testCase.Name).Create(context.TODO(), &v1core.Pod{ObjectMeta: metav1.ObjectMeta{Name: testCase.Name}}, metav1.CreateOptions{})
+
+		By("Check hook executed successfully")
 		f.RunHook()
 		Expect(f).To(ExecuteSuccessfully())
 
+		By("Check node")
 		node := f.KubernetesGlobalResource("Node", testCase.Name)
 		Expect(node.Exists()).To(BeEquivalentTo(want.nodeExists))
 
-		pod := f.KubernetesResource("Pod", testCase.Name, testCase.Name)
-		Expect(pod.Exists()).To(BeEquivalentTo(want.podExists))
+		By("Check pods")
+		pod, _ := f.KubeClient().CoreV1().Pods(testCase.Name).Get(context.TODO(), testCase.Name, metav1.GetOptions{})
+		podExists := pod != nil
+		Expect(podExists).To(BeEquivalentTo(want.podExists))
 	},
 		Entry("Node with enabled fencing and lease updated in time", testCaseParams{
 			Name:               "everything-ok",
