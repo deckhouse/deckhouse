@@ -60,7 +60,9 @@ spec:
       serviceAccountName: terraform-auto-converger
       containers:
       - name: converger
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
         args:
         - "converge-periodical"
         - "--logger-type=json"
