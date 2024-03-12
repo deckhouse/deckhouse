@@ -1,6 +1,6 @@
 ## How it builded
 
-### Build utility binaries
+### Building utility binaries
 - `+` `gops`
   - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
@@ -41,7 +41,7 @@
     - shell-scripts from cilium src: init-container.sh install-plugin.sh cni-uninstall.sh
 
 
-### Build utility images (used for for build other images and binaries)
+### Building utility images (used for build other images and binaries)
 - `runtime`
   - based on `BASE_UBUNTU` image
   - includes:
@@ -73,7 +73,7 @@
     - binaries of bazel and wrapper shell-scripts `(!!! loaded from internet)`
 
 
-### Build final images (used in helm-templates)
+### Building final images (used in helm-templates)
 - `agent` - the main image of cilium-agent
   - based on `runtime` image
   - includes:

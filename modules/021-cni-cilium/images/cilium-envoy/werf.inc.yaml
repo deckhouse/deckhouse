@@ -1,8 +1,94 @@
+#---
+#artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+#from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
+#---
+{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
+# Source repo  settings. Delete after clone repo to fox
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+---
 # #####################################################################
 # Build cilium-envoy binaries
+# Original commit is ad82c7c56e88989992fd25d8d67747de865c823b
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile
+---
+artifact: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+  - export TZ=Etc/UTC TARGETARCH=amd64
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  - apt-get update && apt-get upgrade -y --no-install-recommends
+  - |
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    # Multi-arch cross-compilation packages
+    gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu libc6-dev \
+    # Envoy Build dependencies
+    autoconf automake cmake coreutils curl git libtool make ninja-build patch patchelf \
+    python3 python-is-python3 unzip virtualenv wget zip \
+    # Cilium-envoy build dependencies
+    libcap-dev software-properties-common && \
+  - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+  - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" && \
+  - apt-get update && \
+  - |
+    apt-get install -y --no-install-recommends \
+    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  install:
+  # Install bazel
+  - export BAZEL_VERSION="6.1.0" ARCH="x86_64"
+  - curl -sfL https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-${ARCH} -o /usr/bin/bazel
+  - chmod +x /usr/bin/bazel
+---
+artifact: {{ $.ModuleName }}/cilium-envoy-proxylib-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -p /go/src/github.com/cilium/proxy
+  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /go/src/github.com/cilium/proxy
+  - cd /go/src/github.com/cilium/proxy
+  - git checkout {{ $ciliumProxyRev }}
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /go/src/github.com/cilium/proxy
+  - make -C proxylib all
+  - mv proxylib/libcilium.so /tmp/libcilium.so
+---
+artifact: {{ $.ModuleName }}/cilium-envoy-builder-artifact
+fromImage: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
+import:
+- artifact: {{ $.ModuleName }}/cilium-envoy-proxylib-artifact
+  add: /tmp/libcilium.so
+  to: /tmp/install/usr/lib/libcilium.so
+  before: install
+shell:
+  beforeInstall:
+  - mkdir -p /cilium/proxy
+  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
+  - cd /cilium/proxy
+  - git checkout {{ $ciliumProxyRev }}
+  install:
+  - cd /cilium/proxy
+  - export BAZEL_BUILD_OPTS="--jobs=HOST_CPUS*.75 --disk_cache=/tmp/bazel-cache"
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  - make bazel-bin/cilium-envoy
+  - ./bazel/get_workspace_status
+  - make install
+---
+# #####################################################################
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
----
+from: {{ $.Images.BASE_UBUNTU }}
+import:
+- artifact: {{ $.ModuleName }}/cilium-envoy-builder-artifact
+  add: /tmp/install
+  to: /
+  before: install
