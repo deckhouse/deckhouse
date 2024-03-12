@@ -1,3 +1,19 @@
+/*
+Copyright 2024 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package hooks
 
 import (
@@ -8,6 +24,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"net"
 )
 
 type loadBalancerService struct {
@@ -62,10 +79,20 @@ func updateIngressAddress(input *go_hook.HookInput) error {
 			continue
 		}
 		svc := snap.(loadBalancerService)
+
+		ip := svc.ip
+		if ip == "" {
+			if rawIP, err := net.LookupIP(svc.hostname); err != nil {
+				input.LogEntry.Warnf("cannot resolve hostname(%s): %s", svc.hostname, err.Error())
+			} else {
+				ip = rawIP[0].String()
+			}
+		}
+
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
 				"loadBalancer": map[string]interface{}{
-					"ip":       svc.ip,
+					"ip":       ip,
 					"hostname": svc.hostname,
 				},
 			},
