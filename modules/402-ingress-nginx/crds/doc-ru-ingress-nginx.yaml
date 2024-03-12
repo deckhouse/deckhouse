@@ -4,6 +4,16 @@ spec:
       schema: &schema
         openAPIV3Schema:
           properties:
+            status:
+              properties:
+                loadBalancer:
+                  properties:
+                    ip:
+                      description: |
+                        Выделенный внешний IP адрес балансировщика нагрузки.
+                    hostname:
+                      description: |
+                        Выделенный внешний хостнейм балансировщика нагрузки.
             spec:
               properties:
                 ingressClass:

@@ -47,21 +47,24 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 	if svc.Status.LoadBalancer.Ingress != nil && len(svc.Status.LoadBalancer.Ingress) != 0 {
 		return loadBalancerService{
+			name:     svc.Labels["name"],
 			ip:       svc.Status.LoadBalancer.Ingress[0].IP,
 			hostname: svc.Status.LoadBalancer.Ingress[0].Hostname,
 		}, nil
 	}
-	return loadBalancerService{}, nil
+	return nil, nil
 }
 
 func updateIngressAddress(input *go_hook.HookInput) error {
 	snaps := input.Snapshots["ingress-loadbalancer-service"]
-
 	for _, snap := range snaps {
+		if snap == nil {
+			continue
+		}
 		svc := snap.(loadBalancerService)
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
-				"loadbalancer": map[string]interface{}{
+				"loadBalancer": map[string]interface{}{
 					"ip":       svc.ip,
 					"hostname": svc.hostname,
 				},

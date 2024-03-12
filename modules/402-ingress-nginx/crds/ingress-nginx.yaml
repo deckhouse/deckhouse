@@ -27,13 +27,17 @@ spec:
             status:
               type: object
               properties:
-                loadbalancer:
+                loadBalancer:
                   type: object
                   properties:
                     ip:
                       type: string
+                      description: |
+                          External IP address of external provider LoadBalancer
                     hostname:
                       type: string
+                      description: |
+                          External hostname of external provider LoadBalancer
             spec:
               type: object
               required: ['inlet']
@@ -560,11 +564,11 @@ spec:
           name: Controller Version
           description: 'Current NGINX Ingress Controller version.'
           type: string
-        - jsonPath: .status.loadbalancer.ip
+        - jsonPath: .status.loadBalancer.ip
           name: IP
           description: 'Current NGINX Ingress Controller LoadBalancer IP'
           type: string
-        - jsonPath: .status.loadbalancer.hostname
+        - jsonPath: .status.loadBalancer.hostname
           name: Hostname
           description: 'Current NGINX Ingress Controller LoadBalancer hostname'
           type: string
