@@ -69,9 +69,12 @@ spec:
       serviceAccountName: aggregating-proxy
       initContainers:
         - name: wait-memcached
-          image: {{ include "helm_lib_module_image" (list . "memcached") }}
+          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached:11211; do sleep 1; done' ]
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          resources:
+            requests:
+              {{ - include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       containers:
         - name: mimir
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
