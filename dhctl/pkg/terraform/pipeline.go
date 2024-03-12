@@ -77,9 +77,11 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 	return extractedData, err
 }
 
-func CheckPipeline(r RunnerInterface, name string) (int, *PlanDestructiveChanges, error) {
+func CheckPipeline(r RunnerInterface, name string) (int, TerraformPlan, *PlanDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
 	var destructiveChanges *PlanDestructiveChanges
+	var terraformPlan map[string]any
+
 	pipelineFunc := func() error {
 		err := r.Init()
 		if err != nil {
@@ -93,10 +95,25 @@ func CheckPipeline(r RunnerInterface, name string) (int, *PlanDestructiveChanges
 
 		isChange = r.GetChangesInPlan()
 		destructiveChanges = r.GetPlanDestructiveChanges()
+
+		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
+		if err != nil {
+			var ee *exec.ExitError
+			if ok := errors.As(err, &ee); ok {
+				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+			}
+			return fmt.Errorf("can't get terraform plan for %q\n%v", r.GetPlanPath(), err)
+		}
+
+		err = json.Unmarshal(rawPlan, &terraformPlan)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
-	return isChange, destructiveChanges, err
+	return isChange, terraformPlan, destructiveChanges, err
 }
 
 type BaseInfrastructureDestructiveChanges struct {
@@ -105,7 +122,7 @@ type BaseInfrastructureDestructiveChanges struct {
 	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
 }
 
-func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, map[string]any, *BaseInfrastructureDestructiveChanges, error) {
+func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, TerraformPlan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
 
 	var destructiveChanges *BaseInfrastructureDestructiveChanges
