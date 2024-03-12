@@ -39,11 +39,14 @@
  - **[cert-manager]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[chrony]** Avoid listening on all addresses and listen on the host IP address. [#7519](https://github.com/deckhouse/deckhouse/pull/7519)
  - **[chrony]** Fix the incorrect path in the `NTPDaemonOnNodeDoesNotSynchronizeTime` alert. [#7507](https://github.com/deckhouse/deckhouse/pull/7507)
+ - **[cni-cilium]** Run `safe_agent_updater` pods in the `hostNetwork` mode and use `kubernetes-api-proxy`. [#7760](https://github.com/deckhouse/deckhouse/pull/7760)
+    `cilium-agent` pods will probably restart and L7 policies will flap.
  - **[cni-cilium]** Improve `safe-agent-updater`. [#7576](https://github.com/deckhouse/deckhouse/pull/7576)
     Cilium-agent pods may be reloaded.
  - **[cni-cilium]** Adding safe-agent-updater. [#7333](https://github.com/deckhouse/deckhouse/pull/7333)
     Cilium-agent pods will restart.
  - **[common]** Fix k8s patches for 1.28 and 1.29. [#7537](https://github.com/deckhouse/deckhouse/pull/7537)
+ - **[control-plane-manager]** Fixed `D8KubernetesVersionIsDeprecated` alert. [#7768](https://github.com/deckhouse/deckhouse/pull/7768)
  - **[control-plane-manager]** Fix race reading between the deckhouse pod status and the `minUsedControlPlaneKubernetesVersion` variable. [#7637](https://github.com/deckhouse/deckhouse/pull/7637)
     Prevents the Deckhouse version update error from being skipped.
  - **[control-plane-manager]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
@@ -54,6 +57,7 @@
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
  - **[deckhouse-controller]** Add CA certificates to the standard `/etc/ssl/` path. [#7625](https://github.com/deckhouse/deckhouse/pull/7625)
+ - **[dhctl]** Prevent deadlock when re-bootstrap cluster. [#7753](https://github.com/deckhouse/deckhouse/pull/7753)
  - **[dhctl]** Avoid mirroring versions in `dhctl mirror` that were not yet released. [#7716](https://github.com/deckhouse/deckhouse/pull/7716)
  - **[dhctl]** Set version field for the `install-data` ConfigMap in the `dhctl bootstrap-phase install-deckhouse` command. [#7493](https://github.com/deckhouse/deckhouse/pull/7493)
  - **[dhctl]** Ignore a master node SSH fingerprint. [#7360](https://github.com/deckhouse/deckhouse/pull/7360)
@@ -61,8 +65,11 @@
  - **[docs]** Add support for Astra Linux `1.7.5`. [#7396](https://github.com/deckhouse/deckhouse/pull/7396)
  - **[extended-monitoring]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[flant-integration]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[flow-schema]** Change apiVersion for `FlowSchema` and `PriorityLevelConfiguration` to the minimum available. [#7750](https://github.com/deckhouse/deckhouse/pull/7750)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ - **[ingress-nginx]** Add missed libraries to the Ingress controller v1.6 image. [#7764](https://github.com/deckhouse/deckhouse/pull/7764)
+    Ingress controller v1.6 will restart.
  - **[ingress-nginx]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[ingress-nginx]** Fix missed libs. [#7717](https://github.com/deckhouse/deckhouse/pull/7717)
     Ingress controller will restart.
@@ -135,6 +142,7 @@
  - **[deckhouse-controller]** Update module values if the corresponding moduleSource was updated. [#7096](https://github.com/deckhouse/deckhouse/pull/7096)
  - **[external-module-manager]** Restore modules from ModulePullOverride objects. [#7266](https://github.com/deckhouse/deckhouse/pull/7266)
  - **[ingress-nginx]** Add missing tests. [#7392](https://github.com/deckhouse/deckhouse/pull/7392)
+ - **[istio]** Added a pre-upgrade compatibility check for the coming Kubernetes version. [#7712](https://github.com/deckhouse/deckhouse/pull/7712)
  - **[istio]** Bump istio version to `1.19.7`. [#7584](https://github.com/deckhouse/deckhouse/pull/7584)
     The Istio control plane will restart. User workloads will not restart automaticaly, you will have to restart them eventually.
  - **[istio]** Add the ability to use more than 2 replicas of `istiod` pods and autoscaling. [#7421](https://github.com/deckhouse/deckhouse/pull/7421)

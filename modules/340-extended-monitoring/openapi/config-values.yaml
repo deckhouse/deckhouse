@@ -46,6 +46,22 @@ properties:
                 type: string
                 description: |
                   Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
+      forceCheckDisabledControllers:
+        type: array
+        x-examples:
+          - ["Deployment", "StatefulSet"]
+        description: |
+          A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended.
+
+          Specify `All` to check all controller kinds.
+        items:
+          type: string
+          enum:
+            - Deployment
+            - StatefulSet
+            - DaemonSet
+            - CronJob
+            - All
   events:
     type: object
     default: {}

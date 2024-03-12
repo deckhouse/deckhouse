@@ -1,6 +1,6 @@
 {
   "format_version": "0.1",
-  "terraform_version": "0.13.4",
+  "terraform_version": "0.14.8",
   "variables": {
     "cloudConfig": {
       "value": ""
@@ -673,7 +673,7 @@
   },
   "prior_state": {
     "format_version": "0.1",
-    "terraform_version": "0.13.4",
+    "terraform_version": "0.14.8",
     "values": {
       "outputs": {
         "cloud_discovery_data": {

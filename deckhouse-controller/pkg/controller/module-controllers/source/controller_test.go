@@ -16,12 +16,14 @@ package source
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
@@ -61,7 +63,7 @@ spec:
 		assert.False(t, result.Requeue, "error have to be permanent, we don't want to reconcile until the ModuleSource will change")
 		assert.ErrorContains(t, err, "credentials not found in the dockerCfg")
 
-		cms, _ := c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", v1.GetOptions{})
+		cms, _ := c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", metav1.GetOptions{})
 		assert.Contains(t, cms.Status.Msg, "credentials not found in the dockerCfg")
 		assert.Len(t, cms.Status.AvailableModules, 0)
 	})
@@ -103,7 +105,7 @@ spec:
 		assert.False(t, result.Requeue)
 		assert.Empty(t, result.RequeueAfter)
 
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", v1.GetOptions{})
+		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Len(t, ms.Finalizers, 0)
 	})
@@ -161,7 +163,7 @@ status:
 		assert.False(t, result.Requeue)
 		assert.Equal(t, 5*time.Second, result.RequeueAfter)
 
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-2", v1.GetOptions{})
+		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-2", metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Len(t, ms.Finalizers, 1)
 		assert.Equal(t, ms.Status.Msg, "ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete ModuleRelease manually to continue")
@@ -222,7 +224,7 @@ status:
 		assert.False(t, result.Requeue)
 		assert.Empty(t, result.RequeueAfter)
 
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-3", v1.GetOptions{})
+		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-3", metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Len(t, ms.Finalizers, 0)
 	})
@@ -241,7 +243,7 @@ func createFakeController(ctx context.Context) *Controller {
 	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 	defer informerFactory.Start(ctx.Done())
 
-	return NewController(cs, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer)
+	return NewController(cs, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, nil)
 }
 
 func createFakeModuleSource(cs versioned.Interface, yamlObj string) (*v1alpha1.ModuleSource, error) {
@@ -251,7 +253,7 @@ func createFakeModuleSource(cs versioned.Interface, yamlObj string) (*v1alpha1.M
 		return nil, err
 	}
 
-	ms, err = cs.DeckhouseV1alpha1().ModuleSources().Create(context.TODO(), ms, v1.CreateOptions{})
+	ms, err = cs.DeckhouseV1alpha1().ModuleSources().Create(context.TODO(), ms, metav1.CreateOptions{})
 
 	return ms, err
 }
@@ -264,7 +266,104 @@ func createFakeModuleRelease(cs versioned.Interface, yamlObj string) (*v1alpha1.
 		return nil, err
 	}
 
-	mr, err = cs.DeckhouseV1alpha1().ModuleReleases().Create(context.TODO(), mr, v1.CreateOptions{})
+	mr, err = cs.DeckhouseV1alpha1().ModuleReleases().Create(context.TODO(), mr, metav1.CreateOptions{})
 
 	return mr, err
+}
+
+func TestGetReleasePolicy(t *testing.T) {
+	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	}
+	c := &Controller{logger: log.New(), deckhouseEmbeddedPolicy: embeddedDeckhousePolicy}
+
+	t.Run("Exact match policy", func(t *testing.T) {
+		policy := &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ModuleUpdatePolicy",
+				APIVersion: "deckhouse.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-1",
+			},
+			Spec: v1alpha1.ModuleUpdatePolicySpec{
+				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"source": "test-1", "module": "test-module-1"}},
+				},
+			},
+		}
+		mup, err := c.getReleasePolicy("test-1", "test-module-1", []*v1alpha1.ModuleUpdatePolicy{policy})
+		require.NoError(t, err)
+		assert.Equal(t, "test-1", mup.Name)
+	})
+
+	t.Run("Only module match policy", func(t *testing.T) {
+		policy := &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ModuleUpdatePolicy",
+				APIVersion: "deckhouse.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-2",
+			},
+			Spec: v1alpha1.ModuleUpdatePolicySpec{
+				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"module": "test-module-2"}},
+				},
+			},
+		}
+		mup, err := c.getReleasePolicy("test-2", "test-module-2", []*v1alpha1.ModuleUpdatePolicy{policy})
+		require.NoError(t, err)
+		assert.Equal(t, "test-2", mup.Name)
+	})
+
+	t.Run("Only source match policy", func(t *testing.T) {
+		policy := &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ModuleUpdatePolicy",
+				APIVersion: "deckhouse.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-3",
+			},
+			Spec: v1alpha1.ModuleUpdatePolicySpec{
+				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"source": "test-3"}},
+				},
+			},
+		}
+		mup, err := c.getReleasePolicy("test-3", "test-module-3", []*v1alpha1.ModuleUpdatePolicy{policy})
+		require.NoError(t, err)
+		assert.Equal(t, "test-3", mup.Name)
+	})
+
+	t.Run("Except module policy", func(t *testing.T) {
+		policy := &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ModuleUpdatePolicy",
+				APIVersion: "deckhouse.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-4",
+			},
+			Spec: v1alpha1.ModuleUpdatePolicySpec{
+				ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"source": "test-4", "module": "foobar"}},
+				},
+			},
+		}
+		mup, err := c.getReleasePolicy("test-4", "test-module-4", []*v1alpha1.ModuleUpdatePolicy{policy})
+		fmt.Println(mup)
+		require.NoError(t, err)
+		assert.Equal(t, "", mup.Name)
+	})
+
+	t.Run("No policy set", func(t *testing.T) {
+		mup, err := c.getReleasePolicy("test-5", "test-module-5", []*v1alpha1.ModuleUpdatePolicy{})
+		require.NoError(t, err)
+		assert.Equal(t, "", mup.Name)
+	})
 }

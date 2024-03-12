@@ -22,6 +22,7 @@ type VsphereProviderClusterConfiguration struct {
 	InternalNetworkNames *[]string               `json:"internalNetworkNames,omitempty" yaml:"internalNetworkNames,omitempty"`
 	InternalNetworkCIDR  *string                 `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
 	VMFolderPath         *string                 `json:"vmFolderPath,omitempty" yaml:"vmFolderPath,omitempty"`
+	VMFolderExists       bool                    `json:"vmFolderExists" yaml:"vmFolderExists"`
 	Region               *string                 `json:"region,omitempty" yaml:"region,omitempty"`
 	Zones                *[]string               `json:"zones,omitempty" yaml:"zones,omitempty"`
 	BaseResourcePool     *string                 `json:"baseResourcePool,omitempty" yaml:"baseResourcePool,omitempty"`

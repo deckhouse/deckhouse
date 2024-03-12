@@ -52,6 +52,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/be/modules/600-flant-integration/images/madison-proxy/src"
   labels:
   - "type/dependencies"
@@ -188,6 +197,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

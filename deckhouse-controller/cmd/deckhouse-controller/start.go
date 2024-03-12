@@ -23,6 +23,7 @@ import (
 	"time"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/client"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
@@ -154,7 +155,9 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
+	deckhouseConfigC := make(chan utils.Values, 1)
+
+	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
 	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
@@ -167,7 +170,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel())
+	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
 	}
@@ -178,6 +181,8 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	if err != nil {
 		return err
 	}
+
+	dController.RunControllers()
 
 	// Init deckhouse-config service with ModuleManager instance.
 	d8config.InitService(operator.ModuleManager)
