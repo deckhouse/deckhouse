@@ -26,13 +26,14 @@ spec:
           properties:
             status:
               type: object
-              loadbalancer:
-                type: object
-                properties:
-                  ip:
-                    type: string
-                  hostname:
-                    type: string
+              properties:
+                loadbalancer:
+                  type: object
+                  properties:
+                    ip:
+                      type: string
+                    hostname:
+                      type: string
             spec:
               type: object
               required: ['inlet']

@@ -17,8 +17,8 @@ type loadBalancerService struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/ingress-nginx",
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:       "/modules/ingress-nginx",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "ingress-loadbalancer-service",
