@@ -309,7 +309,7 @@ systemReserved:
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
   {{- if .nodeGroup.kubelet.resourceReservation.static.cpu }}
-  # test: "{{ .nodeGroup.kubelet.resourceReservation.static.cpu }}"
+  # test: "{{ typeOf .nodeGroup.kubelet.resourceReservation.static.cpu }}"
   cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu }}
   {{- end }}
   {{- if .nodeGroup.kubelet.resourceReservation.static.memory }}
