@@ -52,16 +52,14 @@ type NodeGroupCheckResult struct {
 	Status string `json:"status,omitempty"`
 }
 
-type TerraformPlan map[string]any
-
 type Statistics struct {
-	Node          []NodeCheckResult      `json:"nodes,omitempty"`
-	NodeTemplates []NodeGroupCheckResult `json:"node_templates,omitempty"`
-	Cluster       ClusterCheckResult     `json:"cluster,omitempty"`
-	TerraformPlan TerraformPlan          `json:"terraform_plan,omitempty"`
+	Node          []NodeCheckResult         `json:"nodes,omitempty"`
+	NodeTemplates []NodeGroupCheckResult    `json:"node_templates,omitempty"`
+	Cluster       ClusterCheckResult        `json:"cluster,omitempty"`
+	TerraformPlan []terraform.TerraformPlan `json:"terraform_plan,omitempty"`
 }
 
-func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
+func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
 	clusterState, err := GetClusterStateFromCluster(kubeCl)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
@@ -79,10 +77,10 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 	return terraform.CheckBaseInfrastructurePipeline(baseRunner, "Kubernetes cluster")
 }
 
-func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, *terraform.PlanDestructiveChanges, error) {
+func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		return terraform.PlanHasNoChanges, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
 	}
 
 	nodeRunner := terraformContext.GetCheckNodeRunner(metaConfig, terraform.CheckNodeRunnerOptions{
@@ -121,7 +119,9 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		statistics.Cluster.Status = DestructiveStatus
 		statistics.Cluster.DestructiveChanges = destructiveChanges
 	}
-	statistics.TerraformPlan = terraformPlan
+	if terraformPlan != nil {
+		statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
+	}
 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
 	if err != nil {
@@ -196,16 +196,35 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				continue
 			}
 
+			nodeGroup := NodeGroupGroupOptions{
+				Name:            nodeGroupName,
+				Step:            step,
+				DesiredReplicas: replicas,
+				State:           nodeGroupState.State,
+			}
+
 			excessiveQuantity := len(nodeGroupState.State) - replicas
 			for excessiveQuantity > 0 {
 				lastIndex := len(sortedNodeNames) - 1
 				nodeName := sortedNodeNames[lastIndex]
 
-				statistics.Node = append(statistics.Node, NodeCheckResult{
-					Group:  nodeGroupName,
-					Name:   nodeName,
-					Status: AbandonedStatus,
-				})
+				checkResult := NodeCheckResult{
+					Group: nodeGroupName,
+					Name:  nodeName,
+				}
+
+				_, terraformPlan, destructiveChanges, err := checkNodeState(metaConfig, &nodeGroup, nodeName, terraformContext, opts)
+				if err != nil {
+					checkResult.Status = ErrorStatus
+					allErrs = multierror.Append(allErrs, fmt.Errorf("node %s: %v", nodeName, err))
+				} else {
+					checkResult.Status = AbandonedStatus
+					checkResult.DestructiveChanges = destructiveChanges
+				}
+
+				if terraformPlan != nil {
+					statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
+				}
 
 				sortedNodeNames = sortedNodeNames[:lastIndex]
 				delete(nodeGroupState.State, nodeName)
@@ -227,7 +246,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				Name:   name,
 				Status: OKStatus,
 			}
-			changed, destructiveChanges, err := checkNodeState(metaConfig, &nodeGroup, name, terraformContext, opts)
+			changed, terraformPlan, destructiveChanges, err := checkNodeState(metaConfig, &nodeGroup, name, terraformContext, opts)
 			switch {
 			case err != nil:
 				checkResult.Status = ErrorStatus
@@ -237,6 +256,10 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 			case changed == terraform.PlanHasDestructiveChanges:
 				checkResult.Status = DestructiveStatus
 				checkResult.DestructiveChanges = destructiveChanges
+			}
+
+			if terraformPlan != nil {
+				statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
 			}
 
 			statistics.Node = append(statistics.Node, checkResult)
