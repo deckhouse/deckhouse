@@ -390,9 +390,11 @@ EOF
 # CIS becnhmark purposes
 chmod 600 /var/lib/kubelet/config.yaml
 
-{{- if eq $topologyManagerEnabled true }}
 policyName=$(cat /var/lib/kubelet/cpu_manager_state | jq -r '.policyName')
+{{- if eq $topologyManagerEnabled true }}
 if [[ $policyName == "none" ]]; then
+{{- else }}
+if [[ $policyName == "static" ]]; then
+{{- end }}
   rm /var/lib/kubelet/cpu_manager_state /var/lib/kubelet/memory_manager_state
 fi
-{{- end }}
