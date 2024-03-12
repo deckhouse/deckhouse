@@ -17,15 +17,34 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const sleepDurationSecond = 60
+const (
+	sleepDurationSecond     = 60
+	shutdownDurationSeconds = 5
+)
+
+var btfUnavailable = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "ebpf_exporter_btf_support_unavailable_in_kernel",
+	Help: "Whether PSI subsystem is unavailable on a given system",
+})
+
+func init() {
+	prometheus.MustRegister(btfUnavailable)
+}
 
 func main() {
 	binPath := os.Getenv("EBPF_EXPORTER_BIN_PATH")
@@ -63,17 +82,52 @@ func main() {
 
 	err := syscall.Exec(binPath, args, os.Environ())
 	if err != nil {
-		error_loop(err)
+		server := runHTTPServer(listenAddress)
+		errorLoop(err, server)
 	}
 }
 
-func error_loop(err error) {
+func runHTTPServer(addr string) *http.Server {
+	server := &http.Server{Addr: addr}
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	return server
+}
+
+func errorLoop(err error, server *http.Server) {
 	log.Println(err)
+	btfUnavailable.Set(1)
 	ticker := time.NewTicker(sleepDurationSecond * time.Second)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 	for {
 		select {
+		case sig := <-c:
+			shutdown(sig, server)
 		case <-ticker.C:
 			log.Println("tick")
 		}
 	}
+}
+
+func shutdown(sig os.Signal, server *http.Server) {
+	log.Printf("Caught signal %s, exiting", sig.String())
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownDurationSeconds*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Failed to gracefully shutdown http server: %s", err)
+	}
+
+	os.Exit(0)
 }
