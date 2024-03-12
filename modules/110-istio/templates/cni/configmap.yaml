@@ -1,0 +1,26 @@
+{{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-cni-config
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "istio-cni-node")) | nindent 2 }}
+data:
+  cni_network_config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "istio-cni",
+      "type": "istio-cni",
+      "log_level": "info",
+      "log_uds_address": "__LOG_UDS_ADDRESS__",
+      "kubernetes": {
+        "kubeconfig": "__KUBECONFIG_FILEPATH__",
+        "cni_bin_dir": "/opt/cni/bin",
+        "exclude_namespaces": [
+          "istio-system",
+          "kube-system"
+        ]
+      }
+    }
+{{- end }}
