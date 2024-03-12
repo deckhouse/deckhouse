@@ -1,4 +1,4 @@
-package main
+package extended_monitoring_exporter
 
 import (
 	"context"
@@ -11,14 +11,13 @@ import (
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -59,6 +58,7 @@ const (
 	PrometheusURL                                         = "http://localhost:9090"
 )
 
+// These are the metrics that we are going to export to Prometheus
 var (
 	podMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -140,6 +140,7 @@ var (
 	)
 )
 
+// Register the metrics with Prometheus
 func init() {
 	prometheus.MustRegister(podMetric)
 	prometheus.MustRegister(deployment_metric)
@@ -153,6 +154,7 @@ func init() {
 	prometheus.MustRegister(extended_monitoring_node_enabled)
 }
 
+// exporter is a struct that holds the kubernetes client and the metrics client
 type exporter struct {
 	client   *kubernetes.Clientset
 	metrices *metrics.Clientset
@@ -160,14 +162,13 @@ type exporter struct {
 
 type Exporter interface {
 	ListAnnotatedObjects(namespace string) ([]Annotated, error)
-	GetMetrics(objects []Annotated) error
 	GetNamespace() []string
 }
 
 func NewExporter() Exporter {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error()) // Handle error properly in your application.
+		fmt.Fprintf(os.Stderr, "Failed to create in-cluster config: %v", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -177,17 +178,19 @@ func NewExporter() Exporter {
 
 	metricsClient, err := metrics.NewForConfig(config)
 	if err != nil {
-		fmt.Printf("Error building metrics client: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Failed to create metrics client: %v", err)
 	}
 
+	return &exporter{
+		client:   clientset,
+		metrices: metricsClient,
+	}
 }
 
 /*
 This function would connect to the Kubernetes cluster and fetch objects that have been annotated, based on the namespace
 and type provided.
 */
-
 func (e *exporter) GetNamespace() []string {
 	namespaces, err := e.client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -201,6 +204,7 @@ func (e *exporter) GetNamespace() []string {
 	return ns
 }
 
+// ListAnnotatedObjects returns a list of annotated objects in the given namespace that have been annotated with the extended-monitoring.deckhouse.io/enabled=true label.
 func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 	// get the list of objects that have been annotated on the namespaec given with value : extended-monitoring.deckhouse.io/enabled=true
 	var annotatedObjects []Annotated
@@ -214,11 +218,6 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 		fmt.Println("[logs Deployment ] Error: ", err)
 		return nil, err
 	}
-	// ingresses, err := e.client.ExtensionsV1beta1().Ingresses(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", ExtendedMonitoringEnabledLabel)})
-	// if err != nil {
-	// 	fmt.Println("[logs Ingress ] Error: ", err)
-	// 	return nil, err
-	// }
 	stateful, err := e.client.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=true", ExtendedMonitoringEnabledLabel)})
 	if err != nil {
 		fmt.Println("[logs Stateful ] Error: ", err)
@@ -253,9 +252,7 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 			Thresholds: thresholds,
 		})
 
-		// go func(namespace, podName string) {
 		podMetrics(namespace, pod.Name)
-		// }(pod.Namespace, pod.Name)
 	}
 
 	for _, deployment := range deployments.Items {
@@ -277,18 +274,8 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 			Thresholds: thresolds,
 		})
 
-		// go func(namespace, deploymentName string) {
 		deploymentMetrics(namespace, deployment.Name)
-		// }(deployment.Namespace, deployment.Name)
 	}
-
-	// for _, ingress := range ingresses.Items {
-	// 	annotatedObjects = append(annotatedObjects, Annotated{
-	// 		Namespace: ingress.Namespace,
-	// 		Name:      ingress.Name,
-	// 		Object:    "Ingress",
-	// 	})
-	// }
 
 	for _, stateful := range stateful.Items {
 		cputhreshold := stateful.Spec.DeepCopy().Template.Spec.Overhead.Cpu()
@@ -308,9 +295,7 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 			Thresholds: thresolds,
 		})
 
-		// go func(namespace, statefulsetName string) {
 		statefulsetMetrics(namespace, stateful.Name)
-		// }(stateful.Namespace, stateful.Name)
 	}
 
 	for _, daemonset := range daemons.Items {
@@ -329,9 +314,7 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 			Object:    "DaemonSet",
 		})
 
-		// go func(namespace, daemonsetName string) {
 		daemonsetMetrics(namespace, daemonset.Name)
-		// }(daemonset.Namespace, daemonset.Name)
 	}
 
 	for _, node := range nodes.Items {
@@ -343,18 +326,11 @@ func (e *exporter) ListAnnotatedObjects(namespace string) ([]Annotated, error) {
 
 		fmt.Println(node.Name)
 
-		// go func(nodeName string) {
 		nodeMetrics(node.Name)
-		// }(node.Name)
 	}
 
 	return annotatedObjects, nil
 
-}
-
-func (e *exporter) GetMetrics(objects []Annotated) error {
-
-	return nil
 }
 
 type Annotated struct {
@@ -363,10 +339,6 @@ type Annotated struct {
 	Enabled    bool
 	Object     string
 	Thresholds map[string]string
-}
-
-func NewAnnotated() *Annotated {
-	return &Annotated{}
 }
 
 // # Monitoring is enabled by default for all controllers in a namespace and can be disabled by using
@@ -385,6 +357,7 @@ func (a *Annotated) IsEnabled(kube_labels map[string]string, annotations string)
 
 }
 
+// ParseThresholds parses the thresholds from the labels and annotations of the kubernetes object.
 func (a *Annotated) ParseThresholds(labels map[string]string, annotations map[string]string, defaultThresholds map[string]string) map[string]string {
 	thresholds := make(map[string]string)
 
@@ -431,26 +404,6 @@ func main() {
 		}
 	}()
 	var wg sync.WaitGroup
-
-	// extract the objects from slice to the individual slices
-	// go func() {
-	// 	for {
-	// 		for _, object := range SLICE {
-	// 			if object.Object == Pod {
-	// 				PODS = append(PODS, object)
-	// 			}
-	// 			if object.Object == Deployment {
-	// 				DEPLOYMENTS = append(DEPLOYMENTS, object)
-	// 			}
-	// 			if object.Object == Statefulset {
-	// 				STATEFULSETS = append(STATEFULSETS, object)
-	// 			}
-	// 			if object.Object == Daemonset {
-	// 				DAEMONSETS = append(DAEMONSETS, object)
-	// 			}
-	// 		}
-	// 	}
-	// }()
 
 	fmt.Println("Starting server on port http://localhost:8080")
 
@@ -612,6 +565,7 @@ func nodeMetrics(nodeName string) {
 	go query(query_node_labels, NodeLabels, nodeName, "")
 }
 
+// query exports the query to the prometheus server and sets the value of the metric
 func query(query string, objectType string, objName string, namespace string) {
 	client, err := api.NewClient(api.Config{
 		Address: PrometheusURL,
@@ -639,17 +593,13 @@ func query(query string, objectType string, objName string, namespace string) {
 			if warning != nil {
 				fmt.Println("Warning querying Prometheus:", warning)
 			}
-			// fmt.Println(result)
 			var latestValue float64
 			if result != nil && result.Type() == model.ValMatrix {
 				matrix := result.(model.Matrix)
-				// fmt.Println(matrix)
 				if len(matrix) > 0 {
 					latestValue = float64(matrix[matrix.Len()-1].Values[0].Value)
-					// fmt.Printf("Deployment: %s, Time: %s, Value: %f\n", objectType, matrix[len(matrix)-1].Values[0].Timestamp.Time().Format(time.RFC3339), latestValue)
 				}
 			}
-			// fmt.Println(latestValue)
 			switch objectType {
 			case Podcpuusage:
 				podMetric.WithLabelValues(objName + "-cpuusage").Set(latestValue)
