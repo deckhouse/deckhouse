@@ -95,6 +95,7 @@
 ## Полезные ссылки
 
 [Стандартизированный глоссарий для Kubernetes](https://kubernetes.io/ru/docs/reference/glossary/?fundamental=true)
+
 [Стандартизированный глоссарий для КлаудНэйтив](https://glossary.cncf.io/e)
 
 ## Ссылка на Редполитику
