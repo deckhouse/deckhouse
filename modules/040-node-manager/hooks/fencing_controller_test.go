@@ -81,7 +81,7 @@ func TemplateToYAML(tmpl string, params interface{}) string {
 	return output.String()
 }
 
-var _ = FDescribe("Modules :: nodeManager :: hooks :: fencing_controller ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
