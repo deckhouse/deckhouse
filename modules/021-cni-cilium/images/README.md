@@ -24,14 +24,18 @@
 - `+` `llvm`
   - based on `compilers` image
   - includes:
-    - src of llvm
+    - src of llvm-10.0
     - binaries clang, llc, llvm-objcopy (builded from src)
 - *todo* `iptables`
   - based on `ubuntu:22.04` image
   - includes:
     - installed packages from repo: debian-archive-keyring apt-src ca-certificates
     - loaded from repo src of iptables 1.8.8-1 and builded deb-package
-- *todo* `cilium-envoy`
+- `cilium-envoy`
+  - based on `BASE_UBUNTU` image
+  - includes:
+    - src of cilium-envoy
+    - binaries cilium-envoy (builded from src)
 - `+` `cilium`
   - based on `builder` image
   - includes:
