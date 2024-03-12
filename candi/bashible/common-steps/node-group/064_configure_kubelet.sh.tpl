@@ -308,9 +308,15 @@ systemReserved:
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
+  {{- if .nodeGroup.kubelet.resourceReservation.static.cpu }}
   cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
+  {{- end }}
+  {{- if .nodeGroup.kubelet.resourceReservation.static.memory }}
   memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
+  {{- end }}
+  {{- if .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage }}
   ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
+  {{- end }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
