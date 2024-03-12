@@ -17,11 +17,22 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
+      subresources:
+        status: {}
       schema: &schema
         openAPIV3Schema:
           type: object
           required: ['spec']
           properties:
+            status:
+              type: object
+              loadbalancer:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  hostname:
+                    type: string
             spec:
               type: object
               required: ['inlet']
@@ -547,6 +558,14 @@ spec:
         - jsonPath: .spec.controllerVersion
           name: Controller Version
           description: 'Current NGINX Ingress Controller version.'
+          type: string
+        - jsonPath: .status.loadbalancer.ip
+          name: IP
+          description: 'Current NGINX Ingress Controller LoadBalancer IP'
+          type: string
+        - jsonPath: .status.loadbalancer.hostname
+          name: Hostname
+          description: 'Current NGINX Ingress Controller LoadBalancer hostname'
           type: string
     - name: v1
       served: true
