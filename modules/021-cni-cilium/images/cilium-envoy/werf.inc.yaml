@@ -75,6 +75,7 @@ shell:
   - git checkout {{ $ciliumProxyRev }}
   install:
   - cd /cilium/proxy
+  - export SOURCE_VERSION="{{ $ciliumProxyRev }}"
   - export BAZEL_BUILD_OPTS="--jobs=HOST_CPUS*.75 --disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - make bazel-bin/cilium-envoy
