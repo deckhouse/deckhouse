@@ -88,7 +88,7 @@
 | Список responder'ов, ответственных за уведомления.| Список ответчиков (responder), которые отвечают за отправку уведомлений. | |
 | | | |
 
-## Ссылка в Фигму с графикой
+## Ссылка в Фигму с драфтом
 
 [Ссылка в Фигму](https://www.figma.com/file/pJOXVgTxgBAGoOjzu0oAkJ/Deckhouse-Kubernetes-Platform?type=whiteboard&node-id=1-14)
 
@@ -98,6 +98,8 @@
 
 [Стандартизированный глоссарий для КлаудНэйтив](https://glossary.cncf.io/e)
 
-## Ссылка на Редполитику
+## Ссыли на Редполитику
 
 Ссылка на git [Редполитики](https://fox.flant.com/docs/company/-/commit/0cea3835ac219fc56002ecac2ee0777cae1b3b21)
+
+Ссылка на GooglDoc [Редполитики](https://docs.google.com/document/d/1Iqv0dvJx-objqNzugGhEhhb6j6ax_6yuIaSnVSdiFhU/edit)
