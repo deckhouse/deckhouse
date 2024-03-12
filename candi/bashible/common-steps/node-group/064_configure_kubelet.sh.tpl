@@ -372,7 +372,6 @@ shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
 {{- if eq $topologyManagerEnabled true }}
-{{- if or (eq $resourceReservationMode "Auto") (eq $resourceReservationMode "Static") }}
 cpuManagerPolicy: static
 memoryManagerPolicy: Static
 reservedMemory:
@@ -381,7 +380,6 @@ reservedMemory:
     memory: "$(reserved_memory)"
 topologyManagerScope: {{ dig "kubelet" "topologyManager" "scope" "Container" .nodeGroup | kebabcase }}
 topologyManagerPolicy: {{ dig "kubelet" "topologyManager" "policy" "None" .nodeGroup | kebabcase }}
-{{- end }}
 {{- end }}
 EOF
 
