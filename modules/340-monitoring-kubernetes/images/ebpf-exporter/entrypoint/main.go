@@ -33,13 +33,12 @@ import (
 )
 
 const (
-	sleepDurationSecond     = 60
 	shutdownDurationSeconds = 5
 )
 
 var btfUnavailable = prometheus.NewGauge(prometheus.GaugeOpts{
 	Name: "ebpf_exporter_btf_support_unavailable_in_kernel",
-	Help: "Whether PSI subsystem is unavailable on a given system",
+	Help: "BTF support is unavailable on a given system",
 })
 
 func init() {
@@ -83,7 +82,7 @@ func main() {
 	err := syscall.Exec(binPath, args, os.Environ())
 	if err != nil {
 		server := runHTTPServer(listenAddress)
-		errorLoop(err, server)
+		errorHandling(err, server)
 	}
 }
 
@@ -103,20 +102,15 @@ func runHTTPServer(addr string) *http.Server {
 	return server
 }
 
-func errorLoop(err error, server *http.Server) {
+func errorHandling(err error, server *http.Server) {
 	log.Println(err)
 	btfUnavailable.Set(1)
-	ticker := time.NewTicker(sleepDurationSecond * time.Second)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
-	for {
-		select {
-		case sig := <-c:
-			shutdown(sig, server)
-		case <-ticker.C:
-			log.Println("tick")
-		}
-	}
+
+	sig := <-c
+	shutdown(sig, server)
 }
 
 func shutdown(sig os.Signal, server *http.Server) {
