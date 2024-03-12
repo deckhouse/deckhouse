@@ -168,10 +168,11 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 			continue
 		}
 
+		GracePeriodSeconds := int64(0)
 		for _, pod := range podsToDelete.Items {
 			input.LogEntry.Warnf("Delete pod %s in namespace %s on node %s", pod.Name, pod.Namespace, pod.Spec.NodeName)
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: &Int64(0),
+				GracePeriodSeconds: &GracePeriodSeconds,
 			})
 			if err != nil {
 				input.LogEntry.Errorf("Can't delete pod %s: %v", pod.Name, err)
