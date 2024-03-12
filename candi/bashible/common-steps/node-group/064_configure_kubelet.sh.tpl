@@ -156,12 +156,12 @@ function resources_management_memory_units_to_bytes {
   echo -n "${return}"
 }
 
+total_memory=$(free -m|awk '/^Mem:/{print $2}')
 {{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
 {{- if eq $resourceReservationMode "Auto" }}
 
 # https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
 function dynamic_memory_sizing {
-    total_memory=$(free -m|awk '/^Mem:/{print $2}')
     recommended_systemreserved_memory=0
     if (($total_memory <= 4096)); then # 8% of the first 4GB of memory
         recommended_systemreserved_memory=$(echo $total_memory 0.08 | awk '{print $1 * $2}')
@@ -221,13 +221,11 @@ function dynamic_ephemeral_storage_sizing {
 {{- end }}
 
 function eviction_hard_threshold_memory_available {
-  total_memory=$(free -m|awk '/^Mem:/{print $2}')
   return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.01 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
   echo -n "${return}"
 }
 
 function eviction_soft_threshold_memory_available {
-  total_memory=$(free -m|awk '/^Mem:/{print $2}')
   return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.02 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
   echo -n "${return}"
 }
