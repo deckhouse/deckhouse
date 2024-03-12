@@ -73,7 +73,12 @@ func main() {
 	}
 
 	cmd := exec.Command(binPath, args...)
-	_, err := cmd.CombinedOutput()
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
 	if err != nil {
 		server := runHTTPServer(listenAddress)
 		errorHandling(err, server)
