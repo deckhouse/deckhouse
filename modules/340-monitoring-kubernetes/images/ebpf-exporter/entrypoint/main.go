@@ -22,7 +22,10 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 )
+
+const sleepDurationSecond = 60
 
 func main() {
 	binPath := os.Getenv("EBPF_EXPORTER_BIN_PATH")
@@ -60,6 +63,17 @@ func main() {
 
 	err := syscall.Exec(binPath, args, os.Environ())
 	if err != nil {
-		log.Fatal(err)
+		error_loop(err)
+	}
+}
+
+func error_loop(err error) {
+	log.Println(err)
+	ticker := time.NewTicker(sleepDurationSecond * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			log.Println("tick")
+		}
 	}
 }
