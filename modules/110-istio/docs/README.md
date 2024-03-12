@@ -175,8 +175,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 The main purpose of the activation is to add a sidecar container to the application Pods so that Istio can manage the traffic.
 
 The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
-* A label attached to a **namespace** allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
-  * `istio-injection=enabled` — use the latest installed version of Istio;
+* A label attached to a namespace allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
+  * `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
   * `istio.io/rev=v1x16` — use the specific Istio version for a given namespace.
 * The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
