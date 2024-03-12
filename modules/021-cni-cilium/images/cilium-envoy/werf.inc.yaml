@@ -12,8 +12,9 @@
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/.github/workflows/build-envoy-images-release.yaml
 ---
-artifact: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
+image: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
 from: {{ $.Images.BASE_UBUNTU }}
 shell:
   beforeInstall:
@@ -82,8 +83,6 @@ shell:
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
   - make install
----
-# #####################################################################
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
 from: {{ $.Images.BASE_UBUNTU }}
