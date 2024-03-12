@@ -117,12 +117,11 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		allErrs = multierror.Append(allErrs, err)
 	case clusterChanged == terraform.PlanHasChanges:
 		statistics.Cluster.Status = ChangedStatus
-		statistics.TerraformPlan = terraformPlan
 	case clusterChanged == terraform.PlanHasDestructiveChanges:
 		statistics.Cluster.Status = DestructiveStatus
 		statistics.Cluster.DestructiveChanges = destructiveChanges
-		statistics.TerraformPlan = terraformPlan
 	}
+	statistics.TerraformPlan = terraformPlan
 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
 	if err != nil {
