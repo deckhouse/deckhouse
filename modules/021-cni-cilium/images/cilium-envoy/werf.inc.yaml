@@ -24,13 +24,10 @@ shell:
   - |
     apt-get install -y --no-install-recommends \
     ca-certificates \
-# Multi-arch cross-compilation packages
     gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu libc6-dev \
-# Envoy Build dependencies
     autoconf automake cmake coreutils curl git libtool make ninja-build patch patchelf \
     python3 python-is-python3 unzip virtualenv wget zip \
-# Cilium-envoy build dependencies
-    libcap-dev software-properties-common && \
+    libcap-dev software-properties-common
   - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
   - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" && \
   - apt-get update && \
