@@ -31,13 +31,13 @@ import (
 
 func TestMakeRemoteRegistryRequestOptionsAnonymous(t *testing.T) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, false, false, 1)
-	require.Len(t, remoteOpts, 0)
+	require.Len(t, remoteOpts, 1)
 	require.Len(t, nameOpts, 0)
 }
 
 func TestMakeRemoteRegistryRequestOptionsAnonymousInsecure(t *testing.T) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, true, false, 1)
-	require.Len(t, remoteOpts, 0)
+	require.Len(t, remoteOpts, 1)
 	require.Len(t, nameOpts, 1)
 
 	expectedOptionFnPtr := reflect.PointerTo(reflect.TypeOf(name.Option(name.Insecure)))
