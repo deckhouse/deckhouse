@@ -309,13 +309,13 @@ systemReserved:
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
   {{- if .nodeGroup.kubelet.resourceReservation.static.cpu }}
-  cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu }}
+  cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
   {{- end }}
   {{- if .nodeGroup.kubelet.resourceReservation.static.memory }}
-  memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory }}
+  memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory | quote }}
   {{- end }}
   {{- if .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage }}
-  ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage }}
+  ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
   {{- end }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
