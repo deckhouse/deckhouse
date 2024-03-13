@@ -112,7 +112,7 @@ func FindExternalModuleImages(mod *Module, authProvider authn.Authenticator, ins
 		return nil, nil, fmt.Errorf("Get available release channels of module: %w", err)
 	}
 
-	releaseChannelVersions, err := fetchVersionsFromModuleReleaseChannels(releaseImages, authProvider, insecure, skipVerifyTLS)
+	releaseChannelVersions, err := fetchVersionsFromModuleReleaseChannels(releaseImages, authProvider, insecure, skipVerifyTLS, jobs)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Fetch versions from %q release channels: %w", mod.Name, err)
 	}
