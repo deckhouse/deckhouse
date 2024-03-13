@@ -106,7 +106,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(memcached_current_bytes{app=\"memcached\"}) / sum(memcached_limit_bytes{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"}) / sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -167,7 +167,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{app=\"memcached\",status=\"hit\",command=\"get\"}[$__rate_interval])) / sum (rate (memcached_commands_total{app=\"memcached\", command=\"get\"}[$__rate_interval]\n))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",status=\"hit\",command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]\n))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -269,7 +269,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_items_evicted_total{app=\"memcached\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "evicts",
@@ -278,7 +278,7 @@
           "target": ""
         },
         {
-          "expr": "sum (rate (memcached_items_reclaimed_total{app=\"memcached\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_items_reclaimed_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -393,7 +393,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum (memcached_current_bytes{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -478,7 +478,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum (memcached_limit_bytes{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -544,7 +544,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{app=\"memcached\", status=\"hit\", command=\"get\"}[$__rate_interval])) / sum (rate (memcached_commands_total{app=\"memcached\", command=\"get\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", status=\"hit\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -553,7 +553,7 @@
           "step": 5
         },
         {
-          "expr": "sum (rate (memcached_commands_total{app=\"memcached\", status=\"miss\", command=\"get\"}[$__rate_interval])) / sum (rate (memcached_commands_total{app=\"memcached\", command=\"get\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", status=\"miss\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "miss",
@@ -669,7 +669,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum (memcached_items_evicted_total{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -754,7 +754,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum (memcached_items_reclaimed_total{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_items_reclaimed_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -822,7 +822,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (memcached_current_items{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_current_items{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count",
@@ -919,7 +919,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_read_bytes_total{app=\"memcached\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_read_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "read",
@@ -928,7 +928,7 @@
           "target": ""
         },
         {
-          "expr": "sum (rate (memcached_written_bytes_total{app=\"memcached\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_written_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "written",
@@ -1027,7 +1027,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (memcached_current_connections{app=\"memcached\"})",
+          "expr": "sum by (pod) (memcached_current_connections{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count",
@@ -1121,7 +1121,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (memcached_commands_total{app=\"memcached\",command=\"get\"}) / (sum (memcached_commands_total{app=\"memcached\", command=\"get\"}) + sum (memcached_commands_total{app=\"memcached\", command=\"set\"}))",
+          "expr": "sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) / (sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"set\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Get",
@@ -1130,7 +1130,7 @@
           "target": ""
         },
         {
-          "expr": "sum (memcached_commands_total{app=\"memcached\",command=\"set\"})  / (sum (memcached_commands_total{app=\"memcached\", command=\"get\"}) + sum (memcached_commands_total{app=\"memcached\", command=\"set\"}))",
+          "expr": "sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"})  / (sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"}))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Set",
@@ -1226,7 +1226,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{app=\"memcached\"}[$__rate_interval])) by (command)",
+          "expr": "sum by (pod, command) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{command}}",
