@@ -42,9 +42,9 @@ func (r *SingleShotRunner) Apply() (err error) {
 	return
 }
 
-func (r *SingleShotRunner) Plan() (err error) {
+func (r *SingleShotRunner) Plan(opts PlanOptions) (err error) {
 	r.plan.Do(func() {
-		err = r.Runner.Plan()
+		err = r.Runner.Plan(opts)
 	})
 	return
 }
