@@ -309,13 +309,13 @@ systemReserved:
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
   # test: "{{ typeOf .nodeGroup.kubelet.resourceReservation.static.cpu }}"
-  {{- if ne .nodeGroup.kubelet.resourceReservation.static.cpu 0.0 }}
+  {{- if eq "string" (typeOf .nodeGroup.kubelet.resourceReservation.static.cpu) }}
   cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu }}
   {{- end }}
-  {{- if ne .nodeGroup.kubelet.resourceReservation.static.memory 0.0 }}
+  {{- if eq "string" (typeOf .nodeGroup.kubelet.resourceReservation.static.memory) }}
   memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory }}
   {{- end }}
-  {{- if ne .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage 0.0 }}
+  {{- if eq "string" (typeOf .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage) }}
   ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage }}
   {{- end }}
 {{- end }}
