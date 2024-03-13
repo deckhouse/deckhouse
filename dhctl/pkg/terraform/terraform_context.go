@@ -48,72 +48,120 @@ func (f *TerraformContext) getOrCreateRunner(name string, createFunc func() Runn
 	return r
 }
 
-type CheckBaseInfraRunnerOptions struct {
-	CommanderMode bool
-	ClusterState  []byte
-}
-
 // TODO(dhctl-for-commander): Use same tf-runner for check & converge in commander mode only, keep things as-is without changes
-func (f *TerraformContext) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts CheckBaseInfraRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("check.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout), func() RunnerInterface {
-			r := NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure").
-				WithVariables(metaConfig.MarshalConfig()).
-				WithState(opts.ClusterState).
-				WithAutoApprove(true)
+			if opts.CommanderMode {
+				r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache).
+					WithSkipChangesOnDeny(true).
+					WithVariables(metaConfig.MarshalConfig()).
+					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
+					WithAutoApprove(opts.AutoApprove)
 
-			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-			return r
+				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+				return r
+			} else {
+				r := NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure").
+					WithVariables(metaConfig.MarshalConfig()).
+					WithAutoApprove(true)
+				if opts.ClusterState != nil {
+					r.WithState(opts.ClusterState)
+				}
+
+				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+				return r
+			}
 		})
 }
 
-type CheckNodeRunnerOptions struct {
-	NodeName        string
-	NodeGroupName   string
-	NodeGroupStep   string
-	NodeIndex       int
-	NodeState       []byte
-	NodeCloudConfig string
-}
-
-func (f *TerraformContext) GetCheckNodeRunner(metaConfig *config.MetaConfig, opts CheckNodeRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetCheckNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("check.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
 		func() RunnerInterface {
-			r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep).
-				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-				WithState(opts.NodeState).
-				WithName(opts.NodeName)
+			if opts.CommanderMode {
+				r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
+					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+					WithSkipChangesOnDeny(true).
+					WithName(opts.NodeName).
+					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
+					WithAutoApprove(opts.AutoApprove).
+					WithHook(opts.ReadinessChecker)
 
-			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-			return r
+				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+				return r
+			} else {
+				r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep).
+					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+					WithState(opts.NodeState).
+					WithName(opts.NodeName)
+
+				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+				return r
+			}
+		})
+}
+
+func (f *TerraformContext) GetCheckNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
+	return f.getOrCreateRunner(
+		fmt.Sprintf("check.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
+		func() RunnerInterface {
+			if opts.CommanderMode {
+				r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
+					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+					WithName(opts.NodeName).
+					WithAllowedCachedState(true).
+					WithSkipChangesOnDeny(true).
+					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
+					WithAutoApprove(opts.AutoApprove)
+
+				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+				return r
+			} else {
+				r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep).
+					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+					WithName(opts.NodeName).
+					WithState(opts.NodeState).
+					WithSkipChangesOnDeny(true).
+					WithAutoDismissDestructiveChanges(false).
+					WithAutoApprove(true)
+
+				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+				return r
+			}
 		})
 }
 
 // TODO: use same runner in check+converge only in commander mode, use as-is otherwise, implement destroy and bootstrap
-
-type ConvergeBaseInfraRunnerOptions struct {
+type BaseInfraRunnerOptions struct {
 	AutoDismissDestructive           bool
 	AutoApprove                      bool
 	CommanderMode                    bool
+	StateCache                       dstate.Cache
 	ClusterState                     []byte
 	AdditionalStateSaverDestinations []SaverDestination
 }
 
-func (f *TerraformContext) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts ConvergeBaseInfraRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout),
 		func() RunnerInterface {
-			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
+			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache).
 				WithSkipChangesOnDeny(true).
 				WithVariables(metaConfig.MarshalConfig()).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 				WithAutoApprove(opts.AutoApprove)
-			if !opts.CommanderMode {
+
+			if opts.ClusterState != nil {
 				r = r.WithState(opts.ClusterState)
 			}
+
 			r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
@@ -122,7 +170,7 @@ func (f *TerraformContext) GetConvergeBaseInfraRunner(metaConfig *config.MetaCon
 		})
 }
 
-type ConvergeNodeRunnerOptions struct {
+type NodeRunnerOptions struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 
@@ -134,22 +182,24 @@ type ConvergeNodeRunnerOptions struct {
 	NodeCloudConfig string
 
 	CommanderMode                    bool
+	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
 	ReadinessChecker                 InfraActionHook
 }
 
-func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts ConvergeNodeRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
 		func() RunnerInterface {
-			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache).
+			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 				WithSkipChangesOnDeny(true).
 				WithName(opts.NodeName).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 				WithAutoApprove(opts.AutoApprove).
 				WithHook(opts.ReadinessChecker)
-			if !opts.CommanderMode {
+
+			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)
 			}
 
@@ -161,7 +211,7 @@ func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, 
 		})
 }
 
-type ConvergeNodeDeleteRunnerOptions struct {
+type NodeDeleteRunnerOptions struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 
@@ -173,21 +223,23 @@ type ConvergeNodeDeleteRunnerOptions struct {
 	NodeCloudConfig string
 
 	CommanderMode                    bool
+	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
 }
 
-func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts ConvergeNodeDeleteRunnerOptions) RunnerInterface {
+func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
 		func() RunnerInterface {
-			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache).
+			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 				WithName(opts.NodeName).
 				WithAllowedCachedState(true).
 				WithSkipChangesOnDeny(true).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 				WithAutoApprove(opts.AutoApprove)
-			if !opts.CommanderMode {
+
+			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)
 			}
 
