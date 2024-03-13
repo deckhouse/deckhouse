@@ -21,12 +21,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -102,10 +102,10 @@ type Controller struct {
 }
 
 const (
-	UpdatePolicyLabel = "modules.deckhouse.io/update-policy"
+	UpdatePolicyLabel  = "modules.deckhouse.io/update-policy"
+	approvalAnnotation = "modules.deckhouse.io/approved"
 
 	defaultCheckInterval   = 15 * time.Second
-	approvalAnnotation     = "modules.deckhouse.io/approved"
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
@@ -448,11 +448,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
-
-	sort.Sort(byVersion(otherReleases))
-	pred := newReleasePredictor(otherReleases)
-
-	pred.calculateRelease()
+	otherReleases = deepCopyList(otherReleases)
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
@@ -463,10 +459,25 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	}
 
 	var modulesChangedReason string
+	defer func() {
+		if modulesChangedReason != "" {
+			c.emitRestart(modulesChangedReason)
+		}
+	}()
 
-	if pred.currentReleaseIndex == len(pred.releases)-1 {
+	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
+	releaseUpdater := newUpdater(c.logger, kubeAPI)
+
+	releaseUpdater.PrepareReleases(otherReleases)
+	if releaseUpdater.ReleasesCount() == 0 {
+		return ctrl.Result{}, nil
+	}
+
+	releaseUpdater.PredictNextRelease()
+
+	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
-		deployedRelease := pred.releases[pred.currentReleaseIndex]
+		deployedRelease := otherReleases[releaseUpdater.GetCurrentDeployedReleaseIndex()]
 		deckhouseconfig.Service().AddModuleNameToSource(deployedRelease.Spec.ModuleName, deployedRelease.GetModuleSource())
 		c.sourceModules[deployedRelease.Spec.ModuleName] = deployedRelease.GetModuleSource()
 
@@ -486,154 +497,164 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			// defer restart
 			modulesChangedReason = "one of modules is not enabled"
-			defer c.emitRestart(modulesChangedReason)
 		}
+
+		return ctrl.Result{}, nil
 	}
 
-	if len(pred.skippedPatchesIndexes) > 0 {
-		for _, index := range pred.skippedPatchesIndexes {
-			release := pred.releases[index]
-
-			release.Status.Phase = v1alpha1.PhaseSuperseded
-			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		}
+	if releaseUpdater.GetPredictedReleaseIndex() == -1 {
+		return ctrl.Result{}, nil
 	}
 
-	if pred.desiredReleaseIndex >= 0 {
-		release := pred.releases[pred.desiredReleaseIndex]
-		ts := time.Now().UTC()
-		// if release has associated update policy
-		if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
-			var policy *v1alpha1.ModuleUpdatePolicy
-			if policyName == "" {
-				policy = &v1alpha1.ModuleUpdatePolicy{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-						APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "",
-					},
-					Spec: *c.deckhouseEmbeddedPolicy,
-				}
-			} else {
-				// get policy spec
-				policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
-				if err != nil {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
+	release := otherReleases[releaseUpdater.GetPredictedReleaseIndex()]
+	var policy *v1alpha1.ModuleUpdatePolicy
+	// if release has associated update policy
+	if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
+		if policyName == "" {
+			policy = &v1alpha1.ModuleUpdatePolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "",
+				},
+				Spec: *c.deckhouseEmbeddedPolicy,
 			}
-
-			switch policy.Spec.Update.Mode {
-			case "Ignore":
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
+		} else {
+			// get policy spec
+			policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
+			if err != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-
-			case "Manual":
-				if !isReleaseApproved(release) {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
-				release.Status.Approved = true
-
-			case "Auto":
-				if !policy.Spec.Update.Windows.IsAllowed(ts) {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
 			}
+		}
 
-			// download desired module version
-			ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-
-			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-			ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
-			if err != nil {
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-			}
-
-			release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
-			}
-
-			moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
-			relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
-
-			def := models.DeckhouseModuleDefinition{
-				Name:   moduleName,
-				Weight: release.Spec.Weight,
-				Path:   moduleVersionPath,
-			}
-			err = validateModule(c.modulesValidator, def)
-			if err != nil {
-				c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
-				release.Status.Phase = v1alpha1.PhaseSuspended
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, "validation failed: "+err.Error()); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-
-				return ctrl.Result{}, nil
-			}
-
-			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
-			if err != nil {
-				c.logger.Errorf("Module deploy failed: %v", err)
-				if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-			}
-			// disable target module hooks so as not to invoke them before restart
-			if c.modulesValidator.GetModule(moduleName) != nil {
-				c.modulesValidator.DisableModuleHooks(moduleName)
-			}
-			// after deploying a new release, mark previous one (if any) as superseded
-			if pred.currentReleaseIndex >= 0 {
-				release := pred.releases[pred.currentReleaseIndex]
-				release.Status.Phase = v1alpha1.PhaseSuperseded
-				release.Status.Message = ""
-				release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-				if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-			}
-
-			// defer restart
-			if modulesChangedReason == "" {
-				modulesChangedReason = "a new module release found"
-				defer c.emitRestart(modulesChangedReason)
-			}
-
-			release.Status.Phase = v1alpha1.PhaseDeployed
-			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		} else {
-			if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+		if policy.Spec.Update.Mode == "Ignore" {
+			if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+
+			//TODO: remove next block because it handled in release updater
+			//case "Manual":
+			//	if !release.GetApproved() {
+			//		if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
+			//			return ctrl.Result{Requeue: true}, e
+			//		}
+			//		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			//	}
+			//	release.SetApprovedStatus(true)
+			//
+			//case "Auto":
+			//	if !policy.Spec.Update.Windows.IsAllowed(ts) {
+			//		if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
+			//			return ctrl.Result{Requeue: true}, e
+			//		}
+			//		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			//	}
 		}
+
+		//TODO: remove next block as it moved to kubeAPI.DeployRelease
+		// download desired module version
+		//ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
+		//if err != nil {
+		//	return ctrl.Result{Requeue: true}, err
+		//}
+		//
+		//md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+		//ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+		//if err != nil {
+		//	return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+		//}
+		//
+		//release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
+		//if err != nil {
+		//	return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
+		//}
+		//
+		//moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+		//relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
+		//newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
+		//
+		//def := models.DeckhouseModuleDefinition{
+		//	Name:   moduleName,
+		//	Weight: release.Spec.Weight,
+		//	Path:   moduleVersionPath,
+		//}
+		//err = validateModule(c.modulesValidator, def)
+		//if err != nil {
+		//	c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
+		//	release.Status.Phase = v1alpha1.PhaseSuspended
+		//	if e := c.updateModuleReleaseStatusMessage(ctx, release, "validation failed: "+err.Error()); e != nil {
+		//		return ctrl.Result{Requeue: true}, e
+		//	}
+		//
+		//	return ctrl.Result{}, nil
+		//}
+		//
+		//err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
+		//if err != nil {
+		//	c.logger.Errorf("Module deploy failed: %v", err)
+		//	if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
+		//		return ctrl.Result{Requeue: true}, e
+		//	}
+		//}
+		//// disable target module hooks so as not to invoke them before restart
+		//if c.modulesValidator.GetModule(moduleName) != nil {
+		//	c.modulesValidator.DisableModuleHooks(moduleName)
+		//}
+		//// after deploying a new release, mark previous one (if any) as superseded
+		//if releaseUpdater.GetCurrentDeployedReleaseIndex() >= 0 {
+		//	release := otherReleases[releaseUpdater.GetCurrentDeployedReleaseIndex()]
+		//	release.Status.Phase = v1alpha1.PhaseSuperseded
+		//	release.Status.Message = ""
+		//	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+		//	if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
+		//		return ctrl.Result{Requeue: true}, e
+		//	}
+		//}
+		//
+		//// defer restart
+		//if modulesChangedReason == "" {
+		//	modulesChangedReason = "a new module release found"
+		//}
+		//
+		//release.Status.Phase = v1alpha1.PhaseDeployed
+		//release.Status.Message = ""
+		//release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+		//if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
+		//	return ctrl.Result{Requeue: true}, e
+		//}
+	} else {
+		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
+
+	releaseUpdater.SetMode(policy.Spec.Update.Mode)
+
+	if releaseUpdater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		if !releaseUpdater.ApplyPredictedRelease(nil) {
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
+	var windows update.Windows
+	if !releaseUpdater.InManualMode() {
+		windows = policy.Spec.Update.Windows
+	}
+
+	if !releaseUpdater.ApplyPredictedRelease(windows) {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	modulesChangedReason = "a new module release found"
 
 	return ctrl.Result{}, nil
 }
@@ -1053,31 +1074,6 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 	return os.Symlink(moduleRelativePath, symlinkPath)
 }
 
-type byVersion []*v1alpha1.ModuleRelease
-
-func (b byVersion) Len() int {
-	return len(b)
-}
-
-func (b byVersion) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-func (b byVersion) Less(i, j int) bool {
-	return b[i].Spec.Version.LessThan(b[j].Spec.Version)
-}
-
-func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
-	if approved, found := release.ObjectMeta.Annotations[approvalAnnotation]; found {
-		value, err := strconv.ParseBool(approved)
-		if err != nil {
-			return false
-		}
-		return value
-	}
-	return false
-}
-
 type moduleValidator interface {
 	ValidateModule(m *addonmodules.BasicModule) error
 	GetValuesValidator() *validation.ValuesValidator
@@ -1110,4 +1106,18 @@ func (c *Controller) registerMetrics() error {
 	}
 
 	return nil
+}
+
+type deepCopier[T any] interface {
+	DeepCopy() T
+}
+
+func deepCopyList[T deepCopier[T]](list []T) []T {
+	result := make([]T, len(list))
+
+	for i := range list {
+		result[i] = list[i].DeepCopy()
+	}
+
+	return result
 }

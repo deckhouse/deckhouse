@@ -58,6 +58,10 @@ type Release interface {
 	GetMessage() string
 }
 
-type ReleaseUpdater interface {
-	UpdateStatus(release any, msg, phase string)
+type KubeAPI[R Release] interface {
+	UpdateReleaseStatus(release R, msg, phase string) error
+	PatchReleaseAnnotations(name string, m map[string]interface{})
+	PatchReleaseApplyAfter(name string, applyTime time.Time)
+	DeployRelease(release R) error
+	SaveReleaseData(data DeckhouseReleaseData)
 }

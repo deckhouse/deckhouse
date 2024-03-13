@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -31,6 +32,8 @@ const (
 	PhaseDeployed        = "Deployed"
 	PhaseSuperseded      = "Superseded"
 	PhaseSuspended       = "Suspended"
+
+	approvalAnnotation = "modules.deckhouse.io/approved"
 )
 
 var (
@@ -89,58 +92,54 @@ func (mr *ModuleRelease) GetCooldownUntil() *time.Time {
 }
 
 func (mr *ModuleRelease) GetApproved() bool {
-	//TODO implement me
-	panic("implement me")
+	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+		value, err := strconv.ParseBool(approved)
+		if err != nil {
+			return false
+		}
+		return value
+	}
+	return false
 }
 
 func (mr *ModuleRelease) GetDisruptions() []string {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (mr *ModuleRelease) GetDisruptionApproved() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
 func (mr *ModuleRelease) GetPhase() string {
-	//TODO implement me
-	panic("implement me")
+	return mr.Status.Phase
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
-func (mr *ModuleRelease) SetApprovedStatus(b bool) {
-	//TODO implement me
-	panic("implement me")
+func (mr *ModuleRelease) SetApprovedStatus(val bool) {
+	mr.Status.Approved = val
 }
 
 func (mr *ModuleRelease) GetSuspend() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
 func (mr *ModuleRelease) GetManuallyApproved() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
 func (mr *ModuleRelease) GetApprovedStatus() bool {
-	//TODO implement me
-	panic("implement me")
+	return false
 }
 
 func (mr *ModuleRelease) GetMessage() string {
-	//TODO implement me
-	panic("implement me")
+	return mr.Status.Message
 }
 
 // GetModuleSource returns module source for this release

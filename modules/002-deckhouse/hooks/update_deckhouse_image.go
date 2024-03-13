@@ -175,7 +175,13 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// fetch releases from snapshot and patch initial statuses
-	deckhouseUpdater.FetchAndPrepareReleases(input.Snapshots["releases"])
+	releases := make([]*d8updater.DeckhouseRelease, 0, len(snap))
+	for _, rl := range input.Snapshots["releases"] {
+		releases = append(releases, rl.(*d8updater.DeckhouseRelease))
+	}
+
+	// fetch releases from snapshot and patch initial statuses
+	deckhouseUpdater.PrepareReleases(releases)
 	if deckhouseUpdater.ReleasesCount() == 0 {
 		return nil
 	}
