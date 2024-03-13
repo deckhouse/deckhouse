@@ -423,7 +423,7 @@ func (r *Runner) Apply() error {
 	})
 }
 
-func (r *Runner) Plan() error {
+func (r *Runner) Plan(opts PlanOptions) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -444,6 +444,9 @@ func (r *Runner) Plan() error {
 			fmt.Sprintf("-out=%s", tmpFile.Name()),
 		}
 
+		if opts.Destroy {
+			args = append(args, "-destroy")
+		}
 		args = append(args, r.workingDir)
 
 		exitCode, err := r.execTerraform(args...)
