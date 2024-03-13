@@ -812,6 +812,8 @@ function chmod_dirs_for_cleanup() {
   fi
 }
 
+trap "chmod_dirs_for_cleanup" EXIT
+
 
 function main() {
   >&2 echo "Start cloud test script"
