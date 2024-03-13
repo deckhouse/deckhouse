@@ -60,8 +60,8 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
 <table>
   <thead>
     <tr>
-        <th>Required privileges in vSphere API</th>
-        <th></th>
+        <th>List of privileges</th>
+        <th>Purpose</th>
     </tr>
   </thead>
   <tbody>
