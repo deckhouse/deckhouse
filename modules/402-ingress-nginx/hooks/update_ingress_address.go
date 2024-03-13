@@ -21,10 +21,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v12 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"net"
 )
 
 type loadBalancerService struct {
@@ -35,7 +34,7 @@ type loadBalancerService struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:       "/modules/ingress-nginx",
+	Queue:       "/modules/ingress-nginx/service-discover-address",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "ingress-loadbalancer-service",
@@ -46,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-ingress-nginx"},
 				},
 			},
-			LabelSelector: &v1.LabelSelector{
+			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"deckhouse-service-type": "provider-managed",
 				},
@@ -57,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, updateIngressAddress)
 
 func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var svc v12.Service
+	var svc corev1.Service
 
 	if err := sdk.FromUnstructured(obj, &svc); err != nil {
 		return nil, err
@@ -79,26 +78,16 @@ func updateIngressAddress(input *go_hook.HookInput) error {
 			continue
 		}
 		svc := snap.(loadBalancerService)
-
-		ip := svc.ip
-		if ip == "" {
-			if rawIP, err := net.LookupIP(svc.hostname); err != nil {
-				input.LogEntry.Warnf("cannot resolve hostname(%s): %s", svc.hostname, err.Error())
-			} else {
-				ip = rawIP[0].String()
-			}
-		}
-
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
 				"loadBalancer": map[string]interface{}{
-					"ip":       ip,
+					"ip":       svc.ip,
 					"hostname": svc.hostname,
 				},
 			},
 		}
 		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "IngressNginxController",
-			"", svc.name, object_patch.IgnoreMissingObject())
+			"", svc.name, object_patch.IgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}
 	return nil
 }
