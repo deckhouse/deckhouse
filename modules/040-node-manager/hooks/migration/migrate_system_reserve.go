@@ -109,8 +109,9 @@ func systemReserve(input *go_hook.HookInput) error {
 	ngsSnapshot := input.Snapshots["ngs"]
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
-		input.LogEntry.Println("NodeGroupName: ", ng.Name, "KubeletResourceReservationMode: ", ng.ResourceReservationMode)
-		if ng.ResourceReservationMode != "" {
+		skipMigration := ng.ResourceReservationMode != ""
+		input.LogEntry.Printf("NodeGroupName: %s, KubeletResourceReservationMode: %s, skipMigration: %t", ng.Name, ng.ResourceReservationMode, skipMigration)
+		if skipMigration {
 			continue
 		}
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
