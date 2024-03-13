@@ -289,8 +289,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				SaveBastionHostToCache(baseOutputs.BastionHost)
 			}
 
-			app.SSHHosts = []string{masterOutputs.MasterIPForSSH}
-			b.SSHClient.Settings.SetAvailableHosts(app.SSHHosts)
+			b.SSHClient.Settings.SetAvailableHosts([]string{masterOutputs.MasterIPForSSH})
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath
@@ -520,24 +519,6 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 		}
 		return nil
 	})
-}
-
-func setBastionHost(host string, sshClient *ssh.Client) {
-	app.SSHBastionHost = host
-
-	if app.SSHBastionUser == "" {
-		app.SSHBastionUser = app.SSHUser
-	}
-
-	if app.SSHBastionPort == "" {
-		app.SSHBastionPort = app.SSHPort
-	}
-
-	if sshClient != nil {
-		sshClient.Settings.BastionHost = app.SSHBastionHost
-		sshClient.Settings.BastionUser = app.SSHBastionUser
-		sshClient.Settings.BastionPort = app.SSHBastionPort
-	}
 }
 
 func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig) error {

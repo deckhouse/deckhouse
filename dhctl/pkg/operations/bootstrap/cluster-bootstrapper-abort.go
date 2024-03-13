@@ -89,7 +89,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		app.SSHHosts = mastersIPs
 		b.SSHClient.Settings.SetAvailableHosts(mastersIPs)
 	}
 
