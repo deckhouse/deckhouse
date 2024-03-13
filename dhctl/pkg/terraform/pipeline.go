@@ -57,7 +57,7 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(PlanOptions{})
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 	return extractedData, err
 }
 
-func CheckPipeline(r RunnerInterface, name string) (int, TerraformPlan, *PlanDestructiveChanges, error) {
+func CheckPipeline(r RunnerInterface, name string, opts PlanOptions) (int, TerraformPlan, *PlanDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
 	var destructiveChanges *PlanDestructiveChanges
 	var terraformPlan map[string]any
@@ -88,7 +88,7 @@ func CheckPipeline(r RunnerInterface, name string) (int, TerraformPlan, *PlanDes
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(opts)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(PlanOptions{})
 		if err != nil {
 			return err
 		}

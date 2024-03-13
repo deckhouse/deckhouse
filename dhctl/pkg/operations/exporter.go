@@ -15,6 +15,7 @@
 package operations
 
 import (
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"net/http"
 	"os"
@@ -222,7 +223,7 @@ func (c *ConvergeExporter) getStatistic() *converge.Statistics {
 		return nil
 	}
 
-	metaConfig.UUID, err = converge.GetClusterUUID(c.kubeCl)
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()

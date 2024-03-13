@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -40,7 +39,7 @@ func (s *FileTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	return s.metaConfig, nil
 }
 
-func (s *FileTerraStateLoader) PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error) {
+func (s *FileTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
 	metaConfig, err := s.PopulateMetaConfig()
 	if err != nil {
 		return nil, nil, err
@@ -49,11 +48,11 @@ func (s *FileTerraStateLoader) PopulateClusterState() ([]byte, map[string]conver
 	return getNodesFromCache(metaConfig, s.stateCache)
 }
 
-func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([]byte, map[string]converge.NodeGroupTerraformState, error) {
+func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([]byte, map[string]state.NodeGroupTerraformState, error) {
 	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)\\.tfstate$", metaConfig.ClusterPrefix)
 	groupsReg, _ := regexp.Compile(nodeGroupRegex)
 
-	nodesFromCache := make(map[string]converge.NodeGroupTerraformState)
+	nodesFromCache := make(map[string]state.NodeGroupTerraformState)
 
 	var baseInfraState []byte
 
@@ -75,7 +74,7 @@ func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([
 		nodeGroupName := nodeGroupNameAndNodeIndex[1]
 
 		if _, ok := nodesFromCache[nodeGroupName]; !ok {
-			nodesFromCache[nodeGroupName] = converge.NodeGroupTerraformState{
+			nodesFromCache[nodeGroupName] = state.NodeGroupTerraformState{
 				State: map[string][]byte{},
 			}
 		}
@@ -87,4 +86,17 @@ func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([
 	})
 
 	return baseInfraState, nodesFromCache, err
+}
+
+func DeleteNodeTerraformStateFromCache(nodeName string, stateCache state.Cache) error {
+	keysToDelete := []string{
+		fmt.Sprintf("%s.tfstate", nodeName),
+		fmt.Sprintf("%s.tfstate.backup", nodeName),
+	}
+
+	for _, key := range keysToDelete {
+		stateCache.Delete(key)
+	}
+
+	return nil
 }
