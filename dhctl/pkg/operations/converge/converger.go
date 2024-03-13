@@ -156,7 +156,11 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
-	inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
+	var inLockRunner *converge.InLockRunner
+	// No need for converge-lock in commander mode for bootstrap and converge operations
+	if !c.CommanderMode {
+		inLockRunner = converge.NewInLockLocalRunner(kubeCl, "local-converger")
+	}
 
 	stateCache := cache.Global()
 
