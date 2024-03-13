@@ -2097,7 +2097,11 @@ spec:
                           type: string
                           x-doc-default: None
                           description: |
-                            The policy defines the actual strategy used to carry out the alignment (e.g. best-effort, restricted, single-numa-node, etc.).
+                            A strategy that is determined by resource alignment policies. There are four supported policies:
+                            - None - does not perform any resource alignment (default).
+                            - BestEffort - determines the availability of resources on each node and uses this information to maintain the correspondence of the Numa node with the container.
+                            - Restricted - determines the availability of resources on each node and uses this information to select the most appropriate node in each container.
+                            - SingleNumaNode - determines the availability of resources on each node and uses this information to determine whether it is possible to maintain a correspondence between the container and the Numa node.
                           enum:
                             - None
                             - BestEffort
