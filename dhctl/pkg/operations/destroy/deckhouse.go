@@ -15,6 +15,19 @@
 package destroy
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"fmt"
+	"time"
+
+	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -90,9 +103,88 @@ func (g *DeckhouseDestroyer) DeleteResources(cloudType string) error {
 		return err
 	}
 
-	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
+	err = log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
 		return g.deleteEntities(kubeCl)
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return g.PrintCCMLogs(kubeCl)
+}
+
+func (g *DeckhouseDestroyer) PrintCCMLogs(kubeCl *client.KubernetesClient) error {
+	getPods := func(kubeCl *client.KubernetesClient, namespace, labelSelector string) ([]v1.Pod, error) {
+		pods, err := kubeCl.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
+		if err != nil {
+			log.DebugF("Cannot get pod %s/%s. Got error: %v", namespace, labelSelector, err)
+			return nil, err
+		}
+
+		if len(pods.Items) == 0 {
+			log.DebugF("Cannot get deckhouse pod. Count of returned pods is zero")
+			return nil, fmt.Errorf("Pods not found")
+		}
+
+		return pods.Items, nil
+	}
+
+	const ns = "d8-cloud-provider-yandex"
+
+	getLogs := func(kubeCl *client.KubernetesClient, namespace, podName string) ([]byte, error) {
+		logOptions := v1.PodLogOptions{Container: "yandex-cloud-controller-manager", TailLines: pointer.Int64(30000)}
+		request := kubeCl.CoreV1().Pods(namespace).GetLogs(podName, &logOptions)
+		result, err := request.DoRaw(context.TODO())
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	printLogs := func(logs []byte) {
+		reader := bufio.NewReader(bytes.NewReader(logs))
+		for {
+			l, _, err := reader.ReadLine()
+			if err != nil {
+				break
+			}
+
+			log.InfoLn(string(l))
+		}
+	}
+
+	var pods []v1.Pod
+
+	err := retry.NewLoop("Get CCM pods", 3, 3*time.Second).Run(func() error {
+		var err error
+		pods, err = getPods(kubeCl, ns, "app=cloud-controller-manager")
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range pods {
+		var logs []byte
+		err := retry.NewLoop(fmt.Sprintf("Get logs for pod %s", pod.Name), 3, 3*time.Second).Run(func() error {
+			var err error
+			logs, err = getLogs(kubeCl, ns, pod.Name)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+
+		_ = log.Process("common", fmt.Sprintf("Get logs for pod %s", pod.Name), func() error {
+			printLogs(logs)
+			return nil
+		})
+	}
+
+	return nil
 }
 
 func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) error {
