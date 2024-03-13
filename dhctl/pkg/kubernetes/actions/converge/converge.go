@@ -143,7 +143,11 @@ func (r *Runner) isSkip(phase Phase) bool {
 }
 
 func (r *Runner) RunConverge() error {
-	return r.lockRunner.Run(r.converge)
+	if r.lockRunner != nil {
+		return r.lockRunner.Run(r.converge)
+	} else {
+		return r.converge()
+	}
 }
 
 func (r *Runner) converge() error {
