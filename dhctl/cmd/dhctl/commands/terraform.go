@@ -17,6 +17,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 
@@ -71,7 +72,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
 		if err != nil {
 			return err
 		}

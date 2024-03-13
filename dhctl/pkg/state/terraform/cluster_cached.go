@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -70,7 +69,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 		return nil, err
 	}
 
-	metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+	metaConfig.UUID, err = GetClusterUUID(kubeCl)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +81,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	return metaConfig, nil
 }
 
-func (s *KubeTerraStateLoader) PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error) {
+func (s *KubeTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
 	clusterState, err := s.getClusterState()
 	if err != nil {
 		return nil, nil, err
@@ -96,10 +95,10 @@ func (s *KubeTerraStateLoader) PopulateClusterState() ([]byte, map[string]conver
 	return clusterState, nodesState, nil
 }
 
-func (s *KubeTerraStateLoader) getNodesState() (map[string]converge.NodeGroupTerraformState, error) {
+func (s *KubeTerraStateLoader) getNodesState() (map[string]state.NodeGroupTerraformState, error) {
 	var err error
 	var kubeCl *client.KubernetesClient
-	var nodesState map[string]converge.NodeGroupTerraformState
+	var nodesState map[string]state.NodeGroupTerraformState
 
 	confirmation := input.NewConfirmation().
 		WithMessage("Do you want to continue with Nodes state from local cache?").
@@ -118,7 +117,7 @@ func (s *KubeTerraStateLoader) getNodesState() (map[string]converge.NodeGroupTer
 		if kubeCl, err = s.kubeGetter.GetKubeClient(); err != nil {
 			return nil, err
 		}
-		nodesState, err = converge.GetNodesStateFromCluster(kubeCl)
+		nodesState, err = GetNodesStateFromCluster(kubeCl)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +153,7 @@ func (s *KubeTerraStateLoader) getClusterState() ([]byte, error) {
 		if kubeCl, err = s.kubeGetter.GetKubeClient(); err != nil {
 			return nil, err
 		}
-		clusterState, err = converge.GetClusterStateFromCluster(kubeCl)
+		clusterState, err = GetClusterStateFromCluster(kubeCl)
 		if err != nil {
 			return nil, err
 		}

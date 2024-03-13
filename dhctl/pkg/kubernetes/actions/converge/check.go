@@ -15,7 +15,10 @@
 package converge
 
 import (
+	"encoding/json"
 	"fmt"
+	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"reflect"
 	"sort"
 
@@ -23,6 +26,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -60,43 +65,128 @@ type Statistics struct {
 }
 
 func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
-	clusterState, err := GetClusterStateFromCluster(kubeCl)
-	if err != nil {
-		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+	var clusterState []byte
+	var err error
+	// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
+	// NOTE: In the commander mode cluster state should exist in the local state cache.
+	if !opts.CommanderMode {
+		clusterState, err = state_terraform.GetClusterStateFromCluster(kubeCl)
+		if err != nil {
+			return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+		}
+		if clusterState == nil {
+			return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("kubernetes cluster has no state")
+		}
 	}
 
-	if clusterState == nil {
-		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("kubernetes cluster has no state")
+	var stateSavers []terraform.SaverDestination
+	if opts.CommanderMode {
+		stateSavers = append(stateSavers, NewClusterStateSaver(kubeCl))
 	}
 
-	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.CheckBaseInfraRunnerOptions{
-		CommanderMode: opts.CommanderMode,
-		ClusterState:  clusterState,
+	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.BaseInfraRunnerOptions{
+		AutoDismissDestructive:           false,
+		AutoApprove:                      true,
+		CommanderMode:                    opts.CommanderMode,
+		StateCache:                       opts.StateCache,
+		ClusterState:                     clusterState,
+		AdditionalStateSaverDestinations: stateSavers,
 	})
 
 	return terraform.CheckBaseInfrastructurePipeline(baseRunner, "Kubernetes cluster")
 }
 
-func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
 	}
 
-	nodeRunner := terraformContext.GetCheckNodeRunner(metaConfig, terraform.CheckNodeRunnerOptions{
+	cfg := metaConfig
+	if nodeGroupState.Settings != nil {
+		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{nodeGroupState.Settings})
+		if err != nil {
+			log.ErrorLn(err)
+		} else {
+			cfg, err = metaConfig.DeepCopy().Prepare()
+			if err != nil {
+				return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
+			}
+			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
+		}
+	}
+
+	pipelineForMaster := nodeGroup.Step == "master-node"
+	nodeGroupName := nodeGroup.Name
+	if pipelineForMaster {
+		nodeGroupName = MasterNodeGroupName
+	}
+
+	var stateSavers []terraform.SaverDestination
+	if opts.CommanderMode {
+		stateSavers = append(stateSavers, NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nil))
+	}
+	nodeRunner := terraformContext.GetCheckNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
+		AutoDismissDestructive:           false,
+		AutoApprove:                      true,
+		NodeName:                         nodeName,
+		NodeGroupName:                    nodeGroup.Name,
+		NodeGroupStep:                    nodeGroup.Step,
+		NodeIndex:                        nodeIndex,
+		NodeState:                        nodeGroup.State[nodeName],
+		NodeCloudConfig:                  nodeGroup.CloudConfig,
+		CommanderMode:                    opts.CommanderMode,
+		StateCache:                       opts.StateCache,
+		AdditionalStateSaverDestinations: stateSavers,
+	})
+
+	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
+}
+
+func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
+	if err != nil {
+		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
+	}
+
+	pipelineForMaster := nodeGroup.Step == "master-node"
+
+	nodeGroupName := nodeGroup.Name
+	var nodeGroupSettingsFromConfig []byte
+	if pipelineForMaster {
+		nodeGroupName = MasterNodeGroupName
+	} else {
+		// Node group settings are only for the static node.
+		nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(nodeGroup.Name)
+	}
+
+	var stateSavers []terraform.SaverDestination
+	if opts.CommanderMode {
+		stateSavers = append(stateSavers, NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+	}
+
+	nodeRunner := terraformContext.GetCheckNodeRunner(metaConfig, terraform.NodeRunnerOptions{
+		AutoDismissDestructive: false,
+		AutoApprove:            true,
+
 		NodeName:        nodeName,
 		NodeGroupName:   nodeGroup.Name,
 		NodeGroupStep:   nodeGroup.Step,
 		NodeIndex:       nodeIndex,
 		NodeState:       nodeGroup.State[nodeName],
 		NodeCloudConfig: nodeGroup.CloudConfig,
+
+		CommanderMode:                    opts.CommanderMode,
+		StateCache:                       opts.StateCache,
+		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	return terraform.CheckPipeline(nodeRunner, nodeName)
+	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{})
 }
 
 type CheckStateOptions struct {
 	CommanderMode bool
+	StateCache    dhctlstate.Cache
 }
 
 func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (*Statistics, error) {
@@ -123,9 +213,19 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
 	}
 
-	nodesState, err := GetNodesStateFromCluster(kubeCl)
-	if err != nil {
-		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
+	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
+	// NOTE: In the commander mode nodes state should exist in the local state cache.
+	var nodesState map[string]state.NodeGroupTerraformState
+	if opts.CommanderMode {
+		nodesState, err = LoadNodesStateForCommanderMode(opts.StateCache, metaConfig, kubeCl)
+		if err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to load nodes state: %w", err))
+		}
+	} else {
+		nodesState, err = state_terraform.GetNodesStateFromCluster(kubeCl)
+		if err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
+		}
 	}
 
 	nodeTemplates, err := GetNodeGroupTemplates(kubeCl)
@@ -213,7 +313,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 					Name:  nodeName,
 				}
 
-				_, terraformPlan, destructiveChanges, err := checkNodeState(metaConfig, &nodeGroup, nodeName, terraformContext, opts)
+				_, terraformPlan, destructiveChanges, err := checkAbandonedNodeState(kubeCl, metaConfig, &nodeGroup, &nodeGroupState, nodeName, terraformContext, opts)
 				if err != nil {
 					checkResult.Status = ErrorStatus
 					allErrs = multierror.Append(allErrs, fmt.Errorf("node %s: %v", nodeName, err))
@@ -222,6 +322,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 					checkResult.DestructiveChanges = destructiveChanges
 				}
 
+				statistics.Node = append(statistics.Node, checkResult)
 				if terraformPlan != nil {
 					statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
 				}
@@ -246,7 +347,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				Name:   name,
 				Status: OKStatus,
 			}
-			changed, terraformPlan, destructiveChanges, err := checkNodeState(metaConfig, &nodeGroup, name, terraformContext, opts)
+			changed, terraformPlan, destructiveChanges, err := checkNodeState(kubeCl, metaConfig, &nodeGroup, name, terraformContext, opts)
 			switch {
 			case err != nil:
 				checkResult.Status = ErrorStatus
@@ -258,11 +359,10 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				checkResult.DestructiveChanges = destructiveChanges
 			}
 
+			statistics.Node = append(statistics.Node, checkResult)
 			if terraformPlan != nil {
 				statistics.TerraformPlan = append(statistics.TerraformPlan, terraformPlan)
 			}
-
-			statistics.Node = append(statistics.Node, checkResult)
 		}
 	}
 
