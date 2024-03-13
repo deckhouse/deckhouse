@@ -14,10 +14,14 @@
 
 package terraform
 
+type PlanOptions struct {
+	Destroy bool
+}
+
 type RunnerInterface interface {
 	Init() error
 	Apply() error
-	Plan() error
+	Plan(opts PlanOptions) error
 	Destroy() error
 	Stop()
 

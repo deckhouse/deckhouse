@@ -16,7 +16,6 @@ package infrastructure
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -24,7 +23,7 @@ import (
 
 type StateLoader interface {
 	PopulateMetaConfig() (*config.MetaConfig, error)
-	PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error)
+	PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error)
 }
 
 type NodeGroupController interface {
