@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -33,7 +34,13 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.InstallDeckhouse()
@@ -50,7 +57,13 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecuteBashible()
@@ -67,7 +80,13 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.CreateResources()
@@ -86,7 +105,13 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.Abort(app.ForceAbortFromCache)
@@ -102,7 +127,13 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 	app.DefineDropCacheFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.BaseInfrastructure()
@@ -118,7 +149,13 @@ func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecPostBootstrap()
