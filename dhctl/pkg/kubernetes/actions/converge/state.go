@@ -23,7 +23,6 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	apiv1 "k8s.io/api/core/v1"
-	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -36,68 +35,6 @@ import (
 )
 
 var ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
-
-type NodeGroupTerraformState struct {
-	State    map[string][]byte
-	Settings []byte
-}
-
-func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]NodeGroupTerraformState, error) {
-	extractedState := make(map[string]NodeGroupTerraformState)
-
-	err := retry.NewLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
-		if err != nil {
-			return err
-		}
-
-		for _, nodeState := range nodeStateSecrets.Items {
-			name := nodeState.Labels["node.deckhouse.io/node-name"]
-			if name == "" {
-				return fmt.Errorf("can't determine Node name for %q secret", nodeState.Name)
-			}
-
-			nodeGroup := nodeState.Labels["node.deckhouse.io/node-group"]
-			if nodeGroup == "" {
-				return fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.Name)
-			}
-
-			if _, ok := extractedState[nodeGroup]; !ok {
-				extractedState[nodeGroup] = NodeGroupTerraformState{State: make(map[string][]byte)}
-			}
-
-			// TODO: validate, that all secrets from node group have same node-group-settings.json
-			nodeGroupTerraformState := extractedState[nodeGroup]
-			nodeGroupTerraformState.Settings = nodeState.Data["node-group-settings.json"]
-
-			state := nodeState.Data["node-tf-state.json"]
-			nodeGroupTerraformState.State[name] = state
-
-			log.InfoF("nodeGroup=%s nodeName=%s symbols=%v\n", nodeGroup, name, len(state))
-			extractedState[nodeGroup] = nodeGroupTerraformState
-		}
-		return nil
-	})
-	return extractedState, err
-}
-
-func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error) {
-	var state []byte
-	err := retry.NewLoop("Get Cluster Terraform state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		clusterStateSecret, err := kubeCl.CoreV1().Secrets("d8-system").Get(context.TODO(), "d8-cluster-terraform-state", metav1.GetOptions{})
-		if err != nil {
-			if k8errors.IsNotFound(err) {
-				// Return empty state, if there is no state in cluster. Need to skip cluster state apply in converge.
-				return nil
-			}
-			return err
-		}
-
-		state = clusterStateSecret.Data["cluster-tf-state.json"]
-		return nil
-	})
-	return state, err
-}
 
 // Create secret for node with group settings only.
 func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
@@ -248,20 +185,6 @@ func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) er
 	return retry.NewLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10*time.Second).Run(func() error {
 		return kubeCl.CoreV1().Secrets("d8-system").Delete(context.TODO(), secretName, metav1.DeleteOptions{})
 	})
-}
-
-func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
-	var clusterUUID string
-	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		clusterUUID = uuidConfigMap.Data["cluster-uuid"]
-		return nil
-	})
-	return clusterUUID, err
 }
 
 // NewClusterStateSaver returns StateSaver that saves intermediate terraform state to Secret.
