@@ -5,7 +5,7 @@
 ---
 {{- $cniVersion := "1.4.0" }}
 # Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 artifact: {{ $.ModuleName }}/cni-plugins-artifact
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}

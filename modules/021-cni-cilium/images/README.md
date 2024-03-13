@@ -4,45 +4,48 @@
 - `+` `gops`
   - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
-    - src of gops
-    - binaries of gops (builded from src)
+    - src of gops *(loaded from fox)*
+    - binaries of gops *(builded from src)*
 - `+` `cni-plugins`
   - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
-    - src of cni-plugins
-    - binaries of cni-plugins (builded from src)
+    - src of cni-plugins *(loaded from fox)*
+    - binaries of cni-plugins *(builded from src)*
 - `+` `hubble`
   - based on `BASE_GOLANG_20_BULLSEYE_DEV` image
   - includes:
-    - src of hubble
-    - binaries hubble-cli (builded from src)
+    - src of hubble *(loaded from fox)*
+    - binaries hubble-cli *(builded from src)*
 - `+` `bpftool`
   - based on `compilers` image
   - includes:
-    - src of bpf-next
-    - binaries bpftool (builded from src)
+    - src of bpf-next *(loaded from fox)*
+    - binaries bpftool *(builded from src)*
 - `+` `llvm`
   - based on `compilers` image
   - includes:
-    - src of llvm-10.0
-    - binaries clang, llc, llvm-objcopy (builded from src)
+    - src of llvm-10.0 *(loaded from fox)*
+    - binaries clang, llc, llvm-objcopy *(builded from src)*
+- `+` `cilium`
+  - based on `builder` image
+  - includes:
+    - src of cilium *(loaded from fox)*
+    - patches
+    - binaries of cilium *(builded from src)*
+    - shell-scripts from cilium src: init-container.sh install-plugin.sh cni-uninstall.sh
+- `+` `cilium-envoy`
+  - based on `BASE_UBUNTU` image
+  - includes:
+    - installed packages from repo
+    - binaries of bazel `(!!! loaded from internet)`
+    - src of envoyproxy/envoy *(loaded from fox)*
+    - src of cilium/proxy *(loaded from fox)*
+    - binaries cilium-envoy *(builded from src)*
 - *todo* `iptables`
   - based on `ubuntu:22.04` image
   - includes:
     - installed packages from repo: debian-archive-keyring apt-src ca-certificates
     - loaded from repo src of iptables 1.8.8-1 and builded deb-package
-- `cilium-envoy`
-  - based on `BASE_UBUNTU` image
-  - includes:
-    - src of cilium-envoy
-    - binaries cilium-envoy (builded from src)
-- `+` `cilium`
-  - based on `builder` image
-  - includes:
-    - src of cilium
-    - patches
-    - binaries of cilium (builded from src)
-    - shell-scripts from cilium src: init-container.sh install-plugin.sh cni-uninstall.sh
 
 
 ### Building utility images (used for build other images and binaries)

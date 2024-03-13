@@ -5,7 +5,7 @@
 #---
 {{- $llvmRev := "llvmorg-10.0.0" }}
 # Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on compilers)

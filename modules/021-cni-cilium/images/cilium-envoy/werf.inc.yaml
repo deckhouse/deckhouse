@@ -4,7 +4,7 @@
 #---
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
 # Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -75,8 +75,8 @@ shell:
   - git checkout {{ $ciliumProxyRev }}
   install:
   - cd /cilium/proxy
-  #- export SOURCE_VERSION="{{ $ciliumProxyRev }}"
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
+  - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
   - export BAZEL_BUILD_OPTS="--jobs=HOST_CPUS*.75 --disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - make bazel-bin/cilium-envoy

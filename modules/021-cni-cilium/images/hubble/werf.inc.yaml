@@ -1,6 +1,6 @@
 {{- $hubbleVersion := "v0.12.3" }}
 # Source repo  settings. Delete after clone repo to fox
-{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Build hubble-cli binaries
