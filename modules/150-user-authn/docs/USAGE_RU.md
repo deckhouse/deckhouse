@@ -286,6 +286,6 @@ spec:
 
 {% endraw %}
 
-## Как задать права пользователю без добавления в группу
+## Как задать права пользователю или группе
 
 Для настройки используются параметры в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
