@@ -88,7 +88,7 @@ entries:
                 - title:
                     en: Build a container image
                     ru: Соберите образ контейнера
-                  url: /modules-docs/chart-adapt/build-container-images
+                  url: /modules-docs/chart-adapt/build-container-images/
                 - title:
                     en: Add hooks
                     ru: Добавьте хуки

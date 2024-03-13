@@ -291,23 +291,3 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- url: https://nobody:{{ env "CI_MODULE_DOC_TOKEN" }}@fox.flant.com/deckhouse/modules/docs.git
-  # TODO REMOVE!
-  #commit: 071e4a24427907060c40c6c897e932b6e6702973
-  branch: docs2site
-  add: /docs/src
-  to: /srv/jekyll-data/documentation/pages/modules-docs
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  excludePaths: ['existing_modules', 'images']
-- url: https://nobody:{{ env "CI_MODULE_DOC_TOKEN" }}@fox.flant.com/deckhouse/modules/docs.git
-  #commit: 071e4a24427907060c40c6c897e932b6e6702973
-  branch: docs2site
-  add: /docs/src/images
-  to: /srv/jekyll-data/documentation/images/modules-docs
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
