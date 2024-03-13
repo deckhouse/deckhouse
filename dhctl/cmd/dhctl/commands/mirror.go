@@ -60,6 +60,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		Jobs:                  app.MirrorJobs,
 		RegistryHost:          app.MirrorRegistryHost,
 		RegistryPath:          app.MirrorRegistryPath,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -82,6 +83,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return fmt.Errorf("Registry credentials validation failure: %w", err)
 	}
@@ -107,6 +109,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		Jobs:                  app.MirrorJobs,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -132,6 +135,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return fmt.Errorf("Source registry access validation failure: %w", err)
 	}

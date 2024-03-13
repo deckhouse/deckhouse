@@ -30,13 +30,13 @@ import (
 )
 
 func TestMakeRemoteRegistryRequestOptionsAnonymous(t *testing.T) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, false, false)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, false, false, 1)
 	require.Len(t, remoteOpts, 0)
 	require.Len(t, nameOpts, 0)
 }
 
 func TestMakeRemoteRegistryRequestOptionsAnonymousInsecure(t *testing.T) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, true, false)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, true, false, 1)
 	require.Len(t, remoteOpts, 0)
 	require.Len(t, nameOpts, 1)
 
@@ -60,7 +60,7 @@ func TestInsecureReadAccessValidation(t *testing.T) {
 	err = remote.Write(ref, img, remote.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}))
 	require.NoError(t, err)
 
-	err = ValidateReadAccessForImage(imageTag, authn.Anonymous, true, false)
+	err = ValidateReadAccessForImage(imageTag, authn.Anonymous, true, false, 1)
 	require.NoError(t, err, "Should validate successfully")
 }
 
@@ -73,7 +73,7 @@ func TestReadAccessValidationWithSkipTLSVerify(t *testing.T) {
 	img, err := random.Image(256, 1)
 	require.NoError(t, err)
 
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, false, true)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(nil, false, true, 1)
 	ref, err := name.ParseReference(imageTag, nameOpts...)
 	require.NoError(t, err)
 	remoteOpts = append(remoteOpts, remote.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}))
@@ -81,7 +81,7 @@ func TestReadAccessValidationWithSkipTLSVerify(t *testing.T) {
 	err = remote.Write(ref, img, remoteOpts...)
 	require.NoError(t, err)
 
-	err = ValidateReadAccessForImage(imageTag, authn.Anonymous, false, true)
+	err = ValidateReadAccessForImage(imageTag, authn.Anonymous, false, true, 1)
 	require.NoError(t, err, "Should validate successfully")
 }
 
@@ -91,7 +91,7 @@ func TestWriteAccessValidationWithSkipTLSVerify(t *testing.T) {
 	server := httptest.NewTLSServer(registryHandler)
 	repo := strings.TrimPrefix(server.URL, "https://") + "/test"
 
-	err := ValidateWriteAccessForRepo(repo, authn.Anonymous, false, true)
+	err := ValidateWriteAccessForRepo(repo, authn.Anonymous, false, true, 1)
 	require.NoError(t, err, "Should validate successfully")
 }
 
@@ -101,6 +101,6 @@ func TestWriteAccessValidationInsecure(t *testing.T) {
 	server := httptest.NewServer(registryHandler)
 	repo := strings.TrimPrefix(server.URL, "http://") + "/test"
 
-	err := ValidateWriteAccessForRepo(repo, authn.Anonymous, true, false)
+	err := ValidateWriteAccessForRepo(repo, authn.Anonymous, true, false, 1)
 	require.NoError(t, err, "Should validate successfully")
 }

@@ -201,6 +201,7 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			mirrorCtx.RegistryAuth,
 			mirrorCtx.Insecure,
 			mirrorCtx.SkipTLSVerification,
+			mirrorCtx.Jobs,
 		)
 		if err != nil {
 			return fmt.Errorf("fetch versions from %q release channels: %w", moduleName, err)
@@ -245,8 +246,9 @@ func fetchVersionsFromModuleReleaseChannels(
 	releaseChannelImages map[string]struct{},
 	authProvider authn.Authenticator,
 	insecure, skipVerifyTLS bool,
+	jobs int,
 ) (map[string]string, error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
 

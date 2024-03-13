@@ -33,7 +33,7 @@ func TestPullTrivyVulnerabilityDatabaseImageSuccessSkipTLS(t *testing.T) {
 	blobHandler := registry.NewInMemoryBlobHandler()
 	registryHandler := registry.New(registry.WithBlobHandler(blobHandler))
 	server := httptest.NewTLSServer(registryHandler)
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authn.Anonymous, false, true)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authn.Anonymous, false, true, 1)
 	testLayout := prepareEmptyOCILayout(t)
 
 	deckhouseRepo := strings.TrimPrefix(server.URL, "https://") + "/deckhouse/ee"
@@ -45,7 +45,7 @@ func TestPullTrivyVulnerabilityDatabaseImageSuccessSkipTLS(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(ref, wantImage, remoteOpts...))
 
-	err = PullTrivyVulnerabilityDatabaseImageToLayout(deckhouseRepo, authn.Anonymous, testLayout, false, true)
+	err = PullTrivyVulnerabilityDatabaseImageToLayout(deckhouseRepo, authn.Anonymous, testLayout, false, true, 1)
 	require.NoError(t, err)
 
 	wantDigest, err := wantImage.Digest()
@@ -63,7 +63,7 @@ func TestPullTrivyVulnerabilityDatabaseImageSuccessInsecure(t *testing.T) {
 	blobHandler := registry.NewInMemoryBlobHandler()
 	registryHandler := registry.New(registry.WithBlobHandler(blobHandler))
 	server := httptest.NewServer(registryHandler)
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authn.Anonymous, true, false)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authn.Anonymous, true, false, 1)
 	testLayout := prepareEmptyOCILayout(t)
 
 	deckhouseRepo := strings.TrimPrefix(server.URL, "http://") + "/deckhouse/ee"
@@ -75,7 +75,7 @@ func TestPullTrivyVulnerabilityDatabaseImageSuccessInsecure(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(ref, wantImage, remoteOpts...))
 
-	err = PullTrivyVulnerabilityDatabaseImageToLayout(deckhouseRepo, authn.Anonymous, testLayout, true, false)
+	err = PullTrivyVulnerabilityDatabaseImageToLayout(deckhouseRepo, authn.Anonymous, testLayout, true, false, 1)
 	require.NoError(t, err)
 
 	wantDigest, err := wantImage.Digest()

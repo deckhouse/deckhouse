@@ -37,6 +37,7 @@ const (
 	mirrorNoValidation   = "off"
 	mirrorFastValidation = "fast"
 	mirrorFullValidation = "full"
+	mirrorJobs           = "4"
 )
 
 var (
@@ -62,6 +63,8 @@ var (
 
 	MirrorDoGOSTDigest            bool
 	MirrorDontContinuePartialPull bool
+
+	MirrorJobs int
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -121,7 +124,9 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
-
+	cmd.Flag("parallel", "Number of parallel registry pulls.").
+		Default(mirrorJobs).
+		IntVar(&MirrorJobs)
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		var err error
 		if err = parseAndValidateMinVersionFlag(); err != nil {

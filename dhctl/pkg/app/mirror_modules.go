@@ -57,6 +57,9 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
+	cmd.Flag("parallel", "Number of parallel registry pulls.").
+		Default(mirrorJobs).
+		IntVar(&MirrorJobs)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if err := validateRegistryCredentials(); err != nil {

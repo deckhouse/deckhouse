@@ -49,8 +49,8 @@ func GetDeckhouseExternalModules(mirrorCtx *Context) ([]Module, error) {
 	return result, nil
 }
 
-func GetExternalModulesFromRepo(repo string, registryAuth authn.Authenticator, insecure, skipVerifyTLS bool) ([]Module, error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(registryAuth, insecure, skipVerifyTLS)
+func GetExternalModulesFromRepo(repo string, registryAuth authn.Authenticator, insecure, skipVerifyTLS bool, jobs int) ([]Module, error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(registryAuth, insecure, skipVerifyTLS, jobs)
 	repoPathBuildFuncForExternalModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/%s", repo, moduleName)
 	}
@@ -103,8 +103,8 @@ func getModulesForRepo(
 	return result, nil
 }
 
-func FindExternalModuleImages(mod *Module, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) (moduleImages, releaseImages map[string]struct{}, err error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+func FindExternalModuleImages(mod *Module, authProvider authn.Authenticator, insecure, skipVerifyTLS bool, jobs int) (moduleImages, releaseImages map[string]struct{}, err error) {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 
 	moduleImages = map[string]struct{}{}
 	releaseImages, err = getAvailableReleaseChannelsImagesForModule(mod, nameOpts, remoteOpts)
