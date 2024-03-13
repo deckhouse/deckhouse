@@ -20,7 +20,7 @@ k8s:
     ccm:
       openstack: v1.25.3
       # todo change after test
-      yandex: add-logs-for-load-balanser-operation
+      yandex: 0-25-add-additional-logs
       aws: v1.25.1
       vsphere: v1.25.0
       azure: v1.25.22
