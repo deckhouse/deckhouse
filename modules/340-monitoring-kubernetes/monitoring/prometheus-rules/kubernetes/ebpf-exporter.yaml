@@ -36,7 +36,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "job"
       summary: >
-        Kernel not supported.
+        The BTF module required for ebpf_exporter is missing in the kernel.
         Possible actions to resolve the problem:
-        * Built kernel with BTF type information [BPF Type Format](https://www.kernel.org/doc/html/latest/bpf/btf.html).
+        * Built kernel with BTF type information [info](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
+        * [Disable](https://deckhouse.io/documentation/v1/modules/340-monitoring-kubernetes/configuration.html#parameters-ebpfexporterenaled) ebpf_exporter
