@@ -71,7 +71,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		Status: CheckStatusInSync,
 	}
 
-	status, statusDetails, _, err := c.checkInfra(ctx, kubeCl, c.Params.MetaConfig, c.TerraformContext)
+	status, statusDetails, err := c.checkInfra(ctx, kubeCl, c.Params.MetaConfig, c.TerraformContext)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check infra state: %w", err)
 	}
@@ -127,19 +127,16 @@ func (c *Checker) checkConfiguration(_ context.Context, kubeCl *client.Kubernete
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, string, error) {
-	var message string
-
+func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, error) {
 	stat, err := converge.CheckState(
 		kubeCl, metaConfig, terraformContext,
-		converge.CheckStateOptions{CommanderMode: c.CommanderMode},
+		converge.CheckStateOptions{
+			CommanderMode: c.CommanderMode,
+			StateCache:    c.StateCache,
+		},
 	)
-
-	// NOTE: According to the current converge.CheckState implementation
-	//       err actually not always an internal-error, but may be a message closely related to the stat
-	//       as these cases are indistinguishable we always treat it as a message
 	if err != nil {
-		message = err.Error()
+		return CheckStatusDestructiveOutOfSync, stat, err
 	}
 
 	checkStatus := CheckStatusInSync
@@ -154,7 +151,7 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 		checkStatus = checkStatus.CombineStatus(resolveStatisticsStatus(stat.Cluster.Status))
 	}
 
-	return checkStatus, stat, message, nil
+	return checkStatus, stat, nil
 }
 
 func resolveStatisticsStatus(status string) CheckStatus {
@@ -175,7 +172,7 @@ func resolveStatisticsStatus(status string) CheckStatus {
 		return CheckStatusOutOfSync
 	case converge.ErrorStatus:
 		// NOTE: Unknown error, probably can be healed by the retry
-		return CheckStatusOutOfSync
+		return CheckStatusDestructiveOutOfSync
 	}
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
