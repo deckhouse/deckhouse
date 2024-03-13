@@ -157,12 +157,14 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		clusterBootstrapping = !clusterBootstrappedV.Bool()
 	}
 
-	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc.GetHTTPClient()), clusterBootstrapping)
+	podReady := isDeckhousePodReady(dc.GetHTTPClient())
+	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, podReady, clusterBootstrapping)
+
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if isDeckhousePodReady(dc.GetHTTPClient()) {
+	if podReady {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
