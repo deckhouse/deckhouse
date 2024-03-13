@@ -285,8 +285,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
 			if baseOutputs.BastionHost != "" {
+				b.SSHClient.Settings.BastionHost = baseOutputs.BastionHost
 				SaveBastionHostToCache(baseOutputs.BastionHost)
 			}
+
+			app.SSHHosts = []string{masterOutputs.MasterIPForSSH}
+			b.SSHClient.Settings.SetAvailableHosts(app.SSHHosts)
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath
