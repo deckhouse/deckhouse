@@ -52,8 +52,8 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 	Context("Service with LoadBalancer type and with hostname", func() {
 		BeforeEach(func() {
 			resources := []string{
-				ingressNginxControllerYAML("test"),
-				serviceYAML("test", "LoadBalancer", "", "hostname"),
+				ingressNginxControllerYAML("test2"),
+				serviceYAML("test2", "LoadBalancer", "", "hostname"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -61,7 +61,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 
 		It("Should set hostname", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			ingress := f.KubernetesGlobalResource("IngressNginxController", "test")
+			ingress := f.KubernetesGlobalResource("IngressNginxController", "test2")
 			Expect(ingress.Field("status.loadBalancer.hostname").Str).To(Equal("hostname"))
 			Expect(ingress.Field("status.loadBalancer.ip").Str).To(BeEmpty())
 		})
@@ -69,8 +69,8 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 	Context("Service with LoadBalancer type and with ip", func() {
 		BeforeEach(func() {
 			resources := []string{
-				ingressNginxControllerYAML("test"),
-				serviceYAML("test", "LoadBalancer", "ip", ""),
+				ingressNginxControllerYAML("test3"),
+				serviceYAML("test3", "LoadBalancer", "ip", ""),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -78,7 +78,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 
 		It("Should set ip", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			ingress := f.KubernetesGlobalResource("IngressNginxController", "test")
+			ingress := f.KubernetesGlobalResource("IngressNginxController", "test3")
 			Expect(ingress.Field("status.loadBalancer.hostname").Str).To(BeEmpty())
 			Expect(ingress.Field("status.loadBalancer.ip").Str).To(Equal("ip"))
 		})
@@ -87,8 +87,8 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 	Context("Service with LoadBalancer type and with ip and hostname", func() {
 		BeforeEach(func() {
 			resources := []string{
-				ingressNginxControllerYAML("test"),
-				serviceYAML("test", "LoadBalancer", "ip", "hostname"),
+				ingressNginxControllerYAML("test4"),
+				serviceYAML("test4", "LoadBalancer", "ip", "hostname"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -96,7 +96,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 
 		It("Should set ip", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			ingress := f.KubernetesGlobalResource("IngressNginxController", "test")
+			ingress := f.KubernetesGlobalResource("IngressNginxController", "test4")
 			Expect(ingress.Field("status.loadBalancer.hostname").Str).To(Equal("hostname"))
 			Expect(ingress.Field("status.loadBalancer.ip").Str).To(Equal("ip"))
 		})
