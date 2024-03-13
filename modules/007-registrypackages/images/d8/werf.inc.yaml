@@ -32,5 +32,5 @@ shell:
   - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
   - go-task build:dist:linux:amd64
-  - mv ./dist/v{{ $version }}/linix-amd64/d8 /d8
+  - mv ./dist/v{{ $version }}/linux-amd64/d8 /d8
   - chmod +x /d8 /install /uninstall
