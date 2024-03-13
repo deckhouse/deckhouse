@@ -266,6 +266,8 @@ spec:
 
 {% endraw %}
 
+По умолчанию пользователь получает роль `User`, описание прав которого предаставлено [`здесь`](../../140-user-authz/readme.html#список-доступа-для-каждой-роли-модуля-по-умолчанию)
+
 ## Пример добавления статического пользователя в группу
 
 {% raw %}
@@ -284,8 +286,6 @@ spec:
 
 {% endraw %}
 
-## Как ограничить права пользователю конкретными namespace?
+## Как задать права пользователю без добавления в группу
 
-Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
-
-По умолчанию пользователь получает роль `User`, описание прав которого предаставлено [`здесь`](../../140-user-authz/readme.html#список-доступа-для-каждой-роли-модуля-по-умолчанию)
+Для настройки используются параметры в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
