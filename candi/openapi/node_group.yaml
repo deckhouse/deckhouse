@@ -2077,19 +2077,19 @@ spec:
                     topologyManager:
                       type: object
                       description: |
-                        Control Topology Management Policies on a node.
+                        Controls Topology Management Policies on a node.
                         More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
                         enabled:
                           type: boolean
                           x-doc-default: false
                           description: |
-                            Enables Control Topology Management on a node.
+                            Enables Topology Management on a node.
                         scope:
                           type: string
                           x-doc-default: Container
                           description: |
-                            The scope defines the granularity at which you would like resource alignment to be performed (e.g. at the pod or container level).
+                            The scope defines the granularity at which to perform resource alignment (e.g. pod or container level).
                           enum:
                             - Container
                             - Pod
