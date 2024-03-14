@@ -176,6 +176,11 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		}
 	}
 
+	// disable target module hooks so as not to invoke them before restart
+	if k.modulesValidator.GetModule(moduleName) != nil {
+		k.modulesValidator.DisableModuleHooks(moduleName)
+	}
+
 	return nil
 }
 
