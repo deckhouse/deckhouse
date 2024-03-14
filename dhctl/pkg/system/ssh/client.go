@@ -29,7 +29,7 @@ var (
 )
 
 // initializeNewInstance disables singleton logic
-func initAgentInstance(privateKeys []string, initializeNewInstance bool) (*frontend.Agent, error) {
+func initAgentInstance(privateKeys []session.AgentPrivateKey, initializeNewInstance bool) (*frontend.Agent, error) {
 	var err error
 
 	if initializeNewInstance {
@@ -69,7 +69,7 @@ func initAgentInstance(privateKeys []string, initializeNewInstance bool) (*front
 	return agentInstance, err
 }
 
-func NewClient(session *session.Session, privKeys []string) *Client {
+func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
 		PrivateKeys: privKeys,
@@ -83,7 +83,7 @@ type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
 
-	PrivateKeys        []string
+	PrivateKeys        []session.AgentPrivateKey
 	InitializeNewAgent bool
 
 	kubeProxies []*frontend.KubeProxy

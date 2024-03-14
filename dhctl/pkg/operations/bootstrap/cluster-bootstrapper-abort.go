@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -42,34 +41,6 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	}
 
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
-}
-
-func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
-	if len(app.SSHHosts) == 0 {
-		mastersIPs, err := GetMasterHostsIPs()
-		if err != nil {
-			return nil, err
-		}
-		app.SSHHosts = mastersIPs
-	}
-
-	bastionHost, err := GetBastionHostFromCache()
-	if err != nil {
-		log.ErrorF("Can not load bastion host: %v\n", err)
-		return nil, err
-	}
-
-	if bastionHost != "" {
-		setBastionHost(bastionHost, nil)
-	}
-
-	sshClient := ssh.NewClientFromFlags()
-	sshClient.InitializeNewAgent = initializeNewAgent
-	if _, err := sshClient.Start(); err != nil {
-		return nil, fmt.Errorf("unable to start ssh client: %w", err)
-	}
-
-	return sshClient, nil
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
@@ -112,13 +83,23 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 
 	var destroyer destroy.Destroyer
 
-	var sshClient *ssh.Client
-	if b.initializeNewAgent {
-		defer func() {
-			if sshClient != nil {
-				sshClient.Stop()
-			}
-		}()
+	if len(b.SSHClient.Settings.AvailableHosts()) == 0 {
+		mastersIPs, err := GetMasterHostsIPs()
+		if err != nil {
+			log.ErrorF("Can not load available ssh hosts: %v\n", err)
+			return err
+		}
+		b.SSHClient.Settings.SetAvailableHosts(mastersIPs)
+	}
+
+	bastionHost, err := GetBastionHostFromCache()
+	if err != nil {
+		log.ErrorF("Can not load bastion host: %v\n", err)
+		return err
+	}
+
+	if bastionHost != "" {
+		b.SSHClient.Settings.BastionHost = bastionHost
 	}
 
 	err = log.Process("common", "Choice abort type", func() error {
@@ -137,11 +118,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 					},
 				)
 			} else {
-				sshClient, err := getSSHClient(b.initializeNewAgent)
-				if err != nil {
-					return err
-				}
-				destroyer = destroy.NewStaticMastersDestroyer(sshClient)
+				destroyer = destroy.NewStaticMastersDestroyer(b.SSHClient)
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -154,23 +131,18 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			return nil
 		}
 
-		sshClient, err := getSSHClient(b.initializeNewAgent)
-		if err != nil {
-			return err
-		}
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
 
 		if !b.CommanderMode {
-			if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{}); err != nil {
-				return fmt.Errorf(bootstrapAbortInvalidCacheMessage, sshClient.Check().String(), err)
+			if err = cache.InitWithOptions(b.SSHClient.Check().String(), cache.CacheOptions{}); err != nil {
+				return fmt.Errorf(bootstrapAbortInvalidCacheMessage, b.SSHClient.Check().String(), err)
 			}
 		}
 
 		destroyParams := &destroy.Params{
-			SSHClient:              sshClient,
+			SSHClient:              b.SSHClient,
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
