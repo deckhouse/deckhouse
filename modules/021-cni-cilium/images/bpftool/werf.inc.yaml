@@ -1,19 +1,13 @@
-#---
-#artifact: {{ $.ModuleName }}/bpftool-artifact
-#from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
-#---
-{{- $bpftoolRev := "93270357daa949e4bed375b40d0a100ce04f3399" }}
-# Source repo  settings. Delete after clone repo to fox
-#{{- $_ := set . "SOURCE_REPO" "https://kernel.googlesource.com/pub/scm" }}
----
 # #####################################################################
 # Build BPFTOOL binaries (based on compilers)
 # Original IMAGE_TAG is d3093f6aeefef8270306011109be623a7e80ad1b
 # Corresponding commit 3f125f524cdf74e20c1ac73855042a9254747855 (https://github.com/cilium/image-tools/tree/3f125f524cdf74e20c1ac73855042a9254747855)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
-# Based on https://github.com/cilium/image-tools/blob/3f125f524cdf74e20c1ac73855042a9254747855/images/bpftool/Dockerfile
+# and https://github.com/cilium/image-tools/blob/3f125f524cdf74e20c1ac73855042a9254747855/images/bpftool/Dockerfile
 # Original compilers IMAGE_TAG is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
 # #####################################################################
+---
+{{- $bpftoolRev := "93270357daa949e4bed375b40d0a100ce04f3399" }}
 ---
 artifact: {{ $.ModuleName }}/bpftool-builder-artifact
 fromImage: {{ $.ModuleName }}/compilers-artifact

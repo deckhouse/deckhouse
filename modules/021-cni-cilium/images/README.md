@@ -24,8 +24,8 @@
 - `+` `llvm`
   - based on `compilers` image
   - includes:
-    - src of llvm-10.0 *(loaded from fox)*
-    - binaries clang, llc, llvm-objcopy *(builded from src)*
+    - src of llvm *(loaded from fox)*
+    - binaries llvm-10.0.0: clang, llc, llvm-objcopy *(builded from src)*
 - `+` `cilium`
   - based on `builder` image
   - includes:
@@ -36,7 +36,7 @@
 - `+` `cilium-envoy`
   - based on `BASE_UBUNTU` image
   - includes:
-    - installed packages from repo
+    - installed packages from repo `(!!! loaded from internet)`
     - binaries of bazel `(!!! loaded from internet)`
     - src of envoyproxy/envoy *(loaded from fox)*
     - src of cilium/proxy *(loaded from fox)*
@@ -44,9 +44,11 @@
 - *todo* `iptables`
   - based on `ubuntu:22.04` image
   - includes:
-    - installed packages from repo: debian-archive-keyring apt-src ca-certificates
-    - loaded from repo src of iptables 1.8.8-1 and builded deb-package
-
+    - installed packages from repo `(!!! loaded from internet)`:
+      - debian-archive-keyring apt-src ca-certificates
+    - loaded src-deb-package from repo `(!!! loaded from internet)`:
+      - iptables 1.8.8-1
+    - rebuilded deb-package
 
 ### Building utility images (used for build other images and binaries)
 - `runtime`
@@ -57,16 +59,19 @@
     - binaries from image `cni-plugins`
     - binaries from image `gops`
     - binaries from image `cni-plugins`
-    - binaries from image `iptables`
+    - deb-package from image `iptables`
+    - installed packages from image `iptables`
     - shell-scripts from cilium src: iptables-wrapper-installer.sh
-    - installed packages from repo: bash-completion iproute2 iptables ipset kmod ca-certificates
-    - installed packages from iptables-binaries and shell-scripts
+    - installed packages from repo `(!!! loaded from internet)`:
+      - bash-completion iproute2 iptables ipset kmod ca-certificates
+
 - `builder`
   - based on `runtime` image
   - includes:
     - binaries from image `llvm`
     - binaries from image `BASE_GOLANG_20_BULLSEYE`
-    - installed packages from repo: gcc g++ libc6-dev binutils coreutils curl gcc libc6-dev git make patch unzip
+    - installed packages from repo `(!!! loaded from internet)`:
+      - gcc g++ libc6-dev binutils coreutils curl gcc libc6-dev git make patch unzip
     - binaries and plugins of protoc `(!!! loaded from internet)`
   ```
   - ?? libelf1, libmnl0
@@ -76,7 +81,7 @@
 - `compilers`
   - based on `BASE_UBUNTU` image
   - includes:
-    - installed packages from repo
+    - installed packages from repo `(!!! loaded from internet)`
     - binaries of bazel and wrapper shell-scripts `(!!! loaded from internet)`
 
 

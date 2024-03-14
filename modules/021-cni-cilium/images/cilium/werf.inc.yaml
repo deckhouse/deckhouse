@@ -1,6 +1,9 @@
+# #####################################################################
+# Build cilium-agent binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
+# #####################################################################
+---
 {{- $ciliumVersion := "1.14.5" }}
-# Source repo  settings. Delete after clone repo to fox
-#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 # #####################################################################
 # Artifact with src from repo cilium/cilium
@@ -13,10 +16,6 @@ shell:
   install:
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
----
-# #####################################################################
-# Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-builder-artifact
 fromImage: {{ $.ModuleName }}/builder-artifact

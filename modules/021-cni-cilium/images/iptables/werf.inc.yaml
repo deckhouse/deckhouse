@@ -1,4 +1,24 @@
+#---
+#artifact: {{ $.ModuleName }}/iptables-artifact
+#from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
+#---
+# #####################################################################
+# IPTABLES
+# Original IMAGE_TAG is 67f517af50e18f64cd12625021f1c39246bb4f92
+# Corresponding commit 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
+# #####################################################################
+---
+{{- $iptablesVersion := "1.8.8-1" }}
 ---
 artifact: {{ $.ModuleName }}/iptables-artifact
-from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
----
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  install:
+  - mkdir /iptables
+  - cd /iptables
+  - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src
+  - echo 'deb-src [signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/debian-testing.list
+  - apt-get update && apt-src -b install iptables={{ $iptablesVersion }}
+  - apt-get clean && rm -rf /var/lib/apt/lists/*

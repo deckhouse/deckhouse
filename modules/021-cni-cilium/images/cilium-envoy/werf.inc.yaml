@@ -1,11 +1,3 @@
-#---
-#artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-#from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
-#---
-{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
-# Source repo  settings. Delete after clone repo to fox
-#{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
----
 # #####################################################################
 # Build cilium-envoy binaries
 # Original commit is ad82c7c56e88989992fd25d8d67747de865c823b
@@ -13,6 +5,9 @@
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/.github/workflows/build-envoy-images-release.yaml
+# #####################################################################
+---
+{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
 ---
 image: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
 from: {{ $.Images.BASE_UBUNTU }}
