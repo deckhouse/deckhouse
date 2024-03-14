@@ -19,7 +19,7 @@ shell:
   - chmod 0700 /entrypoint/entrypoint
 ---
 artifact: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
+from: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/metrics
   to: /metrics
@@ -30,9 +30,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apt update
-  - apt install -y --no-install-recommends git build-essential pkg-config zlib1g-dev libelf-dev clang libcap2-bin
   install:
   - export BUILD_DIR="/build/ebpf-exporter"
   - mkdir -p ${BUILD_DIR}
@@ -61,9 +58,6 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y libcap-utils
   install:
     - /binary_replace.sh -i "{{ $copyFiles }}" -o /relocate
 ---
