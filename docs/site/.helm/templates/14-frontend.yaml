@@ -49,6 +49,8 @@ spec:
               name: modules-docs-en
             - mountPath: /app/ru/modules
               name: modules-docs-ru
+            - mountPath: /cache
+              name: download-cache
         - name: builder
           command:
             - "/app/server"
@@ -95,6 +97,8 @@ spec:
         - name: modules-docs-en
           emptyDir: {}
         - name: modules-docs-ru
+          emptyDir: {}
+        - name: download-cache
           emptyDir: {}
 
 ---
