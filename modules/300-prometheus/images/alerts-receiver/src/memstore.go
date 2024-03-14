@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -26,23 +27,22 @@ import (
 )
 
 type memStore struct {
-	alerts map[model.Fingerprint]*types.Alert
+	alerts   map[model.Fingerprint]*types.Alert
+	capacity int
 	sync.RWMutex
 }
 
 func newMemStore(l int) *memStore {
 	a := make(map[model.Fingerprint]*types.Alert, l)
-	return &memStore{alerts: a}
+	return &memStore{alerts: a, capacity: l}
 }
 
 // Add or update alert in internal store
-func (a *memStore) insertAlert(alert *model.Alert) {
+func (a *memStore) insertAlert(alert *model.Alert) error {
 	a.Lock()
 	defer a.Unlock()
 
 	now := time.Now()
-
-	removePlkAnnotations(alert)
 
 	ta := &types.Alert{
 		Alert:     *alert,
@@ -64,25 +64,27 @@ func (a *memStore) insertAlert(alert *model.Alert) {
 		ta.Timeout = true
 		ta.EndsAt = now.Add(resolveTimeout)
 	}
-	fingerprint := ta.Fingerprint()
 
-	if _, ok := a.alerts[fingerprint]; ok {
-		log.Infof("alert with fingerprint %s updated in queue", fingerprint)
-		a.alerts[fingerprint] = ta.Merge(a.alerts[fingerprint])
-	} else {
+	fingerprint := fingerprintWithoutSeverity(alert)
+
+	al, ok := a.alerts[fingerprint]
+	if !ok {
+		if len(a.alerts) == a.capacity {
+			return fmt.Errorf("cannot add alert to queue (capacity = %d), queue is full", a.capacity)
+		}
 		log.Infof("alert with fingerprint %s added to queue", fingerprint)
+		a.alerts[fingerprint] = ta
+		return nil
 	}
-	a.alerts[fingerprint] = ta
 
-	return
-}
+	if al.Labels[severityLabel] > ta.Labels[severityLabel] {
+		log.Infof("alert with fingerprint %s and severity level more than %s exists in queue", fingerprint, ta.Labels[severityLabel])
+		return nil
+	}
 
-// Remove alert from internal store
-func (a *memStore) removeAlert(fingerprint model.Fingerprint) {
-	a.Lock()
-	defer a.Unlock()
-	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
-	delete(a.alerts, fingerprint)
+	log.Infof("alert with fingerprint %s updated in queue", fingerprint)
+	a.alerts[fingerprint] = ta.Merge(a.alerts[fingerprint])
+	return nil
 }
 
 // Remove a bunch of alerts from internal store
@@ -101,4 +103,11 @@ func (a *memStore) getAlert(fingerprint model.Fingerprint) (*types.Alert, bool) 
 	defer a.Unlock()
 	alert, ok := a.alerts[fingerprint]
 	return alert, ok
+}
+
+// Calculate alert fingerprint without severity level to combine alerts with the same labels but with different severity
+func fingerprintWithoutSeverity(ta *model.Alert) model.Fingerprint {
+	labels := ta.Labels.Clone()
+	delete(labels, severityLabel)
+	return labels.Fingerprint()
 }

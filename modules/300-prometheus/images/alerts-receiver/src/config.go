@@ -32,6 +32,7 @@ const (
 	severityLabel    = "severity_level"
 	summaryLabel     = "summary"
 	descriptionLabel = "description"
+	DMSName          = "DeadMansSwitch"
 )
 
 type config struct {

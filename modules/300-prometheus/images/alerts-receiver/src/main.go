@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -37,16 +36,8 @@ func main() {
 
 	log.SetLevel(config.logLevel)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		sig := <-sigCh
-		log.Infof("got signal %v", sig)
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	server := newServer(config.listenHost, config.listenPort)
 	server.setHandlers(config, store)
@@ -57,7 +48,7 @@ func main() {
 			return
 		}
 		log.Error(err)
-		cancel()
+		stop()
 	}()
 
 	server.setReadiness(true)
@@ -96,10 +87,16 @@ func reconcile(ctx context.Context, s *storeStruct) {
 	// Add or update CRs
 	alertSet := make(map[string]struct{}, len(s.memStore.alerts))
 	alertsToRemove := make([]model.Fingerprint, 0, len(s.memStore.alerts))
+
 	s.memStore.RLock()
 	for fingerprint, alert := range s.memStore.alerts {
 		if alert.Resolved() {
 			alertsToRemove = append(alertsToRemove, fingerprint)
+			continue
+		}
+
+		// remove DMS alert
+		if alert.Name() == DMSName {
 			continue
 		}
 
