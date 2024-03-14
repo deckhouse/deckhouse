@@ -71,7 +71,7 @@ func TestInsertAlertToStore(t *testing.T) {
 		}
 		store.insertAlert(alert)
 		require.Equal(t, len(store.alerts), 2)
-		require.Equal(t, store.alerts[fingerprint(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
+		require.Equal(t, store.alerts[fingerprintWithoutSeverity(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
 	})
 
 	t.Run("Add alert like third, but with lower severity", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestInsertAlertToStore(t *testing.T) {
 		}
 		store.insertAlert(alert)
 		require.Equal(t, len(store.alerts), 2)
-		require.Equal(t, store.alerts[fingerprint(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
+		require.Equal(t, store.alerts[fingerprintWithoutSeverity(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
 	})
 
 }
