@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -37,7 +38,13 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefinePreflight(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.Bootstrap()
