@@ -308,16 +308,16 @@ systemReserved:
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
-  {{- if hasKey "kubelet" .nodeGroup }}
-    {{- if hasKey "resourceReservation" .nodeGroup.kubelet }}
-      {{- if hasKey "static" .nodeGroup.kubelet.resourceReservation }}
-        {{- if hasKey "cpu" .nodeGroup.kubelet.resourceReservation.static }}
+  {{- if hasKey .nodeGroup "kubelet" }}
+    {{- if hasKey .nodeGroup.kubelet "resourceReservation" }}
+      {{- if hasKey .nodeGroup.kubelet.resourceReservation "static" }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "cpu" }}
   cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
         {{- end }}
-        {{- if hasKey "memory" .nodeGroup.kubelet.resourceReservation.static }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "memory" }}
   memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory | quote }}
         {{- end }}
-        {{- if hasKey "ephemeralStorage" .nodeGroup.kubelet.resourceReservation.static }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "ephemeralStorage" }}
   ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
         {{- end }}
       {{- end }}
