@@ -58,4 +58,4 @@
       plk_create_group_if_not_exists__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__certificates_issuer_changed: CertmanagerCertificateIssuerChanged,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer has changed
-      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer has changed, probably cert-manager restart needed to update exporter state.
+      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} issuer has changed. Cert-manager restart is required to update the exported metrics state.
