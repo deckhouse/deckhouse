@@ -104,14 +104,3 @@ It will be better for you to enable `control-plane-manager` module to be able to
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 1 day) on node {{`{{$labels.component}}`}}.
         {{- include "instruction" . | nindent 8 }}
       summary: Kubernetes has API clients with soon expiring certificates
-  - alert: KubeAutomaticVersionCannotApply
-    expr: max (d8_set_automatic_k8s_version_failed) == 1
-    labels:
-      severity_level: "5"
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      description: |
-        Cannot apply automatic kubernetes version {{`{{$labels.config_default_version}}`}} because this minor version less than the maximum version {{`{{$labels.max_used_in_cluster_version}}`}} that has ever been installed in the cluster, more than 1 minor version.
-        Current cluster version is {{`{{$labels.current_version}}`}}. You should set specific version manually for resolve this alert.
-      summary: Cannot apply automatic kubernetes version
