@@ -19,9 +19,11 @@ from: {{ $.Images.BASE_UBUNTU }}
 shell:
   beforeInstall:
   - mkdir /iptables
-  - cd /iptables
-  - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src ca-certificates
+  - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src ca-certificates apt-transport-https
+  - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $snapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
+  - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $snapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
+  - apt-get update && apt-src update
   install:
-  - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
-  - apt-get update && apt-src -b install iptables={{ $iptablesVersion }}
+  - cd /iptables
+  - apt-src -b -t install iptables={{ $iptablesVersion }}
   - apt-get clean && rm -rf /var/lib/apt/lists/*
