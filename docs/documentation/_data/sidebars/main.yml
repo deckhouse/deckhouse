@@ -1262,6 +1262,10 @@ entries:
                 ru: Настройки
               url: /modules/450-network-gateway/configuration.html
     - title:
+        en: Deckhouse CLI
+        ru: Deckhouse CLI
+      url: /deckhouse-cli/
+    - title:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
