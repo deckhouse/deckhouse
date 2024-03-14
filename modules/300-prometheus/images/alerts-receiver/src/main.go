@@ -23,9 +23,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/prometheus/alertmanager/types"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/prometheus/common/model"
 )
 
 func main() {
@@ -86,39 +85,36 @@ func reconcile(ctx context.Context, s *storeStruct) {
 
 	// Add or update CRs
 	alertSet := make(map[string]struct{}, len(s.memStore.alerts))
-	alertsToRemove := make([]model.Fingerprint, 0, len(s.memStore.alerts))
 
-	s.memStore.RLock()
-	for fingerprint, alert := range s.memStore.alerts {
-		if alert.Resolved() {
-			alertsToRemove = append(alertsToRemove, fingerprint)
-			continue
-		}
+	log.Info("remove resolved alerts")
+	s.memStore.removeResolvedAlerts()
 
-		// remove DMS alert
-		if alert.Name() == DMSName {
-			continue
-		}
+	// get deep copy
+	alerts := s.memStore.deepCopy()
 
-		alertSet[fingerprint.String()] = struct{}{}
+	if len(alerts) == s.memStore.capacity {
+		addClusterHasTooManyAlertsAlert(alerts)
+	}
 
+	if time.Now().After(s.memStore.lastDMSReceived) {
+		addMissingDeadMensSwitch(alerts)
+	}
+
+	for fingerprint, alert := range alerts {
 		// is alerts CR does not exist in cluster, insert CR
-		if _, ok := crSet[fingerprint.String()]; !ok {
-			err := s.clusterStore.createCR(ctx, fingerprint.String(), alert)
+		if _, ok := crSet[fingerprint]; !ok {
+			err := s.clusterStore.createCR(ctx, fingerprint, alert)
 			if err != nil {
 				log.Error(err)
 			}
 		}
 
 		// Update CR status
-		err := s.clusterStore.updateCRStatus(ctx, fingerprint.String(), alert)
+		err := s.clusterStore.updateCRStatus(ctx, fingerprint, alert)
 		if err != nil {
 			log.Error(err)
 		}
 	}
-	s.memStore.RUnlock()
-
-	s.memStore.removeAlerts(alertsToRemove)
 
 	// Remove CRs which do not have corresponding alerts
 	for k := range crSet {
@@ -129,4 +125,16 @@ func reconcile(ctx context.Context, s *storeStruct) {
 			}
 		}
 	}
+}
+
+// generate queue fullness alert
+func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert) {
+	log.Info("add queue fullness alert")
+	return
+}
+
+// generate alert about missing deadmansswitch
+func addMissingDeadMensSwitch(alerts map[string]*types.Alert) {
+	log.Infof("add missed %s alert", DMSName)
+	return
 }
