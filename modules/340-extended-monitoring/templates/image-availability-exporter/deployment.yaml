@@ -85,6 +85,9 @@ spec:
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
         - --capath=/registry-root-ca/ca.crt
         {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers }}
+        - '--force-check-disabled-controllers={{ .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers | join "," | replace "All" "*" }}'
+        {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         resources:

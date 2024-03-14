@@ -100,6 +100,8 @@ type Controller struct {
 	externalModulesDir string
 	symlinksDir        string
 
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
@@ -114,6 +116,7 @@ const (
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
+	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
 	waitingForWindow       = "Release is waiting for the update window: %s"
 	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
 	namespace              = "d8-system"
@@ -129,6 +132,7 @@ func NewController(ks kubernetes.Interface,
 	mv moduleValidator,
 	httpClient d8http.Client,
 	metricStorage *metric_storage.MetricStorage,
+	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -170,9 +174,10 @@ func NewController(ks kubernetes.Interface,
 
 		sourceModules: make(map[string]string),
 
-		modulesValidator:   mv,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		modulesValidator:        mv,
+		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
+		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 	}
@@ -552,17 +557,37 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		ts := time.Now().UTC()
 		// if release has associated update policy
 		if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
-			// get policy spec
-			policy, err := c.moduleUpdatePoliciesLister.Get(policyName)
-			if err != nil {
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+			var policy *v1alpha1.ModuleUpdatePolicy
+			if policyName == "" {
+				policy = &v1alpha1.ModuleUpdatePolicy{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+						APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "",
+					},
+					Spec: *c.deckhouseEmbeddedPolicy,
+				}
+			} else {
+				// get policy spec
+				policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
+				if err != nil {
+					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+						return ctrl.Result{Requeue: true}, e
+					}
+					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+				}
+			}
+
+			switch policy.Spec.Update.Mode {
+			case "Ignore":
+				if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			}
 
-			// if policy mode manual
-			if policy.Spec.Update.Mode == "Manual" {
+			case "Manual":
 				if !isReleaseApproved(release) {
 					if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
 						return ctrl.Result{Requeue: true}, e
@@ -570,14 +595,14 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 				}
 				release.Status.Approved = true
-			}
 
-			// if policy mode auto
-			if policy.Spec.Update.Mode == "Auto" && !policy.Spec.Update.Windows.IsAllowed(ts) {
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
-					return ctrl.Result{Requeue: true}, e
+			case "Auto":
+				if !policy.Spec.Update.Windows.IsAllowed(ts) {
+					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
+						return ctrl.Result{Requeue: true}, e
+					}
+					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 
 			// download desired module version

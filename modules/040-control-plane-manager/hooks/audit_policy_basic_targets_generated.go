@@ -81,6 +81,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-ingress-nginx:kruise",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
 	"system:serviceaccount:d8-istio:alliance-metadata-exporter",
+	"system:serviceaccount:d8-istio:cni",
 	"system:serviceaccount:d8-istio:ingress-gateway-controller",
 	"system:serviceaccount:d8-istio:kiali",
 	"system:serviceaccount:d8-istio:multicluster-api-proxy",
@@ -128,4 +129,5 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-admission-controller",
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender",
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-updater",
+	"system:serviceaccount:kube-system:stale-dns-connections-cleaner",
 }

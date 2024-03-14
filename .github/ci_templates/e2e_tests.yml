@@ -108,6 +108,10 @@ run: |
   dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   echo "DHCTL log file: $dhctl_log_file"
 
+  user_runner_id=$(id -u):$(id -g)
+  echo "user_runner_id $user_runner_id"
+
+
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   echo "Start waiting ssh connection string script"
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
@@ -125,7 +129,7 @@ run: |
 
   $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 {!{ end }!}
-
+  
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 
@@ -140,9 +144,9 @@ run: |
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
 
@@ -178,9 +182,9 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
+  -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
@@ -223,12 +227,9 @@ run: |
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
 {!{- end }!}
+    -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v ${TMP_DIR_PATH}:/tmp \
-    --user $(id -u):$(id -u) \
-    -v /etc/group:/etc/group:ro \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/shadow:/etc/shadow:ro \
     -w /deckhouse \
   ${INSTALL_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}

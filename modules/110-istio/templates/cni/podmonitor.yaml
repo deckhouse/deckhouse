@@ -1,0 +1,31 @@
+{{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-cni
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https-metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+        - targetLabel: job
+          replacement: "istio-cni"
+  selector:
+    matchLabels:
+      app: istio-cni-node
+  namespaceSelector:
+    matchNames:
+      - d8-{{ .Chart.Name }}
+{{- end }}
