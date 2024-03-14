@@ -103,15 +103,15 @@ type Controller struct {
 }
 
 const (
-	UpdatePolicyLabel  = "modules.deckhouse.io/update-policy"
-	approvalAnnotation = "modules.deckhouse.io/approved"
+	UpdatePolicyLabel = "modules.deckhouse.io/update-policy"
 
 	defaultCheckInterval   = 15 * time.Second
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
-	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
 	waitingForWindow       = "Release is waiting for the update window: %s"
+	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
+	namespace              = "d8-system"
 )
 
 // NewController returns a new sample controller
@@ -561,78 +561,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			//		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			//	}
 		}
-
-		//TODO: remove next block as it moved to kubeAPI.DeployRelease
-		// download desired module version
-		//ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
-		//if err != nil {
-		//	return ctrl.Result{Requeue: true}, err
-		//}
-		//
-		//md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-		//ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
-		//if err != nil {
-		//	return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-		//}
-		//
-		//release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
-		//if err != nil {
-		//	return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
-		//}
-		//
-		//moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
-		//relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-		//newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
-		//
-		//def := models.DeckhouseModuleDefinition{
-		//	Name:   moduleName,
-		//	Weight: release.Spec.Weight,
-		//	Path:   moduleVersionPath,
-		//}
-		//err = validateModule(c.modulesValidator, def)
-		//if err != nil {
-		//	c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
-		//	release.Status.Phase = v1alpha1.PhaseSuspended
-		//	if e := c.updateModuleReleaseStatusMessage(ctx, release, "validation failed: "+err.Error()); e != nil {
-		//		return ctrl.Result{Requeue: true}, e
-		//	}
-		//
-		//	return ctrl.Result{}, nil
-		//}
-		//
-		//err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
-		//if err != nil {
-		//	c.logger.Errorf("Module deploy failed: %v", err)
-		//	if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
-		//		return ctrl.Result{Requeue: true}, e
-		//	}
-		//}
-		//// disable target module hooks so as not to invoke them before restart
-		//if c.modulesValidator.GetModule(moduleName) != nil {
-		//	c.modulesValidator.DisableModuleHooks(moduleName)
-		//}
-		//// after deploying a new release, mark previous one (if any) as superseded
-		//if releaseUpdater.GetCurrentDeployedReleaseIndex() >= 0 {
-		//	release := otherReleases[releaseUpdater.GetCurrentDeployedReleaseIndex()]
-		//	release.Status.Phase = v1alpha1.PhaseSuperseded
-		//	release.Status.Message = ""
-		//	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-		//	if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-		//		return ctrl.Result{Requeue: true}, e
-		//	}
-		//}
-		//
-		//// defer restart
-		//if modulesChangedReason == "" {
-		//	modulesChangedReason = "a new module release found"
-		//}
-		//
-		//release.Status.Phase = v1alpha1.PhaseDeployed
-		//release.Status.Message = ""
-		//release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-		//if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-		//	return ctrl.Result{Requeue: true}, e
-		//}
 
 		releaseUpdater.SetMode(policy.Spec.Update.Mode)
 
