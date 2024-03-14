@@ -571,7 +571,7 @@ spec:
                     hostname:
                       type: string
                       description: |
-                        External hostname of external provider LoadBalancer
+                        The hostname of the LoadBalancer.
             spec:
               type: object
               required: ['inlet']
