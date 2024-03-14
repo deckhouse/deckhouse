@@ -146,6 +146,13 @@ spec:
             name: backend
             port:
               name: http
+      - path: /downloads/deckhouse-cli
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              name: http
       - path: /documentation/v1
         pathType: Prefix
         backend:
