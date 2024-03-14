@@ -150,7 +150,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: frontend
+            port:
+              name: http
+      - path: /githubusercontent
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
             port:
               name: http
       - path: /documentation/v1
