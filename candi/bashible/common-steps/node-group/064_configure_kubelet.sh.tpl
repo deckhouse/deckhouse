@@ -308,14 +308,20 @@ systemReserved:
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
-  {{- if .nodeGroup.kubelet.resourceReservation.static.cpu }}
+  {{- if hasKey "kubelet" .nodeGroup }}
+    {{- if hasKey "resourceReservation" .nodeGroup.kubelet }}
+      {{- if hasKey "static" .nodeGroup.kubelet.resourceReservation }}
+        {{- if hasKey "cpu" .nodeGroup.kubelet.resourceReservation.static }}
   cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
-  {{- end }}
-  {{- if .nodeGroup.kubelet.resourceReservation.static.memory }}
+        {{- end }}
+        {{- if hasKey "memory" .nodeGroup.kubelet.resourceReservation.static }}
   memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory | quote }}
-  {{- end }}
-  {{- if .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage }}
+        {{- end }}
+        {{- if hasKey "ephemeralStorage" .nodeGroup.kubelet.resourceReservation.static }}
   ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
