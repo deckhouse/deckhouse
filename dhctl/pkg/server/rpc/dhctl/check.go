@@ -170,9 +170,12 @@ func prepareSSHClient(connectionConfig *config.ConnectionConfig) (*ssh.Client, e
 		AvailableHosts: sshHosts,
 		User:           connectionConfig.SSHConfig.SSHUser,
 	})
-	privateKeys := make([]string, 0, len(connectionConfig.SSHConfig.SSHAgentPrivateKeys))
+	privateKeys := make([]session.AgentPrivateKey, 0, len(connectionConfig.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range connectionConfig.SSHConfig.SSHAgentPrivateKeys {
-		privateKeys = append(privateKeys, key.Key)
+		privateKeys = append(privateKeys, session.AgentPrivateKey{
+			Key:        key.Key,
+			Passphrase: key.Passphrase,
+		})
 	}
 	sshClient, err := ssh.NewClient(sess, privateKeys).Start()
 	if err != nil {
