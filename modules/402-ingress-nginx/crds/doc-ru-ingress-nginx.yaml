@@ -10,10 +10,10 @@ spec:
                   properties:
                     ip:
                       description: |
-                        Выделенный внешний IP адрес балансировщика нагрузки.
+                        IP-адрес балансировщика нагрузки.
                     hostname:
                       description: |
-                        Выделенный внешний хостнейм балансировщика нагрузки.
+                        DNS-имя балансировщика нагрузки.
             spec:
               properties:
                 ingressClass:
