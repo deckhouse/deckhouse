@@ -8,9 +8,11 @@
 # Corresponding commit 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
+# and https://github.com/cilium/image-tools/blob/aee704bc3cf922acc4a2a02b0b76f524d4796a14/images/iptables/Dockerfile
 # #####################################################################
 ---
 {{- $iptablesVersion := "1.8.8-1" }}
+{{- $snapshotDate := "20230116T212610Z" }}
 ---
 artifact: {{ $.ModuleName }}/iptables-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -18,8 +20,8 @@ shell:
   beforeInstall:
   - mkdir /iptables
   - cd /iptables
-  - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src
+  - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src ca-certificates
   install:
-  - echo 'deb-src [signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/debian-testing.list
+  - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
   - apt-get update && apt-src -b install iptables={{ $iptablesVersion }}
   - apt-get clean && rm -rf /var/lib/apt/lists/*
