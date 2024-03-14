@@ -567,7 +567,7 @@ spec:
                     ip:
                       type: string
                       description: |
-                        External IP address of external provider LoadBalancer
+                        The IP address of the load balancer.
                     hostname:
                       type: string
                       description: |
