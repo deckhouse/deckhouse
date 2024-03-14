@@ -27,3 +27,52 @@ shell:
   - cd /iptables
   - apt-src -b -t install iptables={{ $iptablesVersion }}
   - apt-get clean && rm -rf /var/lib/apt/lists/*
+---
+{{- $gitTag := "debian/1.8.8-1" }}
+---
+artifact: {{ $.ModuleName }}/iptables-git-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y --no-install-recommends ca-certificates git apt-src build-essential
+  - apt-get install -y --no-install-recommends build-essential autoconf automake bison  flex libmnl-dev libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev libtool
+  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
+  install:
+  - mkdir /iptables
+  - git clone --depth 1 --branch "{{ $gitTag }}" {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
+  - apt-src import iptables --location=/iptables/iptables-1.8.8 --version={{ $iptablesVersion }}
+  - cd /iptables
+  - dpkg-checkbuilddeps ./iptables-1.8.8/debian/control
+  - cd /iptables/iptables-1.8.8
+  - dpkg-buildpackage -b -us -uc
+---
+artifact: {{ $.ModuleName }}/iptables-git2-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y --no-install-recommends ca-certificates git build-essential binutils lintian debhelper dh-make devscripts
+  install:
+  - mkdir /iptables
+  - git clone --depth 1 --branch "{{ $gitTag }}" {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
+  - cd /iptables/iptables-1.8.8
+  - apt-get build-dep -y .
+  - dpkg-checkbuilddeps /iptables/iptables-1.8.8/debian/control
+  - debuild -i -us -uc -b
+---
+artifact: {{ $.ModuleName }}/iptables-git3-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+  - apt-get update
+  - apt-get install -y --no-install-recommends git-buildpackage ca-certificates build-essential
+  - apt-get install -y --no-install-recommends build-essential autoconf automake bison  flex libmnl-dev libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev libtool
+  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
+  install:
+  - mkdir /iptables
+  - gbp clone {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
+  - cd /iptables/iptables-1.8.8
+  - git checkout {{ $gitTag }}
+  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar
