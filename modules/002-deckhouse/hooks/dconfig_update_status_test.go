@@ -189,7 +189,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			Expect(f).To(ExecuteSuccessfully())
 
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.message").String()).To(ContainSubstring("Ignored: spec.settings are not valid (version 1):  1 error occurred: * moduleOne.param2 is a forbidden property"), "should report invalid settings, got %s", promCfg.Field("status.message").String())
+			Expect(promCfg.Field("status.message").String()).To(ContainSubstring("Error: spec.settings are not valid (version 1):  1 error occurred: * moduleOne.param2 is a forbidden property"), "should report invalid settings, got %s", promCfg.Field("status.message").String())
 		})
 	})
 
