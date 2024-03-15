@@ -56,16 +56,15 @@ shell:
     python3 python-is-python3 unzip virtualenv wget zip \
     libcap-dev software-properties-common
   - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-  - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" && \
-  - apt-get update && \
+  - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main"
   - |
-    apt-get install -y --no-install-recommends \
+    apt-get update && apt-get install -y --no-install-recommends \
     clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-   - | # from iptables
+  - | # from iptables
      apt-get install -y --no-install-recommends \
      ca-certificates debian-archive-keyring apt-transport-https apt-src git build-essential git-buildpackage \
      build-essential autoconf automake bison  flex libmnl-dev libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev libtool \
-   - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
+  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
   # apt clean
   - apt-get purge --auto-remove && apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -104,7 +103,3 @@ shell:
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
-
-
-
-
