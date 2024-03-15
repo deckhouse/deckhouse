@@ -242,6 +242,10 @@ properties:
           kind:
             type: string
             enum: [ ZvirtCloudProviderDiscoveryData ]
+          zones:
+            type: array
+            items:
+              type: string
           storageDomains:
             type: array
             items:
