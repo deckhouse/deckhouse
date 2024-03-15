@@ -107,6 +107,7 @@
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
@@ -131,6 +132,7 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
