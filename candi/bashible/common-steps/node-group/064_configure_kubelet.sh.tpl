@@ -157,9 +157,9 @@ function resources_management_memory_units_to_bytes {
 }
 
 total_memory=$(free -m|awk '/^Mem:/{print $2}')
+
 {{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
 {{- if eq $resourceReservationMode "Auto" }}
-
 # https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
 function dynamic_memory_sizing {
     recommended_systemreserved_memory=0
@@ -197,7 +197,6 @@ function dynamic_memory_sizing {
     recommended_systemreserved_memory=$(resources_management_memory_units_to_bytes $(echo $recommended_systemreserved_memory | awk '{printf("%.0fMi",$1)}'))
     echo -n "${recommended_systemreserved_memory}"
 }
-
 {{- else if eq $resourceReservationMode "Static" }}
 function dynamic_memory_sizing {
   echo -n "$(resources_management_memory_units_to_bytes {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }})"
