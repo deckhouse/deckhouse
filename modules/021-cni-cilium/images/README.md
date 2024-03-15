@@ -37,7 +37,7 @@
   - based on `BASE_UBUNTU` image
   - includes:
     - installed packages from repo `(!!! loaded from internet)`
-    - binaries of bazel `(!!! loaded from internet)`
+    - binaries of bazel(6.1.0) `(!!! loaded from internet)`
     - src of envoyproxy/envoy *(loaded from fox)*
     - src of cilium/proxy *(loaded from fox)*
     - binaries cilium-envoy *(builded from src)*
@@ -82,7 +82,7 @@
   - based on `BASE_UBUNTU` image
   - includes:
     - installed packages from repo `(!!! loaded from internet)`
-    - binaries of bazel and wrapper shell-scripts `(!!! loaded from internet)`
+    - binaries of bazel(3.7.0, 3.7.1, 3.7.2) and wrapper shell-scripts `(!!! loaded from internet)`
 
 
 ### Building final images (used in helm-templates)
