@@ -33,7 +33,7 @@ const (
 	summaryLabel                     = "summary"
 	descriptionLabel                 = "description"
 	DMSAlertName                     = "DeadMansSwitch"
-	MissedDMSAlertName               = "MissedDeadMansSwitch"
+	MissingDMSAlertName              = "MissingDeadMansSwitch"
 	ClusterHasTooManyAlertsAlertName = "ClusterHasTooManyAlerts"
 )
 

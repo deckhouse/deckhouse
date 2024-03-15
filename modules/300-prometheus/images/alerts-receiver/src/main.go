@@ -138,6 +138,6 @@ func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity in
 // generate alert about missing deadmansswitch
 func addMissingDeadMensSwitchAlert(alerts map[string]*types.Alert) {
 	log.Infof("add missed %s alert", DMSAlertName)
-	alert := generateAlert(MissedDMSAlertName, "Entire Alerting pipeline is not functional.")
-	alerts[strings.ToLower(MissedDMSAlertName)] = alert
+	alert := generateAlert(MissingDMSAlertName, "Entire Alerting pipeline is not functional.")
+	alerts[strings.ToLower(MissingDMSAlertName)] = alert
 }
