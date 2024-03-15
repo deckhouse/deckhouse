@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
@@ -145,7 +146,7 @@ func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity in
 		},
 		UpdatedAt: time.Now(),
 	}
-	alerts[MissedDMSAlertName] = alert
+	alerts[strings.ToLower(ClusterHasTooManyAlertsAlertName)] = alert
 }
 
 // generate alert about missing deadmansswitch
@@ -165,5 +166,5 @@ func addMissingDeadMensSwitch(alerts map[string]*types.Alert) {
 		},
 		UpdatedAt: time.Now(),
 	}
-	alerts[MissedDMSAlertName] = alert
+	alerts[strings.ToLower(MissedDMSAlertName)] = alert
 }
