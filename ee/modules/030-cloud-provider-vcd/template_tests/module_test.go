@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package template_tests
 
 import (
+	"encoding/base64"
 	"os"
 	"testing"
 
@@ -69,7 +70,7 @@ const moduleValuesA = `
         sshPublicKey: rsa-aaaa
         organization: org
         virtualDataCenter: dc
-        virtualApplicationName: app
+        virtualApplicationName: Virtual-app_NAmeVcd
         mainNetwork: internal
         masterNodeGroup:
           replicas: 1
@@ -107,6 +108,10 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(regSecret.Exists()).To(BeTrue())
+			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("virtual-app-namevcd"))))
 		})
 	})
 })

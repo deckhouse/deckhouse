@@ -1843,7 +1843,7 @@ internal:
 					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
 					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
 
-					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
+					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "vcd")
 					Expect(vcdCluster.Exists()).To(BeTrue())
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))

@@ -27,6 +27,8 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
+	// need after discovery cloud provider
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_group",
@@ -96,12 +98,18 @@ func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 func handleDeploymentRequired(input *go_hook.HookInput) error {
 	var totalCount int
 
-	snap := input.Snapshots["node_group"]
-	for _, sn := range snap {
-		ng := sn.(depRequiredNG)
-		if ng.IsCloud {
-			totalCount++
-			break // we need at least one NG
+	// we have cloud providers which support only cluster api
+	// and we do not need to deploy machine controller manager
+	// for these provider don't have machineClassKind settings or this setting is empty
+	mcmInstanceClassRaw := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind")
+	if mcmInstanceClassRaw.Exists() && mcmInstanceClassRaw.String() != "" {
+		snap := input.Snapshots["node_group"]
+		for _, sn := range snap {
+			ng := sn.(depRequiredNG)
+			if ng.IsCloud {
+				totalCount++
+				break // we need at least one NG
+			}
 		}
 	}
 
