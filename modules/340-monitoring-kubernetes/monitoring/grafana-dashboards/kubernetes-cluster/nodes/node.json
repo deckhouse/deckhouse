@@ -26,7 +26,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 1860,
   "graphTooltip": 0,
-  "iteration": 1710508086468,
+  "iteration": 1710508086478,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -15998,7 +15998,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 76
+            "y": 28
           },
           "id": 43,
           "links": [],
@@ -16041,7 +16041,7 @@
               },
               "expr": "node_filesystem_free_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
-              "hide": false,
+              "hide": true,
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}} - Free",
               "refId": "B",
@@ -16054,18 +16054,19 @@
               },
               "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
-              "hide": false,
+              "hide": true,
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}} - Size",
               "refId": "C",
               "step": 240
             }
           ],
-          "title": "Filesystem space",
+          "title": "Filesystem space available",
           "type": "timeseries"
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "description": "",
@@ -16075,7 +16076,7 @@
                 "mode": "palette-classic"
               },
               "custom": {
-                "axisLabel": "file nodes",
+                "axisLabel": "bytes",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -16118,7 +16119,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "bytes"
             },
             "overrides": []
           },
@@ -16126,9 +16127,9 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 76
+            "y": 28
           },
-          "id": 41,
+          "id": 316,
           "links": [],
           "options": {
             "legend": {
@@ -16149,16 +16150,20 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "node_filesystem_files_free{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P0D6E4079E36703EB"
+              },
+              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{mountpoint}} - Free file nodes",
-              "refId": "A",
+              "legendFormat": "{{mountpoint}} - Size",
+              "refId": "C",
               "step": 240
             }
           ],
-          "title": "File Nodes Free",
+          "title": "Filesystem size",
           "type": "timeseries"
         },
         {
@@ -16223,7 +16228,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 86
+            "y": 38
           },
           "id": 28,
           "links": [],
@@ -16276,7 +16281,7 @@
                 "mode": "palette-classic"
               },
               "custom": {
-                "axisLabel": "file Nodes",
+                "axisLabel": "file nodes",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -16327,9 +16332,9 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 86
+            "y": 38
           },
-          "id": 219,
+          "id": 41,
           "links": [],
           "options": {
             "legend": {
@@ -16350,16 +16355,16 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "node_filesystem_files{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_files_free{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{mountpoint}} - File nodes total",
+              "legendFormat": "{{mountpoint}} - Free file nodes",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "File Nodes Size",
+          "title": "File Nodes Free",
           "type": "timeseries"
         },
         {
@@ -16441,7 +16446,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 96
+            "y": 48
           },
           "id": 44,
           "links": [],
@@ -16481,6 +16486,103 @@
             }
           ],
           "title": "Filesystem in ReadOnly / Error",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "file Nodes",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 48
+          },
+          "id": 219,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "expr": "node_filesystem_files{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - File nodes total",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "File Nodes Size",
           "type": "timeseries"
         }
       ],
