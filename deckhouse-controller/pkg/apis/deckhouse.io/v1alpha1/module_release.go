@@ -95,17 +95,6 @@ func (mr *ModuleRelease) GetCooldownUntil() *time.Time {
 	return nil
 }
 
-func (mr *ModuleRelease) GetApproved() bool {
-	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
-		value, err := strconv.ParseBool(approved)
-		if err != nil {
-			return false
-		}
-		return value
-	}
-	return false
-}
-
 func (mr *ModuleRelease) GetDisruptions() []string {
 	return nil
 }
@@ -135,6 +124,15 @@ func (mr *ModuleRelease) GetSuspend() bool {
 }
 
 func (mr *ModuleRelease) GetManuallyApproved() bool {
+	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+		value, err := strconv.ParseBool(approved)
+		if err != nil {
+			return false
+		}
+
+		return value
+	}
+
 	return false
 }
 
