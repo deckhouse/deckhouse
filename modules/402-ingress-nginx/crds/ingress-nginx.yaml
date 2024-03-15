@@ -203,9 +203,6 @@ spec:
                   anyOf:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
-                  x-kubernetes-validations:
-                    - message: .spec.httpsPort can't be 6443, it's reserved for kube-apiserver
-                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer
@@ -753,9 +750,6 @@ spec:
                   anyOf:
                     - {required: ["httpPort"]}
                     - {required: ["httpsPort"]}
-                  x-kubernetes-validations:
-                    - message: .spec.httpsPort can't be 6443, it's reserved for kube-apiserver
-                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer
@@ -775,6 +769,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                     behindL7Proxy:
                       type: boolean
                       description: |
