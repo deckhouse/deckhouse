@@ -26,7 +26,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 1860,
   "graphTooltip": 0,
-  "iteration": 1710508086448,
+  "iteration": 1710508086468,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -48,7 +48,8 @@
     },
     {
       "datasource": {
-        "uid": "$ds_prometheus"
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
       },
       "description": "Busy state of all CPU cores together",
       "fieldConfig": {
@@ -114,7 +115,11 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "",
@@ -911,7 +916,8 @@
     },
     {
       "datasource": {
-        "uid": "$ds_prometheus"
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
       },
       "description": "Basic CPU info",
       "fieldConfig": {
@@ -1279,7 +1285,11 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1288,7 +1298,11 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1297,7 +1311,11 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1305,7 +1323,11 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1313,7 +1335,11 @@
           "step": 240
         },
         {
-          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1321,7 +1347,11 @@
           "step": 240
         },
         {
-          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Idle",
@@ -1828,7 +1858,8 @@
     },
     {
       "datasource": {
-        "uid": "$ds_prometheus"
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
       },
       "description": "Basic network info per interface",
       "fieldConfig": {
@@ -2263,7 +2294,11 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -2271,7 +2306,11 @@
           "step": 240
         },
         {
-          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -15959,7 +15998,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 76
           },
           "id": 43,
           "links": [],
@@ -16087,7 +16126,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 28
+            "y": 76
           },
           "id": 41,
           "links": [],
@@ -16184,7 +16223,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 86
           },
           "id": 28,
           "links": [],
@@ -16288,7 +16327,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 86
           },
           "id": 219,
           "links": [],
@@ -16402,7 +16441,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 96
           },
           "id": 44,
           "links": [],
