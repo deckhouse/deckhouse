@@ -319,9 +319,9 @@ type KubeletResourceReservation struct {
 }
 
 type KubeletStaticResourceReservation struct {
-	CPU              resource.Quantity `json:"cpu"`
-	Memory           resource.Quantity `json:"memory"`
-	EphemeralStorage resource.Quantity `json:"ephemeralStorage"`
+	CPU              resource.Quantity `json:"cpu,omitempty"`
+	Memory           resource.Quantity `json:"memory,omitempty"`
+	EphemeralStorage resource.Quantity `json:"ephemeralStorage,omitempty"`
 }
 
 type KubeletResourceReservationMode string
