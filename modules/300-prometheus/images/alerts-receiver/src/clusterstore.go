@@ -142,27 +142,44 @@ func (c *clusterStore) createCR(rootCtx context.Context, fingerprint string, ale
 	_, err = c.dc.Resource(c.GVR).Create(ctx, obj, v1.CreateOptions{})
 	cancel()
 
+	if err != nil {
+		return err
+	}
+
+	// if alert.StartsAt time is zero, set status startsAt field to now on CR create
+	startsAt := alert.StartsAt
+	if startsAt.IsZero() {
+		startsAt = time.Now()
+	}
+
+	err = c.updateCRStatus(ctx, fingerprint, startsAt, alert.UpdatedAt)
 	return err
 }
 
 // Uodate CR status
-func (c *clusterStore) updateCRStatus(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
+func (c *clusterStore) updateCRStatus(rootCtx context.Context, fingerprint string, startsAt, updatedAt time.Time) error {
 	log.Infof("update status of CR with name %s", fingerprint)
 
 	alertStatus := clusterAlertFiring
 
 	// If alert was updated last time > 2min ago, alert is marked as stale
-	if time.Since(alert.UpdatedAt) > 2*reconcileTime {
+	if time.Since(updatedAt) > 2*reconcileTime {
 		alertStatus = clusterAlertFiringStaled
 	}
 
-	patch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"alertStatus":    alertStatus,
-			"startsAt":       alert.StartsAt.Format(time.RFC3339),
-			"lastUpdateTime": alert.UpdatedAt.Format(time.RFC3339),
-		},
+	statusField := map[string]interface{}{
+		"alertStatus":    alertStatus,
+		"lastUpdateTime": updatedAt.Format(time.RFC3339),
 	}
+	// id StartsAt field of alert is zero, don't update startsAt status field
+	if !startsAt.IsZero() {
+		statusField["startsAt"] = startsAt.Format(time.RFC3339)
+	}
+
+	patch := map[string]interface{}{
+		"status": statusField,
+	}
+
 	data, err := json.Marshal(patch)
 	if err != nil {
 		return err

@@ -148,8 +148,7 @@ func generateAlert(alertName, message string) *types.Alert {
 				"description": model.LabelValue(message),
 				"summary":     model.LabelValue(fmt.Sprintf("Alerting %s", alertName)),
 			},
-			StartsAt: now,
-			EndsAt:   now.Add(resolveTimeout),
+			EndsAt: now.Add(resolveTimeout),
 		},
 		UpdatedAt: now,
 	}

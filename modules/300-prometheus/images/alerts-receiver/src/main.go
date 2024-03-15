@@ -107,12 +107,12 @@ func reconcile(ctx context.Context, s *storeStruct) {
 			if err != nil {
 				log.Error(err)
 			}
-		}
-
-		// Update CR status
-		err := s.clusterStore.updateCRStatus(ctx, fingerprint, alert)
-		if err != nil {
-			log.Error(err)
+		} else {
+			// Update CR status
+			err := s.clusterStore.updateCRStatus(ctx, fingerprint, alert.StartsAt, alert.UpdatedAt)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 
