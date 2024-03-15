@@ -37,7 +37,8 @@ func TestInsertAlertToStore(t *testing.T) {
 				"service":        "deckhouse",
 			},
 		}
-		store.insertAlert(alert)
+		err := store.insertAlert(alert)
+		require.NoError(t, err)
 		require.Equal(t, len(store.alerts), 1)
 	})
 
@@ -53,7 +54,8 @@ func TestInsertAlertToStore(t *testing.T) {
 				"service":        "deckhouse",
 			},
 		}
-		store.insertAlert(alert)
+		err := store.insertAlert(alert)
+		require.NoError(t, err)
 		require.Equal(t, len(store.alerts), 2)
 	})
 
@@ -69,7 +71,8 @@ func TestInsertAlertToStore(t *testing.T) {
 				"service":        "deckhouse",
 			},
 		}
-		store.insertAlert(alert)
+		err := store.insertAlert(alert)
+		require.NoError(t, err)
 		require.Equal(t, len(store.alerts), 2)
 		require.Equal(t, store.alerts[fingerprintWithoutSeverity(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
 	})
@@ -86,9 +89,9 @@ func TestInsertAlertToStore(t *testing.T) {
 				"service":        "deckhouse",
 			},
 		}
-		store.insertAlert(alert)
+		err := store.insertAlert(alert)
+		require.NoError(t, err)
 		require.Equal(t, len(store.alerts), 2)
 		require.Equal(t, store.alerts[fingerprintWithoutSeverity(alert)].Alert.Labels[severityLabel], model.LabelValue("9"))
 	})
-
 }

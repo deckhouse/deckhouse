@@ -41,6 +41,7 @@ func main() {
 	server := newServer(config.listenHost, config.listenPort)
 	server.setHandlers(config, store)
 
+	log.Infof("starting listener: %s", server.Addr)
 	go func() {
 		err := server.ListenAndServe()
 		if err == nil || err == http.ErrServerClosed {
@@ -76,15 +77,13 @@ func reconcileLoop(ctx context.Context, s *storeStruct) {
 
 func reconcile(ctx context.Context, s *storeStruct) {
 	log.Info("starting reconcile")
+	return
 
 	crSet, err := s.clusterStore.listCRs(ctx)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-
-	// Add or update CRs
-	alertSet := make(map[string]struct{}, len(s.memStore.alerts))
 
 	log.Info("remove resolved alerts")
 	s.memStore.removeResolvedAlerts()
@@ -118,7 +117,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 
 	// Remove CRs which do not have corresponding alerts
 	for k := range crSet {
-		if _, ok := alertSet[k]; !ok {
+		if _, ok := alerts[k]; !ok {
 			err := s.clusterStore.removeCR(ctx, k)
 			if err != nil {
 				log.Error(err)
@@ -130,11 +129,9 @@ func reconcile(ctx context.Context, s *storeStruct) {
 // generate queue fullness alert
 func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert) {
 	log.Info("add queue fullness alert")
-	return
 }
 
 // generate alert about missing deadmansswitch
 func addMissingDeadMensSwitch(alerts map[string]*types.Alert) {
 	log.Infof("add missed %s alert", DMSName)
-	return
 }

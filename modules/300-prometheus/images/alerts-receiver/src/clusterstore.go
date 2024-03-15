@@ -63,7 +63,7 @@ func newClusterStore() *clusterStore {
 }
 
 func (c *clusterStore) listCRs(rootCtx context.Context) (map[string]struct{}, error) {
-	log.Info("list CRs")
+	log.Info("list CRs in the cluster")
 	ctx, cancel := context.WithTimeout(rootCtx, contextTimeout)
 	crList, err := c.dc.Resource(c.GVR).List(ctx, v1.ListOptions{
 		LabelSelector:        fmt.Sprintf("app=%s,heritage=deckhouse", appName),
