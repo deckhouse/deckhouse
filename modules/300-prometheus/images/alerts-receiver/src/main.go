@@ -77,7 +77,6 @@ func reconcileLoop(ctx context.Context, s *storeStruct) {
 
 func reconcile(ctx context.Context, s *storeStruct) {
 	log.Info("starting reconcile")
-	return
 
 	crSet, err := s.clusterStore.listCRs(ctx)
 	if err != nil {
@@ -124,6 +123,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 			}
 		}
 	}
+	log.Info("finishing reconcile")
 }
 
 // generate queue fullness alert
