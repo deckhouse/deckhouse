@@ -137,7 +137,7 @@ func (mr *ModuleRelease) GetManuallyApproved() bool {
 }
 
 func (mr *ModuleRelease) GetApprovedStatus() bool {
-	return false
+	return mr.Status.Approved
 }
 
 func (mr *ModuleRelease) GetMessage() string {
