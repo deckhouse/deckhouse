@@ -235,6 +235,8 @@ EOF
     return 0
   fi
 
+  #debug
+  context::jq -e -r '.review.request.object.spec.kubelet' > /tmp/$(date +%s).json 2>&1
   # check topologyManager.enabled and resourceReservation.mode == "static"
   if context::jq -e -r '.review.request.object.spec.kubelet.resourceReservation.mode == "static" and .review.request.object.spec.kubelet.topologyManager.enabled == true and .review.request.object.spec.kubelet.resourceReservation.static.cpu == null' >/dev/null 2>&1; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
