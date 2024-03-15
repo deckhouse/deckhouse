@@ -222,6 +222,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -262,6 +265,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                 acceptRequestsFrom:
                   type: array
                   description: |
@@ -812,6 +818,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                 acceptRequestsFrom:
                   type: array
                   description: |
