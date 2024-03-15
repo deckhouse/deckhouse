@@ -25,14 +25,16 @@ import (
 )
 
 const (
-	appName          = "prometheus"
-	reconcileTime    = 1 * time.Minute
-	resolveTimeout   = 5 * time.Minute
-	contextTimeout   = 10 * time.Second
-	severityLabel    = "severity_level"
-	summaryLabel     = "summary"
-	descriptionLabel = "description"
-	DMSName          = "DeadMansSwitch"
+	appName                          = "prometheus"
+	reconcileTime                    = 1 * time.Minute
+	resolveTimeout                   = 5 * time.Minute
+	contextTimeout                   = 10 * time.Second
+	severityLabel                    = "severity_level"
+	summaryLabel                     = "summary"
+	descriptionLabel                 = "description"
+	DMSAlertName                     = "DeadMansSwitch"
+	MissedDMSAlertName               = "MissedDeadMansSwitch"
+	ClusterHasTooManyAlertsAlertName = "ClusterHasTooManyAlerts"
 )
 
 type config struct {

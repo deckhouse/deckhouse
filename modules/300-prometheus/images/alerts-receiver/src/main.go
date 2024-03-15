@@ -18,12 +18,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -91,7 +93,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 	alerts := s.memStore.deepCopy()
 
 	if len(alerts) == s.memStore.capacity {
-		addClusterHasTooManyAlertsAlert(alerts)
+		addClusterHasTooManyAlertsAlert(alerts, s.memStore.capacity)
 	}
 
 	if time.Now().After(s.memStore.lastDMSReceived) {
@@ -127,11 +129,41 @@ func reconcile(ctx context.Context, s *storeStruct) {
 }
 
 // generate queue fullness alert
-func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert) {
+func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity int) {
 	log.Info("add queue fullness alert")
+	alert := &types.Alert{
+		Alert: model.Alert{
+			Labels: model.LabelSet{
+				"alertname":      ClusterHasTooManyAlertsAlertName,
+				"prometheus":     "deckhouse",
+				"severity_level": "1",
+			},
+			Annotations: model.LabelSet{
+				"description": model.LabelValue(fmt.Sprintf("Cluster has more than %s active alerts.", capacity)),
+				"summary":     "Alerting " + ClusterHasTooManyAlertsAlertName,
+			},
+		},
+		UpdatedAt: time.Now(),
+	}
+	alerts[MissedDMSAlertName] = alert
 }
 
 // generate alert about missing deadmansswitch
 func addMissingDeadMensSwitch(alerts map[string]*types.Alert) {
-	log.Infof("add missed %s alert", DMSName)
+	log.Infof("add missed %s alert", DMSAlertName)
+	alert := &types.Alert{
+		Alert: model.Alert{
+			Labels: model.LabelSet{
+				"alertname":      MissedDMSAlertName,
+				"prometheus":     "deckhouse",
+				"severity_level": "1",
+			},
+			Annotations: model.LabelSet{
+				"description": "Entire Alerting pipeline is not functional.",
+				"summary":     "Alerting " + MissedDMSAlertName,
+			},
+		},
+		UpdatedAt: time.Now(),
+	}
+	alerts[MissedDMSAlertName] = alert
 }

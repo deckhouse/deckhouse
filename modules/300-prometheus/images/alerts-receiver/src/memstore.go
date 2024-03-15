@@ -46,8 +46,8 @@ func (a *memStore) insertAlert(alert *model.Alert) error {
 	now := time.Now()
 
 	// check if alert is DeadMan'sSwitch
-	if alert.Name() == DMSName {
-		log.Infof("Received %s alert", DMSName)
+	if alert.Name() == DMSAlertName {
+		log.Infof("Received %s alert", DMSAlertName)
 		a.lastDMSReceived = now
 		return nil
 	}
