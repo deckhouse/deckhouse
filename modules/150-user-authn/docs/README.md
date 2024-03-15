@@ -27,7 +27,7 @@ You can use several external authentication providers simultaneously.
 
 ## Integration features
 
-### Authenticating to the Kubernetes API using a login and password
+### Basic authentication to the Kubernetes API
 
 Login and password authentication in the Kubernetes API is currently available only for the Crowd provider, however, other external providers such as GitHub, GitLab and others are supported. Given that login and password authentication through these sources is functioning successfully, it can also be used as an external source of accounts in Dex. Support for this feature for static users and LDAP-enabled providers is expected in the near future.
 
