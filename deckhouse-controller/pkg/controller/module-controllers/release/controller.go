@@ -470,8 +470,48 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
 	}
+
+	var policy *v1alpha1.ModuleUpdatePolicy
+	// if release has associated update policy
+	if policyName, found := mr.ObjectMeta.Labels[UpdatePolicyLabel]; found {
+		if policyName == "" {
+			policy = &v1alpha1.ModuleUpdatePolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "",
+				},
+				Spec: *c.deckhouseEmbeddedPolicy,
+			}
+		} else {
+			// get policy spec
+			policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
+			if err != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			}
+		}
+
+		if policy.Spec.Update.Mode == "Ignore" {
+			if e := c.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+	} else {
+		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	kubeAPI := newKubeAPI(c.logger, c.d8ClientSet, c.moduleSourcesLister, c.moduleReleasesLister, c.externalModulesDir, c.symlinksDir, c.modulesValidator)
-	releaseUpdater := newModuleUpdater(c.logger, nConfig, kubeAPI)
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI)
 
 	releaseUpdater.PrepareReleases(otherReleases)
 	if releaseUpdater.ReleasesCount() == 0 {
@@ -510,87 +550,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	if releaseUpdater.GetPredictedReleaseIndex() == -1 {
 		return ctrl.Result{}, nil
 	}
-
-	release := otherReleases[releaseUpdater.GetPredictedReleaseIndex()]
-	var policy *v1alpha1.ModuleUpdatePolicy
-	// if release has associated update policy
-	if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
-		if policyName == "" {
-			policy = &v1alpha1.ModuleUpdatePolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "",
-				},
-				Spec: *c.deckhouseEmbeddedPolicy,
-			}
-		} else {
-			// get policy spec
-			policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
-			if err != nil {
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			}
-		}
-
-		if policy.Spec.Update.Mode == "Ignore" {
-			if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-
-			//TODO: remove next block because it handled in release updater
-			//case "Manual":
-			//	if !release.GetApproved() {
-			//		if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
-			//			return ctrl.Result{Requeue: true}, e
-			//		}
-			//		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			//	}
-			//	release.SetApprovedStatus(true)
-			//
-			//case "Auto":
-			//	if !policy.Spec.Update.Windows.IsAllowed(ts) {
-			//		if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
-			//			return ctrl.Result{Requeue: true}, e
-			//		}
-			//		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			//	}
-		}
-
-		releaseUpdater.SetMode(policy.Spec.Update.Mode)
-
-		if releaseUpdater.PredictedReleaseIsPatch() {
-			// patch release does not respect update windows or ManualMode
-			if !releaseUpdater.ApplyPredictedRelease(nil) {
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			}
-			return ctrl.Result{}, nil
-		}
-
-		var windows update.Windows
-		if !releaseUpdater.InManualMode() {
-			windows = policy.Spec.Update.Windows
-		}
-
-		if !releaseUpdater.ApplyPredictedRelease(windows) {
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-
-		modulesChangedReason = "a new module release found"
-
-	} else {
-		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
-			return ctrl.Result{Requeue: true}, e
-		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
-	releaseUpdater.SetMode(policy.Spec.Update.Mode)
 
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode

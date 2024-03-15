@@ -752,7 +752,3 @@ func (du *Updater[R]) checkAppliedNowConditions(appliedNowRelease *R) bool {
 func (du *Updater[R]) GetPredictedReleaseIndex() int {
 	return du.predictedReleaseIndex
 }
-
-func (du *Updater[R]) SetMode(mode string) {
-	du.inManualMode = mode == "Manual"
-}
