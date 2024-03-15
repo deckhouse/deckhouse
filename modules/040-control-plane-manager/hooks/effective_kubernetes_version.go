@@ -31,6 +31,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -68,6 +69,9 @@ Description:
 */
 
 const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
+
+const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
+const deckhouseDefaultK8sVersionSecretKey = "deckhouseDefaultKubernetesVersion"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
@@ -156,6 +160,11 @@ func ekvFilterNode(unstructured *unstructured.Unstructured) (go_hook.FilterResul
 	return semver.NewVersion(rawV)
 }
 
+type kubernetesVersionsInSecret struct {
+	MaxUsed          *semver.Version
+	DeckhouseDefault *semver.Version
+}
+
 func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret corev1.Secret
 
@@ -164,12 +173,27 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, err
 	}
 
-	raw, ok := secret.Data["maxUsedControlPlaneKubernetesVersion"]
-	if !ok {
-		return nil, nil
+	versions := kubernetesVersionsInSecret{}
+
+	rawMaxUsed, ok := secret.Data[maxUsedK8sVersionSecretKey]
+	if ok {
+		maxUsed, err := semver.NewVersion(string(rawMaxUsed))
+		if err != nil {
+			return nil, err
+		}
+		versions.MaxUsed = maxUsed
 	}
 
-	return semver.NewVersion(string(raw))
+	rawDeckhouseDefault, ok := secret.Data[deckhouseDefaultK8sVersionSecretKey]
+	if ok {
+		deckhouseDefault, err := semver.NewVersion(string(rawDeckhouseDefault))
+		if err != nil {
+			return nil, err
+		}
+		versions.DeckhouseDefault = deckhouseDefault
+	}
+
+	return versions, nil
 }
 
 func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container) error {
@@ -200,7 +224,8 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	requirements.SaveValue(minK8sVersionRequirementKey, minNodeVersion.String())
 
 	// process secret snapshot
-	maxUsedControlPlaneVersion := ekvProcessSecretSnapshot(input)
+	versionsInSecret := ekvProcessSecretSnapshot(input)
+	maxUsedControlPlaneVersion := versionsInSecret.MaxUsed
 	if maxUsedControlPlaneVersion == nil {
 		input.LogEntry.Warn("deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version")
 		maxUsedControlPlaneVersion = configVersion
@@ -236,13 +261,36 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
 	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
+	var patch map[string]interface{}
+
+	addToPatch := func(key, value string) {
+		if patch == nil {
+			patch = map[string]interface{}{
+				"data": map[string]interface{}{},
+			}
+		}
+
+		data := patch["data"].(map[string]interface{})
+		data[key] = value
+	}
+
 	if !effectiveKubernetesVersion.LessThan(maxUsedControlPlaneVersion) {
 		encoded := base64.StdEncoding.EncodeToString([]byte(resultStr))
-		patch := map[string]interface{}{
-			"data": map[string]interface{}{
-				"maxUsedControlPlaneKubernetesVersion": encoded,
-			},
-		}
+		addToPatch(maxUsedK8sVersionSecretKey, encoded)
+	}
+
+	currentDeckhouseDefault, err := semver.NewVersion(config.DefaultKubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("incorrect default kubernetes version %s: %v", config.DefaultKubernetesVersion, err)
+	}
+
+	if versionsInSecret.DeckhouseDefault == nil || currentDeckhouseDefault.GreaterThan(versionsInSecret.DeckhouseDefault) {
+		resultStr := fmt.Sprintf("%d.%d", currentDeckhouseDefault.Major(), currentDeckhouseDefault.Minor())
+		encoded := base64.StdEncoding.EncodeToString([]byte(resultStr))
+		addToPatch(deckhouseDefaultK8sVersionSecretKey, encoded)
+	}
+
+	if patch != nil {
 		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 	}
 
@@ -325,12 +373,12 @@ func ekvProcessNodeSnapshot(input *go_hook.HookInput) (minNodeVersion, maxNodeVe
 }
 
 // get semver from secret
-func ekvProcessSecretSnapshot(input *go_hook.HookInput) (maxUsedControlPlaneVersion *semver.Version) {
+func ekvProcessSecretSnapshot(input *go_hook.HookInput) (maxUsedControlPlaneVersion kubernetesVersionsInSecret) {
 	snap := input.Snapshots["max_used_control_plane_version"]
 
 	if len(snap) > 0 && snap[0] != nil {
-		return snap[0].(*semver.Version)
+		return snap[0].(kubernetesVersionsInSecret)
 	}
 
-	return nil
+	return kubernetesVersionsInSecret{}
 }

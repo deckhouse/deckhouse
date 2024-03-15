@@ -198,25 +198,9 @@ function dynamic_memory_sizing {
     echo -n "${recommended_systemreserved_memory}"
 }
 
-function dynamic_cpu_sizing {
-  echo -n "70m"
-}
-
-function dynamic_ephemeral_storage_sizing {
-  echo -n "1Gi"
-}
-
 {{- else if eq $resourceReservationMode "Static" }}
 function dynamic_memory_sizing {
   echo -n "$(resources_management_memory_units_to_bytes {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }})"
-}
-
-function dynamic_cpu_sizing {
-  echo -n "{{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}"
-}
-
-function dynamic_ephemeral_storage_sizing {
-  echo -n "{{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}"
 }
 {{- end }}
 
@@ -351,11 +335,28 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
-{{- if or (eq $resourceReservationMode "Auto") (eq $resourceReservationMode "Static") }}
+{{- if eq $resourceReservationMode "Auto" }}
 systemReserved:
-  cpu: "$(dynamic_cpu_sizing)"
+  cpu: 70m
   memory: "$(dynamic_memory_sizing)"
-  ephemeral-storage: "$(dynamic_ephemeral_storage_sizing)"
+  ephemeral-storage: 1Gi
+{{- else if eq $resourceReservationMode "Static" }}
+systemReserved:
+  {{- if hasKey .nodeGroup "kubelet" }}
+    {{- if hasKey .nodeGroup.kubelet "resourceReservation" }}
+      {{- if hasKey .nodeGroup.kubelet.resourceReservation "static" }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "cpu" }}
+  cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
+        {{- end }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "memory" }}
+  memory: "$(dynamic_memory_sizing)"
+        {{- end }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "ephemeralStorage" }}
+  ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1

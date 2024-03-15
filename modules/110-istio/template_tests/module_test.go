@@ -90,6 +90,8 @@ const istioValues = `
         key: mykey
         root: myroot
         chain: mychain
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
       auth:
         password: qqq
     auth:

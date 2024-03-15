@@ -36,6 +36,13 @@ properties:
         - ["10.10.10.0/24", "10.10.20.0/24"]
         items:
           type: string
+      isIstioCNIEnabled:
+        type: boolean
+        default: false
+        description: |
+          The switch indicates whether istio-cni is enabled in the cluster and
+          whether it is necessary to enable the compatibility mode for istio-cni.
+          (cni-exclusive: false)
       hubble:
         type: object
         default: {}
