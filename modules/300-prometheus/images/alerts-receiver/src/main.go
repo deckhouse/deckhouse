@@ -131,7 +131,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 // generate queue fullness alert
 func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity int) {
 	log.Info("add queue fullness alert")
-	alert := generateAlert(ClusterHasTooManyAlertsAlertName, fmt.Sprintf("Cluster has more than %s active alerts.", capacity))
+	alert := generateAlert(ClusterHasTooManyAlertsAlertName, fmt.Sprintf("Cluster has more than %d active alerts.", capacity))
 	alerts[strings.ToLower(ClusterHasTooManyAlertsAlertName)] = alert
 }
 
