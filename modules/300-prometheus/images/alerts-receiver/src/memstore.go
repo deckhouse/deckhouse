@@ -133,3 +133,25 @@ func fingerprintWithoutSeverity(ta *model.Alert) string {
 	delete(labels, severityLabel)
 	return labels.Fingerprint().String()
 }
+
+// Generate an alert
+func generateAlert(alertName, message string) *types.Alert {
+	now := time.Now()
+	alert := &types.Alert{
+		Alert: model.Alert{
+			Labels: model.LabelSet{
+				"alertname":      model.LabelValue(alertName),
+				"prometheus":     "deckhouse",
+				"severity_level": "1",
+			},
+			Annotations: model.LabelSet{
+				"description": model.LabelValue(message),
+				"summary":     model.LabelValue(fmt.Sprintf("Alerting %s", alertName)),
+			},
+			StartsAt: now,
+			EndsAt:   now.Add(resolveTimeout),
+		},
+		UpdatedAt: now,
+	}
+	return alert
+}

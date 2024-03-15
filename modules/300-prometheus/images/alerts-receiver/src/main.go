@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
-	"github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -98,7 +97,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 	}
 
 	if time.Now().After(s.memStore.lastDMSReceived) {
-		addMissingDeadMensSwitch(alerts)
+		addMissingDeadMensSwitchAlert(alerts)
 	}
 
 	for fingerprint, alert := range alerts {
@@ -132,39 +131,13 @@ func reconcile(ctx context.Context, s *storeStruct) {
 // generate queue fullness alert
 func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity int) {
 	log.Info("add queue fullness alert")
-	alert := &types.Alert{
-		Alert: model.Alert{
-			Labels: model.LabelSet{
-				"alertname":      ClusterHasTooManyAlertsAlertName,
-				"prometheus":     "deckhouse",
-				"severity_level": "1",
-			},
-			Annotations: model.LabelSet{
-				"description": model.LabelValue(fmt.Sprintf("Cluster has more than %s active alerts.", capacity)),
-				"summary":     "Alerting " + ClusterHasTooManyAlertsAlertName,
-			},
-		},
-		UpdatedAt: time.Now(),
-	}
+	alert := generateAlert(ClusterHasTooManyAlertsAlertName, fmt.Sprintf("Cluster has more than %s active alerts.", capacity))
 	alerts[strings.ToLower(ClusterHasTooManyAlertsAlertName)] = alert
 }
 
 // generate alert about missing deadmansswitch
-func addMissingDeadMensSwitch(alerts map[string]*types.Alert) {
+func addMissingDeadMensSwitchAlert(alerts map[string]*types.Alert) {
 	log.Infof("add missed %s alert", DMSAlertName)
-	alert := &types.Alert{
-		Alert: model.Alert{
-			Labels: model.LabelSet{
-				"alertname":      MissedDMSAlertName,
-				"prometheus":     "deckhouse",
-				"severity_level": "1",
-			},
-			Annotations: model.LabelSet{
-				"description": "Entire Alerting pipeline is not functional.",
-				"summary":     "Alerting " + MissedDMSAlertName,
-			},
-		},
-		UpdatedAt: time.Now(),
-	}
+	alert := generateAlert(MissedDMSAlertName, "Entire Alerting pipeline is not functional.")
 	alerts[strings.ToLower(MissedDMSAlertName)] = alert
 }
