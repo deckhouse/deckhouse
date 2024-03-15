@@ -85,8 +85,8 @@ func (a *memStore) insertAlert(alert *model.Alert) error {
 		return nil
 	}
 
-	if al.Labels[severityLabel] > ta.Labels[severityLabel] {
-		log.Infof("alert with fingerprint %s and severity level more than %s exists in queue", fingerprint, ta.Labels[severityLabel])
+	if al.Labels[severityLabel] < ta.Labels[severityLabel] {
+		log.Infof("alert with fingerprint %s and severity level less than %s exists in queue", fingerprint, ta.Labels[severityLabel])
 		return nil
 	}
 
