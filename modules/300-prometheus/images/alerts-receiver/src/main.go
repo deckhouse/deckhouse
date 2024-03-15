@@ -96,7 +96,7 @@ func reconcile(ctx context.Context, s *storeStruct) {
 		addClusterHasTooManyAlertsAlert(alerts, s.memStore.capacity)
 	}
 
-	if time.Now().After(s.memStore.lastDMSReceived) {
+	if time.Now().After(s.memStore.lastDMSReceived.Add(2 * reconcileTime)) {
 		addMissingDeadMensSwitchAlert(alerts)
 	}
 

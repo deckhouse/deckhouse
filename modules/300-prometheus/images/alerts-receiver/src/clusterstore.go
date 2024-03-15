@@ -152,7 +152,7 @@ func (c *clusterStore) createCR(rootCtx context.Context, fingerprint string, ale
 		startsAt = time.Now()
 	}
 
-	err = c.updateCRStatus(ctx, fingerprint, startsAt, alert.UpdatedAt)
+	err = c.updateCRStatus(rootCtx, fingerprint, startsAt, alert.UpdatedAt)
 	return err
 }
 
