@@ -69,7 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, systemReserve)
 
 type NodeGroup struct {
-	Name string
+	Name                    string
+	ResourceReservationMode string
 }
 
 func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -80,7 +81,8 @@ func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return &NodeGroup{
-		Name: ng.Name,
+		Name:                    ng.Name,
+		ResourceReservationMode: string(ng.Spec.Kubelet.ResourceReservation.Mode),
 	}, nil
 }
 
@@ -107,6 +109,11 @@ func systemReserve(input *go_hook.HookInput) error {
 	ngsSnapshot := input.Snapshots["ngs"]
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
+		skipMigration := ng.ResourceReservationMode != ""
+		input.LogEntry.Printf("NodeGroupName: %s, KubeletResourceReservationMode: %s, skipMigration: %t", ng.Name, ng.ResourceReservationMode, skipMigration)
+		if skipMigration {
+			continue
+		}
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")
