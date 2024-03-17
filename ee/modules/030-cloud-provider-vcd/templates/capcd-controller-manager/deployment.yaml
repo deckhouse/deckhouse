@@ -88,8 +88,6 @@ spec:
         env:
           - name: CAPVCD_SKIP_RDE
             value: "true"
-          - name: USE_K8S_ENV_AS_CONTROL_PLANE_IP
-            value: "true"
         ports:
         - containerPort: 9444
           name: webhook-server
@@ -102,6 +100,11 @@ spec:
           - "--leader-elect"
           - "--metrics-bind-address=127.0.0.1:9446"
           - "--health-probe-bind-address=:9445"
+          - "--webhook-port=9444"
+          - "--use-kubernetes-host-env-as-control-plane-host"
+          - "--use-normal-vms-creation-instead-tkg"
+          - "--resize-disk-before-network-reconciliation"
+          - "--pass-hostname-by-guest-info"
         livenessProbe:
           httpGet:
             path: /healthz
