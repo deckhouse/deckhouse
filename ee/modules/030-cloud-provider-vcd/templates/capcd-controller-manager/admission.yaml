@@ -21,6 +21,7 @@ webhooks:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
     - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -42,6 +43,7 @@ webhooks:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
     - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -71,6 +73,7 @@ webhooks:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
     - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -92,6 +95,7 @@ webhooks:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
     - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
