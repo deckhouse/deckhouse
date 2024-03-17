@@ -12,6 +12,16 @@ metadata:
     cluster.x-k8s.io/v1beta1: v1beta2
   name: vcdmachinetemplates.infrastructure.cluster.x-k8s.io
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: capcd-controller-manager-webhook-service
+          namespace: d8-cloud-provider-vcd
+          path: /convert
+      conversionReviewVersions:
+        - v1
   group: infrastructure.cluster.x-k8s.io
   names:
     kind: VCDMachineTemplate
@@ -138,6 +148,137 @@ spec:
     storage: true
     subresources:
       status: {}
+  - name: v1beta3
+    schema:
+      openAPIV3Schema:
+        description: VCDMachineTemplate is the Schema for the vcdmachinetemplates
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VCDMachineTemplateSpec defines the desired state of VCDMachineTemplate
+            properties:
+              template:
+                properties:
+                  metadata:
+                    description: |-
+                      Standard object's metadata.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations is an unstructured key value map stored with a resource that may be
+                          set by external tools to store and retrieve arbitrary metadata. They are not
+                          queryable and should be preserved when modifying objects.
+                          More info: http://kubernetes.io/docs/user-guide/annotations
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Map of string keys and values that can be used to organize and categorize
+                          (scope and select) objects. May match selectors of replication controllers
+                          and services.
+                          More info: http://kubernetes.io/docs/user-guide/labels
+                        type: object
+                    type: object
+                  spec:
+                    description: Spec is the specification of the desired behavior
+                      of the machine.
+                    properties:
+                      bootstrapped:
+                        description: |-
+                          Bootstrapped is true when the kubeadm bootstrapping has been run
+                          against this machine
+                        type: boolean
+                      catalog:
+                        description: Catalog hosting templates
+                        type: string
+                      diskSize:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        description: DiskSize is the size, in bytes, of the disk for
+                          this machine
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      enableNvidiaGPU:
+                        description: |-
+                          EnableNvidiaGPU is true when a VM should be created with the relevant binaries installed
+                          If true, then an appropriate placement policy should be set
+                        type: boolean
+                      extraOvdcNetworks:
+                        description: |-
+                          ExtraOvdcNetworks is the list of extra Ovdc Networks that are mounted to machines.
+                          VCDClusterSpec.OvdcNetwork is always attached regardless of this field.
+                        items:
+                          type: string
+                        type: array
+                      failureDomain:
+                        description: |-
+                          FailureDomain is the failure domain the machine will be created in.
+                          Must match a key in the FailureDomains map stored on the cluster object.
+                        type: string
+                      placementPolicy:
+                        description: PlacementPolicy is the placement policy to be
+                          used on this machine.
+                        type: string
+                      providerID:
+                        description: ProviderID will be the container name in ProviderID
+                          format (vmware-cloud-director://<vm id>)
+                        type: string
+                      sizingPolicy:
+                        description: |-
+                          SizingPolicy is the sizing policy to be used on this machine.
+                          If no sizing policy is specified, default sizing policy will be used to create the nodes
+                        type: string
+                      storageProfile:
+                        description: StorageProfile is the storage profile to be used
+                          on this machine
+                        type: string
+                      template:
+                        description: TemplatePath is the path of the template OVA
+                          that is to be used
+                        type: string
+                      vmNamingTemplate:
+                        description: |-
+                          VmNamingTemplate is go template to generate VM names based on Machine and VCDMachine CRs.
+                          Functions of Sprig library are supported. See https://github.com/Masterminds/sprig
+                          Immutable field. machine.Name is used as VM name when this field is empty.
+                        type: string
+                    type: object
+                required:
+                  - spec
+                type: object
+            required:
+              - template
+            type: object
+          status:
+            description: VCDMachineTemplateStatus defines the observed state of VCDMachineTemplate
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: { }
 status:
   acceptedNames:
     kind: ""
