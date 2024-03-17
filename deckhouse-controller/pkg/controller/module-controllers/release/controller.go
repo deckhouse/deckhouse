@@ -502,7 +502,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
-
 	} else {
 		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 			return ctrl.Result{Requeue: true}, e
