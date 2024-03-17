@@ -261,7 +261,6 @@ spec:
         - spec
         type: object
     served: true
-    storage: true
     subresources:
       status: {}
   - name: v1beta3
