@@ -13,7 +13,7 @@ webhooks:
     service:
       name: capcd-controller-manager-webhook-service
       namespace: d8-cloud-provider-vcd
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta3-vcdcluster
   failurePolicy: Fail
   name: mutation.vcdcluster.infrastructure.cluster.x-k8s.io
   rules:
@@ -87,7 +87,7 @@ webhooks:
     service:
       name: capcd-controller-manager-webhook-service
       namespace: d8-cloud-provider-vcd
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta3-vcdmachine
   failurePolicy: Fail
   name: validation.vcdmachine.infrastructure.cluster.x-k8s.io
   rules:
