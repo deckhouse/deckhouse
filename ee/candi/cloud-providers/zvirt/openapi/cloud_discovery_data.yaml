@@ -27,6 +27,6 @@ apiVersions:
               minLength: 1
             isEnabled:
               type: boolean
-            isDefaul:
+            isDefault:
               type: boolean
         description: List of storage classes.

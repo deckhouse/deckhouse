@@ -14,6 +14,14 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+git:
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
+    to: /patches
+    includePaths:
+      - '**/*.patch'
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   beforeInstall:
     - apk add --no-cache make patch git bash
@@ -22,6 +30,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.ovirt.version }} {{ $.SOURCE_REPO }}/oVirt/terraform-provider-ovirt.git /src
     - cd /src
+    - find /patches -name '*.patch' | xargs git apply --verbose
     - go mod edit -go=1.20
     - go mod tidy
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X main.version={{ .TF.ovirt.version }} -X main.commit=00000000"
