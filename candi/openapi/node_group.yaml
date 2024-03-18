@@ -2089,7 +2089,7 @@ spec:
                           type: string
                           x-doc-default: Container
                           description: |
-                            The scope defines the granularity at which to perform resource alignment (e.g. pod or container level).
+                            Defines the granularity at which to perform resource alignment (pod or container level).
                           enum:
                             - Container
                             - Pod
@@ -2098,10 +2098,10 @@ spec:
                           x-doc-default: None
                           description: |
                            A strategy driven by resource alignment policies. Four policies are supported:
-                            - None - does not perform any resource alignment (default).
-                            - BestEffort - determines the availability of resources on each node and uses this information to maintain the correspondence between the Numa node and the container.
-                            - Restricted - determines the availability of resources on each node and uses this information to select the most appropriate node in each container.
-                            - SingleNumaNode - determines the availability of resources on each node and uses this information to determine whether it is possible to maintain a correspondence between the container and the Numa node.
+                            - `None` — does not perform any resource alignment (default).
+                            - `BestEffort` — determines the availability of resources on each node and uses this information to maintain the correspondence between the Numa node and the container.
+                            - `Restricted` — determines the availability of resources on each node and uses this information to select the most appropriate node in each container.
+                            - `SingleNumaNode` — determines the availability of resources on each node and uses this information to determine whether it is possible to maintain a correspondence between the container and the Numa node.
                             
                             Similar to the none, best-effort, restricted, single-numa-node policies in Kubernetes. See [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies) for more information.
                           enum:
