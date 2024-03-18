@@ -1,0 +1,162 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-zvirt
+    cluster.x-k8s.io/provider: zvirt
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: zvirtmachinetemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: ZvirtMachineTemplate
+    listKind: ZvirtMachineTemplateList
+    plural: zvirtmachinetemplates
+    singular: zvirtmachinetemplate
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ZvirtMachineTemplate is the Schema for the zvirtmachinetemplates
+            API
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ZvirtMachineTemplateSpec defines the desired state of ZvirtMachineTemplate
+              properties:
+                template:
+                  properties:
+                    metadata:
+                      description: |-
+                        ObjectMeta is metadata that all persisted resources must have, which includes all objects
+                        users must create. This is a copy of customizable fields from metav1.ObjectMeta.
+                        
+                        
+                        ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template` and `MachineSet.Template`,
+                        which are not top-level Kubernetes objects. Given that metav1.ObjectMeta has lots of special cases
+                        and read-only fields which end up in the generated CRD validation, having it as a subset simplifies
+                        the API and some issues that can impact user experience.
+                        
+                        
+                        During the [upgrade to controller-tools@v2](https://github.com/kubernetes-sigs/cluster-api/pull/1054)
+                        for v1alpha2, we noticed a failure would occur running Cluster API test suite against the new CRDs,
+                        specifically `spec.metadata.creationTimestamp in body must be of type string: "null"`.
+                        The investigation showed that `controller-tools@v2` behaves differently than its previous version
+                        when handling types from [metav1](k8s.io/apimachinery/pkg/apis/meta/v1) package.
+                        
+                        
+                        In more details, we found that embedded (non-top level) types that embedded `metav1.ObjectMeta`
+                        had validation properties, including for `creationTimestamp` (metav1.Time).
+                        The `metav1.Time` type specifies a custom json marshaller that, when IsZero() is true, returns `null`
+                        which breaks validation because the field isn't marked as nullable.
+                        
+                        
+                        In future versions, controller-tools@v2 might allow overriding the type and validation for embedded
+                        types. When that happens, this hack should be revisited.
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Annotations is an unstructured key value map stored with a resource that may be
+                            set by external tools to store and retrieve arbitrary metadata. They are not
+                            queryable and should be preserved when modifying objects.
+                            More info: http://kubernetes.io/docs/user-guide/annotations
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Map of string keys and values that can be used to organize and categorize
+                            (scope and select) objects. May match selectors of replication controllers
+                            and services.
+                            More info: http://kubernetes.io/docs/user-guide/labels
+                          type: object
+                      type: object
+                    spec:
+                      properties:
+                        clusterID:
+                          description: the zVirt cluster this VM instance belongs too.
+                          type: string
+                        cpu:
+                          description: CPU defines the VM CPU.
+                          properties:
+                            cores:
+                              default: 1
+                              description: Cores is the number of cores per socket.
+                              format: int32
+                              type: integer
+                            sockets:
+                              default: 4
+                              description: Sockets is the number of sockets for a VM.
+                              format: int32
+                              type: integer
+                            threads:
+                              default: 1
+                              description: Threads is the number of thread per core.
+                              format: int32
+                              type: integer
+                          required:
+                            - cores
+                            - sockets
+                            - threads
+                          type: object
+                        memory:
+                          default: 8192
+                          description: MemoryMB is the size of a VM's memory in MiBs.
+                          format: int32
+                          type: integer
+                        nicName:
+                          default: nic1
+                          description: NicName is a name that will be assigned to the
+                            vNIC attached to the VM.
+                          type: string
+                        rootDiskSizeGb:
+                          default: 20
+                          description: RootDiskSize size of the bootable disk in GiB.
+                          format: int64
+                          type: integer
+                        template:
+                          description: The VM template this instance will be created
+                            from.
+                          type: string
+                        vnicProfileID:
+                          description: VNICProfileID the id of the zVirt vNic profile
+                            for the VM.
+                          type: string
+                      required:
+                        - clusterID
+                        - rootDiskSizeGb
+                        - template
+                        - vnicProfileID
+                      type: object
+                  required:
+                    - spec
+                  type: object
+              required:
+                - template
+              type: object
+          type: object
+      served: true
+      storage: true

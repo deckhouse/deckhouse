@@ -5,7 +5,7 @@ apiVersions:
     type: object
     additionalProperties: false
     description: |
-    x-      Описывает конфигурацию облачного кластера в Zvirt.
+      Описывает конфигурацию облачного кластера в Zvirt.
 
       Используется cloud-провайдером, если control plane кластера размещен в облаке.
 
@@ -38,10 +38,13 @@ apiVersions:
                   ID кластера.
               numCPUs:
                 description: |
-                  Количество vCPU, выделяемых виртуальным машинам zVirt.
+                  Количество vCPU, выделяемых виртуальным машинам.
               memory:
                 description: |
-                  Память в MiB для выделения виртуальным машинам zVirt VirtualMachines.
+                  Память в MiB для выделения виртуальным машинам.
+              rootDiskSize:
+                description: |
+                  Размер корневого диска в GiB для использования в виртуальных машинах.
               template:
                 description: |
                   Имя шаблона, который будет использован при заказе виртуальных машин.

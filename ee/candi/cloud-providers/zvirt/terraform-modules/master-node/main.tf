@@ -23,6 +23,14 @@ resource "ovirt_vm" "master_vm" {
   vm_type = local.master_vm_type
 
   initialization_custom_script = local.master_cloud_init_script
+
+  lifecycle {
+    ignore_changes = [
+      initialization_custom_script,
+      placement_policy_affinity,
+      placement_policy_host_ids
+    ]
+  }
 }
 
 data "ovirt_disk_attachments" "master-vm-boot-disk-attachment" {
@@ -32,6 +40,10 @@ data "ovirt_disk_attachments" "master-vm-boot-disk-attachment" {
 resource "ovirt_disk_resize" "master_boot_disk_resize" {
   disk_id = tolist(data.ovirt_disk_attachments.master-vm-boot-disk-attachment.attachments)[0].disk_id
   size    = local.master_root_disk_size
+
+  lifecycle {
+    ignore_changes = [disk_id]
+  }
 }
 
 resource "ovirt_nic" "master_vm_nic" {
