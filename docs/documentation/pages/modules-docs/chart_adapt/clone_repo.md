@@ -18,4 +18,4 @@ permalink: en/modules-docs/chart-adapt/clone-repo/
      && cd hello-world-module
    ```
 
-   > **NOTE:** Подставьте свой адрес для команды git clone.
+   > **NOTE:** Подставьте свой адрес для команды `git clone`.
