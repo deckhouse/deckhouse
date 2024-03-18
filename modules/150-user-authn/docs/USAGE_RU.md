@@ -170,7 +170,7 @@ spec:
 
 ### LDAP
 
-В примере представлена конфигурация провайдера Dex под названием `active-directory`.
+В примере представлены настройки провайдера для интеграции с Active-directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1
