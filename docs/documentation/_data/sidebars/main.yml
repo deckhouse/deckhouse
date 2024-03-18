@@ -71,7 +71,7 @@ entries:
                   url: /modules-docs/guides/version/
             - title:
                 en: Chart adapt
-                ru: Адаптируем существующий чарт
+                ru: Адаптация существующего чарта
               folders:
                 - title:
                     en: Description
