@@ -88,7 +88,7 @@ spec:
 
 ### Регистрация кастомных метрик в Kubernetes API
 
-Кастомные метрики необходимо регистрировать в API `/apis/custom.metrics.k8s.io/`, в примере эту регистрацию производит `prometheus-metrics-adapter` (и он же реализует API). На эти метрики можно будет ссылаться из объекта `HorizontalPodAutoscaler`. Настройка ванильного `prometheus-metrics-adapter` — трудоемкий процесс, мы его упростили, определив набор [Custom Resources](cr.html) с разным Scope:
+Кастомные метрики необходимо регистрировать в API `/apis/custom.metrics.k8s.io/`, эту регистрацию производит prometheus-metrics-adapter (и он же реализует API). На эти метрики можно будет ссылаться из объекта _HorizontalPodAutoscaler_. Настройка ванильного prometheus-metrics-adapter — трудоемкий процесс, мы его упростили, определив набор [Custom Resources](cr.html) с разным Scope:
 * Namespaced:
   * `ServiceMetric`;
   * `IngressMetric`;
@@ -105,7 +105,7 @@ spec:
   * `ClusterStatefulsetMetric` (недоступен пользователям);
   * `ClusterDaemonSetMetric` (недоступен пользователям).
 
-С помощью Cluster-wide-ресурса можно задать глобальное определение метрики, а с помощью Namespaced-resource можно переопределить её локально. [Формат](cr.html) для всех custom resource - одинаковый.
+С помощью cluster-wide-ресурса можно задать глобальное определение метрики, а с помощью _Namespace_ можно переопределить её локально. [Формат](cr.html) для всех custom resource - одинаковый.
 
 ### Применяем кастомные метрики в HPA
 
