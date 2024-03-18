@@ -53,7 +53,7 @@ docker:
 {{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
 {{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # for prepull
-{{ $binaries := cat $binaries "/pause /bin/true" }}
+{{ $binaries := cat $binaries "/pause /usr/bin/true" }}
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 fromImage: {{ $.ModuleName }}/agent
