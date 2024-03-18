@@ -21,4 +21,4 @@ sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "hel
 
 Проверьте результат командой `cat` и убедитесь, что изменения применились.
 
-> **NOTE:** Можно также использовать другие вспомогательные функции из библиотеки Deckhouse. Подробнее смотрите в документации <https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib>
+> **NOTE:** Рекомендуем пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
