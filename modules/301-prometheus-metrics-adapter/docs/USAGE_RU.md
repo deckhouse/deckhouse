@@ -17,7 +17,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 **Важно!** [По умолчанию](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA использует разные подходы при масштабировании:
 * Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на требование масштабировать **вверх**, это происходит незамедлительно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста: за 15 секунд поды могут удвоиться, но если подов меньше 4, добавятся 4 новых пода.
-* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на то, что требуется уменьшить масштаб (**вниз**), это происходит в течение 5 минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300), когда собираются предложения о новом количестве реплик, в результате чего выбирается самое большое значение. Нет ограничений на количество удаляемых подов за один раз.
+* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на то, что требуется масштабировать **вниз**, это происходит в течение 5 минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): собираются предложения о новом количестве реплик, в результате чего выбирается самое большое значение. Нет ограничений на количество удаляемых подов за один раз.
 
 Если имеются проблемы с колебаниями метрик и происходит резкое увеличение ненужных реплик приложения, применяются разные подходы:
 * Оборачивание метрики агрегирующей функцией (например, `avg_over_time()`), если метрика определена PromQL-запросом. [Пример...](#пример-использования-нестабильной-кастомной-метрики)
