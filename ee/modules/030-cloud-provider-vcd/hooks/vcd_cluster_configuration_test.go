@@ -39,7 +39,7 @@ kind: VCDClusterConfiguration
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 organization: My_Org
 virtualDataCenter: My_Org
-virtualApplicationName: VAPP
+virtualApplicationName: vapp
 layout: Standard
 internalNetworkCIDR: 172.16.2.0/24
 mainNetwork: internal
