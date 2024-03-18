@@ -341,7 +341,7 @@ spec:
 
 В примерах инсталляций добавлено универсальное правило, которое позволяет создавать собственные метрики без настроек в `prometheus-metrics-adapter`, — «любая метрика в Prometheus с именем `kube_adapter_metric_<name>` будет зарегистрирована в API под именем `<name>`». После чего, остается написать экспортер (exporter), который будет экспортировать подобную метрику, или создать правило [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) в Prometheus, которое будет агрегировать вашу метрику на основе других метрик.
 
-Пример `CustomPrometheusRules`:
+Пример _CustomPrometheusRules_:
 
 {% raw %}
 
