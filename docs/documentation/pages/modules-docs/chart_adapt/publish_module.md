@@ -3,7 +3,7 @@ title: "Опубликуйте модуль"
 permalink: en/modules-docs/chart-adapt/publish-module/
 ---
 
-В `.gitlab-ci.yml` впишите свои переменные вместо указанных в шаблоне.
+В файле `.gitlab-ci.yml` укажите собственные переменные вместо тех, которые указаны в шаблоне.
 
 ```yaml
 MODULES_MODULE_NAME: echoserver
@@ -12,7 +12,7 @@ MODULES_MODULE_SOURCE: registry.flant.com/deckhouse/modules/template
 MODULES_MODULE_TAG: ${CI_COMMIT_REF_NAME}
 ```
 
-В Gitlab добавьте секреты для аутентификации в container registry в секции Settings -> CI/CD.
+В GitLab добавьте аутентификационные данные для доступа к container registry в разделе **Settings** -> **CI/CD**.
 
 Например:
 
@@ -21,9 +21,9 @@ MODULES_REGISTRY_LOGIN = username
 MODULES_REGISTRY_PASSWORD = password
 ```
 
-> **NOTE:** если вы используете fox, то доступы указывать не нужно.
+> **NOTE:** если вы используете **fox**, то доступы указывать не нужно.
 
-Запушим наши изменения обратно в git.
+Внесите  изменения в git.
 
 ```sh
 rm -rf .tmp-chart
@@ -33,12 +33,12 @@ git push --set-upstream origin example
 ```
 <!-- TODO: Сквош коммитов? -->
 
- Увидим, что сборка прошла успешна.
+  Убедитесь, что сборка прошла успешно.
 
 ![Pipeline](../../../images/modules-docs/pipeline.png)
 
-Теперь повесим тег v0.0.1. Во вновь появившемся окне нажимаем кнопку `Deploy to alpha`.
+Поместите тег v0.0.1. Теперь нажмите кнопку **Deploy to alpha**.
 
 ![Deploy](../../../images/modules-docs/deploy.png)
 
-После этого модуль доступен для подключения в кластерах Deckhouse.
+Модуль станет доступным для подключения в кластерах Deckhouse Kubernetes Platform.

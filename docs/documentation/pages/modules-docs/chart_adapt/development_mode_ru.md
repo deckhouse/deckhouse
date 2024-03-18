@@ -4,10 +4,9 @@ permalink: ru/modules-docs/chart-adapt/development-mode/
 lang: ru
 ---
 
-## Режим "разработчика"
+## Режим разработчика
 
-При разработке модулей бывает необходимо скачивать и деплоить модуль минуя каналы обновлений.
-Для этих целей нужно использовать ресурс ModulePullOverride.
+При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс *ModulePullOverride*.
 
 Пример:
 
@@ -23,15 +22,15 @@ spec:
 ```
 
 Параметры ресурса:
-**metadata.name** - Имя модуля. Должно соответствовать имени модуля в ModuleSource (поле `.status.modules.[].name`).
+* Имя модуля **metadata.name**. Должно соответствовать имени модуля в *ModuleSource* (параметр `.status.modules.[].name`).
 
-**spec.imageTag** - тэг образа контейнера. Может быть любым. Например, ~pr333~, ~my-branch~.
+* Тэг образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
 
-**spec.source** - имя ModuleSource. Из данного ModuleSource берутся данные для авторизации в registry.
+* Имя *ModuleSource* **spec.source** . Выдает данные для авторизации в registry.
 
-**spec.scanInterval** (не обязательно) - интервал проверки образа в registry. По-умолчанию: 15 секунд.
+Не обязательный интервал **spec.scanInterval**. Проверяет образы в registry. По-умолчанию задан интервал в 15 секунд.
 
-Для принудительного обновления можно задать большой интервал и использовать аннотацию `renew=""`.
+Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
 
 Пример:
 
@@ -41,14 +40,14 @@ kubectl annotate mop <name> renew=""
 
 ## Принцип действия
 
-При создании данного ресурса, указанный модуль будет игнорировать ModuleUpdatePolicy и не будет скачивать и создавать объекты ModuleRelease.
-Вместо этого, модуль будет скачиваться при каждом изменении image digest и сразу применяться в кластере.
-При этом, в статусе объекта ModuleSource данный модуль получит признак `overridden: true`, который указывает на то, что у данного модуля был создан и используется ресурс ModulePullOverride.
-При удалении ModulePullOverride модуль продолжит функционировать дальше, но если для него существует политика ModuleUpdatePolicy, то будут скачаны новые релизы (если есть), которые заменят текущую "версию разработчика".
+При разработке этого ресурса, указанный модуль не будет учитывать *ModuleUpdatePolicy* и не будет загружать и создавать объекты *ModuleRelease*.
+Вместо этого, модуль будет загружаться при каждом изменении image digest и будет применяться в кластере.
+При этом, в статусе объекта *ModuleSource* этот модуль получит признак `overridden: true`, который указывает на то, что используется ресурс *ModulePullOverride*.
+После удаления *ModulePullOverride*, модуль продолжит функционировать, но если для него применена политика *ModuleUpdatePolicy*, то загрузятся новые релизы (при наличии), которые заменят текущую "версию разработчика".
 
 ### Пример
 
-1. Существует ModuleSource, в котором есть два модуля:
+В примере представлен *ModuleSource*, содержащий два модуля:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -70,9 +69,9 @@ kubectl annotate mop <name> renew=""
      modulesCount: 2
    ```
 
-   В данном ModuleSource существуют два модуля `echo` и `hello-world` для обоих определена политика обновления, они скачиваются и устанавливаются в Deckhouse.
+В *ModuleSource* присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в Deckhouse Kubernetes Platform.
 
-2. Создадим ModulePullOverride для модуля echo
+1. Создайте *ModulePullOverride* для модуля `echo`.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -84,9 +83,9 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
-   Данный ресурс будет проверять image tag `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
-
-3. При каждом обновлении статус данного ресурса будет меняться:
+ Этот ресурс будет проверять tag образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
+ 
+ При каждом обновлении статус этого ресурса будет меняться:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -105,10 +104,10 @@ kubectl annotate mop <name> renew=""
 
    где:
 
-   - **imageDigest** — digest образа контейнеров, который был скачан.
-   - **updatedAt** — когда образ был скачан в последний раз.
+   - **imageDigest** - уникальный идентификатор образа контейнера, который был загружен.
+   - **lastUpdated** - время последней загрузки образа.
 
-4. При этом ModuleSource приобретет вид:
+При этом *ModuleSource* приобретет вид:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

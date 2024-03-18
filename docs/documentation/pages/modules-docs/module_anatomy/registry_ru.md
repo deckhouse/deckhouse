@@ -4,23 +4,22 @@ permalink: ru/modules-docs/module-anatomy/registry/
 lang: ru
 ---
 
-После сборки модуль загружается в container registry. Для дистрибьюции и обновления модулей Deckhouse использует только этот источник.
-Как выглядит модуль в container registry и из чего состоит мы разберем в этой главе.
+После сборки модуль сохраняется в registry контейнера. Для распространения и обновления модулей Deckhouse используется только этот репозиторий. Ниже рассмотрено, как выглядит модуль в registry контейнера и из чего он состоит.
 
-> В примерах мы будем использовать утилиту [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Как установить ее указано в [документации](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) (для MacOS это можно сделать через brew).
+> В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). [Установите ее по инструкции в документации](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) (для MacOS это можно сделать через brew).
 
-## Из чего состоит артефакт модуля?
+## Состав артефакта модуля
 
 Модуль состоит из трех частей:
-- **Образы контейнеров приложений** -- самая понятная часть. Это то что мы будем запускать в кластере Deckhouse, то что указываем в шаблонах. Именно эти образы мы описываем в папке [images](module_folder.md#images). Образы имеют content-based теги (подробнее о стратегии тегирования можно почитать в документации [werf](https://werf.io/documentation/v1.2/usage/build/process.html#tagging-images)).
-- **Образ модуля** -- папка с модулем загружается в registry как контейнер. В качестве тегов образов используется semver.
-- **Релиз** -- отдельный файл с описанием релиза `release.yaml`, который тоже загружается в registry. Релизы создаются каждый раз при выходе новой версии и используются Deckhouse для обновления модуля в кластере. У релизов два тега: semver (как у образа модуля) и тег, соответствующий каналу обновлений (alpha, beta, и т.д.).
+- **Образы контейнеров приложений** - образы, которые запускаются в кластере Deckhouse и которые указываются в шаблонах. Образы описаны в папке images.[images](module_folder.md#images). Образы содержат content-based теги (подробнее о стратегии тегирования можно почитать в документации [werf](https://werf.io/documentation/v1.2/usage/build/process.html#tagging-images)).
+- **Образ модуля** - папка с модулем, которая загружается в registry аналогично контейнеру. В качестве тегов образов используется `semver`.
+- **Релиз** - отдельный файл с описанием релиза `release.yaml`, который загружается в registry. Релизы создаются каждый раз при выходе новой версии и используются Deckhouse Kubernetes Platform для обновления модуля в кластере. У релизов выставляется два типа тегов: `semver` (как у образа модуля) и тег, соответствующий каналу обновлений, например, `alpha`, `beta`.
 
 ## Источник модулей (Module Source)
 
-Модули загружаются в источник модулей: вложенная абстракция, с которой потом работает Deckhouse.
+Модули загружаются в источник модулей: вложенная абстракция, с которой потом работает Deckhouse Kubernetes Platform.
 
-Пример того, как выглядит Module Source внутри registry.
+Пример того, как выглядит Module Source внутри registry, представлен ниже.
 
 ```tree
 registry.example.io
@@ -48,7 +47,7 @@ registry.example.io
           └─ 📝 beta
 ```
 
-> Поскольку источник модулей имеет вложенную структуру репозиториев, container registry должен поддерживать эту функцию. Примеры таких registry: [Docker Registry v2](https://github.com/distribution/distribution), [Harbor](https://goharbor.io/).
+> Источник модулей имеет вложенную структуру репозиториев, и registry контейнера должен поддерживать эту функцию. Примеры подобных registry: [Docker Registry v2](https://github.com/distribution/distribution), [Harbor](https://goharbor.io/).
 >
 > Для доставки модулей в закрытые (air-gapped) окружения есть специальные скрипты в репозитории [tools](https://fox.flant.com/deckhouse/modules/tools).  
 
@@ -65,7 +64,7 @@ module-1
 module-2
 ```
 
-Видим, что в module source есть два модуля.
+Посмотрите, что в `module source` присутствует два модуля.
 
 #### Список образов модуля
 
@@ -80,9 +79,9 @@ e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
 v1.23.2
 ```
 
-Видим что для `module-1` есть два образа модуля и два образа контейнеров приложений.
+Для `module-1` присутствуют два образа модуля и два образа контейнеров приложений.
 
-#### Какие файлы лежат в образе модуля `v1.23.1`
+#### Файлы из образа модуля `v1.23.1`
 
 ```sh
 $ crane export registry.example.io/modules-source/module-1:v1.23.1 - \
@@ -91,7 +90,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 - \
 
 > Вывод будет достаточно большим
 
-#### Какие образы контейнеров приложений используются для модуля версии `v1.23.1`
+#### Образы контейнеров приложений для модуля версии `v1.23.1`
 
 ```sh
 $ crane export registry.example.io/modules-source/module-1:v1.23.1 - \
@@ -105,7 +104,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 - \
 }
 ```
 
-#### Посмотреть список релизов
+#### Просмотр списка релизов
 
 ```sh
 crane ls registry.example.io/modules-source/module-1/release
@@ -118,9 +117,9 @@ alpha
 beta
 ```
 
-Видим, что в этом registry было два релиза, а еще что там используются два канала обновлений: alpha и beta.
+В примере представлено, что в этом registry используется два релиза и два канала обновлений: `alpha` и `beta`.
 
-#### Какая версия сейчас находится на канале обновлений alpha
+#### Версия на канале обновлений alpha
 
 ```sh
 $ crane export registry.example.io/modules-source/module-1/release:alpha - \
