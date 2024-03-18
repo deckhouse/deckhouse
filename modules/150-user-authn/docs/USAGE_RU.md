@@ -53,11 +53,11 @@ spec:
 
 Полученные `Client ID` и `Client Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
 
-Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Запросите клиента подтвердить запрос, который придет к нему на email.
+Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
 
 ### GitLab
 
-В примере представлены настройки провайдера для интеграции с Gitlab.
+В примере представлены настройки провайдера для интеграции с GitLab.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -87,7 +87,7 @@ spec:
 
 ### Atlassian Crowd
 
-В примере представлены настройки провайдера для интеграции с Сrowd.
+В примере представлены настройки провайдера для интеграции с Atlassian Crowd.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -170,7 +170,7 @@ spec:
 
 ### LDAP
 
-В примере представлены настройки провайдера для интеграции с Active-directory.
+В примере представлены настройки провайдера для интеграции с Active Directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1

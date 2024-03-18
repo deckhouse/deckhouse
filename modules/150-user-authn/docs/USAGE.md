@@ -86,7 +86,7 @@ Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html
 
 ### Atlassian Crowd
 
-The example shows the provider's settings for integration with Crowd.
+The example shows the provider's settings for integration with Atlassian Crowd.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -167,7 +167,7 @@ Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html
 
 ### LDAP
 
-The example shows the provider's settings for integration with Active-directory.
+The example shows the provider's settings for integration with Active Directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1
