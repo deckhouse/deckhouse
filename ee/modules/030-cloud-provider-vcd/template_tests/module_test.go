@@ -70,7 +70,7 @@ const moduleValuesA = `
         sshPublicKey: rsa-aaaa
         organization: org
         virtualDataCenter: dc
-        virtualApplicationName: Virtual-app_NAmeVcd
+        virtualApplicationName: v1rtual-app
         mainNetwork: internal
         masterNodeGroup:
           replicas: 1
@@ -111,7 +111,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 
 			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("virtual-app-namevcd"))))
+			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
 		})
 	})
 })

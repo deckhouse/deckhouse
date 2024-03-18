@@ -17,7 +17,7 @@ data:
   machineClassKind: {{ b64enc "" | quote }}
   capiClusterKind: {{ b64enc "VCDCluster" | quote }}
   capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
-  capiClusterName: {{ lower $providerClusterConfiguration.virtualApplicationName | camelcase | kebabcase | b64enc | quote }}
+  capiClusterName: {{ $providerClusterConfiguration.virtualApplicationName | b64enc | quote }}
   capiMachineTemplateKind: {{ b64enc "VCDMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
   sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}

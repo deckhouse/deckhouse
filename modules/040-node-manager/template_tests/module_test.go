@@ -1788,7 +1788,7 @@ internal:
     machineClassKind: ""
     capiClusterKind: "VCDCluster"
     capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
-    capiClusterName: "vcd"
+    capiClusterName: "app"
     capiMachineTemplateKind: "VCDMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
     vcd:
@@ -1843,7 +1843,7 @@ internal:
 					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
 					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
 
-					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "vcd")
+					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
 					Expect(vcdCluster.Exists()).To(BeTrue())
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
@@ -1865,8 +1865,8 @@ internal:
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeTrue())
 
-					Expect(md.Field("spec.clusterName").String()).To(Equal("vcd"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("vcd"))
+					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
 					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
 					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
 
@@ -1898,7 +1898,7 @@ internal:
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
-				assertClusterResources(f, "vcd")
+				assertClusterResources(f, "app")
 
 				assertVCDCluster(f)
 
