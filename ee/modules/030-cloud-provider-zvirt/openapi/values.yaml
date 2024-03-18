@@ -100,16 +100,21 @@ properties:
                     description: |
                       Memory in MiB to allocate to zVirt VirtualMachines.
                     example: 8192
+                  rootDiskSizeGb:
+                    description: |
+                      Root disk size in GiB to use in zVirt VirtualMachines.
+                    example: 40
+                    type: integer
+                  etcdDiskSizeGb:
+                    description: |
+                      Etcd disk size in gigabytes.
+                    example: 10
+                    type: integer
                   template:
                     type: string
                     description: |
                       Template name to be cloned.
                     example: debian-bookworm
-                  os:
-                    type: string
-                    description: |
-                      OS type.
-                    example: debian_9
                   vmType:
                     type: string
                     description: |
