@@ -269,7 +269,7 @@ spec:
 
 {% endraw %}
 
-By default, the user is assigned the role User, the description of its permissions is provided [`here`](../../140-user-authz/readme.html#default-access-list-for-each-role).
+By default, the user is assigned the [role User](../../140-user-authz/readme.html#default-access-list-for-each-role).
 
 ## Example of adding a static user to a group
 
