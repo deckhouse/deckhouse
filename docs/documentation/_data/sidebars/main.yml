@@ -70,7 +70,7 @@ entries:
                     ru: Описание
                   url: /modules-docs/guides/version/
             - title:
-                en: Chart adapt
+                en: Chart adaptation
                 ru: Адаптация существующего чарта
               folders:
                 - title:
@@ -99,7 +99,7 @@ entries:
                   url: /modules-docs/chart-adapt/publish-module/
                 - title:
                     en: Deploy a module into the cluster
-                    ru: Выложите в свой кластер
+                    ru: Разверните модуль в кластере
                   url: /modules-docs/chart-adapt/deploy/
                 - title:
                     en: Development mode
