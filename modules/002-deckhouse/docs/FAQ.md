@@ -1,5 +1,5 @@
 ---
-title: "The deckhouse module: FAQqw"
+title: "The deckhouse module: FAQ"
 ---
 
 ## How to run kube-bench in my cluster?
