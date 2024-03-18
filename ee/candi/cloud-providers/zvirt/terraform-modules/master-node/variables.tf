@@ -31,8 +31,8 @@ locals {
   master_vm_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vmType", [])
   master_nic_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "nicName", [])
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
-  master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", [])*1024*1024*1024
-  master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", [])*1024*1024*1024
+  master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 20)*1024*1024*1024
+  master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 10)*1024*1024*1024
 
   master_cloud_init_script = yamlencode({
     "hostname": local.master_node_name,
