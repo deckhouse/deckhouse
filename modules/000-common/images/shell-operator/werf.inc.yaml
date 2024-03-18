@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "fix-on-startup-webhook-handler-fail-2"}}
+{{- $shellOperatorVersion := "fix-on-startup-webhook-handler"}}
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
