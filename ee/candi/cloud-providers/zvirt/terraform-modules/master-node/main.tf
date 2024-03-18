@@ -21,7 +21,6 @@ resource "ovirt_vm" "master_vm" {
   memory_ballooning = false
 
   vm_type = local.master_vm_type
-  os_type = local.master_os_type
 
   initialization_custom_script = local.master_cloud_init_script
 }
@@ -32,7 +31,7 @@ data "ovirt_disk_attachments" "master-vm-boot-disk-attachment" {
 
 resource "ovirt_disk_resize" "master_boot_disk_resize" {
   disk_id = tolist(data.ovirt_disk_attachments.master-vm-boot-disk-attachment.attachments)[0].disk_id
-  size    = 40*1024*1024*1024 #40 GB
+  size    = local.master_root_disk_size
 }
 
 resource "ovirt_nic" "master_vm_nic" {
@@ -43,7 +42,7 @@ resource "ovirt_nic" "master_vm_nic" {
 
 resource "ovirt_disk" "master-kubernetes-data" {
   format            = "raw"
-  size              = 15*1024*1024*1024 # 15 GB
+  size              = local.master_etcd_disk_size
   storage_domain_id = local.storage_domain_id
   alias             = join("-", [local.master_node_name, "kubernetes-data"])
   sparse            = false
