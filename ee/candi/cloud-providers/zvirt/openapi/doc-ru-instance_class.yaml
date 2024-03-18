@@ -21,15 +21,12 @@ spec:
                 memory:
                   description: |
                     Память в MiB для выделения виртуальным машинам zVirt VirtualMachines.
-                rootDiskSize:
+                rootDiskSizeGb:
                   description: |
                     Размер корневого диска в GiB для использования в виртуальных машинах zVirt.
                 template:
                   description: |
-                    Имя шаблона, который будет клонирован.
-                os:
-                  description: |
-                    Тип ОС.
+                    Имя шаблона, из которого будут клонированы ВМ.
                 vmType:
                   description: |
                     Нагрузочный профиль.
