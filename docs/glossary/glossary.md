@@ -8,7 +8,7 @@
 | Namespace  | Пространство имен |  |
 | Label | Лэйбл или Метка |  |
 | Annotations | Аннотации |  |
-| custom resources | Кастомизированные ресурсы, кастомные ресурсы |  |
+| custom resources | Кастомные ресурсы | Одобрено! |
 | control plane | Не переводится обычно. Управляет кластером. |
 | bare-metal-сервер | Сервер bare metal |  |
 | inventory-файл | Файл inventory или инвентарный файл |  |
