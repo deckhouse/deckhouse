@@ -1,5 +1,5 @@
 ---
-title: "Модули Deckhouse"
+title: "Модули Deckhouse Kubernetes Platform"
 permalink: ru/modules-docs/
 lang: ru
 ---
