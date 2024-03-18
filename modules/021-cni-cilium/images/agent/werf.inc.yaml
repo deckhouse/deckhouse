@@ -42,26 +42,47 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 # #####################################################################
+# Binaries artifact for distroless
+---
+# hubble and dependencies
+{{ $binaries := "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+# cilium-envoy and dependencies
+{{ $binaries := cat $binaries "/usr/bin/cilium-envoy" }}
+# cilium and dependencies
+{{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromImage: {{ $.ModuleName }}/agent
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  includePaths:
+  - binary_replace.sh
+  stageDependencies:
+    install:
+    - binary_replace.sh
+shell:
+  install:
+    - chmod +x /binary_replace.sh
+    - mkdir -p /relocate
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir -p /relocate/var/lib/cilium
+    - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+    - mkdir -p /relocate/home
+    - cp -a /home/cilium /relocate/home/cilium
+    - cp -a /etc/bash.bashrc /relocate/etc
+---
+# #####################################################################
 # New Main Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: {{ $.ModuleName }}/runtime-distroless-artifact
 import:
-- artifact: {{ $.ModuleName }}/cilium-builder-artifact
-  add: /tmp/install
+- artifact: {{ $.ModuleName }}/agent-binaries-artifact
+  add: /relocate
   to: /
-  before: install
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-  add: /usr/bin/cilium-envoy
-  to: /usr/bin/cilium-envoy
-  before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
   before: install
 docker:
   ENV:
