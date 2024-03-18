@@ -4,7 +4,7 @@ permalink: ru/modules-docs/chart-adapt/build-container-images/
 lang: ru
 ---
 
-Одна из хороших практик - образы для модулей должны лежать в нашем registry. Очистим папку images/* и добавим туда наш образ для hello-world-app.
+Полезный подход - хранить образы для модулей в нашем реестре (registry). Очистите папку с образами (`images/*`) и загрузите туда наш образ для приложения **hello-world**.
 
 ```sh
 rm -rf images/*
