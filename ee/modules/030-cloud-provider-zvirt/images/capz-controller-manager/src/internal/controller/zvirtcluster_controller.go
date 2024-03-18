@@ -91,7 +91,7 @@ func (r *ZvirtClusterReconciler) reconcile(
 		return ctrl.Result{}, fmt.Errorf("Failed to parse api server host: %w", err)
 	}
 
-	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
+	port, err := strconv.ParseInt(controlPlaneEndpointURL.Port(), 10, 32)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Failed to parse api server port: %w", err)
 	}
