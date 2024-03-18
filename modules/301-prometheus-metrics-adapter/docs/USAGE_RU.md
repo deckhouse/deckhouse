@@ -343,6 +343,8 @@ spec:
 
 Пример _CustomPrometheusRules_:
 
+В примере представлены пользовательские правила Prometheus для метрики `mymetric`.
+
 {% raw %}
 
 ```yaml
