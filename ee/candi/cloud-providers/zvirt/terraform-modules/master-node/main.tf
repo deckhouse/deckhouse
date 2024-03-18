@@ -21,7 +21,6 @@ resource "ovirt_vm" "master_vm" {
   memory_ballooning = false
 
   vm_type = local.master_vm_type
-  os_type = local.master_os_type
 
   initialization_custom_script = local.master_cloud_init_script
 }
