@@ -419,7 +419,7 @@ This feature is available in Enterprise Edition only.
 1. Run the Deckhouse installer version 1.56.3 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:stable bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:alpha bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -431,8 +431,7 @@ This feature is available in Enterprise Edition only.
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
    ```shell
-    export DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>"
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
@@ -443,8 +442,7 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull all Deckhouse version images starting from version 1.45:
 
    ```shell
-    export DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>"
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
@@ -456,9 +454,7 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull images from a third-party registry:
 
    ```shell
-    export DHCTL_CLI_MIRROR_SOURCE_LOGIN="user"
-    export DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password"
-   dhctl mirror --source="corp.company.com/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
+    DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.com/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
@@ -481,9 +477,7 @@ This feature is available in Enterprise Edition only.
    Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
 
    ```shell
-    export DHCTL_CLI_MIRROR_USER="<USERNAME>"
-    export DHCTL_CLI_MIRROR_PASS="<PASSWORD>"
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
@@ -504,7 +498,7 @@ The steps below are necessary for manually loading images of modules connected f
 1. Run Deckhouse installer version 1.56.0 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:stable bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:alpha bash
    ```
 
    Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
@@ -532,9 +526,7 @@ The steps below are necessary for manually loading images of modules connected f
    Below is an example of a command for pulling images from the `/tmp/d8-modules` directory:
 
    ```shell
-    export DHCTL_CLI_MIRROR_USER="<USERNAME>"
-    export DHCTL_CLI_MIRROR_PASS="<PASSWORD>"
-   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
