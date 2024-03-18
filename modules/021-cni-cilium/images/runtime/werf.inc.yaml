@@ -59,6 +59,13 @@ shell:
 ---
 # clang dependencies
 {{ $binaries := "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
+{{ $binaries := cat $binaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+# bpftool dependencies
+{{ $binaries := cat $binaries "/usr/local/bin/bpftool" }}
+# cni-loopback dependencies
+{{ $binaries := cat $binaries "/cni/loopback" }}
+# gops dependencies
+{{ $binaries := cat $binaries "/bin/gops" }}
 # from base install script
 {{ $binaries := cat $binaries "/usr/bin/jq /usr/bin/curl" }}
 # for debug
@@ -74,6 +81,7 @@ shell:
 # iptables
 {{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
 {{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
+{{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
 ---
 artifact: {{ $.ModuleName }}/runtime-binaries-artifact
 fromImage: {{ $.ModuleName }}/runtime-artifact
@@ -106,25 +114,6 @@ shell:
 image: {{ $.ModuleName }}/runtime-distroless-artifact
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
-  add: /usr/local/bin/
-  to: /usr/local/bin
-  before: install
-  includePaths:
-  - clang
-  - llc
-- artifact: {{ $.ModuleName }}/bpftool-artifact
-  add: /usr/local/bin/bpftool
-  to: /usr/local/bin/bpftool
-  before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
-  add: /out/linux/amd64/bin/loopback
-  to: /cni/loopback
-  before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
-  add: /out/linux/amd64/bin/gops
-  to: /bin/gops
-  before: install
 - artifact: {{ $.ModuleName }}/runtime-binaries-artifact
   add: /usr/share/zoneinfo/Etc/UTC
   to: /etc/localtime
@@ -132,10 +121,6 @@ import:
 - artifact: {{ $.ModuleName }}/runtime-binaries-artifact
   add: /relocate
   to: /
-  before: install
-- artifact: {{ $.ModuleName }}/runtime-binaries-artifact
-  add: /usr/lib/x86_64-linux-gnu/xtables/
-  to: /usr/lib/x86_64-linux-gnu/xtables
   before: install
 - artifact: {{ $.ModuleName }}/runtime-binaries-artifact
   add: /usr/sbin/iptables-wrapper
