@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.4.5"}}
+{{- $shellOperatorVersion := "fix-on-startup-webhook-handler-fail"}}
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
@@ -50,7 +50,7 @@ shell:
     - make install-libLTLIBRARIES install-includeHEADERS
     - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
     - cd /
-    - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git
+    - git clone --branch {{ $shellOperatorVersion }} --depth 1 https://github.com/flant/shell-operator.git
     - cd /shell-operator
     - go mod tidy
     - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version=latest'" -tags use_libjq -o shell-operator ./cmd/shell-operator
