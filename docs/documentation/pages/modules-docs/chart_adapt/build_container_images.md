@@ -19,6 +19,6 @@ echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world/Dockerfile
 sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorld") }}/g' templates/deployment.yaml
 ```
 
-Можно проверить результат при помощи команды `cat` и убедиться, что изменения применились.
+Проверьте результат командой `cat` и убедитесь, что изменения применились.
 
 > **NOTE:** Можно также использовать другие вспомогательные функции из библиотеки Deckhouse. Подробнее смотрите в документации <https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib>
