@@ -1,0 +1,38 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ZvirtMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo keep machine instance template after rollout
+    # https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      {{- if .nodeGroup.instanceClass.template }}
+      template: {{ .nodeGroup.instanceClass.template | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.clusterId }}
+      clusterID: {{ .nodeGroup.instanceClass.clusterId | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.vnicProfileId }}
+      vnicProfileID: {{ .nodeGroup.instanceClass.vnicProfileId | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.numCPUs }}
+      cpu:
+        sockets: {{ .nodeGroup.instanceClass.numCPUs }}
+        cores: 1
+        threads: 1
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.memory }}
+      memory: {{ .nodeGroup.instanceClass.memory }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+      rootDiskSizeGb: {{ .nodeGroup.instanceClass.rootDiskSizeGb }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.nicName }}
+      nicName: {{ .nodeGroup.instanceClass.nicName | quote }}
+      {{- end }}

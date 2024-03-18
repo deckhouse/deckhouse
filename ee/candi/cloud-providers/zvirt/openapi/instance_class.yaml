@@ -45,11 +45,11 @@ spec:
                     Memory in MiB to allocate to zVirt VirtualMachines.
                   x-doc-examples: [8192]
                   type: integer
-                rootDiskSize:
+                rootDiskSizeGb:
                   description: |
                     Root disk size in GiB to use in zVirt VirtualMachines.
 
-                    The disk will be automatically enlarged if its size in the template is less than specified.
+                    The disk will be automatically resized if its size in the template differs from specified.
                   x-doc-examples: [20]
                   x-doc-default: 20
                   type: integer
@@ -57,11 +57,6 @@ spec:
                   description: |
                     Template name to be cloned.
                   x-doc-examples: ['debian-bookworm']
-                  type: string
-                os:
-                  description: |
-                    OS type.
-                  x-doc-examples: ['debian_9']
                   type: string
                 vmType:
                   description: |

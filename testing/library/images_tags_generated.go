@@ -104,6 +104,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cloudProviderZvirt": map[string]interface{}{
+		"capzControllerManager":     "imageHash-cloudProviderZvirt-capzControllerManager",
 		"cloudControllerManager125": "imageHash-cloudProviderZvirt-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderZvirt-cloudControllerManager126",
 		"cloudControllerManager127": "imageHash-cloudProviderZvirt-cloudControllerManager127",
