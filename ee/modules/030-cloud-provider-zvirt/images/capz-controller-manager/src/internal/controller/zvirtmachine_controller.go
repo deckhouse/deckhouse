@@ -139,7 +139,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	var err error
 
 	if zvMachine.Status.FailureReason != nil || zvMachine.Status.FailureMessage != nil {
-		logger.Info("ZvirtMachine is failed, will not reconcile. See ZvirtMachine status for details.")
+		logger.Info("ZvirtMachine has failed, will not reconcile. See ZvirtMachine status for details.")
 		return ctrl.Result{}, nil
 	}
 
@@ -173,7 +173,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	logger.Info("Reconciling ZvirtMachine")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	timeout := ovirt.ContextStrategy(timeoutCtx)
 
