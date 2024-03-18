@@ -419,7 +419,7 @@ This feature is available in Enterprise Edition only.
 1. Run the Deckhouse installer version 1.56.3 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:alpha bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.4 bash
    ```
 
    Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
@@ -498,7 +498,7 @@ The steps below are necessary for manually loading images of modules connected f
 1. Run Deckhouse installer version 1.56.0 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:alpha bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.4 bash
    ```
 
    Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
