@@ -80,6 +80,8 @@ shell:
 {{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
 {{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
 {{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
+# bash-completion
+{{ $binaries := cat $binaries "/etc/profile.d/bash_completion.sh /usr/share/bash-completion/bash_completion" }}
 # for debug
 {{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
 ---
