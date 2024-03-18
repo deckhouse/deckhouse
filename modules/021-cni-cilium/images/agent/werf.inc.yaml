@@ -52,6 +52,8 @@ docker:
 {{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
 {{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
 {{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+# for prepull
+{{ $binaries := cat $binaries "/pause /bin/true" }}
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 fromImage: {{ $.ModuleName }}/agent
@@ -70,8 +72,7 @@ shell:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir -p /relocate/var/lib/cilium
     - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-    - mkdir -p /relocate/home
-    - cp -a /home/cilium /relocate/home/cilium
+    - mkdir -p /relocate/home/cilium
     - cp -a /etc/bash.bashrc /relocate/etc
 ---
 # #####################################################################
