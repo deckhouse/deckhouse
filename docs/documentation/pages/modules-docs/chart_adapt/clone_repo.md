@@ -7,7 +7,7 @@ permalink: en/modules-docs/chart-adapt/clone-repo/
 
 Команда Deckhouse Kubernetes Platform подготовила репозиторий для удобного создания модулей. Внутри репозитория представлен пример минимального модуля, который содержит все возможные функции. Предлагаем использовать этот репозиторий, как основу.
 
-1. Сделайте форк шаблона для модуля в Gitlab (cсылка на репозиторий - [fox.flant.com/deckhouse/modules/template](https://fox.flant.com/deckhouse/modules/template)):
+1. Сделайте форк шаблона для модуля в Gitlab [из репозитория](https://fox.flant.com/deckhouse/modules/template):
 
    ![Fork](../../../images/modules-docs/fork.png)
 
