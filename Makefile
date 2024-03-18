@@ -49,7 +49,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),"")
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/...
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -67,7 +67,11 @@ else
   ifneq ($(FE_MODULES),)
     BE_MODULES_RECURSE = ${BE_MODULES}/...
   endif
-	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE}
+	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+  ifneq ($(FE_MODULES),)
+    SE_MODULES_RECURSE = ${SE_MODULES}/...
+  endif
+	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif
 
 # Set host arch & OS for golang-based programs, e.g. Prometheus

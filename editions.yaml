@@ -43,6 +43,9 @@ editions:
   - ceph-csi
   - openvpn
 
+- name: SE
+  modulesDir: "ee/se/modules"
+
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:

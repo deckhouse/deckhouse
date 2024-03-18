@@ -176,6 +176,7 @@ jobs:
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
             const hasBE = pr.labels.some((l) => l.name === 'edition/be');
+            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
             let edition = defaultEdition;
             if (hasCE) {
               edition = 'CE';
@@ -183,8 +184,10 @@ jobs:
               edition = 'EE';
             } else if (hasBE) {
               edition = 'BE';
+            } else if (hasSE) {
+              edition = 'SE';
             }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}`);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
