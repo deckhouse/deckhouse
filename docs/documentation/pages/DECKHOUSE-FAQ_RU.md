@@ -420,7 +420,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.3 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.56.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.4 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
@@ -432,7 +432,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Следующая команда скачает образы Deckhouse тех версий, которые находятся на каналах обновлений (о текущем статусе версий на каналах обновлений можно узнать на [flow.deckhouse.io](https://flow.deckhouse.io)):
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Если загрузка образов будет прервана, повторный вызов команды проверит загруженные образы и продолжит загрузку с момента ее остановки. Продолжение загрузки возможно только если с момента остановки прошло не более суток.
@@ -443,7 +443,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Например, для загрузки всех версий Deckhouse, начиная с версии 1.45, используйте команду:
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
 
    > Обратите внимание, параметр `--min-version` будет проигнорирован если вы укажете версию выше находящейся в канале обновлений rock-solid.
@@ -455,7 +455,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Например, вот как можно загрузить образы из стороннего registry:
 
    ```shell
-   dhctl mirror --source="corp.company.ru/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.ru/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Параметр `--license` действует как сокращение для параметров `--source-login` и `--source-password` и предназначен для использования с официальным registry Deckhouse.
@@ -478,7 +478,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Пример команды для загрузки образов из файла `/tmp/d8-images/d8.tar`:
 
    ```shell
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
    ```
 
    > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse/ee).
@@ -499,7 +499,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.58.4 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы модулей и YAML-манифест [ModuleSource](cr.html#modulesource), описывающий источник модулей.
@@ -528,7 +528,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Пример команды для загрузки образов из директории `/tmp/d8-modules`:
 
    ```shell
-   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
    ```
 
    > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse-modules).
