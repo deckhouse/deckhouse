@@ -12,7 +12,7 @@ lang: ru
 
 В этом репозитории представлена документация для создания собственного модуля Deckhouse.
 
-## Для ознакомления до начала чтения
+## Полезно перед чтением
 
 Принципы, по которым работают модули Deckhouse, можно понять ознакомившись с [addon-operator](https://github.com/flant/addon-operator) и [shell-operator](https://github.com/flant/addon-operator).
 
