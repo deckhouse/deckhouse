@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
@@ -37,7 +38,7 @@ func main() {
 
 	log.SetLevel(config.logLevel)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	server := newServer(config.listenHost, config.listenPort)
