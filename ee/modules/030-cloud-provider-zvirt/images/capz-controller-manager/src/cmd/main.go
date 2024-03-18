@@ -9,8 +9,11 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
+	"time"
 
 	ovsdk "github.com/ovirt/go-ovirt-client"
+	"k8s.io/utils/pointer"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -98,6 +101,8 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "2e318131.cluster.x-k8s.io",
+		LeaseDuration:          pointer.Duration(5*time.Minute + 10*time.Second),
+		RenewDeadline:          pointer.Duration(5 * time.Minute),
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

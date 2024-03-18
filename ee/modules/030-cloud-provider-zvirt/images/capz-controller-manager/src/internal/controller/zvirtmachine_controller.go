@@ -384,11 +384,11 @@ func (r *ZvirtMachineReconciler) createVM(
 		if diskAttach.Bootable() && diskAttach.Active() {
 			diskParams, err := ovirt.UpdateDiskParams().WithProvisionedSize(uint64(zvMachine.Spec.RootDiskSize * 1024 * 1024 * 1024))
 			if err != nil {
-				return nil, fmt.Errorf("Cannot resize VM boo disk: %w", err)
+				return nil, fmt.Errorf("Cannot resize VM boot disk: %w", err)
 			}
 
 			if _, err = r.Zvirt.UpdateDisk(diskAttach.DiskID(), diskParams); err != nil {
-				return nil, fmt.Errorf("Cannot resize VM boo disk: %w", err)
+				return nil, fmt.Errorf("Cannot resize VM boot disk: %w", err)
 			}
 
 			diskResized = true
