@@ -12,7 +12,7 @@ lang: ru
 
    ![Fork](../../../images/modules-docs/fork.png)
 
-1. Склонируйте его.
+1. Клонируйте его.
 
    ```sh
    git clone git@fox.flant.com:***/hello-world-module.git hello-world-module \
