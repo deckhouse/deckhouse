@@ -69,3 +69,11 @@ yandex:
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+
+dvp:
+  namespace: hashicorp
+  type: kubernetes
+  version: 0.83.0
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes

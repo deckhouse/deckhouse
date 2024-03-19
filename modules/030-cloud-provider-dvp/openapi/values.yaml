@@ -1,0 +1,10 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      providerClusterConfiguration:
+        $ref: '/deckhouse/candi/cloud-providers/dvp/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'

@@ -1,0 +1,237 @@
+kind: DVPClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Описывает конфигурацию облачного кластера в DVP.
+
+      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы.
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+          zones:
+            type: array
+            description: |
+              Список зон, в которых допустимо создавать узлы.
+
+              Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/zone`.
+
+              [Больше](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологичесих метках в kubernetes.
+
+              > Внимание! Чтобы установить необходимые метки для узла DVP, следуйте инструкциям NodeGroup [документации](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+
+          instanceClass:
+            description: |
+              Параметры виртуальной машины и ее дисков для созданного master ноды.
+            properties:
+              virtualMachine: &instanceClassVirtualMachine
+                description: |
+                  Настройки виртуальной машины для созданного master ноды.
+                properties:
+                  cpu:
+                    description: |
+                      Параметры конфигурации CPU.
+                    properties:
+                      cores:
+                        description: |
+                          Количество ядер CPU для виртуальной машины.
+                      coreFraction:
+                        description: |
+                          Гарантированная доля CPU, которая будет выделена ВМ. Указывается в процентах.
+
+                          Поддерживаемые значения: `5%`, `10%`, `25%`, `50%`, `100%`.
+                        example: "100%"
+
+                  memory:
+                    description: |
+                      Определяет параметры памяти для виртуальной машины.
+                    properties:
+                      size:
+                        description: |
+                          Объем оперативной памяти, выделяемый ВМ.
+
+                  ipAddresses:
+                    type: array
+                    description: |
+                      Статические ip-адреса, которые будут назначены сетевым интерфейсам ВМ. Количество адресов должно соответствовать количеству создаваемых реплик ВМ. Каждый ip-адрес будет назначен соответствующему экземпляру ВМ.
+
+                      Например: количество реплик равно 3, и у нас есть следующий список ip-адресов: ip1, ip2, ip3. В результате ip1 будет назначен первой реплике, ip2 - второй, а ip3 - третьей.
+
+                      > Внимание! Эти адреса должны принадлежать диапазону адресов, указанному в конфигурации модуля виртуализации в параметре virtualMachineCIDRs.
+
+                  additionalLabels:
+                    description: |
+                      Дополнительные метки для ресурса VM.
+
+                  additionalAnnotations:
+                    description: |
+                      Дополнительные аннотации для ресурса VM.
+
+                  nodeSelector:
+                    description: |
+                      Позволяет назначать размещение ВМ на указанные ноды DVP.
+
+                      [То же](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/), что и в параметре подов `spec.nodeSelector` в Kubernetes;
+
+                  priorityClassName:
+                    description: |
+                      [То же](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/), что и в параметре `spec.priorityClassName` подов в Kubernetes;
+
+                  tolerations:
+                    description: |
+                      Позволяет задать параметры tolerations для ВМ для узла DVP.
+
+                      [То же](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/), что и в параметре подов `spec.tolerations` в Kubernetes;
+
+              rootDisk: &instanceClassRootDisk
+                type: object
+                description: |
+                  Указывает настройки для загрузочного диска виртуальной машины.
+                properties:
+                  size:
+                    description: |
+                      Размер диска.
+                  storageClassName:
+                    description: |
+                      Имя существующего StorageClass будет использоваться для создания диска ВМ.
+                  image:
+                    description: |
+                      Параметры образа, который будет использоваться для создания диска ВМ.
+                    properties:
+                      type:
+                        description: |
+                          Тип источника образа.
+                      name:
+                        description: |
+                          Имя образа, который будет использоваться для создания диска.
+
+                          > Для установки требуются образы ОС linux с предустановленным cloud-init
+              etcdDisk:
+                description: |
+                  Указание настроек для диска данных ETCD.
+                properties:
+                  size:
+                    description: |
+                      Размер диска.
+                  storageClassName:
+                    description: |
+                      Имя существующего StorageClass будет использоваться для создания диска ВМ.
+
+              additionalLabels:
+                description: |
+                  Дополнительные лейблы, которые будут присвоены созданным инстансам.
+
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+
+            zones:
+              type: array
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/zone`.
+
+                [Больше](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологичесих метках в kubernetes.
+
+                > Внимание! Чтобы установить необходимые метки для узла DVP, следуйте инструкциям NodeGroup [документации](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+              properties:
+                labels:
+                  type: object
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                annotations:
+                  type: object
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+
+            instanceClass:
+              required: [virtualMachine, rootDisk]
+              type: object
+              description: |
+                Параметры виртуальной машины и диска для созданного статического узла.
+              properties:
+                virtualMachine: *instanceClassVirtualMachine
+                rootDisk: *instanceClassRootDisk
+
+
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-dvp/layouts.html) о возможных схемах размещения провайдера.
+
+      region:
+        description: |
+          Имя региона.
+
+          Чтобы использовать этот параметр, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/region`.
+
+          Читайте [подробнее](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках.
+
+          > Внимание! Чтобы установить требуемую метку для узла DVP, следуйте документации [NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+
+      zones:
+        type: array
+        description: |
+          Список зон, в которых допустимо создавать узлы.
+
+          Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/zone`.
+
+          [Больше](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологичесих метках в kubernetes.
+
+          > Внимание! Чтобы установить необходимые метки для узла DVP, следуйте инструкциям NodeGroup [документации](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+      provider:
+        description: |
+          Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+        properties:
+          kubeconfigBase64:
+            description: |
+              Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке base64.
+
+          namespace:
+            description: |
+              Пространство имен, в котором будут созданы ресурсы кластера DKP.
+
+              > Внимание! Если не указано явно, будет использоваться пространство имен по умолчанию для kubeconfig.
+            type: string
