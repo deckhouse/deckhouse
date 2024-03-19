@@ -1,5 +1,5 @@
 ---
-title: "В кластере Deckhouse"
+title: "Как опубликовать модуль в кластере DKP?"
 permalink: ru/modules-docs/module-anatomy/deckhouse/
 lang: ru
 ---

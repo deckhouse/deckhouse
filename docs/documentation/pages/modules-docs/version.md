@@ -1,5 +1,5 @@
 ---
-title: "Мониторинг модуля"
+title: "Monitoring modules"
 permalink: en/modules-docs/guides/version/
 ---
 
