@@ -46,11 +46,14 @@ docker:
   CMD: ["/usr/bin/cilium"]
 ---
 # #####################################################################
+# #####################################################################
 # Binaries artifact for distroless agent (based on runtime-artifact)(based on Ubuntu)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
 ---
+# #####################################################################
+# list of binaries
 # from base install script
 {{ $binaries := "/etc/localtime /usr/bin/jq /usr/bin/curl" }}
 # clang and dependencies
@@ -91,8 +94,10 @@ docker:
 # for prepull
 {{ $binaries := cat $binaries "/pause /usr/bin/true" }}
 ---
+# #####################################################################
+---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
-fromImage: {{ $.ModuleName }}/runtime-artifact
+fromImage: {{ $.Images.BASE_UBUNTU }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
@@ -102,6 +107,35 @@ git:
     install:
     - binary_replace.sh
 import:
+- artifact: {{ $.ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-src
+  add: /go/src/github.com/cilium/cilium/images/runtime/
+  to: /go/src/github.com/cilium/cilium/images/runtime
+  before: install
+  includePaths:
+  - iptables-wrapper-installer.sh
 - artifact: {{ $.ModuleName }}/cilium-builder-artifact
   add: /tmp/install
   to: /
@@ -136,25 +170,39 @@ import:
   to: /pause
   before: install
 shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive
+  - ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+  - apt-get update && apt-get upgrade -y
+  - apt-get install -y --no-install-recommends jq curl tzdata strace
+  - apt-get install -y --no-install-recommends bash-completion iproute2 iptables ipset kmod ca-certificates
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/*
   install:
-    # common
-    - chmod +x /binary_replace.sh
-    - mkdir -p /relocate
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    # from runtime
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "/relocate/usr/sbin/${cmd}"
-        ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /usr/sbin/iptables-wrapper
-    # from agent
-    - mkdir -p /relocate/var/lib/cilium
-    - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-    - mkdir -p /relocate/home/cilium
-    - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
-    - cp -a /etc/bash.bashrc /relocate/etc
+  # from runtime
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./iptables-wrapper-installer.sh --no-sanity-check
+  # common relocate
+  - chmod +x /binary_replace.sh
+  - mkdir -p /relocate
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  # additional relocate from runtime
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      rm -f "/relocate/usr/sbin/${cmd}"
+      ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /usr/sbin/iptables-wrapper
+  # additional relocate from agent
+  - mkdir -p /relocate/var/lib/cilium
+  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+  - mkdir -p /relocate/home/cilium
+  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+  - cp -a /etc/bash.bashrc /relocate/etc
 ---
 # #####################################################################
 # New Main Image (Distroless)
