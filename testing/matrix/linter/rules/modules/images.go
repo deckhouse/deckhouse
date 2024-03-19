@@ -68,6 +68,7 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 	case "builder/werf.inc.yaml",
 		"compilers/werf.inc.yaml",
 		"runtime/werf.inc.yaml",
+		"base/werf.inc.yaml",
 		"drbd-reactor/Dockerfile",
 		"linstor-affinity-controller/Dockerfile",
 		"linstor-csi/Dockerfile",
