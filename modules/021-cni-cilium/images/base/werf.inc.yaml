@@ -1,113 +1,115 @@
-# {{- $goVersion := "1.21.5" }}
-# {{- $protocVersion := "22.3" }}
-# ---
-# image: {{ $.ModuleName }}/base-builder-dev-image
-# from: {{ $.Images.BASE_UBUNTU }}
-# mount:
-# - fromPath: ~/go-pkg-cache
-#   to: /go/pkg
-# git:
-# - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-#   to: /
-#   includePaths:
-#   - binary_replace.sh
-#   stageDependencies:
-#     install:
-#     - binary_replace.sh
-# shell:
-#   install:
-#   - export DEBIAN_FRONTEND=noninteractive
-#   - export TZ=Etc/UTC
-#   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-#   - apt-get update && apt-get upgrade -y --no-install-recommends
-#   # apt install
-#   - | # from runtime
-#     apt-get install -y --no-install-recommends \
-#     jq curl tzdata strace \
-#     bash-completion iproute2 iptables ipset kmod ca-certificates
-#   - | # from builder
-#     apt-get install -y --no-install-recommends \
-#     gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu \
-#     unzip \
-#     gcc libc6-dev binutils coreutils curl git make patch
-#   - | # from compilers
-#     apt-get install -y --no-install-recommends \
-#     automake \
-#     binutils \
-#     bison \
-#     build-essential \
-#     ca-certificates \
-#     cmake \
-#     curl \
-#     flex \
-#     g++ \
-#     gcc-9 \
-#     git \
-#     libelf-dev \
-#     libmnl-dev \
-#     libtool \
-#     make \
-#     ninja-build \
-#     pkg-config \
-#     python2 \
-#     python3 \
-#     python3-pip \
-#     unzip
-#   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-#   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
-#   # from cilium-envoy
-#   - |
-#     apt-get install -y --no-install-recommends \
-#     ca-certificates \
-#     gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu libc6-dev \
-#     autoconf automake cmake coreutils curl git libtool make ninja-build patch patchelf \
-#     python3 python-is-python3 unzip virtualenv wget zip \
-#     libcap-dev software-properties-common
-#   - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-#   - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main"
-#   - |
-#     apt-get update && apt-get install -y --no-install-recommends \
-#     clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-#   - | # from iptables
-#      apt-get install -y --no-install-recommends \
-#      ca-certificates debian-archive-keyring apt-transport-https apt-src git build-essential git-buildpackage \
-#      build-essential autoconf automake bison  flex libmnl-dev libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev libtool \
-#   - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
-#   # apt clean
-#   - apt-get purge --auto-remove && apt-get clean
-#   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-#   # Install Go
-#   - curl -sfL https://go.dev/dl/go${{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
-#   - rm -rf /usr/local/go
-#   - tar -C /usr/local -xzf go.tar.gz
-#   - rm go.tar.gz
-#   - export GOROOT=/usr/local/go GOPATH=/go
-#   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
-#   - export GOOS=linux GOARCH=amd64
-#   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
-#   - export CGO_ENABLED=0
-#   - go version
-#   # Install protoc and plugins
-#   - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
-#   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local
-#   - chmod o+rx /usr/local/bin/protoc
-#   - chmod o+rX -R /usr/local/include/google/
-#   # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
-#   - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@8ba23be9613c672d40ae261d2a1335d639bdd59b
-#   - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
-#   - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
-#   - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
-#   # Install multiversion bazel
-#   - bazel_versions=("3.7.0" "3.7.1" "3.7.2" "6.1.0")
-#   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-#   - curl --fail --show-error --silent --location https://github.com/bazelbuild/bazel/blob/6.1.0/scripts/packages/bazel.sh --output /usr/local/bin/bazel
-#   - chmod +x /usr/local/bin/bazel
-#   - |
-#     for bazel_version in "${bazel_versions[@]}" ; do
-#       # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
-#       # so for multiple versions to be usable files will need to moved around, which would be more tedious
-#       long_binary_name="bazel-${bazel_version}-linux-x86_64"
-#       curl --fail --show-error --silent --location https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
-#       chmod +x "/usr/local/bin/${long_binary_name}"
-#       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
-#     done
+{{- $goVersion := "1.21.5" }}
+{{- $protocVersion := "22.3" }}
+---
+image: {{ $.ModuleName }}/base-cilium-dev
+from: {{ $.Images.BASE_UBUNTU }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  includePaths:
+  - binary_replace.sh
+  stageDependencies:
+    install:
+    - binary_replace.sh
+shell:
+  install:
+  - export DEBIAN_FRONTEND=noninteractive
+  - export TZ=Etc/UTC
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  - apt-get update && apt-get upgrade -y --no-install-recommends
+  # apt install
+  - | # from runtime
+    apt-get install -y --no-install-recommends \
+    jq curl tzdata strace \
+    bash-completion iproute2 iptables ipset kmod ca-certificates
+  - | # from builder
+    apt-get install -y --no-install-recommends \
+    gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu \
+    unzip \
+    gcc libc6-dev binutils coreutils curl git make patch
+  - | # from compilers
+    apt-get install -y --no-install-recommends \
+    automake \
+    binutils \
+    bison \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    flex \
+    g++ \
+    gcc-9 \
+    git \
+    libelf-dev \
+    libmnl-dev \
+    libtool \
+    make \
+    ninja-build \
+    pkg-config \
+    python2 \
+    python3 \
+    python3-pip \
+    unzip
+  - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
+  # from cilium-envoy
+  - |
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu libc6-dev \
+    autoconf automake cmake coreutils curl git libtool make ninja-build patch patchelf \
+    python3 python-is-python3 unzip virtualenv wget zip \
+    libcap-dev software-properties-common
+  - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+  #- apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main"
+  - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
+  - |
+    apt-get update && apt-get install -y --no-install-recommends \
+    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  - | # from iptables
+     apt-get install -y --no-install-recommends \
+     ca-certificates debian-archive-keyring apt-transport-https apt-src git build-essential git-buildpackage \
+     build-essential autoconf automake bison  flex libmnl-dev libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev libtool
+  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
+  # apt clean
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  # Install Go
+  - curl -sfL https://go.dev/dl/go${{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
+  - rm -rf /usr/local/go
+  - tar -C /usr/local -xzf go.tar.gz
+  - rm go.tar.gz
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export CGO_ENABLED=0
+  - go version
+  # Install protoc and plugins
+  - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local
+  - rm /tmp/protoc.zip
+  - chmod o+rx /usr/local/bin/protoc
+  - chmod o+rX -R /usr/local/include/google/
+  # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
+  - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@8ba23be9613c672d40ae261d2a1335d639bdd59b
+  - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
+  - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
+  - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
+  # Install multiversion bazel
+  - bazel_versions=("3.7.0" "3.7.1" "3.7.2" "6.1.0")
+  # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
+  - curl --fail --show-error --silent --location https://raw.githubusercontent.com/bazelbuild/bazel/6.1.0/scripts/packages/bazel.sh --output /usr/local/bin/bazel
+  - chmod +x /usr/local/bin/bazel
+  - |
+    for bazel_version in "${bazel_versions[@]}" ; do
+      # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
+      # so for multiple versions to be usable files will need to moved around, which would be more tedious
+      long_binary_name="bazel-${bazel_version}-linux-x86_64"
+      curl --fail --show-error --silent --location https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      chmod +x "/usr/local/bin/${long_binary_name}"
+      USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
+    done
