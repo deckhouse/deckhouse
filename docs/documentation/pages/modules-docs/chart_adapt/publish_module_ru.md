@@ -13,7 +13,7 @@ MODULES_MODULE_SOURCE: registry.flant.com/deckhouse/modules/template
 MODULES_MODULE_TAG: ${CI_COMMIT_REF_NAME}
 ```
 
-В GitLab добавьте аутентификационные данные для доступа к container registry в разделе **Settings** --> **CI/CD**.
+В GitLab добавьте аутентификационные данные для доступа к registry контейнера в разделе **Settings** --> **CI/CD**.
 
 Например:
 
@@ -22,7 +22,7 @@ MODULES_REGISTRY_LOGIN = username
 MODULES_REGISTRY_PASSWORD = password
 ```
 
-> если вы используете **fox**, то доступы указывать не нужно.
+> Если вы используете **fox**, то доступы указывать не нужно.
 
 Внесите  изменения в git.
 

@@ -24,7 +24,7 @@ spec:
 
 * Тэг образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
 
-* Имя *ModuleSource* **spec.source** . Выдает данные для авторизации в registry.
+* Имя *ModuleSource* **spec.source**. Выдает данные для авторизации в registry.
 
 Не обязательный интервал **spec.scanInterval**. Проверяет образы в registry. По-умолчанию задан интервал в 15 секунд.
 
@@ -38,9 +38,9 @@ kubectl annotate mop <name> renew=""
 
 ## Принцип действия
 
-При разработке этого ресурса, указанный модуль не будет учитывать *ModuleUpdatePolicy* и не будет загружать и создавать объекты *ModuleRelease*.
+При разработке этого ресурса, указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
 Вместо этого, модуль будет загружаться при каждом изменении image digest и будет применяться в кластере.
-При этом, в статусе объекта *ModuleSource* этот модуль получит признак `overridden: true`, который указывает на то, что используется ресурс *ModulePullOverride*.
+При этом, в статусе объекта *ModuleSource* этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс *ModulePullOverride*.
 После удаления *ModulePullOverride*, модуль продолжит функционировать, но если для него применена политика *ModuleUpdatePolicy*, то загрузятся новые релизы (при наличии), которые заменят текущую "версию разработчика".
 
 ### Пример
@@ -81,7 +81,7 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
- Этот ресурс будет проверять tag образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
+ Этот ресурс будет проверять тэг образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
 
  При каждом обновлении статус этого ресурса будет меняться:
 

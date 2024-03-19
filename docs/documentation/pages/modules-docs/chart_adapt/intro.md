@@ -7,5 +7,5 @@ permalink: en/modules-docs/chart-adapt/
 
 * [git](https://git-scm.com) – система контроля версий;
 * [sed](https://github.com/mirror/sed) – редактор потоков;
-* [yq](https://github.com/mikefarah/yq) – коммандная строка для JSON и YAML.
+* [yq](https://github.com/mikefarah/yq) – командная строка для JSON и YAML.
 

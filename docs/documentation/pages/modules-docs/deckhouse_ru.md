@@ -88,7 +88,7 @@ spec:
 
 ## Создайте ресурс ModuleRelease
 
-По аналогии с [*DeckhouseRelease*](../../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей тоже есть релизы.
+По аналогии с [*DeckhouseRelease*](../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей тоже есть релизы.
 
 > Модули из источника модулей имеют собственный цикл обновлений в отличии от Deckhouse Kubernetes Platform. Для исправления бага в модуле не нужно ждать нового релиза Deckhouse Kubernetes Platform.
 
