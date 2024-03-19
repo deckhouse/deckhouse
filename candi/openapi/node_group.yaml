@@ -2040,13 +2040,13 @@ spec:
                           type: string
                           default: "Auto"
                           description: |
-                            Specify whether to:
+                            Defines the system resource reservation mode:
 
-                            * `Off` — Disable resource reservation.
-                            * `Auto` — Reserve resources based on the Node capacity.
-                            * `Static` — Provide your own resource reservation values via the `static` parameter.
+                            * `Off` — disables resource reservation.
+                            * `Auto` — reserves resources based on the Node capacity.
+                            * `Static` — provides your own resource reservation values via the `static` parameter.
 
-                            Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
+                            Note that currently we do not use a dedicated group `cgroup` for resource reservation (`-system-reserved-cgroup` is not used).
                         static:
                           type: object
                           anyOf:
@@ -2077,8 +2077,13 @@ spec:
                     topologyManager:
                       type: object
                       description: |
-                        Controls Topology Management Policies on a node.
-                        For more information, see [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                        Controls a topology manager.
+
+                        The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
+
+                        In a cluster with [NUMA](https://ru.wikipedia.org/wiki/Non-Uniform_Memory_Access)nodes, the topology manager can optimise application performance by placing containers on these NUMA nodes for efficient resource usage.
+
+                        For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
                         enabled:
                           type: boolean
@@ -2089,7 +2094,9 @@ spec:
                           type: string
                           x-doc-default: Container
                           description: |
-                            Defines the granularity at which to perform resource alignment (pod or container level).
+                            Defines the granularity at which to perform resource alignment at the container or pod level in the following modes:
+                              - `Container`. The calculation of preferred resources is performed independently for each container.
+                              - `Pod`. The calculation of the required resources is performed for each pod, where all its containers are treated as a single system.
                           enum:
                             - Container
                             - Pod
@@ -2097,13 +2104,15 @@ spec:
                           type: string
                           x-doc-default: None
                           description: |
-                           A strategy driven by resource alignment policies. Four policies are supported:
-                            - `None` — does not perform any resource alignment (default).
-                            - `BestEffort` — determines the availability of resources on each node and uses this information to maintain the correspondence between the NUMA node and the container.
-                            - `Restricted` — determines the availability of resources on each node and uses this information to select the most appropriate node in each container.
-                            - `SingleNumaNode` — determines the availability of resources on each node and uses this information to determine whether it is possible to maintain a correspondence between the container and the NUMA node.
+                           Defines a resource aligment policy taking into account node topology in scheduling pods.
+
+                           Four policies are supported:
+                            - `None` - no resource alignment is performed (used by default).
+                            - `BestEffort` - a preferred NUMA node is defined for each pod container. If there is no suitable node to place a new pod, the new pod will be placed on a free node, and the already running pod will remain in its place.
+                            - `Restricted` - a preferred NUMA node is defined for each pod container. If there is no suitable node to place a new pod, the new pod will not be placed on a free node and the already running pod will be stopped.
+                            - `SingleNumaNode` - a preferred NUMA node is defined for each pod container. If there is no preferred NUMA node for all pod containers, the new pod is not placed on a node, and the already running pod will be stopped.
                             
-                            Similar to the none, best-effort, restricted, single-numa-node policies in Kubernetes. For more information, see [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies) for more information.
+                            For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies) for more information.
                           enum:
                             - None
                             - BestEffort
