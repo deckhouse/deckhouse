@@ -84,7 +84,7 @@ kubectl annotate mop <name> renew=""
    ```
 
  Этот ресурс будет проверять tag образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
- 
+
  При каждом обновлении статус этого ресурса будет меняться:
 
    ```yaml
@@ -104,8 +104,8 @@ kubectl annotate mop <name> renew=""
 
    где:
 
-   - **imageDigest** - уникальный идентификатор образа контейнера, который был загружен.
-   - **lastUpdated** - время последней загрузки образа.
+- **imageDigest** - уникальный идентификатор образа контейнера, который был загружен.
+- **lastUpdated** - время последней загрузки образа.
 
 При этом *ModuleSource* приобретет вид:
 

@@ -4,13 +4,13 @@ permalink: ru/modules-docs/module-anatomy/deckhouse/
 lang: ru
 ---
 
-В этой главе рассмотрен процесс публикации настроенного модуля в кластере Deckhouse Kubernetes Platform, а также представлена информация, где можно просмотреть результаты.
+В этой разделе рассмотрен процесс публикации настроенного модуля в кластере Deckhouse Kubernetes Platform, а также представлена информация, где можно просмотреть результаты.
 
-## ModuleSource
+## Ресурс ModuleSource
 
-Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет источник (container registry), откуда Deckhouse Kubernetes Platform будет загружать модули.
+Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет registry контейнера, откуда Deckhouse Kubernetes Platform будет загружать модули.
 
-Пример `ModuleSource`:
+Пример *ModuleSource*:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -23,24 +23,26 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-Как только ресурс будет создан, ознакомьтесь со списком модулей, которые находятся в подключенном *ModuleSource*, присутствуют-ли там ошибки.
+Как только ресурс будет создан, проверьте список модулей, которые находятся в подключенном *ModuleSource*:
 
 ```sh
 kubectl get ms
 ```
 
-Пример вывода:
+Пример ответа:
 
-```
+```none
 NAME        COUNT   SYNC   MSG
 example     2       16s
 ```
+
+Прим. Лена: А это что за команда?
 
 ```sh
 kubectl get ms example -o yaml
 ```
 
-Пример вывода:
+Пример ответа:
 
 ```yaml
 ...
@@ -56,15 +58,18 @@ status:
 
 > Deckhouse обновляет список модулей и версий один раз в 3 минуты.
 
-На этом этапе модули еще не установлены, так как не хватает *ModuleUpdatePolicy*. Необходимо установить этот модуль.
+На этом этапе модули еще не установлены, так как не хватает модуля *ModuleUpdatePolicy*. Необходимо установить этот модуль.
 
-## ModuleUpdatePolicy
+## Ресурс ModuleUpdatePolicy
 
-Ресурс *ModuleUpdatePolicy* используется для определения списка модулей, которые необходимо установить. Политики релизного канала и их обновления - ручная, автоматическая или автоматизированная с техническими окнами обслуживания (Manual/Auto/Auto with maintenance windows). Если настройки *ModuleUpdatePolicy* для *ModuleSource* не будут указаны, то будут использованы настройки релизного канала и обновлений, установленные для Deckhouse Kubernetes Platform.
+Ресурс *ModuleUpdatePolicy* используется для определения списка модулей, которые будут установлены. 
+
+Политика релизного канала и обновлений может быть ручная, автоматическая или автоматизированная с техническими окнами обслуживания (Manual/Auto/Auto with maintenance windows). Если настройки *ModuleUpdatePolicy* для *ModuleSource* не будут указаны, то используются настройки релизного канала и обновлений, установленные для Deckhouse Kubernetes Platform.
 
 Также, можно установить `mode: Ignore` для того, чтобы не скачивать модули.
 
-В следующем примере с *ModuleUpdatePolicy*, обратите внимание на параметр *labelSelector*, который ограничивает действие политики модулем `module-1`, полученным из `example` источника модулей *ModuleSourc*:
+В следующем примере с *ModuleUpdatePolicy*, обратите внимание на параметр `labelSelector`, который ограничивает действие политики модулем `module-1`, полученным из `example` источника модулей *ModuleSource*:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleUpdatePolicy
@@ -81,9 +86,9 @@ spec:
     mode: Manual    
 ```
 
-## ModuleRelease
+## Ресурс ModuleRelease
 
-По аналогии с *DeckhouseRelease*, у модулей тоже есть релизы.
+По аналогии с [*DeckhouseRelease*](../../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей тоже есть релизы.
 
 > Модули из источника модулей имеют собственный цикл обновлений в отличии от Deckhouse Kubernetes Platform. Для исправления бага в модуле не нужно ждать нового релиза Deckhouse Kubernetes Platform.
 
@@ -93,9 +98,9 @@ Deckhouse Kubernetes Platform самостоятельно создает рес
 kubectl get mr
 ```
 
-Пример вывода:
+Пример ответа:
 
-```
+```none
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
 ```
@@ -106,9 +111,9 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
-Если используется ручной режим обновления (Auto), будет установлен автоматический релиз при ближайшем релизном окне (или при фактической загрузке, если окна не указаны).
+Если используется автоматический режим обновлений (Auto), будет установлен автоматический релиз при ближайшем релизном окне или при фактической загрузке, если окна не указаны.
 
-## Module
+## Ресурс Module
 
 После загрузки и установки можно проверить, доступны ли модули для использования. Для этого выведите список всех доступных модулей Deckhouse Kubernetes Platform:
 
@@ -116,15 +121,17 @@ kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 kubectl get modules | grep example
 ```
 
-```
+Пример ответа:
+
+```none
 NAME                                  WEIGHT   STATE      SOURCE
 module-1                              900      Disabled   example
 module-2                              900      Disabled   example
 ```
 
-Модули стали доступны.
+Готово, модули стали доступны.
 
-## ModuleConfig
+## Ресурс ModuleConfig
 
 Теперь можно работать с модулями, как с обычными модулями Deckhouse Kubernetes Platform. Создайте *ModuleConfig*, чтобы включить `module-1`.
 
@@ -145,9 +152,9 @@ spec:
 kubectl get moduleconfig module-1
 ```
 
-Пример вывода:
+Пример ответа:
 
-```
+```nones
 NAME              STATE     VERSION   AGE   TYPE                  STATUS
 module-1          Enabled   1         3m    example
 ```

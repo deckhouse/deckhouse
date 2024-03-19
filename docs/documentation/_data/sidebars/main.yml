@@ -34,8 +34,8 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
-            en: Module development
-            ru: Разработка модулей
+            en: How to develop a module?
+            ru: Как разработать модуль?
           folders:
             - title:
                 en: Description
@@ -55,23 +55,27 @@ entries:
                   url: /modules-docs/module-anatomy/module-folder/
                 - title:
                     en: Container registry
-                    ru: Container registry
+                    ru: Registry контейнера
                   url: /modules-docs/module-anatomy/registry/
                 - title:
                     en: In the Deckhouse cluster
                     ru: В кластере Deckhouse
                   url: /modules-docs/module-anatomy/deckhouse/
             - title:
-                en: Guides to create a module
-                ru: Руководства по созданию модуля
+                en: Module creation guide
+                ru: Руководство по созданию модуля
               folders:
                 - title:
                     en: Description
                     ru: Описание
+                  url: /modules-docs/guides/
+                - title:
+                    en: Versions
+                    ru: Версионирование
                   url: /modules-docs/guides/version/
             - title:
-                en: Chart adaptation
-                ru: Адаптация существующего чарта
+                en: How to adapt an existing chart?
+                ru: Как адаптировать существующий чарт?
               folders:
                 - title:
                     en: Description

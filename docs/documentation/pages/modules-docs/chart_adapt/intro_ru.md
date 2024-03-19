@@ -1,6 +1,7 @@
 ---
 title: "Адаптируйте существующий чарт"
-permalink: en/modules-docs/chart-adapt/
+permalink: ru/modules-docs/chart-adapt/
+lang: ru
 ---
 
 В этом разделе мы рассмотрим процесс адаптации существующего Helm-чарта и преобразования его в полноценный модуль Deckhouse Kubernetes Platform.
