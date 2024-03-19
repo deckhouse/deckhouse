@@ -23,7 +23,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-Как только ресурс будет создан, проверьте список модулей, которые находятся в подключенном *ModuleSource*:
+Проверьте, что ресурс создан.
 
 ```sh
 kubectl get ms
@@ -36,9 +36,9 @@ NAME        COUNT   SYNC   MSG
 example     2       16s
 ```
 
-Прим. Лена: А это что за команда?
+Как только ресурс будет создан, проверьте список модулей, которые находятся в подключенном *ModuleSource*:
 
-```sh
+```shell
 kubectl get ms example -o yaml
 ```
 
