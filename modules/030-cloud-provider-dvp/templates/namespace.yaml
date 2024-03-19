@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus.deckhouse.io/monitor-watcher-enabled" "true" "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
+---
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}

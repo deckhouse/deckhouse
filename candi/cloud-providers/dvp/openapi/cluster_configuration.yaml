@@ -1,0 +1,472 @@
+kind: DVPClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Describes the configuration of a cloud cluster in Deckhouse Virtualization Platform (DVP).
+
+      Used by the cloud provider if a cluster's control plane is hosted in the DVP cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: DVPClusterConfiguration
+        layout: Standard
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        zones:
+        - zone-a
+        - zone-b
+        - zone-c
+        region: r1
+        masterNodeGroup:
+          replicas: 3
+          zones:
+          - zone-a
+          - zone-b
+          - zone-c
+          instanceClass:
+            virtualMachine:
+              cpu:
+                cores: 1
+                coreFraction: 100%
+              memory:
+                size: 4Gi
+              ipAddresses:
+              - 10.10.10.10
+              - 10.10.10.11
+              - 10.10.10.12
+              additionalLabels:
+                additional-vm-label: label-value
+              additionalAnnotations:
+                additional-vm-annotation: annotation-value
+              tolerations:
+              - key: "dedicated.deckhouse.io"
+                operator: "Equal"
+                value: "system"
+              nodeSelector:
+                subzone: subzone-1
+            rootDisk:
+              size: 10Gi
+              storageClassName: sc1
+              image:
+                type: ClusterVirtualMachineImage
+                name: ubuntu
+            etcdDisk:
+              size: 10Gi
+              storageClassName: sc1
+        nodeGroups:
+          - name: worker
+            zones:
+            - zone-a
+            - zone-b
+            - zone-c
+            replicas: 1
+            instanceClass:
+              virtualMachine:
+                cpu:
+                  cores: 4
+                  coreFraction: 100%
+                memory:
+                  size: 8Gi
+              rootDisk:
+                size: 10Gi
+                image:
+                  type: "ClusterVirtualMachineImage"
+                  name: "ubuntu"
+        provider:
+          kubeconfigBase64: ZXhhbXBsZQo=
+          namespace: "<namespace>"
+
+    additionalProperties: false
+    required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [DVPClusterConfiguration]
+      sshPublicKey:
+        type: string
+        description: |
+          A public key for accessing nodes.
+      masterNodeGroup:
+        type: object
+        description: |
+          The definition of the master's NodeGroup.
+
+          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+        additionalProperties: false
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            description: |
+              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            type: integer
+            minimum: 1
+
+          zones:
+            type: array
+            description: |
+              A set of zones in which nodes can be created.
+
+              To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
+              Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
+              > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            items:
+              enum:
+              - zone-a
+              - zone-b
+              - zone-c
+            uniqueItems: true
+
+          instanceClass:
+            type: object
+            description: |
+              VM and its disks settings for the created master node.
+            additionalProperties: false
+            required: [virtualMachine, rootDisk, etcdDisk]
+            properties:
+
+              virtualMachine: &instanceClassVirtualMachine
+                type: object
+                description: |
+                  VM settings for the created master node.
+                required: [cpu, memory]
+                properties:
+                  cpu:
+                    description: |
+                      CPU setting for VM.
+                    type: object
+                    additionalProperties: false
+                    required: [cores]
+                    properties:
+                      cores:
+                        description: |
+                          Amount of CPU cores for VM.
+                        minumum: 1
+                        format: int32
+                        type: integer
+                      coreFraction:
+                        type: string
+                        default: "100%"
+                        enum: ["5%", "10%", "25%", "50%", "100%"]
+                        description: |
+                          Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
+                          Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
+                        example: "100%"
+
+                  memory:
+                    type: object
+                    description: |
+                      Specifies the memory settings for the VM.
+                    required:
+                      - size
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Amount of memory resources allowed for VM.
+                        example: 4Gi
+
+                  ipAddresses:
+                    type: array
+                    description: |
+                      Static ip addresses to be assigned to the VM's network interfaces. The number of addresses should correspond to the number of repilicas to be created. Each ip address will be assigned to the corresponding VM instance.
+                      For example: the number of replicas is 3, and we have the following list of ip addresses: ip1, ip2, ip3. As a result, ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+
+                      > Caution! These addresses must belong to the address range specified in the virtualization module configuration in the virtualMachineCIDRs parameter.
+                    items:
+                      type: string
+                      pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'
+
+                  additionalLabels:
+                    type: object
+                    x-doc-example: |
+                      ```yaml
+                      cluster-owner: user
+                      ```
+                    description: |
+                      Additional labels for VM resource.
+                    additionalProperties:
+                      type: string
+
+                  additionalAnnotations:
+                    type: object
+                    x-doc-example: |
+                      ```yaml
+                      cluster-owner: user
+                      ```
+                    description: |
+                      Additional annotations for VM resource.
+                    additionalProperties:
+                      type: string
+
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: |
+                      Allows VM to be assigned to specified DVP nodes.
+
+                      [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) as in the pods `spec.nodeSelector` parameter in Kubernetes;
+                    type: object
+
+                  priorityClassName:
+                    description: |
+                      [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)  as in the pods `spec.priorityClassName` parameter in Kubernetes;
+                    type: string
+
+                  tolerations:
+                    type: array
+                    description: |
+                      Allows you to set tolerations for VM for a DVP node.
+
+                      [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods `spec.tolerations` parameter in Kubernetes;
+                    items:
+                      type: object
+                      description: ""
+                      properties:
+                        effect:
+                          type: string
+                          description: ""
+                        key:
+                          type: string
+                          description: ""
+                        operator:
+                          type: string
+                          description: ""
+                        tolerationSeconds:
+                          type: integer
+                          description: ""
+                          format: int64
+                        value:
+                          type: string
+                          description: ""
+
+              rootDisk: &instanceClassRootDisk
+                type: object
+                description: |
+                  Specifies settings for the root disk of VM.
+                required:
+                  - size
+                  - image
+                properties:
+                  size:
+                    type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    description: |
+                      Root disk size.
+                    example: 10Gi
+                  storageClassName:
+                    type: string
+                    description: |
+                      The name of the existing StorageClass will be used to create the VM's root disk.
+                  image:
+                    type: object
+                    description: |
+                      Image parameters that will be used to create the VM's root disk.
+                    required:
+                      - type
+                      - name
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The type of the image source.
+                        enum:
+                        - "ClusterVirtualMachineImage"
+                        - "VirtualMachineImage"
+                      name:
+                        type: string
+                        description: |
+                          The name of the image that will be used to create the root disk.
+
+                          > The installation requires linux OS images with cloud-init pre-installed
+              etcdDisk:
+                type: object
+                description: |
+                  Specifies settings for the ETCD data disk.
+                required:
+                  - size
+                properties:
+                  size:
+                    type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    description: |
+                      ETCD disk size.
+                    example: 10Gi
+                  storageClassName:
+                    type: string
+                    description: |
+                      The name of the existing StorageClass will be used to create the ETCD data disk.
+
+              additionalLabels:
+                type: object
+                description: |
+                  Additional labels.
+                x-doc-example: |
+                  ```yaml
+                  project: cms-production
+                  severity: critical
+                  ```
+                additionalProperties:
+                  type: string
+
+      nodeGroups:
+        type: array
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              description: |
+                The name of the NodeGroup to use for generating node names.
+              type: string
+            replicas:
+              description: |
+                The number of nodes to create.
+              type: integer
+
+            zones:
+              type: array
+              description: |
+                A set of zones in which nodes can be created.
+                To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
+                Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
+                > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              items:
+                enum:
+                - zone-a
+                - zone-b
+                - zone-c
+              uniqueItems: true
+
+            nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
+              properties:
+                labels:
+                  type: object
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                  additionalProperties:
+                    type: string
+                taints:
+                  type: array
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+
+            instanceClass:
+              required: [virtualMachine, rootDisk]
+              type: object
+              description: |
+                VM and Disk settings for the created static node.
+              properties:
+                virtualMachine: *instanceClassVirtualMachine
+                rootDisk: *instanceClassRootDisk
+
+
+      layout:
+        type: string
+        description: |
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html) about possible provider layouts.
+        enum: [Standard]
+
+      region:
+        type: string
+        description: |
+          The name of region.
+          To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
+          Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
+          > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+
+      zones:
+        type: array
+        description: |
+          A set of zones in which nodes can be created.
+          To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
+          Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
+          > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+        items:
+          enum:
+          - zone-a
+          - zone-b
+          - zone-c
+        uniqueItems: true
+
+      provider:
+        type: object
+        description: |
+          Contains settings to connect to the Deckhouse Kubernetes Platform API.
+        additionalProperties: false
+        properties:
+          kubeconfigBase64:
+            description: |
+              Kubeconfig to connect to Deckhouse Kubernetes Platform API base64 encoded.
+            type: string
+            pattern: '^[A-Za-z0-9+/]+[=]{0,2}$'
+          namespace:
+            description: |
+              Namespace in which DKP cluster resources will be created.
+
+              > Caution! If not explicitly specified, the default namespace for kubeconfig will be used.
+            type: string
+        required:
+        - kubeconfigBase64
+        - namespace
