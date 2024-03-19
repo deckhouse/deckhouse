@@ -82,6 +82,8 @@ shell:
 {{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
 # bash-completion
 {{ $binaries := cat $binaries "/etc/profile.d/bash_completion.sh /usr/share/bash-completion/bash_completion" }}
+# groups
+{{ $binaries := cat $binaries "/usr/bin/groups" }}
 # for debug
 {{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
 ---
