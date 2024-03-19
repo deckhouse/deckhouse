@@ -121,7 +121,7 @@ func nodeHandler(input *go_hook.HookInput) error {
 		if minNodeVersion == nil || nodeVersion.LessThan(minNodeVersion) {
 			minNodeVersion = nodeVersion
 		}
-		
+
 		if node.NodeGroup != "" {
 			if _, ok := ngc[node.NodeGroup]; !ok {
 				ngc[node.NodeGroup] = NodeGroupCapacity{

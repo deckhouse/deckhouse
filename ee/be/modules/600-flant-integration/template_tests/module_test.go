@@ -235,7 +235,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 - name: FP_KUBEALL_CONTEXT
   value: ""
 - name: FP_NODE_GROUPS_CAPACITY
-  value: map[master:map[CPU:4 memory:8.589934592e+09]]
+  value: '{"master":{"CPU":4,"memory":8589934592}}'
 `
 
 			Expect(ds.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(expectedEnvsDS))
