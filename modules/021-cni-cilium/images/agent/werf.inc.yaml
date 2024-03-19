@@ -97,7 +97,7 @@ docker:
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
-fromImage: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_UBUNTU }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
