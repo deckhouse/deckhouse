@@ -121,10 +121,17 @@ func nodeHandler(input *go_hook.HookInput) error {
 		if minNodeVersion == nil || nodeVersion.LessThan(minNodeVersion) {
 			minNodeVersion = nodeVersion
 		}
-
+		
 		if node.NodeGroup != "" {
-			ngc[node.NodeGroup].CPU.Add(*node.Capacity.Cpu())
-			ngc[node.NodeGroup].Memory.Add(*node.Capacity.Memory())
+			if _, ok := ngc[node.NodeGroup]; !ok {
+				ngc[node.NodeGroup] = NodeGroupCapacity{
+					CPU:    node.Capacity.Cpu(),
+					Memory: node.Capacity.Memory(),
+				}
+			} else {
+				ngc[node.NodeGroup].CPU.Add(*node.Capacity.Cpu())
+				ngc[node.NodeGroup].Memory.Add(*node.Capacity.Memory())
+			}
 		}
 
 		if node.Type == "Static" {
