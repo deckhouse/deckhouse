@@ -1,3 +1,5 @@
+{% raw %}.
+
 ---
 title: "Соберите образ контейнера"
 permalink: ru/modules-docs/chart-adapt/build-container-images/
@@ -23,3 +25,4 @@ sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "hel
 Проверьте результат командой `cat` и убедитесь, что изменения применились.
 
 > Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
+{% endraw %}.
