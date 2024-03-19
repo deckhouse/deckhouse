@@ -1,9 +1,8 @@
-{% raw %}
-
 ---
 title: "Соберите образ контейнера"
 permalink: en/modules-docs/chart-adapt/build-container-images/
 ---
+{% raw %}
 
 Полезный подход - хранить образы для модулей в нашем registry. Очистите папку с образами `images/*` и загрузите туда наш образ для приложения **hello-world**.
 
@@ -24,4 +23,5 @@ sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "hel
 Проверьте результат командой `cat` и убедитесь, что изменения применились.
 
 > Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
-{% endraw %}. 
+
+{% endraw %}.
