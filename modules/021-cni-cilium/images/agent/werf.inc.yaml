@@ -16,6 +16,10 @@ import:
   add: /usr/bin/cilium-envoy
   to: /usr/bin/cilium-envoy
   before: install
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /usr/lib/libcilium.so
+  to: /usr/lib/libcilium.so
+  before: install
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
   to: /usr/bin/hubble
@@ -47,7 +51,7 @@ docker:
 # hubble and dependencies
 {{ $binaries := "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # cilium-envoy and dependencies
-{{ $binaries := cat $binaries "/usr/bin/cilium-envoy" }}
+{{ $binaries := cat $binaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # cilium and dependencies
 {{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
 {{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}

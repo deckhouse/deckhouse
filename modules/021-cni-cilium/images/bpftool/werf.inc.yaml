@@ -13,7 +13,7 @@ artifact: {{ $.ModuleName }}/bpftool-builder-artifact
 fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
-  - git clone {{ $.SOURCE_REPO }}/linux/kernel/git/bpf/bpf-next.git /src/linux
+  - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
   install:
