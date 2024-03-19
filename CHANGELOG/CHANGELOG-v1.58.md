@@ -39,6 +39,7 @@
  - **[cert-manager]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[chrony]** Avoid listening on all addresses and listen on the host IP address. [#7519](https://github.com/deckhouse/deckhouse/pull/7519)
  - **[chrony]** Fix the incorrect path in the `NTPDaemonOnNodeDoesNotSynchronizeTime` alert. [#7507](https://github.com/deckhouse/deckhouse/pull/7507)
+ - **[cloud-provider-vcd]** Add validation for a virtual application name. [#7817](https://github.com/deckhouse/deckhouse/pull/7817)
  - **[cni-cilium]** Run `safe_agent_updater` pods in the `hostNetwork` mode and use `kubernetes-api-proxy`. [#7760](https://github.com/deckhouse/deckhouse/pull/7760)
     `cilium-agent` pods will probably restart and L7 policies will flap.
  - **[cni-cilium]** Improve `safe-agent-updater`. [#7576](https://github.com/deckhouse/deckhouse/pull/7576)
@@ -56,6 +57,8 @@
  - **[dashboard]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
+ - **[deckhouse-controller]** Repeat queries to get CRD and apply conversation strategies. [#7827](https://github.com/deckhouse/deckhouse/pull/7827)
+    Prevents a critical error from occurring in the cluster when starting or turning on modules.
  - **[deckhouse-controller]** Add CA certificates to the standard `/etc/ssl/` path. [#7625](https://github.com/deckhouse/deckhouse/pull/7625)
  - **[dhctl]** Prevent deadlock when re-bootstrap cluster. [#7753](https://github.com/deckhouse/deckhouse/pull/7753)
  - **[dhctl]** Avoid mirroring versions in `dhctl mirror` that were not yet released. [#7716](https://github.com/deckhouse/deckhouse/pull/7716)
@@ -76,6 +79,7 @@
  - **[ingress-nginx]** Add libraries to the final image. [#7666](https://github.com/deckhouse/deckhouse/pull/7666)
     Ingress nginx controller will restart.
  - **[ingress-nginx]** Fix `/tmp` access rights for controller v1.6. [#7498](https://github.com/deckhouse/deckhouse/pull/7498)
+ - **[istio]** Got rid of `istioMinimalVersion` requirement in `release.yaml` to fix the upgrading issue. [#7815](https://github.com/deckhouse/deckhouse/pull/7815)
  - **[istio]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
  - **[kube-dns]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[kube-dns]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
@@ -97,6 +101,8 @@
  - **[network-policy-engine]** Add /run/xtables.lock mount. [#7554](https://github.com/deckhouse/deckhouse/pull/7554)
  - **[node-local-dns]** Fix node local dns readiness probes [#7553](https://github.com/deckhouse/deckhouse/pull/7553)
  - **[node-local-dns]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[node-manager]** Disable MCM for unsupported cloud providers. [#7817](https://github.com/deckhouse/deckhouse/pull/7817)
+ - **[node-manager]** kubelet resource reservation fixes. [#7788](https://github.com/deckhouse/deckhouse/pull/7788)
  - **[node-manager]** Fixed kubelet resource reservation for Static nodes [#7724](https://github.com/deckhouse/deckhouse/pull/7724)
  - **[node-manager]** Set providerID only on Static nodes (fix CloudStatic nodes bootstrap). [#7486](https://github.com/deckhouse/deckhouse/pull/7486)
  - **[node-manager]** Prevent node (with `CloudPermanent` or `Static` type) deletion by autoscaler. [#7339](https://github.com/deckhouse/deckhouse/pull/7339)
@@ -105,6 +111,7 @@
  - **[openvpn]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[operator-prometheus]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[operator-prometheus]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[operator-trivy]** Update trivy ConfigMap template. [#7780](https://github.com/deckhouse/deckhouse/pull/7780)
  - **[operator-trivy]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[operator-trivy]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[prometheus]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
