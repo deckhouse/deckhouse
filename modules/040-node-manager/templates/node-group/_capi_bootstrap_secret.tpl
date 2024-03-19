@@ -27,6 +27,7 @@ data:
 {{- $_ := set $tpl_context "Template" $context.Template }}
 {{- $_ := set $tpl_context "Values" $context.Values }}
 {{- $_ := set $tpl_context "vcd" $context.Values.nodeManager.internal.cloudProvider.vcd }}
+{{- $_ := set $tpl_context "clusterName" $context.Values.nodeManager.internal.cloudProvider.capiClusterName }}
 ---
 {{- $f := $context.Files.Get (printf "capi/%s/cluster.yaml" $context.Values.nodeManager.internal.cloudProvider.type)}}
 {{ tpl ($f) $tpl_context }}
