@@ -210,6 +210,11 @@ Below are their fundamental differences:
 
 ### Federation
 
+#### Requirements for clusters joining the federation
+
+* Each cluster must have a unique cluster domain ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
+* Pod and Service subnets **doesn't need** to be unique ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
+
 #### General principles of federation
 
 * Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -242,6 +247,11 @@ To establish a federation, you must:
 > It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
 
 ### Multicluster
+
+#### Requirements for clusters that are combined into a multicluster
+
+* Cluster domains **should** be the same for all members of multicluster ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
+* Pod and Service subnets **should** be unique for each multicluster member ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
 
 #### General principles
 
