@@ -25,8 +25,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/go-openapi/spec"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sYAML "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 )
 
@@ -65,28 +67,47 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
+	errs := &ValidationError{}
 
-	for _, doc := range docs {
+	for i, doc := range docs {
 		if doc == "" {
 			continue
 		}
 		docData := []byte(doc)
 
-		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, &unstructured.Unstructured{})
+		obj := &unstructured.Unstructured{}
+		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, obj)
 		if err != nil {
-			return fmt.Errorf("unmarshal: %w", err)
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
 		}
 
+		var errMessages []string
+
 		if gvk.Version == "" {
-			return errors.New("no version information, but it's required")
+			errMessages = append(errMessages, ".apiVersion is required")
 		}
 
 		if gvk.Kind == "CustomResourceDefinition" {
-			return errors.New("got unacceptable resource kind: CustomResourceDefinition")
+			errMessages = append(errMessages, "got unacceptable resource kind: CustomResourceDefinition")
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
 		}
 	}
 
-	return nil
+	return errs.ErrorOrNil()
 }
 
 // ValidateInitConfiguration parses and validates cluster InitConfiguration.
@@ -98,49 +119,68 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
+	errs := &ValidationError{}
 	var initConfigDocsCount int
 
-	for _, doc := range docs {
+	for i, doc := range docs {
 		if doc == "" {
 			continue
 		}
 
 		docData := []byte(doc)
 
-		var index SchemaIndex
-		err := yaml.Unmarshal(docData, &index)
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
-			return fmt.Errorf("unmarshal: %w", err)
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
+		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
+
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		if err != nil {
+			errMessages = append(errMessages, err.Error())
 		}
 
 		switch index.Kind {
 		case InitConfigurationKind:
 			initConfigDocsCount++
-			if initConfigDocsCount > 1 {
-				return fmt.Errorf("only one %q expected", InitConfigurationKind)
-			}
-			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
-			if err != nil {
-				return fmt.Errorf("validate %q: %w", InitConfigurationKind, err)
-			}
 		case ModuleConfigKind:
-			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
-			if err != nil {
-				return fmt.Errorf("validate %q: %w", ModuleConfigKind, err)
-			}
 		default:
-			return fmt.Errorf(
-				"unknown kind %q, expected one of (%q, %q)",
-				index.Kind, InitConfigurationKind, ModuleConfigKind,
-			)
+			errMessages = append(errMessages, fmt.Errorf(
+				"unknown kind, expected one of (%q, %q)", InitConfigurationKind, ModuleConfigKind,
+			).Error())
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
 		}
 	}
 
-	if initConfigDocsCount == 0 {
-		return fmt.Errorf("%q required", InitConfigurationKind)
+	if initConfigDocsCount != 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("exactly one %q required", InitConfigurationKind).Error()},
+		})
 	}
 
-	return nil
+	return errs.ErrorOrNil()
 }
 
 // ValidateClusterConfiguration parses and validates cluster ClusterConfiguration.
@@ -157,45 +197,76 @@ func ValidateClusterConfiguration(
 	}
 
 	clusterConfigurationDocs := input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1)
-	var clusterConfig *ClusterConfig
+	errs := &ValidationError{}
+	var clusterConfigDocsCount int
+	var clusterConfig ClusterConfig
 
-	for _, doc := range clusterConfigurationDocs {
+	for i, doc := range clusterConfigurationDocs {
 		if doc == "" {
 			continue
 		}
 
 		docData := []byte(doc)
 
-		var index SchemaIndex
-		err := yaml.Unmarshal(docData, &index)
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
-			return ClusterConfig{}, fmt.Errorf("unmarshal: %w", err)
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
+		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
+
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		if err != nil {
+			errMessages = append(errMessages, err.Error())
 		}
 
 		switch index.Kind {
 		case ClusterConfigurationKind:
-			if clusterConfig != nil {
-				return ClusterConfig{}, fmt.Errorf("only one %q expected", ClusterConfigurationKind)
-			}
-
-			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
-			if err != nil {
-				return ClusterConfig{}, fmt.Errorf("validate %q: %w", ClusterConfigurationKind, err)
-			}
+			clusterConfigDocsCount++
 
 			if err = yaml.Unmarshal([]byte(doc), &clusterConfig); err != nil {
-				return ClusterConfig{}, fmt.Errorf("unmarshal %q: %w", ClusterConfigurationKind, err)
+				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
 			}
 		default:
-			return ClusterConfig{}, fmt.Errorf("unknown kind %q, expected %q", index.Kind, InitConfigurationKind)
+			errMessages = append(errMessages, fmt.Errorf(
+				"unknown kind, expected %q", ClusterConfigurationKind,
+			).Error())
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
 		}
 	}
 
-	if clusterConfig == nil {
-		return ClusterConfig{}, fmt.Errorf("%q required", ClusterConfigurationKind)
+	if clusterConfigDocsCount != 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("exactly one %q required", ClusterConfigurationKind).Error()},
+		})
 	}
 
-	return *clusterConfig, nil
+	if err := errs.ErrorOrNil(); err != nil {
+		return ClusterConfig{}, err
+	}
+
+	return clusterConfig, nil
 }
 
 // ValidateProviderSpecificClusterConfiguration parses and validates cluster ProviderSpecificClusterConfiguration.
@@ -229,78 +300,65 @@ func ValidateProviderSpecificClusterConfiguration(
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(providerSpecificClusterConfiguration), -1)
+	errs := &ValidationError{}
 	var clusterConfigDocsCount int
 
-	for _, doc := range docs {
+	for i, doc := range docs {
 		if doc == "" {
 			continue
 		}
 
 		docData := []byte(doc)
 
-		var index SchemaIndex
-		err := yaml.Unmarshal(docData, &index)
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
-			return fmt.Errorf("unmarshal: %w", err)
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
+		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
+
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		if err != nil {
+			errMessages = append(errMessages, err.Error())
 		}
 
 		switch index.Kind {
 		case providerKind:
 			clusterConfigDocsCount++
-			if clusterConfigDocsCount > 1 {
-				return fmt.Errorf("only one %q expected", providerKind)
-			}
-			err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
-			if err != nil {
-				return fmt.Errorf("validate %q: %w", providerKind, err)
-			}
 		default:
-			return fmt.Errorf("unknown kind %q, expected %q", index.Kind, providerKind)
+			errMessages = append(errMessages, fmt.Errorf("unknown kind, expected %q", providerKind).Error())
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
 		}
 	}
 
-	if clusterConfigDocsCount == 0 {
-		return fmt.Errorf("%q required", providerKind)
+	if clusterConfigDocsCount != 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("exactly one %q required", providerKind).Error()},
+		})
 	}
 
-	return nil
-}
-
-// ValidateClusterSettingsFormat parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-// Deprecated! Use ValidateClusterConfiguration.
-func ValidateClusterSettingsFormat(settings string, opts ...ValidateOption) error {
-	options := applyOptions(opts...)
-	if !options.commanderMode {
-		panic("ValidateClusterSettingsFormat operation currently supported only in commander mode")
-	}
-
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(settings)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		if doc == "" {
-			continue
-		}
-
-		err := parseDocument(doc, &metaConfig, schemaStore, opts...)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return errs.ErrorOrNil()
 }
 
 // ValidateClusterSettingsChanges validates changes of current cluster configuration with the previous one.
@@ -352,27 +410,35 @@ func ValidateClusterSettingsChanges(
 		}
 	}
 
+	errs := &ValidationError{}
+
 	for index, newDoc := range newDocs {
 		oldDoc, ok := oldDocs[index]
 		if !ok {
 			continue
 		}
 
-		schema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
+		docSchema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
 			Kind:    index.Kind,
 			Version: index.Version,
 		})
-		if schema == nil {
-			return errors.New("unknown yaml configuration index")
+		if docSchema == nil {
+			errs.Append(ErrKindChangesValidationFailed, Error{
+				Messages: []string{"unknown yaml configuration index"},
+			})
+			continue
 		}
 
-		err := compareWith([]byte(oldDoc), []byte(newDoc), *schema)
+		err := compareWith([]byte(oldDoc), []byte(newDoc), *docSchema)
 		if err != nil {
-			return err
+			errs.Append(ErrKindChangesValidationFailed, Error{
+				Messages: []string{err.Error()},
+			})
+			continue
 		}
 	}
 
-	return nil
+	return errs.ErrorOrNil()
 }
 
 func setConfigs(
@@ -395,16 +461,16 @@ func setConfigs(
 
 	if !index.IsValid() {
 		return fmt.Errorf(
-			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
-			index.Version, index.Kind, doc,
+			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s",
+			index.Version, index.Kind,
 		)
 	}
 
-	schema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
+	docSchema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
 		Kind:    index.Kind,
 		Version: index.Version,
 	})
-	if schema == nil {
+	if docSchema == nil {
 		// No need to compare Resources that are not stored in the cache.
 		return nil
 	}
@@ -475,6 +541,91 @@ func validateXUnsafeExtensions(
 		}
 	}
 	return nil
+}
+
+type ErrorKind int
+
+const (
+	ErrKindChangesValidationFailed ErrorKind = iota + 1
+	ErrKindValidationFailed
+	ErrKindInvalidYAML
+)
+
+func (k ErrorKind) String() string {
+	switch k {
+	case ErrKindChangesValidationFailed:
+		return "ChangesValidationFailed"
+	case ErrKindValidationFailed:
+		return "ValidationFailed"
+	case ErrKindInvalidYAML:
+		return "InvalidYAML"
+	default:
+		return "unknown"
+	}
+}
+
+type ValidationError struct {
+	Kind   ErrorKind
+	Errors []Error
+}
+
+func (v *ValidationError) Append(kind ErrorKind, e Error) {
+	if v.Kind < kind {
+		v.Kind = kind
+	}
+	v.Errors = append(v.Errors, e)
+}
+
+func (v *ValidationError) Error() string {
+	if v == nil {
+		return ""
+	}
+	errs := make([]string, 0, len(v.Errors))
+	for _, e := range v.Errors {
+		b := strings.Builder{}
+		if e.Index != nil {
+			b.WriteString(fmt.Sprintf("[%d]", *e.Index))
+		}
+
+		if e.Group != "" {
+			b.WriteString(fmt.Sprintf(" %s", schema.GroupVersionKind{
+				Group:   e.Group,
+				Version: e.Version,
+				Kind:    e.Kind,
+			}.String()))
+		}
+		if e.Name != "" {
+			b.WriteString(fmt.Sprintf(" %q", e.Name))
+		}
+		if b.Len() != 0 {
+			b.WriteString(": ")
+		}
+		b.WriteString(strings.Join(e.Messages, "; "))
+
+		errs = append(errs, b.String())
+	}
+
+	return fmt.Sprintf("%s: %s", v.Kind, strings.Join(errs, "\n"))
+}
+
+func (v *ValidationError) ErrorOrNil() error {
+	if v == nil {
+		return nil
+	}
+	if len(v.Errors) == 0 {
+		return nil
+	}
+
+	return v
+}
+
+type Error struct {
+	Index    *int
+	Group    string
+	Version  string
+	Kind     string
+	Name     string
+	Messages []string
 }
 
 type namedIndex struct {

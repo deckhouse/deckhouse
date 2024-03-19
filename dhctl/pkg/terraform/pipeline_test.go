@@ -153,7 +153,7 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			var expectedPlan map[string]any
+			var expectedPlan TerraformPlan
 			require.NoError(t, json.Unmarshal(tc.showResp.resp, &expectedPlan))
 
 			require.Equal(t, tc.expectedRes, res)
