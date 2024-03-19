@@ -37,6 +37,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
@@ -150,12 +151,12 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	// if values key does not exist, then cluster is just bootstrapping
 	clusterBootstrapping := !input.Values.Exists("global.clusterIsBootstrapped")
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc), clusterBootstrapping)
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc.GetHTTPClient()), clusterBootstrapping)
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if isDeckhousePodReady(dc) {
+	if isDeckhousePodReady(dc.GetHTTPClient()) {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -460,10 +461,9 @@ func getDeckhousePods(snap []go_hook.FilterResult) ([]deckhousePodInfo, error) {
 	return deckhousePods, nil
 }
 
-func isDeckhousePodReady(dc dependency.Container) bool {
+func isDeckhousePodReady(httpClient d8http.Client) bool {
 	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 
-	httpClient := dc.GetHTTPClient()
 	url := fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
