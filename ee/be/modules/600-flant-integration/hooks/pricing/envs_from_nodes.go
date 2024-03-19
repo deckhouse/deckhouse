@@ -114,6 +114,8 @@ func nodeHandler(input *go_hook.HookInput) error {
 	for _, s := range snaps {
 		node := s.(*Node)
 
+		input.LogEntry.Printf("Node: %s, cpu: %v, mem: %s", node.NodeGroup, node.Capacity.Cpu().String(), node.Capacity.Memory().String())
+
 		nodeVersion, err := semver.NewVersion(node.Version)
 		if err != nil {
 			return fmt.Errorf("can't parse Node version: %v", err)
