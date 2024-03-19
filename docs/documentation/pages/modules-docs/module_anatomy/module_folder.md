@@ -117,13 +117,15 @@ permalink: en/modules-docs/module-anatomy/module-folder/
 
 * `CONFIGURATION.md` – файл для создания ресурсов из `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml` добавьте вручную.
   
+  <div markdown="0">
   <details><summary>Пример файла</summary>
-    <code-block>
-      ---
-      title: "Настройки модуля"
-      ---
-    </code-bloсk>
+  <pre class="highlight">
+  <code>---
+  title: "Настройки модуля"
+  ---</code>
+  </pre>
   </details>
+  </div>
 
 #### Ассеты
 
