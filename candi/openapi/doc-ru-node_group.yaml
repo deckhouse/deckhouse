@@ -745,7 +745,13 @@ spec:
                             Параметры резервирования ресурсов в режиме `Static`.
                     topologyManager:
                       description: |
-                        Управление политиками топологии на узле. Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                        Управление менеджером топологии.
+
+                        Менеджер топологии позволяет планировщику Kubernetes использовать информацию о топологии ресурсов при планировании подов.
+
+                        В кластере с [NUMA](https://ru.wikipedia.org/wiki/Non-Uniform_Memory_Access)-узлами с помощью менеджера топологии можно добиться повышения производительности приложений за счет размещения контейнеров пода на таком NUMA-узле, где работа с ресурсами будет наиболее эффективной.
+
+                        Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
                         enabled:
                           description: |
