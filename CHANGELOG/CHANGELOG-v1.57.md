@@ -1,11 +1,16 @@
 # Changelog v1.57
 
+## [MALFORMED]
+
+
+ - #7086 unknown section "linstor"
+ - #7088 unknown section "linstor"
+
 ## Know before update
 
 
  - All containers that use `spotify/scratch` image will be restarted (almost all Deckhouse containers).
  - Deckhouse will not upgrade if the istio version in the cluster is lower than `1.16`.
- - The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
 
 ## Features
 
@@ -101,9 +106,6 @@
  - **[istio]** Add the [ingressClass](https://deckhouse.io/documentation/latest/modules/110-istio/configuration.html#parameters-ingressclass) parameter to the module configuration. [#7007](https://github.com/deckhouse/deckhouse/pull/7007)
  - **[keepalived]** keepalived is now based on a distroless image. [#6962](https://github.com/deckhouse/deckhouse/pull/6962)
     keepalived pods will restart.
- - **[linstor]** Disable Deckhouse update while `legacy` linstor module is enabled. [#7088](https://github.com/deckhouse/deckhouse/pull/7088)
- - **[linstor]** Add a validating webhook to prevent the linstor module from being enabled. [#7086](https://github.com/deckhouse/deckhouse/pull/7086)
-    The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
  - **[monitoring-kubernetes]** Move `helm` module to `monitoring-kubernetes` module. [#6726](https://github.com/deckhouse/deckhouse/pull/6726)
  - **[prometheus]** Fix concurrent map access error. [#7261](https://github.com/deckhouse/deckhouse/pull/7261)
     Internal alerts-receiver will restart.
