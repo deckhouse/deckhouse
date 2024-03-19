@@ -55,7 +55,7 @@ shell:
   - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 # #####################################################################
-# Binaries artifact for distroless (based on runtime-artifact)(based on Ubuntu)
+# runtime binaries artifact for distroless (based on runtime-artifact)(based on Ubuntu)
 ---
 # from base install script
 {{ $binaries := "/etc/localtime /usr/bin/jq /usr/bin/curl" }}
@@ -122,4 +122,83 @@ import:
   add: /relocate
   to: /
   before: install
+---
+# #####################################################################
+# agent binaries artifact for distroless (based on runtime-artifact)(based on Ubuntu)
+---
+# hubble and dependencies
+{{ $binaries := cat $binaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+# cilium-envoy and dependencies
+{{ $binaries := cat $binaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+# cilium and dependencies
+{{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+# for prepull
+{{ $binaries := cat $binaries "/pause /usr/bin/true" }}
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact2
+fromImage: {{ $.ModuleName }}/runtime-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  includePaths:
+  - binary_replace.sh
+  stageDependencies:
+    install:
+    - binary_replace.sh
+import:
+- artifact: {{ $.ModuleName }}/cilium-builder-artifact
+  add: /tmp/install
+  to: /
+  before: install
+  includePaths:
+  - cni-uninstall.sh
+  - init-container.sh
+  - install-plugin.sh
+  - LICENSE.all
+  - etc/bash_completion.d/cilium
+  - opt/cni/bin/cilium-cni
+  - usr/bin/cilium*
+  - var/lib/cilium/bpf
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /usr/bin/cilium-envoy
+  to: /usr/bin/cilium-envoy
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /usr/lib/libcilium.so
+  to: /usr/lib/libcilium.so
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /hubble
+  to: /usr/bin/hubble
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /bash_completion
+  to: /etc/bash_completion.d/hubble
+  before: install
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+shell:
+  install:
+    # common
+    - chmod +x /binary_replace.sh
+    - mkdir -p /relocate
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    # runtime
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/usr/sbin/${cmd}"
+        ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+      done
+      # broken symlinks are not imported from the artifact
+      touch /usr/sbin/iptables-wrapper
+    # agent
+    - mkdir -p /relocate/var/lib/cilium
+    - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+    - mkdir -p /relocate/home/cilium
+    - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+    - cp -a /etc/bash.bashrc /relocate/etc
 ---
