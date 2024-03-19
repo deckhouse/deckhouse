@@ -74,6 +74,11 @@ properties:
             type: integer
             format: int64
             x-examples: [800000]
+      nodeGroupsCapacity:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
       terraformManagerEnabled:
         type: boolean
         x-examples: [true]

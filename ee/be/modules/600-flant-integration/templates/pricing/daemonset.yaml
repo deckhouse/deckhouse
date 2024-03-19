@@ -118,7 +118,7 @@ spec:
         - name: FP_KUBEALL_CONTEXT
           value: {{ .Values.flantIntegration.kubeall.context | quote }}
         - name: FP_NODE_GROUPS_CAPACITY
-        - value: {{ .Values.flantIntegration.internal.nodeGroupsCapacity | quote }}
+          value: {{ .Values.flantIntegration.internal.nodeGroupsCapacity | quote }}
         livenessProbe:
           httpGet:
             path: /metrics
