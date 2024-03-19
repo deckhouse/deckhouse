@@ -15,7 +15,7 @@ on:
   push:
     branches: [ "main", "release-*" ]
   schedule:
-    - cron: '44 2 * * 5'
+    - cron: '30 2 * * 5'
 
 jobs:
   analyze:
