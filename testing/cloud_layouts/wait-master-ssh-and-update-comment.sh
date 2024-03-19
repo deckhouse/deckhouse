@@ -58,8 +58,7 @@ function get_comment(){
   )"
   exit_code="$?"
 
-  echo "Getting response (code: $http_code):"
-  cat "$response_file"
+  echo "Getting response code: $http_code"
 
   if [[ "$exit_code" != 0 ]]; then
     echo "Incorrect response code $exit_code"
@@ -94,7 +93,7 @@ function update_comment(){
   local http_code
 
   http_code="$(curl \
-    -v --output "$response_file" \
+    --output "$response_file" \
     --write-out "%{http_code}" \
     -X PATCH \
     -H "Accept: application/vnd.github+json" \
@@ -104,8 +103,6 @@ function update_comment(){
   )"
   exit_code="$?"
 
-  echo "Response update output:"
-  cat "$response_file"
   rm -f "$response_file"
 
   if [ "$exit_code" == 0 ]; then
