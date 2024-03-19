@@ -1,5 +1,5 @@
 ---
-title: "Сделайте форк или скопируйте шаблон репозитория с модулем"
+title: "Создайте репозиторий"
 permalink: ru/modules-docs/chart-adapt/clone-repo/
 lang: ru
 ---
@@ -19,4 +19,4 @@ lang: ru
      && cd hello-world-module
    ```
 
-   > **NOTE:** Подставьте свой адрес для команды `git clone`.
+   > Подставьте свой адрес для команды `git clone`.

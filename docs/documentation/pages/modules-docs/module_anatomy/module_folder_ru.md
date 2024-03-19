@@ -144,7 +144,7 @@ lang: ru
 - При запуске с флагом `--config` выводит конфигурацию хука в формате YAML.
 - При обычном запуске выполняет само действие.
 
-> **NOTE:** для модулей Deckhouse Kubernetes Platform написание хуков поддерживается только на языке Python.
+> для модулей Deckhouse Kubernetes Platform написание хуков поддерживается только на языке Python.
 >
 > Файлы хуков должно иметь права на выполнение. Добавьте их командой `chmod +x <путь до файла с хуком>`.
 
@@ -229,7 +229,7 @@ lang: ru
 Собранные образы имеют content-based теги, которые можно использовать в шаблонах образа, если подключена [lib-helm](https://github.com/deckhouse/lib-helm).
 
 ```yaml
-image: \{{ include "helm_lib_module_image" (list . "<имя образа>") }}
+image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 ```
 
 > <Имя образа> совпадает с именем папки внутри `images/` для этого модуля, записанным в camel нотации с маленькой буквы.
@@ -299,7 +299,7 @@ image: \{{ include "helm_lib_module_image" (list . "<имя образа>") }}
   properties:
     internal:
       type: object
-      default: \{}
+      default: {}
   ```
 
 </details>
@@ -323,7 +323,7 @@ image: \{{ include "helm_lib_module_image" (list . "<имя образа>") }}
     name: registry-creds
   type: kubernetes.io/dockerconfigjson
   data:
-    .dockerconfigjson: \{{ .Values.<имяМодуля>.registry.dockercfg }}
+    .dockerconfigjson: {{ .Values.<имяМодуля>.registry.dockercfg }}
   ```
 
 ### .helmignore
@@ -349,7 +349,6 @@ dependencies:
 
 В данном файле настройте следующие опции модуля:
 
----
 **tags**: [string] - дополнительные тэги для модуля, которые преобразуются в лейблы модуля: `module.deckhouse.io/$tag=""`.
 
 **weight**: integer - вес модуля. Вес по-умолчанию: 900, можно задать собственный вес в диапазоне 900 - 999.

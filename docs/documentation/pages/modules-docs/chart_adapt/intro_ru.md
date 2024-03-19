@@ -1,15 +1,11 @@
 ---
-title: "Адаптируйте существующий чарт"
+title: "Установите утилиты"
 permalink: ru/modules-docs/chart-adapt/
 lang: ru
 ---
 
-В этом разделе мы рассмотрим процесс адаптации существующего Helm-чарта и преобразования его в полноценный модуль Deckhouse Kubernetes Platform.
+Установите утилиты до выполнения инструкции:
 
-Для работы потребуются следующие утилиты:
-
-* git
-* sed
-* [yq](https://github.com/mikefarah/yq)
-
-Не забудьте установить утилиты до выполнения инструкции.
+* [git](https://git-scm.com) – система контроля версий;
+* [sed](https://github.com/mirror/sed) – редактор потоков;
+* [yq](https://github.com/mikefarah/yq) – коммандная строка для JSON и YAML.

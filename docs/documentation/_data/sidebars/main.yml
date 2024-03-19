@@ -5,7 +5,7 @@ entries:
         en: Overview
         ru: Введение в документацию
       url: /deckhouse-overview.html
-    - title: Deckhouse
+    - title: Deckhouse Kubernetes Platform
       folders:
         - title:
             en: How to install?
@@ -31,7 +31,9 @@ entries:
                 en: Global configuration
                 ru: Глобальные настройки
               url: /deckhouse-configure-global.html
-            - title: Custom Resources
+            - title: 
+                en: Custom Resources
+                ru: Кастомные ресурсы
               url: /cr.html
         - title:
             en: How to develop a module?
@@ -46,10 +48,6 @@ entries:
                 ru: Анатомия модуля
               folders:
                 - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules-docs/module-anatomy/
-                - title:
                     en: Module folder
                     ru: Папка с модулем
                   url: /modules-docs/module-anatomy/module-folder/
@@ -57,22 +55,14 @@ entries:
                     en: Container registry
                     ru: Registry контейнера
                   url: /modules-docs/module-anatomy/registry/
-                - title:
-                    en: In the Deckhouse cluster
-                    ru: В кластере Deckhouse
-                  url: /modules-docs/module-anatomy/deckhouse/
             - title:
-                en: Module creation guide
-                ru: Руководство по созданию модуля
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules-docs/guides/
-                - title:
-                    en: Versions
-                    ru: Версионирование
-                  url: /modules-docs/guides/version/
+                en: How to publish module in the DKP claster?
+                ru: Как опубликовать модуль в кластере DKP?
+              url: /modules-docs/deckhouse/
+            - title:
+                en: Monitoring modules
+                ru: Мониторинг модуля
+              url: /modules-docs/version/
             - title:
                 en: How to adapt an existing chart?
                 ru: Как адаптировать существующий чарт?

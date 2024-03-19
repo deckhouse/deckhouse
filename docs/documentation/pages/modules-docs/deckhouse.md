@@ -1,12 +1,11 @@
 ---
 title: "В кластере Deckhouse"
-permalink: ru/modules-docs/module-anatomy/deckhouse/
-lang: ru
+permalink: en/modules-docs/module-anatomy/deckhouse/
 ---
 
 В этой разделе рассмотрен процесс публикации настроенного модуля в кластере Deckhouse Kubernetes Platform, а также представлена информация, где можно просмотреть результаты.
 
-## Ресурс ModuleSource
+## Создайте ресурс ModuleSource
 
 Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет registry контейнера, откуда Deckhouse Kubernetes Platform будет загружать модули.
 
@@ -60,7 +59,7 @@ status:
 
 На этом этапе модули еще не установлены, так как не хватает модуля *ModuleUpdatePolicy*. Необходимо установить этот модуль.
 
-## Ресурс ModuleUpdatePolicy
+## Создайте ресурс ModuleUpdatePolicy
 
 Ресурс *ModuleUpdatePolicy* используется для определения списка модулей, которые будут установлены. 
 
@@ -86,7 +85,7 @@ spec:
     mode: Manual    
 ```
 
-## Ресурс ModuleRelease
+## Создайте ресурс ModuleRelease
 
 По аналогии с [*DeckhouseRelease*](../../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей тоже есть релизы.
 
@@ -94,7 +93,7 @@ spec:
 
 Deckhouse Kubernetes Platform самостоятельно создает ресурсы *ModuleRelease* исходя из того, что хранится в registry контейнеров.
 
-```sh
+```shell
 kubectl get mr
 ```
 
@@ -107,13 +106,13 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 
 Так как в *ModuleSource* был указан канал обновления `alpha`, были загружены новые версии модулей. Так как режим обновления политики установлен в `Manual`, необходимо вручную подтвердить установку новой версии. Для этого добавьте аннотацию к указанному релизу:
 
-```sh
+```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
 Если используется автоматический режим обновлений (Auto), будет установлен автоматический релиз при ближайшем релизном окне или при фактической загрузке, если окна не указаны.
 
-## Ресурс Module
+## Создайте ресурс Module
 
 После загрузки и установки можно проверить, доступны ли модули для использования. Для этого выведите список всех доступных модулей Deckhouse Kubernetes Platform:
 
@@ -131,7 +130,7 @@ module-2                              900      Disabled   example
 
 Готово, модули стали доступны.
 
-## Ресурс ModuleConfig
+## Создайте ресурс ModuleConfig
 
 Теперь можно работать с модулями, как с обычными модулями Deckhouse Kubernetes Platform. Создайте *ModuleConfig*, чтобы включить `module-1`.
 
@@ -142,19 +141,19 @@ metadata:
   name: module-1
 spec:
   enabled: true
-  settings: {}
+  settings: \{}
   version: 1
 ```
 
 Если появятся проблемы с модулем, то Deckhouse Kubernetes Platform запишет ошибку в *ModuleConfig*. Проверьте, что ошибка не отображается:
 
-```sh
+```shell
 kubectl get moduleconfig module-1
 ```
 
 Пример ответа:
 
-```nones
+```none
 NAME              STATE     VERSION   AGE   TYPE                  STATUS
 module-1          Enabled   1         3m    example
 ```

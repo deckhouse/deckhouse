@@ -1,5 +1,5 @@
 ---
-title: "Сделайте форк или скопируйте шаблон репозитория с модулем"
+title: "Разверните модуль в кластере"
 permalink: en/modules-docs/chart-adapt/deploy/
 ---
 
