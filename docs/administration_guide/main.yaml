@@ -1,0 +1,100 @@
+# 
+entries:
+  folders:
+    - title:
+        en: Overview
+        ru: Администрирование
+      url: /
+    - title: Deckhouse Kubernetes Platform
+      folders:
+        - title:
+            en: Access
+            ru: Доступ
+          folders:
+            - title:
+                en: Connection
+                ru: Подключение
+                url: /.html    
+            - title:
+                en: Authentication
+                ru: Аутентификация
+                url: /.html
+            - title:
+                en: Authorisation
+                ru: Авторизация
+                url: /.html
+        - title:
+           en: Installation and maintenance
+           ru: Установка и сопровождение
+           url: /
+          folders:   
+            - title:
+                en: 
+                ru: Установка платформы
+                url: /.html
+            - title:
+                en: 
+                ru: Интеграция платформы с инфраструктурой
+                url: /.html         
+            - title:
+                en: 
+                ru: Настройка платформы
+                url: /.html
+            - title:
+                en: 
+                ru: Обновление платформы
+                url: /.html 
+            - title:
+                en: 
+                ru: Высокая надежность и доступность
+                url: /.html
+            - title:
+                en: 
+                ru: Управление ресурсами платформы
+                url: /.html 
+            - title:
+                en: 
+                ru: Масштабирование платформы
+                url: /.html
+            - title:
+                en: 
+                ru: Безопасность платформы
+                url: /.html 
+            - title:
+                en: 
+                ru: Мониторинг платформы
+                url: /.html
+            - title:
+                en: 
+                ru: Журналирование платформы
+                url: /.html 
+            - title:
+      - title:
+           en: Access control and managment
+           ru: Контроль и управление доступом
+           url: /
+          folders:   
+            - title:
+                en: Sharing 
+                ru: Разделение ресурсов платформы между пользователями
+                url: /.html
+            - title:
+                en: Guides to 
+                ru: Руководства по
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: 
+                - title:
+                    en: Versions
+                    ru: Версионирование
+                  url: /modules-docs/guides/version/
+            - title:
+                en: 
+                ru: 
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: 
