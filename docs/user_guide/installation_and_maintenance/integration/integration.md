@@ -2,6 +2,10 @@
 title: "Cloud provider — AWS: примеры"
 ---
 
+
+
+
+
 ## Пример custom resource `AWSInstanceClass`
 
 Ниже представлен простой пример конфигурации custom resource `AWSInstanceClass`:

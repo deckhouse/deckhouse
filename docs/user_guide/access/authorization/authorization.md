@@ -11,453 +11,954 @@ title: "Модуль user-authz: примеры конфигурации"
 После успешной авторизации пользователь будет перенаправлен на главную страницу Deckhouse, где можно начать работу с системой.
 
 
-## Пример `ClusterAuthorizationRule`
+Аутентифицированная учетная запись по умолчанию не имеет прав на действия в кластере. Для предоставления разрешений в DKP реализован механизм авторизации.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
+**Механизм авторизации**
+
+После аутентификации, пользователь приступает к авторизации. В DKP предусмотрены универсальные методы. Цепочка pods авторизации принимает запрос, содержащий аутентифицированное имя и действие (list, get, watch, create и т. д.) пользователя. В отличие от аутентификации, авторизация выполняется в полном объеме при каждом запросе. Если запрос не сможет пройти проверку хотя бы в одном из pod или не получит однозначного ответа, он будет отклонен с HTTP-кодом 403 (запрещено). Запрос продолжит свой путь, если был принят хотя бы одним pod и при этом никакой другой pod его не отклонил.
+
+Выбором дополнений для авторизации занимается администратор кластера. Для этого он перечисляет их названия через запятую в аргументе командной строки `--authorization-mode`.
+
+Поддерживаются следующие режимы:
+
+* `--authorization-mode=AlwaysDeny` — отклоняет все запросы, подходит для тестирования;
+
+* `--authorization-mode=AlwaysAllow` — разрешает все запросы, подходит на случай, если вам не нужна авторизация;
+
+* `--authorization-mode=RBAC` — включает политику локальной пользовательской авторизации с помощью файла. Это ролевой механизм, в котором хранением и применением политик авторизации занимается API-сервер DKP.
+
+* `--authorization-mode=Node` — это специальный режим, предназначенный для авторизации API-запросов со стороны **kubelets**.
+
+
+DKP предлагает способы принудительного применения разрешений, представленных различными режимами и модулями авторизации:
+
+* **Узел** - режим авторизации узла, который предоставляет сетям **kubelets** разрешения на доступ к службам, конечным точкам, узлам, pods, секретам и постоянным томам для узла. **kubelet** идентифицируется как часть **system:nodes** группы с именем пользователя `system:node:<name>`, которое должно быть авторизовано узлом. Этот режим включен по умолчанию.
+
+* **RBAC** - режим, в котором доступ к ресурсам регулируется с помощью ролей. Чтобы включить RBAC, запустите сервер API с флагом `--authorization-mode=RBAC`. Параметры выставляются в манифесте с конфигурацией **api-server**, которая по умолчанию находится по пути `/etc/DKP/manifests/kube-apiserver.yaml`, в секции **command**. По умолчанию RBAC включен: убедиться в этом можно по значению `authorization-mode` (в уже упомянутом **kube-apiserver.yaml**). Среди его значений могут оказаться и другие типы авторизации (node, webhook, always allow).
+
+Пример настройки режима RBAC:
+
+1. Примените настройки RBAC.
+
+~~~
+
+kubectl apply -f rbac.yaml
+
+~~~
+
+2. Создайте токен для доступа к кластеру.
+
+~~~
+
+kubectl create sa kubernetes -n kube-system
+kubectl create clusterrolebinding kubernetesd --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes
+kubectl describe secret $(kubectl get secret -n kube-system | grep kubernetes | awk '{print $1}') -n kube-system
+
+~~~
+
+3. Скопируйте токен и используйте его для входа в DKP.
+
+### Управление доступом
+
+Управление доступом – важный аспект безопасности DKP. Необходимо убедиться, что только авторизованные пользователи имеют доступ к кластеру.
+
+Для этого:
+
+1. Создайте файл с настройками RBAC (Role-Based Access Control) при помощи **kube-rbac-proxy**. Роль RBAC или кластерная роль содержит правила, которые представляют набор разрешений. Разрешения являются чисто аддитивными (отсутствуют правила – **запретить**).
+
+Роль всегда устанавливает разрешения в определенном пространстве имен; при создании роли необходимо указать пространство имен, к которому она принадлежит.
+
+Для управления доступом в DKP через RBAC используются следующие сущности API:
+
+* Role (роль) и ClusterRole (кластерная роль) — роли, которые служат для описания прав доступа:
+
+  * Роль — права в рамках пространства имен;
+  
+  * Кластерная роль — права в рамках кластера, в том числе к кластер-специфичным объектам типа узлов, non-resources urls (т.е. не связанных с ресурсами DKP — например, /version, /logs, /api*).
+
+* RoleBinding и ClusterRoleBinding — служит для привязки роли и кластерной роли к пользователю, группе пользователей или ServiceAccount.
+
+Сущности: Role и RoleBinding ограничиваются пространством имен (namespace), т.е. должны находиться в пределах одного пространства имен. Однако RoleBinding может ссылаться на ClusterRole, что позволяет создать набор типовых разрешений и управлять доступом с их помощью.
+
+Роли описывают права при помощи наборов правил, содержащих:
+
+* группы API — см. официальную документацию по apiGroups и вывод kubectl api-resources;
+
+* ресурсы (pod, namespace, deployment и т.п.);
+
+* команды (set, update и т.п.);
+
+* имена ресурсов (resourceNames) — для случая, когда нужно предоставить доступ к какому-то определенному ресурсу, а не ко всем ресурсам этого типа.
+
+### Role (роль)
+
+В DKP администратор может назначить субъектам DKP (пользователям, группам или служебным учетным записям) следующие роли:
+
+* view: доступ только для чтения, исключает секреты;
+
+* edit: перечисленное выше + возможность редактировать большинство ресурсов, исключает роли и привязки ролей;
+
+* admin: перечисленное выше + возможность управлять ролями и привязками ролей на уровне пространств имен;
+
+* cluster-admin: все возможные привилегии.
+
+Помимо этого в DKP присутствует два типа пользователей-администраторов:
+
+* **Service Accounts** — аккаунты, управляемые DKP API;
+
+* **Users** — пользователи, управляемые внешними, независимыми сервисами.
+
+Основное отличие этих типов в том, что для Service Accounts существуют специальные объекты в DKP API (они называются — ServiceAccounts), которые привязаны к пространству имен и набору авторизационных данных. Такие пользователи (Service Accounts) предназначены в основном для управления правами доступа к DKP API процессов, работающих в кластере DKP.
+
+Пример простой роли, позволяющей получать список и статус pod и следить за ними в пространстве имен **target-namespace**, представлен ниже:
+
+~~~
+
+kind: Role
 metadata:
-  name: test-rule
-spec:
-  subjects:
-  - kind: User
-    name: some@example.com
-  - kind: ServiceAccount
-    name: gitlab-runner-deploy
-    namespace: d8-service-accounts
-  - kind: Group
-    name: some-group-name
-  accessLevel: PrivilegedUser
-  portForwarding: true
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
-  allowAccessToSystemNamespaces: false
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
-  namespaceSelector:
-    labelSelector:
-      matchExpressions:
-      - key: stage
-        operator: In
-        values:
-        - test
-        - review
-      matchLabels:
-        team: frontend
-```
+namespace: target-namespace
+name: pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
 
-## Создание пользователя
+~~~
 
-В Kubernetes есть две категории пользователей:
+### ClusterRole (кластерная роль)
 
-* ServiceAccount'ы, учет которых ведет сам Kubernetes через API.
-* Остальные пользователи, учет которых ведет не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
-  * через модуль [user-authn](../../modules/150-user-authn/);
-  * с помощью сертификатов.
+Изначально ролевой ресурс **ClusterRole** (кластерная роль) - является ресурсом без пространства имен. Ресурсы имеют разные имена (роль и кластерная роль), потому что объект DKP всегда должен иметь ресурсное или нересурсное пространство имен.
 
-При выпуске сертификата для аутентификации нужно указать в нем имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
+Кластерные роли имеют несколько применений. Можно использовать кластерную роль для:
 
-### Создание ServiceAccount для сервера и предоставление ему доступа
+* разрешения ресурсов в пространстве имен и получения доступа к отдельным пространствам имен;
 
-Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развертывания приложений через CI-системы.  
+* разрешения ресурсов пространства имен и получения доступа ко всем пространствам имен;
 
-1. Создайте ServiceAccount, например в namespace `d8-service-accounts`:
+* определения разрешений для ресурсов, ограниченных кластером.
 
-   ```shell
-   kubectl create -f - <<EOF
-   apiVersion: v1
-   kind: ServiceAccount
-   metadata:
-     name: gitlab-runner-deploy
-     namespace: d8-service-accounts
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: gitlab-runner-deploy-token
-     namespace: d8-service-accounts
-     annotations:
-       kubernetes.io/service-account.name: gitlab-runner-deploy
-   type: kubernetes.io/service-account-token
-   EOF
-   ```
+Если необходимо определить роль в пространстве имен, используйте роль; если необходимо определить роль в масштабе кластера, используйте кластерную роль.
 
-1. Дайте необходимые ServiceAccount права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
+Пример роли в пространстве имен по умолчанию, которую можно использовать для предоставления доступа на чтение к pod, представлен ниже:
 
-   ```shell
-   kubectl create -f - <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: ClusterAuthorizationRule
-   metadata:
-     name: gitlab-runner-deploy
-   spec:
-     subjects:
-     - kind: ServiceAccount
-       name: gitlab-runner-deploy
-       namespace: d8-service-accounts
-     accessLevel: SuperAdmin
-     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
-     allowAccessToSystemNamespaces: true      
-   EOF
-   ```
+~~~
 
-   Если в конфигурации Deckhouse включен режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имен (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
-
-1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
-
-   ```shell
-   export CLUSTER_NAME=my-cluster
-   export USER_NAME=gitlab-runner-deploy.my-cluster
-   export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
-   export FILE_NAME=kube.config
-   ```
-
-1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
-
-   Используйте один из следующих вариантов доступа к API-серверу кластера:
-
-   * Если есть прямой доступ до API-сервера:
-     1. Получите сертификат CA кластера Kubernetes:
-
-        ```shell
-        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
-        ```
-
-     1. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
-
-        ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
-          --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$FILE_NAME
-        ```
-
-   * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
-      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
-
-   * Если используется непубличный CA:
-
-     1. Получите сертификат CA из Secret'а с сертификатом, который используется для домена `api.%s`:
-
-        ```shell
-        kubectl -n d8-user-authn get secrets -o json \
-          $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
-          | jq -rc '.data."ca.crt" // .data."tls.crt"' \
-          | base64 -d > /tmp/ca.crt
-        ```
-
-     2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
-
-        ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-          --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$FILE_NAME
-        ```
-
-   * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
-
-     ```shell
-     kubectl config set-cluster $CLUSTER_NAME \
-       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-       --kubeconfig=$FILE_NAME
-     ```
-
-1. Сгенерируйте секцию `user` с токеном из Secret'а ServiceAccount в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
-     --kubeconfig=$FILE_NAME
-   ```
-
-1. Сгенерируйте контекст в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config set-context $CONTEXT_NAME \
-     --cluster=$CLUSTER_NAME --user=$USER_NAME \
-     --kubeconfig=$FILE_NAME
-   ```
-
-1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
-
-   ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
-   ```
-
-### Создание пользователя с помощью клиентского сертификата
-
-#### Создание пользователя
-
-* Получите корневой сертификат кластера (ca.crt и ca.key).
-* Сгенерируйте ключ пользователя:
-
-  ```shell
-  openssl genrsa -out myuser.key 2048
-  ```
-
-* Создайте CSR, где укажите, что требуется пользователь `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
-
-  ```shell
-  openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-  ```
-
-* Подпишите CSR корневым сертификатом кластера:
-
-  ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-  ```
-
-* Теперь полученный сертификат можно указывать в конфиг-файле:
-
-  ```shell
-  cat << EOF
-  apiVersion: v1
-  clusters:
-  - cluster:
-      certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<хост кластера>:6443
-    name: kubernetes
-  contexts:
-  - context:
-      cluster: kubernetes
-      user: myuser
-    name: myuser@kubernetes
-  current-context: myuser@kubernetes
-  kind: Config
-  preferences: {}
-  users:
-  - name: myuser
-    user:
-      client-certificate-data: $(cat myuser.crt | base64 -w0)
-      client-key-data: $(cat myuser.key | base64 -w0)
-  EOF
-  ```
-
-#### Предоставление доступа созданному пользователю
-
-Для предоставления доступа созданному пользователю создайте `ClusterAuthorizationRule`.
-
-Пример `ClusterAuthorizationRule`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
-  name: myuser
-spec:
-  subjects:
-  - kind: User
-    name: myuser
-  accessLevel: PrivilegedUser
-  portForwarding: true
-```
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
 
-## Настройка `kube-apiserver` для работы в режиме multi-tenancy
+~~~
 
-Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
+Кластерная роль может использоваться для предоставления тех же разрешений, что и простая роль. Поскольку кластерные функции имеют кластерную область, их также можно использовать для предоставления доступа к следующим объектам:
 
-Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/040-control-plane-manager/), никаких ручных действий не требуется.
+* ресурсам, охватываемые кластером (например, узлам);
 
-Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
+* нересурсным конечным точкам (например, сервису **healthz**);
 
-* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например — `--authorization-mode=Node,Webhook,RBAC`);
-* добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
-* добавление `volumeMounts`:
+* ресурсам с пространством имен (например, pods) во всех пространствах имен.
 
-  ```yaml
-  - name: authorization-webhook-config
-    mountPath: /etc/kubernetes/authorization-webhook-config.yaml
-    readOnly: true
-  ```
+**Примечание:** Можно использовать кластерную роль, чтобы разрешить конкретному пользователю запускать команду: `kubectl get pods --all-namespaces`.
 
-* добавление `volumes`:
+Пример кластерной роли, которую можно использовать для предоставления доступа на чтение к секретным данным в любом конкретном пространстве имен или во всех пространствах имен (в зависимости от того, как оно связано):
 
-  ```yaml
-  - name: authorization-webhook-config
-    hostPath:
-      path: /etc/kubernetes/authorization-webhook-config.yaml
-      type: FileOrCreate
-  ```
+~~~
 
-## Как проверить, что у пользователя есть доступ?
-
-Необходимо выполнить следующую команду, в которой будут указаны:
-
-* `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ;
-* `user` — имя пользователя;
-* `groups` — группы пользователя.
-
-> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
-
-```shell
-cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
-{
-  "apiVersion": "authorization.k8s.io/v1",
-  "kind": "SubjectAccessReview",
-  "spec": {
-    "resourceAttributes": {
-      "namespace": "",
-      "verb": "watch",
-      "version": "v1",
-      "resource": "pods"
-    },
-    "user": "system:kube-controller-manager",
-    "groups": [
-      "Admins"
-    ]
-  }
-}
-EOF
-```
-
-В результате увидим, есть ли доступ и на основании какой роли:
-
-```json
-{
-  "allowed": true,
-  "reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-controller-manager\" of ClusterRole \"system:kube-controller-manager\" to User \"system:kube-controller-manager\""
-}
-```
-
-Если в кластере включен режим **multi-tenancy**, нужно выполнить еще одну проверку, чтобы убедиться, что у пользователя есть доступ в namespace:
-
-```shell
-cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
-{
-  "apiVersion": "authorization.k8s.io/v1",
-  "kind": "SubjectAccessReview",
-  "spec": {
-    "resourceAttributes": {
-      "namespace": "",
-      "verb": "watch",
-      "version": "v1",
-      "resource": "pods"
-    },
-    "user": "system:kube-controller-manager",
-    "groups": [
-      "Admins"
-    ]
-  }
-}
-EOF
-```
-
-```json
-{
-  "allowed": false
-}
-```
-
-Сообщение `allowed: false` значит, что webhook не блокирует запрос. В случае блокировки запроса webhook'ом вы получите, например, следующее сообщение:
-
-```json
-{
-  "allowed": false,
-  "denied": true,
-  "reason": "making cluster scoped requests for namespaced resources are not allowed"
-}
-```
-
-## Настройка прав высокоуровневых ролей
-
-Если требуется добавить прав для определенной [высокоуровневой роли](./#ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
-
-Пример:
-
-```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  annotations:
-    user-authz.deckhouse.io/access-level: Editor
-  name: user-editor
+# "namespace" опущено, поскольку ClusterRole не находится в пространстве имен
+name: secret-reader
 rules:
-- apiGroups:
-  - kuma.io
-  resources:
-  - trafficroutes
-  - trafficroutes/finalizers
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - flagger.app
-  resources:
-  - canaries
-  - canaries/status
-  - metrictemplates
-  - metrictemplates/status
-  - alertproviders
-  - alertproviders/status
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-```
----
-title: "Модуль user-authz: FAQ"
----
+- apiGroups: [""]
+ # на уровне HTTP имя ресурса для доступа к cекрету
+ # объекты - это "секреты"
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list"]
+ # Имя роли или объекта ClusterRole должно быть допустимым именем сегмента пути.
 
-## Как создать пользователя?
+~~~
 
-[Создание пользователя](usage.html#создание-пользователя).
+### Привязка роли (RoleBinding) и привязка роли кластеров (ClusterRoleBinding)
 
-## Как ограничить права пользователю конкретными namespace?
+Привязка роли — это разрешение, распространяющееся на определенную роль для пользователя или группы пользователей. Привязка роли содержит список субъектов (пользователей, групп или учетных записей служб) и ссылку на предоставляемую роль. Привязка ролей предоставляет разрешения в пределах определенного пространства имен (namespace), тогда как привязка к кластеру предоставляет доступ ко всему кластеру.
 
-Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Привязка роли может ссылаться на любую роль в том же пространстве имен. В качестве альтернативы, привязка роли может ссылаться на кластерную роль (ClusterRole) и привязывать эту кластерную роль к пространству имен **RoleBinding**. Если необходимо привязать кластерную роль ко всем пространствам имен в кластере, используйте **ClusterRoleBinding**.
 
-## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
+Ниже представлен пример привязки роли **pod-reader** пользователю **maria** в пространстве имен по умолчанию. Это позволит **maria** читать pods в пространстве имен по умолчанию:
 
-Представьте, что пользователь `jane.doe@example.com` состоит в группе `administrators`. Созданы два ClusterAuthorizationRules:
+~~~
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
+apiVersion: rbac.authorization.k8s.io/v1
+# Эта привязка к роли позволяет "maria" читать pods в пространстве имен "default".
+# У вас уже должна быть роль с именем "pod-reader" в этом пространстве имен.
+kind: RoleBinding
 metadata:
-  name: jane
-spec:
-  subjects:
-    - kind: User
-      name: jane.doe@example.com
-  accessLevel: User
-  namespaceSelector:
-    labelSelector:
-      matchLabels:
-        env: review
+name: read-pods
+namespace: default
+subjects:
+  - kind: User
+    name: maria
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role  # укажите значение Role или ClusterRole
+  # укажите имя существующей роли или кластерной роли для привязки
+  name: rbac-role-binding-role
+  apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
-  name: admin
+  name: rbac-role-binding-role
+rules:
+# "" обозначает основную группу API
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+
+~~~
+
+Привязка ролей также может ссылаться на кластерную роль для предоставления разрешений, определенных в роли для ресурсов внутри пространства имен **RoleBinding**. Такие ссылки позволяет определить набор общих ролей в вашем кластере, а затем повторно использовать их в нескольких пространствах имен.
+
+Например, несмотря на то, что следующая привязка ролей ссылается на кластерную роль, **dave** (субъект, чувствительный к регистру) сможет читать секреты только в пространстве имен **development**, потому что пространством имен **привязка ролей** (в его метаданных) является **development**.
+
+~~~
+
+apiVersion: rbac.authorization.k8s.io/v1
+# Эта привязка к роли позволяет "dave" читать секреты в пространстве имен "development".
+# У вас уже должна быть кластерная роль с именем "secret-reader".
+kind: RoleBinding
+metadata:
+name: read-secrets
+#
+# Пространство имен RoleBinding определяет, где предоставляются разрешения.
+# В данном примере предоставляется разрешение только в пределах пространства имен "development".
+namespace: development
+subjects:
+
+apiVersion: rbac.authorization.k8s.io/v1
+# ClusterRoleBinding позволяет любому члену группы "менеджер" читать секреты в любом пространстве имен.
+kind: ClusterRoleBinding
+metadata:
+name: read-secrets-global
+subjects:
+- kind: Group
+  name: manager # Имя чувствительно к регистру
+  apiGroup: rbac.authorization.k8s.io
+  roleRef:
+  kind: ClusterRole
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+  
+~~~
+
+**Примечание:** после создания привязки нельзя изменить роль или кластерную роль, на которую она ссылается. 
+
+Чтобы изменить **roleRef** привязку, удалите объект привязки и создайте замену.
+
+
+Причины ограничения в привязке ролей:
+
+* Создание неизменяемой привязки **roleRef** позволяет предоставлять кому-либо **update** разрешение на существующий объект привязки, чтобы можно было управлять списком субъектов без изменения роли, предоставленной этим субъектам. После создания привязки не получится изменить роль или кластерную роль, на которую она ссылается. При попытке изменить **roleRef** привязки отобразится ошибка проверки. Если необходимо изменить **roleRef** для привязки, нужно удалить объект привязки и создать замену.
+
+* Привязка к другой роли **for** – это другая привязка. Требование удаления/воссоздания привязки для изменения **roleRef** гарантирует, что полный список субъектов в привязке предназначен для предоставления новой роли (в отличие от включения или случайного изменения ссылки на роль без проверки).
+
+* Утилита командной строки **kubectl auth reconcile** создает или обновляет файл манифеста, содержащий объекты RBAC, и обрабатывает удаление и воссоздание объектов привязки, если требуется изменение роли, на которую они ссылаются.
+
+## Безопасность данных
+
+### Обновление безопасности
+
+**Регулярное обновление DKP**
+
+Регулярное обновление DKP поможет обеспечить безопасность сети.
+
+Для обновления DKP необходимо выполнить следующие шаги:
+
+* проверить доступность нового релиза на странице DKP;
+
+* создать резервную копию всех данных;
+
+* обновить узлы кластера по очереди;
+
+* проверить работоспособность кластера после обновления.
+
+**Защита рабочих узлов**
+
+Защита рабочих узлов полностью настраивается пользователем. DKP не предоставляет pods, утилит или файлов для их защиты. Рабочие узлы – это узлы, на которых запускаются контейнеры и приложения. Для обеспечения их безопасности необходимо принять следующие меры:
+
+1. Установите обновления безопасности операционной системы.
+
+2. Ограничьте доступ к портам, используемым DKP.
+
+3. Установите контрольные точки безопасности (Security Contexts) для контейнеров.
+
+4. Опционально используйте необходимые Network Policies для ограничения доступа к сетевым ресурсам.
+
+### Создание секрета (secret)
+
+Существует несколько вариантов создания секрета:
+
+* использовать kubectl;
+
+* использовать файл конфигурации;
+
+* использовать инструмент настройки.
+
+**Ограничения на секретные имена и данные**
+
+Имя секретного объекта должно быть действительным именем поддомена DNS.
+
+Можно указать **data** и/или **stringData** поле при создании файла конфигурации для секрета. **data** И **stringData** поля являются необязательными. Значения для всех ключей в **data** поле должны быть строками в механизме транспортного кодирования base64. Если преобразование в строку base64 нежелательно, можно указать **stringData** поле, которое принимает произвольные строки в качестве значений.
+
+Ключи **data** и **stringData** должны состоять из буквенно-цифровых символов, «**-**», «**_**» или «**..**» Все пары ключ-значение в **stringData** поле внутренне объединены в **data** поле. Если ключ появляется как в **data**, так и в **stringData** поле, значение, указанное в **stringData** поле, имеет приоритет.
+
+**Ограничение по размеру**
+
+Размер отдельных секретов ограничен 1 МБ. Это делается для предотвращения создания очень больших секретов, которые могут исчерпать сервер API и память kubelet. Однако создание множества меньших секретов также может привести к исчерпанию памяти. Вы можете использовать квоту ресурсов, чтобы ограничить количество секретов (или других ресурсов) в пространстве имен.
+
+Редактирование секрета
+
+Можно отредактировать существующий секрет, если секрет не является неизменяемым. Чтобы отредактировать секрет, используйте один из следующих методов:
+
+* kubectl;
+
+* файл конфигурации.
+
+Также можно редактировать данные в секрете с помощью инструмента настройки. Однако этот метод создает новый объект secret с отредактированными данными.
+
+В зависимости от того, как создан секрет, а также от того, как секрет используется в pods, обновления существующих объектов secret автоматически распространяются на pods, которые используют данные.
+
+#### Использование секрета
+
+Секреты могут быть смонтированы как тома данных или представлены как переменные среды, которые будут использоваться контейнером в pod. Секреты также могут использоваться другими частями системы, не подвергаясь прямому воздействию pod. Например, секреты могут содержать учетные данные, которые другие части системы должны использовать для взаимодействия с внешними системами от имени пользователя.
+
+Источники секретных томов проверяются и гарантированно указывают на объект типа Secret. Следовательно, секрет должен быть создан до создания любых pods, которые зависят от него.
+
+Если секрет не может быть извлечен, kubelet периодически повторяет попытки запуска этого pod. Kubelet также сообщает о событии для этого pod, включая подробную информацию о проблеме с извлечением секрета.
+
+**Недопустимые переменные среды**
+
+Если определения переменных среды в спецификации pod считаются недопустимыми именами переменных среды, эти ключи недоступны для контейнера. pod разрешен к запуску.
+
+DKP добавляет событие с причиной, установленной на **InvalidVariableNames**, и сообщение, в котором перечислены пропущенные недопустимые ключи. В следующем примере показан pod, который ссылается на секрет с именем **mysecret**, где **mysecret** содержатся 2 недопустимых ключа: 1badkey и 2alsobad.
+
+~~~
+
+kubectl get events
+
+~~~
+
+Результат будет следующим:
+
+~~~
+
+LASTSEEN   FIRSTSEEN   COUNT     NAME            KIND      SUBOBJECT                         TYPE      REASON
+0s         0s          1         dapi-test-pod   Pod                                         Warning   InvalidEnvironmentVariableNames   kubelet, 127.0.0.1      Keys [1badkey, 2alsobad] from the EnvFrom secret default/mysecret were skipped since they are considered invalid environment variable names.
+
+~~~
+
+**Секреты извлечения образа контейнера**
+
+Если необходимо извлекать образы контейнеров из частного репозитория, нужен способ аутентификации для kubelet на каждом узле в этом репозитории. Например, можно настроить секреты извлечения образов, чтобы сделать это возможным. Эти секреты настраиваются на уровне pod.
+
+
+1. Cоздайте pods:
+
+~~~
+
+cat <<EOF > pod.yaml
+apiVersion: v1
+kind: List
+items:
+- kind: Pod
+  apiVersion: v1
+  metadata:
+  name: prod-db-client-pod
+  labels:
+  name: prod-db-client
+  spec:
+  volumes:
+    - name: secret-volume
+      secret:
+      secretName: prod-db-secret
+      containers:
+    - name: db-client-container
+      image: myClientImage
+      volumeMounts:
+        - name: secret-volume
+          readOnly: true
+          mountPath: "/etc/secret-volume"
+- kind: Pod
+  apiVersion: v1
+  metadata:
+  name: test-db-client-pod
+  labels:
+  name: test-db-client
+  spec:
+  volumes:
+    - name: secret-volume
+      secret:
+      secretName: test-db-secret
+      containers:
+    - name: db-client-container
+      image: myClientImage
+      volumeMounts:
+        - name: secret-volume
+          readOnly: true
+          mountPath: "/etc/secret-volume"
+          EOF
+         # Добавьте pods в тот же kustomization.yaml:
+
+cat <<EOF >> kustomization.yaml
+resources:
+- pod.yaml
+  EOF
+
+~~~
+
+2. Примените все эти объекты на сервере API, выполнив команду:
+
+~~~
+
+kubectl apply -k .
+
+~~~
+
+В файловых системах обоих контейнеров будут присутствовать следующие файлы со значениями для среды каждого контейнера:
+
+~~~
+
+/etc/secret-volume/username
+/etc/secret-volume/password
+
+~~~
+
+Обратите внимание, что спецификации для двух pods отличаются только в одном поле; это облегчает создание pods с различными возможностями из общего шаблона pod.
+
+### Рекомендации
+
+1. Настройте шифрование в состоянии покоя, т.е шифрование для данных, которые в данный момент не используются. 
+
+2. Настройте доступ к секретам с наименьшими привилегиями. 
+
+Компоненты: ограничьте watch-доступ или list-доступ только к наиболее привилегированным компонентам кластера.
+
+Пользователи: ограничьте get-доступ, watch-доступ или list-доступ к секретам. 
+
+Предоставление list-доступа к секретам позволяет субъекту получать содержимое секретов. Пользователь, который может создать pod, использующий секрет, также может видеть значение этого секрета. Даже если кластерные политики не позволяют пользователю напрямую считывать секрет, тот же пользователь может получить доступ к запуску pod, который затем раскрывает секрет.
+
+3. Разрешите доступ только администраторам кластера etcd. 
+
+Для более сложного контроля доступа, такого как ограничение доступа к секретам с определенными параметрами, рассмотрите использование дополнительных механизмов авторизации. 
+
+4. Если существует несколько кластеров etcd, настройте зашифрованную связь TLS 1.2 между кластерами для защиты передаваемых секретных данных.
+
+Можно использовать дополнительных поставщиков хранилища секретных данных для хранения ваших конфиденциальных данных за пределами кластера, а затем настроить pods для доступа к этой информации.
+
+5. Ограничьте доступ к секрету определенных контейнеров. Если определяется несколько контейнеров в pod, и только одному из этих контейнеров требуется доступ к секрету, определите конфигурацию подключения тома или переменной среды, чтобы другие контейнеры не имели доступа к этому секрету.
+
+6. Защитите данные в секретах с помощью шифрования.
+
+7. Не используйте совместное использование манифестов секрета. Если секрет настроен с помощью манифеста с секретными данными, закодированными как base64 (механизмом транспортного кодирования), совместное использование этого файла или его возврат в репозиторий исходного кода означает, что секрет доступен всем, кто может прочитать манифест.
+
+#### Рекомендации по парольной политике
+
+Для повышения безопасности соблюдайте приведенные рекомендации по составлению паролей.
+
+Пароль должен быть:
+
+ * длиной не менее 12 символов;
+
+ * со строчными и прописными буквами, цифрами, специальными символами;
+
+ * уникальным.
+
+Не используйте:
+
+* распространенные словарные слова. Например: «сайт», «книга», «пароль»;
+
+* пустые пароли;
+
+* одинаковые пароли для нескольких сайтов/сервисов;
+
+* персональную или доступную для посторонних личную информацию. Например: имя, фамилия, дата рождения, адрес электронной почты и так далее.
+ 
+## Сетевая безопасность
+
+Сетевая политика определяется в стандартном манифесте формата YAML. Ниже представлен пример:
+
+~~~
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+name: the-network-policy
+namespace: default
 spec:
-  subjects:
-  - kind: Group
-    name: administrators
-  accessLevel: ClusterAdmin
-  namespaceSelector:
-    labelSelector:
-      matchExpressions:
-      - key: env
-        operator: In
-        values:
-        - prod
-        - stage
-```
+podSelector:
+matchLabels:
+role: db
+ingress:
+- from:
+- namespaceSelector:
+  matchLabels:
+  project: cool-project
+- podSelector:
+  matchLabels:
+  role: frontend
+  ports:
+- protocol: tcp
+  port: 6379
+  
+~~~
 
-1. `jane.doe@example.com` имет права запрашивать и просматривать объекты среди всех namespace'ов, помеченных `env=review`.
-2. `Administrators` могут запрашивать, редактировать, получать и удалять объекты на уровне кластера и из namespace'ов, помеченных `env=prod` и `env=stage`.
+Раздел **spec** содержит два важных подраздела — **podSelector** и **ingress**. Первый определяет, к каким pods применяется данная сетевая политика, второй описывает другие пространства имен и pods, к которым могут обращаться эти экземпляры, а также протоколы и порты, используемые для этого.
 
-Так как для `Jane Doe` подходят два правила, необходимо провести вычисления:
-* Она будет иметь самый сильный accessLevel среди всех подходящих правил — `ClusterAdmin`.
-* Опции `namespaceSelector` будут объединены так, что `Jane Doe` будет иметь доступ в namespace'ы, помеченные меткой `env` со значением `review`, `stage` или `prod`.
+Cелектор pod применяет сетевую политику ко всем pod с меткой **role: db**. Раздел **ingress** содержит подраздел **from** с селекторами **namespace** и **pod**. Все пространства имен кластера с меткой **project: cool-project**, а также все их pods, помеченные как role: frontend, могут обращаться к целевому экземпляру pod с меткой role: db. В разделе ports перечислены пары «протокол — порт», которые уточняют допустимые протоколы и порты. В данном случае разрешены протокол tcp и порт 6379 (стандартный для Redis).
 
-> **Note!** Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешен во все namespace'ы, кроме системных, что повлияет на результат вычисления доступных namespace'ов для пользователя.
+Эта политика действует во всем кластере, поэтому доступ к целевому пространству имен будут иметь pods из разных пространств. Текущее пространство имен добавляется по умолчанию, поэтому, даже если оно не помечено как project: cool-project, pods с меткой role: frontend все равно получат доступ.
+
+Сетевая политика оперирует «белыми списками». Изначально доступ закрыт полностью, а затем для pods с подходящими метками открываются отдельные протоколы и порты. Таким образом, если сетевое решение не поддерживает сетевые политики, любой доступ будет запрещен.
+
+При наличии нескольких сетевых политик применяется набор из всех их правил. Например, если в рамках одного pod две разные политики открывают порты 1234 и 5678, это означает, что pod может обращаться к любому из них.
+
+### Настройка сетевых политик
+
+Для настройки сетевой безопасности в DKP необходимо использовать сетевые политики. Сетевые политики определяют, какие типы трафика могут передаваться между pods и какие правила безопасности должны быть применены.
+
+Политики безопасности могут быть определены и импортированы с помощью следующих механизмов:
+
+* с использованием ресурсов DKP NetworkPolicy, CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy. В этом режиме DKP автоматически распространит политики среди всех агентов.
+
+* c импортированием непосредственно в агент через CLI или ссылку на API агента. Этот метод не обеспечивает автоматического распространения политик среди всех агентов. Пользователь несет ответственность за импорт политики во всех необходимых агентах.
+
+Для использования Cilium в DKP, можно воспользоваться преимуществами политики распространения для пользователя. В этом режиме DKP отвечает за распространение политик по всем узлам, и Cilium автоматически применяет политики. Для первоначальной настройки сетевых политик в DKP доступны три формата:
+
+* Стандартный ресурс NetworkPolicy, который поддерживает политики L3 и L4 при входе или выходе модуля.
+
+* Расширенный формат CiliumNetworkPolicy, который доступен как **CustomResourceDefinition**, c поддержкой спецификации политик на уровнях 3-7 как для входа, так и для выхода.
+
+* Формат CiliumClusterwideNetworkPolicy, который представляет собой **CustomResourceDefinition** для определения политик всего кластера, применяемого Cilium. Спецификация такая же, как у CiliumNetworkPolicy, но без указанного пространства имен.
+
+Cilium поддерживает одновременное выполнение нескольких из этих типов политик.
+
+**Примечание:** cоблюдайте осторожность при одновременном использовании нескольких типов политик, поскольку это может привести к путанице. Также возможны ситуации с непреднамеренным доступом из-за конфликта политик.
+
+Примеры создания сетевой политики 4 уровня:
+
+Политика уровня 4 может быть указана в дополнение к политикам уровня 3 или независимо от них. Это ограничивает способность конечной точки отправлять и/или получать пакеты на определенном порту с использованием определенного протокола. Если для конечной точки не указана политика уровня 4, конечной точке разрешено отправлять и получать сообщения по всем портам и протоколам уровня 4, включая ICMP. Если указана какая-либо политика уровня 4, то ICMP будет заблокирован, если только это не связано с подключением, которое иным образом разрешено политикой. Политики уровня 4 применяются к портам после того, как было применено сопоставление портов службы.
+
+Политика уровня 4 может быть указана как при входе, так и при выходе с помощью поля `toPorts`. 
+
+Поле `toPorts` принимает структуру `PortProtocol`, которая определяется следующим образом:
+
+~~~
+
+// PortProtocol specifies an L4 port with an optional transport protocol
+type ,  struct {
+        // Port is an L4 port number. For now the string will be strictly
+        // parsed as a single uint16. In the future, this field may support
+        // ranges in the form "1024-2048"
+        Port  
+
+        string`json:"port"`// Protocol is the L4 protocol. 
+        /If omitted or empty, any protocol// matches. Accepted values: "TCP", "UDP", ""/"ANY"
+        //
+        // Matching on ICMP is not supported.
+        //
+        // +optional
+        Protocol  
+},,
+
+~~~
+
+### Защита API-сервера
+
+API-сервер – это центральная часть DKP, через которую осуществляется управление кластером. Поэтому очень важно обеспечить его безопасность.
+
+**kubectl** предоставляет команду `auth can-i` для быстрого запроса уровня авторизации API. Команда использует `SelfSubjectAccessReview API`, чтобы определить, может ли текущий пользователь выполнить данное действие, и работает независимо от используемого режима авторизации.
+
+~~~
+
+kubectl auth can-i create deployments --namespace dev
+
+~~~
+
+Будет представлен результат, похожий на следующий:
+
+~~~
+
+yes
+
+~~~
+
+Выполните следующую команду:
+~~~
+
+kubectl auth can-i create deployments --namespace prod
+
+~~~
+
+Будет представлен результат, похожий на следующий:
+
+~~~
+
+no
+
+~~~
+
+Для администраторов доступна опция «олицетворения» — отправки запросов от лица другого пользователя для отладки политики авторизации.
+
+Сделать это можно следующим образом:
+
+~~~
+
+kubectl auth can-i list secrets --namespace dev --as dave
+
+~~~
+
+Вывод будет следующим:
+
+~~~
+
+no
+
+~~~
+
+Проверьте, является ли ServiceAccount именем **dev-sa** в пространстве имен. **dev** может отображать pods в пространстве имен **target**:
+
+~~~
+
+kubectl auth can-i list pods \
+--namespace target \
+--as system:serviceaccount:dev:dev-sa
+
+~~~
+
+Будет представлен результат, похожий на следующий:
+
+~~~
+
+yes
+
+~~~
+
+**SelfSubjectAccessReview** является частью **authorization.k8s.io** группы API, которая предоставляет авторизацию сервера API внешним службам. Другие ресурсы, которые входят в эту группу:
+
+* **SubjectAccessReview** - доступ для любого пользователя, а не только для текущего. Полезно для делегирования решений по авторизации серверу API. Например, серверы kubelet и extension API используют это для определения доступа пользователей к своим собственным API.
+* **LocalSubjectAccessReview** - доступ, похожий на SubjectAccessReview, но ограничен определенным пространством имен.
+* **SelfSubjectRulesReview** - доступ, возвращающий набор действий, которые пользователь может выполнить в пространстве имен. Полезно для пользователей, чтобы быстро обобщить свой собственный доступ, или для пользовательских интерфейсов, чтобы скрыть/показать действия.
+
+Эти API могут быть запрошены путем создания обычных ресурсов DKP, где поле ответа **статус** возвращаемого объекта - является результатом запроса.
+
+~~~
+
+kubectl create -f - -o yaml << EOF
+apiVersion: authorization.k8s.io/v1
+kind: SelfSubjectAccessReview
+spec:
+resourceAttributes:
+group: apps
+resource: deployments
+verb: create
+namespace: dev
+EOF
+
+~~~
+
+Созданный **SelfSubjectAccessReview** представлен ниже:
+
+~~~
+
+apiVersion: authorization.k8s.io/v1
+kind: SelfSubjectAccessReview
+metadata:
+creationTimestamp: null
+spec:
+resourceAttributes:
+group: apps
+resource: deployments
+namespace: dev
+verb: create
+status:
+allowed: true
+denied: false
+
+~~~
+
+Для защиты API-сервера:
+
+1. Запустите API-сервер с использованием TLS 1.2-сертификата:
+
+~~~
+
+sudo kubeadm init --control-plane-endpoint "yourdomain.com" --upload-certs
+
+~~~
+
+2. Создайте файл с настройками TLS 1.2:
+
+~~~
+
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: stable
+controlPlaneEndpoint: "yourdomain.com:6443"
+certificatesDir: /etc/kubernetes/pki
+apiServer:
+  extraArgs:
+    authorization-mode: Node,RBAC
+    audit-log-path: /var/log/kubernetes/audit.log
+    audit-policy-file: /etc/kubernetes/audit-policy.yaml
+    secure-port: "6443"
+    TLS 1.2-cert-file: /etc/kubernetes/pki/apiserver.crt
+    TLS 1.2-private-key-file: /etc/kubernetes/pki/apiserver.key
+    service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+    service-account-issuer: kubernetes.default.svc
+
+~~~
+
+3. Примените настройки TLS 1.2:
+
+~~~
+
+sudo kubeadm init phase certs apiserver --config=config.yaml
+sudo systemctl restart kube-apiserver
+
+~~~
+
+
+### Конфигурация безопасности, ограничений и учетных записей
+
+К именам ключей внутри объектов применяются те же правила, что и к поддоменам в DNS (без начальной точки).
+
+**Декодирование объектов secret**
+
+Получить содержимое объекта secret можно с помощью команды `kubectl get secret`:
+
+~~~
+
+> kubectl get secrets/hush-hash -o yaml
+apiVersion: v1
+data:
+password: Y3V0b2Zmcw==
+username: dG9iaWFz
+kind: Secret
+metadata:
+creationTimestamp: 2018-01-15T23:43:50Z
+name: hush-hash
+namespace: default
+resourceVersion: "2030851"
+selfLink: /api/v1/namespaces/default/secrets/hush-hash
+uid: f04641ef-fa4d-11e7-beab-080027c94384
+type: Opaque
+The values are base64-encoded. You need to decode them yourself:
+> echo "Y3V0b2Zmcw==" | base64 --decode
+cutoofs
+
+~~~
+
+Значения хранятся в кодировке base64. Необходимо декодировать их самостоятельно:
+
+~~~
+
+> echo "Y3V0b2Zmcw==" | base64 —decode
+cutoofs
+
+~~~
+
+**Использование объектов secret в контейнерах**
+
+Контейнеры могут обращаться к объектам secret через файлы, подключая тома из pods. Для этого можно задействовать и переменные окружения. Еще один вариант — прямой доступ к API у DKP (если служебная учетная запись контейнера имеет подходящие права) или применение команды `kubectl get secret`.
+
+Чтобы задействовать объект secret, подключенный в виде тома, следует объявить этот том в манифесте pod и указать в спецификации контейнера:
+
+~~~
+
+{
+   "apiVersion":"v1",
+   "kind":"Pod",
+   "metadata":{
+      "name":"pod-with-secret",
+      "namespace":"default"
+   },
+   "spec":{
+      "containers":[
+         {
+            "name":"the-container",
+            "image":"redis",
+            "volumeMounts":[
+               {
+                  "name":"secret-volume",
+                  "mountPath":"/mnt/secret-volume",
+                  "readOnly":true
+               }
+            ]
+         }
+      ],
+      "volumes":[
+         {
+            "name":"secret-volume",
+            "secret":{
+               "secretName":"hush-hash"
+            }
+         }
+      ]
+   }
+}
+
+~~~
+
+Название тома pod (secret-volume) привязывает его к точке подключения в контейнере. Разные контейнеры могут подключить один и тот же том. После запуска этого pod имя пользователя и пароль будут доступны в виде файлов внутри каталога **/etc/secret-volume**:
+
+~~~
+
+> kubectl exec pod-with-secret cat /mnt/secret-volume/username
+tobias
+> kubectl exec pod-with-secret cat /mnt/secret-volume/password
+cutoffs
+
+~~~
+
+**Примечание:** Приведенные рекомендации по настройке парольной политики не должны противоречить требованиям внутренних документов Заказчика, отраслевых и национальных стандартов, требований уполномоченных регуляторов и законодательства РФ.
+
+### Мультиарендность
+
+
+Пространства имен в DKP необходимы для безопасных мультиарендных кластеров. Существует возможность добавлять собственные пространства имен к стандартному пространству имен и встроенной системе kube. Ниже представлен файл YAML, который создает новое пространство имен под названием **custom-namespace**. Для этого достаточно метаданных с одним лишь полем name:
+
+~~~
+
+apiVersion: v1
+kind: Namespace
+metadata:
+name: custom-namespace
+
+~~~
+
+Создайте пространство имен:
+
+~~~
+
+> Kubectl create -f custom-namespace.yaml
+namespace "custom-namespace" created
+> kubectl get namesapces
+NAME STATUS AGE
+custom-namespace Active 39s
+default Active 32d
+kube-system Active 32d
+
+~~~
+
+Поле состояния может быть равно active или terminating. Состояние terminating наступает при удалении пространства имен, в этом случае не получится создавать в нем новые ресурсы. Это упрощает освобождение ресурсов пространства имен и гарантирует его полное удаление. В противном случае контроллер репликации создавал бы новые pods вместо удаленных.
+
+Для работы с пространством имен в команде kubectl укажите аргумент `--namespace`:
+
+~~~
+
+> kubectl create -f some-pod.yaml --namespace=custom-namespace
+pod "some-pod" created
+
+~~~
+
+В новом пространстве имен значится лишь один pod, который был только что создан:
+
+~~~
+
+> kubectl get pods --namespace=custom-namespace
+NAME READY STATUS RESTARTS AGE
+some-pod 1/1 Running 0 6m
+
+~~~
+
+Если опустить аргумент `--namespace`, получится список pods в стандартном пространстве имен:
+
+~~~
+
+> Kubectl get pods
+NAME READY STATUS RESTARTS AGE
+echo-3580479493-n66n4 1/1 Running 16 32d
+leader-elector-191609294-lt95t 1/1 Running 4 9d
+leader-elector-191609294-m6fb6 1/1 Running 4 9d
+leader-elector-191609294-piu8p 1/1 Running 4 9d
+pod-with-secret 1/1 Running 1 1h
+
+~~~
+
+## Управление ключами и сертификатами
+
+### Создание сертификатов и ключей для аутентификации и шифрования
+
+Настройка является опциональной.
+
+1. Создайте корневой сертификат (CA - Certificate Authority) и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl req -newkey rsa:2048 -nodes -keyout ca.key -x509 -days 365 -out ca.crt
+
+~~~
+
+2. Создайте сертификат для API сервера и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl genrsa -out apiserver.key 2048
+openssl req -new -key apiserver.key -out apiserver.csr
+openssl x509 -req -in apiserver.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out apiserver.crt -days 365
+
+~~~
+
+3. Создайте сертификат для клиентов (например, **kubectl**) и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl genrsa -out client.key 2048
+openssl req -new -key client.key -out client.csr
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 365
+
+~~~
+
+4. Создайте сертификат для **etcd** и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl genrsa -out etcd.key 2048
+openssl req -new -key etcd.key -out etcd.csr
+openssl x509 -req -in etcd.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out etcd.crt -days 365
+
+~~~
+
+5. Создайте сертификат для **kubelet** и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl genrsa -out kubelet.key 2048
+openssl req -new -key kubelet.key -out kubelet.csr
+openssl x509 -req -in kubelet.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out kubelet.crt -days 365
+
+~~~
+
+6. Создайте сертификат для **kube-proxy** и закрытый ключ с помощью следующей команды:
+
+~~~
+
+openssl genrsa -out kube-proxy.key 2048
+openssl req -new -key kube-proxy.key -out kube-proxy.csr
+openssl x509 -req -in kube-proxy.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out kube-proxy.crt -days 365
+
+~~~
+
+7. Сохраните все созданные сертификаты и ключи в соответствующих файлах (которые создаются пользователем для хранения ключей) на сервере.
+
+8. Измените конфигурацию DKP (пропишите пути к файлам с ключами), чтобы использовать созданные сертификаты и ключи для аутентификации и шифрования.
+
+Для того чтобы ключи не были скомпрометированы, проводите регулярную ротацию ключей безопасности и сертификатов.
+
+DKP будет автоматически ротировать некоторые сертификаты (в частности, клиентский и серверный сертификаты Kubelet) созданием новых CSR по истечении времени действия текущих.
