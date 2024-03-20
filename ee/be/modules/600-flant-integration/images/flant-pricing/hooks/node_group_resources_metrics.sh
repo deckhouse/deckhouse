@@ -17,7 +17,12 @@ function __config__() {
       queue: /node_group_resources_metrics
       apiVersion: deckhouse.io/v1
       kind: NodeGroup
-      jqFilter: {"name": .metadata.name, "labels": .spec.labels, "taints": .spec.taints}
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "labels": .spec.labels,
+          "taints": .spec.taints
+        }
 EOF
 }
 
