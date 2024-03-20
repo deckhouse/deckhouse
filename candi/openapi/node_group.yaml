@@ -2094,9 +2094,9 @@ spec:
                           type: string
                           x-doc-default: Container
                           description: |
-                            Defines the granularity at which to perform resource alignment at the container or pod level in the following modes:
-                              - `Container`. The calculation of preferred resources is performed independently for each container.
-                              - `Pod`. The calculation of the required resources is performed for each pod, where all its containers are treated as a single system.
+                            Определение гранулярности выравнивания ресурсов:
+                            - `Container`. Вычисление предпочтительных ресурсов выполняется для контейнера. При вычислении не учитывается, что несколько контейнеров относятся к одному поду.
+                            - `Pod`. Вычисление предпочтительных ресурсов выполняется для пода. Все контейнеры пода рассматриваются как единое целое при вычислении.
                           enum:
                             - Container
                             - Pod
@@ -2104,15 +2104,15 @@ spec:
                           type: string
                           x-doc-default: None
                           description: |
-                           Defines a resource aligment policy taking into account node topology in scheduling pods.
+                          Определение политики выравнивания ресурсов с учетом топологии узлов при планировании пода.
 
-                           Four policies are supported:
-                            - `None` - no resource alignment is performed (used by default).
-                            - `BestEffort` - a preferred NUMA node is defined for each pod container. If there is no suitable node to place a new pod, the new pod will be placed on a free node, and the already running pod will remain in its place.
-                            - `Restricted` - a preferred NUMA node is defined for each pod container. If there is no suitable node to place a new pod, the new pod will not be placed on a free node and the already running pod will be stopped.
-                            - `SingleNumaNode` - a preferred NUMA node is defined for each pod container. If there is no preferred NUMA node for all pod containers, the new pod is not placed on a node, and the already running pod will be stopped.
-                            
-                            For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies) for more information.
+                            Поддерживаются четыре политики:
+                            - `None` — выравнивание ресурсов не выполняется (используется по умолчанию).
+                            - `BestEffort` — для каждого контейнера определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под будет запланирован на узел без учета данных менеджера топологии, а уже запущенный под продолжит работу.
+                            - `Restricted` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под не будет запланирован на узел, а уже запущенный под будет остановлен.
+                            - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
+
+                            Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
                           enum:
                             - None
                             - BestEffort
