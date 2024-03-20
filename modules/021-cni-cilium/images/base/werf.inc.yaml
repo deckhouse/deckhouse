@@ -15,7 +15,7 @@ git:
     install:
     - binary_replace.sh
 shell:
-  install:
+  beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive
   - export TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
@@ -77,8 +77,9 @@ shell:
   # apt clean
   - apt-get purge --auto-remove && apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  install:
   # Install Go
-  - curl -sfL https://go.dev/dl/go${{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
+  - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
   - rm -rf /usr/local/go
   - tar -C /usr/local -xzf go.tar.gz
   - rm go.tar.gz
