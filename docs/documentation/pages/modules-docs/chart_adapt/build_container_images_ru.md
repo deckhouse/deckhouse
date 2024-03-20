@@ -1,6 +1,7 @@
 ---
 title: "Соберите образ контейнера"
-permalink: /modules-docs/chart-adapt/build-container-images/
+permalink: ru/modules-docs/chart-adapt/build-container-images/
+lang: ru
 ---
 {% raw %}
 
