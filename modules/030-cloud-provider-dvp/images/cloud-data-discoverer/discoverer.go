@@ -22,7 +22,7 @@ import (
 
 type Discoverer struct {
 	logger *log.Entry
-	config *Config
+	client kubernetes.Interface
 }
 
 type Config struct {
@@ -47,8 +47,8 @@ func parseEnvToConfig() (*Config, error) {
 }
 
 // Client Creates kubeclient
-func (c *Config) client() (*kubernetes.Clientset, error) {
-	kubeconfigData, err := base64.StdEncoding.DecodeString(c.KubeconfigDataBase64)
+func getClient(KubeconfigDataBase64 string) (*kubernetes.Clientset, error) {
+	kubeconfigData, err := base64.StdEncoding.DecodeString(KubeconfigDataBase64)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode kubeconfig data: %v", err.Error())
 	}
@@ -67,7 +67,6 @@ func (c *Config) client() (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, fmt.Errorf("building kubernetes client: %v", err.Error())
 	}
-
 	return client, err
 }
 
@@ -77,9 +76,14 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Cannot get opts from env: %v", err)
 	}
 
+	client, err := getClient(config.KubeconfigDataBase64)
+	if err != nil {
+		logger.Fatalf("Failed to create kubernetes client: %v", err)
+	}
+
 	return &Discoverer{
 		logger: logger,
-		config: config,
+		client: client,
 	}
 }
 
@@ -92,16 +96,10 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		}
 	}
 
-	client, err := d.config.client()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create kubernetes client: %v", err)
-	}
-
 	storageClasses := make([]v1alpha1.DVPStorageClass, 0)
-	scList, err := client.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{})
+	scList, err := d.client.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list storage classes: %v", err)
-
 	}
 	for _, sc := range scList.Items {
 		scdata := &v1alpha1.DVPStorageClass{}
