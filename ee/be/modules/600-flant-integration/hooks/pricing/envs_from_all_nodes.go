@@ -90,7 +90,7 @@ func nodeCapacityHandler(input *go_hook.HookInput) error {
 	for k, v := range ngc {
 		nodeGroupsCapacity[k] = NodeGroupCapacityInt64{
 			CPU:    v.CPU.Value(),
-			Memory: v.Memory.Value() / 1024 / 1024,
+			Memory: v.Memory.Value() / 1024,
 		}
 	}
 
