@@ -46,12 +46,18 @@ editions:
 - name: SE
   modulesDir: "ee/se/modules"
 
+  excludeModules:
+  - dashboard
+
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:
     - openstack
     - vsphere
     - vcd
+    
+  excludeModules:
+  - dashboard
 
 - name: FE
   modulesDir: "ee/fe/modules"
