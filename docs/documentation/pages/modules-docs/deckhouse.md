@@ -1,6 +1,6 @@
 ---
 title: "How to publish module in the DKP claster?"
-permalink: en/modules-docs/module-anatomy/deckhouse/
+permalink: en/modules-docs/deckhouse/
 ---
 
 В этой разделе рассмотрен процесс публикации настроенного модуля в кластере Deckhouse Kubernetes Platform, а также представлена информация, где можно просмотреть результаты.
