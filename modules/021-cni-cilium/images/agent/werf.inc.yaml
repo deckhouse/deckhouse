@@ -206,20 +206,20 @@ shell:
   # common dirs and symlinks
   - mkdir -p /relocate_symlinks
   #- mkdir -p /relocate_symlinks/usr/bin
-  - ln -f -s usr/bin/ "/relocate_symlinks/bin"
+  - ln -f -s usr/bin "/relocate_symlinks/bin"
   - mkdir -p /relocate_symlinks/usr/lib
-  - ln -f -s usr/lib/ "/relocate_symlinks/lib"
+  - ln -f -s usr/lib "/relocate_symlinks/lib"
   - mkdir -p /relocate_symlinks/usr/lib32
-  - ln -f -s usr/lib32/ "/relocate_symlinks/lib32"
+  - ln -f -s usr/lib32 "/relocate_symlinks/lib32"
   - mkdir -p /relocate_symlinks/usr/lib64
-  - ln -f -s usr/lib64/ "/relocate_symlinks/lib64"
+  - ln -f -s usr/lib64 "/relocate_symlinks/lib64"
   - mkdir -p /relocate_symlinks/usr/libx32
-  - ln -f -s usr/libx32/ "/relocate_symlinks/libx32"
+  - ln -f -s usr/libx32 "/relocate_symlinks/libx32"
   #- mkdir -p /relocate_symlinks/usr/sbin
-  #- ln -f -s usr/sbin/ "/relocate_symlinks/sbin"
+  #- ln -f -s usr/sbin "/relocate_symlinks/sbin"
   - mkdir -p /relocate_symlinks/var /relocate_symlinks/run /relocate_symlinks/run/lock
-  - ln -f -s /run/ "/relocate_symlinks/var/run"
-  - ln -f -s /run/lock/ "/relocate_symlinks/var/lock"
+  - ln -f -s /run "/relocate_symlinks/var/run"
+  - ln -f -s /run/lock "/relocate_symlinks/var/lock"
 ---
 image: {{ $.ModuleName }}/base-distroless
 fromImage: common/distroless
