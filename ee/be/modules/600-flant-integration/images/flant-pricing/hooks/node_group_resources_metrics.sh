@@ -53,7 +53,7 @@ function __main__() {
       {
         "name": "flant_pricing_node_group_memory_bytes",
         "group": $group,
-        "set": $memory,
+        "set": ($memory | tonumber),
         "labels": $labels
       }
       '
@@ -62,7 +62,7 @@ function __main__() {
       {
         "name": "flant_pricing_node_group_cpu_cores",
         "group": $group,
-        "set": $cpu,
+        "set": ($cpu | tonumber),
         "labels": $labels
       }
       ' >> $METRICS_PATH
@@ -70,7 +70,7 @@ function __main__() {
       {
         "name": "flant_pricing_node_group_memory_bytes",
         "group": $group,
-        "set": $memory,
+        "set": ($memory | tonumber),
         "labels": $labels
       }
       ' >> $METRICS_PATH
