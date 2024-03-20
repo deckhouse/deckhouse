@@ -49,6 +49,15 @@ function __main__() {
     memory="$(jq -cr '.memory' <<< "$ng_capacity")"
     labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels // {} * {"name": .name}')"
 
+    context::jq -c --arg memory "$memory" --argjson labels "$labels" --arg group "$group" '
+      {
+        "name": "flant_pricing_node_group_memory_bytes",
+        "group": $group,
+        "set": $memory,
+        "labels": $labels
+      }
+      '
+
     context::jq -c --arg cpu "$cpu" --argjson labels "$labels" --arg group "$group" '
       {
         "name": "flant_pricing_node_group_cpu_cores",
