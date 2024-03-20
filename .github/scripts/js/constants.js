@@ -58,7 +58,7 @@ const labels = {
   'edition/ce': { type: 'edition', edition: 'CE' },
   'edition/ee': { type: 'edition', edition: 'EE' },
   'edition/be': { type: 'edition', edition: 'BE' },
-	'edition/se': { type: 'edition', edition: 'SE' }
+  'edition/se': { type: 'edition', edition: 'SE' }
 };
 module.exports.knownLabels = labels;
 
@@ -153,6 +153,6 @@ const editions = [
   'EE',
   'FE',
   'BE',
-	'SE'
+  'SE'
 ];
 module.exports.knownEditions = editions;
