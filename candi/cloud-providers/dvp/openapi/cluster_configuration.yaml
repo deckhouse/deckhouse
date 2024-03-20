@@ -81,8 +81,8 @@ apiVersions:
                   type: "ClusterVirtualMachineImage"
                   name: "ubuntu"
         provider:
-          kubeconfigBase64: ZXhhbXBsZQo=
-          namespace: "<namespace>"
+          kubeconfigDataBase64: ZXhhbXBsZQo=
+          namespace: default
 
     additionalProperties: false
     required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider]
@@ -456,7 +456,7 @@ apiVersions:
           Contains settings to connect to the Deckhouse Kubernetes Platform API.
         additionalProperties: false
         properties:
-          kubeconfigBase64:
+          kubeconfigDataBase64:
             description: |
               Kubeconfig to connect to Deckhouse Kubernetes Platform API base64 encoded.
             type: string
@@ -468,5 +468,5 @@ apiVersions:
               > Caution! If not explicitly specified, the default namespace for kubeconfig will be used.
             type: string
         required:
-        - kubeconfigBase64
+        - kubeconfigDataBase64
         - namespace
