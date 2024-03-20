@@ -27,8 +27,6 @@ EOF
 }
 
 function __main__() {
-  env
-  context::jq
   ngs_capacity="$FP_NODE_GROUPS_CAPACITY"
   group="group_node_group_resources_metrics"
 
