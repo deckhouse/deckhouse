@@ -233,9 +233,7 @@ import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
-  before: setup
-shell:
-  setup:
+  before: install
 docker:
   ENV:
     HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
