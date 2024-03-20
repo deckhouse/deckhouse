@@ -232,12 +232,14 @@ import:
 # New Main Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
-fromImage: {{ $.ModuleName }}/base-distroless
+fromImage: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
   before: setup
+shell:
+  setup:
 docker:
   ENV:
     HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
