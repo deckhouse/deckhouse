@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type Node struct {
+type NodeCapacity struct {
 	Capacity  v1.ResourceList `json:"capacity"`
 	NodeGroup string          `json:"nodeGroup"`
 }
@@ -35,7 +35,7 @@ func ApplyNodeCapacityFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
-	n := &Node{}
+	n := &NodeCapacity{}
 
 	if _, ok := node.ObjectMeta.Labels["node.deckhouse.io/group"]; !ok {
 		return n, nil
@@ -72,7 +72,7 @@ func nodeCapacityHandler(input *go_hook.HookInput) error {
 	nodeGroupsCapacity := map[string]NodeGroupCapacityInt64{}
 
 	for _, s := range snaps {
-		node := s.(*Node)
+		node := s.(*NodeCapacity)
 
 		if node.NodeGroup != "" {
 			if _, ok := ngc[node.NodeGroup]; !ok {
