@@ -68,7 +68,7 @@ function __main__() {
       ' >> $METRICS_PATH
     context::jq -c --arg memory "$memory" --argjson labels "$labels" --arg group "$group" '
       {
-        "name": "flant_pricing_node_group_memory_bytes",
+        "name": "flant_pricing_node_group_memory_mb",
         "group": $group,
         "set": ($memory | tonumber),
         "labels": $labels
