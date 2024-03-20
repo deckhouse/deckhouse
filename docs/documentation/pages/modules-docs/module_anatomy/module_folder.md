@@ -313,7 +313,7 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 
 * Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) - это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
 
-* Доступы в registry из ресурса [_ModuleSource_](../deckhouse.md/#ресурс-modulesource) доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
+* Доступы в registry из ресурса [_ModuleSource_](../deckhouse.md#ресурс-modulesource) доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
 
 * Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 

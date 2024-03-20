@@ -31,9 +31,7 @@ entries:
                 en: Global configuration
                 ru: Глобальные настройки
               url: /deckhouse-configure-global.html
-            - title: 
-                en: Custom Resources
-                ru: Кастомные ресурсы
+            - title: Custom Resources
               url: /cr.html
         - title:
             en: How to develop a module?
