@@ -22,7 +22,7 @@ spec:
 Параметры ресурса:
 * Имя модуля **metadata.name**. Должно соответствовать имени модуля в *ModuleSource* (параметр `.status.modules.[].name`).
 
-* Тэг образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
+* Тег образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
 
 * Имя *ModuleSource* **spec.source**. Выдает данные для авторизации в registry.
 
@@ -81,7 +81,7 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
- Этот ресурс будет проверять тэг образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
+ Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (<ms:spec.registry.repo>/<mpo:metadata.name>:<mpo:spec.imageTag>).
 
  При каждом обновлении статус этого ресурса будет меняться:
 

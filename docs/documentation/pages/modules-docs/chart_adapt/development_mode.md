@@ -21,7 +21,7 @@ spec:
 Параметры ресурса:
 * Имя модуля **metadata.name**. Должно соответствовать имени модуля в *ModuleSource* (параметр `.status.modules.[].name`).
 
-* Тэг образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
+* Тег образа контейнера **spec.imageTag**. Может быть любым. Например, ~pr333~, ~my-branch~.
 
 * Имя *ModuleSource* **spec.source** . Выдает данные для авторизации в registry.
 
