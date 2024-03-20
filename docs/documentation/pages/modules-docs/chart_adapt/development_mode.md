@@ -1,6 +1,6 @@
 ---
 title: "Режим разработчика"
-permalink: en/modules-docs/chart-adapt/development-mode/
+permalink: en/modules-docs/development-mode/
 ---
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс *ModulePullOverride*.

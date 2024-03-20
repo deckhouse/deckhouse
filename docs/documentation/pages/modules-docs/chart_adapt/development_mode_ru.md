@@ -1,6 +1,6 @@
 ---
 title: "Режим разработчика"
-permalink: ru/modules-docs/chart-adapt/development-mode/
+permalink: ru/modules-docs/development-mode/
 lang: ru
 ---
 
