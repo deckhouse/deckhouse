@@ -48,7 +48,7 @@ function __main__() {
     fi
     cpu="$(jq -cr '.CPU' <<< "$ng_capacity")"
     memory="$(jq -cr '.memory' <<< "$ng_capacity")"
-    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels * {"name": .metadata.name}')"
+    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels // {} * {"name": .metadata.name}')"
 
     context::jq -c --arg cpu "$cpu" --argjson labels "$labels" --arg group "$group" '
       {
