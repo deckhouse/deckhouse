@@ -58,8 +58,8 @@ entries:
                 ru: Как опубликовать модуль в кластере DKP?
               url: /modules-docs/deckhouse/
             - title:
-                en: Monitoring modules
-                ru: Мониторинг модуля
+                en: Versioning modules
+                ru: Версионирование модуля
               url: /modules-docs/version/
             - title:
                 en: How to adapt an existing chart?

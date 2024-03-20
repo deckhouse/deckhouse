@@ -1,5 +1,5 @@
 ---
-title: "Monitoring modules"
+title: "Versioning modules"
 permalink: en/modules-docs/version/
 ---
 

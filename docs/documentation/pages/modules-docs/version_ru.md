@@ -1,5 +1,5 @@
 ---
-title: "Мониторинг модуля"
+title: "Версионирование модуля"
 permalink: ru/modules-docs/version/
 lang: ru
 ---
