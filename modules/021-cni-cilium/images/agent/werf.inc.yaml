@@ -219,6 +219,9 @@ shell:
   - mkdir -p /relocate/usr/libx32
   - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
   - ln -f -s usr/libx32 "/relocate/libx32"
+  #
+  - ln -f -s /run "/relocate/var/run"
+  - ln -f -s /run/lock "/relocate/var/lock"
 ---
 # #####################################################################
 # New Main Image (Distroless)
