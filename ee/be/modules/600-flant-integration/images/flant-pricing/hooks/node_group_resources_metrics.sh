@@ -49,11 +49,11 @@ function __main__() {
     fi
     cpu="$(jq -cr '.CPU' <<< "$ng_capacity")"
     memory="$(jq -cr '.memory' <<< "$ng_capacity")"
-    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels // {} * {"name": .metadata.name}')"
+    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels // {} * {"name": .name}')"
 
     context::jq -c --arg cpu "$cpu" --argjson labels "$labels" --arg group "$group" '
       {
-        "name": flant_pricing_node_group_cpu_cores,
+        "name": "flant_pricing_node_group_cpu_cores",
         "group": $group,
         "set": $cpu,
         "labels": $labels
@@ -61,7 +61,7 @@ function __main__() {
       ' >> $METRICS_PATH
     context::jq -c --arg memory "$memory" --argjson labels "$labels" --arg group "$group" '
       {
-        "name": flant_pricing_node_group_memory_bytes,
+        "name": "flant_pricing_node_group_memory_bytes",
         "group": $group,
         "set": $memory,
         "labels": $labels
