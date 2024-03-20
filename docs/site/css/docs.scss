@@ -929,7 +929,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding: 2px 4px;
     font-size: 90%;
     background: #eef2ff;
-    white-space: nowrap;
+    white-space: pre-wrap;
     border-radius: 4px;
 }
 
@@ -999,6 +999,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .anchorjs-link:hover {
     text-decoration: none;
+}
+
+.docs .table-wrapper {
+    overflow: auto;
 }
 
 .docs table {
