@@ -64,15 +64,15 @@ docker:
 # cni-loopback and dependencies
 {{ $binaries := cat $binaries "/cni/loopback" }}
 # gops and dependencies
-{{ $binaries := cat $binaries "/bin/gops" }}
+{{ $binaries := cat $binaries "/usr/bin/gops" }}
 # shell-scripts dependencies
-{{ $binaries := cat $binaries "/bin/bash /bin/sh /bin/echo /bin/printf /bin/sed /bin/awk /bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binaries := cat $binaries "/bin/cat /bin/head /bin/cut /bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+{{ $binaries := cat $binaries "/usr/bin/bash /usr/bin/sh /usr/bin/echo /usr/bin/printf /usr/bin/sed /usr/bin/awk /usr/bin/nsenter /usr/bin/mount /usr/bin/mkdir /usr/bin/basename" }}
+{{ $binaries := cat $binaries "/usr/bin/cat /usr/bin/head /usr/bin/cut /usr/bin/od /usr/bin/grep /usr/bin/cp /usr/bin/mv /usr/bin/rm /usr/bin/ln /usr/bin/wc /usr/bin/find" }}
 # kmod and dependencies
-{{ $binaries := cat $binaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
+{{ $binaries := cat $binaries "/usr/bin/kmod /usr/bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
-{{ $binaries := cat $binaries "/bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat " }}
-{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr sbin/arpd /usr/sbin/genl" }}
+{{ $binaries := cat $binaries "/usr/bin/ip /usr/bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat " }}
+{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr/sbin/arpd /usr/sbin/genl" }}
 # iptables and dependencies
 {{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
 {{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
@@ -82,7 +82,7 @@ docker:
 # groups
 {{ $binaries := cat $binaries "/usr/bin/groups" }}
 # for debug
-{{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
+{{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /usr/bin/ls" }}
 # hubble and dependencies
 {{ $binaries := cat $binaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # cilium-envoy and dependencies
@@ -124,7 +124,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
-  to: /bin/gops
+  to: /usr/bin/gops
   before: install
 - artifact: {{ $.ModuleName }}/iptables-artifact
   add: /iptables
@@ -237,9 +237,8 @@ import:
   - lib32
   - lib64
   - libx32
-  - run
-  - var
-  - usr/lib
+  - var/run
+  - var/lock
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
