@@ -64,6 +64,23 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
+{{- if or (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+- add: /ee/se/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+- add: /ee/se/modules
+  to: /src/se/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
+{{- end }}
 {{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
