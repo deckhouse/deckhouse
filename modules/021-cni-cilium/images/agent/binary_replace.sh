@@ -80,14 +80,12 @@ function relocate_item() {
   local new_place="${RDIR}$(dirname ${file})"
 
   mkdir -p ${new_place}
-  cp -a ${file} ${new_place}
+  cp -a --remove-destination ${file} ${new_place}
 
   # if symlink, copy original file too
   local orig_file="$(readlink -f ${file})"
-  local new_orig_place="${RDIR}$(dirname ${orig_file})"
   if [[ "${file}" != "${orig_file}" ]]; then
-    mkdir -p ${new_orig_place}
-    cp -a ${orig_file} ${new_orig_place}
+    cp -a --remove-destination ${orig_file} ${new_place}
   fi
 }
 
