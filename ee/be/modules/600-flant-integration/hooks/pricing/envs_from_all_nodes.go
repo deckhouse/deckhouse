@@ -56,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "node",
 			ApiVersion: "v1",
 			Kind:       "Node",
-			FilterFunc: ApplyPricingNodeFilter,
+			FilterFunc: ApplyNodeCapacityFilter,
 		},
 	},
 }, nodeCapacityHandler)
