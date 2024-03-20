@@ -1,6 +1,6 @@
 ---
 title: "Monitoring modules"
-permalink: en/modules-docs/guides/version/
+permalink: en/modules-docs/version/
 ---
 
 ## Версия модуля

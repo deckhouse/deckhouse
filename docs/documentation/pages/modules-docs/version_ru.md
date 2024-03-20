@@ -1,6 +1,6 @@
 ---
 title: "Мониторинг модуля"
-permalink: ru/modules-docs/guides/version/
+permalink: ru/modules-docs/version/
 lang: ru
 ---
 
