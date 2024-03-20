@@ -232,7 +232,7 @@ import:
 # New Main Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
-fromImage: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
