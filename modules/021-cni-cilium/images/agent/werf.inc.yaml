@@ -203,7 +203,7 @@ shell:
   - mkdir -p /relocate/home/cilium
   - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
   - cp -a /etc/bash.bashrc /relocate/etc
-  # =====================================================================================
+  setup:
   - mkdir -p /relocate/usr/bin
   - cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin
   - ln -f -s usr/bin "/relocate/bin"
@@ -220,6 +220,7 @@ shell:
   - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
   - ln -f -s usr/libx32 "/relocate/libx32"
   #
+  - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
   - ln -f -s /run/lock "/relocate/var/lock"
 ---
