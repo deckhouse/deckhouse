@@ -1,7 +1,6 @@
 ---
 title: "Что дальше?"
-permalink: ru/modules-docs/chart-adapt/final-words/
-lang: ru
+permalink: en/modules-docs/final-words/
 ---
 
 - Рекомендуем прочитать [документацию по доступным шаблонам и хелперам](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib#helm-library-for-deckhouse-modules).
@@ -10,3 +9,4 @@ lang: ru
 - В качестве примера можно посмотреть на [модули, разработанные компанией Flant](existing_modules/modules.md)
 
 **Желаем вам успешной разработки и благополучных деплоев!**
+<!-- Только не деплойте в пятницу. -->

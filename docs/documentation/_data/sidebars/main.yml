@@ -93,14 +93,14 @@ entries:
                     en: Deploy a module into the cluster
                     ru: Разверните модуль в кластере
                   url: /modules-docs/chart-adapt/deploy/
-         - title:
-            en: Development mode
-            ru: Режим разработчика
-         url: /modules-docs/development-mode/
-                - title:
-                    en: What's next
-                    ru: Что дальше?
-                  url: /modules-docs/chart-adapt/final-words/
+            - title:
+                en: Development mode
+                ru: Режим разработчика
+              url: /modules-docs/development-mode/
+            - title:
+                en: What's next
+                ru: Что дальше?
+              url: /modules-docs/final-words/
         - title:
             en: Release channels
             ru: Каналы обновлений
