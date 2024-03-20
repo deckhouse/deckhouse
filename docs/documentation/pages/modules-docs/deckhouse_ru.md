@@ -1,6 +1,6 @@
 ---
 title: "Как опубликовать модуль в кластере DKP?"
-permalink: ru/modules-docs/module-anatomy/deckhouse/
+permalink: ru/modules-docs/deckhouse/
 lang: ru
 ---
 
