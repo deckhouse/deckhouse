@@ -204,14 +204,19 @@ shell:
   - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
   - cp -a /etc/bash.bashrc /relocate/etc
   # =====================================================================================
+  - mkdir -p /relocate/usr/bin
   - cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin
   - ln -f -s usr/bin "/relocate/bin"
+  - mkdir -p /relocate/usr/lib
   - cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib
   - ln -f -s usr/lib "/relocate/lib"
+  - mkdir -p /relocate/usr/lib32
   - cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32
   - ln -f -s usr/lib32 "/relocate/lib32"
+  - mkdir -p /relocate/usr/lib64
   - cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64
   - ln -f -s usr/lib64 "/relocate/lib64"
+  - mkdir -p /relocate/usr/libx32
   - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
   - ln -f -s usr/libx32 "/relocate/libx32"
 ---
