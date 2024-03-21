@@ -42,6 +42,7 @@ var cloudProviderToProviderKind = map[string]string{
 	"Yandex":    "YandexClusterConfiguration",
 	"vSphere":   "VsphereClusterConfiguration",
 	"Azure":     "AzureClusterConfiguration",
+	"VCD":       "VCDClusterConfiguration",
 }
 
 type ClusterConfig struct {
