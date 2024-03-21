@@ -1,59 +1,11 @@
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
----
-# #####################################################################
-# Old Main Image
----
-image: {{ $.ModuleName }}/agent
-fromImage: {{ $.ModuleName }}/runtime-artifact
-import:
-- artifact: {{ $.ModuleName }}/cilium-builder-artifact
-  add: /tmp/install
-  to: /
-  before: install
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-  add: /usr/bin/cilium-envoy
-  to: /usr/bin/cilium-envoy
-  before: install
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-  add: /usr/lib/libcilium.so
-  to: /usr/lib/libcilium.so
-  before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
-  before: install
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
-shell:
-  install:
-  - groupadd -f cilium
-  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
-  - rm -rf /go
-docker:
-  ENV:
-    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
-    INITSYSTEM: SYSTEMD
-    HUBBLE_COMPAT: legacy-json-output
-  WORKDIR: "/home/cilium"
-  CMD: ["/usr/bin/cilium"]
----
-# #####################################################################
-# #####################################################################
-# Binaries artifact for distroless agent (based on runtime-artifact)(based on Ubuntu)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
-# list of binaries
+# List of binary files used by agent
 # from base install script
 {{ $binaries := "/etc/localtime /usr/bin/jq /usr/bin/curl" }}
 # clang and dependencies
@@ -95,6 +47,7 @@ docker:
 {{ $binaries := cat $binaries "/pause /usr/bin/true" }}
 ---
 # #####################################################################
+# Binaries artifact for distroless agent (based on Ubuntu)
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -136,7 +89,7 @@ import:
   before: install
   includePaths:
   - iptables-wrapper-installer.sh
-- artifact: {{ $.ModuleName }}/cilium-builder-artifact
+- artifact: {{ $.ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
   before: install
@@ -201,7 +154,7 @@ shell:
     done
     # broken symlinks are not imported from the artifact
     touch /usr/sbin/iptables-wrapper
-  # additional relocate from agent
+  # additional relocate from cilium
   - mkdir -p /relocate/var/lib/cilium
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
   - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
@@ -233,7 +186,7 @@ shell:
   - echo "cilium:x:1000:" >> /relocate/etc/group
 ---
 # #####################################################################
-# New Main Image (Distroless)
+# New Main Ageng Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless
