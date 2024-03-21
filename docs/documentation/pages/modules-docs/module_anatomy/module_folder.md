@@ -58,11 +58,11 @@ permalink: en/modules-docs/module-anatomy/module-folder/
 
 ### crds
 
-В этой папке лежат кастомные ресурсы [_Definition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/), которые используются компонентами модуля. Применение _Definition_ в Deckhouse Kubernetes Platform отличается от того, как это предлагает Helm. _Definition_ обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
+В этой папке лежат [_СustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. Применение CRD в Deckhouse Kubernetes Platform отличается от того, как это предлагает Helm. CRD обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
 
-Чтобы включить в работу _Definition_ из определенной папки, нужно добавить в папку специальный [хук](#hooks).
+Чтобы включить в работу CRD из определенной папки, нужно добавить в папку специальный [хук](#hooks).
 
-Чтобы отобразить _Definition_ из папки `/crds/` в документации на сайте или модуле documentation в кластере, выполните следующие шаги:
+Чтобы отобразить CRD из папки `/crds/` в документации на сайте или модуле documentation в кластере, выполните следующие шаги:
 * создайте файл перевода со структурой аналогичной файлу ресурса:
   - оставьте только параметры `description`;
   - используйте префикс `doc-ru-` в названии: например `/crds/doc-ru-crd.yaml` для `/crds/crd.yaml`.
