@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -54,7 +56,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleProjects))
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
-	postRenderer := new(projectTemplateHelmRenderer)
+	postRenderer := &projectTemplateHelmRenderer{
+		logger: input.LogEntry,
+	}
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 
@@ -197,6 +201,7 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 
 type projectTemplateHelmRenderer struct {
 	projectName string
+	logger      logger.Logger
 }
 
 func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
@@ -223,6 +228,11 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 			return renderedManifests, err
 		}
 
+		if un.GetAPIVersion() == "" || un.GetKind() == "" {
+			// skip empty manifests
+			continue
+		}
+
 		// inject multitenancy-manager labels
 		labels := un.GetLabels()
 		if labels == nil {
@@ -233,7 +243,6 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 		if un.GetAPIVersion() != "v1" || un.GetKind() != "Namespace" {
 			data, _ := yaml.Marshal(un.Object)
-			fmt.Println("NON NS\n" + manifest + "\n-=-=-==--==-\n" + string(data))
 			builder.WriteString("\n---\n" + string(data))
 			continue
 		}
@@ -260,6 +269,8 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 	}
 
 	result.WriteString(builder.String())
+
+	ptr.logger.Debugf("Rendered project %q: \n%s", ptr.projectName, result.String())
 
 	fmt.Println("RENDER PROJECT\n" + result.String())
 
