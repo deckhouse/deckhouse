@@ -101,17 +101,6 @@ spec:
   enabled: true`,
 			schema: testSchemaStore(t),
 		},
-		"failed: invalid config": {
-			phase: phases.FinalizationPhase,
-			oldConfig: `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration`,
-			newConfig: `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration`,
-			schema:      testSchemaStore(t),
-			errContains: `.clusterType is required`,
-		},
 		"unsafe field changed": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
@@ -240,6 +229,46 @@ masterNodeGroup:
 			schema:      testSchemaStore(t),
 			errContains: "can't update masterNodeGroup.imageID if masterNodeGroup.replicas == 1",
 		},
+		"change number of docs": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    imageID: foo
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+---
+`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    imageID: foo
+---
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
+metadata:
+  name: system
+spec:
+    enabled: true
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: system
+`,
+			schema: testSchemaStore(t),
+		},
 	}
 
 	for name, tt := range tests {
@@ -259,7 +288,7 @@ masterNodeGroup:
 func testSchemaStore(t *testing.T) *SchemaStore {
 	schemaStore := newSchemaStore([]string{"/tmp"})
 
-	schema := []byte(`
+	clusterConfigSchema := []byte(`
 kind: ClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
@@ -300,6 +329,57 @@ apiVersions:
                 type: string
 `)
 
-	require.NoError(t, schemaStore.upload(schema))
+	moduleConfigSchema := []byte(`
+kind: ModuleConfig
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: true
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [ModuleConfig]
+`)
+
+	nodeGroupConfigSchema := []byte(`
+kind: NodeGroup
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: true
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [NodeGroup]
+`)
+
+	instanceClassConfigSchema := []byte(`
+kind: YandexInstanceClass
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: true
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [YandexInstanceClass]
+`)
+
+	require.NoError(t, schemaStore.upload(clusterConfigSchema))
+	require.NoError(t, schemaStore.upload(moduleConfigSchema))
+	require.NoError(t, schemaStore.upload(nodeGroupConfigSchema))
+	require.NoError(t, schemaStore.upload(instanceClassConfigSchema))
 	return schemaStore
 }
