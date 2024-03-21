@@ -13,10 +13,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
-
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"helm.sh/helm/v3/pkg/releaseutil"
