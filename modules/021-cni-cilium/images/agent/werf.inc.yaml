@@ -51,6 +51,7 @@
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 from: {{ $.Images.BASE_UBUNTU }}
+fromCacheVersion: 10
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
