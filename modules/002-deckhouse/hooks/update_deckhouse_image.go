@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -30,10 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
@@ -110,7 +114,6 @@ type deckhousePodInfo struct {
 	Namespace string `json:"namespace"`
 	Image     string `json:"image"`
 	ImageID   string `json:"imageID"`
-	Ready     bool   `json:"ready"`
 }
 
 const (
@@ -143,12 +146,12 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	// if values key does not exist, then cluster is just bootstrapping
 	clusterBootstrapping := !input.Values.Exists("global.clusterIsBootstrapped")
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, clusterBootstrapping)
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc.GetHTTPClient()), clusterBootstrapping)
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if deckhousePod.Ready {
+	if isDeckhousePodReady(dc.GetHTTPClient()) {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -336,11 +339,8 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		imageName = pod.Spec.Containers[0].Image
 	}
 
-	var ready bool
-
 	if len(pod.Status.ContainerStatuses) > 0 {
 		imageID = pod.Status.ContainerStatuses[0].ImageID
-		ready = pod.Status.ContainerStatuses[0].Ready
 	}
 
 	return deckhousePodInfo{
@@ -348,7 +348,6 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		ImageID:   imageID,
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
-		Ready:     ready,
 	}, nil
 }
 
@@ -429,4 +428,21 @@ func getDeckhousePod(snap []go_hook.FilterResult) *deckhousePodInfo {
 	}
 
 	return &deckhousePod
+}
+
+func isDeckhousePodReady(httpClient d8http.Client) bool {
+	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+
+	url := fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		klog.Errorf("error getting deckhouse pod readyz status: %s", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	return true
 }
