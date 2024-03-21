@@ -65,10 +65,9 @@ var distrolessImagesPrefix = map[string][]string{
 
 func skipDistrolessImageCheckIfNeeded(image string) bool {
 	switch image {
-	case "builder/werf.inc.yaml",
-		"compilers/werf.inc.yaml",
-		"runtime/werf.inc.yaml",
+	case "compilers/werf.inc.yaml",
 		"base/werf.inc.yaml",
+		"cilium/werf.inc.yaml",
 		"drbd-reactor/Dockerfile",
 		"linstor-affinity-controller/Dockerfile",
 		"linstor-csi/Dockerfile",
