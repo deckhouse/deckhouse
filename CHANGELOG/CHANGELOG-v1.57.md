@@ -53,7 +53,7 @@
  - **[candi]** Wait for a node to be added to the cluster before annotating the node. [#6443](https://github.com/deckhouse/deckhouse/pull/6443)
  - **[common]** Fixed vulnerabilities in csi livenessprobe and node-driver-registrar: CVE-2022-41723, CVE-2023-39325, GHSA-m425-mq94-257g [#6956](https://github.com/deckhouse/deckhouse/pull/6956)
     csi-controller pod will restart.
- - **[deckhouse]** Сhange the way the deckhouse pod readiness is determined during the minor version update. [#7866](https://github.com/deckhouse/deckhouse/pull/7866)
+ - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7866](https://github.com/deckhouse/deckhouse/pull/7866)
  - **[deckhouse]** Keep enabled modules without helm charts after converge. [#7315](https://github.com/deckhouse/deckhouse/pull/7315)
  - **[deckhouse-controller]** fix for `change-registry` helper's handling of registry credentials. [#7095](https://github.com/deckhouse/deckhouse/pull/7095)
  - **[deckhouse-controller]** Fix ModuleConfig validation for configs with empty settings. [#7064](https://github.com/deckhouse/deckhouse/pull/7064)
