@@ -311,7 +311,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
 --- a/controllers/vcdmachine_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdmachine_controller.go	(date 1711017611081)
++++ b/controllers/vcdmachine_controller.go	(date 1711047781194)
 @@ -13,21 +13,19 @@
  	"fmt"
  	"math"
@@ -747,7 +747,8 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		Network:                 ovdcNetwork,
  		NeedsCustomization:      false,
  		IsConnected:             true,
- 		IPAddressAllocationMode: "POOL",
+-		IPAddressAllocationMode: "POOL",
++		IPAddressAllocationMode: "DHCP",
  		NetworkAdapterType:      "VMXNET3",
  	}
 +
