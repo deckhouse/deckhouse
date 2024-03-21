@@ -47,7 +47,7 @@ function __main__() {
     fi
     cpu="$(jq -cr '.CPU' <<< "$ng_capacity")"
     memory="$(jq -cr '.memory' <<< "$ng_capacity")"
-    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | .labels // {} * {"name": .name}')"
+    labels="$(context::jq -cr --arg ng_name "$node_group_name" '.snapshots.ngs[].filterResult | select(.name == $ng_name) | ((.taints // [] | .[] | {("taint-"+.effect): .key}) // {}) as $t | (.labels // {}) as $l | $t * $l * {"name": .name}')"
 
     context::jq -c --arg memory "$memory" --argjson labels "$labels" --arg group "$group" '
       {
