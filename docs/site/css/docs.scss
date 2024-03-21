@@ -1042,6 +1042,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-top-right-radius: 10px;
 }
 
+.docs table thead tr th a {
+    color: #fff;
+    text-decoration: underline;
+}
+
 .docs table tbody tr td {
     padding: 8px 10px;
     border-bottom: 2px solid #eef2ff;
