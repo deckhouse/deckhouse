@@ -169,6 +169,10 @@ import:
   add: /pause
   to: /pause
   before: install
+- image: common/distroless
+  add: /etc/group
+  to: /from_common_distroless/group
+  before: setup
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive
@@ -200,7 +204,6 @@ shell:
   # additional relocate from agent
   - mkdir -p /relocate/var/lib/cilium
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-  - mkdir -p /relocate/home/cilium
   - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
   - cp -a /etc/bash.bashrc /relocate/etc
   setup:
@@ -223,6 +226,11 @@ shell:
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
   - ln -f -s /run/lock "/relocate/var/lock"
+  #
+  - mkdir -p /relocate/home/cilium
+  - mkdir -p /relocate/etc
+  - cp -a /from_common_distroless/group /relocate/etc/group
+  - echo "cilium:x:1000:" >> /relocate/etc/group
 ---
 # #####################################################################
 # New Main Image (Distroless)
