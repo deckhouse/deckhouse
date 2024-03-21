@@ -311,7 +311,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
 --- a/controllers/vcdmachine_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdmachine_controller.go	(date 1711015894143)
++++ b/controllers/vcdmachine_controller.go	(date 1711017611081)
 @@ -13,21 +13,19 @@
  	"fmt"
  	"math"
@@ -682,7 +682,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineScriptExecutionError, "", "")
  	if err != nil {
  		log.Error(err, "failed to remove VCDMachineScriptExecutionError from RDE", "rdeID", vcdCluster.Status.InfraId)
-@@ -952,16 +934,23 @@
+@@ -952,24 +934,33 @@
 
  // reconcileVMNetworks ensures that desired networks are attached to VMs
  // networks[0] refers the primary network
@@ -708,7 +708,9 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		if err != nil {
  			return errors.Wrapf(err, "Error ensuring network [%s] is attached to vApp", ovdcNetwork)
  		}
-@@ -970,6 +959,8 @@
+
+-		desiredConnectionArray[index] = getNetworkConnection(connections, ovdcNetwork)
++		desiredConnectionArray[index] = getNetworkConnection(connections, ovdcNetwork, log)
  	}
 
  	if !containsTheSameElements(connections.NetworkConnection, desiredConnectionArray) {
@@ -725,8 +727,33 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		err = vm.UpdateNetworkConnectionSection(connections)
  		if err != nil {
  			return errors.Wrapf(err, "failed to update networks of VM")
-@@ -1025,18 +1017,22 @@
+@@ -1008,35 +1000,45 @@
+ 	return true
+ }
+
+-func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string) *types.NetworkConnection {
++func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string, log logr.Logger) *types.NetworkConnection {
+
+ 	for _, existingConnection := range connections.NetworkConnection {
++		log.Info(fmt.Sprintf("getNetworkConnection: try connection %+v", existingConnection))
+ 		if existingConnection.Network == ovdcNetwork {
++			log.Info(fmt.Sprintf("getNetworkConnection: found connection %+v", existingConnection))
+ 			return existingConnection
+ 		}
  	}
+
+-	return &types.NetworkConnection{
++	res := &types.NetworkConnection{
+ 		Network:                 ovdcNetwork,
+ 		NeedsCustomization:      false,
+ 		IsConnected:             true,
+ 		IPAddressAllocationMode: "POOL",
+ 		NetworkAdapterType:      "VMXNET3",
+ 	}
++
++	log.Info(fmt.Sprintf("getNetworkConnection: not found connection use defaults %+v", res))
++
++	return res
  }
 
 -func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VApp, ovdcNetworkName string) error {
@@ -749,7 +776,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
  	if err != nil {
  		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
-@@ -1065,7 +1061,7 @@
+@@ -1065,7 +1067,7 @@
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
 
@@ -758,7 +785,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
 
  	return string(value), nil
  }
-@@ -1348,16 +1344,14 @@
+@@ -1348,16 +1350,14 @@
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {
