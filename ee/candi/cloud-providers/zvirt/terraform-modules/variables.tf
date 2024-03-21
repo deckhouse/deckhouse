@@ -50,7 +50,3 @@ variable "instance_vm_type" {
   default = "high_performance"
 }
 
-variable "node_name_prefix" {
-  description = "Prefix for Node naming"
-  default = "d8"
-}
