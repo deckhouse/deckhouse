@@ -311,7 +311,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
 --- a/controllers/vcdmachine_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdmachine_controller.go	(date 1711048883632)
++++ b/controllers/vcdmachine_controller.go	(date 1711050421974)
 @@ -13,21 +13,19 @@
  	"fmt"
  	"math"
@@ -777,7 +777,15 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
  	if err != nil {
  		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
-@@ -1065,8 +1067,6 @@
+@@ -1047,7 +1049,6 @@
+ }
+
+ func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *clusterv1.Machine) (string, error) {
+-	log := ctrl.LoggerFrom(ctx)
+ 	if machine.Spec.Bootstrap.DataSecretName == nil {
+ 		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
+ 	}
+@@ -1065,8 +1066,6 @@
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
 
@@ -786,7 +794,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	return string(value), nil
  }
 
-@@ -1348,16 +1348,14 @@
+@@ -1348,16 +1347,14 @@
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {
