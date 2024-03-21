@@ -233,6 +233,7 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 
 		if un.GetAPIVersion() != "v1" || un.GetKind() != "Namespace" {
 			data, _ := yaml.Marshal(un.Object)
+			fmt.Println("NON NS\n" + manifest + "\n-=-=-==--==-\n" + string(data))
 			builder.WriteString("\n---\n" + string(data))
 			continue
 		}
