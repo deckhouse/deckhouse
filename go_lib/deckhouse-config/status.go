@@ -147,15 +147,9 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
 		res := Service().ConfigValidator().Validate(cfg)
 		if res.HasError() {
-			var prefix = "Ignored"
-			if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
-				prefix = "Error"
-			}
-
-			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
 			return ModuleConfigStatus{
 				Version: "",
-				Message: invalidMsg,
+				Message: fmt.Sprintf("Error: %s", res.Error),
 			}
 		}
 	}

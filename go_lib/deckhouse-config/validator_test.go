@@ -221,6 +221,18 @@ spec:
 `,
 			expectValid,
 		},
+		{
+			"empty spec.settings with enabled:false",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: false
+`,
+			expectValid,
+		},
 
 		// Invalid cases
 		{
@@ -238,6 +250,18 @@ spec:
 `,
 			expectInvalid,
 		},
+		{
+			"empty spec.settings with enabled:true",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: true
+`,
+			expectInvalid,
+		},
 	}
 
 	for _, tt := range tests {
@@ -246,6 +270,9 @@ spec:
 
 			vv := validation.NewValuesValidator()
 			err := mock.AddOpenAPISchemas(vv, "global", "testdata/validator/global")
+			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
+
+			err = mock.AddOpenAPISchemas(vv, "flant-integration", "testdata/validator/flant-integration")
 			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
 
 			v := NewConfigValidator(vv)
