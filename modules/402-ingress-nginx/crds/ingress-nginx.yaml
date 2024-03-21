@@ -40,7 +40,7 @@ spec:
                 inlet:
                   type: string
                   description: |
-                    The way traffic goes to cluster from the outer network. This field is immutable after creation.
+                    The way traffic from the external network is routed to the cluster. Once you have set the method, you cannot change it later.
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
@@ -53,7 +53,7 @@ spec:
 
                       **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 10354, 10355.
 
-                      **Caution!** When switching from this inlet to any other, it is necessary to clear the iptables rules and then restart the kube-proxy pods, or completely reboot the nodes on which the ingress-controllers were located.
+                      **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
