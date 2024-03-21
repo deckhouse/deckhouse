@@ -929,7 +929,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding: 2px 4px;
     font-size: 90%;
     background: #eef2ff;
-    white-space: nowrap;
+    white-space: normal;
     border-radius: 4px;
 }
 
@@ -1001,6 +1001,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
+.docs .table-wrapper {
+    overflow: auto;
+}
+
 .docs table {
     width: 100%;
     border-spacing: 0;
@@ -1036,6 +1040,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs table thead tr th:last-child {
     border-top-right-radius: 10px;
+}
+
+.docs table thead tr th a {
+    color: #fff;
+    text-decoration: underline;
 }
 
 .docs table tbody tr td {
