@@ -60,6 +60,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "10:00"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -153,6 +159,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -168,6 +180,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -842,6 +860,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -857,6 +881,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
