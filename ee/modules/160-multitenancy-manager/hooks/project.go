@@ -8,6 +8,7 @@ package hooks
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -258,6 +259,8 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 	}
 
 	result.WriteString(builder.String())
+
+	fmt.Println("RENDER PROJECT\n" + result.String())
 
 	return result, nil
 }
