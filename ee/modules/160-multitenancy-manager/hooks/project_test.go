@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -458,7 +460,7 @@ spec:
 `
 
 func TestPostRenderer(t *testing.T) {
-	pr := new(projectTemplateHelmRenderer)
+	pr := &projectTemplateHelmRenderer{logger: logrus.New()}
 	pr.SetProject("test-project-1")
 	buf := bytes.NewBuffer(nil)
 
