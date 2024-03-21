@@ -242,17 +242,11 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
 
-.PHONY: docs-spellcheck-site
-docs-spellcheck-site: ## Check the spelling in the main site part (werf is required to build the containers)
+.PHONY: docs-spellcheck
+docs-spellcheck: ## Check the spelling in the main site part (werf is required to build the containers)
   ##~ Options: filename="target-file" (Specify the path to a specific file)
   ##~ Options: type="plain_text" (Displays HTML stripped of tags. Use only with filename option!)
-	sh ./tools/spelling/spell_check_site.sh $(filename) $(type)
-
-.PHONY: docs-spellcheck-documentation
-docs-spellcheck-documentation: ## Check the spelling in the documentation part (werf is required to build the containers)
-  ##~ Options: filename="target-file" (Specify the path to a specific file)
-  ##~ Options: type="plain_text" (Displays HTML stripped of tags. Use only with filename option!)
-	sh ./tools/spelling/spell_check_documentation.sh $(filename) $(type)
+	sh ./tools/spelling/spell_check.sh $(filename) $(type)
 
 ##@ Spell checking services
 
@@ -267,13 +261,9 @@ generate-special-dictionary: ## Generate a dictionary of special terms.
 	cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
 	sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
 
-.PHONY: get-words-with-typos-from-site
-get-words-with-typos-from-site: ## Pulls out a list of all the terms in all pages that were considered a typo
-	sh ./tools/spelling/spell_check_site.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u > spell_log_site
-
-.PHONY: get-words-with-typos-from-documentation
-get-words-with-typos-from-documentation: ## Pulls out a list of all the terms in all pages that were considered a typo
-	sh ./tools/spelling/spell_check_documentation.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u > spell_log_documentation
+.PHONY: get-words-with-typos
+get-words-with-typos: ## Pulls out a list of all the terms in all pages that were considered a typo
+	sh ./tools/spelling/spell_check.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u > spell_log_site
 
 ##@ Update kubernetes control-plane patchversions
 

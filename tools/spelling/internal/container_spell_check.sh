@@ -23,7 +23,7 @@ echo "Checking docs..."
 
 if [ -n "$1" ]; then
   if [ -n "$2" ]; then
-    python3 clear_html_from_code.py $arg_target_page | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | html2text -utf8 | sed '/^$/d'
+    python3 clean-files.py $arg_target_page | sed '/^$/d' | hunspell -d $language -l
   else
     check=1
     if test -f "filesignore"; then
@@ -37,7 +37,7 @@ if [ -n "$1" ]; then
 __EOF__
       if [ "$check" -eq 1 ]; then
         echo "Checking $arg_target_page..."
-        result=$(python3 clear_html_from_code.py $arg_target_page | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | sed '/^$/d' | hunspell -d $language -l)
+        result=$(python3 clean-files.py $arg_target_page | sed '/^$/d' | hunspell -d $language -l)
         if [ -n "$result" ]; then
           echo $result | sed 's/\s\+/\n/g'
         fi
@@ -47,8 +47,7 @@ __EOF__
     fi
   fi
 else
-
-  for file in `find ./ -type f -name "*.html"`
+  for file in `find ./ -type f`
   do
     check=1
     if test -f "/temp/internal/filesignore"; then
@@ -61,7 +60,8 @@ else
   $(cat /temp/internal/filesignore)
 __EOF__
       if [ "$check" -eq 1 ]; then
-        result=$(python3 /temp/internal/clear_html_from_code.py $file | sed '/<!-- spell-check-ignore -->/,/<!-- end-spell-check-ignore -->/d' | sed '/^$/d' | hunspell -d $language -l -H)
+        result=$(python3 /temp/internal/clean-files.py $file | sed '/^$/d' | hunspell -d $language -l)
+        #python3 /temp/internal/clean-files.py $file
         if [ -n "$result" ]; then
           unset ex_result
           ex_result=1

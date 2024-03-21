@@ -1,3 +1,14 @@
 compare
 channel-menu-v2
 channel-menu
+_layouts
+header
+buttons
+breadcrumbs
+steps
+copyright
+dns-template-title
+head-site
+getting-started-setup
+backends
+openapi-tippy
