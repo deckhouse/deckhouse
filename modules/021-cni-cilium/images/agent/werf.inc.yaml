@@ -191,6 +191,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless
+fromCacheVersion: 10
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
