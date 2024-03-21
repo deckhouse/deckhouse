@@ -1,4 +1,4 @@
-1823
+1843
 1GB
 2GB
 5XX
@@ -34,6 +34,7 @@ AzureInstanceClass
 AzureInstanceClasses
 BDU
 BGP
+BPF
 Backlink
 BaseDN
 Bashible
@@ -160,6 +161,7 @@ Dockerfile
 Dockerfiles
 Dockerfile’s
 DoesNotExist
+Dryrun
 EBS
 ECMP
 EE
@@ -296,7 +298,11 @@ LowNodeUtilization
 MQL
 MTLS
 MVCC
+MachineClass
+MachineClasses
 MachineControllerManager
+MachineDeployment
+MachineDeployment
 Manilla
 Mayastor
 MetalLB
@@ -330,6 +336,7 @@ NSX
 NTP
 Namespaced
 Namespase
+Netfilter
 NetworkAddress
 NetworkPolicy
 NoExecute
@@ -493,6 +500,7 @@ ServiceMonitor
 Serviсes
 Sidekiq
 SimpleWithInternalNetwork
+Sitemap
 Snapshotter
 SonarQube
 Sonatype
@@ -517,6 +525,7 @@ THENEWSTACK
 TLF
 TLS
 TLSv
+TODO
 TaintToleration
 Taskfile
 Terraform
@@ -572,13 +581,16 @@ VolumeSnapshotContent
 VsphereClusterConfiguration
 VsphereInstanceClass
 VsphereInstanceClasses
+VxLAN
 WORKDIR
+WSL
 WaitingForDisruptiveApproval
 WeChat
 WeChatConfig
 WebhookConfig
 WerfBundle
 WerfSource
+WhateverInstanceClass
 Whitelist
 Wildcards
 WithNAT
@@ -742,10 +754,12 @@ dockerignore
 dockersamples
 documentation
 doesn
+downcase
 drbd
 dropdown
 dst
 eBPF
+ee
 eg
 egressgateway
 elasticsearch
@@ -902,6 +916,7 @@ maxPods
 maxReplicas
 maxSurgePerZone
 maxUnavailable
+md
 memberlist
 memcached
 metadata
@@ -942,6 +957,7 @@ namespaces
 neighbour
 nexthop
 nexthops
+nf
 nginx
 noProxyAddressList
 nodeAffinity
@@ -949,6 +965,7 @@ nodeGroup
 nodeGroups
 nodeName
 nodeSelector
+nodeStatusUpdateFrequency
 nodeTemplate
 nodeType
 nodegroups
@@ -1028,6 +1045,7 @@ registryDockerCfg
 registryImagesRepo
 registrysecret
 releaseChannel
+repo
 reprovisioning
 resizer
 resourcePolicy
@@ -1102,6 +1120,7 @@ tcp
 templating
 terminationGracePeriodSeconds
 terraform
+testEnum
 timeslot
 timestamp
 tls
@@ -1333,6 +1352,7 @@ zoneTagCategory
 пиринга
 подсети
 подсеть
+проброс
 раннера
 реквест
 релейбл

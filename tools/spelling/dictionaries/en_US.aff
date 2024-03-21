@@ -1,4 +1,4 @@
-SET ISO8859-1
+SET UTF-8
 KEY qwertyuiop|asdfghjkl|zxcvbnm
 TRY esianrtolcdugmphbyfvkwzESIANRTOLCDUGMPHBYFVKWZ'-
 NOSUGGEST !
@@ -42,8 +42,8 @@ SFX V   0     ive        [^e]
 
 SFX N Y 3
 SFX N   e     ion        e
-SFX N   y     ication    y 
-SFX N   0     en         [^ey] 
+SFX N   y     ication    y
+SFX N   0     en         [^ey]
 
 SFX X Y 3
 SFX X   e     ions       e
@@ -52,14 +52,14 @@ SFX X   0     ens        [^ey]
 
 SFX H N 2
 SFX H   y     ieth       y
-SFX H   0     th         [^y] 
+SFX H   0     th         [^y]
 
 SFX Y Y 1
 SFX Y   0     ly         .
 
 SFX G Y 2
 SFX G   e     ing        e
-SFX G   0     ing        [^e] 
+SFX G   0     ing        [^e]
 
 SFX J Y 2
 SFX J   e     ings       e
@@ -211,12 +211,12 @@ REP ys ies
 REP u ough
 
 #   PHONEtic_english.h - #PHONEtic transformation rules for use with #PHONEtic.c
-#   Copyright (C) 2000 Bj�rn Jacke
+#   Copyright (C) 2000 Björn Jacke
 #
-#   This rule set is based on Lawrence Phillips original metaPHONE 
+#   This rule set is based on Lawrence Phillips original metaPHONE
 #   algorithm with modifications made by Michael Kuhn in his
-#   C implantation, more modifications by Bj�rn Jacke when
-#   converting the algorithm to a rule set and minor 
+#   C implantation, more modifications by Björn Jacke when
+#   converting the algorithm to a rule set and minor
 #   touch ups by Kevin Atkinson
 #
 #   This library is free software; you can redistribute it and/or
@@ -232,11 +232,11 @@ REP u ough
 #   License along with this library; if not, write to the Free Software
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-#   Bj�rn Jacke may be reached by email at bjoern.jacke@gmx.de
+#   Björn Jacke may be reached by email at bjoern.jacke@gmx.de
 #
 #   Changelog:
 #
-#   2000-01-05  Bj�rn Jacke <bjoern.jacke@gmx.de>
+#   2000-01-05  Björn Jacke <bjoern.jacke@gmx.de>
 #               - first version with translation rules derived from
 #                 metaPHONE.cc distributed with aspell 0.28.3
 #               - "TH" is now representated as "@" because "0" is a
@@ -254,7 +254,7 @@ REP u ough
 #   2000-01-07  Kevin Atkinson <kevinatk@home.com>
 #               Converted from header to data file.
 #
-#   2007-08-23  László Németh <nemeth AT OOo>
+#   2007-08-23  LÃ¡szlÃ³ NÃ©meth <nemeth AT OOo>
 #               Add PHONE header and #PHONE keywords
 #
 # version 1.1
@@ -282,7 +282,7 @@ PHONE C                    K
 PHONE DG(EIY)              K
 PHONE DD-                  _
 PHONE D                    T
-PHONE �<                   E
+PHONE É<                   E
 PHONE EH(AEIOUY)-^         *H
 PHONE ER(AEIOUY)-^         *R
 PHONE E(HR)^               *
@@ -400,7 +400,7 @@ PHONE Z                    S
 #
 #  E --> A      at beginnig
 #          _      SILENT otherwise
-#  
+#
 #  F --> F
 #
 #  G -->        SILENT if in "-gh-" and not at end or before a vowel
@@ -426,7 +426,7 @@ PHONE Z                    S
 #  L --> L
 #
 #  M --> M
-#  
+#
 #  N --> N
 #
 #  O --> A      at beginning
@@ -462,5 +462,5 @@ PHONE Z                    S
 #
 #  Y -->        SILENT if not followed by a vowel
 #          Y      if followed by a vowel
-# 
+#
 #  Z --> S

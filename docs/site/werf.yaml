@@ -178,11 +178,6 @@ import:
 image: docs-spell-checker
 #from: {{ .Images.BASE_UBUNTU }}
 from: {{ .Images.BASE_PYTHON_ALPINE }}
-import:
-  - artifact: web-static
-    add: /app/_site
-    to: /spelling/_site
-    before: setup
 git:
   - add: /tools/spelling/dictionaries/
     to: /temp/dictionaries
@@ -192,6 +187,29 @@ git:
     to: /temp/internal
     stageDependencies:
       setup: '**/*'
+  - add: /docs/documentation
+    to: /spelling/docs/documentation
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.md'
+      - '**/*.html'
+      - '**/*.liquid'
+  - add: /docs/site
+    to: /spelling/docs/site
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.md'
+      - '**/*.html'
+      - '**/*.liquid'
+  - add: /modules
+    to: /spelling/modules
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.yaml'
+      - '**/*.yml'
 docker:
   ENV:
     LANG: ru_RU.UTF-8
@@ -207,8 +225,8 @@ shell:
     #- apt install -y locales
     #- sed -i -e 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
     #- ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-    - apk add hunspell html2text tree
-    - pip3 install beautifulsoup4
+    - apk add hunspell
+    - pip3 install pyyaml
   #install:
   #  - apt -y install hunspell html2text python3.11 python3-pip tree
   #  - pip3 install beautifulsoup4
