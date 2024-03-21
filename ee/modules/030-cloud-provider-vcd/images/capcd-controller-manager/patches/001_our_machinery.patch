@@ -1,4 +1,4 @@
-Subject: [PATCH] ++
+Subject: [PATCH] deckhouse machinery
 ---
 Index: controllers/vcdcluster_controller.go
 IDEA additional info:
@@ -311,7 +311,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
 --- a/controllers/vcdmachine_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdmachine_controller.go	(date 1711047781194)
++++ b/controllers/vcdmachine_controller.go	(date 1711048883632)
 @@ -13,21 +13,19 @@
  	"fmt"
  	"math"
@@ -777,16 +777,16 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
  	if err != nil {
  		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
-@@ -1065,7 +1067,7 @@
+@@ -1065,8 +1067,6 @@
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
 
 -	log.V(2).Info(fmt.Sprintf("Auto-generated bootstrap script: [%s]", string(value)))
-+	log.Info(fmt.Sprintf("Auto-generated bootstrap script: [%s]", string(value)))
-
+-
  	return string(value), nil
  }
-@@ -1348,16 +1350,14 @@
+
+@@ -1348,16 +1348,14 @@
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {
