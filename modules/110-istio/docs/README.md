@@ -210,7 +210,7 @@ Below are their fundamental differences:
 
 ### Federation
 
-#### Requirements for clusters joining the federation
+#### Requirements for clusters
 
 * Each cluster must have a unique cluster domain ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
 * Pod and Service subnets **doesn't need** to be unique ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
@@ -248,7 +248,7 @@ To establish a federation, you must:
 
 ### Multicluster
 
-#### Requirements for clusters that are combined into a multicluster
+#### Requirements for clusters
 
 * Cluster domains **should** be the same for all members of multicluster ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
 * Pod and Service subnets **should** be unique for each multicluster member ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
