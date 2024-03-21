@@ -9,11 +9,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
