@@ -55,9 +55,6 @@ editions:
     - openstack
     - vsphere
     - vcd
-    
-  excludeModules:
-  - dashboard
 
 - name: FE
   modulesDir: "ee/fe/modules"
