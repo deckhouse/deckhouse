@@ -104,6 +104,12 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	for _, sc := range scList.Items {
 		scdata := &v1alpha1.DVPStorageClass{}
 		scdata.Name = sc.GetName()
+
+		scAnnotations := sc.GetAnnotations()
+		if scAnnotations["storageclass.kubernetes.io/is-default-class"] == "true" {
+			scdata.IsDefault = true
+		}
+
 		storageClasses = append(storageClasses, *scdata)
 	}
 
