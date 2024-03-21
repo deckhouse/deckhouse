@@ -58,7 +58,7 @@ var _ = Describe("DVP Cloud discovery data tests", func() {
 		Context("Two storage classes exist in the cluster", func() {
 			It("should return no error", func() {
 
-				_, err := fakeKubeClient.StorageV1().StorageClasses().Create(context.TODO(), &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "test-0"}}, metav1.CreateOptions{})
+				_, err := fakeKubeClient.StorageV1().StorageClasses().Create(context.TODO(), &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "test-0", Annotations: map[string]string{"storageclass.kubernetes.io/is-default-class": "true"}}}, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = fakeKubeClient.StorageV1().StorageClasses().Create(context.TODO(), &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "test-1"}}, metav1.CreateOptions{})
@@ -66,7 +66,7 @@ var _ = Describe("DVP Cloud discovery data tests", func() {
 
 				data, err := d.DiscoveryData(context.TODO(), []byte{})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(data).To(MatchJSON(`{"storageClasses":[{"name":"test-0"},{"name":"test-1"}]}`))
+				Expect(data).To(MatchJSON(`{"storageClasses":[{"name":"test-0", "isDefault":true},{"name":"test-1"}]}`))
 			})
 		})
 
