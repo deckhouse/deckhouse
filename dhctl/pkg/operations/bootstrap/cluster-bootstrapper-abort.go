@@ -43,6 +43,29 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
 }
 
+func (b *ClusterBootstrapper) initSSHClient() error {
+	if len(b.SSHClient.Settings.AvailableHosts()) == 0 {
+		mastersIPs, err := GetMasterHostsIPs()
+		if err != nil {
+			log.ErrorF("Can not load available ssh hosts: %v\n", err)
+			return err
+		}
+		b.SSHClient.Settings.SetAvailableHosts(mastersIPs)
+	}
+
+	bastionHost, err := GetBastionHostFromCache()
+	if err != nil {
+		log.ErrorF("Can not load bastion host: %v\n", err)
+		return fmt.Errorf("unable to load bastion host: %w", err)
+	}
+
+	if bastionHost != "" {
+		b.SSHClient.Settings.BastionHost = bastionHost
+	}
+
+	return nil
+}
+
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
@@ -83,25 +106,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 
 	var destroyer destroy.Destroyer
 
-	if len(b.SSHClient.Settings.AvailableHosts()) == 0 {
-		mastersIPs, err := GetMasterHostsIPs()
-		if err != nil {
-			log.ErrorF("Can not load available ssh hosts: %v\n", err)
-			return err
-		}
-		b.SSHClient.Settings.SetAvailableHosts(mastersIPs)
-	}
-
-	bastionHost, err := GetBastionHostFromCache()
-	if err != nil {
-		log.ErrorF("Can not load bastion host: %v\n", err)
-		return err
-	}
-
-	if bastionHost != "" {
-		b.SSHClient.Settings.BastionHost = bastionHost
-	}
-
 	err = log.Process("common", "Choice abort type", func() error {
 		ok, err := stateCache.InCache(ManifestCreatedInClusterCacheKey)
 		if err != nil {
@@ -118,6 +122,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 					},
 				)
 			} else {
+				if err := b.initSSHClient(); err != nil {
+					return err
+				}
 				destroyer = destroy.NewStaticMastersDestroyer(b.SSHClient)
 			}
 
@@ -131,6 +138,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			return nil
 		}
 
+		if err := b.initSSHClient(); err != nil {
+			return err
+		}
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
