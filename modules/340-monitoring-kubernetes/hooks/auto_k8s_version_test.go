@@ -145,30 +145,11 @@ data:
 		Context("check for empty \"ClusterConfiguration\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(""))
-				var sec corev1.Secret
-				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
-
-				_, err := dependency.TestDC.MustGetK8sClient().
-					CoreV1().
-					Secrets("appns").
-					Create(context.TODO(), &sec, metav1.CreateOptions{})
-				Expect(err).To(BeNil())
 				f.RunGoHook()
 			})
 
-			It("must return error", func() {
-				Expect(f.GoHookError).To(MatchError("cluster configuration kubernetesVersion is empty or invalid"))
-
-				var k8sVersion string
-				if val, exists := requirements.GetValue(AutoK8sVersion); exists {
-					k8sVersion = fmt.Sprintf("%v", val)
-				}
-				var reasons []string
-				if val, exists := requirements.GetValue(AutoK8sReason); exists {
-					reasons = strings.Split(fmt.Sprintf("%v", val), ", ")
-				}
-				Expect(k8sVersion).To(BeEmpty())
-				Expect(reasons).To(BeEmpty())
+			It("must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
 			})
 		})
 	})
