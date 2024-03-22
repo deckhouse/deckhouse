@@ -15,6 +15,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -53,7 +54,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleProjects))
 
 func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
-	postRenderer := new(projectTemplateHelmRenderer)
+	postRenderer := &projectTemplateHelmRenderer{
+		logger: input.LogEntry,
+	}
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 
@@ -196,6 +199,7 @@ func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, er
 
 type projectTemplateHelmRenderer struct {
 	projectName string
+	logger      logger.Logger
 }
 
 func (ptr *projectTemplateHelmRenderer) SetProject(name string) {
@@ -220,6 +224,11 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 		err = yaml.Unmarshal([]byte(manifest), &un)
 		if err != nil {
 			return renderedManifests, err
+		}
+
+		if un.GetAPIVersion() == "" || un.GetKind() == "" {
+			// skip empty manifests
+			continue
 		}
 
 		// inject multitenancy-manager labels
@@ -258,6 +267,8 @@ func (ptr *projectTemplateHelmRenderer) Run(renderedManifests *bytes.Buffer) (mo
 	}
 
 	result.WriteString(builder.String())
+
+	ptr.logger.Debugf("Rendered project %q: \n%s", ptr.projectName, result.String())
 
 	return result, nil
 }
