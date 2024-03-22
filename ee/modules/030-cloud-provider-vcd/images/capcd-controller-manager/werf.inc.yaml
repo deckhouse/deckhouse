@@ -30,8 +30,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     # - git clone --depth 1 --branch {{ $value.clusterApi.vcd }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
-    - git clone https://github.com/name212/cluster-api-provider-cloud-director.git /src
-    - git checkout 2cb247c3feb20a556a29b298d023160214ecfabd
+    - git clone --depth 1 --branch deckhouse_improvements https://github.com/name212/cluster-api-provider-cloud-director.git /src
     - cd /src
     # - test -d /patches/ && for patchfile in /patches/*.patch ; do git apply ${patchfile} ; done
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $value.clusterApi.vcd }}" -o /cluster-api-provider-cloud-director
