@@ -217,7 +217,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 #### Требования к кластерам
 
 * У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) интерфейса _ClusterConfiguration_, по умолчанию значение параметра `cluster.local`.
-* Подсеть подов и сервисов **не обязательно** должны быть уникальными (параметры [podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) интерфейса `ClusterConfiguration`).
+* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) не должны быть уникальными.
 
 #### Общие принципы федерации
 
