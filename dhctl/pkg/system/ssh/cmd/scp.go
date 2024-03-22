@@ -86,8 +86,9 @@ func (s *SCP) SCP() *SCP {
 		"-C", // compression
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPersist=600s",
-		"-o", "StrictHostKeyChecking=accept-new",
-		"-o", "UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
 	}
 
