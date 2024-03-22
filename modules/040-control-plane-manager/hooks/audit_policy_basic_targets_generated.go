@@ -9,6 +9,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-cloud-instance-manager",
 	"d8-cloud-provider-aws",
 	"d8-cloud-provider-azure",
+	"d8-cloud-provider-dvp",
 	"d8-cloud-provider-gcp",
 	"d8-cloud-provider-openstack",
 	"d8-cloud-provider-vcd",
