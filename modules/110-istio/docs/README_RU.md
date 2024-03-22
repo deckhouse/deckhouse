@@ -216,7 +216,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration), по умолчанию значение параметра `cluster.local`.
+* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). По умолчанию значение параметра — `cluster.local`.
 * Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) не должны быть уникальными.
 
 #### Общие принципы федерации
@@ -253,7 +253,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера, по умолчанию значение параметра `cluster.local`.
+* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
 * Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого члена мультикластера.
 
 #### Общие принципы
