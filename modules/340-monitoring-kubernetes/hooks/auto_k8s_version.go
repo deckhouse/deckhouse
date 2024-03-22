@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -95,11 +94,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 func clusterConfiguration(input *go_hook.HookInput, dc dependency.Container) error {
 	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
-	if !ok || len(kubernetesVersion) == 0 {
-		return errors.New("cluster configuration kubernetesVersion is empty or invalid")
-	}
-
-	if kubernetesVersion[0].(string) == "Automatic" {
+	if ok && len(kubernetesVersion) > 0 && kubernetesVersion[0].(string) == "Automatic" {
 		var (
 			unsupportVersion k8sUnsupportedVersion
 			wg               sync.WaitGroup
