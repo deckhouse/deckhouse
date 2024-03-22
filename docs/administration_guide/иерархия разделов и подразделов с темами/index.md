@@ -90,7 +90,7 @@ https://deckhouse.ru.test.flant.com/documentation/v1/modules/140-user-authz/
 
 ## Установка и сопровождение
 
-   ### *Установка платформы*
+### *Установка платформы*
 
   https://deckhouse.ru.test.flant.com/documentation/v1/installing/
 
@@ -104,7 +104,13 @@ https://deckhouse.ru.test.flant.com/documentation/v1/modules/140-user-authz/
    * **Ресурсы установки**
    * **Установка ДКП**
 
-### *Интеграция платформы с инфраструктурой*(мало контента)
+### *Интеграция платформы с инфраструктурой*(отсутствует контент)
+
+Интеграция платформы Deckhouse с инфраструктурой может включать несколько этапов:
+
+* Подключение к Deckhouse. Для этого необходимо создать новый кластер и подключить его к контроллеру Deckhouse.
+* Настройка ресурсов. После подключения кластера необходимо настроить ресурсы  Deployments, Services и Ingresses.
+* Создание и управление приложениями. С помощью Deckhouse можно создавать и управлять приложениями, такими как микросервисы, на платформе Kubernetes.
 
 Оин из сценариев сюда (https://deckhouse.ru.test.flant.com/documentation/v1/modules/402-ingress-nginx/)
 
