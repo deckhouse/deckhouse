@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Example usage:
-# source ./tools/validation/run_env
-# validation_go_run ./tools/validation --type copyright --file "$1"
+source ./tools/validation/run_env
 
-# This snippet is needed because 'go run' still not in sync
-# with other Go tools and considered a toy.
-# See https://github.com/golang/go/issues/13440#issuecomment-218353305
-
-function validation_go_run() {
-  validationDir="$1"
-  shift
-  go run ${validationDir}/{main,messages,diff,copyright,no_cyrillic,doc_changes,grafana_dashboard,release_requirements}.go "$@"
-}
+validation_go_run ./tools/validation \
+  --type release-requirements \
+  --file "$1"
