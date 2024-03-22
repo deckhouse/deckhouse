@@ -105,6 +105,7 @@ spec:
           - "--use-normal-vms-creation-instead-tkg"
           - "--resize-disk-before-network-reconciliation"
           - "--pass-hostname-by-guest-info"
+          - "--default-network-mode-for-new-vm=DHCP"
         livenessProbe:
           httpGet:
             path: /healthz
