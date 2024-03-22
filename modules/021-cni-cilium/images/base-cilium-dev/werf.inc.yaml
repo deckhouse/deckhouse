@@ -31,7 +31,7 @@ shell:
   - |
     apt-get install -y --no-install-recommends \
     debian-archive-keyring apt-transport-https apt-src curl \
-    jq  tzdata software-properties-common \
+    jq tzdata software-properties-common \
     bash-completion iproute2 iptables ipset kmod ca-certificates \
     coreutils binutils make cmake automake autoconf patch patchelf \
     git zip unzip wget \
@@ -66,7 +66,8 @@ shell:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
   - rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
-  - export GOROOT=/usr/local/go GOPATH=/go PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - go version
