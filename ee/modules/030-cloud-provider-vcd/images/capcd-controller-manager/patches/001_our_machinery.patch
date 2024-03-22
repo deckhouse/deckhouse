@@ -1,4 +1,4 @@
-Subject: [PATCH] ++
+Subject: [PATCH] deckhouse machinery
 ---
 Index: controllers/vcdcluster_controller.go
 IDEA additional info:
@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
 --- a/controllers/vcdcluster_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdcluster_controller.go	(date 1706023540429)
++++ b/controllers/vcdcluster_controller.go	(date 1710531258576)
 @@ -216,7 +216,7 @@
  		}
  		newRdeVersion, err := semver.New(rdeVersionInUse)
@@ -26,15 +26,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  		// try to resolve the defined entity
  		entityState, resp, err := workloadVCDClient.APIClient.DefinedEntityApi.ResolveDefinedEntity(ctx, updatedRDE.Id, org.Org.ID)
  		if err != nil {
-@@ -892,6 +892,7 @@
- 					if err1 != nil {
- 						log.Error(err1, "failed to add RdeError (RDE upgrade failed) ", "rdeID", infraID)
- 					}
-+					return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile RDE after upgrading RDE [%s]", infraID)
- 				}
- 				err = capvcdRdeManager.AddToEventSet(ctx, capisdk.RdeUpgraded, infraID, "", "", skipRDEEventUpdates)
- 				if err != nil {
-@@ -953,117 +954,119 @@
+@@ -953,117 +953,119 @@
  	virtualServiceNamePrefix := capisdk.GetVirtualServiceNamePrefix(vcdCluster.Name, vcdCluster.Status.InfraId)
  	lbPoolNamePrefix := capisdk.GetLoadBalancerPoolNamePrefix(vcdCluster.Name, vcdCluster.Status.InfraId)
 
@@ -252,7 +244,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	}
 
  	vcdCluster.Spec.ControlPlaneEndpoint = infrav1.APIEndpoint{
-@@ -1157,10 +1160,9 @@
+@@ -1157,10 +1159,9 @@
  	if !strings.HasPrefix(vcdCluster.Status.InfraId, NoRdePrefix) {
  		if err := r.reconcileRDE(ctx, cluster, vcdCluster, workloadVCDClient, clusterVApp.VApp.ID, true); err != nil {
  			log.Error(err, "failed to add VApp ID to RDE", "rdeID", infraID, "vappID", clusterVApp.VApp.ID)
@@ -266,7 +258,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	}
 
  	if metadataMap != nil && len(metadataMap) > 0 && !vcdCluster.Status.VAppMetadataUpdated {
-@@ -1177,14 +1179,14 @@
+@@ -1177,14 +1178,14 @@
  	err = rdeManager.AddToVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VCDResourceVApp,
  		vcdCluster.Name, clusterVApp.VApp.ID, nil)
  	if err != nil {
@@ -283,7 +275,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	}
  	err = capvcdRdeManager.AddToEventSet(ctx, capisdk.InfraVappAvailable, clusterVApp.VApp.ID, "", "", skipRDEEventUpdates)
  	if err != nil {
-@@ -1264,7 +1266,7 @@
+@@ -1264,7 +1265,7 @@
 
  	// Delete the load balancer components
  	virtualServiceNamePrefix := capisdk.GetVirtualServiceNamePrefix(vcdCluster.Name, vcdCluster.Status.InfraId)
@@ -292,7 +284,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 
  	controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
  	if controlPlanePort == 0 {
-@@ -1381,16 +1383,15 @@
+@@ -1381,16 +1382,15 @@
  		capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VCDResourceVApp, vcdCluster.Name)
  	if err != nil {
@@ -319,7 +311,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
 --- a/controllers/vcdmachine_controller.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/vcdmachine_controller.go	(date 1706301505822)
++++ b/controllers/vcdmachine_controller.go	(date 1711050421974)
 @@ -13,21 +13,19 @@
  	"fmt"
  	"math"
@@ -379,7 +371,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		if err != nil {
  			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
  			if err1 != nil {
-@@ -573,6 +583,134 @@
+@@ -573,11 +583,139 @@
  		// 	VCDResourceSet can get bloated with VMs if the cluster contains a large number of worker nodes
  	}
 
@@ -514,6 +506,12 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	desiredNetworks := []string{vcdCluster.Spec.OvdcNetwork}
  	if vcdMachine.Spec.ExtraOvdcNetworks != nil {
  		desiredNetworks = append([]string{vcdCluster.Spec.OvdcNetwork}, vcdMachine.Spec.ExtraOvdcNetworks...)
+ 	}
+-	if err = r.reconcileVMNetworks(vdcManager, vApp, vm, desiredNetworks); err != nil {
++	if err = r.reconcileVMNetworks(vdcManager, vApp, vm, desiredNetworks, log); err != nil {
+ 		log.Error(err, fmt.Sprintf("Error while attaching networks to vApp and VMs"))
+ 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+ 	}
 @@ -694,127 +832,6 @@
  			"lbpool", lbPoolName)
  	}
@@ -684,16 +682,119 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineScriptExecutionError, "", "")
  	if err != nil {
  		log.Error(err, "failed to remove VCDMachineScriptExecutionError from RDE", "rdeID", vcdCluster.Status.InfraId)
-@@ -1065,7 +1047,7 @@
+@@ -952,24 +934,33 @@
+
+ // reconcileVMNetworks ensures that desired networks are attached to VMs
+ // networks[0] refers the primary network
+-func (r *VCDMachineReconciler) reconcileVMNetworks(vdcManager *vcdsdk.VdcManager, vApp *govcd.VApp, vm *govcd.VM, networks []string) error {
++func (r *VCDMachineReconciler) reconcileVMNetworks(vdcManager *vcdsdk.VdcManager, vApp *govcd.VApp, vm *govcd.VM, networks []string, log logr.Logger) error {
++	log.Info("reconcileVMNetworks starts")
++	defer log.Info("reconcileVMNetworks finished")
++
++	log.Info("reconcileVMNetworks: run GetNetworkConnectionSection")
+ 	connections, err := vm.GetNetworkConnectionSection()
++
+ 	if err != nil {
+ 		return errors.Wrapf(err, "Failed to get attached networks to VM")
+ 	}
+
++	log.Info(fmt.Sprintf("reconcileVMNetworks: GetNetworkConnectionSection finished %+v", connections))
++
+ 	desiredConnectionArray := make([]*types.NetworkConnection, len(networks))
+
+ 	for index, ovdcNetwork := range networks {
+-		err = ensureNetworkIsAttachedToVApp(vdcManager, vApp, ovdcNetwork)
++		err = ensureNetworkIsAttachedToVApp(vdcManager, vApp, ovdcNetwork, log)
+ 		if err != nil {
+ 			return errors.Wrapf(err, "Error ensuring network [%s] is attached to vApp", ovdcNetwork)
+ 		}
+
+-		desiredConnectionArray[index] = getNetworkConnection(connections, ovdcNetwork)
++		desiredConnectionArray[index] = getNetworkConnection(connections, ovdcNetwork, log)
+ 	}
+
+ 	if !containsTheSameElements(connections.NetworkConnection, desiredConnectionArray) {
++		log.Info(fmt.Sprintf("reconcileVMNetworks: not containsTheSameElements %+v - %+v", connections, desiredConnectionArray))
++
+ 		connections.NetworkConnection = desiredConnectionArray
+ 		// update connection indexes for deterministic reconcilation
+ 		connections.PrimaryNetworkConnectionIndex = 0
+@@ -977,6 +968,7 @@
+ 			connection.NetworkConnectionIndex = index
+ 		}
+
++		log.Info(fmt.Sprintf("reconcileVMNetworks: run UpdateNetworkConnectionSection %+v", connections))
+ 		err = vm.UpdateNetworkConnectionSection(connections)
+ 		if err != nil {
+ 			return errors.Wrapf(err, "failed to update networks of VM")
+@@ -1008,35 +1000,45 @@
+ 	return true
+ }
+
+-func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string) *types.NetworkConnection {
++func getNetworkConnection(connections *types.NetworkConnectionSection, ovdcNetwork string, log logr.Logger) *types.NetworkConnection {
+
+ 	for _, existingConnection := range connections.NetworkConnection {
++		log.Info(fmt.Sprintf("getNetworkConnection: try connection %+v", existingConnection))
+ 		if existingConnection.Network == ovdcNetwork {
++			log.Info(fmt.Sprintf("getNetworkConnection: found connection %+v", existingConnection))
+ 			return existingConnection
+ 		}
+ 	}
+
+-	return &types.NetworkConnection{
++	res := &types.NetworkConnection{
+ 		Network:                 ovdcNetwork,
+ 		NeedsCustomization:      false,
+ 		IsConnected:             true,
+-		IPAddressAllocationMode: "POOL",
++		IPAddressAllocationMode: "DHCP",
+ 		NetworkAdapterType:      "VMXNET3",
+ 	}
++
++	log.Info(fmt.Sprintf("getNetworkConnection: not found connection use defaults %+v", res))
++
++	return res
+ }
+
+-func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VApp, ovdcNetworkName string) error {
++func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VApp, ovdcNetworkName string, log logr.Logger) error {
+ 	for _, vAppNetwork := range vApp.VApp.NetworkConfigSection.NetworkNames() {
+ 		if vAppNetwork == ovdcNetworkName {
++			log.Info(fmt.Sprintf("ensureNetworkIsAttachedToVApp: found vAppNetwork = ovdcNetworkName = %s", ovdcNetworkName))
+ 			return nil
+ 		}
+ 	}
+
++	log.Info("ensureNetworkIsAttachedToVApp: run GetOrgVdcNetworkByName")
+ 	ovdcNetwork, err := vdcManager.Vdc.GetOrgVdcNetworkByName(ovdcNetworkName, true)
+ 	if err != nil {
+ 		return fmt.Errorf("unable to get ovdc network [%s]: [%v]", ovdcNetworkName, err)
+ 	}
+
++	log.Info(fmt.Sprintf("ensureNetworkIsAttachedToVApp: run GetOrgVdcNetworkByName %+v", ovdcNetwork))
++	log.Info("ensureNetworkIsAttachedToVApp: run AddOrgNetwork")
+ 	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
+ 	if err != nil {
+ 		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
+@@ -1047,7 +1049,6 @@
+ }
+
+ func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *clusterv1.Machine) (string, error) {
+-	log := ctrl.LoggerFrom(ctx)
+ 	if machine.Spec.Bootstrap.DataSecretName == nil {
+ 		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
+ 	}
+@@ -1065,8 +1066,6 @@
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
 
 -	log.V(2).Info(fmt.Sprintf("Auto-generated bootstrap script: [%s]", string(value)))
-+	log.Info(fmt.Sprintf("Auto-generated bootstrap script: [%s]", string(value)))
-
+-
  	return string(value), nil
  }
-@@ -1348,16 +1330,14 @@
+
+@@ -1348,16 +1347,14 @@
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {
@@ -719,7 +820,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/controllers/cluster_scripts/cloud_init.tmpl b/controllers/cluster_scripts/cloud_init.tmpl
 --- a/controllers/cluster_scripts/cloud_init.tmpl	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/controllers/cluster_scripts/cloud_init.tmpl	(date 1706023442915)
++++ b/controllers/cluster_scripts/cloud_init.tmpl	(date 1708800378404)
 @@ -1,166 +1,1 @@
  #cloud-config
 -users:
@@ -894,7 +995,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/main.go b/main.go
 --- a/main.go	(revision 4425424cdd48705497032208b4f15698f2a5c4f2)
-+++ b/main.go	(date 1706023442915)
++++ b/main.go	(date 1708800378520)
 @@ -10,10 +10,11 @@
  	_ "embed"
  	"flag"
