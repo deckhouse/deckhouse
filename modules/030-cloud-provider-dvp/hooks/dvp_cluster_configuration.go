@@ -26,12 +26,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, _ *unstructured.Unstructured, secretFound bool) error {
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	if !secretFound {
 		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
 	}
 
 	input.Values.Set("cloudProviderDvp.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
-
+	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", providerDiscoveryData.Object)
 	return nil
 })
