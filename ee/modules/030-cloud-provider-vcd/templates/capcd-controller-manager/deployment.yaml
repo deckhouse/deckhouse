@@ -103,7 +103,6 @@ spec:
           - "--webhook-port=9444"
           - "--use-kubernetes-host-env-as-control-plane-host"
           - "--use-normal-vms-creation-instead-tkg"
-          - "--resize-disk-before-network-reconciliation"
           - "--pass-hostname-by-guest-info"
           - "--default-network-mode-for-new-vm=DHCP"
         livenessProbe:
