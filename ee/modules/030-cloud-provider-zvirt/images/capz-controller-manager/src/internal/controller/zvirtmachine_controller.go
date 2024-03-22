@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -26,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	zv1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 	"github.com/deckhouse/deckhouse/internal/controller/utils"
 )
 
@@ -51,7 +52,7 @@ type ZvirtMachineReconciler struct {
 func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	zvMachine := &zv1alpha1.ZvirtMachine{}
+	zvMachine := &infrastructurev1.ZvirtMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, zvMachine)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -76,6 +77,18 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("cluster", cluster.Name)
+
+	zvCluster := &infrastructurev1.ZvirtCluster{}
+	err = r.Client.Get(ctx, types.NamespacedName{
+		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}, zvCluster)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("Error getting ZvirtCluster: %w", err)
+	}
 
 	if annotations.IsPaused(cluster, zvMachine) {
 		logger.Info("ZvirtMachine or linked Cluster is marked as paused. Will not reconcile.")
@@ -102,24 +115,24 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Handle non-deleted clusters
-	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine)
+	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine, zvCluster)
 }
 
 func patchZvirtMachine(
 	ctx context.Context,
 	patchHelper *patch.Helper,
-	zvirtMachine *zv1alpha1.ZvirtMachine,
+	zvirtMachine *infrastructurev1.ZvirtMachine,
 	options ...patch.Option,
 ) error {
 	conditions.SetSummary(zvirtMachine,
-		conditions.WithConditions(zv1alpha1.VMReadyCondition),
+		conditions.WithConditions(infrastructurev1.VMReadyCondition),
 	)
 
 	// Patch the object, ignoring conflicts on the conditions owned by this controller.
 	options = append(options,
 		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
 			clusterv1.ReadyCondition,
-			zv1alpha1.VMReadyCondition,
+			infrastructurev1.VMReadyCondition,
 		}},
 	)
 	return patchHelper.Patch(ctx, zvirtMachine, options...)
@@ -134,7 +147,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	logger logr.Logger,
 	cluster *clusterv1.Cluster,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
 ) (_ ctrl.Result, reterr error) {
 	var err error
 
@@ -144,7 +158,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	// If ZvirtMachine is not under finalizer yet, set it now.
-	if controllerutil.AddFinalizer(zvMachine, zv1alpha1.MachineFinalizer) {
+	if controllerutil.AddFinalizer(zvMachine, infrastructurev1.MachineFinalizer) {
 		return ctrl.Result{}, nil
 	}
 
@@ -152,8 +166,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("Waiting for Cluster infrastructure to become Ready")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.WaitingForClusterInfrastructureReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.WaitingForClusterInfrastructureReason,
 			clusterv1.ConditionSeverityInfo,
 			"",
 		)
@@ -164,8 +178,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("Bootstrap cloud-init secret reference is missing from Machine")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.WaitingForBootstrapScriptReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.WaitingForBootstrapScriptReason,
 			clusterv1.ConditionSeverityInfo,
 			"",
 		)
@@ -177,13 +191,13 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	defer cancel()
 	timeout := ovirt.ContextStrategy(timeoutCtx)
 
-	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, timeout)
+	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster, timeout)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see ZvirtMachine status for details")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMErrorReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMErrorReason,
 			clusterv1.ConditionSeverityError,
 			"No VM can be found or created for Machine: %v",
 			err,
@@ -209,7 +223,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 
 	// Node usually joins the cluster if the CSR generated by kubelet with the node name is approved.
 	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
-	zvMachine.Status.Addresses = []zv1alpha1.VMAddress{
+	zvMachine.Status.Addresses = []infrastructurev1.VMAddress{
 		{Type: clusterv1.MachineHostName, Address: machine.Name},
 		{Type: clusterv1.MachineInternalDNS, Address: machine.Name},
 	}
@@ -218,7 +232,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	switch vmStatus {
 	case ovirt.VMStatusUp:
 		logger.Info("VM state is UP", "id", vm.ID())
-		conditions.MarkTrue(zvMachine, zv1alpha1.VMReadyCondition)
+		conditions.MarkTrue(zvMachine, infrastructurev1.VMReadyCondition)
 		zvMachine.Status.Ready = true
 
 		addrs, err := vm.WaitForNonLocalIPAddress(timeout)
@@ -250,7 +264,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 			)
 		}
 
-		zvMachine.Status.Addresses = append(zvMachine.Status.Addresses, []zv1alpha1.VMAddress{
+		zvMachine.Status.Addresses = append(zvMachine.Status.Addresses, []infrastructurev1.VMAddress{
 			{Type: clusterv1.MachineInternalIP, Address: machineAddress},
 			{Type: clusterv1.MachineExternalIP, Address: machineAddress},
 		}...)
@@ -270,8 +284,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		}
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMInFailedStateReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMInFailedStateReason,
 			clusterv1.ConditionSeverityError,
 			"",
 		)
@@ -285,8 +299,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		if err != nil {
 			conditions.MarkFalse(
 				zvMachine,
-				zv1alpha1.VMReadyCondition,
-				zv1alpha1.VMErrorReason,
+				infrastructurev1.VMReadyCondition,
+				infrastructurev1.VMErrorReason,
 				clusterv1.ConditionSeverityError,
 				"%v", err,
 			)
@@ -298,8 +312,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("Waiting for VM to become UP", "id", vm.ID(), "status", vmStatus)
 		conditions.MarkUnknown(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMNotReadyReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMNotReadyReason,
 			"VM is not ready, state is %s",
 			vmStatus,
 		)
@@ -313,7 +327,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 func (r *ZvirtMachineReconciler) getOrCreateVM(
 	ctx context.Context,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
 	retryStrategy ...ovirt.RetryStrategy,
 ) (ovirt.VM, error) {
 	vm, foundVM, err := r.findVMForMachine(machine, retryStrategy...)
@@ -325,13 +340,14 @@ func (r *ZvirtMachineReconciler) getOrCreateVM(
 		return vm, nil
 	}
 
-	return r.createVM(ctx, machine, zvMachine, retryStrategy)
+	return r.createVM(ctx, machine, zvMachine, zvCluster, retryStrategy)
 }
 
 func (r *ZvirtMachineReconciler) createVM(
 	ctx context.Context,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
 	retryStrategy []ovirt.RetryStrategy,
 ) (ovirt.VM, error) {
 	dataSecretName := *machine.Spec.Bootstrap.DataSecretName
@@ -362,7 +378,7 @@ func (r *ZvirtMachineReconciler) createVM(
 		return nil, fmt.Errorf("Cannot get VM template %q: %w", zvMachine.Spec.TemplateName, err)
 	}
 
-	vm, err := r.Zvirt.CreateVM(ovirt.ClusterID(zvMachine.Spec.ClusterID), tpl.ID(), machine.Name, vmConfig, retryStrategy...)
+	vm, err := r.Zvirt.CreateVM(ovirt.ClusterID(zvCluster.Spec.ID), tpl.ID(), machine.Name, vmConfig, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create VM: %w", err)
 	}
@@ -442,7 +458,7 @@ func (r *ZvirtMachineReconciler) createVM(
 
 func (r *ZvirtMachineReconciler) checkIfVirtualMachineIsMisconfigured(
 	vm ovirt.VM,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
 	logger logr.Logger,
 	retryStrategy ...ovirt.RetryStrategy,
 ) (bool, error) {
@@ -480,7 +496,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
 ) (ctrl.Result, error) {
 	logger.Info("Reconciling Machine delete")
 
@@ -503,7 +519,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 		logger.Info("VM not found in zVirt, nothing to do")
 	}
 
-	controllerutil.RemoveFinalizer(zvMachine, zv1alpha1.MachineFinalizer)
+	controllerutil.RemoveFinalizer(zvMachine, infrastructurev1.MachineFinalizer)
 	logger.Info("Reconciled Machine delete successfully")
 	return ctrl.Result{}, nil
 }
@@ -522,7 +538,7 @@ func (r *ZvirtMachineReconciler) findVMForMachine(machine *clusterv1.Machine, re
 
 func (r *ZvirtMachineReconciler) vmConfigFromZvirtMachineSpec(
 	hostname string,
-	machineSpec *zv1alpha1.ZvirtMachineSpec,
+	machineSpec *infrastructurev1.ZvirtMachineSpec,
 	cloudInitScript []byte,
 ) (ovirt.BuildableVMParameters, error) {
 	ramBytes := int64(machineSpec.Memory) * 1024 * 1024
@@ -562,6 +578,6 @@ func (r *ZvirtMachineReconciler) vmConfigFromZvirtMachineSpec(
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZvirtMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&zv1alpha1.ZvirtMachine{}).
+		For(&infrastructurev1.ZvirtMachine{}).
 		Complete(r)
 }

@@ -34,8 +34,6 @@ properties:
                 numCPUs: 4
                 memory: 8192
                 template: debian-bookworm
-                os: debian_9
-                vmType: high_performance
                 vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                 nicName: "nic1"
                 storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
@@ -115,11 +113,6 @@ properties:
                     description: |
                       Template name to be cloned.
                     example: debian-bookworm
-                  vmType:
-                    type: string
-                    description: |
-                      Load profile.
-                    example: high_performance
                   vnicProfileId:
                     type: string
                     description: |

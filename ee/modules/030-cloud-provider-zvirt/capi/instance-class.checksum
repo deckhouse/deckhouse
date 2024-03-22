@@ -5,11 +5,6 @@
   {{- $template = .nodeGroup.instanceClass.template }}
 {{- end }}
 
-{{- $clusterId := .nil }}
-{{- if .nodeGroup.instanceClass.clusterId }}
-  {{- $clusterId = .nodeGroup.instanceClass.clusterId }}
-{{- end }}
-
 {{- $vnicProfileId := .nil }}
 {{- if .nodeGroup.instanceClass.vnicProfileId }}
   {{- $vnicProfileId = .nodeGroup.instanceClass.vnicProfileId }}
@@ -36,7 +31,6 @@
 {{- end }}
 
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
-{{- $_ := set $options "clusterId" .nodeGroup.instanceClass.clusterId -}}
 {{- $_ := set $options "vnicProfileId" .nodeGroup.instanceClass.vnicProfileId -}}
 {{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}

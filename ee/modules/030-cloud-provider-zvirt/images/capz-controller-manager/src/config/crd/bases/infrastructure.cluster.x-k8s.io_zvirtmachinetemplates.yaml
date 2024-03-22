@@ -14,7 +14,7 @@ spec:
     singular: zvirtmachinetemplate
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ZvirtMachineTemplate is the Schema for the zvirtmachinetemplates
@@ -91,9 +91,6 @@ spec:
                     type: object
                   spec:
                     properties:
-                      clusterID:
-                        description: the zVirt cluster this VM instance belongs too.
-                        type: string
                       cpu:
                         description: CPU defines the VM CPU.
                         properties:
@@ -141,7 +138,6 @@ spec:
                           for the VM.
                         type: string
                     required:
-                    - clusterID
                     - rootDiskSizeGb
                     - template
                     - vnicProfileID

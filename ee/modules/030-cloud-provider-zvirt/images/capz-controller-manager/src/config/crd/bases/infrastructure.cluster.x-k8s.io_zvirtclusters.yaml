@@ -14,7 +14,7 @@ spec:
     singular: zvirtcluster
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ZvirtCluster is the Schema for the zvirtclusters API
@@ -53,6 +53,9 @@ spec:
                 - host
                 - port
                 type: object
+              id:
+                description: ID holds zVirt cluster identifier of this ZvirtCluster.
+                type: string
             type: object
           status:
             description: ZvirtClusterStatus defines the observed state of ZvirtCluster
