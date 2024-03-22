@@ -49,6 +49,7 @@ shell:
   - rm -rf /iptables
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   - cd /go/src/github.com/cilium/cilium/images/runtime
+  - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/
   - ./iptables-wrapper-installer.sh --no-sanity-check
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go

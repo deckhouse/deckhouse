@@ -85,7 +85,7 @@ import:
   to: /iptables
   before: install
 - artifact: {{ $.ModuleName }}/cilium-artifact
-  add: /go/src/github.com/cilium/cilium/images/runtime/
+  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
   to: /go/src/github.com/cilium/cilium/images/runtime
   before: install
   includePaths:
