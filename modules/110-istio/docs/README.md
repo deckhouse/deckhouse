@@ -212,8 +212,8 @@ Below are their fundamental differences:
 
 #### Requirements for clusters
 
-* Each cluster must have a unique cluster domain ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
-* Pod and Service subnets **doesn't need** to be unique ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
+* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the _ClusterConfiguration_ interface, the default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the _ClusterConfiguration_ interface can be the same.
 
 #### General principles of federation
 
@@ -250,8 +250,8 @@ To establish a federation, you must:
 
 #### Requirements for clusters
 
-* Cluster domains **should** be the same for all members of multicluster ([clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) setting in `ClusterConfiguration` interface).
-* Pod and Service subnets **should** be unique for each multicluster member ([podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) settings in `ClusterConfiguration` resource).
+* Cluster domains in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the _ClusterConfiguration_ interface must be the same for all multicluster members, the default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the _ClusterConfiguration_ interface must be unique for each multicluster member.
 
 #### General principles
 

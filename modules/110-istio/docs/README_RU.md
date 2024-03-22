@@ -216,7 +216,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* У каждого кластера должен быть уникальный домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) в интерфейсе `ClusterConfiguration`, по умолчанию `cluster.local`).
+* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) интерфейса _ClusterConfiguration_, по умолчанию значение параметра `cluster.local`.
 * Подсеть подов и сервисов **не обязательно** должны быть уникальными (параметры [podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) интерфейса `ClusterConfiguration`).
 
 #### Общие принципы федерации
@@ -253,8 +253,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* Домены кластеров **должны** быть одинаковыми для всех членов мультикластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) интерфейса `ClusterConfiguration`, по умолчанию `cluster.local`).
-* Подсеть подов и сервисов **должны** быть уникальными для каждого члена мультикластера (параметры [podSubnetCIDR](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [serviceSubnetCIDR](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) интерфейса `ClusterConfiguration`).
+* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) интерфейса _ClusterConfiguration_ должны быть одинаковыми для всех членов мультикластера, по умолчанию значение параметра `cluster.local`.
+* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) интерфейса _ClusterConfiguration_ должны быть уникальными для каждого члена мультикластера.
 
 #### Общие принципы
 
