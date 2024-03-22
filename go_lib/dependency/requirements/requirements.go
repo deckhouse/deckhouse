@@ -56,11 +56,7 @@ func CheckRequirement(key, value string) (bool, error) {
 
 	for _, f := range fs {
 		passed, ferr := f(value, memoryStorage)
-		if ferr != nil {
-			return passed, ferr
-		}
-
-		if !passed {
+		if ferr != nil || !passed {
 			return passed, ferr
 		}
 	}
