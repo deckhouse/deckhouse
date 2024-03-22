@@ -94,7 +94,9 @@ https://deckhouse.ru.test.flant.com/documentation/v1/deckhouse-release-channels.
 
 ### *Высокая надежность и доступность*
 
-   https://deckhouse.ru.test.flant.com/documentation/v1/modules/460-log-shipper/
+https://deckhouse.ru.test.flant.com/documentation/v1/kubernetes.html
+
+https://deckhouse.ru.test.flant.com/documentation/v1/modules/460-log-shipper/
 
 * **Going to production** (нужны тестовые сценарии)
 - Подготовка инфраструктуры
