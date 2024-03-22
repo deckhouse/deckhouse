@@ -12,6 +12,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -458,7 +459,7 @@ spec:
 `
 
 func TestPostRenderer(t *testing.T) {
-	pr := new(projectTemplateHelmRenderer)
+	pr := &projectTemplateHelmRenderer{logger: logrus.New()}
 	pr.SetProject("test-project-1")
 	buf := bytes.NewBuffer(nil)
 
