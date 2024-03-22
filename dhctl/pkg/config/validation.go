@@ -329,14 +329,14 @@ func ValidateClusterSettingsChanges(
 	oldRawDocs := input.YAMLSplitRegexp.Split(strings.TrimSpace(oldConfig), -1)
 	newRawDocs := input.YAMLSplitRegexp.Split(strings.TrimSpace(newConfig), -1)
 
-	oldDocs := map[SchemaIndex]string{}
-	newDocs := map[SchemaIndex]string{}
+	oldDocs := map[namedIndex]string{}
+	newDocs := map[namedIndex]string{}
 
 	for _, rawDoc := range oldRawDocs {
 		if rawDoc == "" {
 			continue
 		}
-		err := setConfigs(schemaStore, oldDocs, rawDoc, opts...)
+		err := setConfigs(schemaStore, oldDocs, rawDoc)
 		if err != nil {
 			return err
 		}
@@ -346,23 +346,22 @@ func ValidateClusterSettingsChanges(
 		if rawDoc == "" {
 			continue
 		}
-		err := setConfigs(schemaStore, newDocs, rawDoc, opts...)
+		err := setConfigs(schemaStore, newDocs, rawDoc)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(oldDocs) != len(newDocs) {
-		return ErrConfigAmountChanged
-	}
-
 	for index, newDoc := range newDocs {
 		oldDoc, ok := oldDocs[index]
 		if !ok {
-			return errors.New("cannot to add additional configuration file")
+			continue
 		}
 
-		schema := schemaStore.getV1alpha1CompatibilitySchema(&index)
+		schema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
+			Kind:    index.Kind,
+			Version: index.Version,
+		})
 		if schema == nil {
 			return errors.New("unknown yaml configuration index")
 		}
@@ -378,9 +377,8 @@ func ValidateClusterSettingsChanges(
 
 func setConfigs(
 	schemaStore *SchemaStore,
-	configs map[SchemaIndex]string,
+	configs map[namedIndex]string,
 	doc string,
-	opts ...ValidateOption,
 ) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
@@ -389,9 +387,10 @@ func setConfigs(
 
 	docData := []byte(doc)
 
-	index, err := schemaStore.Validate(&docData, opts...)
-	if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-		return err
+	index := namedIndex{}
+	err := yaml.Unmarshal(docData, &index)
+	if err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	if !index.IsValid() {
@@ -401,13 +400,16 @@ func setConfigs(
 		)
 	}
 
-	schema := schemaStore.getV1alpha1CompatibilitySchema(index)
+	schema := schemaStore.getV1alpha1CompatibilitySchema(&SchemaIndex{
+		Kind:    index.Kind,
+		Version: index.Version,
+	})
 	if schema == nil {
 		// No need to compare Resources that are not stored in the cache.
 		return nil
 	}
 
-	configs[*index] = doc
+	configs[index] = doc
 
 	return nil
 }
@@ -473,4 +475,23 @@ func validateXUnsafeExtensions(
 		}
 	}
 	return nil
+}
+
+type namedIndex struct {
+	Kind     string `json:"kind"`
+	Version  string `json:"apiVersion"`
+	Metadata struct {
+		Name string `json:"name"`
+	} `json:"metadata"`
+}
+
+func (i *namedIndex) IsValid() bool {
+	return i.Kind != "" && i.Version != ""
+}
+
+func (i *namedIndex) String() string {
+	if i.Metadata.Name != "" {
+		return fmt.Sprintf("%s, %s", i.Kind, i.Version)
+	}
+	return fmt.Sprintf("%s, %s, metadata.name: %q", i.Kind, i.Version, i.Metadata.Name)
 }
