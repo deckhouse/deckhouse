@@ -1,0 +1,29 @@
+kind: DVPCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: DVPCloudDiscoveryData
+      storageClasses:
+      - name: standard
+        isDefault: true
+      - name: premium
+    additionalProperties: false
+    required: [apiVersion, kind, storageClasses]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [DVPCloudDiscoveryData]
+      storageClasses:
+        type: array
+        items:
+          properties:
+            name:
+              type: string
+            isDefault:
+              type: boolean

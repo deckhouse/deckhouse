@@ -26,6 +26,19 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+func GenerateSecretYAML(clusterConfiguration, discoveryData string) string {
+	return fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+ name: d8-provider-cluster-configuration
+ namespace: kube-system
+data:
+ "cloud-provider-cluster-configuration.yaml": %s
+ "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(discoveryData)))
+}
+
 var _ = Describe("Modules :: cloud-provider-dvp :: hooks :: dvp_cluster_configuration ::", func() {
 	const (
 		initValuesString = `
@@ -59,7 +72,7 @@ masterNodeGroup:
     etcdDisk:
       size: 10Gi
 provider:
-  kubeconfigBase64: ZXhhbXBsZQo=
+  kubeconfigDataBase64: ZXhhbXBsZQo=
   namespace: tenant
 `
 
@@ -70,25 +83,28 @@ kind: DVPClusterConfiguration
 layout: WithNATInstance
 `
 
-	var secretStateCorrect = fmt.Sprintf(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-provider-cluster-configuration
-  namespace: kube-system
-data:
-  "cloud-provider-cluster-configuration.yaml": %s
-`, base64.StdEncoding.EncodeToString([]byte(stateCorrectDVPClusterConfiguration)))
+	var stateCorrectDiscoveryData = `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "storageClasses":[
+    {"name":"a"},
+    {"name":"b","isDefault":true}
+		]
+}
+`
 
-	secretStateWrong := fmt.Sprintf(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cloud-provider-cluster-configuration.yaml": %s
-  `, base64.StdEncoding.EncodeToString([]byte(stateWrongDVPClusterConfiguration)))
+	var stateWrongDiscoveryData = `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "zones": [{"name":"a"},{"name":"b"}]
+}
+`
+
+	var secretStateCorrectClusterCorrectData = GenerateSecretYAML(stateCorrectDVPClusterConfiguration, stateCorrectDiscoveryData)
+	var secretStateCorrectClusterWrongData = GenerateSecretYAML(stateCorrectDVPClusterConfiguration, stateWrongDiscoveryData)
+	var secretStateWrongClusterWrongData = GenerateSecretYAML(stateWrongDVPClusterConfiguration, stateWrongDiscoveryData)
 
 	a := HookExecutionConfigInit(initValuesString, `{}`)
 	Context("Cluster has empty state", func() {
@@ -104,31 +120,51 @@ data:
 	})
 
 	b := HookExecutionConfigInit(initValuesString, `{}`)
-	Context("Correct DVP Cluster Configuration", func() {
+	Context("Correct DVP Cluster Configuration and correct discovery data", func() {
 		BeforeEach(func() {
-			b.BindingContexts.Set(b.KubeStateSet(secretStateCorrect))
+			b.BindingContexts.Set(b.KubeStateSet(secretStateCorrectClusterCorrectData))
 			b.RunHook()
 		})
 
 		It("All values should be ok", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderDvp.internal.providerClusterConfiguration").String()).To(MatchYAML(stateCorrectDVPClusterConfiguration))
+			Expect(b.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData").String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1
+kind: DVPCloudDiscoveryData
+storageClasses:
+  - name: a
+  - name: b
+    isDefault: true`))
 		})
 	})
 
 	c := HookExecutionConfigInit(initValuesString, `{}`)
-	Context("Wrong DVP Cluster Configuration", func() {
+	Context("Correct DVP Cluster Configuration and wrong discovery data", func() {
 		BeforeEach(func() {
-			c.BindingContexts.Set(b.KubeStateSet(secretStateWrong))
+			c.BindingContexts.Set(b.KubeStateSet(secretStateCorrectClusterWrongData))
 			c.RunHook()
 		})
 
 		It("Hook should fail with errors", func() {
 			Expect(c).To(Not(ExecuteSuccessfully()))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`layout should be one of [Standard]`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.sshPublicKey is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.storageClasses is required`))
+		})
+	})
+
+	d := HookExecutionConfigInit(initValuesString, `{}`)
+	Context("Wrong DVP Cluster Configuration", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(b.KubeStateSet(secretStateWrongClusterWrongData))
+			d.RunHook()
+		})
+
+		It("Hook should fail with errors", func() {
+			Expect(d).To(Not(ExecuteSuccessfully()))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout should be one of [Standard]`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.sshPublicKey is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
 		})
 	})
 

@@ -8,3 +8,5 @@ properties:
     properties:
       providerClusterConfiguration:
         $ref: '/deckhouse/candi/cloud-providers/dvp/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+      providerDiscoveryData:
+        $ref: '/deckhouse/candi/cloud-providers/dvp/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
