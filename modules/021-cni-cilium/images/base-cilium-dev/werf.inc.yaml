@@ -3,11 +3,18 @@
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.1.0" }}
 ---
 # #####################################################################
-# Base image for build binaries of all cilium components (based on Ubuntu)
+# BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
 # based on original images: runtime, builder, compilers, cilium-envoy, iptables
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/builder/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-bazel.sh
+#
+# Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
+# Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
+# #####################################################################
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_UBUNTU }}
