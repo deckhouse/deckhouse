@@ -26,12 +26,14 @@ variable "nodeIndex" {
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "clusterUUID" {
   type = string
 }
+
 
 locals {
   prefix                = var.clusterConfiguration.cloud.prefix

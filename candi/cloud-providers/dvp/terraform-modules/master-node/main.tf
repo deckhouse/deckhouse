@@ -41,7 +41,6 @@ locals {
     }
   }
 
-
   vm_destructive_params = merge({
     "virtualMachine" = {
       "cpu" = {
