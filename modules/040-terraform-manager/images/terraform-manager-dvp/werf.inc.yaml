@@ -1,0 +1,28 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/yandex
+  to: /deckhouse/candi/cloud-providers/yandex
+import:
+- artifact: terraform-provider-yandex
+  add: /terraform-provider-yandex
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
+  before: setup
+---
+artifact: terraform-provider-yandex
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make patch git bash
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v{{ .TF.yandex.version }} {{ $.SOURCE_REPO }}/yandex-cloud/terraform-provider-yandex.git /src
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
+    - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
+    - chmod -R 755 /terraform-provider-yandex
+    - chown 64535:64535 /terraform-provider-yandex
