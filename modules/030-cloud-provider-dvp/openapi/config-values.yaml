@@ -1,3 +1,23 @@
-x-config-version: 2
 type: object
 properties:
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
+        x-examples:
+        - ["linstor-thin.*", "ceph"]
+      default:
+        type: string
+        description: |
+          The name of StorageClass that will be used in the cluster by default;
+
+          If the parameter is omitted, the default StorageClass is either:
+          * existing default StorageClass (that has the annotation ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
+          * the first StorageClass created by the module (in accordance with the order listed in the table above).
+        x-examples:
+        - "linstor-thin-r2"
