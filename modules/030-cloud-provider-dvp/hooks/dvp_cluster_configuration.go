@@ -33,5 +33,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 
 	input.Values.Set("cloudProviderDvp.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", providerDiscoveryData.Object)
+
 	return nil
 })
