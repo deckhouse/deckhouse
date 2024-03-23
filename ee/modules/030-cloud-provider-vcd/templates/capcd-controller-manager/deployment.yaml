@@ -104,6 +104,7 @@ spec:
           - "--use-kubernetes-host-env-as-control-plane-host"
           - "--use-normal-vms-creation-instead-tkg"
           - "--pass-hostname-by-guest-info"
+          - "--skip-post-bootstrap-phases-checking"
           - "--default-network-mode-for-new-vm=DHCP"
         livenessProbe:
           httpGet:
