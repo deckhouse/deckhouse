@@ -13,20 +13,19 @@
 {{- $bpftoolRev := "93270357daa949e4bed375b40d0a100ce04f3399" }}
 ---
 artifact: {{ $.ModuleName }}/bpftool-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromImage: {{ $.ModuleName }}/compilers-artifact
 shell:
   beforeInstall:
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
-  install:
-  - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
+  #install:
+  #- update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+  #- update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
   setup:
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   # - mkdir -p /out/linux/amd64/bin
   # - cp bpftool /out/linux/amd64/bin
-  - cp bpftool /usr/local/bin
-
+  - cp -a bpftool /usr/local/bin
