@@ -11,6 +11,7 @@ import:
 ---
 artifact: terraform-provider-kubernetes
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
