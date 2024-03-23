@@ -29,7 +29,8 @@ shell:
     - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
     - cd /src
     - find /patches -name '*.patch' | xargs git apply
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-kubernetes/version.ProviderVersion={{ .TF.kubernetes.version }}"
-    - mv /go/bin/terraform-provider-kubernetes /terraform-provider-kubernetes
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-kubernetes -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-kubernetes/version.ProviderVersion={{ .TF.kubernetes.version }}"
+    - mv terraform-provider-kubernetes /terraform-provider-kubernetes
     - chmod -R 755 /terraform-provider-kubernetes
     - chown 64535:64535 /terraform-provider-kubernetes
