@@ -58,8 +58,8 @@ locals {
   root_disk_image_name         = local.master_instance_class.rootDisk.image.name
   root_disk_image_type         = local.master_instance_class.rootDisk.image.type
 
-  etcd_disk_size               = lookup(local.master_instance_class.etcDisk, "size", "20Gb")
-  etcd_disk_storage_class_name = lookup(local.master_instance_class.etcDisk, "storageClassName", null)
+  etcd_disk_size               = lookup(local.master_instance_class.etcdDisk, "size", "20Gb")
+  etcd_disk_storage_class_name = lookup(local.master_instance_class.etcdDisk, "storageClassName", null)
 
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 
