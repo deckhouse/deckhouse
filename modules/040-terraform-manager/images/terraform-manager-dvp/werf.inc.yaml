@@ -1,16 +1,21 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/yandex
-  to: /deckhouse/candi/cloud-providers/yandex
+- add: /{{ .ModulePath }}candi/cloud-providers/dvp
+  to: /deckhouse/candi/cloud-providers/dvp
 import:
-- artifact: terraform-provider-yandex
-  add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
+- artifact: terraform-provider-kubernetes
+  add: /terraform-provider-kubernetes
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
   before: setup
 ---
-artifact: terraform-provider-yandex
+artifact: terraform-provider-kubernetes
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
@@ -20,9 +25,10 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.yandex.version }} {{ $.SOURCE_REPO }}/yandex-cloud/terraform-provider-yandex.git /src
+    - git clone --depth 1 --branch v{{ .TF.dvp.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
     - cd /src
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
-    - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
-    - chmod -R 755 /terraform-provider-yandex
-    - chown 64535:64535 /terraform-provider-yandex
+    - find /patches -name '*.patch' | xargs git apply
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-kubernetes/version.ProviderVersion={{ .TF.kubernetes.version }}"
+    - mv /go/bin/terraform-provider-dvp /terraform-provider-kubernetes
+    - chmod -R 755 /terraform-provider-kubernetes
+    - chown 64535:64535 /terraform-provider-kubernetes
