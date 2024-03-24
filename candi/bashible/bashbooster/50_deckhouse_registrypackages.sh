@@ -114,7 +114,7 @@ import socket
 import ssl
 import urllib.request
 
-socket.setdefaulttimeout(10)
+socket.setdefaulttimeout(30)
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -123,15 +123,13 @@ endpoints = "${REGISTRY_PACKAGES_PROXY_ENDPOINTS}".split(",")
 # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 endpoint = random.choice(endpoints)
 
-scheme = "http"
+token = open("/var/lib/bashible/bootstrap-token", "r").read()
 
-if "${REGISTRY_PACKAGES_PROXY_TOKEN}" != "":
-  scheme = "https"
-  opener = urllib.request.build_opener()
-  opener.addheaders = [('Authorization', 'Bearer ${REGISTRY_PACKAGES_PROXY_TOKEN}')]
-  urllib.request.install_opener(opener)
+opener = urllib.request.build_opener()
+opener.addheaders = [('Authorization', f'Bearer {token}')]
+urllib.request.install_opener(opener)
 
-url = f'{scheme}://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
+url = f'https://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
 urllib.request.urlretrieve(url, "$2")
 EOF
 }
@@ -154,7 +152,7 @@ bb-rp-proxy-fetch-blobs() {
 # Unpack packages and run install script
 # bb-package-install package:digest
 bb-package-install() {
-  local BB_RP_INSTALL_FETCH_FROM_PROXY="true"
+  bb-flag-set bb-rp-install-fetch-from-proxy
 
   bb-rp-install "$@"
 }
@@ -221,7 +219,7 @@ bb-rp-fetch() {
     return 0
   fi
 
-  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" != "true" ]]; then
+  if ! bb-flag? bb-rp-install-fetch-from-proxy; then
     bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
     trap 'bb-log-error "Failed to fetch manifests"' ERR
     bb-rp-fetch-manifests PACKAGES_MAP
@@ -238,7 +236,7 @@ bb-rp-fetch() {
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
   trap 'bb-log-error "Failed to fetch packages"' ERR
-  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" == "true" ]]; then
+  if bb-flag? bb-rp-install-fetch-from-proxy; then
     bb-rp-proxy-fetch-blobs PACKAGES_MAP
   else
     bb-rp-fetch-blobs BLOB_FILES_MAP
@@ -250,9 +248,11 @@ bb-rp-fetch() {
 # Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
-  if [[ "${BB_RP_INSTALL_FETCH_FROM_PROXY}" != "true" ]]; then
+  if ! bb-flag? bb-rp-install-fetch-from-proxy; then
     bb-log-deprecated 'bb-package-install'
   fi
+
+  bb-flag-unset bb-rp-install-fetch-from-proxy
 
   local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do

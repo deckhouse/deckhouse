@@ -28,13 +28,6 @@ subjects:
   name: prometheus
   namespace: d8-monitoring
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: registry-packages-proxy-client
-  namespace: d8-registry-packages-proxy
-  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -59,6 +52,6 @@ roleRef:
   kind: Role
   name: access-to-registry-packages-proxy-from-http
 subjects:
-  - kind: ServiceAccount
-    name: registry-packages-proxy-client
-    namespace: d8-registry-packages-proxy
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
