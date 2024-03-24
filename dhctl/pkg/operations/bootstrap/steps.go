@@ -18,9 +18,14 @@
 package bootstrap
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"net"
+	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -167,7 +172,7 @@ func CheckBashibleBundle(sshClient *ssh.Client) bool {
 }
 
 func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
-	tun := sshCl.ReverseTunnel("5080:127.0.0.1:5080")
+	tun := sshCl.ReverseTunnel("5444:127.0.0.1:5444")
 	err := tun.Up()
 	if err != nil {
 		return nil, err
@@ -201,7 +206,14 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 }
 
 func StartRegistryPackagesProxy(config config.RegistryData) error {
-	listener, err := net.Listen("tcp", "127.0.0.1:5080")
+	cert, err := generateTLSCertificate()
+	if err != nil {
+		return fmt.Errorf("failed to generate TLS certificate: %v", err)
+	}
+
+	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
@@ -229,6 +241,45 @@ func StartRegistryPackagesProxy(config config.RegistryData) error {
 	}()
 
 	return nil
+}
+
+func generateTLSCertificate() (tls.Certificate, error) {
+	now := time.Now()
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(now.Unix()),
+		Subject: pkix.Name{
+			CommonName:         "registry-packages-proxy.deckhouse.io",
+			Country:            []string{"unknown"},
+			Organization:       []string{"deckhouse.io"},
+			OrganizationalUnit: []string{"registry-packages-proxy"},
+		},
+		NotBefore:             now,
+		NotAfter:              now.AddDate(0, 0, 1), // Valid for one day
+		SubjectKeyId:          []byte{113, 117, 105, 99, 107, 115, 101, 114, 118, 101},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage: x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %v", err)
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, template, template,
+		priv.Public(), priv)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %v", err)
+	}
+
+	var outCert tls.Certificate
+	outCert.Certificate = append(outCert.Certificate, cert)
+	outCert.PrivateKey = priv
+
+	return outCert, nil
 }
 
 func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {

@@ -343,9 +343,3 @@ properties:
             type: array
             items:
               type: string
-      registryPackagesProxyClientToken:
-        type: string
-        x-examples:
-          - "mytoken"
-        description: |
-          Token for accessing the registry packages proxy.

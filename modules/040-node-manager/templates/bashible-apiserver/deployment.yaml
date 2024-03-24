@@ -155,9 +155,6 @@ spec:
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
-    {{- if hasKey $.Values.nodeManager.internal "registryPackagesProxyClientToken" }}
-    registryPackagesProxyClientToken: {{ $.Values.nodeManager.internal.registryPackagesProxyClientToken | quote }}
-    {{- end }}
 {{- end }}
 ---
 apiVersion: v1

@@ -357,7 +357,7 @@ func (rid *registryInputData) FromMap(m map[string][]byte) {
 	}
 }
 
-func (rid registryInputData) toRegistry(apiServerEndpoints []string, packagesProxyToken string) registry {
+func (rid registryInputData) toRegistry(apiServerEndpoints []string) registry {
 	var auth string
 
 	if len(rid.DockerConfig) > 0 {
@@ -397,7 +397,6 @@ func (rid registryInputData) toRegistry(apiServerEndpoints []string, packagesPro
 		DockerCFG:              rid.DockerConfig,
 		Auth:                   auth,
 		PackagesProxyEndpoints: packagesProxyEndpoints,
-		PackagesProxyToken:     packagesProxyToken,
 	}
 }
 
@@ -542,7 +541,6 @@ type registry struct {
 	DockerCFG              []byte   `json:"dockerCfg" yaml:"dockerCfg"`
 	Auth                   string   `json:"auth" yaml:"auth"`
 	PackagesProxyEndpoints []string `json:"packagesProxyEndpoints,omitempty" yaml:"packagesProxyEndpoints,omitempty"`
-	PackagesProxyToken     string   `json:"packagesProxyToken,omitempty" yaml:"packagesProxyToken,omitempty"`
 }
 
 // input from secret
@@ -563,15 +561,14 @@ type dockerCfg struct {
 }
 
 type inputData struct {
-	ClusterDomain                    string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress                string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider                    interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy                            map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	APIServerEndpoints               []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA                     string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles                   []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	AllowedKubernetesVersions        []string               `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
-	NodeGroups                       []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                             interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	RegistryPackagesProxyClientToken string                 `json:"registryPackagesProxyClientToken" yaml:"registryPackagesProxyClientToken"`
+	ClusterDomain             string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress         string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider             interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	AllowedKubernetesVersions []string               `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
+	NodeGroups                []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                      interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
 }
