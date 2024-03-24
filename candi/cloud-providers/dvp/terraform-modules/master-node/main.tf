@@ -260,7 +260,7 @@ resource "kubernetes_manifest" "vm" {
           "userData" = templatefile("${path.module}/templates/cloudinit.tftpl", {
             host_name      = local.vm_host_name
             ssh_public_key = local.ssh_public_key
-            user_data      = var.cloudConfig
+            user_data      = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
           })
         }
 

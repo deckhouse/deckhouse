@@ -15,7 +15,7 @@ apiVersions:
     properties:
       apiVersion:
         type: string
-        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+        enum: [deckhouse.io/v1]
       kind:
         type: string
         enum: [DVPCloudDiscoveryData]
