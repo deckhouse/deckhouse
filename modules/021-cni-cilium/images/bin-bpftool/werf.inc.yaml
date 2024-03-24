@@ -1,5 +1,5 @@
 # #####################################################################
-# Build BPFTOOL binaries (based on compilers)
+# Build BPFTOOL binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of BPFTOOL is d3093f6aeefef8270306011109be623a7e80ad1b
 # Corresponding commit 3f125f524cdf74e20c1ac73855042a9254747855 (https://github.com/cilium/image-tools/tree/3f125f524cdf74e20c1ac73855042a9254747855)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
