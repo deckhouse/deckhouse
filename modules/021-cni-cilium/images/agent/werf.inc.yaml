@@ -1,3 +1,4 @@
+{{- $fromCacheVersion := "12" }}
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
@@ -51,7 +52,7 @@
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 from: {{ $.Images.BASE_UBUNTU }}
-fromCacheVersion: 11
+fromCacheVersion: {{ $fromCacheVersion }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
@@ -191,7 +192,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: 10
+fromCacheVersion: {{ $fromCacheVersion }}
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
