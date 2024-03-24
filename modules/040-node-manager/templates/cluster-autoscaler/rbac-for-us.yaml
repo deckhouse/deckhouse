@@ -34,6 +34,14 @@ rules:
   - watch
 # cluster api
 - apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  verbs:
+  - get
+  - list
+  - watch
+  resources:
+  - vcdmachinetemplates
+- apiGroups:
   - cluster.x-k8s.io
   resources:
   - machinedeployments
