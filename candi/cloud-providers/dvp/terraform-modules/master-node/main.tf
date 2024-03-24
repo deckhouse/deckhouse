@@ -58,8 +58,10 @@ locals {
       "cloudConfigHash"   = sha256(jsonencode(var.cloudConfig))
     }
     },
-    { "rootDiskHash" = local.root_disk_destructive_params_json_hash,
-    "etcDiskHash" = local.etc_disk_destructive_params_json_hash },
+    {
+      "rootDiskHash" = local.root_disk_destructive_params_json_hash,
+      "etcDiskHash"  = local.etc_disk_destructive_params_json_hash
+    },
   )
 
   root_disk_destructive_params_json      = jsonencode(local.root_disk_destructive_params)
@@ -71,11 +73,12 @@ locals {
   vm_destructive_params_json      = jsonencode(local.vm_destructive_params)
   vm_destructive_params_json_hash = substr(sha256(jsonencode(local.vm_destructive_params)), 0, 6)
 
-  root_disk_name = join("-", [local.prefix, "master-root", var.nodeIndex, local.root_disk_destructive_params_json_hash])
-  etc_disk_name  = join("-", [local.prefix, "kubernetes-data", var.nodeIndex, local.etc_disk_destructive_params_json_hash])
-  vm_host_name   = join("-", [local.prefix, "master", var.nodeIndex])
-  vm_name        = join("-", [local.vm_host_name, local.vm_destructive_params_json_hash])
-  vmip_name      = format("%s-%s", local.vm_host_name, replace(local.vm_ip_address, ".", "-"))
+  root_disk_name        = join("-", [local.prefix, "master-root", var.nodeIndex, local.root_disk_destructive_params_json_hash])
+  etc_disk_name         = join("-", [local.prefix, "kubernetes-data", var.nodeIndex, local.etc_disk_destructive_params_json_hash])
+  vm_host_name          = join("-", [local.prefix, "master", var.nodeIndex])
+  vm_name               = join("-", [local.vm_host_name, local.vm_destructive_params_json_hash])
+  cloudinit_secret_name = join("-", [local.vm_host_name, "cloudinit", local.vm_destructive_params_json_hash])
+  vmip_name             = format("%s-%s", local.vm_host_name, replace(local.vm_ip_address, ".", "-"))
 
   vm_merged_labels = merge(
     {
@@ -198,16 +201,26 @@ resource "kubernetes_manifest" "vmip" {
   }
 }
 
+resource "kubernetes_secret" "master-cloudinit-secret" {
+  metadata {
+    name      = local.cloudinit_secret_name
+    namespace = local.namespace
+  }
+  data = {
+    userData = templatefile("${path.module}/templates/cloudinit.tftpl", {
+      host_name      = local.vm_host_name
+      ssh_public_key = local.ssh_public_key
+      user_data      = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
+    })
+  }
+  type = "Opaque"
+}
+
 resource "kubernetes_manifest" "vm" {
 
   field_manager {
     force_conflicts = true
   }
-
-  # TODO:
-  computed_fields = [
-    "spec.restartApprovalID"
-  ]
 
   manifest = {
     "apiVersion" = local.apiVersion
@@ -256,18 +269,16 @@ resource "kubernetes_manifest" "vm" {
         ]
 
         "provisioning" = {
-          "type" = "UserData"
-          "userData" = templatefile("${path.module}/templates/cloudinit.tftpl", {
-            host_name      = local.vm_host_name
-            ssh_public_key = local.ssh_public_key
-            user_data      = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
-          })
+          "type" = "UserDataSecret"
+          "userDataSecretRef" = {
+            "name" = local.cloudinit_secret_name
+          }
         }
 
       },
       local.vm_ip_address != "" ? { "virtualMachineIPAddressClaimName" = kubernetes_manifest.vmip[0].manifest.metadata.name } : null,
       local.vm_priority_class_name != null ? { "priorityClassName" = local.vm_priority_class_name } : null,
-      local.vm_tolerations != null ? { "tolerations"  = local.vm_tolerations } : null,
+      local.vm_tolerations != null ? { "tolerations" = local.vm_tolerations } : null,
       length(local.vm_merged_node_selector) != 0 ? { "nodeSelector" = local.vm_merged_node_selector } : null,
     )
   }
