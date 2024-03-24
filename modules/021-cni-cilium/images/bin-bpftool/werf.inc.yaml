@@ -22,7 +22,6 @@ shell:
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
   install:
-  - apt-get remove  -y libcap-dev
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
   setup:

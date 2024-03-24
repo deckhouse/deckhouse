@@ -43,7 +43,7 @@ shell:
     coreutils binutils make cmake automake autoconf patch patchelf \
     git zip unzip wget \
     gcc gcc-9 g++ gcc-x86-64-linux-gnu g++-x86-64-linux-gnu \
-    libc6-dev libc6-dev-amd64-cross libelf-dev libmnl-dev libcap-dev \
+    libc6-dev libc6-dev-amd64-cross libelf-dev libmnl-dev \
     bison flex \
     build-essential libtool ninja-build pkg-config git-buildpackage \
     python2 python3 python3-pip virtualenv \
@@ -58,6 +58,7 @@ shell:
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   - | # download-only
     apt-get update && apt-get install -y --no-install-recommends --download-only \
+    libcap-dev \
     python-is-python3 \
     clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
   # end common
@@ -67,6 +68,7 @@ shell:
   # # for/from cilium-envoy only
   # - |
   #   apt-get install -y --no-install-recommends \
+  #   libcap-dev \
   #   python-is-python3 \
   #   clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
   install:
