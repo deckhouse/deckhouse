@@ -1,4 +1,5 @@
 {{- $ciliumVersion := "1.14.5" }}
+{{- $fromCacheVersion := "14" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
@@ -6,6 +7,7 @@
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches

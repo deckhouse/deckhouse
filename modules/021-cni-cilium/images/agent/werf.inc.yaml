@@ -1,4 +1,4 @@
-{{- $fromCacheVersion := "13" }}
+{{- $fromCacheVersion := "14" }}
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
