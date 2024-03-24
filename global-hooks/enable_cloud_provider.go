@@ -35,6 +35,7 @@ var (
 		"Azure":     "cloudProviderAzure",
 		"VCD":       "cloudProviderVcd",
 		"Zvirt":     "cloudProviderZvirt",
+		"DVP":       "cloudProviderDvp",
 	}
 )
 
