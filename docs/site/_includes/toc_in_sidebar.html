@@ -2,7 +2,7 @@
     $(document).ready(function () {
         // Handler for .ready() called.
 
-        const $toc = $('#toc-sidebar');
+        const $toc = $('#toc');
 
         $toc.toc({
             minimumHeaders: 2,
@@ -10,45 +10,45 @@
             listType: 'ul',
             showSpeed: 'none',
             headers: '.docs h2,.docs h3, .docs h4',
-            classes: {
-                list: 'toc-sidebar',
-                item: 'toc-sidebar__item',
-                link: 'toc-sidebar__item-link'
-            }
+            // classes: {
+            //     list: 'toc-sidebar',
+            //     item: 'toc-sidebar__item',
+            //     link: 'toc-sidebar__item-link'
+            // }
         });
 
         if (!$.trim($toc.html())) {
             $toc.hide();
         }
 
-        var section_classes = '.post-content h2, .post-content h3, .post-content h4',
-            sections = $(section_classes),
-            visible_offset = 250,
-            nav = $('.toc-sidebar'),
-            nav_height = $('.header').outerHeight();
+        // var section_classes = '.post-content h2, .post-content h3, .post-content h4',
+        //     sections = $(section_classes),
+        //     visible_offset = 250,
+        //     nav = $('.toc-sidebar'),
+        //     nav_height = $('.header').outerHeight();
 
-        $(window).on('scroll', function () {
-            var cur_pos = $(this).scrollTop();
+        // $(window).on('scroll', function () {
+        //     var cur_pos = $(this).scrollTop();
 
-            sections.each(function (index, item) {
-                var top = $(this).offset().top - nav_height - visible_offset,
-                    bottom = top + $(this).outerHeight();
+        //     sections.each(function (index, item) {
+        //         var top = $(this).offset().top - nav_height - visible_offset,
+        //             bottom = top + $(this).outerHeight();
 
-                const nextElement = $(this).nextAll(section_classes).first();
-                if (nextElement && nextElement.length > 0) {
-                    bottom = $(nextElement).offset().top - nav_height - visible_offset;
-                }
-                ;
+        //         const nextElement = $(this).nextAll(section_classes).first();
+        //         if (nextElement && nextElement.length > 0) {
+        //             bottom = $(nextElement).offset().top - nav_height - visible_offset;
+        //         }
+        //         ;
 
-                if (cur_pos >= top && cur_pos <= bottom) {
-                    nav.find('a').removeClass('active');
-                    sections.removeClass('active');
+        //         if (cur_pos >= top && cur_pos <= bottom) {
+        //             nav.find('a').removeClass('active');
+        //             sections.removeClass('active');
 
-                    $(this).addClass('active');
-                    nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
-                }
-            });
-        });
+        //             $(this).addClass('active');
+        //             nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
+        //         }
+        //     });
+        // });
     });
 
 </script>
