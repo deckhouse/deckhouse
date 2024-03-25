@@ -100,7 +100,7 @@ func (s *Service) check(
 
 	// parse meta config
 	metaConfig, err := config.ParseConfigFromData(
-		request.Config,
+		combineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
 		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
 		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
@@ -135,12 +135,14 @@ func (s *Service) check(
 
 	// check cluster state
 	checker := check.NewChecker(&check.Params{
-		SSHClient:           sshClient,
-		StateCache:          cache.Global(),
-		MetaConfig:          metaConfig,
-		CommanderMode:       request.Options.CommanderMode,
-		CommanderModeParams: &commander.CommanderModeParams{},
-		TerraformContext:    terraform.NewTerraformContext(),
+		SSHClient:     sshClient,
+		StateCache:    cache.Global(),
+		CommanderMode: request.Options.CommanderMode,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext: terraform.NewTerraformContext(),
 	})
 
 	result, err := checker.Check(ctx)
@@ -245,4 +247,21 @@ func portToString(p *int32) string {
 		return ""
 	}
 	return strconv.Itoa(int(*p))
+}
+
+func combineYAMLs(yamls ...string) string {
+	var res string
+	for _, yaml := range yamls {
+		if yaml == "" {
+			continue
+		}
+
+		if res != "" {
+			res += "---\n"
+		}
+
+		res = res + strings.TrimSpace(yaml) + "\n"
+	}
+
+	return res
 }
