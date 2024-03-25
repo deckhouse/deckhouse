@@ -65,12 +65,16 @@ shell:
   # # for/from compiller only
   # - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   # - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
+  # - apt-get purge --auto-remove && apt-get clean
+  # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   # # for/from cilium-envoy only
   # - |
   #   apt-get install -y --no-install-recommends \
   #   libcap-dev \
   #   python-is-python3 \
   #   clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  # - apt-get purge --auto-remove && apt-get clean
+  # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz

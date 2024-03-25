@@ -15,34 +15,6 @@
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
 {{- $ciliumProxyTag := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b" }}
 ---
-image: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-shell:
-  beforeInstall:
-  - export TZ=Etc/UTC TARGETARCH=amd64
-  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update && apt-get upgrade -y --no-install-recommends
-  - |
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross binutils-x86-64-linux-gnu libc6-dev \
-    autoconf automake cmake coreutils curl git libtool make ninja-build patch patchelf \
-    python3 python-is-python3 unzip virtualenv wget zip \
-    libcap-dev software-properties-common
-  - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-  - apt-add-repository -y "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main" && \
-  - apt-get update && \
-  - |
-    apt-get install -y --no-install-recommends \
-    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-  - apt-get purge --auto-remove && apt-get clean
-  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-  install:
-  # Install bazel
-  - export BAZEL_VERSION="6.1.0" ARCH="x86_64"
-  - curl -sfL https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-${ARCH} -o /usr/bin/bazel
-  - chmod +x /usr/bin/bazel
----
 artifact: {{ $.ModuleName }}/cilium-envoy-proxylib-artifact
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 mount:
@@ -62,7 +34,7 @@ shell:
   - mv proxylib/libcilium.so /tmp/libcilium.so
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-builder-artifact
-fromImage: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 - artifact: {{ $.ModuleName }}/cilium-envoy-proxylib-artifact
   add: /tmp/libcilium.so
@@ -75,6 +47,16 @@ shell:
   - cd /cilium/proxy
   - git checkout {{ $ciliumProxyRev }}
   install:
+  - |
+    apt-get install -y --no-install-recommends \
+    libcap-dev \
+    python-is-python3 \
+    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  setup:
+  - export TARGETARCH=amd64 ARCH="x86_64"
+  - export BAZEL_VERSION="6.1.0" USE_BAZEL_VERSION="6.1.0"
   - cd /cilium/proxy
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
