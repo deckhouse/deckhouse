@@ -10,11 +10,11 @@
             listType: 'ul',
             showSpeed: 'none',
             headers: '.docs h2,.docs h3, .docs h4',
-            // classes: {
-            //     list: 'toc-sidebar',
-            //     item: 'toc-sidebar__item',
-            //     link: 'toc-sidebar__item-link'
-            // }
+            classes: {
+                list: 'toc-sidebar',
+                item: 'toc-sidebar__item',
+                link: 'toc-sidebar__item-link'
+            }
         });
 
         if (!$.trim($toc.html())) {
@@ -23,7 +23,7 @@
 
         var section_classes = '.post-content h2, .post-content h3, .post-content h4',
             sections = $(section_classes),
-            visible_offset = 250,
+            visible_offset = 650,
             nav = $('.toc-sidebar'),
             nav_height = $('.header').outerHeight();
 
