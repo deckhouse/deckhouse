@@ -14,13 +14,13 @@ import (
 	"sort"
 	"strconv"
 
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
-
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 const (
@@ -116,7 +116,7 @@ func (d *Discoverer) DiscoveryData(
 	ctx context.Context,
 	cloudProviderDiscoveryData []byte,
 ) ([]byte, error) {
-	discoveryData := &v1alpha1.ZvirtCloudProviderDiscoveryData{}
+	discoveryData := &cloudDataV1.ZvirtCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
@@ -224,11 +224,11 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 }
 
 func mergeStorageDomains(
-	sds []v1alpha1.ZvirtStorageDomain,
+	sds []cloudDataV1.ZvirtStorageDomain,
 	cloudSds []ovirtclient.StorageDomain,
-) []v1alpha1.ZvirtStorageDomain {
-	result := []v1alpha1.ZvirtStorageDomain{}
-	cloudSdsMap := make(map[string]v1alpha1.ZvirtStorageDomain)
+) []cloudDataV1.ZvirtStorageDomain {
+	result := []cloudDataV1.ZvirtStorageDomain{}
+	cloudSdsMap := make(map[string]cloudDataV1.ZvirtStorageDomain)
 	for _, sd := range cloudSds {
 		// status may be unknown if external status has arrived
 		status := sd.Status() == ovirtclient.StorageDomainStatusActive
@@ -236,7 +236,7 @@ func mergeStorageDomains(
 			status = true
 		}
 
-		cloudSdsMap[sd.Name()] = v1alpha1.ZvirtStorageDomain{
+		cloudSdsMap[sd.Name()] = cloudDataV1.ZvirtStorageDomain{
 			Name:      sd.Name(),
 			IsEnabled: status,
 			IsDefault: false,
