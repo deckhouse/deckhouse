@@ -37,6 +37,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
   - make -C proxylib all
+  - mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   setup:
   - export TARGETARCH=amd64 ARCH="x86_64"
