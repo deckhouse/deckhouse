@@ -37,8 +37,7 @@
                 const nextElement = $(this).nextAll(section_classes).first();
                 if (nextElement && nextElement.length > 0) {
                     bottom = $(nextElement).offset().top - nav_height - visible_offset;
-                }
-                ;
+                };
 
                 if (cur_pos >= top && cur_pos <= bottom) {
                     nav.find('a').removeClass('active');
