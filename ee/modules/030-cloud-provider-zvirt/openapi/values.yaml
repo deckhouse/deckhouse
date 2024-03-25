@@ -27,10 +27,10 @@ properties:
           - apiVersion: deckhouse.io/v1
             kind: ZvirtClusterConfiguration
             layout: Standard
+            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             masterNodeGroup:
               replicas: 1
               instanceClass:
-                clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
                 numCPUs: 4
                 memory: 8192
                 template: debian-bookworm
@@ -43,7 +43,6 @@ properties:
               - name: worker
                 replicas: 1
                 instanceClass:
-                  clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
                   numCPUs: 4
                   memory: 8192
                   template: debian-bookworm
@@ -52,21 +51,26 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [apiVersion, kind, masterNodeGroup, layout, provider]
+        required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
-            enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
             enum: [ZvirtClusterConfiguration]
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
+          clusterId:
+            type: string
+            description: |
+              cluster id.
+            example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           masterNodeGroup:
             type: object
             additionalProperties: false
-            required: [replicas, clusterId, instanceClass]
+            required: [replicas, instanceClass]
             description: |
               The definition of the master's NodeGroup.
 
@@ -78,15 +82,10 @@ properties:
                 description: |
                   The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
                 x-unsafe-rules: [updateReplicas]
-              clusterId:
-                type: string
-                description: |
-                  cluster id.
-                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [clusterId, numCPUs, memory, template]
+                required: [numCPUs, memory, template]
                 description: |
                   Partial contents of the fields of the
                 properties: &instanceClassProperties
@@ -141,7 +140,7 @@ properties:
               An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
             items:
               type: object
-              required: [name, clusterId, replicas, instanceClass]
+              required: [name, replicas, instanceClass]
               properties:
                 name:
                   type: string
@@ -151,11 +150,6 @@ properties:
                   type: integer
                   description: |
                     The number of nodes to create.
-                clusterId:
-                  type: string
-                  description: |
-                    cluster id.
-                  example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                 nodeTemplate:
                   description: |
                     Parameters of Node objects in Kubernetes to add after registering the node.
