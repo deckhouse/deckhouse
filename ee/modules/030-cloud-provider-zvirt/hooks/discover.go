@@ -14,7 +14,7 @@ import (
 	"unicode"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -119,7 +119,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	var discoveryData v1alpha1.ZvirtCloudProviderDiscoveryData
+	var discoveryData cloudDataV1.ZvirtCloudProviderDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
@@ -134,7 +134,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
-	volumeTypes []v1alpha1.ZvirtStorageDomain,
+	volumeTypes []cloudDataV1.ZvirtStorageDomain,
 ) {
 	var defaultSCName string
 

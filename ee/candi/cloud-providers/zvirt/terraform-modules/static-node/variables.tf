@@ -31,7 +31,7 @@ locals {
 
   vnic_profile_id = lookup(local.instance_class, "vnicProfileId", [])
   storage_domain_id = lookup(local.instance_class, "storageDomainId", [])
-  cluster_id = lookup(local.instance_class, "clusterId", [])
+  cluster_id = lookup(var.providerClusterConfiguration, "clusterId", [])
   template_name = lookup(local.instance_class, "template", [])
   node_name = join("-", [local.resource_name_prefix, local.node_group_name, var.nodeIndex])
   cpus = lookup(local.instance_class, "numCPUs", [])
