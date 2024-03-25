@@ -4,7 +4,8 @@
 #---
 # #####################################################################
 # Build cilium-envoy binaries
-# Original commit is ad82c7c56e88989992fd25d8d67747de865c823b
+# Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
+# Corresponding commit is ad82c7c56e88989992fd25d8d67747de865c823b
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile
@@ -12,6 +13,7 @@
 # #####################################################################
 ---
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
+{{- $ciliumProxyTag := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b" }}
 ---
 image: {{ $.ModuleName }}/cilium-envoy-bulder-base-artifact
 from: {{ $.Images.BASE_UBUNTU }}
@@ -76,7 +78,7 @@ shell:
   - cd /cilium/proxy
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
-  #- git clone --depth 1 --branch {{ $ciliumProxyRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyTag }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - make bazel-bin/cilium-envoy
