@@ -45,12 +45,12 @@ apiVersions:
           insecure: true
     required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
     properties:
-      apiversion:
+      apiVersion:
         type: string
         enum: [deckhouse.io/v1]
       kind:
         type: string
-        enum: [zvirtClusterConfiguration]
+        enum: [ZvirtClusterConfiguration]
       sshPublicKey:
         type: string
         description: a public key for accessing nodes.
