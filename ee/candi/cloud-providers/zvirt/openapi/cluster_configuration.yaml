@@ -21,10 +21,10 @@ apiVersions:
       - apiVersion: deckhouse.io/v1
         kind: ZvirtClusterConfiguration
         layout: Standard
+        clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
         masterNodeGroup:
           replicas: 1
           instanceClass:
-            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             numCPUs: 4
             memory: 8192
             template: debian-bookworm
@@ -35,7 +35,6 @@ apiVersions:
           - name: worker
             replicas: 1
             instanceClass:
-              clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
               numCPUs: 4
               memory: 8192
               template: debian-bookworm
@@ -44,18 +43,18 @@ apiVersions:
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-    required: [apiversion, kind, clusterid, masternodegroup, layout, provider]
+    required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
     properties:
       apiversion:
         type: string
         enum: [deckhouse.io/v1]
       kind:
         type: string
-        enum: [zvirtclusterconfiguration]
-      sshpublickey:
+        enum: [zvirtClusterConfiguration]
+      sshPublicKey:
         type: string
         description: a public key for accessing nodes.
-      clusterid:
+      clusterId:
         type: string
         description: |
           Cluster id.
