@@ -66,7 +66,7 @@ properties:
           masterNodeGroup:
             type: object
             additionalProperties: false
-            required: [replicas, instanceClass]
+            required: [replicas, clusterId, instanceClass]
             description: |
               The definition of the master's NodeGroup.
 
@@ -78,6 +78,11 @@ properties:
                 description: |
                   The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
                 x-unsafe-rules: [updateReplicas]
+              clusterId:
+                type: string
+                description: |
+                  cluster id.
+                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               instanceClass:
                 type: object
                 additionalProperties: false
@@ -85,11 +90,6 @@ properties:
                 description: |
                   Partial contents of the fields of the
                 properties: &instanceClassProperties
-                  clusterId:
-                    type: string
-                    description: |
-                      cluster id.
-                    example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                   numCPUs:
                     type: integer
                     description: |
@@ -141,7 +141,7 @@ properties:
               An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
             items:
               type: object
-              required: [name, replicas, instanceClass]
+              required: [name, clusterId, replicas, instanceClass]
               properties:
                 name:
                   type: string
@@ -151,6 +151,11 @@ properties:
                   type: integer
                   description: |
                     The number of nodes to create.
+                clusterId:
+                  type: string
+                  description: |
+                    cluster id.
+                  example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                 nodeTemplate:
                   description: |
                     Parameters of Node objects in Kubernetes to add after registering the node.
@@ -197,7 +202,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [clusterId, numCPUs, memory, template]
+                  required: [numCPUs, memory, template]
                   description: |
                     Partial contents of the fields of the.
                   properties:
