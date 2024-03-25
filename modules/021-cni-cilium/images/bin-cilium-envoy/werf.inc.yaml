@@ -13,9 +13,9 @@
 # #####################################################################
 ---
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
-{{- $ciliumProxyTag := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
+{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
 ---
-artifact: {{ $.ModuleName }}/cilium-envoy-builder-artifact
+artifact: {{ $.ModuleName }}/cilium-envoy-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 shell:
@@ -46,17 +46,9 @@ shell:
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyTag }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
   - make install
----
-artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-import:
-- artifact: {{ $.ModuleName }}/cilium-envoy-builder-artifact
-  add: /tmp/install
-  to: /
-  before: install

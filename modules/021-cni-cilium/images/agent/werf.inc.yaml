@@ -1,4 +1,4 @@
-{{- $fromCacheVersion := "14" }}
+{{- $fromCacheVersion := "15" }}
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
@@ -105,13 +105,12 @@ import:
   - usr/bin/cilium*
   - var/lib/cilium/bpf
 - artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-  add: /usr/bin/cilium-envoy
-  to: /usr/bin/cilium-envoy
+  add: /tmp/install/usr
+  to: /usr
   before: install
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-  add: /usr/lib/libcilium.so
-  to: /usr/lib/libcilium.so
-  before: install
+  includePaths:
+  - bin/cilium-envoy
+  - lib/libcilium.so
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
   to: /usr/bin/hubble
