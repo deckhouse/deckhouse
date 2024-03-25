@@ -6,55 +6,26 @@ lang: ru
 
 ## Обновление платформы
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
-
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
-
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+Бывают разные обновления: почитать доку.
 
 ### Окна и каналы обновлений
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
-
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
-
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+Подраздел: почитать доку.
 
 ## Высокая надежность и доступность
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
-
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
-
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+А нужен ли раздел верхнего уровня?
 
 ### Катастрофоустойчивость
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
+#### Использование нескольких зон доступности (Multi AZ)
+Платформа Deckhouse предоставляет возможность распределения узлов кластера по зонам доступности. В большинстве облачных решений этот процесс происходит автоматически, однако при работе вне облаков, потребуется явная маркировка узлов с помощью лейблов с указанимем идентификатора зоны. Администраторы платформы должны гарантировать наличие маркировки. При наличии у приложения возможности работать в нескольких репликах, оно будет устойчивым к катастрофам, продолжая работать даже при выходе из строя целой зоны в ЦОД или облаке.
 
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
+#### Использование нескольких регионов (Multi Region)
+Платформа Deckhouse предоставляет возможность распределения узлов кластера по разным географическим регионам. Для этого необходима маркировка узлов специальными лейблами и наличие стабильных каналов связи между регионами. Администраторы платформы должны гарантировать наличие на каждом узле лейбла, указывающего в каком регионе он расположен. Отличие этой возможности от Multi AZ заключается в том, что она обычно подходит только для ситуаций, когда приложения могут функционировать в каждом регионе автономно (не обращаясь к другим регионам), например, как кеш-сервера для CDN или узлы распределенного мониторинга. Рекомендуем уточнить у компании Флант применимость для вашей задачи. Эта функция повышает устойчивость приложений к катастрофам, обеспечивая их работоспособность даже при выходе из строя целого ЦОД или целого облака.
 
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+#### Мультикластер (объединение нескольких кластеров)
+Платформа Deckhouse выходит за рамки поддержки Multi AZ и Multi Region, предлагая инструментарий для объединения нескольких кластеров. Благодаря этой возможности, при отсутствии доступных экземпляров приложения в одном кластере, внешний или внутренний трафик будет автоматически перенаправлен в другой кластер с доступной копией. Это достигается как с помощью встроенного service mesh на основе Istio, так и без его участия благодаря сетевому функционалу платформы на базе Cilium. Для включения функции мультикластер необходимо создать по кластеру Deckhouse в каждом регионе, а после объединить их используя декларативный API. Для успешного внедрения необходимо, чтобы ваше приложение могло работать параллельно в разных регионах, а так же наличие стабильного сетевого канала между регионами. Правильно настроенная система обеспечивает глобальную катастрофоустойчивость приложения, гарантируя его бесперебойную работу даже при выходе из строя целого региона или облака.					
 
 ### Подготовка к production
 
@@ -111,6 +82,8 @@ w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuX
 - Добавьте к этому ресурсы, необходимые для запуска полезной нагрузки.
 
 #### Особенности конфигурации
+
+А нужен ли раздел выше?
 
 ##### Мастер-узлы
 
@@ -227,26 +200,8 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 
 ## Управление ресурсами платформы
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
-
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
-
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+Какими ресурсами?
 
 ## Масштабирование платформы
 
-b0y2N977Ety0Cfc5FCHY0MrNB30twtND0UkqmOPSMBILFbbLzClSBLIQX9yPbsmkYcfppJ3H1HYHZ7a4y9n8dcQ0swGTnAMRt2Pmjbd4VFQX7HIhn9ZYBqNjRhJhBYaBdjIbSV609ZYQobNocXcWhk1O5UC8xc8hp3f7wHmheFzSQt7DIFFtRLjrtUVrFarYx89xeon5VdekWTCuvfPA7CSudR6qLu
-LE8tvirbiBPHT7eYJy4x9k9kncO5FGfj7B6WzGTot7NUlQCnYTPSblHR7TzNQcIU3yhHBvnC2JvFM3EiK4XXz1szhCF12gtQC29c5ADRP5U8UC55GoNvRyVgWPjiHnoJfpslzJh5KOJ4d2yUVlC6FjSOMxdJZTkA5Tgel6qH9z3jxriNmrmEQd5nhnDoeeGOydfih6GE8l2bmdSQ0KAugn1nNrDZUq
-JyPiU011kcqP6G7QfZz2eukUb7LSY9Gad7YzCRHONyKCYX4MQxMDPLIwxguSJfIhtvIDolzw23ihXiU3MHcpy9hwuPwNuGmERvvpR4NXJv1frrLKfKecKJsfwJK9K5d58hlI3YR2MbOdI5JJCh8t24co3oF84Nut8Gdg1VaO7ZAK2OvLCvMCVtW0Q3aQmsuTyeETx1qTM334UCrB5kqw3aQtO1D16C
-DWe1amKfLndTyHnWpvaWGcZuC9besUubvve3hiF639vbiHe18MhLLHHuqA1nx0kkwhXhGIo4Ckel4pyNhhIFXJtKALK0GTyvWQ7I8bkE3rWYmkX
-
-b74UdkAatv4WKOOZSB1KqTO8FhbgnNxxdaaQpjjQ3c8rtqPnsPTOPYetliDYxuLO6mAy5zSIa4N9X8bGF0a6bdf2Jby9Ejtj1b6vLykRtKJaSpw
-30dusIoJmiCdxVJ2DTHMItaTwFeKcAEfLaw2fDAW5tnK60iIAAVS8zkR6mqW8eKnLnaDvCpLCKSLkJ0JVEOqYNb08Ia31ThQH8gDtONLP95KHy7
-HKPJOkIRAP8wbpih2F5KYhKM5i2ezfZSRUOhpmmpC6w9ERKuZrZUthB4KU5puKNcIvFhYSEF5mPHUfbPwG2G2GOp9nA7yAP7qXHWJFVVJbuB6sc
-
-w2A35g413AjMneuwH2LQetdvmIpoM1UdxKjvwk7WXXbXkkvysFdca6WxmrOH5SVMDoHMxmBcyyKoUCuXOm0AqpQfAxqqIjTFdkOrjSV4rvKNMaNNeGLSCCeWm8STfNUGFBpfJWZsqrSMc2LYujXy3qJ3Dja0w6P8azC8DcxLmcdANoDaJaLpNzAIDSKkVlNap0HfQJeMLo13BJtiOV0KhXhB3dsYX9zuCHnj2k3QyoUx8YQbcJDwVUaBFTpypfM8TWj86g9qiHu1V2ic6dIcVeqUPMnhP8i3fKve0GjjLv6T1ebB3xElq4hpIhRgMCt4hFuQCONVTOiMNKHjsDzsNnp6GFG8arj4ofgaxQOYj4Z04LAOh7AZxqaCifybHpLNoRRClFKfZuU0UPStrqvSYZDKljHsal3KZOusbAdUl5ueopZlFsxKdFg3GiuRMwHDJwXY6NRqTG768xHxKwV06uAWthSHk3CkgcE3Mt5FCd
+Все значимые компоненты масштабируются горизонтально, что обеспечивает высокий потенциал масштабирования платформы Deckhouse: гарантируется возможность расширения кластера платформы до 1,000 серверов и 50,000 pod'ов. В том числе горизонтально масштабируются ядро платформы и инфраструктурно-агностический слой (за исключением control-plane), сетевая подсистема (SDN), интеграция с СХД и балансировщики и маршрутизаторы трафика. Вертикальное масштабирование применяется только к control-plane, супер-оператору, и платформе мониторинга, при этом для двух последних планируется перейти на горизонтально-масштабируемый вариант. Масштабирование вычислительных мощностей обеспечивает удобное и независимое управление каждой группой узлов, с автоматическим масштабированием как в облачных так и статических кластерах (последнее в разработке). Также предусмотрены инструменты для планирования мощностей. На практике, платформа позволяет добиться почти бесконечного масштабирования через создание дополнительных кластеров.		
