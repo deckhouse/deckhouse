@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1
 kind: ZvirtMachineTemplate
 metadata:
   annotations:
@@ -15,16 +15,13 @@ spec:
       {{- if .nodeGroup.instanceClass.template }}
       template: {{ .nodeGroup.instanceClass.template | quote }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.clusterId }}
-      clusterID: {{ .nodeGroup.instanceClass.clusterId | quote }}
-      {{- end }}
       {{- if .nodeGroup.instanceClass.vnicProfileId }}
       vnicProfileID: {{ .nodeGroup.instanceClass.vnicProfileId | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.numCPUs }}
       cpu:
-        sockets: {{ .nodeGroup.instanceClass.numCPUs }}
-        cores: 1
+        sockets: 1
+        cores: {{ .nodeGroup.instanceClass.numCPUs }}
         threads: 1
       {{- end }}
       {{- if .nodeGroup.instanceClass.memory }}

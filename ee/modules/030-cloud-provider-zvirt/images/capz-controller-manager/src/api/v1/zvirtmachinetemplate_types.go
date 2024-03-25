@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package v1alpha1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +32,6 @@ type ZvirtMachineSpecTemplate struct {
 	// The VM template this instance will be created from.
 	// +kubebuilder:validation:Required
 	TemplateName string `json:"template"`
-	// the zVirt cluster this VM instance belongs too.
-	// +kubebuilder:validation:Required
-	ClusterID string `json:"clusterID"`
 	// VNICProfileID the id of the zVirt vNic profile for the VM.
 	// +kubebuilder:validation:Required
 	VNICProfileID string `json:"vnicProfileID"`
