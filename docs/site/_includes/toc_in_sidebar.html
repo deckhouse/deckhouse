@@ -23,7 +23,7 @@
 
         var section_classes = '.post-content h2, .post-content h3, .post-content h4',
             sections = $(section_classes),
-            visible_offset = 250,
+            visible_offset = 250000,
             nav = $('.toc-sidebar'),
             nav_height = $('.header').outerHeight();
 
@@ -48,11 +48,6 @@
                     nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
                 }
             });
-        });
-        // Add CSS properties to increase the size of the div
-        $toc.css({
-            'width': '400px', // Increase the width to 400 pixels
-            'height': '1600px' // Increase the height to 800 pixels
         });
     });
 
