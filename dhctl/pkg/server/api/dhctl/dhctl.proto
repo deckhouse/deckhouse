@@ -40,9 +40,10 @@ message CheckResponse {
 
 message CheckStart {
   string connection_config = 1;
-  string config = 2;
-  string state = 3;
-  CheckStartOptions options = 4;
+  string cluster_config = 2;
+  string provider_specific_cluster_config = 3;
+  string state = 4;
+  CheckStartOptions options = 5;
 }
 
 message CheckStop {}
