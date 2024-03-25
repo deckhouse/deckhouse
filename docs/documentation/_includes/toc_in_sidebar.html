@@ -2,60 +2,60 @@
     $(document).ready(function () {
         // Handler for .ready() called.
 
-        const $toc = $('#toc');
+        const $toc = $('#toc-sidebar');
 
         $toc.toc({
             minimumHeaders: 2,
-            // title: '',
+            title: '',
             listType: 'ul',
             showSpeed: 'none',
             headers: '.docs h2,.docs h3,.docs h4',
-            // classes: {
-            //     list: 'toc-sidebar',
-            //     item: 'toc-sidebar__item',
-            //     link: 'toc-sidebar__item-link'
-            // }
+            classes: {
+                list: 'toc-sidebar',
+                item: 'toc-sidebar__item',
+                link: 'toc-sidebar__item-link'
+            }
         });
 
-    //   $toc.on('click', 'a', function () {
-    //     const target = decodeURI($(this).attr('href'));
+      $toc.on('click', 'a', function () {
+        const target = decodeURI($(this).attr('href'));
 
-    //     $('html, body').animate({
-    //       scrollTop: $(target).offset().top - 105
-    //     }, 300);
-    //   });
+        $('html, body').animate({
+          scrollTop: $(target).offset().top - 105
+        }, 300);
+      });
 
         if (!$.trim($toc.html())) {
             $toc.hide();
         }
 
-        // const sectionClasses = '.post-content h2, .post-content h3, .post-content h4';
-        // const sections = $(sectionClasses);
-        // const visibleOffset = 20;
-        // const nav = $('.toc-sidebar');
-        // const navHeight = $('.header').outerHeight();
+        const sectionClasses = '.post-content h2, .post-content h3';
+        const sections = $(sectionClasses);
+        const visibleOffset = 20;
+        const nav = $('.toc-sidebar');
+        const navHeight = $('.header').outerHeight();
 
-        // $(window).on('scroll', function () {
-        //     const currentPosition = $(this).scrollTop();
+        $(window).on('scroll', function () {
+            const currentPosition = $(this).scrollTop();
 
-        //     sections.each(function () {
-        //         const top = $(this).offset().top - navHeight - visibleOffset;
-        //         let bottom = top + $(this).outerHeight();
-        //         const nextElement = $(this).nextAll(sectionClasses).first();
+            sections.each(function () {
+                const top = $(this).offset().top - navHeight - visibleOffset;
+                let bottom = top + $(this).outerHeight();
+                const nextElement = $(this).nextAll(sectionClasses).first();
 
-        //         if (nextElement && nextElement.length > 0) {
-        //             bottom = $(nextElement).offset().top - navHeight - visibleOffset;
-        //         }
+                if (nextElement && nextElement.length > 0) {
+                    bottom = $(nextElement).offset().top - navHeight - visibleOffset;
+                }
 
-        //         if (currentPosition >= top && currentPosition <= bottom) {
-        //             nav.find('a').removeClass('active');
-        //             sections.removeClass('active');
+                if (currentPosition >= top && currentPosition <= bottom) {
+                    nav.find('a').removeClass('active');
+                    sections.removeClass('active');
 
-        //             $(this).addClass('active');
-        //             nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
-        //         }
-        //     });
-        // });
+                    $(this).addClass('active');
+                    nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
+                }
+            });
+        });
     });
 
 </script>
