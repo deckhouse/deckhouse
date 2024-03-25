@@ -21,7 +21,7 @@
         const target = decodeURI($(this).attr('href'));
 
         $('html, body').animate({
-          scrollTop: $(target).offset().top - 105
+          scrollTop: $(target).offset().top - 305
         }, 300);
       });
 
@@ -31,7 +31,7 @@
 
         const sectionClasses = '.post-content h2, .post-content h3, .post-content h4';
         const sections = $(sectionClasses);
-        const visibleOffset = 40;
+        const visibleOffset = 20;
         const nav = $('.toc-sidebar');
         const navHeight = $('.header').outerHeight();
 
