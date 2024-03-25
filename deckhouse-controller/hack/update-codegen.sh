@@ -17,6 +17,7 @@ set -o errexit
 set -o nounset
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
+DECKHOUSE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && cd ../../ && pwd )
 export GOPATH=${GOPATH:-$(go env | grep GOPATH | cut -d= -f2 | tr -d '"')}
 CODEGEN_PKG_ABS=${GOPATH}/pkg/mod/$(go mod graph | grep code-generator | head -n 1 | cut -d" " -f2)
 
@@ -31,10 +32,16 @@ CODEGEN_PKG=$($PY -c "import os.path; print (os.path.relpath('${CODEGEN_PKG_ABS}
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 
+if [ ! -d /tmp/github.com/deckhouse ]; then
+  mkdir -p /tmp/github.com/deckhouse;
+  ln -s $DECKHOUSE_DIR /tmp/github.com/deckhouse/deckhouse
+fi
 
 chmod +x ${CODEGEN_PKG}/generate-groups.sh
 chmod +x ${CODEGEN_PKG}/generate-internal-groups.sh
-${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1 --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1 --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt --output-base "/tmp"
+
+rm -r /tmp/github.com
 
 #kube::codegen::gen_helpers \
 #    --input-pkg-root . \
