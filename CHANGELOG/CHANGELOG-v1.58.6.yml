@@ -1,0 +1,29 @@
+cloud-provider-vcd:
+  fixes:
+    - summary: Change the default network mode for new VMs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7875
+control-plane-manager:
+  fixes:
+    - summary: Fix error when `d8-cluster-configuration` secret is missing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7861
+deckhouse:
+  fixes:
+    - summary: Сhange the way the `deckhouse` pod readiness is determined during the minor version update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7867
+go_lib:
+  fixes:
+    - summary: Use a few requirement functions for one key.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7884
+istio:
+  fixes:
+    - summary: Wiped `istioVer` requirement from `release.yaml`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7879
+multitenancy-manager:
+  fixes:
+    - summary: Fix Project rendering in some cases for embedded templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7876
+node-manager:
+  fixes:
+    - summary: Add permission for _cluster API_ resources for a cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7893
+
