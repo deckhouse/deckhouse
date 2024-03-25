@@ -31,6 +31,7 @@ type DeckhouseModule struct {
 	basic *modules.BasicModule
 
 	description string
+	stage       string
 	labels      map[string]string
 }
 
@@ -50,6 +51,7 @@ func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values
 		basic:       basic,
 		labels:      labels,
 		description: def.Description,
+		stage:       def.Stage,
 	}
 }
 
@@ -74,6 +76,7 @@ func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
 			Weight:      dm.basic.Order,
 			Source:      source,
 			State:       "Disabled",
+			Stage:       dm.stage,
 			Description: dm.description,
 		},
 	}
