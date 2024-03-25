@@ -1,5 +1,5 @@
 ---
-title: Установка и сопровождение
+title: Администрирование
 permalink: ru/guides/production.html
 lang: ru
 ---
