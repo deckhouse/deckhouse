@@ -17,23 +17,23 @@
             }
         });
 
-      $toc.on('click', 'a', function () {
-        const target = decodeURI($(this).attr('href'));
+    //   $toc.on('click', 'a', function () {
+    //     const target = decodeURI($(this).attr('href'));
 
-        $('html, body').animate({
-          scrollTop: $(target).offset().top - 105
-        }, 300);
-      });
+    //     $('html, body').animate({
+    //       scrollTop: $(target).offset().top - 105
+    //     }, 300);
+    //   });
 
         if (!$.trim($toc.html())) {
             $toc.hide();
         }
 
-        const sectionClasses = '.post-content h2, .post-content h3, .post-content h4';
-        const sections = $(sectionClasses);
-        const visibleOffset = 20;
-        const nav = $('.toc-sidebar');
-        const navHeight = $('.header').outerHeight();
+        // const sectionClasses = '.post-content h2, .post-content h3, .post-content h4';
+        // const sections = $(sectionClasses);
+        // const visibleOffset = 20;
+        // const nav = $('.toc-sidebar');
+        // const navHeight = $('.header').outerHeight();
 
         // $(window).on('scroll', function () {
         //     const currentPosition = $(this).scrollTop();
