@@ -186,7 +186,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [clusterId, numCPUs, memory, template]
+              required: [numCPUs, memory, template]
               description: |
                 Partial contents of the fields of the.
               properties:
