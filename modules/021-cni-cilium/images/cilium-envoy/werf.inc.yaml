@@ -78,6 +78,7 @@ shell:
   - cd /cilium/proxy
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
+  - mkdir -p /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $ciliumProxyTag }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
