@@ -1,0 +1,10 @@
+{{ $htmlTable := .Inner | markdownify }}
+{{ $class := .Get 0 }}
+{{ if $class }}
+  {{ $old := "<table>" }}
+  {{ $new := printf "<table class=\"%s\">" $class }}
+  {{ $htmlTable = replace $htmlTable $old $new }}
+{{ end }}
+<div class="table-wrapper">
+  {{ $htmlTable | safeHTML }}
+</div>
