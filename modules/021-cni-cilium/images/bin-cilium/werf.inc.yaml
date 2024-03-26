@@ -35,10 +35,10 @@ import:
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- artifact: {{ $.ModuleName }}/iptables-artifact
-  add: /iptables
-  to: /iptables
-  before: install
+# - artifact: {{ $.ModuleName }}/iptables-artifact
+#   add: /iptables
+#   to: /iptables
+#   before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
