@@ -903,7 +903,7 @@ func (c *Controller) RunPreflightCheck(ctx context.Context) error {
 
 	err := c.restoreAbsentSourceModules()
 	if err != nil {
-		return err
+		return fmt.Errorf("modules restoration failed: %w", err)
 	}
 
 	return c.deleteModulesWithAbsentRelease()
@@ -1001,31 +1001,26 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			if os.IsNotExist(err) {
 				err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight)
 				if err != nil {
-					c.logger.Warnf("Couldn't create module symlink: %s", err)
-					continue
+					return fmt.Errorf("couldn't create module symlink: %s", err)
 				}
 				// some other error
 			} else {
-				c.logger.Errorf("Module %s check error: %s", moduleName, err)
-				continue
+				return fmt.Errorf("module %s check error: %s", moduleName, err)
 			}
 			// check if module versions is up to date
 		} else {
 			dstDir, err := filepath.EvalSymlinks(moduleDir)
 			if err != nil {
-				c.logger.Errorf("Couldn't evaluate module %s symlink %s: %s", moduleName, moduleDir, err)
-				continue
+				return fmt.Errorf("couldn't evaluate module %s symlink %s: %s", moduleName, moduleDir, err)
 			}
 
 			// module version on file system doesn't equal to the deployed module release
 			if filepath.Base(dstDir) != moduleVersion {
 				if err := os.Remove(moduleDir); err != nil {
-					c.logger.Warnf("Couldn't delete stale symlink %s for module %s: err", moduleDir, moduleName, err)
-					continue
+					return fmt.Errorf("couldn't delete stale symlink %s for module %s: %s", moduleDir, moduleName, err)
 				}
 				if err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight); err != nil {
-					c.logger.Warnf("Couldn't create module symlink: %s", err)
-					continue
+					return fmt.Errorf("couldn't create module symlink: %s", err)
 				}
 			}
 		}
@@ -1044,20 +1039,17 @@ func (c *Controller) restoreAbsentSourceModules() error {
 
 		ms, err := c.moduleSourcesLister.Get(moduleSource)
 		if err != nil {
-			c.logger.Warnf("ModuleSource %s is absent. Skipping restoration of the module %s with pull override", moduleSource, moduleName)
-			continue
+			return fmt.Errorf("ModuleSource %s is absent. Skipping restoration of the module %s with pull override", moduleSource, moduleName)
 		}
 
 		md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 		_, moduleDef, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
-			c.logger.Warnf("Couldn't get module %s pull override definition: %s", moduleName, err)
-			continue
+			return fmt.Errorf("couldn't get module %s pull override definition: %s", moduleName, err)
 		}
 
 		if moduleDef == nil {
-			c.logger.Warnf("Module definition for module %s pull override is nil. Ignore", moduleName)
-			continue
+			return fmt.Errorf("module definition for module %s pull override is nil. Ignore", moduleName)
 		}
 
 		moduleWeight := moduleDef.Weight
@@ -1076,15 +1068,13 @@ func (c *Controller) restoreAbsentSourceModules() error {
 				symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
 				err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
 				if err != nil {
-					c.logger.Warnf("Create symlink for module %s failed: %s", moduleName, err)
-					continue
+					return fmt.Errorf("create symlink for module %s failed: %s", moduleName, err)
 				}
 
 				log.Infof("Module %s with pull override restored", moduleName)
 				// some other error
 			} else {
-				c.logger.Errorf("Module %s with pull override check error: %s", moduleName, err)
-				continue
+				return fmt.Errorf("module %s with pull override check error: %s", moduleName, err)
 			}
 		}
 	}
