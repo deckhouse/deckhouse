@@ -150,13 +150,13 @@ spec:
         - --silence-ping-logging
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
-    {{- $i := $context.Values.userAuthn.idTokenTTL | default "10m" }}
-    {{- $k := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
-        - --cookie-refresh={{ $i }}
-    {{- if ge (int (include "helm_lib_duration_to_seconds" $k)) (int (include "helm_lib_duration_to_seconds" $i)) }}
-        - --cookie-expire={{ $k }}
+    {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
+    {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+        - --cookie-refresh={{ $idTokenTTL }}
+    {{- if ge (int (include "helm_lib_duration_to_seconds" $keepUsersLoggedInFor)) (int (include "helm_lib_duration_to_seconds" $idTokenTTL)) }}
+        - --cookie-expire={{ $keepUsersLoggedInFor }}
     {{- else }}
-        - --cookie-expire={{ $i }}
+        - --cookie-expire={{ $idTokenTTL }}
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         env:
