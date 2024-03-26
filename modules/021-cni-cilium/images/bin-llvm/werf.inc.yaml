@@ -1,18 +1,15 @@
+{{- $llvmRev := "llvmorg-10.0.0" }}
+---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of LLVM is a8c542efc076b62ba683e7699c0013adb6955f0f
 # Corresponding commit bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28 (https://github.com/cilium/image-tools/tree/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
-# Based on https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/checkout-llvm.sh
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
-#
-# Original compilers IMAGE_TAG is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
-# Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
----
-{{- $llvmRev := "llvmorg-10.0.0" }}
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev

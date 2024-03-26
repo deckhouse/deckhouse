@@ -1,8 +1,6 @@
 {{- $goVersion := "1.21.5" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.1.0" }}
-{{- $iptablesVersion := "1.8.8-1" }}
-{{- $iptablesSnapshotDate := "20230116T212610Z" }}
 {{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
@@ -14,9 +12,16 @@
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-bazel.sh
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
+# and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
 #
 # Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
+# Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
+# Corresponding commit is ad82c7c56e88989992fd25d8d67747de865c823b
+# Original IMAGE_TAG of cilium/iptables is 67f517af50e18f64cd12625021f1c39246bb4f92
+# Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
 # #####################################################################
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
@@ -55,37 +60,17 @@ shell:
   - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
   - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
   - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
-  # for iptables
-  # - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
-  # - apt-get update && apt-get install -y --no-install-recommends iptables={{ $iptablesVersion }}
-  # - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
-  # - apt-get update && apt-src update
-  # - mkdir -p /iptables && cd /iptables
-  # - apt-src -b -t install iptables={{ $iptablesVersion }}
   # for debug
   - apt-get install -y --no-install-recommends strace
   # apt clean
   - apt-get purge --auto-remove && apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-  - | # download-only
+  # download-only
+  - |
     apt-get update && apt-get install -y --no-install-recommends --download-only \
     libcap-dev \
     python-is-python3 \
     clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-  # end common
-  # # for/from compiller only
-  # - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-  # - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
-  # - apt-get purge --auto-remove && apt-get clean
-  # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-  # # for/from cilium-envoy only
-  # - |
-  #   apt-get install -y --no-install-recommends \
-  #   libcap-dev \
-  #   python-is-python3 \
-  #   clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-  # - apt-get purge --auto-remove && apt-get clean
-  # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
