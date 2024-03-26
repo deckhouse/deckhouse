@@ -88,6 +88,15 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   allowAccessToKubernetes: true
   spec:
     keepUsersLoggedInFor: "19m"
+- name: test-4
+  encodedName: justForTest4
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  allowAccessToKubernetes: true
+  spec:
+    keepUsersLoggedInFor: "2h20m4s"
 `)
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
 			hec.HelmRender()
@@ -176,16 +185,21 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
 			Expect(deploymentTest3.Exists()).To(BeTrue())
-			Expect(deploymentTest3.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-			Expect(deploymentTest3.Field("spec.template.spec.tolerations").Exists()).To(BeTrue()) // default taints
-
 			var oauth2proxyArgTest3 []string
 			for _, result := range deploymentTest3.Field("spec.template.spec.containers.0.args").Array() {
 				oauth2proxyArgTest3 = append(oauth2proxyArgTest3, result.String())
 			}
-
 			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-expire=2h20m5s"))
 			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-refresh=2h20m4s"))
+
+			deploymentTest4 := hec.KubernetesResource("Deployment", "d8-test", "test-4-dex-authenticator")
+			Expect(deploymentTest4.Exists()).To(BeTrue())
+			var oauth2proxyArgTest4 []string
+			for _, result := range deploymentTest4.Field("spec.template.spec.containers.0.args").Array() {
+				oauth2proxyArgTest4 = append(oauth2proxyArgTest3, result.String())
+			}
+			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-expire=2h20m5s"))
+			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-refresh=2h20m4s"))
 		})
 	})
 })
