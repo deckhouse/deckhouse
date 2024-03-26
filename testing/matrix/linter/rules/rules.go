@@ -36,6 +36,26 @@ import (
 
 const defaultRegistry = "registry.example.com/deckhouse"
 
+var (
+	// Name of containers to skip liveness and readyness probes
+	skippedContainerNames = []string{"deckhouse", "handler", "kube-rbac-proxy",
+		"constraint-exporter", "provisioner", "attacher", "resizer",
+		"snapshotter", "livenessprobe", "local-path-provisioner",
+		"image-holder-kube-scheduler123", "image-holder-etcd",
+		"operator", "ebpf-exporter", "vector-reloader", "chrony",
+		"cdi-operator", "virt-operator", "cainjector", "updater",
+	}
+)
+
+func skipContainerByName(name string) bool {
+	for _, containerName := range skippedContainerNames {
+		if name == containerName {
+			return true
+		}
+	}
+	return false
+}
+
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	// Dynatrace module deprecated and will be removed
 	if o.Unstructured.GetKind() == "Deployment" && o.Unstructured.GetNamespace() == "d8-dynatrace" {
@@ -97,6 +117,17 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
+	// check probes only on containers without initContainers
+	livenessProbeErrList := containersLivenessProbesValid(object, containers)
+	for _, liveErr := range livenessProbeErrList {
+		l.ErrorsList.Add(liveErr)
+	}
+
+	readinessProbeErrList := containersReadinessProbesValid(object, containers)
+	for _, readiErr := range readinessProbeErrList {
+		l.ErrorsList.Add(readiErr)
+	}
+
 	initContainers, err := object.GetInitContainers()
 	if err != nil {
 		panic(err)
@@ -116,6 +147,38 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 		l.ErrorsList.Add(containerSecurityContext(object, containers))
 		l.ErrorsList.Add(containerPorts(object, containers))
 	}
+}
+
+// Check container for liveness probe, exceptions are in skippedContainerNames
+func containersLivenessProbesValid(object storage.StoreObject, containers []v1.Container) []errors.LintRuleError {
+	errorList := make([]errors.LintRuleError, 0, len(containers))
+	for _, c := range containers {
+		if !skipContainerByName(c.Name) && c.LivenessProbe == nil {
+			errorList = append(errorList, errors.NewLintRuleError(
+				"CONTAINER00X",
+				object.Identity()+"; container = "+c.Name,
+				c,
+				"Container liveness probes should be specified",
+			))
+		}
+	}
+	return errorList
+}
+
+// Check container for readiness probe, exceptions are in skippedContainerNames
+func containersReadinessProbesValid(object storage.StoreObject, containers []v1.Container) []errors.LintRuleError {
+	errorList := make([]errors.LintRuleError, 0, len(containers))
+	for _, c := range containers {
+		if !skipContainerByName(c.Name) && c.ReadinessProbe == nil {
+			errorList = append(errorList, errors.NewLintRuleError(
+				"CONTAINER00X",
+				object.Identity()+"; container = "+c.Name,
+				c,
+				"Container rediness probes should be specified",
+			))
+		}
+	}
+	return errorList
 }
 
 func containersImagePullPolicy(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
