@@ -7,7 +7,7 @@ permalink: en/modules-docs/deckhouse/
 
 ## Создайте ресурс ModuleSource
 
-Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет registry контейнера, откуда Deckhouse Kubernetes Platform будет загружать модули.
+Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет container registry, откуда Deckhouse Kubernetes Platform будет загружать модули.
 
 Пример *ModuleSource*:
 
