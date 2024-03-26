@@ -16,16 +16,13 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 # # repo based
 # ---
 # artifact: {{ $.ModuleName }}/iptables-artifact
-# from: {{ $.Images.BASE_UBUNTU }}
+# fromImage: {{ $.ModuleName }}/base-cilium-dev
 # shell:
 #   beforeInstall:
-#   - mkdir /iptables
-#   - apt-get update && apt-get install -y --no-install-recommends debian-archive-keyring apt-src ca-certificates apt-transport-https
-#   - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $snapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
 #   - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $snapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
 #   - apt-get update && apt-src update
 #   install:
-#   - cd /iptables
+#   - mkdir -p /iptables && cd /iptables
 #   - apt-src -b -t install iptables={{ $iptablesVersion }}
 #   - apt-get clean && rm -rf /var/lib/apt/lists/*
 # ---

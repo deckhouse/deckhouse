@@ -1,7 +1,7 @@
-#---
-#artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-#from: quay.io/cilium/cilium-envoy:v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b@sha256:992998398dadfff7117bfa9fdb7c9474fefab7f0237263f7c8114e106c67baca
-#---
+{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
+{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
+{{- $fromCacheVersion := "16" }}
+---
 # #####################################################################
 # Build cilium-envoy binaries
 # Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
@@ -12,11 +12,9 @@
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
-{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
-{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
----
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
 import:
 shell:
   beforeInstall:

@@ -1,5 +1,5 @@
 {{- $ciliumVersion := "1.14.5" }}
-{{- $fromCacheVersion := "14" }}
+{{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
@@ -35,10 +35,10 @@ import:
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-# - artifact: {{ $.ModuleName }}/iptables-artifact
-#   add: /iptables
-#   to: /iptables
-#   before: install
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -47,8 +47,8 @@ shell:
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   install:
-  # - dpkg -i /iptables/*.deb
-  # - rm -rf /iptables
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/

@@ -3,6 +3,7 @@
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.1.0" }}
 {{- $iptablesVersion := "1.8.8-1" }}
 {{- $iptablesSnapshotDate := "20230116T212610Z" }}
+{{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
@@ -20,6 +21,7 @@
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_UBUNTU }}
+fromCacheVersion: {{ $fromCacheVersion }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -54,8 +56,8 @@ shell:
   - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
   - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
   # for iptables
-  - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
-  - apt-get update && apt-get install -y --no-install-recommends iptables={{ $iptablesVersion }}
+  # - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
+  # - apt-get update && apt-get install -y --no-install-recommends iptables={{ $iptablesVersion }}
   # - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
   # - apt-get update && apt-src update
   # - mkdir -p /iptables && cd /iptables
