@@ -156,7 +156,7 @@ spec:
     {{- if ge (int (include "helm_lib_duration_to_seconds" $keepUsersLoggedInFor)) (int (include "helm_lib_duration_to_seconds" $idTokenTTL)) }}
         - --cookie-expire={{ $keepUsersLoggedInFor }}
     {{- else }}
-        - --cookie-expire={{ duration (add (int (include "durationToSeconds" $idTokenTTL)) 1) }}
+        - --cookie-expire={{ duration (add (int (include "helm_lib_duration_to_seconds" $idTokenTTL)) 1) }}
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         env:
