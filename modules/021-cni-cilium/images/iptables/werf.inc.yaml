@@ -22,7 +22,7 @@ shell:
   - gbp clone {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
   - cd /iptables/iptables-1.8.8
   - git checkout {{ $gitTag }}
-  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar
+  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar -b -us -uc
 ---
 # #####################################################################
 # ---
