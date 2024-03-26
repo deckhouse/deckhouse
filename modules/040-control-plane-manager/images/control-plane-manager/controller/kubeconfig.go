@@ -36,7 +36,7 @@ import (
 
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
-	for _, v := range []string{"admin", "controller-manager", "scheduler"} {
+	for _, v := range []string{"super-admin", "admin", "controller-manager", "scheduler"} {
 		if err := renewKubeconfig(v); err != nil {
 			return err
 		}
