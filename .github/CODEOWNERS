@@ -19,8 +19,8 @@
 030-cloud-provider-openstack/   @RomanenkoDenys @name212
 030-cloud-provider-vsphere/     @RomanenkoDenys
 031-local-path-provisioner/     @RomanenkoDenys @name212
-035-cni-flannel/                @RomanenkoDenys @name212
-035-cni-simple-bridge/          @RomanenkoDenys @name212
+035-cni-flannel/                @apolovov
+035-cni-simple-bridge/          @apolovov
 040-control-plane-manager/      @RomanenkoDenys @name212
 040-node-manager/               @RomanenkoDenys @name212 @aleksey-su
 040-terraform-manager/          @name212 @aleksey-su
