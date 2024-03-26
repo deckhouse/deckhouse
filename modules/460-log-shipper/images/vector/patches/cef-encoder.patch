@@ -488,19 +488,19 @@ index 000000000..b808b0599
 +    }
 +}
 diff --git a/lib/codecs/src/encoding/format/mod.rs b/lib/codecs/src/encoding/format/mod.rs
-index 1d4e00838..63e4c86d5 100644
+index e61f7cae0..307981733 100644
 --- a/lib/codecs/src/encoding/format/mod.rs
 +++ b/lib/codecs/src/encoding/format/mod.rs
 @@ -4,6 +4,7 @@
  #![deny(missing_docs)]
-
+ 
  mod avro;
 +mod cef;
+ mod common;
  mod csv;
  mod gelf;
- mod json;
-@@ -17,6 +18,7 @@ use std::fmt::Debug;
-
+@@ -19,6 +20,7 @@ use std::fmt::Debug;
+ 
  pub use self::csv::{CsvSerializer, CsvSerializerConfig};
  pub use avro::{AvroSerializer, AvroSerializerConfig, AvroSerializerOptions};
 +pub use cef::{CefSerializer, CefSerializerConfig};
@@ -508,30 +508,30 @@ index 1d4e00838..63e4c86d5 100644
  pub use gelf::{GelfSerializer, GelfSerializerConfig};
  pub use json::{JsonSerializer, JsonSerializerConfig};
 diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
-index f95164117..eadbc9fa7 100644
+index 2f28c27ec..b66dd73d0 100644
 --- a/lib/codecs/src/encoding/mod.rs
 +++ b/lib/codecs/src/encoding/mod.rs
 @@ -8,11 +8,11 @@ use std::fmt::Debug;
-
+ 
  use bytes::BytesMut;
  pub use format::{
 -    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CsvSerializer,
 -    CsvSerializerConfig, GelfSerializer, GelfSerializerConfig, JsonSerializer,
 -    JsonSerializerConfig, LogfmtSerializer, LogfmtSerializerConfig, NativeJsonSerializer,
--    NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig, RawMessageSerializer,
--    RawMessageSerializerConfig, TextSerializer, TextSerializerConfig,
+-    NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig, ProtobufSerializer,
+-    ProtobufSerializerConfig, ProtobufSerializerOptions, RawMessageSerializer,
 +    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CefSerializer,
 +    CefSerializerConfig, CsvSerializer, CsvSerializerConfig, GelfSerializer, GelfSerializerConfig,
 +    JsonSerializer, JsonSerializerConfig, LogfmtSerializer, LogfmtSerializerConfig,
 +    NativeJsonSerializer, NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig,
-+    RawMessageSerializer, RawMessageSerializerConfig, TextSerializer, TextSerializerConfig,
++    ProtobufSerializer, ProtobufSerializerConfig, ProtobufSerializerOptions, RawMessageSerializer,
+     RawMessageSerializerConfig, TextSerializer, TextSerializerConfig,
  };
  pub use framing::{
-     BoxedFramer, BoxedFramingError, BytesEncoder, BytesEncoderConfig, CharacterDelimitedEncoder,
-@@ -185,6 +185,13 @@ pub enum SerializerConfig {
+@@ -186,6 +186,13 @@ pub enum SerializerConfig {
          avro: AvroSerializerOptions,
      },
-
+ 
 +    /// Encodes an event as a CEF (Common Event Format) formatted message.
 +    ///
 +    Cef(
@@ -542,10 +542,10 @@ index f95164117..eadbc9fa7 100644
      /// Encodes an event as a CSV message.
      ///
      /// This codec must be configured with fields to encode.
-@@ -248,6 +255,12 @@ impl From<AvroSerializerConfig> for SerializerConfig {
+@@ -267,6 +274,12 @@ impl From<AvroSerializerConfig> for SerializerConfig {
      }
  }
-
+ 
 +impl From<CefSerializerConfig> for SerializerConfig {
 +    fn from(config: CefSerializerConfig) -> Self {
 +        Self::Cef(config)
@@ -555,7 +555,7 @@ index f95164117..eadbc9fa7 100644
  impl From<CsvSerializerConfig> for SerializerConfig {
      fn from(config: CsvSerializerConfig) -> Self {
          Self::Csv(config)
-@@ -303,6 +316,7 @@ impl SerializerConfig {
+@@ -328,6 +341,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => Ok(Serializer::Avro(
                  AvroSerializerConfig::new(avro.schema.clone()).build()?,
              )),
@@ -563,17 +563,17 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => Ok(Serializer::Csv(config.build()?)),
              SerializerConfig::Gelf => Ok(Serializer::Gelf(GelfSerializerConfig::new().build())),
              SerializerConfig::Json(config) => Ok(Serializer::Json(config.build())),
-@@ -335,7 +349,8 @@ impl SerializerConfig {
-             SerializerConfig::Avro { .. } | SerializerConfig::Native => {
-                 FramingConfig::LengthDelimited
-             }
+@@ -361,7 +375,8 @@ impl SerializerConfig {
+             SerializerConfig::Avro { .. }
+             | SerializerConfig::Native
+             | SerializerConfig::Protobuf(_) => FramingConfig::LengthDelimited,
 -            SerializerConfig::Csv(_)
 +            SerializerConfig::Cef(_)
 +            | SerializerConfig::Csv(_)
              | SerializerConfig::Gelf
              | SerializerConfig::Json(_)
              | SerializerConfig::Logfmt
-@@ -351,6 +366,7 @@ impl SerializerConfig {
+@@ -377,6 +392,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).input_type()
              }
@@ -581,7 +581,7 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => config.input_type(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::input_type(),
              SerializerConfig::Json(config) => config.input_type(),
-@@ -368,6 +384,7 @@ impl SerializerConfig {
+@@ -395,6 +411,7 @@ impl SerializerConfig {
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).schema_requirement()
              }
@@ -589,7 +589,7 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => config.schema_requirement(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::schema_requirement(),
              SerializerConfig::Json(config) => config.schema_requirement(),
-@@ -385,6 +402,8 @@ impl SerializerConfig {
+@@ -413,6 +430,8 @@ impl SerializerConfig {
  pub enum Serializer {
      /// Uses an `AvroSerializer` for serialization.
      Avro(AvroSerializer),
@@ -598,7 +598,7 @@ index f95164117..eadbc9fa7 100644
      /// Uses a `CsvSerializer` for serialization.
      Csv(CsvSerializer),
      /// Uses a `GelfSerializer` for serialization.
-@@ -409,6 +428,7 @@ impl Serializer {
+@@ -439,6 +458,7 @@ impl Serializer {
          match self {
              Serializer::Json(_) | Serializer::NativeJson(_) | Serializer::Gelf(_) => true,
              Serializer::Avro(_)
@@ -606,7 +606,7 @@ index f95164117..eadbc9fa7 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -429,6 +449,7 @@ impl Serializer {
+@@ -460,6 +480,7 @@ impl Serializer {
              Serializer::Json(serializer) => serializer.to_json_value(event),
              Serializer::NativeJson(serializer) => serializer.to_json_value(event),
              Serializer::Avro(_)
@@ -614,10 +614,10 @@ index f95164117..eadbc9fa7 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -446,6 +467,12 @@ impl From<AvroSerializer> for Serializer {
+@@ -478,6 +499,12 @@ impl From<AvroSerializer> for Serializer {
      }
  }
-
+ 
 +impl From<CefSerializer> for Serializer {
 +    fn from(serializer: CefSerializer) -> Self {
 +        Self::Cef(serializer)
@@ -627,7 +627,7 @@ index f95164117..eadbc9fa7 100644
  impl From<CsvSerializer> for Serializer {
      fn from(serializer: CsvSerializer) -> Self {
          Self::Csv(serializer)
-@@ -500,6 +527,7 @@ impl tokio_util::codec::Encoder<Event> for Serializer {
+@@ -538,6 +565,7 @@ impl tokio_util::codec::Encoder<Event> for Serializer {
      fn encode(&mut self, event: Event, buffer: &mut BytesMut) -> Result<(), Self::Error> {
          match self {
              Serializer::Avro(serializer) => serializer.encode(event, buffer),
@@ -636,25 +636,26 @@ index f95164117..eadbc9fa7 100644
              Serializer::Gelf(serializer) => serializer.encode(event, buffer),
              Serializer::Json(serializer) => serializer.encode(event, buffer),
 diff --git a/src/codecs/encoding/config.rs b/src/codecs/encoding/config.rs
-index 97096de1e..b1d970e8e 100644
+index d16ec78b6..8c7c3ffab 100644
 --- a/src/codecs/encoding/config.rs
 +++ b/src/codecs/encoding/config.rs
-@@ -109,7 +109,8 @@ impl EncodingConfigWithFraming {
+@@ -119,7 +119,9 @@ impl EncodingConfigWithFraming {
              }
              (
                  None,
 -                Serializer::Csv(_)
 +                Serializer::Cef(_)
 +                | Serializer::Csv(_)
-                 | Serializer::Gelf(_)
++                | Serializer::Gelf(_)
                  | Serializer::Logfmt(_)
                  | Serializer::NativeJson(_)
+                 | Serializer::RawMessage(_)
 diff --git a/src/codecs/encoding/encoder.rs b/src/codecs/encoding/encoder.rs
-index 3f9970fb9..09b824199 100644
+index d12f2ab85..80eaa0f5f 100644
 --- a/src/codecs/encoding/encoder.rs
 +++ b/src/codecs/encoding/encoder.rs
 @@ -116,6 +116,7 @@ impl Encoder<Framer> {
-             (Serializer::Native(_), _) => "application/octet-stream",
+             (Serializer::Native(_), _) | (Serializer::Protobuf(_), _) => "application/octet-stream",
              (
                  Serializer::Avro(_)
 +                | Serializer::Cef(_)
@@ -662,11 +663,11 @@ index 3f9970fb9..09b824199 100644
                  | Serializer::Gelf(_)
                  | Serializer::Json(_)
 diff --git a/src/components/validation/resources/mod.rs b/src/components/validation/resources/mod.rs
-index 2b9fc3c54..f8ab26834 100644
+index 84186e231..1ef7c8cc3 100644
 --- a/src/components/validation/resources/mod.rs
 +++ b/src/components/validation/resources/mod.rs
-@@ -180,6 +180,7 @@ fn decoder_framing_to_encoding_framer(framing: &decoding::FramingConfig) -> enco
- fn serializer_config_to_deserializer(config: &SerializerConfig) -> decoding::Deserializer {
+@@ -197,6 +197,7 @@ fn serializer_config_to_deserializer(
+ ) -> vector_lib::Result<decoding::Deserializer> {
      let deserializer_config = match config {
          SerializerConfig::Avro { .. } => todo!(),
 +        SerializerConfig::Cef { .. } => todo!(),
@@ -674,7 +675,7 @@ index 2b9fc3c54..f8ab26834 100644
          SerializerConfig::Gelf => DeserializerConfig::Gelf(Default::default()),
          SerializerConfig::Json(_) => DeserializerConfig::Json(Default::default()),
 diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/reference/components/sinks/base/amqp.cue
-index cd201bb51..4ea9e0b87 100644
+index 0e7f44a43..08b811352 100644
 --- a/website/cue/reference/components/sinks/base/amqp.cue
 +++ b/website/cue/reference/components/sinks/base/amqp.cue
 @@ -57,6 +57,91 @@ base: components: sinks: amqp: configuration: {
@@ -770,18 +771,18 @@ index cd201bb51..4ea9e0b87 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -66,6 +151,7 @@ base: components: sinks: amqp: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-index e5ea22305..68adbc7c0 100644
+index e1b600c1e..a22e0f0e8 100644
 --- a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
 +++ b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-@@ -219,6 +219,91 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
+@@ -233,6 +233,91 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -873,19 +874,19 @@ index e5ea22305..68adbc7c0 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -228,6 +313,7 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
-
+@@ -242,6 +327,7 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-index 19a708606..03f26bd96 100644
+index 54226a2e0..578f5b458 100644
 --- a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
 +++ b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
+@@ -212,6 +212,91 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -977,19 +978,19 @@ index 19a708606..03f26bd96 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
-
+@@ -221,6 +306,7 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-index 40164b9d0..5d7cfc2ee 100644
+index 98a78c69a..481f1097b 100644
 --- a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
 +++ b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_streams: configuration: {
+@@ -212,6 +212,91 @@ base: components: sinks: aws_kinesis_streams: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1081,19 +1082,19 @@ index 40164b9d0..5d7cfc2ee 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_streams: configuration: {
-
+@@ -221,6 +306,7 @@ base: components: sinks: aws_kinesis_streams: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/aws_s3.cue b/website/cue/reference/components/sinks/base/aws_s3.cue
-index 11265897c..f5f6a74ed 100644
+index 8b0b152d8..0f8977f84 100644
 --- a/website/cue/reference/components/sinks/base/aws_s3.cue
 +++ b/website/cue/reference/components/sinks/base/aws_s3.cue
-@@ -307,6 +307,91 @@ base: components: sinks: aws_s3: configuration: {
+@@ -321,6 +321,91 @@ base: components: sinks: aws_s3: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1185,19 +1186,19 @@ index 11265897c..f5f6a74ed 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -316,6 +401,7 @@ base: components: sinks: aws_s3: configuration: {
-
+@@ -330,6 +415,7 @@ base: components: sinks: aws_s3: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/aws_sqs.cue b/website/cue/reference/components/sinks/base/aws_sqs.cue
-index 403beb674..a7f57cc28 100644
+index 06267be9b..2b2ea0aec 100644
 --- a/website/cue/reference/components/sinks/base/aws_sqs.cue
 +++ b/website/cue/reference/components/sinks/base/aws_sqs.cue
-@@ -134,6 +134,91 @@ base: components: sinks: aws_sqs: configuration: {
+@@ -143,6 +143,91 @@ base: components: sinks: aws_sqs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1289,19 +1290,19 @@ index 403beb674..a7f57cc28 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -143,6 +228,7 @@ base: components: sinks: aws_sqs: configuration: {
-
+@@ -152,6 +237,7 @@ base: components: sinks: aws_sqs: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/azure_blob.cue b/website/cue/reference/components/sinks/base/azure_blob.cue
-index 5c2568145..05b998055 100644
+index 30b3d9771..5c9afed65 100644
 --- a/website/cue/reference/components/sinks/base/azure_blob.cue
 +++ b/website/cue/reference/components/sinks/base/azure_blob.cue
-@@ -170,6 +170,91 @@ base: components: sinks: azure_blob: configuration: {
+@@ -175,6 +175,91 @@ base: components: sinks: azure_blob: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1393,16 +1394,16 @@ index 5c2568145..05b998055 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -179,6 +264,7 @@ base: components: sinks: azure_blob: configuration: {
-
+@@ -184,6 +269,7 @@ base: components: sinks: azure_blob: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/console.cue b/website/cue/reference/components/sinks/base/console.cue
-index c4deb39c4..693ebc0de 100644
+index 21c24d535..bb069695c 100644
 --- a/website/cue/reference/components/sinks/base/console.cue
 +++ b/website/cue/reference/components/sinks/base/console.cue
 @@ -41,6 +41,91 @@ base: components: sinks: console: configuration: {
@@ -1498,15 +1499,15 @@ index c4deb39c4..693ebc0de 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -50,6 +135,7 @@ base: components: sinks: console: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/file.cue b/website/cue/reference/components/sinks/base/file.cue
-index 383b9d208..5aa831dbe 100644
+index db12805ae..d788419fa 100644
 --- a/website/cue/reference/components/sinks/base/file.cue
 +++ b/website/cue/reference/components/sinks/base/file.cue
 @@ -61,6 +61,91 @@ base: components: sinks: file: configuration: {
@@ -1602,15 +1603,15 @@ index 383b9d208..5aa831dbe 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -70,6 +155,7 @@ base: components: sinks: file: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
-index 82d963fc5..aa5042360 100644
+index c5c8ee003..eaffb10ba 100644
 --- a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
 @@ -110,6 +110,91 @@ base: components: sinks: gcp_chronicle_unstructured: configuration: {
@@ -1706,18 +1707,18 @@ index 82d963fc5..aa5042360 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -119,6 +204,7 @@ base: components: sinks: gcp_chronicle_unstructured: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-index 89b2f3761..f50a7ec06 100644
+index 956e244d0..8e07a71fd 100644
 --- a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-@@ -194,6 +194,91 @@ base: components: sinks: gcp_cloud_storage: configuration: {
+@@ -199,6 +199,91 @@ base: components: sinks: gcp_cloud_storage: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1809,16 +1810,16 @@ index 89b2f3761..f50a7ec06 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -203,6 +288,7 @@ base: components: sinks: gcp_cloud_storage: configuration: {
-
+@@ -208,6 +293,7 @@ base: components: sinks: gcp_cloud_storage: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/gcp_pubsub.cue b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
-index 9c45e6195..8219f4c6d 100644
+index a1d9a916a..5e0d0bf94 100644
 --- a/website/cue/reference/components/sinks/base/gcp_pubsub.cue
 +++ b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
 @@ -108,6 +108,91 @@ base: components: sinks: gcp_pubsub: configuration: {
@@ -1914,18 +1915,18 @@ index 9c45e6195..8219f4c6d 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -117,6 +202,7 @@ base: components: sinks: gcp_pubsub: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/http.cue b/website/cue/reference/components/sinks/base/http.cue
-index c737b39f5..354535237 100644
+index 9bbd2457c..f6f99dd61 100644
 --- a/website/cue/reference/components/sinks/base/http.cue
 +++ b/website/cue/reference/components/sinks/base/http.cue
-@@ -149,6 +149,91 @@ base: components: sinks: http: configuration: {
+@@ -154,6 +154,91 @@ base: components: sinks: http: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2017,19 +2018,19 @@ index c737b39f5..354535237 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -158,6 +243,7 @@ base: components: sinks: http: configuration: {
-
+@@ -163,6 +248,7 @@ base: components: sinks: http: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/humio_logs.cue b/website/cue/reference/components/sinks/base/humio_logs.cue
-index 8d8253417..566c4c99d 100644
+index 4a9d6d2ed..94f505344 100644
 --- a/website/cue/reference/components/sinks/base/humio_logs.cue
 +++ b/website/cue/reference/components/sinks/base/humio_logs.cue
-@@ -102,6 +102,91 @@ base: components: sinks: humio_logs: configuration: {
+@@ -107,6 +107,91 @@ base: components: sinks: humio_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2121,16 +2122,16 @@ index 8d8253417..566c4c99d 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -111,6 +196,7 @@ base: components: sinks: humio_logs: configuration: {
-
+@@ -116,6 +201,7 @@ base: components: sinks: humio_logs: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/kafka.cue b/website/cue/reference/components/sinks/base/kafka.cue
-index 97de9c947..994fc76c7 100644
+index 0de81c9e0..874680888 100644
 --- a/website/cue/reference/components/sinks/base/kafka.cue
 +++ b/website/cue/reference/components/sinks/base/kafka.cue
 @@ -96,6 +96,91 @@ base: components: sinks: kafka: configuration: {
@@ -2226,18 +2227,18 @@ index 97de9c947..994fc76c7 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -105,6 +190,7 @@ base: components: sinks: kafka: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/loki.cue b/website/cue/reference/components/sinks/base/loki.cue
-index 0071c5b2a..9317f72f2 100644
+index 6f151b9d2..5ce7e6f40 100644
 --- a/website/cue/reference/components/sinks/base/loki.cue
 +++ b/website/cue/reference/components/sinks/base/loki.cue
-@@ -153,6 +153,91 @@ base: components: sinks: loki: configuration: {
+@@ -156,6 +156,91 @@ base: components: sinks: loki: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2329,16 +2330,16 @@ index 0071c5b2a..9317f72f2 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -162,6 +247,7 @@ base: components: sinks: loki: configuration: {
-
+@@ -165,6 +250,7 @@ base: components: sinks: loki: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/nats.cue b/website/cue/reference/components/sinks/base/nats.cue
-index 2708c111c..d128faa1c 100644
+index 574768b06..7bef2d9e7 100644
 --- a/website/cue/reference/components/sinks/base/nats.cue
 +++ b/website/cue/reference/components/sinks/base/nats.cue
 @@ -141,6 +141,91 @@ base: components: sinks: nats: configuration: {
@@ -2434,15 +2435,15 @@ index 2708c111c..d128faa1c 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -150,6 +235,7 @@ base: components: sinks: nats: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/papertrail.cue b/website/cue/reference/components/sinks/base/papertrail.cue
-index 8b4cce6d5..d782f06d2 100644
+index 428b4eda1..7db70c5fd 100644
 --- a/website/cue/reference/components/sinks/base/papertrail.cue
 +++ b/website/cue/reference/components/sinks/base/papertrail.cue
 @@ -41,6 +41,91 @@ base: components: sinks: papertrail: configuration: {
@@ -2538,15 +2539,15 @@ index 8b4cce6d5..d782f06d2 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -50,6 +135,7 @@ base: components: sinks: papertrail: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/pulsar.cue b/website/cue/reference/components/sinks/base/pulsar.cue
-index cc62959b4..69a4b1b28 100644
+index dd7e31eba..8e1802194 100644
 --- a/website/cue/reference/components/sinks/base/pulsar.cue
 +++ b/website/cue/reference/components/sinks/base/pulsar.cue
 @@ -135,6 +135,91 @@ base: components: sinks: pulsar: configuration: {
@@ -2642,15 +2643,15 @@ index cc62959b4..69a4b1b28 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -144,6 +229,7 @@ base: components: sinks: pulsar: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/redis.cue b/website/cue/reference/components/sinks/base/redis.cue
-index 774370ce5..03d7c5222 100644
+index 27f231152..d8ca55324 100644
 --- a/website/cue/reference/components/sinks/base/redis.cue
 +++ b/website/cue/reference/components/sinks/base/redis.cue
 @@ -94,6 +94,91 @@ base: components: sinks: redis: configuration: {
@@ -2746,15 +2747,15 @@ index 774370ce5..03d7c5222 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -103,6 +188,7 @@ base: components: sinks: redis: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/socket.cue b/website/cue/reference/components/sinks/base/socket.cue
-index c0b0c62ad..07d65c1d7 100644
+index 23eecf31a..9fa1437cb 100644
 --- a/website/cue/reference/components/sinks/base/socket.cue
 +++ b/website/cue/reference/components/sinks/base/socket.cue
 @@ -53,6 +53,91 @@ base: components: sinks: socket: configuration: {
@@ -2850,18 +2851,18 @@ index c0b0c62ad..07d65c1d7 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -62,6 +147,7 @@ base: components: sinks: socket: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-index 184db1386..1e7c6e417 100644
+index f7be2f936..a280895df 100644
 --- a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
 +++ b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-@@ -152,6 +152,91 @@ base: components: sinks: splunk_hec_logs: configuration: {
+@@ -157,6 +157,91 @@ base: components: sinks: splunk_hec_logs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2953,19 +2954,19 @@ index 184db1386..1e7c6e417 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -161,6 +246,7 @@ base: components: sinks: splunk_hec_logs: configuration: {
-
+@@ -166,6 +251,7 @@ base: components: sinks: splunk_hec_logs: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/webhdfs.cue b/website/cue/reference/components/sinks/base/webhdfs.cue
-index b07f00ae7..0373e26ee 100644
+index e00998274..32e6170a5 100644
 --- a/website/cue/reference/components/sinks/base/webhdfs.cue
 +++ b/website/cue/reference/components/sinks/base/webhdfs.cue
-@@ -102,6 +102,91 @@ base: components: sinks: webhdfs: configuration: {
+@@ -107,6 +107,91 @@ base: components: sinks: webhdfs: configuration: {
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -3057,16 +3058,16 @@ index b07f00ae7..0373e26ee 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -111,6 +196,7 @@ base: components: sinks: webhdfs: configuration: {
-
+@@ -116,6 +201,7 @@ base: components: sinks: webhdfs: configuration: {
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
 diff --git a/website/cue/reference/components/sinks/base/websocket.cue b/website/cue/reference/components/sinks/base/websocket.cue
-index ad51d78f9..4358337af 100644
+index 3922b1c11..491ba97a5 100644
 --- a/website/cue/reference/components/sinks/base/websocket.cue
 +++ b/website/cue/reference/components/sinks/base/websocket.cue
 @@ -88,6 +88,91 @@ base: components: sinks: websocket: configuration: {
@@ -3162,10 +3163,10 @@ index ad51d78f9..4358337af 100644
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -97,6 +182,7 @@ base: components: sinks: websocket: configuration: {
-
+ 
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
-
+ 
