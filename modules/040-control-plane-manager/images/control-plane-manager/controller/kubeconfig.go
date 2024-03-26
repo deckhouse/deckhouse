@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"golang.org/x/mod/semver"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,7 +37,13 @@ import (
 
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
-	for _, v := range []string{"super-admin", "admin", "controller-manager", "scheduler"} {
+
+	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
+	if semver.Compare("v1.29.0", fmt.Sprintf("v%s", config.KubernetesVersion)) < 1 {
+		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
+	}
+
+	for _, v := range kubeconfigs {
 		if err := renewKubeconfig(v); err != nil {
 			return err
 		}
