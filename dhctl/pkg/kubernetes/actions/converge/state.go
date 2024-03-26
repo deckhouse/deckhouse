@@ -104,7 +104,10 @@ func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGro
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
+			return manifests.NewManifestWrapper(
+				manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings),
+				manifests.SecretNameLenghtValidator,
+			)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
@@ -126,7 +129,10 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
+			return manifests.NewManifestWrapper(
+				manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings),
+				manifests.SecretNameLenghtValidator,
+			)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
@@ -146,7 +152,10 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	}
 
 	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
+		return manifests.NewManifestWrapper(
+			manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil),
+			manifests.SecretNameLenghtValidator,
+		)
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
@@ -360,7 +369,10 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings)
+			return manifests.NewManifestWrapper(
+				manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings),
+				manifests.SecretNameLenghtValidator,
+			)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
@@ -371,6 +383,7 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 		},
 		PatchFunc: func(patchData []byte) error {
 			secretName := manifests.SecretNameForNodeTerraformState(s.nodeName)
+
 			// MergePatch is used because we need to replace one field in "data".
 			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
