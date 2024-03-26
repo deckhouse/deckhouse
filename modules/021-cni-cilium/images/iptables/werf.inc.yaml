@@ -10,6 +10,21 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 # and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
 # and https://github.com/cilium/image-tools/blob/aee704bc3cf922acc4a2a02b0b76f524d4796a14/images/iptables/Dockerfile
 # #####################################################################
+{{- $iptablesVersion := "1.8.8-1" }}
+{{- $gitTag := "debian/1.8.8-1" }}
+{{- $_ := set . "SOURCE_REPO" "https://salsa.debian.org" }}
+---
+image: {{ $.ModuleName }}/iptables-git-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+shell:
+  install:
+  - mkdir /iptables
+  - gbp clone {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
+  - cd /iptables/iptables-1.8.8
+  - git checkout {{ $gitTag }}
+  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar
+---
+# #####################################################################
 # ---
 # {{- $iptablesVersion := "1.8.8-1" }}
 # {{- $snapshotDate := "20230116T212610Z" }}
@@ -51,7 +66,8 @@ from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d0
 # shell:
 #   beforeInstall:
 #   - apt-get update
-#   - apt-get install -y --no-install-recommends ca-certificates git build-essential binutils lintian debhelper dh-make devscripts
+#   - apt-get install -y --no-install-recommends ca-certificates git build-essential binutils
+#   - apt-get install -y --no-install-recommends lintian debhelper dh-make devscripts
 #   install:
 #   - mkdir /iptables
 #   - git clone --depth 1 --branch "{{ $gitTag }}" {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-1.8.8
