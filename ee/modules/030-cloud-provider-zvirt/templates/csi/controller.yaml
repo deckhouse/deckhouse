@@ -1,0 +1,92 @@
+{{- define "csi_controller_args" }}
+- "--node-name=$(NODE_ID)"
+- "--ovirt-conf=/etc/cloud/cloud-config"
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
+{{- define "csi_controller_envs" }}
+- name: NODE_ID
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: OVIRT_CONFIG
+  value: /etc/cloud/cloud-config
+{{- end }}
+
+{{- define "csi_controller_volumes" }}
+- name: csi-controller-config-volume
+  secret:
+    secretName: csi-controller-manager
+- name: zvirt-credentials-volume
+  secret:
+    secretName: zvirt-credentials
+{{- end }}
+
+{{- define "csi_controller_volume_mounts" }}
+- name: csi-controller-config-volume
+  mountPath: /etc/cloud
+  readOnly: true
+- name: zvirt-credentials-volume
+  mountPath: /etc/kubernetes/zvirt/basic-auth
+  readOnly: true
+{{- end }}
+
+{{- define "csi_node_args" }}
+- "--node-name=$(NODE_ID)"
+- "--ovirt-conf=/etc/cloud/cloud-config"
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
+{{- define "csi_node_envs" }}
+- name: NODE_ID
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: OVIRT_CONFIG
+  value: /etc/cloud/cloud-config
+{{- end }}
+
+{{- define "csi_node_volumes" }}
+- name: csi-node-config-volume
+  secret:
+    secretName: csi-controller-manager
+- name: zvirt-credentials-volume
+  secret:
+    secretName: zvirt-credentials
+{{- end }}
+
+{{- define "csi_node_volume_mounts" }}
+- mountPath: /etc/cloud
+  name: csi-node-config-volume
+  readOnly: true
+- name: zvirt-credentials-volume
+  mountPath: /etc/kubernetes/zvirt/basic-auth
+  readOnly: true
+{{- end }}
+
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "zvirtCsiDriver") }}
+{{- if $csiControllerImage }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+  {{- $_ := set $csiControllerConfig "resizerEnabled" false }}
+  {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "csi.ovirt.org" }}
+  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}

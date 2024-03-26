@@ -1,0 +1,33 @@
+Subject: [PATCH] XML-escape cloud-init data
+---
+Index: internal/ovirt/resource_ovirt_vm.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision 44ad70de472ee44476fc9c515a638e00a36ca724)
++++ b/internal/ovirt/resource_ovirt_vm.go	(date 1710344245301)
+@@ -1,7 +1,9 @@
+ package ovirt
+ 
+ import (
++	"bytes"
+ 	"context"
++	"encoding/xml"
+ 	"fmt"
+ 	"strings"
+ 
+@@ -668,7 +670,12 @@
+ 		useInit = true
+ 	}
+ 	if hInitScript, ok := data.GetOk("initialization_custom_script"); ok {
++		buf := &bytes.Buffer{}
+ 		vmInitScript = hInitScript.(string)
++		if err := xml.EscapeText(buf, []byte(vmInitScript)); err != nil {
++			diags = append(diags, errorToDiag("xml-escape Initialization parameters", err))
++		}
++		vmInitScript = buf.String()
+ 		useInit = true
+ 	}
+ 

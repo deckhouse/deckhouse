@@ -1,0 +1,46 @@
+{{- $options := dict -}}
+
+{{- $template := .nil }}
+{{- if .nodeGroup.instanceClass.template }}
+  {{- $template = .nodeGroup.instanceClass.template }}
+{{- end }}
+
+{{- $clusterId := .nil }}
+{{- if .nodeGroup.instanceClass.clusterId }}
+  {{- $clusterId = .nodeGroup.instanceClass.clusterId }}
+{{- end }}
+
+{{- $vnicProfileId := .nil }}
+{{- if .nodeGroup.instanceClass.vnicProfileId }}
+  {{- $vnicProfileId = .nodeGroup.instanceClass.vnicProfileId }}
+{{- end }}
+
+{{- $numCPUs := .nil }}
+{{- if .nodeGroup.instanceClass.numCPUs }}
+  {{- $numCPUs = .nodeGroup.instanceClass.numCPUs }}
+{{- end }}
+
+{{- $memory := .nil }}
+{{- if .nodeGroup.instanceClass.memory }}
+  {{- $memory = .nodeGroup.instanceClass.memory }}
+{{- end }}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
+{{- end }}
+
+{{- $nicName := .nil }}
+{{- if .nodeGroup.instanceClass.nicName }}
+  {{- $nicName = .nodeGroup.instanceClass.nicName }}
+{{- end }}
+
+{{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
+{{- $_ := set $options "clusterId" .nodeGroup.instanceClass.clusterId -}}
+{{- $_ := set $options "vnicProfileId" .nodeGroup.instanceClass.vnicProfileId -}}
+{{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
+{{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
+{{- $_ := set $options "rootDiskSizeGb" .nodeGroup.instanceClass.rootDiskSizeGb -}}
+{{- $_ := set $options "nicName" .nodeGroup.instanceClass.nicName -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}
