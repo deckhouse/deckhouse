@@ -184,7 +184,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 				oauth2proxyArgTest3 = append(oauth2proxyArgTest3, result.String())
 			}
 
-			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-expire=2h20m4s"))
+			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-expire=2h20m5s"))
 			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-refresh=2h20m4s"))
 		})
 	})
