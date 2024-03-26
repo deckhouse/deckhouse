@@ -225,7 +225,7 @@ apiVersions:
                     enum:
                       - AntiAffinity
                   manuallyManaged:
-                    not: { }
+                    not: {}
               - properties:
                   policy:
                     enum:
