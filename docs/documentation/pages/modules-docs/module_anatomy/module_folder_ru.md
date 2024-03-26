@@ -55,7 +55,7 @@ lang: ru
 В папке `charts` лежат вспомогательные чарты, которые используются при рендере шаблонов.
 
 > У Deckhouse Kubernetes Platform существует собственная библиотека вспомогательных функций для чартов – [lib-helm](https://github.com/deckhouse/lib-helm), которая добавляется в [каждый модуль](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).
-> Библиотеку можно положить в модуль, как helm subchart. Для этого загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `charts` в корне модуля.
+> Библиотеку также можно положить в модуль как helm subchart. Для этого загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
 
 ### crds
 
