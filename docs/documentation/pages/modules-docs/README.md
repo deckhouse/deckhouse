@@ -8,7 +8,9 @@ permalink: en/modules-docs/
 </p>
 
 
-В этом разделе рассказано, как создать собственный модуль Deckhouse Kubernetes Platform (DKP). Существует три основных этапа жизни модуля:
+В этом разделе рассказано, как создать собственный модуль Deckhouse Kubernetes Platform (DKP). 
+
+Существует три основных этапа жизни модуля:
 
 * **Разработка**: создание кода модуля и его структуры в git-репозитории. В разделе **Анатомия модуля** --> **Папка с модулем** рзбирается, какие папки существуют и что в них находится.
 * **Сборка**: создание артефакта модуля во время сборки и загрузка его в container registry. В разделе **Анатомия модуля** --> **Container registry** разбирается, где хранятся образы в registry и какие образы доступны.
@@ -23,7 +25,7 @@ permalink: en/modules-docs/
 > Хук позволяет сохранять значения в памяти и использовать их позже при рендеринге шаблонов Helm. Об этой особенности и цикле работы модуля, рекомендуем прочитать в [документации Hooks and Helm values](https://flant.github.io/addon-operator/OVERVIEW.html#hooks-and-helm-values).
 * Ознакомьтесь с [концепцией снепшотов](https://flant.github.io/shell-operator/HOOKS.html#snapshots). С помощью снепшотов можно игнорировать отдельные события и реализовать шаблон reconciliation loop, при котором состояние из снепшота приводится к состоянию модуля.
  > Этим способом в Deckhouse Kubernetes Platform реализована 100% поддержка хуков во внутренних модулях.
- * Кроме того, хуки можно использовать вместо `prometheus exporter`. Хуки могут предоставлять метрики, которые Deckhouse будет экспортировать. Ознакомьтесь с информацией [о метриках](https://flant.github.io/addon-operator/metrics/METRICS_FROM_HOOKS.html#custom-metrics).
+ * Кроме того, хуки можно использовать вместо экспортера prometheus. Хуки могут предоставлять метрики, которые Deckhouse будет экспортировать. Ознакомьтесь с информацией [о метриках](https://flant.github.io/addon-operator/metrics/METRICS_FROM_HOOKS.html#custom-metrics).
 * 🎬 В [видео 2019](https://www.youtube.com/watch?v=1_55KPHjVTU) года Андрей Половов подробно рассказал о том, что такое shell-operator и addon-operator.
 * 🎬 [Более подробное видео](https://www.youtube.com/watch?v=we0s4ETUBLc) про работу хуков на английском языке.
 * 💡 В качестве примера можно посмотреть на [модули, разработанные компанией Flant](existing_modules/modules.md).

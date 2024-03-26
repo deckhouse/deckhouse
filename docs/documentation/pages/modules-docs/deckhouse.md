@@ -30,7 +30,7 @@ kubectl get ms
 
 Пример ответа:
 
-```none
+```
 NAME        COUNT   SYNC   MSG
 example     2       16s
 ```
@@ -99,7 +99,7 @@ kubectl get mr
 
 Пример ответа:
 
-```none
+```
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
 ```
@@ -122,7 +122,7 @@ kubectl get modules | grep example
 
 Пример ответа:
 
-```none
+```
 NAME                                  WEIGHT   STATE      SOURCE
 module-1                              900      Disabled   example
 module-2                              900      Disabled   example
@@ -153,7 +153,7 @@ kubectl get moduleconfig module-1
 
 Пример ответа:
 
-```none
+```
 NAME              STATE     VERSION   AGE   TYPE                  STATUS
 module-1          Enabled   1         3m    example
 ```

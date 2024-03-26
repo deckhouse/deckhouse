@@ -5,7 +5,7 @@ lang: ru
 ---
 {% raw %}
 
-Полезный подход - хранить образы для модулей в нашем registry. Очистите папку с образами `images/*` и загрузите туда наш образ для приложения **hello-world**.
+Полезный подход - хранить образы для модулей в нашем registry. Очистите папку с образами `/images/*` и загрузите туда наш образ для приложения `hello-world`.
 
 ```sh
 rm -rf images/*
@@ -25,4 +25,4 @@ sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "hel
 
 > Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
 
-{% endraw %}.
+{% endraw %}

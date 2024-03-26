@@ -34,8 +34,8 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
-            en: How to develop a module?
-            ru: Как разработать модуль?
+            en: Module development
+            ru: Разработка модуля
           folders:
             - title:
                 en: Description
@@ -64,8 +64,8 @@ entries:
                 ru: Как адаптировать существующий чарт?
               folders:
                 - title:
-                    en: Description
-                    ru: Описание
+                    en: Install tools
+                    ru: Установите утилиты
                   url: /modules-docs/chart-adapt/
                 - title:
                     en: Create a repository

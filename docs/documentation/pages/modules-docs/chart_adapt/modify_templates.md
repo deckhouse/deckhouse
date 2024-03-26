@@ -4,9 +4,9 @@ permalink: en/modules-docs/chart-adapt/modify-templates/
 ---
 
 
-Выбранное имя будет соответствовать имени модуля в Deckhouse Kubernetes Platform. В некоторых местах оно может быть записано в формате kebab case или camel case. В инструкции следует использовать то же самое имя, которое было выбрано.
+Выберите имя, которое будет соответствовать имени модуля в Deckhouse Kubernetes Platform. В некоторых местах оно может быть записано в формате kebab case или camel case. В инструкции следует использовать то же самое имя, которое было выбрано.
 
-Откройте `Chart.yaml` и в параметре `name` впишите `hello-world`.
+Откройте `Chart.yaml` и в параметре `name` впишите имя модуля `hello-world`.
 
 ```sh
 sed -Ei '' 's/^name:(.*)/name: hello-world/g' Chart.yaml
@@ -28,8 +28,6 @@ sed -Ei '' 's/^name:(.*)/name: hello-world/g' Chart.yaml
    ```
 
 3. Замените в шаблонах путь `.Values` на `.Values.helloWorld`.
-
-   > Это соглашение, используемое в настоящее время в addon-operator, для доступа к значениям модуля. В будущих версиях планируется возможность отказа от этой архитектурной особенности.
 
    ```sh
    sed -i '' -e 's/.Values/.Values.helloWorld/g' $(find templates/ -type f)
