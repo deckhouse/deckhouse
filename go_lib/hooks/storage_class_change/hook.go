@@ -210,6 +210,32 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		effectiveStorageClass = input.ConfigValues.Get(configValuesPath).String()
 	}
 
+	var internalValuesPath = fmt.Sprintf("%s.internal.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName))
+
+	if args.InternalValuesSubPath != "" {
+		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
+	}
+
+	emptydirUsageMetricValue := 0.0
+	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
+		input.Values.Set(internalValuesPath, false)
+		emptydirUsageMetricValue = 1.0
+	} else {
+		input.Values.Set(internalValuesPath, effectiveStorageClass)
+	}
+
+	if len(input.Snapshots["pvcs"]) != 0 {
+		input.MetricsCollector.Set(
+			"d8_emptydir_usage",
+			emptydirUsageMetricValue,
+			map[string]string{
+				"namespace":   args.Namespace,
+				"module_name": args.ModuleName,
+			},
+			metrics.WithGroup("storage_class_change"),
+		)
+	}
+
 	return effectiveStorageClass
 }
 
@@ -280,32 +306,6 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		if err != nil && !errors.IsNotFound(err) {
 			input.LogEntry.Errorf("%v", err)
 		}
-	}
-
-	if len(pvcs) != 0 {
-		var internalValuesPath = fmt.Sprintf("%s.internal.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName))
-
-		if args.InternalValuesSubPath != "" {
-			internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
-		}
-
-		emptydirUsageMetricValue := 0.0
-		if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
-			input.Values.Set(internalValuesPath, false)
-			emptydirUsageMetricValue = 1.0
-		} else {
-			input.Values.Set(internalValuesPath, effectiveStorageClass)
-		}
-
-		input.MetricsCollector.Set(
-			"d8_emptydir_usage",
-			emptydirUsageMetricValue,
-			map[string]string{
-				"namespace":   args.Namespace,
-				"module_name": args.ModuleName,
-			},
-			metrics.WithGroup("storage_class_change"),
-		)
 	}
 	return nil
 }
