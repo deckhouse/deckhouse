@@ -79,8 +79,17 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     applicationIngressCertificateSecretName: test
     applicationIngressClassName: test
     sendAuthorizationHeader: false
+- name: test-3
+  encodedName: justForTest3
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  allowAccessToKubernetes: true
+  spec:
+    keepUsersLoggedInFor: "19m"
 `)
-			hec.ValuesSet("userAuthn.idTokenTTL", "20m")
+			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
 			hec.HelmRender()
 		})
 		It("Should create desired objects", func() {
@@ -128,7 +137,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest).Should(ContainElement("--redirect-url=https://authenticator.example.com"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--set-authorization-header=true"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-expire=1020h"))
-			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-refresh=20m"))
+			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--whitelist-domain=authenticator.example.com"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--scope=groups email openid offline_access"))
 
@@ -161,9 +170,22 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--redirect-url=https://authenticator.com"))
 			Expect(oauth2proxyArgTest2).ShouldNot(ContainElement("--set-authorization-header=true"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-expire=168h"))
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=20m"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator.com"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid offline_access audience:server:client_id:kubernetes"))
+
+			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
+			Expect(deploymentTest3.Exists()).To(BeTrue())
+			Expect(deploymentTest3.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
+			Expect(deploymentTest3.Field("spec.template.spec.tolerations").Exists()).To(BeTrue()) // default taints
+
+			var oauth2proxyArgTest3 []string
+			for _, result := range deploymentTest3.Field("spec.template.spec.containers.0.args").Array() {
+				oauth2proxyArgTest3 = append(oauth2proxyArgTest3, result.String())
+			}
+
+			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-expire=2h20m4s"))
+			Expect(oauth2proxyArgTest3).Should(ContainElement("--cookie-refresh=2h20m4s"))
 		})
 	})
 })

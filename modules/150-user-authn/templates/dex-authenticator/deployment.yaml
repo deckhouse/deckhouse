@@ -153,10 +153,10 @@ spec:
     {{- $i := $context.Values.userAuthn.idTokenTTL | default "10m" }}
     {{- $k := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
         - --cookie-refresh={{ $i }}
-    {{- if gt $i $k }}
-        - --cookie-expire={{ $i }}
-    {{- else }}
+    {{- if ge (int (include "helm_lib_duration_to_seconds" $k)) (int (include "helm_lib_duration_to_seconds" $i)) }}
         - --cookie-expire={{ $k }}
+    {{- else }}
+        - --cookie-expire={{ $i }}
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         env:
