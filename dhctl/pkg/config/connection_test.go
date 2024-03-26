@@ -95,8 +95,8 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_rsa",
 				"./mocks/id_invalid_rsa",
 			),
-			errContains: "not an encrypted key",
-			opts:        []ValidateOption{ValidateOptionValidateExtensions(true)},
+			opts:        []ValidateOption{ValidateOptionValidateExtensions(true), ValidateOptionCommanderMode(true)},
+			errContains: `ValidationFailed: [1] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: sshAgentPrivateKeys: validation rule failed: invalid ssh key: ssh: not an encrypted key`,
 		},
 		"invalid config: no user": {
 			config: configFunc(
@@ -104,11 +104,19 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_rsa",
 				"./mocks/id_passphrase_rsa",
 			),
-			errContains: "sshUser is required",
+			opts: []ValidateOption{ValidateOptionCommanderMode(true)},
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+	* .sshUser is required
+
+`,
 		},
 		"invalid config: no agent private keys": {
-			config:      invalidSSHConfigNoKeys,
-			errContains: "sshAgentPrivateKeys is required",
+			config: invalidSSHConfigNoKeys,
+			opts:   []ValidateOption{ValidateOptionCommanderMode(true)},
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+	* .sshAgentPrivateKeys is required
+
+`,
 		},
 		"invalid config: empty host": {
 			config: configFunc(
@@ -116,7 +124,11 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_rsa",
 				"./mocks/id_passphrase_rsa",
 			),
-			errContains: "host is required",
+			opts: []ValidateOption{ValidateOptionCommanderMode(true)},
+			errContains: `ValidationFailed: [1] dhctl.deckhouse.io/v1, Kind=SSHHost: "SSHHost, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+	* .host is required
+
+`,
 		},
 		"invalid config: duplicated field": {
 			config: configFunc(
@@ -124,8 +136,9 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_rsa",
 				"./mocks/id_passphrase_rsa",
 			),
-			opts:        []ValidateOption{ValidateOptionStrictUnmarshal(true)},
-			errContains: "already set in map",
+			opts: []ValidateOption{ValidateOptionStrictUnmarshal(true), ValidateOptionCommanderMode(true)},
+			errContains: `ValidationFailed: [1] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: openAPIValidate json unmarshal strict: error converting YAML to JSON: yaml: unmarshal errors:
+  line 5: key "sshPort" already set in map`,
 		},
 	}
 
@@ -207,6 +220,7 @@ sshAgentPrivateKeys:
 - key: |
     %s
   passphrase: spicyburrito
+---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
 `

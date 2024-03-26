@@ -46,23 +46,23 @@ metadata:
 			config: `
 apiVersion: vendor.k8s.io/v1
 metadata:
-  name: ok`,
-			errContains: "'Kind' is missing",
+  name: empty kind`,
+			errContains: `InvalidYAML: [0]: unmarshal: Object 'Kind' is missing in '{"apiVersion":"vendor.k8s.io/v1","metadata":{"name":"empty kind"}}'`,
 		},
 		"empty version": {
 			config: `
 kind: SomeKind
 metadata:
-  name: ok`,
-			errContains: "no version information",
+  name: empty version`,
+			errContains: `ValidationFailed: [0] "empty version": .apiVersion is required`,
 		},
 		"crd": {
 			config: `
 apiVersion: vendor.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: ok`,
-			errContains: "got unacceptable resource kind",
+  name: crd`,
+			errContains: `ValidationFailed: [0] vendor.k8s.io/v1, Kind=CustomResourceDefinition "crd": got unacceptable resource kind: CustomResourceDefinition`,
 		},
 	}
 
@@ -132,7 +132,7 @@ metadata:
   name: global
 spec:
   enabled: true`,
-			errContains: `"InitConfiguration" required`,
+			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
 		"multiple init configs": {
 			config: `
@@ -149,7 +149,7 @@ deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ee
   registryDockerCfg: 2eyJhdXRocyI6eyJyZWdpc3RyeS5kZWNraG91c2UuaW8iOnsiYXV0aCI6ImJHbGpaVzV6WlMxMGIydGxianBtZWxkeFMzZGxOR2s0VEU0ME5tUmtNbGxWTWxKWmJYTkNXVmcyV25sTVJ3PT0ifX19
   releaseChannel: Stable`,
-			errContains: `only one "InitConfiguration" expected`,
+			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
 		"extra kinds": {
 			config: `
@@ -165,7 +165,14 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			errContains: `unknown kind "ClusterConfiguration", expected one of ("InitConfiguration", "ModuleConfig")`,
+			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+	* .metadata is a forbidden property
+	* .clusterType is required
+	* .kubernetesVersion is required
+	* .podSubnetCIDR is required
+	* .serviceSubnetCIDR is required
+
+; unknown kind, expected one of ("InitConfiguration", "ModuleConfig")`,
 		},
 	}
 
@@ -241,7 +248,8 @@ metadata:
   name: global
 spec:
   enabled: true`,
-			errContains: `unknown kind "ModuleConfig", expected "InitConfiguration"`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=ModuleConfig "global": unknown kind, expected "ClusterConfiguration"
+exactly one "ClusterConfiguration" required`,
 		},
 		"extra kinds": {
 			config: `
@@ -258,7 +266,7 @@ kind: SomeKind
 clusterType: Static
 `,
 			expected:    ClusterConfig{},
-			errContains: `unknown kind "SomeKind", expected "InitConfiguration"`,
+			errContains: `ValidationFailed: [1] deckhouse.io/v1, Kind=SomeKind: schema not found: no schema for index SomeKind, deckhouse.io/v1; unknown kind, expected "ClusterConfiguration"`,
 		},
 	}
 
@@ -328,8 +336,10 @@ sshPublicKey: ssh-key
 		},
 		"another provider": {
 			config: `
-version: deckhouse.io/v1
-kind: OpenStackClusterConfiguration`,
+apiVersion: deckhouse.io/v1
+kind: OpenStackClusterConfiguration
+metadata:
+    name: anotherProvider`,
 			clusterConfig: ClusterConfig{
 				ClusterType: "Cloud",
 				Cloud: struct {
@@ -338,7 +348,7 @@ kind: OpenStackClusterConfiguration`,
 					Provider: "vSphere",
 				}),
 			},
-			errContains: `unknown kind "OpenStackClusterConfiguration", expected "VsphereClusterConfiguration"`,
+			errContains: `exactly one "VsphereClusterConfiguration" required`,
 		},
 		"no config": {
 			config: `
@@ -356,7 +366,8 @@ spec:
 					Provider: "vSphere",
 				}),
 			},
-			errContains: `unknown kind "ModuleConfig", expected "VsphereClusterConfiguration"`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=ModuleConfig "global": unknown kind, expected "VsphereClusterConfiguration"
+exactly one "VsphereClusterConfiguration" required`,
 		},
 		"extra provider": {
 			config: `
@@ -381,7 +392,24 @@ nodeNetworkCIDR: "10.241.32.0/20"
 sshPublicKey: ssh-key
 ---
 apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration`,
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: 'YjFnYnA2bHVybDBzbXA2Y2kzanMK'
+  folderID: 'b1gsqe7ct9jtss0mlmid'
+  serviceAccountJSON: |
+    {"id": "ajeqlssun75pno7f46t7"}
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    cores: 8
+    memory: 8192
+    # https://cloud.yandex.ru/marketplace/products/yc/ubuntu-22-04-lts
+    imageID: fd8li2lvvfc6bdj4c787
+    externalIPAddresses:
+    - "Auto"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: ssh-key`,
 			clusterConfig: ClusterConfig{
 				ClusterType: "Cloud",
 				Cloud: struct {
@@ -390,7 +418,7 @@ kind: YandexClusterConfiguration`,
 					Provider: "Yandex",
 				}),
 			},
-			errContains: `only one "YandexClusterConfiguration" expected`,
+			errContains: `ValidationFailed: exactly one "YandexClusterConfiguration" required`,
 		},
 	}
 
@@ -408,76 +436,4 @@ kind: YandexClusterConfiguration`,
 	}
 }
 
-// deprecated
-func TestValidateClusterSettingsFormat(t *testing.T) {
-	once.Do(func() {
-		store = newSchemaStore([]string{"./../../../candi/openapi"})
-	})
-
-	t.Run("ok", func(t *testing.T) {
-		t.Run("cluster configuration", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigFormat, validateOpts...)
-			require.NoError(t, err)
-		})
-		t.Run("resource-1", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(resourceFormat1, validateOpts...)
-			require.NoError(t, err)
-		})
-		t.Run("resource-2", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(resourceFormat2, validateOpts...)
-			require.NoError(t, err)
-		})
-		t.Run("cluster configuration with resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigWithResourcesFormat, validateOpts...)
-			require.NoError(t, err)
-		})
-	})
-
-	t.Run("not ok", func(t *testing.T) {
-		t.Run("unexpected field", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(unknownFieldFormat, validateOpts...)
-			require.Error(t, err)
-		})
-	})
-}
-
 var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}
-
-var (
-	clusterConfigFormat = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: Yandex
-  prefix: "cmdr-test-03051973"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "cluster.local"`
-	resourceFormat1 = `---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse-admin
-spec:
-  enabled: true`
-	resourceFormat2 = `---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
-metadata:
-  name: some-name`
-	clusterConfigWithResourcesFormat = clusterConfigFormat + "\n" + resourceFormat1
-	unknownFieldFormat               = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: Yandex
-  prefix: "cmdr-test-03051973"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "cluster.local"
-unexpected: "fail"`
-)

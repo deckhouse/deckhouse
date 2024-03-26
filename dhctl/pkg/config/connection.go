@@ -22,6 +22,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 )
 
@@ -60,50 +62,80 @@ func ParseConnectionConfig(
 	opts ...ValidateOption,
 ) (*ConnectionConfig, error) {
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
+	errs := &ValidationError{}
+	var connectionConfigDocsCount int
 
 	config := &ConnectionConfig{}
 
-	for _, doc := range docs {
+	for i, doc := range docs {
 		if doc == "" {
 			continue
 		}
 		docData := []byte(doc)
 
-		var index SchemaIndex
-		err := yaml.Unmarshal(docData, &index)
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
-			return nil, fmt.Errorf("unmarshal connection config: %w", err)
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
 		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
-			return nil, err
+			errMessages = append(errMessages, err.Error())
 		}
 
 		switch index.Kind {
 		case SSHConfigKind:
-			if config.SSHConfig != nil {
-				return nil, fmt.Errorf("only one %q expected", SSHConfigKind)
-			}
-
+			connectionConfigDocsCount++
 			var sshConfig *SSHConfig
 			if err = yaml.Unmarshal([]byte(doc), &sshConfig); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal %q: %w\n---\n%s\n", SSHConfigKind, err, doc)
+				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
 			}
 			config.SSHConfig = sshConfig
 		case SSHConfigHostKind:
 			var sshHost SSHHost
 			if err = yaml.Unmarshal([]byte(doc), &sshHost); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal %q: %w\n---\n%s\n", SSHConfigHostKind, err, doc)
+				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
 		default:
-			return nil, fmt.Errorf("unknown kind %q, expected %q or %q", index.Kind, SSHConfigKind, SSHConfigHostKind)
+			errMessages = append(errMessages, fmt.Errorf(
+				"unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind,
+			).Error())
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
 		}
 	}
 
-	if config.SSHConfig == nil {
-		return nil, fmt.Errorf("%q required", SSHConfigKind)
+	if connectionConfigDocsCount != 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("exactly one %q required", SSHConfigKind).Error()},
+		})
+	}
+
+	if err := errs.ErrorOrNil(); err != nil {
+		return nil, err
 	}
 
 	return config, nil
