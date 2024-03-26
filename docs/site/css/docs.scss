@@ -344,9 +344,9 @@
   padding-top: 5px;
 }
 
-.layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) {
-  height: calc(100vh - 400px);
-}
+// .layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) {
+//   height: calc(100vh - 400px);
+// }
 
 .sidebar__container {
   overflow-x: hidden;
