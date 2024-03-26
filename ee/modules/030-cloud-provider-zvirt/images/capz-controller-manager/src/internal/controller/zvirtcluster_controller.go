@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	ovirt "github.com/ovirt/go-ovirt-client"
+	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -107,11 +107,11 @@ func (r *ZvirtClusterReconciler) reconcile(
 
 	clusterScope.ZvirtCluster.Status.Ready = true
 
-	// if err = r.checkZvirtClusterID(clusterScope.ZvirtCluster.Spec.ID); err != nil {
-	// 	clusterScope.ZvirtCluster.Status.Ready = false
-	// 	clusterScope.ZvirtCluster.Status.FailureReason = infrastructurev1.ClusterMisconfiguredReason
-	// 	clusterScope.ZvirtCluster.Status.FailureMessage = err.Error()
-	// }
+	if err = r.checkZvirtClusterID(clusterScope.ZvirtCluster.Spec.ID); err != nil {
+		clusterScope.ZvirtCluster.Status.Ready = false
+		clusterScope.ZvirtCluster.Status.FailureReason = infrastructurev1.ClusterMisconfiguredReason
+		clusterScope.ZvirtCluster.Status.FailureMessage = err.Error()
+	}
 
 	err = clusterScope.Patch(ctx)
 	if err != nil {

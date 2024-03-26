@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ovirt "github.com/ovirt/go-ovirt-client"
+	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	ovsdk "github.com/ovirt/go-ovirt-client"
+	ovsdk "github.com/ovirt/go-ovirt-client/v3"
 	"k8s.io/utils/pointer"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
