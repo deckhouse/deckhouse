@@ -55,10 +55,11 @@ shell:
   - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
   # for iptables
   - echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" > /etc/apt/sources.list.d/iptables-snapshot.list
-  - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
-  - apt-get update && apt-src update
-  - mkdir -p /iptables && cd /iptables
-  - apt-src -b -t install iptables={{ $iptablesVersion }}
+  - apt-get update && apt-get install -y --no-install-recommends iptables={{ $iptablesVersion }}
+  # - echo "deb-src [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-bullseye-automatic.gpg] https://snapshot.debian.org/archive/debian/{{ $iptablesSnapshotDate }}/ bookworm main" >> /etc/apt/sources.list.d/iptables-snapshot.list
+  # - apt-get update && apt-src update
+  # - mkdir -p /iptables && cd /iptables
+  # - apt-src -b -t install iptables={{ $iptablesVersion }}
   # for debug
   - apt-get install -y --no-install-recommends strace
   # apt clean

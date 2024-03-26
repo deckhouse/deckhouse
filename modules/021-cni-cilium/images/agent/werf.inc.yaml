@@ -130,8 +130,8 @@ import:
 shell:
   install:
   # from runtime
-  - dpkg -i /iptables/*.deb
-  - rm -rf /iptables
+  # - dpkg -i /iptables/*.deb
+  # - rm -rf /iptables
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - ./iptables-wrapper-installer.sh --no-sanity-check

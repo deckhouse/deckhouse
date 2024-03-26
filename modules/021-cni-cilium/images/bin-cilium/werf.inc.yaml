@@ -47,8 +47,8 @@ shell:
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   install:
-  - dpkg -i /iptables/*.deb
-  - rm -rf /iptables
+  # - dpkg -i /iptables/*.deb
+  # - rm -rf /iptables
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/
