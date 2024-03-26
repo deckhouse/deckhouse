@@ -26,6 +26,7 @@ resource "ovirt_vm" "node_vm" {
 
   lifecycle {
     ignore_changes = [
+      os_type,
       initialization_custom_script,
       placement_policy_affinity,
       placement_policy_host_ids
