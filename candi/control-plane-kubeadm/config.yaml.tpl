@@ -46,7 +46,11 @@ apiServer:
   extraArgs:
 {{- if .apiserver.serviceAccount }}
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- if .apiserver.serviceAccount.issuer }}
+    service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
+    {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- end }}
