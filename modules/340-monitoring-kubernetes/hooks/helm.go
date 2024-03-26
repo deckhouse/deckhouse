@@ -113,9 +113,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{
 		Order: 1,
 	},
-}, dependency.WithExternalDependencies(handleHelmReleasesByShedule))
+}, dependency.WithExternalDependencies(handleHelmReleasesBySchedule))
 
-func handleHelmReleasesByShedule(input *go_hook.HookInput, dc dependency.Container) error {
+func handleHelmReleasesBySchedule(input *go_hook.HookInput, dc dependency.Container) error {
 	return handleHelmReleases(input, dc, helmReleasesInterval)
 }
 
