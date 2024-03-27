@@ -7,7 +7,7 @@
         * on (raw_pod_id) group_left
         max by (raw_pod_id) (
           label_replace(
-            label_replace(ebpf_exporter_oom_kills{global_oom="0", cgroup_path=~".*slice.*"}, "raw_pod_id", "$1", "cgroup_path", ".+-pod(.+).slice"),
+            label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*slice.*"}, "raw_pod_id", "$1", "cgroup_path", ".+-pod(.+).slice"),
               "raw_pod_id", "$1$2$3$4$5", "raw_pod_id", "(.+)_(.+)_(.+)_(.+)_(.+)"
           )
         )
@@ -17,11 +17,30 @@
       max by (namespace, pod, container) (
         label_replace(kube_pod_container_info, "raw_container_id", "$1", "container_id", "containerd://(.+)")
         * on (raw_container_id) group_left
-        max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{global_oom="0", cgroup_path=~".*slice.*"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
+        max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*slice.*"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
       )
   - record: oom_kills:normalized
     expr: |-
       max by (namespace, pod, container) (
         kube_pod_container_info * on (uid) group_left
-        max by (uid) (label_replace(ebpf_exporter_oom_kills{global_oom="0", cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", "/sys/fs/cgroup/memory/kubepods/burstable/pod(.*)"))
+        max by (uid) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", ".+burstable/pod(.*)"))
       )
+  - alert: EbpfExporterKernelNotSupported
+    expr: min by (job) (ebpf_exporter_btf_support_unavailable_in_kernel{job="ebpf-exporter"}) == 1
+    for: 3m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: monitoring-kubernetes
+      d8_component: ebpf-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "job"
+      summary: >
+        The BTF module required for ebpf_exporter is missing in the kernel.
+        Possible actions to resolve the problem:
+        * Built kernel with BTF type information [info](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
+        * [Disable](https://deckhouse.io/documentation/v1/modules/340-monitoring-kubernetes/configuration.html#parameters-ebpfexporterenaled) ebpf_exporter
