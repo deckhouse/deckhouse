@@ -227,79 +227,79 @@ user-authn          Disabled   1                    12h
 
 В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
-|  Набор модулей (bundle) |  Список включенных по умолчанию модулей |
-| --- | --- |
+| Набор модулей (bundle) | Список включенных по умолчанию модулей |
+| :--- | :--- |
 | **Default** |
-* admission-policy-engine
-* cert-manager
-* chrony
-* containerized-data-importer
-* control-plane-manager
-* dashboard
-* external-module-manager
-* deckhouse
-* documentation
-* descheduler
-* extended-monitoring
-* flow-schema
-* helm
-* ingress-nginx
-* kube-dns
-* kube-proxy
-* local-path-provisioner
-* log-shipper
-* monitoring-custom
-* monitoring-deckhouse
-* monitoring-kubernetes-control-plane
-* monitoring-kubernetes
-* monitoring-ping
-* namespace-configurator
-* node-manager
-* pod-reloader
-* priority-class
-* prometheus
-* prometheus-metrics-adapter
-* secret-copier
-* smoke-mini
-* snapshot-controller
-* terraform-manager
-* upmeter
-* user-authn
-* user-authz
-* vertical-pod-autoscaler
-* node-local-dns
-* flant-integration |
+| admission-policy-engine
+| cert-manager
+| chrony
+| containerized-data-importer
+| control-plane-manager
+| dashboard
+| external-module-manager
+| deckhouse
+| documentation
+| descheduler
+| extended-monitoring
+| flow-schema
+| helm
+| ingress-nginx
+| kube-dns
+| kube-proxy
+| local-path-provisioner
+| log-shipper
+| monitoring-custom
+| monitoring-deckhouse
+| monitoring-kubernetes-control-plane
+| monitoring-kubernetes
+| monitoring-ping
+| namespace-configurator
+| node-manager
+| pod-reloader
+| priority-class
+| prometheus
+| prometheus-metrics-adapter
+| secret-copier
+| smoke-mini
+| snapshot-controller
+| terraform-manager
+| upmeter
+| user-authn
+| user-authz
+| vertical-pod-autoscaler
+| node-local-dns
+| flant-integration |
 | **Managed** |
-* admission-policy-engine
-* cert-manager
-* containerized-data-importer
-* dashboard
-* external-module-manager
-* deckhouse
-* documentation
-* descheduler
-* extended-monitoring
-* flow-schema
-* helm
-* ingress-nginx
-* local-path-provisioner
-* log-shipper
-* monitoring-custom
-* monitoring-deckhouse
-* monitoring-kubernetes
-* monitoring-ping
-* namespace-configurator
-* pod-reloader
-* prometheus
-* prometheus-metrics-adapter
-* secret-copier
-* snapshot-controller
-* upmeter
-* user-authz
-* vertical-pod-autoscaler
-* flant-integration |
+| admission-policy-engine
+| cert-manager
+| containerized-data-importer
+| dashboard
+| external-module-manager
+| deckhouse
+| documentation
+| descheduler
+| extended-monitoring
+| flow-schema
+| helm
+| ingress-nginx
+| local-path-provisioner
+| log-shipper
+| monitoring-custom
+| monitoring-deckhouse
+| monitoring-kubernetes
+| monitoring-ping
+| namespace-configurator
+| pod-reloader
+| prometheus
+| prometheus-metrics-adapter
+| secret-copier
+| snapshot-controller
+| upmeter
+| user-authz
+| vertical-pod-autoscaler
+| flant-integration |
 | **Minimal** |
-* deckhouse |
+| deckhouse |
 
 > **Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI). Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
 
