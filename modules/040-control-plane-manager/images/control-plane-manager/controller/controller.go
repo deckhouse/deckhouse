@@ -73,6 +73,7 @@ func main() {
 	runPhase(updateRootKubeconfig())
 	runPhase(installExtraFiles())
 	runPhase(convergeComponents())
+	runPhase(upgrade())
 	runPhase(config.writeLastAppliedConfigurationChecksum())
 
 	cleanup()
