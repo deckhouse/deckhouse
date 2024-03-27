@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-debian-version? 10 || bb-is-debian-version? 11 ; then
+if bb-is-debian-version? 10 || bb-is-debian-version? 11 || bb-is-debian-version? 12 ; then
   if ls -l /etc/alternatives/iptables | grep -q iptables-nft; then
     update-alternatives --set iptables /usr/sbin/iptables-legacy
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy

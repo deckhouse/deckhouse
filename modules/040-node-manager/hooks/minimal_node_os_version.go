@@ -31,7 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-var osImageRegex = regexp.MustCompile(`^Ubuntu ([0-9.]+)( )?(LTS)?$`)
+var osImageUbuntuRegex = regexp.MustCompile(`^Ubuntu ([0-9.]+)( )?(LTS)?$`)
+var osImageDebianRegex = regexp.MustCompile(`^Debian GNU\/Linux ([0-9.]+)( )?(.*)?$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
@@ -54,10 +55,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyNodesMinimalOSVersionFilter,
 		},
 	},
-}, discoverMinimalNodesOSVersiopon)
+}, discoverMinimalNodesOSVersion)
 
 const (
-	minVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minVersionUbuntuValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minVersionDebianValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
 )
 
 func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -65,32 +67,47 @@ func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.F
 	return version, err
 }
 
-func discoverMinimalNodesOSVersiopon(input *go_hook.HookInput) error {
+func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
 	snap := input.Snapshots["nodes_os_version"]
 	if len(snap) == 0 {
 		return nil
 	}
 
-	var minVersion *semver.Version
+	var minUbuntuVersion, minDebianVersion *semver.Version
 
 	for _, s := range snap {
-		if !osImageRegex.MatchString(s.(string)) {
+		switch {
+		case osImageUbuntuRegex.MatchString(s.(string)):
+			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(s.(string))[1])
+			if err != nil {
+				return err
+			}
+			if minUbuntuVersion == nil || ctrlUbuntuVersion.LessThan(minUbuntuVersion) {
+				minUbuntuVersion = ctrlUbuntuVersion
+			}
+		case osImageDebianRegex.MatchString(s.(string)):
+			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(s.(string))[1])
+			if err != nil {
+				return err
+			}
+			if minDebianVersion == nil || ctrlDebianVersion.LessThan(minUbuntuVersion) {
+				minDebianVersion = ctrlDebianVersion
+			}
+		default:
 			continue
 		}
-		ctrlVersion, err := semver.NewVersion(osImageRegex.FindStringSubmatch(s.(string))[1])
-		if err != nil {
-			return err
-		}
-		if minVersion == nil || ctrlVersion.LessThan(minVersion) {
-			minVersion = ctrlVersion
-		}
 	}
 
-	if minVersion == nil {
-		requirements.RemoveValue(minVersionValuesKey)
-		return nil
+	if minUbuntuVersion == nil {
+		requirements.RemoveValue(minVersionUbuntuValuesKey)
+	} else {
+		requirements.SaveValue(minVersionUbuntuValuesKey, minUbuntuVersion.String())
+	}
+	if minDebianVersion == nil {
+		requirements.RemoveValue(minVersionDebianValuesKey)
+	} else {
+		requirements.SaveValue(minVersionDebianValuesKey, minDebianVersion.String())
 	}
 
-	requirements.SaveValue(minVersionValuesKey, minVersion.String())
 	return nil
 }
