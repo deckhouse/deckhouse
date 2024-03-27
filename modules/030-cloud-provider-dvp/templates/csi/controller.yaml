@@ -1,0 +1,70 @@
+###
+### controller
+###
+
+
+{{- define "csi_controller_args" }}
+- "--debug"
+- "--csi-endpoint=unix:///csi/csi.sock"
+- "--liveness-endpoint=:9807"
+{{- end }}
+
+{{- define "csi_controller_envs" }}
+- name: HOST_NAMESPACE
+  value: {{ .Values.cloudProviderDvp.internal.providerClusterConfiguration.provider.namespace | quote }}
+- name: HOST_KUBECONFIG
+  valueFrom:
+      secretKeyRef:
+        name: csi-credentials
+        key: kubeconfigBase64
+- name: NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
+{{- end }}
+
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "dvpCsiPlugin") }}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "livenessProbePort" 9808 }}
+{{- $_ := set $csiControllerConfig "topologyEnabled" false }}
+{{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+
+{{- define "csi_node_args" }}
+- "--debug"
+- "--csi-endpoint=unix:///csi/csi.sock"
+{{- end }}
+
+{{- define "csi_node_envs" }}
+- name: HOST_NAMESPACE
+  value: {{ .Values.cloudProviderDvp.internal.providerClusterConfiguration.provider.namespace | quote }}
+- name: HOST_KUBECONFIG
+  valueFrom:
+      secretKeyRef:
+        name: csi-credentials
+        key: kubeconfigBase64
+- name: NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "disk.csi.virtualization.deckhouse.io" }}
+{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

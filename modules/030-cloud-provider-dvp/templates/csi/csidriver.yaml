@@ -1,0 +1,8 @@
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: disk.csi.virtualization.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-driver")) | nindent 2 }}
+spec:
+  attachRequired: true
+  podInfoOnMount: false

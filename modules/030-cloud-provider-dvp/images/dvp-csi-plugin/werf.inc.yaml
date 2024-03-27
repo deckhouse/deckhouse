@@ -1,0 +1,44 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /go/bin/virtualization-csi-driver
+  to: /bin/virtualization-csi-driver
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+docker:
+  ENTRYPOINT: ["/bin/virtualization-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /go/src/app
+  - git clone --depth 1 --branch feat/volume-expansion {{ $.SOURCE_REPO }}/deckhouse/virtualization-csi-driver.git /go/src/app
+  - cd /go/src/app
+  - |
+    VERSION=$(cat VERSION)
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+    -ldflags '-X github.com/deckhouse/virtualization-csi-driver/driver.version=${VERSION}' \
+    -o /go/bin/virtualization-csi-driver \
+    github.com/deckhouse/virtualization-csi-driver/images/virtualization-csi-driver/cmd/virtualization-csi-driver/
+
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
