@@ -40,16 +40,6 @@ func init() {
 
 // RegisterCheck add CheckFunc for some component
 func RegisterCheck(key string, f CheckFunc) {
-	fmt.Println("CALLER")
-	pc, file, no, ok := runtime.Caller(1)
-	if ok {
-		fmt.Printf("called from %s#%d\n", file, no)
-	}
-
-	details := runtime.FuncForPC(pc)
-	if ok && details != nil {
-		fmt.Printf("called from2 %s - %d\n", details.Name(), details.Entry())
-	}
 	defaultRegistry.RegisterCheck(key, f)
 }
 
@@ -61,7 +51,8 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 var mreg = regexp.MustCompile(`/modules/[0-9]+-(\S+)/requirements`)
 
 // CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
-func CheckRequirement(key, value string, modulesSetParams ...set.Set) (bool, error) {
+// enabledModules is optional and will filter check-functions if module is disabled
+func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error) {
 	if defaultRegistry == nil {
 		return true, nil
 	}
@@ -72,22 +63,20 @@ func CheckRequirement(key, value string, modulesSetParams ...set.Set) (bool, err
 	}
 
 	for _, f := range fs {
-		if len(modulesSetParams) > 0 {
-			modulesSet := modulesSetParams[0]
+		if len(enabledModules) > 0 {
+			modulesSet := enabledModules[0]
 			pc := reflect.ValueOf(f).Pointer()
 			fn := runtime.FuncForPC(pc)
-			fmt.Println("##! RUN CHECK FUNCTION", fn.Name())
-			rr := mreg.FindStringSubmatch(fn.Name())
-			fmt.Println("##! SUMB", rr)
+			// return the caller of the function like: github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements.init.0.func1
+
+			match := mreg.FindStringSubmatch(fn.Name())
 			var moduleName string
-			if len(rr) > 0 {
-				moduleName = rr[1]
+			if len(match) > 0 {
+				moduleName = match[1] // name of a module
 			}
-			fmt.Println("##! CHECKING MODULE NAME", moduleName)
 
 			if moduleName != "" && !modulesSet.Has(moduleName) {
 				// module is disabled, we don't have to run its checks
-				fmt.Println("##! SKIPPING DISABLED MODULE", moduleName)
 				continue
 			}
 		}
