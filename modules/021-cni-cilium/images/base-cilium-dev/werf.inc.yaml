@@ -30,14 +30,6 @@ fromCacheVersion: {{ $fromCacheVersion }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
-  includePaths:
-  - binary_replace.sh
-  stageDependencies:
-    install:
-    - binary_replace.sh
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
@@ -49,7 +41,7 @@ shell:
     debian-archive-keyring apt-transport-https apt-src curl \
     jq tzdata software-properties-common \
     bash-completion iproute2 iptables ipset kmod ca-certificates \
-    coreutils binutils make cmake automake autoconf patch patchelf \
+    coreutils binutils make cmake ccache automake autoconf ccache patch patchelf \
     git zip unzip wget \
     gcc gcc-9 g++ gcc-x86-64-linux-gnu g++-x86-64-linux-gnu \
     libc6-dev libc6-dev-amd64-cross libelf-dev libmnl-dev \
@@ -90,12 +82,12 @@ shell:
   - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
   - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
   # Install multiversion bazel
-  - bazel_versions=(3.7.0 3.7.1 3.7.2 6.1.0)
+  - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
   - curl --fail --show-error --silent --location https://raw.githubusercontent.com/bazelbuild/bazel/${bazel_versions[-1]}/scripts/packages/bazel.sh --output /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - |
-    for bazel_version in "${bazel_versions[@]}" ; do
+    for bazel_version in ${bazel_versions[@]} ; do
       # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
       # so for multiple versions to be usable files will need to moved around, which would be more tedious
       long_binary_name="bazel-${bazel_version}-linux-x86_64"

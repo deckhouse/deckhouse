@@ -1,4 +1,5 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
@@ -26,8 +27,13 @@ shell:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
   setup:
+  - mkdir -p /tmp/ccache-dir
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
+  #- export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /src/llvm/llvm/build-native
   - cd /src/llvm/llvm/build-native
+  - ccache --zero-stats || true
+  - ccache --show-stats || true
   - |
     cmake .. -G "Ninja" \
       -DLLVM_TARGETS_TO_BUILD="BPF" \
@@ -35,7 +41,11 @@ shell:
       -DBUILD_SHARED_LIBS="OFF" \
       -DCMAKE_BUILD_TYPE="Release" \
       -DLLVM_BUILD_RUNTIME="OFF" \
-      -DCMAKE_INSTALL_PREFIX="/usr/local"
+      -DCMAKE_INSTALL_PREFIX="/usr/local" \
+      -DLLVM_CCACHE_BUILD="ON" \
+      -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+      -DLLVM_CCACHE_MAXSIZE="0"
+  - ccache --show-stats || true
   - ninja clang llc llvm-objcopy
   - strip bin/clang
   - strip bin/llc

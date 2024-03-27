@@ -15,7 +15,9 @@
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 fromCacheVersion: {{ $fromCacheVersion }}
-import:
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
   - mkdir -p /cilium/proxy

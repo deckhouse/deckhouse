@@ -181,7 +181,7 @@ shell:
   - echo "cilium:x:1000:" >> /relocate/etc/group
 ---
 # #####################################################################
-# New Main Ageng Image (Distroless)
+# New Main Agent Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless

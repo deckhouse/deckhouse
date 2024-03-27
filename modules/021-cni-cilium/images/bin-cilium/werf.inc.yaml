@@ -59,7 +59,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /go/src/github.com/cilium/cilium
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all

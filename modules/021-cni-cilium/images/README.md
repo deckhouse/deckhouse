@@ -36,6 +36,7 @@
   - based on `BASE_CILIUM_DEV` image
   - includes:
     - src of llvm *(loaded from fox)*
+    - build-cache of llvm *(loaded from fox)*
     - binaries llvm-10.0.0: clang, llc, llvm-objcopy *(builded from src)*
 - `+` `iptables`
   - based on `BASE_CILIUM_DEV` image
@@ -47,6 +48,7 @@
   - includes:
     - src of cilium/proxy *(loaded from fox)*
     - src of envoyproxy/envoy *(loaded from fox)*
+    - build-cache of cilium/proxy *(loaded from fox)*
     - binaries and libs of cilium-envoy *(builded from src)*
 - `+` `cilium`
   - based on `BASE_CILIUM_DEV` image
