@@ -19,11 +19,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 	rbac "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -36,8 +35,8 @@ func upgradeToK8s129() error {
 	kubeClient, _ := kubernetes.NewForConfig(config)
 
 	_, err := kubeClient.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
-
-	if err != nil && strings.Contains(err.Error(), "not found") {
+	
+	if apierrors.IsNotFound(err) {
 		log.Print("Create ClusterRoleBinding \"kubeadm:cluster-admins\"")
 		clusterRoleBinding := &rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
