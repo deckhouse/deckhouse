@@ -180,7 +180,7 @@
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
       summary: |-
-        Ingress version 1.1 will be disabled in Deckhouse release 1.57
+        Ingress version 1.1 will be disabled in upcoming Deckhouse releases
       description: |-
         There is at least one ingress nginx controller with deprecated version 1.1. Ingress nginx version 1.1 will be disabled in upcoming Deckhouse releases. Consider upgrading to a newer version of Ingress nginx controller (all the pods of the affected Ingress Nginx controllers will be consequently recreated during upgrade).
         Use the following command to list the affected Ingress nginx controllers:
