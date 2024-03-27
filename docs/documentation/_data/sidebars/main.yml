@@ -9,7 +9,7 @@ entries:
       folders:
         - title:
             en: How to install the platform?
-            ru: Как установить платформу?
+            ru: Установка платформы
           folders:
             - title:
                 en: Description
@@ -21,7 +21,7 @@ entries:
               url: /installing/configuration.html
         - title:
             en: How to configure the platform?
-            ru: Как настроить платформу?
+            ru: Настройка платформы
           folders:
             - title:
                 en: Description
@@ -35,7 +35,7 @@ entries:
               url: /cr.html
         - title:
             en: How to develop a module?
-            ru: Как разработать модуль?
+            ru: Разработка модуля
           folders:
             - title:
                 en: Description
