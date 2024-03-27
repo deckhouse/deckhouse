@@ -8,8 +8,8 @@ entries:
     - title: Deckhouse Kubernetes Platform
       folders:
         - title:
-            en: How to install?
-            ru: Как установить?
+            en: How to install the platform?
+            ru: Как установить платформу?
           folders:
             - title:
                 en: Description
@@ -20,8 +20,8 @@ entries:
                 ru: Настройки
               url: /installing/configuration.html
         - title:
-            en: How to configure?
-            ru: Как настроить?
+            en: How to configure the platform?
+            ru: Как настроить платформу?
           folders:
             - title:
                 en: Description
