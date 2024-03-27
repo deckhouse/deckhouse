@@ -1,5 +1,6 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
 {{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
+{{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
@@ -14,6 +15,7 @@
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
@@ -29,11 +31,11 @@ shell:
   setup:
   - mkdir -p /tmp/ccache-dir
   - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
-  #- export CCACHE_DIR="/tmp/ccache-dir"
+  - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /src/llvm/llvm/build-native
   - cd /src/llvm/llvm/build-native
   - ccache --zero-stats || true
-  - ccache --show-stats || true
+  - ccache --show-stats -v || true
   - |
     cmake .. -G "Ninja" \
       -DLLVM_TARGETS_TO_BUILD="BPF" \
@@ -45,8 +47,9 @@ shell:
       -DLLVM_CCACHE_BUILD="ON" \
       -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
       -DLLVM_CCACHE_MAXSIZE="0"
-  - ccache --show-stats || true
+  - ccache --show-stats -v || true
   - ninja clang llc llvm-objcopy
+  - ccache --show-stats -v || true
   - strip bin/clang
   - strip bin/llc
   - strip bin/llvm-objcopy
