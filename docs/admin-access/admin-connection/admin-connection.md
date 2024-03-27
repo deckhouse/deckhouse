@@ -471,11 +471,18 @@ user-authn          Disabled   1                    12h
 1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
 
    ```shell
+   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   ```
+
+### Направление трафика на приложение 
+
 Создайте Service и [Ingress](https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/) для вашего приложения.
+
 
 ### Мониторинг приложения
 
 Добавьте аннотации prometheus.deckhouse.io/custom-target: "my-app" и prometheus.deckhouse.io/port: "80" к созданному Service’у.
 Настройте [monitoring-custom](https://deckhouse.ru/documentation/v1/modules/340-monitoring-custom/)
+
 
 
