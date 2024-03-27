@@ -509,6 +509,17 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 		return ctrl.Result{}, fmt.Errorf("Find zVirt VM for Machine: %w", err)
 	}
 	if vmFound {
+		disks, err := vm.ListDiskAttachments(timeout)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("List zVirt VM disks: %w", err)
+		}
+		for _, disk := range disks {
+			if !disk.Bootable() {
+				logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", vm.Name())
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+
 		if err := vm.Shutdown(true, timeout); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Shutdown zVirt VM: %w", err)
 		}
