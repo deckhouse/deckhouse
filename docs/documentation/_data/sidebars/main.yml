@@ -46,12 +46,12 @@ entries:
                 ru: Структура модуля
               url: /modules-docs/module-anatomy/module-folder/
             - title: 
-              en: Module build
+              en: Building a module
               ru: Сборка модуля
               url: /modules-docs/module-anatomy/registry/
             - title:
-                en: How to publish module in the DKP cluster?
-                ru: Как опубликовать модуль в кластере DKP?
+                en: Running a module
+                ru: Запуск модуля
               url: /modules-docs/deckhouse/
             - title:
                 en: Versioning modules
