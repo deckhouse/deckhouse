@@ -8,9 +8,9 @@ lang: ru
 
 > В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
 
-## Состав модуля
+## Состав артефакта модуля
 
-Модуль состоит из трех частей:
+Артефакт модуля состоит из трех частей:
 - **Образы контейнеров приложений** запускаются в кластере Deckhouse и указываются в шаблонах. Образы описаны в папке [images](module_folder.md#images). Образы содержат content-based теги. Подробнее о том, как ставить теги можно почитать в документации [werf](https://werf.io/documentation/v1.2/usage/build/process.html#tagging-images).
 - **Образ модуля** загружается в registry аналогично контейнеру. В качестве тегов образов используется `semver`.
 - **Релиз** описывает релиз в `release.yaml`, который загружается в registry. Релизы создаются каждый раз при выходе новой версии и используются в Deckhouse Kubernetes Platform для обновления модуля в кластере. У релизов выставляется два типа тегов: `semver`, как у образа модуля, и тег, соответствующий каналу обновлений, например, `alpha`, `beta`.
