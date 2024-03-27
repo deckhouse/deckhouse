@@ -47,6 +47,7 @@ type ModuleProperties struct {
 	Weight      uint32 `json:"weight"`
 	State       string `json:"state,omitempty"`
 	Source      string `json:"source,omitempty"`
+	Stage       string `json:"stage,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 

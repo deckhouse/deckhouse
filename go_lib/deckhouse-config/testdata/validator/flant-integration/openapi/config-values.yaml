@@ -1,0 +1,111 @@
+type: object
+properties:
+  contacts:
+    type: integer
+    default: 0
+    description: |
+      The number of contact persons for which we need to charge.
+  doNotChargeForRockSolid:
+    type: boolean
+    default: false
+    description: |
+      Is the RockSolid release channel included in the price, or should we charge for it separately.
+  planIsBoughtAsBundle:
+    type: boolean
+    default: false
+    description: |
+      Whether a "package" has been purchased.
+  auxiliaryCluster:
+    type: boolean
+    default: false
+    description: |
+      This cluster is auxiliary.
+  clusterType:
+    type: string
+    enum: ["Cloud", "Hybrid", "Static"]
+    x-examples: ["Cloud"]
+    description: |
+      Sets the cluster type in exported metrics, disabling automatic detection.
+  nodesDiscount:
+    type: integer
+    default: 0
+    description: |
+      Discount for nodes as a percentage, without the % symbol. For example: 10, 20, 30.
+  metrics:
+    oneOf:
+      - type: object
+      - type: boolean
+        enum: [false]
+    default: {}
+    properties:
+      url:
+        type: string
+        default: "https://connect.deckhouse.io/v1/remote_write"
+        description: |
+          URL for sending metrics in Prometheus remote_write format.
+    description: |
+      Metrics parameters or `false` to disable metrics distribution.
+  madisonAuthKey:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    description: |
+      Key to access Madison alertmanager, or `false` to disable integration. Leave empty to autogenerate upon registration.
+
+      Use kubectl to reveal generated key:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
+      ```
+    x-examples: ["abc"]
+  licenseKey:
+    type: string
+    description: |
+      Client license key.
+  grafanaAlertsToMadisonEnabled:
+    type: boolean
+    default: false
+    description: |
+      In addition to Prometheus, also send all Grafana alerts to Madison.
+  logs:
+    oneOf:
+      - type: object
+      - type: boolean
+        enum: [false]
+    default: {}
+    properties:
+      url:
+        type: string
+        default: "https://connect.deckhouse.io/v1/loki_push"
+        description: |
+          URL for sending logs in Loki compatible storage.
+    description: |
+      Logs parameters or `false` to disable logs distribution.
+  kubeall:
+    type: object
+    default: {}
+    description: |
+      Parameters for generating the kubeall registry.
+    required: [host]
+    properties:
+      host:
+        type: string
+        x-examples: ["hostA"]
+        description: |
+          The hostname on which to run `kubectl`.
+      kubectl:
+        type: string
+        default: "sudo kubectl"
+        description: |
+          Kubectl command (with sudo if needed).
+      kubeconfig:
+        type: string
+        default: "/root/.kube/config"
+        description: |
+          The path to the `kubeconfig` file.
+      context:
+        type: string
+        default: ""
+        description: |
+          Which `context` to use from the specified `kubeconfig`.

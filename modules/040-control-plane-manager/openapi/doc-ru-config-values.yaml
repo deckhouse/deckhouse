@@ -7,6 +7,11 @@ properties:
         description: |
           Настройки выпуска ServiceAccount'ов.
         properties:
+          issuer:
+            description: |
+              Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
+
+              **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
             description: |
               Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.

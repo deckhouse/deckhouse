@@ -17,3 +17,5 @@
   to: /deckhouse/candi/cloud-providers/vsphere
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
+- add: /ee/fe/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
+  to: /deckhouse/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl

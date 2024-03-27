@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Modules :: node-manager :: hooks :: set_priorities ::", func() {
 	const (
-		stateNGs = `
+		ngsWithPriorities = `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -56,20 +56,53 @@ spec:
     maxPerZone: 10
     minPerZone: 6
 `
+		ngsWithoutPriorities = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  cloudInstances:
+    maxPerZone: 4
+    minPerZone: 3
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng2
+spec:
+  cloudInstances:
+    maxPerZone: 4
+    minPerZone: 3
+`
 	)
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}, "instancePrefix": "test"}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
-	Context("Empty cluster", func() {
+	Context("With priorities", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGs))
+			f.BindingContexts.Set(f.KubeStateSet(ngsWithPriorities))
 			f.RunHook()
 		})
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.ValuesGet("nodeManager.internal.clusterAutoscalerPriorities").String()
-			Expect(m).To(Equal(`{"20":["^test-ng1-[0-9a-zA-Z]+$"],"50":["^test-ng2-[0-9a-zA-Z]+$"]}`))
+			Expect(m).To(Equal(`{"1":[".*"],"20":["^test-ng1-[0-9a-zA-Z]+$"],"50":["^test-ng2-[0-9a-zA-Z]+$"]}`))
+		})
+	})
+
+	Context("Without priorities", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ngsWithoutPriorities))
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.ValuesGet("nodeManager.internal.clusterAutoscalerPriorities").Exists()
+			Expect(m).To(BeFalse())
 		})
 	})
 

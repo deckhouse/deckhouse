@@ -7,7 +7,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
-  sampleLimit: 50000
+  sampleLimit: 100000
   endpoints:
   - port: https
     scheme: https

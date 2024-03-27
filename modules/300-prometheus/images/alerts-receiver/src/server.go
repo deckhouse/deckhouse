@@ -81,15 +81,9 @@ func (s *server) alertsHandler(config *config, store *storeStruct) func(w http.R
 				log.Debugf("received alert: %s", a)
 			}
 
-			// skip adding alerts if alerts queue is full
-			if len(store.memStore.alerts) == config.capacity {
-				log.Infof("cannot add alert to queue (capacity = %d), queue is full", config.capacity)
-				s.setReadiness(false)
-				continue
+			if err := store.memStore.insertAlert(alert); err != nil {
+				log.Error(err)
 			}
-
-			s.setReadiness(true)
-			store.memStore.insertAlert(alert)
 		}
 		w.WriteHeader(http.StatusOK)
 	}

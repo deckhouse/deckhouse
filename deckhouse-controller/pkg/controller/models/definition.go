@@ -24,6 +24,7 @@ type DeckhouseModuleDefinition struct {
 	Name        string   `yaml:"name"`
 	Weight      uint32   `yaml:"weight,omitempty"`
 	Tags        []string `yaml:"tags"`
+	Stage       string   `yaml:"stage"`
 	Description string   `yaml:"description"`
 
 	Path string `yaml:"-"`

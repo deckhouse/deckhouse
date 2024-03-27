@@ -40,7 +40,7 @@ spec:
                 inlet:
                   type: string
                   description: |
-                    The way traffic goes to cluster from the outer network.
+                    The way traffic from the external network is routed to the cluster. Once you have set the method, you cannot change it later.
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
@@ -52,6 +52,8 @@ spec:
                       **Caution!** There can be only one controller with this inlet type on a host.
 
                       **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 10354, 10355.
+
+                      **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -203,9 +205,6 @@ spec:
                   anyOf:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
-                  x-kubernetes-validations:
-                    - message: .spec.httpsPort can't be 6443, it's reserved for kube-apiserver
-                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer
@@ -225,6 +224,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -265,6 +267,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                 acceptRequestsFrom:
                   type: array
                   description: |
@@ -753,9 +758,6 @@ spec:
                   anyOf:
                     - {required: ["httpPort"]}
                     - {required: ["httpsPort"]}
-                  x-kubernetes-validations:
-                    - message: .spec.httpsPort can't be 6443, it's reserved for kube-apiserver
-                      rule: 'self.httpsPort != 6443'
                   properties:
                     httpPort:
                       type: integer
@@ -775,6 +777,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -815,6 +820,9 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                 acceptRequestsFrom:
                   type: array
                   description: |

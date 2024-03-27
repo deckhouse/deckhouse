@@ -34,7 +34,7 @@ if [[ "$virtualization" == "" ]]; then
   virtualization="unknown"
 fi
 max_attempts=5
-node=$(hostname -s)
+node=${D8_NODE_HOSTNAME}
 
 until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$node" node.deckhouse.io/virtualization="$virtualization"; do
   attempt=$(( attempt + 1 ))

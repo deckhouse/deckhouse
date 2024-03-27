@@ -55,7 +55,7 @@ data:
         params:
           nodeAffinityType:
             - "requiredDuringSchedulingIgnoredDuringExecution"
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.removePodsViolatingNodeAffinity | nindent 10 }}
   {{- else }}
       "RemovePodsViolatingNodeAffinity":
         enabled: false
@@ -65,7 +65,7 @@ data:
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: true
         params:
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.removePodsViolatingInterPodAntiAffinity | nindent 10 }}
   {{- else }}
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: false
@@ -85,7 +85,7 @@ data:
               "cpu": 80
               "memory": 90
               "pods": 80
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.lowNodeUtilization | nindent 10 }}
   {{- else }}
       "LowNodeUtilization":
         enabled: false
@@ -99,7 +99,7 @@ data:
             thresholds:
               "cpu": 50
               "memory": 50
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.highNodeUtilization | nindent 10 }}
   {{- else }}
       "HighNodeUtilization":
         enabled: false
@@ -109,7 +109,7 @@ data:
       "RemovePodsViolatingNodeTaints":
         enabled: true
         params:
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.removePodsViolatingNodeTaints | nindent 10 }}
   {{- else }}
       "RemovePodsViolatingNodeTaints":
         enabled: false
@@ -119,7 +119,7 @@ data:
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: true
         params:
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.removePodsViolatingTopologySpreadConstraint | nindent 10 }}
   {{- else }}
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: false
@@ -132,7 +132,7 @@ data:
           podsHavingTooManyRestarts:
             podRestartThreshold: 100
             includingInitContainers: true
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+    {{- include "additional_parameters" $strategies.removePodsHavingTooManyRestarts | nindent 10 }}
   {{- else }}
       "RemovePodsHavingTooManyRestarts":
         enabled: false
@@ -146,7 +146,6 @@ data:
             maxPodLifeTimeSeconds: 86400
             podStatusPhases:
               - "Pending"
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
   {{- else }}
       "PodLifeTime":
         enabled: false
