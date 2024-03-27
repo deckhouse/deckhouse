@@ -82,7 +82,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 		It("Should have no minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			_, exists := requirements.GetValue(minVersionValuesKey)
+			_, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeFalse())
 		})
 	})
@@ -95,7 +95,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 		It("Should have no minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			_, exists := requirements.GetValue(minVersionValuesKey)
+			_, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeFalse())
 		})
 	})
@@ -108,7 +108,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(minVersionValuesKey)
+			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("20.4.3"))
 		})
@@ -116,14 +116,14 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 	Context("One node with Centos OS and requirements set", func() {
 		BeforeEach(func() {
-			requirements.SaveValue(minVersionValuesKey, "1.2.3")
+			requirements.SaveValue(minVersionUbuntuValuesKey, "1.2.3")
 			f.BindingContexts.Set(f.KubeStateSet(nodeCentos7))
 			f.RunHook()
 		})
 
 		It("Should remove minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			_, exists := requirements.GetValue(minVersionValuesKey)
+			_, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeFalse())
 		})
 	})
@@ -136,7 +136,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(minVersionValuesKey)
+			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("18.4.5"))
 		})
@@ -150,7 +150,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(minVersionValuesKey)
+			value, exists := requirements.GetValue(minVersionUbuntuValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("18.4.5"))
 		})

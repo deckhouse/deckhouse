@@ -4,9 +4,9 @@ bashible: &bashible
     '20.04':
     '22.04':
   debian:
-    '9':
     '10':
     '11':
+    '12':
   centos:
     '7':
     '8':
