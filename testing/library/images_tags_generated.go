@@ -49,6 +49,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"cloudProviderDvp": map[string]interface{}{
 		"cloudDataDiscoverer": "imageHash-cloudProviderDvp-cloudDataDiscoverer",
+		"dvpCsiPlugin":        "imageHash-cloudProviderDvp-dvpCsiPlugin",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager125": "imageHash-cloudProviderGcp-cloudControllerManager125",
