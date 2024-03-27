@@ -24,11 +24,13 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
+  - export VERSION="dev"
   - mkdir -p /go/src/app
   - git clone --depth 1 --branch feat/volume-expansion {{ $.SOURCE_REPO }}/deckhouse/virtualization-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+    -ldflags "-s -w -X github.com/deckhouse/virtualization-csi-driver/version.Version=${VERSION}" \
     -o /go/bin/virtualization-csi-driver \
     github.com/deckhouse/virtualization-csi-driver/images/virtualization-csi-driver/cmd/virtualization-csi-driver/
 
