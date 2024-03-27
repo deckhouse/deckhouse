@@ -85,12 +85,6 @@ type modulePatch struct {
 	Value v1alpha1.ModuleStatus `json:"value"`
 }
 
-type moduleConfigPatch struct {
-	Op    string                      `json:"op"`
-	Path  string                      `json:"path"`
-	Value v1alpha1.ModuleConfigStatus `json:"value"`
-}
-
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
@@ -286,26 +280,17 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 		if err == nil {
 			newModuleConfigStatus := d8config.Service().StatusReporter().ForConfig(moduleConfig)
 			if (moduleConfig.Status.Message != newModuleConfigStatus.Message) || (moduleConfig.Status.Version != newModuleConfigStatus.Version) {
-				patch, err := json.Marshal([]moduleConfigPatch{{
-					Op:   "replace",
-					Path: "/status",
-					Value: v1alpha1.ModuleConfigStatus{
-						Message: newModuleConfigStatus.Message,
-						Version: newModuleConfigStatus.Version,
-					},
-				}})
-				if err != nil {
-					return err
-				}
+				moduleConfig.Status.Message = newModuleConfigStatus.Message
+				moduleConfig.Status.Version = newModuleConfigStatus.Version
 
 				log.Debugf(
-					"Patch /status for moduleconfig/%s: version '%s' to %s', message '%s' to '%s'",
+					"Update /status for moduleconfig/%s: version '%s' to %s', message '%s' to '%s'",
 					moduleConfig.Name,
 					moduleConfig.Status.Version, newModuleConfigStatus.Version,
 					moduleConfig.Status.Message, newModuleConfigStatus.Message,
 				)
 
-				_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Patch(dml.ctx, moduleConfig.Name, types.JSONPatchType, patch, v1.PatchOptions{}, "status")
+				_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().UpdateStatus(dml.ctx, moduleConfig, v1.UpdateOptions{})
 				if err != nil {
 					return err
 				}
@@ -354,7 +339,7 @@ func (dml *DeckhouseController) updateModuleStatus(moduleName string) error {
 
 		newModuleStatus := d8config.Service().StatusReporter().ForModule(module, moduleConfig, bundleName)
 		if module.Status.Status != newModuleStatus.Status || module.Status.Message != newModuleStatus.Message || module.Status.HooksState != newModuleStatus.HooksState {
-			patch, err := json.Marshal([]modulePatch{{
+			patch, _ := json.Marshal([]modulePatch{{
 				Op:   "replace",
 				Path: "/status",
 				Value: v1alpha1.ModuleStatus{
@@ -363,9 +348,6 @@ func (dml *DeckhouseController) updateModuleStatus(moduleName string) error {
 					HooksState: newModuleStatus.HooksState,
 				},
 			}})
-			if err != nil {
-				return err
-			}
 
 			log.Debugf("Patch /status for module/%s: status '%s' to '%s', message '%s' to '%s'", moduleName, module.Status.Status, newModuleStatus.Status, module.Status.Message, newModuleStatus.Message)
 
