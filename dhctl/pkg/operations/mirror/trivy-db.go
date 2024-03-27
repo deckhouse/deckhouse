@@ -28,8 +28,9 @@ func PullTrivyVulnerabilityDatabaseImageToLayout(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	insecure, skipVerifyTLS bool,
+	jobs int,
 ) error {
-	nameOpts, _ := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+	nameOpts, _ := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 
 	trivyDBPath := path.Join(sourceRepo, "security", "trivy-db:2")
 	ref, err := name.ParseReference(trivyDBPath, nameOpts...)
@@ -38,7 +39,7 @@ func PullTrivyVulnerabilityDatabaseImageToLayout(
 	}
 
 	images := map[string]struct{}{ref.String(): {}}
-	if err = PullImageSet(authProvider, targetLayout, images, insecure, skipVerifyTLS, false); err != nil {
+	if err = PullImageSet(authProvider, targetLayout, images, insecure, skipVerifyTLS, false, jobs); err != nil {
 		return fmt.Errorf("pull vulnerability database: %w", err)
 	}
 

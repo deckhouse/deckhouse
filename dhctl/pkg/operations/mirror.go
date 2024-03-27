@@ -117,6 +117,7 @@ func MirrorDeckhouseToLocalFS(
 		layouts.Security,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return fmt.Errorf("pull vulnerability database: %w", err)
 	}

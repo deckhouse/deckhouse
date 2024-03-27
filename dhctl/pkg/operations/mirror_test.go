@@ -64,6 +64,7 @@ func TestMirrorE2E_Insecure(t *testing.T) {
 		DeckhouseRegistryRepo: sourceHost + sourceRepoPath,
 		UnpackedImagesPath:    workingDir,
 		ValidationMode:        mirror.NoValidation,
+		Jobs:                  1,
 	}
 	pushCtx := &mirror.Context{
 		Insecure:              true,
@@ -72,6 +73,7 @@ func TestMirrorE2E_Insecure(t *testing.T) {
 		RegistryPath:          targetRepoPath,
 		UnpackedImagesPath:    workingDir,
 		ValidationMode:        mirror.NoValidation,
+		Jobs:                  1,
 	}
 
 	versionsToPull := []semver.Version{
@@ -130,7 +132,7 @@ func createDeckhouseReleaseChannelsInRegistry(t *testing.T, repo string) {
 
 func createTrivyVulnerabilityDatabaseInRegistry(t *testing.T, repo string, insecure, useTLS bool) {
 	t.Helper()
-	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authn.Anonymous, insecure, useTLS)
+	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(authn.Anonymous, insecure, useTLS, 1)
 
 	trivyDBImageTag := repo + "/security/trivy-db:2"
 	ref, err := name.ParseReference(trivyDBImageTag, nameOpts...)
@@ -143,7 +145,7 @@ func createTrivyVulnerabilityDatabaseInRegistry(t *testing.T, repo string, insec
 func createDeckhouseControllersAndInstallersInRegistry(t *testing.T, repo string) {
 	t.Helper()
 
-	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false)
+	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false, 1)
 
 	createRandomImageInRegistry(t, repo+":alpha")
 	createRandomImageInRegistry(t, repo+":beta")
@@ -216,7 +218,7 @@ func createRandomImageInRegistry(t *testing.T, tag string) (digest string) {
 	img, err := random.Image(int64(rand.Intn(1024)+1), int64(rand.Intn(5)+1))
 	require.NoError(t, err)
 
-	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false)
+	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false, 1)
 	ref, err := name.ParseReference(tag, nameOpts...)
 	require.NoError(t, err)
 
@@ -252,7 +254,7 @@ func createDeckhouseReleaseChannelImageInRegistry(t *testing.T, repo, tag, versi
 	img, err := mutate.AppendLayers(base, layers...)
 	require.NoError(t, err)
 
-	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false)
+	nameOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptions(nil, true, false, 1)
 	ref, err := name.ParseReference(repo+":"+tag, nameOpts...)
 	require.NoError(t, err)
 

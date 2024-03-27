@@ -27,8 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) error {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool, jobs int) error {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 	ref, err := name.ParseReference(imageTag, nameOpts...)
 	if err != nil {
 		return fmt.Errorf("Parse registry address: %w", err)
@@ -45,8 +45,8 @@ func ValidateReadAccessForImage(imageTag string, authProvider authn.Authenticato
 	return nil
 }
 
-func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) error {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, insecure, skipVerifyTLS bool, jobs int) error {
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 	ref, err := name.NewTag(repo+":dhctlWriteCheck", nameOpts...)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func ValidateWriteAccessForRepo(repo string, authProvider authn.Authenticator, i
 	return nil
 }
 
-func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure, skipTLSVerification bool) ([]name.Option, []remote.Option) {
+func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure, skipTLSVerification bool, jobs int) ([]name.Option, []remote.Option) {
 	n, r := make([]name.Option, 0), make([]remote.Option, 0)
 	if insecure {
 		n = append(n, name.Insecure)
@@ -78,9 +78,10 @@ func MakeRemoteRegistryRequestOptions(authProvider authn.Authenticator, insecure
 		r = append(r, remote.WithTransport(transport))
 	}
 
+	r = append(r, remote.WithJobs(jobs))
 	return n, r
 }
 
 func MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx *Context) ([]name.Option, []remote.Option) {
-	return MakeRemoteRegistryRequestOptions(mirrorCtx.RegistryAuth, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification)
+	return MakeRemoteRegistryRequestOptions(mirrorCtx.RegistryAuth, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, mirrorCtx.Jobs)
 }

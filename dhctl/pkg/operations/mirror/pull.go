@@ -38,6 +38,7 @@ func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 		false,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return err
 	}
@@ -54,6 +55,7 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 		false,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return err
 	}
@@ -70,6 +72,7 @@ func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 		false,
+		mirrorCtx.Jobs,
 	); err != nil {
 		return err
 	}
@@ -81,12 +84,12 @@ func PullImageSet(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	imageSet map[string]struct{},
-	insecure, skipVerifyTLS, allowMissingTags bool,
+	insecure, skipVerifyTLS, allowMissingTags bool, jobs int,
 ) error {
 	pullCount := 1
 	totalCount := len(imageSet)
 	for imageTag := range imageSet {
-		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS, jobs)
 		ref, err := name.ParseReference(imageTag, pullOpts...)
 		if err != nil {
 			return fmt.Errorf("parse image reference %q: %w", imageTag, err)
@@ -131,10 +134,10 @@ func PullImageSet(
 func PullModules(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse modules")
 	for moduleName, moduleData := range layouts.Modules {
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, false); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, false, mirrorCtx.Jobs); err != nil {
 			return fmt.Errorf("pull %q module: %w", moduleName, err)
 		}
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, true); err != nil {
+		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, true, mirrorCtx.Jobs); err != nil {
 			return fmt.Errorf("pull %q module release information: %w", moduleName, err)
 		}
 	}
