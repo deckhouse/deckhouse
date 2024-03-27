@@ -51,7 +51,9 @@ registry.example.io
 
 Для доставки модулей в закрытые (air-gapped) окружения есть специальные скрипты в репозитории [tools](https://fox.flant.com/deckhouse/modules/tools).
 
-### Список полезных команд для работы с источником модулей
+## Список полезных команд для работы с источником модулей
+
+> В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
 
 * Вывод списка модулей в источнике модулей:
 
