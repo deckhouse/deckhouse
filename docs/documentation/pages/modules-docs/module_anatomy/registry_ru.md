@@ -4,7 +4,7 @@ permalink: ru/modules-docs/module-anatomy/registry/
 lang: ru
 ---
 
-После сборки модуль сохраняется в container registry.<!-- уточнить репозиторий: Для распространения и обновления модулей Deckhouse Kubernetes Platform используется только этот репозиторий.--> Ниже рассмотрено, как выглядит модуль в container registry и из чего он состоит.
+После сборки модуль сохраняется в container registry.<!-- @TODO уточнить репозиторий: Для распространения и обновления модулей Deckhouse Kubernetes Platform используется только этот репозиторий.--> Ниже рассмотрено, как выглядит модуль в container registry и из чего он состоит.
 
 > В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
 
