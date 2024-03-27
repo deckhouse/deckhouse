@@ -42,8 +42,8 @@ entries:
                 ru: Описание
               url: /modules-docs/
             - title:
-                en: Structure
-                ru: Структура
+                en: Module structure
+                ru: Структура модуля
               url: /modules-docs/module-anatomy/module-folder/
             - title: 
                 en: Building and publication
