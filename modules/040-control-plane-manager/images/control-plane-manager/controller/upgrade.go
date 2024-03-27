@@ -35,9 +35,9 @@ func upgradeToK8s129() error {
 	kubeClient, _ := kubernetes.NewForConfig(config)
 
 	_, err := kubeClient.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
-	
+
 	if apierrors.IsNotFound(err) {
-		log.Print("Create ClusterRoleBinding \"kubeadm:cluster-admins\"")
+		log.Print("create ClusterRoleBinding \"kubeadm:cluster-admins\"")
 		clusterRoleBinding := &rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterAdminsGroupAndClusterRoleBinding,
@@ -57,7 +57,7 @@ func upgradeToK8s129() error {
 
 		_, err = kubeClient.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
 		if err != nil {
-			return fmt.Errorf("Create ClusterRoleBinding \"kubeadm:cluster-admins\" error: %v", err)
+			return fmt.Errorf("create ClusterRoleBinding \"kubeadm:cluster-admins\" error: %v", err)
 		}
 	}
 
