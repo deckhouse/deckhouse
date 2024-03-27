@@ -471,7 +471,6 @@ user-authn          Disabled   1                    12h
 1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
 
    ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
 Создайте Service и [Ingress](https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/) для вашего приложения.
 
 ### Мониторинг приложения
