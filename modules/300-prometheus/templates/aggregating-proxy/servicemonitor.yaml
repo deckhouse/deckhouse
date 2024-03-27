@@ -1,0 +1,36 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aggregating-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  sampleLimit: 1500
+  endpoints:
+    - port: https
+      scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+    - port: https
+      scheme: https
+      path: /promxy/metrics
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+  selector:
+    matchLabels:
+      app: aggregating-proxy
+  namespaceSelector:
+    matchNames:
+      - d8-monitoring

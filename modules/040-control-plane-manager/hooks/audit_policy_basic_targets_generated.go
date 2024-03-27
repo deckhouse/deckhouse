@@ -90,6 +90,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-log-shipper:log-shipper",
 	"system:serviceaccount:d8-metallb:controller",
 	"system:serviceaccount:d8-metallb:speaker",
+	"system:serviceaccount:d8-monitoring:aggregating-proxy",
 	"system:serviceaccount:d8-monitoring:alertmanager-internal",
 	"system:serviceaccount:d8-monitoring:alerts-receiver",
 	"system:serviceaccount:d8-monitoring:cert-exporter",

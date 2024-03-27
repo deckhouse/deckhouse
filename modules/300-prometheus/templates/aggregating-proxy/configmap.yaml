@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aggregating-proxy-config
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
+data:
+  mimir.yaml: |
+    multitenancy_enabled: false
+    activity_tracker:
+      filepath: ""
+    api:
+      prometheus_http_prefix: ''
+    server:
+      http_listen_address: 127.0.0.1
+      http_listen_port: 8080
+      grpc_listen_address: 127.0.0.1
+      grpc_listen_port: 9095
+    frontend:
+      cache_results: true
+      log_queries_longer_than: 0
+      align_queries_with_step: false
+      results_cache:
+        backend: "memcached"
+        memcached:
+          addresses: dns+memcached.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:11211
+      downstream_url: http://localhost:8082
+  promxy.yaml: |
+    promxy:
+      server_groups:
+        - static_configs:
+            - targets:
+                {{- if (include "helm_lib_ha_enabled" .) }}
+                - prometheus-main-0.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
+                - prometheus-main-1.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
+                {{- else }}
+                - prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
+                {{- end }}
+          ignore_error: true
+          anti_affinity: 30s
+          timeout: 5s
+          remote_read: false
+          prefer_max: true
+          scheme: https
+          http_client:
+            dial_timeout: 1s
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              insecure_skip_verify: true
+          {{- if ne (int .Values.prometheus.longtermRetentionDays) 0 }}
+        - static_configs:
+            - targets:
+                - prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
+          ignore_error: true
+          anti_affinity: 300s
+          timeout: 5s
+          remote_read: false
+          prefer_max: true
+          scheme: https
+          http_client:
+            dial_timeout: 1s
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              insecure_skip_verify: true
+          {{- end }}

@@ -27,6 +27,9 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+- kind: ServiceAccount
+  name: aggregating-proxy
+  namespace: d8-monitoring
 - kind: Group
   name: ingress-nginx:auth
 - kind: Group

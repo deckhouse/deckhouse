@@ -1,0 +1,87 @@
+{{- define "memcached_resources" }}
+cpu: 25m
+memory: 256Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: memcached
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "memcached")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: memcached
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: memcached
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "memcached")) | nindent 2 }}
+spec:
+  serviceName: memcached
+  selector:
+    matchLabels:
+      app: memcached
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "memcached")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+        - name: memcached
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "memcached") }}
+          command:
+            - memcached
+            - -m
+            - "240"
+            - -c
+            - "32768"
+          ports:
+            - name: memcached
+              containerPort: 11211
+          livenessProbe:
+            tcpSocket:
+              port: memcached
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: memcached
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- include "memcached_resources" . | nindent 14 }}
+        - name: exporter
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "memcachedExporter") }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9150
+              name: http-metrics
+              protocol: TCP
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 64Mi
