@@ -55,8 +55,8 @@ permalink: en/modules-docs/module-anatomy/module-folder/
 
 В папке `/charts` лежат вспомогательные чарты, которые используются при рендере шаблонов.
 
-> У Deckhouse Kubernetes Platform существует собственная библиотека вспомогательных функций для чартов – [lib-helm](https://github.com/deckhouse/lib-helm), которая добавляется в [каждый модуль](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).
-> Библиотеку также можно положить в модуль как helm subchart. Для этого загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
+У Deckhouse Kubernetes Platform существует собственная библиотека вспомогательных функций для чартов – [lib-helm](https://github.com/deckhouse/lib-helm), которая добавляется в [каждый модуль](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).  
+Библиотеку также можно положить в модуль как helm subchart. Для этого загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
 
 ### crds
 
@@ -268,10 +268,10 @@ if **name** == "**main**":
 
 В этой папке содержатся инструкции по сборке образов контейнеров модуля. Существует два способа описания образа контейнера:
 
-1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) – файл, который содержит команды для быстрой сборки образов.
+1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — файл, который содержит команды для быстрой сборки образов.
 2. Файл `werf.inc.yaml`, который является аналогом [секции описания образа из `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
-Структура папок должна быть плоской. На первом уровне находятся папки для файлов, используемых при создании образа, на втором - контекст для сборки. Вложенная структура папок недопустима.
+Структура папок должна быть плоской. На первом уровне находятся папки для файлов, используемых при создании образа, на втором — контекст для сборки. Вложенная структура папок недопустима.
 
 Собранные образы имеют content-based теги, которые можно использовать в шаблонах образа, если подключена [lib-helm](https://github.com/deckhouse/lib-helm).
 
