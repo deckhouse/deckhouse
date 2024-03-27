@@ -94,6 +94,11 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "registry_packages_proxy_resources" . | nindent 12 }}
           {{- end }}
+          limits:
+            # If Pod actually exceeds the configured limit amount it will be evicted
+            # and therefore eventually subject to garbage collection, which will clean up the storage.
+            # This is a safety measure to prevent the Pod from consuming all the storage on the node.
+            ephemeral-storage: 2Gi
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -107,6 +112,7 @@ spec:
         ports:
           - containerPort: 5443
             hostPort: 5443
+            name: https
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:

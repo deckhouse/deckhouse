@@ -12,16 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package proxy
+package app
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/prometheus/client_golang/prometheus"
+	"registry-packages-proxy/internal/cache"
 )
 
-type Options struct {
-	RegistryClient registry.Client
-	Cache          cache.Cache
-	Logger         log.Logger
+var cacheMetrics cache.Metrics
+
+func RegisterMetrics() {
+	cacheSize := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "registry_packages_proxy",
+		Subsystem: "cache",
+		Name:      "size",
+		Help:      "Size of the cache in bytes",
+	})
+	prometheus.MustRegister(cacheSize)
+
+	cacheMetrics = cache.Metrics{
+		CacheSize: cacheSize,
+	}
 }

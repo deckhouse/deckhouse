@@ -18,16 +18,16 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 
 	"registry-packages-proxy/internal/app"
-	"registry-packages-proxy/internal/cache"
 	"registry-packages-proxy/internal/credentials"
 )
 
@@ -40,6 +40,11 @@ func main() {
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
 		ctx := context.Background()
 
+		ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
+
+		app.RegisterMetrics()
+
 		logger := app.InitLogger()
 		client := app.InitClient(logger)
 		dynamicClient := app.InitDynamicClient(logger)
@@ -49,27 +54,19 @@ func main() {
 			return errors.Wrap(err, "failed to listen")
 		}
 
-		quantity, err := resource.ParseQuantity(app.CacheRetentionSize)
-		if err != nil {
-			return errors.Wrap(err, "failed to parse cache retention size")
-		}
-
 		watcher := credentials.NewWatcher(client, dynamicClient, app.RegistrySecretDiscoveryPeriod, logger)
 
 		go watcher.Watch(ctx)
 
-		cache, err := cache.New(app.CacheDirectory, uint64(quantity.Value()), app.CacheRetentionPeriod)
+		cache, err := app.NewCache(ctx)
 		if err != nil {
 			return errors.Wrap(err, "failed to create cache")
 		}
 		defer cache.Close()
 
-		go func() {
-			err := cache.Run(ctx)
-			if err != nil {
-				log.Errorf("Run cache: %v", err)
-			}
-		}()
+		if cache == nil {
+			logger.Info("Cache is disabled")
+		}
 
 		proxy, err := proxy.NewProxy(listener, app.BuildRouter(), watcher, proxy.Options{
 			Cache:  cache,
@@ -78,6 +75,8 @@ func main() {
 		if err != nil {
 			return errors.Wrap(err, "failed to create proxy")
 		}
+
+		logger.Infof("Listening on %s", listener.Addr().String())
 
 		err = proxy.Serve()
 		if err != nil {

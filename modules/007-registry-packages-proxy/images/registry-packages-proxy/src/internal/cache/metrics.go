@@ -12,16 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package proxy
+package cache
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-)
+import "github.com/prometheus/client_golang/prometheus"
 
-type Options struct {
-	RegistryClient registry.Client
-	Cache          cache.Cache
-	Logger         log.Logger
+type Metrics struct {
+	CacheSize prometheus.Gauge
 }

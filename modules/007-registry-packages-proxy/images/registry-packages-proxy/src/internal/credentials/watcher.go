@@ -34,6 +34,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
+const (
+	// defaultRepository is the repository address from deckhouse-registry secret.
+	defaultRepository = ""
+)
+
 type Watcher struct {
 	k8sClient                     *kubernetes.Clientset
 	k8sDynamicClient              dynamic.Interface
@@ -129,7 +134,7 @@ func (w *Watcher) fetchSecret(ctx context.Context) error {
 	}
 
 	w.registryClientConfigsMutex.Lock()
-	w.registryClientConfigs[""] = registryConfig
+	w.registryClientConfigs[defaultRepository] = registryConfig
 	w.registryClientConfigsMutex.Unlock()
 
 	return nil

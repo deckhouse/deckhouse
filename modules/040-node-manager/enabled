@@ -18,7 +18,12 @@ source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
-  echo "true" > $MODULE_ENABLED_RESULT
+
+  if values::array_has global.enabledModules "registry-packages-proxy" ; then
+    echo "true" > $MODULE_ENABLED_RESULT
+  else
+    echo "false" > $MODULE_ENABLED_RESULT
+  fi
 }
 
 enabled::run "$@"
