@@ -52,7 +52,7 @@ entries:
                 - title: Container registry
                   url: /modules-docs/module-anatomy/registry/
             - title:
-                en: How to publish module in the DKP claster
+                en: How to publish module in the DKP cluster
                 ru: Как опубликовать модуль в кластере DKP
               url: /modules-docs/deckhouse/
             - title:
