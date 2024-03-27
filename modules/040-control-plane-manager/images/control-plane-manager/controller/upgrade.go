@@ -31,13 +31,15 @@ import (
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 func upgradeToK8s129() error {
-	fmt.Println("I'm fine")
+	log.Println("I'm fine 1")
 	config, _ := rest.InClusterConfig()
 	kubeClient, _ := kubernetes.NewForConfig(config)
 
 	_, err := kubeClient.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
 
+	log.Println("I'm fine 2", err)
 	if apierrors.IsNotFound(err) {
+		log.Println("I'm fine 3")
 		log.Print("create ClusterRoleBinding \"kubeadm:cluster-admins\"")
 		clusterRoleBinding := &rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
