@@ -34,8 +34,8 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
-            en: Module development
-            ru: Разработка модуля
+            en: How to develop a module?
+            ru: Как разработать модуль?
           folders:
             - title:
                 en: Description
