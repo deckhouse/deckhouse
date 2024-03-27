@@ -31,6 +31,7 @@ import (
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 func upgradeToK8s129() error {
+	fmt.Println("I'm fine")
 	config, _ := rest.InClusterConfig()
 	kubeClient, _ := kubernetes.NewForConfig(config)
 
