@@ -112,432 +112,47 @@
    DNS
    ```
 
-4. Чтобы получить доступ к веб-интерфейсам компонентов Deckhouse настройте работу DNS и укажите в параметрах Deckhouse шаблон DNS-имен. Шаблон DNS-имен используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Поэтому для шаблона `%s.kube.company.my Grafana` будет доступен шаблон DNS-имен по адресу `grafana.kube.company.my`.
+4. Чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, настройте работу DNS и укажите в параметрах Deckhouse шаблон DNS-имен. Шаблон DNS-имен используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Поэтому для шаблона `%s.kube.company.my Grafana` будет доступен шаблон DNS-имен по адресу `grafana.kube.company.my`.
 
-4. Настройте DNS для сервисов Deckhouse одним из следующих способов:
+5. Настройте DNS для сервисов Deckhouse одним из следующих способов:
 
-Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
-Если ваш шаблон DNS-имен кластера является wildcard DNS-шаблоном (например, %s.kube.company.my), то добавьте соответствующую wildcard A-запись со значением IP-адреса master-узла.
-Если ваш шаблон DNS-имен кластера НЕ является wildcard DNS-шаблоном (например, %s-kube.company.my), то добавьте А или CNAME-записис адресом master-узла, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
-api
-argocd
-cdi-uploadproxy
-dashboard
-documentation
-dex
-grafana
-hubble
-istio
-istio-api-proxy
-kubeconfig
-openvpn-admin
-prometheus
-status
-upmeter
-Если вы не имеете под управлением DNS-сервер, то на компьютере, с которого необходим доступ к сервисам Deckhouse, добавьте статические записи в файл /etc/hosts (%SystemRoot%\system32\drivers\etc\hosts для Windows).
+* С возможностью добавления DNS-записи, используя DNS-сервер. Если ваш шаблон DNS-имен кластера является wildcard DNS-шаблоном (например, `%s.kube.company.my`), то добавьте соответствующую wildcard A-запись со значением IP-адреса мастер-узла. Если ваш шаблон DNS-имен кластера не является wildcard DNS-шаблоном (например, `%s-kube.company.my`), добавьте А или CNAME-записи с адресом мастер-узла, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
+  * `api`
+  * `argocd`
+  * `cdi-uploadproxy`
+  * `dashboard`
+  * `documentation`
+  * `dex`
+  * `grafana`
+  * `hubble`
+  * `istio`
+  * `istio-api-proxy`
+  * `kubeconfig`
+  * `openvpn-admin`
+  * `prometheus`
+  * `status`
+  * `upmeter`
 
-Для добавления записей в файл /etc/hosts на на Linux-компьютере с которого необходим доступ к сервисам Deckhouse (далее — ПК), выполните следующие шаги:
+* Без управления DNS-сервером. На компьютере, с которого необходим доступ к сервисам Deckhouse, добавьте статические записи в файл `/etc/hosts` (%SystemRoot%\system32\drivers\etc\hosts для Windows).
 
-[Выполните на ПК] Укажите используемый шаблон DNS-имен в переменной DOMAIN_TEMPLATE (например, %s.kube.company.my):
+Для добавления записей в файл `/etc/hosts` на на Linux-компьютере с которого необходим доступ к сервисам Deckhouse (далее — ПК), выполните [следующие шаги](ссылка).
 
-DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-[Выполните на ПК] Укажите IP-адрес балансировщика в переменной BALANCER_IP:
+### Настройка удаленного доступа к кластеру
 
-BALANCER_IP='<BALANCER_IP>'
-[Выполните на ПК] Добавьте записи в файл /etc/hosts:
+На персональном компьютере выполните следующие шаги, для того чтобы настроить подключение `kubectl` к кластеру:
 
-for i in api argocd cdi-uploadproxy dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
-Затем, на master-узле выполните следующую команду (укажите используемый шаблон DNS-имен в переменной DOMAIN_TEMPLATE):
+1. Откройте веб-интерфейс сервиса *Kubeconfig Generator*. Для него зарезервировано имя `kubeconfig`, и адрес для доступа формируется согласно шаблона DNS-имен (который установили ранее). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс *Kubeconfig Generator* будет доступен по адресу `https://kubeconfig.1.2.3.4.sslip.io`.
+2. Авторизуйтесь под пользователем `admin@deckhouse.io`. Пароль пользователя, сгенерированный на предыдущем шаге:
+` — rjm1pcgttf` (пароль можно найти в *CustomResource User* в файле `resource.yml`).
+3. Выберите вкладку с ОС персонального компьютера.
+4. Последовательно скопируйте и выполните команды, приведенные на странице.
+5. Проверьте корректную работу `kubectl` (например, выполнив команду  `kubectl get no`).
 
-DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+### Настройка Grafana
 
-## Настройте удаленный доступ к кластеру
-На персональном компьютере выполните следующие шаги, для того чтобы настроить подключение kubectl к кластеру:
+Установите [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/).
 
-Откройте веб-интерфейс сервиса Kubeconfig Generator. Для него зарезервировано имя kubeconfig, и адрес для доступа формируется согласно шаблона DNS-имен (который вы установили ранее). Например, для шаблона DNS-имен %s.1.2.3.4.sslip.io, веб-интерфейс Kubeconfig Generator будет доступен по адресу https://kubeconfig.1.2.3.4.sslip.io.
-Авторизуйтесь под пользователем admin@deckhouse.io. Пароль пользователя, сгенерированный на предыдущем шаге, — rjm1pcgttf (вы также можете найти его в CustomResource User в файле resource.yml).
-Выберите вкладку с ОС персонального компьютера.
-Последовательно скопируйте и выполните команды, приведенные на странице.
-Проверьте корректную работу kubectl (например, выполнив команду kubectl get no).
-
-
-Инструкция по установке [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/)
-
-
-* [Каналы обновлений](/ru/platform/deckhouse-release-channels.html)
-
-[En](/en/)
-
-1. Документация
-
-1. Платформа
-2. v1
-3. Как настроить?
-
-[Платформа](#)
-
-* [Модули](/ru/modules/)
-
-* [Введение в документацию](./deckhouse-overview.html)
-* [Deckhouse](#)
-  - [Как установить?](#)
-    + [Описание](./installing/)
-    + [Настройки](./installing/configuration.html)
-  - [Как настроить?](#)
-    + [Описание](./)
-    + [Глобальные настройки](./deckhouse-configure-global.html)
-    + [Custom Resources](./cr.html)
-  - [Каналы обновлений](./deckhouse-release-channels.html)
-  - [Поддерживаемые версии K8s и ОС](./supported_versions.html)
-  - [Сравнение редакций](./revision-comparison.html)
-  - [Настройка ПО безопасности](./security_software_setup.html)
-  - [FAQ](./deckhouse-faq.html)
-  - [Модули](#)
-    + [deckhouse](#)
-      * [Описание](./modules/002-deckhouse/)
-      * [Примеры](./modules/002-deckhouse/usage.html)
-      * [Справка](#)
-        - [Настройки](./modules/002-deckhouse/configuration.html)
-        - [Custom Resources](./modules/002-deckhouse/cr.html)
-      * [FAQ](./modules/002-deckhouse/faq.html)
-    + [documentation](#)
-      * [Описание](./modules/810-documentation/)
-      * [Примеры](./modules/810-documentation/examples.html)
-      * [Настройки](./modules/810-documentation/configuration.html)
-* [Кластер Kubernetes](#)
-  - [Описание](./kubernetes.html)
-  - [Cloud providers](#)
-    + [Amazon Web Services](#)
-      * [Описание](./modules/030-cloud-provider-aws/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-aws/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-aws/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-aws/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-aws/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-aws/cr.html)
-      * [Примеры](./modules/030-cloud-provider-aws/examples.html)
-      * [FAQ](./modules/030-cloud-provider-aws/faq.html)
-    + [Google Cloud Platform](#)
-      * [Описание](./modules/030-cloud-provider-gcp/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-gcp/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-gcp/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-gcp/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-gcp/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-gcp/cr.html)
-      * [Примеры](./modules/030-cloud-provider-gcp/examples.html)
-      * [FAQ](./modules/030-cloud-provider-gcp/faq.html)
-    + [Microsoft Azure](#)
-      * [Описание](./modules/030-cloud-provider-azure/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-azure/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-azure/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-azure/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-azure/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-azure/cr.html)
-      * [Примеры](./modules/030-cloud-provider-azure/examples.html)
-    + [OpenStack EE Only](#)
-      * [Описание](./modules/030-cloud-provider-openstack/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-openstack/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-openstack/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-openstack/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-openstack/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-openstack/cr.html)
-      * [Примеры](./modules/030-cloud-provider-openstack/examples.html)
-      * [FAQ](./modules/030-cloud-provider-openstack/faq.html)
-    + [VMware vSphere EE Only](#)
-      * [Описание](./modules/030-cloud-provider-vsphere/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-vsphere/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-vsphere/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-vsphere/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-vsphere/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-vsphere/cr.html)
-      * [Примеры](./modules/030-cloud-provider-vsphere/examples.html)
-      * [FAQ](./modules/030-cloud-provider-vsphere/faq.html)
-    + [VMware Cloud Director  Experimental EE Only](#)
-      * [Описание](./modules/030-cloud-provider-vcd/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-vcd/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-vcd/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-vcd/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-vcd/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-vcd/cr.html)
-      * [Примеры](./modules/030-cloud-provider-vcd/examples.html)
-      * [FAQ](./modules/030-cloud-provider-vcd/faq.html)
-    + [Yandex Cloud](#)
-      * [Описание](./modules/030-cloud-provider-yandex/)
-      * [Установка](#)
-        - [Подготовка окружения](./modules/030-cloud-provider-yandex/environment.html)
-        - [Схемы размещения](./modules/030-cloud-provider-yandex/layouts.html)
-        - [Настройка провайдера](./modules/030-cloud-provider-yandex/cluster_configuration.html)
-      * [Справка](#)
-        - [Настройки](./modules/030-cloud-provider-yandex/configuration.html)
-        - [Custom Resources](./modules/030-cloud-provider-yandex/cr.html)
-      * [Примеры](./modules/030-cloud-provider-yandex/examples.html)
-      * [FAQ](./modules/030-cloud-provider-yandex/faq.html)
-  - [Управление control plane](#)
-    + [Описание](./modules/040-control-plane-manager/)
-    + [Примеры](./modules/040-control-plane-manager/examples.html)
-    + [Настройки](./modules/040-control-plane-manager/configuration.html)
-    + [FAQ](./modules/040-control-plane-manager/faq.html)
-  - [Управление узлами](#)
-    + [Описание](./modules/040-node-manager/)
-    + [Примеры](./modules/040-node-manager/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/040-node-manager/configuration.html)
-      * [Custom Resources](./modules/040-node-manager/cr.html)
-    + [FAQ](./modules/040-node-manager/faq.html)
-  - [Другие модули](#)
-    + [cni-cilium](#)
-      * [Описание](./modules/021-cni-cilium/)
-      * [Настройки](./modules/021-cni-cilium/configuration.html)
-    + [cilium-hubble](#)
-      * [Описание](./modules/500-cilium-hubble/)
-      * [Настройки](./modules/500-cilium-hubble/configuration.html)
-    + [cni-flannel](#)
-      * [Описание](./modules/035-cni-flannel/)
-      * [Настройки](./modules/035-cni-flannel/configuration.html)
-    + [cni-simple-bridge](#)
-      * [Описание](./modules/035-cni-simple-bridge/)
-    + [kube-proxy](#)
-      * [Описание](./modules/021-kube-proxy/)
-    + [kube-dns](#)
-      * [Описание](./modules/042-kube-dns/)
-      * [Настройки](./modules/042-kube-dns/configuration.html)
-      * [Примеры](./modules/042-kube-dns/examples.html)
-      * [FAQ](./modules/042-kube-dns/faq.html)
-    + [node-local-dns EE Only](#)
-      * [Описание](./modules/350-node-local-dns/)
-      * [Примеры](./modules/350-node-local-dns/examples.html)
-      * [Настройки](./modules/350-node-local-dns/configuration.html)
-    + [terraform-manager](#)
-      * [Описание](./modules/040-terraform-manager/)
-      * [Настройки](./modules/040-terraform-manager/configuration.html)
-* [Доступ к кластеру](#)
-  - [dashboard](#)
-    + [Описание](./modules/500-dashboard/)
-    + [Примеры](./modules/500-dashboard/examples.html)
-    + [Настройки](./modules/500-dashboard/configuration.html)
-  - [openvpn  Experimental](#)
-    + [Описание](./modules/500-openvpn/)
-    + [Примеры](./modules/500-openvpn/examples.html)
-    + [Настройки](./modules/500-openvpn/configuration.html)
-* [Доставка Experimental EE Only](#)
-  - [Описание](./modules/502-delivery/)
-  - [Примеры](./modules/502-delivery/usage.html)
-  - [Справка](#)
-    + [Настройки](./modules/502-delivery/configuration.html)
-    + [Custom Resources](./modules/502-delivery/cr.html)
-* [Балансировка трафика](#)
-  - [ingress-nginx](#)
-    + [Описание](./modules/402-ingress-nginx/)
-    + [Примеры](./modules/402-ingress-nginx/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/402-ingress-nginx/configuration.html)
-      * [Custom Resources](./modules/402-ingress-nginx/cr.html)
-    + [FAQ](./modules/402-ingress-nginx/faq.html)
-  - [istio](#)
-    + [Описание](./modules/110-istio/)
-    + [Справка](#)
-      * [Настройки](./modules/110-istio/configuration.html)
-      * [Custom Resources](./modules/110-istio/cr.html)
-      * [Custom Resources (от istio.io)](./modules/110-istio/istio-cr.html)
-    + [Примеры](./modules/110-istio/examples.html)
-* [Мониторинг](#)
-  - [Prometheus & Grafana](#)
-    + [Описание](./modules/300-prometheus/)
-    + [Примеры](./modules/300-prometheus/usage.html)
-    + [Справка](#)
-      * [Настройки](./modules/300-prometheus/configuration.html)
-      * [Custom Resources](./modules/300-prometheus/cr.html)
-    + [FAQ](./modules/300-prometheus/faq.html)
-  - [Мониторинг вашего приложения](#)
-    + [Описание](./modules/340-monitoring-custom/)
-    + [Настройки](./modules/340-monitoring-custom/configuration.html)
-  - [Мониторинг сети](#)
-    + [Описание](./modules/340-monitoring-ping/)
-    + [Настройки](./modules/340-monitoring-ping/configuration.html)
-    + [Примеры](./modules/340-monitoring-ping/usage.html)
-  - [Мониторинг кластера](#)
-    + [Описание](./modules/340-monitoring-kubernetes/)
-    + [Настройки](./modules/340-monitoring-kubernetes/configuration.html)
-  - [Мониторинг control plane](#)
-    + [Описание](./modules/340-monitoring-kubernetes-control-plane/)
-    + [Настройки](./modules/340-monitoring-kubernetes-control-plane/configuration.html)
-  - [Расширенный мониторинг](#)
-    + [Описание](./modules/340-extended-monitoring/)
-    + [Настройки](./modules/340-extended-monitoring/configuration.html)
-  - [Логи](#)
-    + [Доставка логов](#)
-      * [Описание](./modules/460-log-shipper/)
-      * [Примеры](./modules/460-log-shipper/examples.html)
-      * [Расширенная конфигурация](./modules/460-log-shipper/advanced_usage.html)
-      * [Справка](#)
-        - [Настройки](./modules/460-log-shipper/configuration.html)
-        - [Custom Resources](./modules/460-log-shipper/cr.html)
-    + [Кратковременное хранение Experimental](#)
-      * [Описание](./modules/462-loki/)
-      * [Примеры](./modules/462-loki/examples.html)
-      * [Настройки](./modules/462-loki/configuration.html)
-  - [Другие модули](#)
-    + [flant-integration EE Only](#)
-      * [Описание](./modules/600-flant-integration/)
-      * [Настройки](./modules/600-flant-integration/configuration.html)
-    + [okmeter  Proprietary](#)
-      * [Описание](./modules/500-okmeter/)
-      * [Примеры](./modules/500-okmeter/examples.html)
-      * [Настройки](./modules/500-okmeter/configuration.html)
-    + [prometheus-pushgateway](#)
-      * [Описание](./modules/303-prometheus-pushgateway/)
-      * [Примеры](./modules/303-prometheus-pushgateway/examples.html)
-      * [Настройки](./modules/303-prometheus-pushgateway/configuration.html)
-    + [upmeter](#)
-      * [Описание](./modules/500-upmeter/)
-      * [Примеры](./modules/500-upmeter/examples.html)
-      * [Настройки](#)
-        - [Настройки](./modules/500-upmeter/configuration.html)
-        - [Custom Resources](./modules/500-upmeter/cr.html)
-* [Масштабирование и управление ресурсами](#)
-  - [Priority classes](#)
-    + [Описание](./modules/001-priority-class/)
-    + [Настройки](./modules/001-priority-class/configuration.html)
-  - [Масштабирование по метрикам](#)
-    + [Описание](./modules/301-prometheus-metrics-adapter/)
-    + [Примеры](./modules/301-prometheus-metrics-adapter/usage.html)
-    + [Справка](#)
-      * [Настройки](./modules/301-prometheus-metrics-adapter/configuration.html)
-      * [Custom Resources](./modules/301-prometheus-metrics-adapter/cr.html)
-  - [Вертикальное масштабирование](#)
-    + [Описание](./modules/302-vertical-pod-autoscaler/)
-    + [Примеры](./modules/302-vertical-pod-autoscaler/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/302-vertical-pod-autoscaler/configuration.html)
-      * [Custom Resources](./modules/302-vertical-pod-autoscaler/cr.html)
-    + [FAQ](./modules/302-vertical-pod-autoscaler/faq.html)
-  - [Другие модули](#)
-    + [descheduler](#)
-      * [Описание](./modules/400-descheduler/)
-      * [Примеры](./modules/400-descheduler/examples.html)
-      * [Справка](#)
-        - [Настройки](./modules/400-descheduler/configuration.html)
-        - [Custom Resources](./modules/400-descheduler/cr.html)
-    + [flow-schema](#)
-      * [Описание](./modules/011-flow-schema/)
-      * [Настройки](./modules/011-flow-schema/configuration.html)
-      * [FAQ](./modules/011-flow-schema/faq.html)
-    + [pod-reloader](#)
-      * [Описание](./modules/465-pod-reloader/)
-      * [Примеры](./modules/465-pod-reloader/examples.html)
-      * [Настройки](./modules/465-pod-reloader/configuration.html)
-* [Безопасность](#)
-  - [User authentication](#)
-    + [Описание](./modules/150-user-authn/)
-    + [Примеры](./modules/150-user-authn/usage.html)
-    + [Справка](#)
-      * [Настройки](./modules/150-user-authn/configuration.html)
-      * [Custom Resources](./modules/150-user-authn/cr.html)
-    + [FAQ](./modules/150-user-authn/faq.html)
-  - [User authorization](#)
-    + [Описание](./modules/140-user-authz/)
-    + [Примеры](./modules/140-user-authz/usage.html)
-    + [Справка](#)
-      * [Настройки](./modules/140-user-authz/configuration.html)
-      * [Custom Resources](./modules/140-user-authz/cr.html)
-    + [FAQ](./modules/140-user-authz/faq.html)
-  - [Multitenancy  Experimental EE Only](#)
-    + [Описание](./modules/160-multitenancy-manager/)
-    + [Примеры](./modules/160-multitenancy-manager/usage.html)
-    + [Справка](#)
-      * [Настройки](./modules/160-multitenancy-manager/configuration.html)
-      * [Custom Resources](./modules/160-multitenancy-manager/cr.html)
-  - [Политики безопасности](#)
-    + [Описание](./modules/015-admission-policy-engine/)
-    + [Справка](#)
-      * [Настройки](./modules/015-admission-policy-engine/configuration.html)
-      * [Custom Resources](./modules/015-admission-policy-engine/cr.html)
-    + [FAQ](./modules/015-admission-policy-engine/faq.html)
-  - [Аудит Experimental EE Only](#)
-    + [Описание](./modules/650-runtime-audit-engine/)
-    + [Справка](#)
-      * [Настройки](./modules/650-runtime-audit-engine/configuration.html)
-      * [Custom Resources](./modules/650-runtime-audit-engine/cr.html)
-    + [Расширенная конфигурация](./modules/650-runtime-audit-engine/advanced_usage.html)
-    + [Примеры](./modules/650-runtime-audit-engine/examples.html)
-    + [FAQ](./modules/650-runtime-audit-engine/faq.html)
-  - [Другие модули](#)
-    + [network-policy-engine](#)
-      * [Описание](./modules/050-network-policy-engine/)
-      * [Примеры](./modules/050-network-policy-engine/examples.html)
-      * [Настройки](./modules/050-network-policy-engine/configuration.html)
-    + [cert-manager](#)
-      * [Описание](./modules/101-cert-manager/)
-      * [Примеры](./modules/101-cert-manager/usage.html)
-      * [Справка](#)
-        - [Настройки](./modules/101-cert-manager/configuration.html)
-        - [Custom Resources](./modules/101-cert-manager/cr.html)
-      * [FAQ](./modules/101-cert-manager/faq.html)
-    + [operator-trivy  Experimental EE Only](#)
-      * [Описание](./modules/500-operator-trivy/)
-      * [Настройки](./modules/500-operator-trivy/configuration.html)
-      * [FAQ](./modules/500-operator-trivy/faq.html)
-* [Хранилище](#)
-  - [ceph-csi](#)
-    + [Описание](./modules/031-ceph-csi/)
-    + [Примеры](./modules/031-ceph-csi/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/031-ceph-csi/configuration.html)
-      * [Custom Resources](./modules/031-ceph-csi/cr.html)
-    + [FAQ](./modules/031-ceph-csi/faq.html)
-  - [local-path-provisioner](#)
-    + [Описание](./modules/031-local-path-provisioner/)
-    + [Примеры](./modules/031-local-path-provisioner/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/031-local-path-provisioner/configuration.html)
-      * [Custom Resources](./modules/031-local-path-provisioner/cr.html)
-    + [FAQ](./modules/031-local-path-provisioner/faq.html)
-  - [snapshot-controller](#)
-    + [Описание](./modules/045-snapshot-controller/)
-    + [Примеры](./modules/045-snapshot-controller/usage.html)
-    + [Настройки](./modules/045-snapshot-controller/configuration.html)
-* [Приятные мелочи](#)
-  - [chrony](#)
-    + [Описание](./modules/470-chrony/)
-    + [Настройки](./modules/470-chrony/configuration.html)
-  - [namespace-configurator](#)
-    + [Описание](./modules/600-namespace-configurator/)
-    + [Настройки](./modules/600-namespace-configurator/configuration.html)
-    + [Примеры](./modules/600-namespace-configurator/examples.html)
-  - [secret-copier](#)
-    + [Описание](./modules/600-secret-copier/)
-* [Bare Metal](#)
-  - [keepalived EE Only](#)
-    + [Описание](./modules/450-keepalived/)
-    + [Примеры](./modules/450-keepalived/examples.html)
-    + [Справка](#)
-      * [Настройки](./modules/450-keepalived/configuration.html)
-      * [Custom Resources](./modules/450-keepalived/cr.html)
-    + [FAQ](./modules/450-keepalived/faq.html)
-  - [metallb EE Only](#)
-    + [Описание](./modules/380-metallb/)
-    + [Примеры](./modules/380-metallb/examples.html)
-    + [Настройки](./modules/380-metallb/configuration.html)
-  - [network-gateway EE Only](#)
-    + [Описание](./modules/450-network-gateway/)
-    + [Настройки](./modules/450-network-gateway/configuration.html)
-* [Используемое ПО](./oss_info.html)
-
-# Как настроить?
-
- Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или [перейти к последней стабильной версии Deckhouse](/documentation/v1/).
+### Настройка модулей
 
 Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков [Addon-operator'а](https://github.com/flant/addon-operator/), правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
 
@@ -546,64 +161,6 @@ Deckhouse настраивается с помощью:
 * **[Глобальных настроек](deckhouse-configure-global.html).** Глобальные настройки хранятся в custom resource `ModuleConfig/global`. Глобальные настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
 * **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
 * **Custom resource'ов.** Некоторые модули настраиваются с помощью дополнительных custom resource'ов.
-
-Пример набора custom resource'ов конфигурации Deckhouse:
-
-```
-<span class="c1"># &#x413;&#x43B;&#x43E;&#x431;&#x430;&#x43B;&#x44C;&#x43D;&#x44B;&#x435; &#x43D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">deckhouse.io/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ModuleConfig</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">global</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">version</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">settings</span><span class="pi">:</span>
-    <span class="na">modules</span><span class="pi">:</span>
-      <span class="na">publicDomainTemplate</span><span class="pi">:</span> <span class="s2">"</span><span class="s">%s.kube.company.my"</span>
-<span class="nn">---</span>
-<span class="c1"># &#x41D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438; &#x43C;&#x43E;&#x434;&#x443;&#x43B;&#x44F; monitoring-ping.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">deckhouse.io/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ModuleConfig</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">monitoring-ping</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">version</span><span class="pi">:</span> <span class="m">1</span>
-  <span class="na">settings</span><span class="pi">:</span>
-    <span class="na">externalTargets</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="na">host</span><span class="pi">:</span> <span class="s">8.8.8.8</span>
-<span class="nn">---</span>
-<span class="c1"># &#x41E;&#x442;&#x43A;&#x43B;&#x44E;&#x447;&#x438;&#x442;&#x44C; &#x43C;&#x43E;&#x434;&#x443;&#x43B;&#x44C; dashboard.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">deckhouse.io/v1alpha1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">ModuleConfig</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">dashboard</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
-```
-
-Посмотреть список custom resource'ов `ModuleConfig`, состояние модуля (включен/выключен) и его статус можно с помощью команды `kubectl get moduleconfigs`:
-
-```
-<span class="nv">$ </span>kubectl get moduleconfigs
-NAME                STATE      VERSION    STATUS    AGE
-deckhouse           Enabled    1                    12h
-documentation       Enabled    2                    12h
-global              Enabled    1                    12h
-prometheus          Enabled    2                    12h
-upmeter             Disabled   2                    12h
-```
-
-Чтобы изменить глобальную конфигурацию Deckhouse или конфигурацию модуля, нужно создать или отредактировать соответствующий ресурс `ModuleConfig`.
-
-Например, чтобы отредактировать конфигурацию модуля `upmeter`, выполните следующую команду:
-
-```
-kubectl <span class="nt">-n</span> d8-system edit moduleconfig/upmeter
-```
-
-После завершения редактирования изменения применяются автоматически.
-
-## Настройка модуля
 
 > При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту _звезду_.
 
