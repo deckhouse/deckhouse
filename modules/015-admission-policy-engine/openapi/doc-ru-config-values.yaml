@@ -36,9 +36,9 @@ properties:
     properties:
       storageClass:
         description: |
-          Имя StorageClass'а, который предполагается использовать для trivy-provider.
+          Имя StorageClass для использования `trivy_provider`.
 
-          `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
+          `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
       enabled:
         description: "Включить trivy-провайдер."
       registrySecrets:

@@ -64,9 +64,9 @@ properties:
         type: string
         x-examples: ["ceph-ssd", "false"]
         description: |
-          The name of the trivy-provider StorageClass to use.
+          The name of the StorageClass to use for `trivy-provider`.
 
-          `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
+          `false` — forces the `emptyDir` usage. Manually delete the old PVC and restart Pod, after setting the parameter.
       enabled:
         type: boolean
         default: false
