@@ -13,6 +13,7 @@
  - **[candi]** Add Kubernetes 1.29 support. [#7247](https://github.com/deckhouse/deckhouse/pull/7247)
     All control plane components will restart.
  - **[candi]** Add support for the new cloud provider — VMware Cloud Director. [#6527](https://github.com/deckhouse/deckhouse/pull/6527)
+ - **[control-plane-manager]** Option to change service account tokens issuer. [#7892](https://github.com/deckhouse/deckhouse/pull/7892)
  - **[dhctl]** Generate `DeckhouseRelease` manifests for mirrored releases. [#7697](https://github.com/deckhouse/deckhouse/pull/7697)
  - **[documentation]** Module documentation is available in the cluster. [#6449](https://github.com/deckhouse/deckhouse/pull/6449)
  - **[extended-monitoring]** Support custom container registry CA, registry credentials and insecure (HTTP) registries in the image-availability-exporter. Change ModuleConfig settings. [#7354](https://github.com/deckhouse/deckhouse/pull/7354)
