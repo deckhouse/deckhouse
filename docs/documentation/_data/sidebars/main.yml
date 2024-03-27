@@ -8,8 +8,8 @@ entries:
     - title: Deckhouse Kubernetes Platform
       folders:
         - title:
-            en: How to install the platform?
-            ru: Как установить платформу?
+            en: How to install the platform
+            ru: Как установить платформу
           folders:
             - title:
                 en: Description
@@ -20,8 +20,8 @@ entries:
                 ru: Настройки
               url: /installing/configuration.html
         - title:
-            en: How to configure the platform?
-            ru: Как настроить платформу?
+            en: How to configure the platform
+            ru: Как настроить платформу
           folders:
             - title:
                 en: Description
@@ -34,8 +34,8 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
-            en: How to develop a module?
-            ru: Как разработать модуль?
+            en: How to develop a module
+            ru: Как разработать модуль
           folders:
             - title:
                 en: Description
@@ -52,16 +52,16 @@ entries:
                 - title: Container registry
                   url: /modules-docs/module-anatomy/registry/
             - title:
-                en: How to publish module in the DKP claster?
-                ru: Как опубликовать модуль в кластере DKP?
+                en: How to publish module in the DKP claster
+                ru: Как опубликовать модуль в кластере DKP
               url: /modules-docs/deckhouse/
             - title:
                 en: Versioning modules
                 ru: Версионирование модуля
               url: /modules-docs/version/
             - title:
-                en: How to adapt an existing chart?
-                ru: Как адаптировать существующий чарт?
+                en: How to adapt an existing chart
+                ru: Как адаптировать существующий чарт
               folders:
                 - title:
                     en: Install tools
@@ -97,7 +97,7 @@ entries:
               url: /modules-docs/development-mode/
             - title:
                 en: What's next
-                ru: Что дальше?
+                ru: Что дальше
               url: /modules-docs/final-words/
         - title:
             en: Release channels
