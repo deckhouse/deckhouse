@@ -4,7 +4,7 @@ permalink: en/modules-docs/chart-adapt/build-container-images/
 ---
 {% raw %}
 
-Полезный подход - хранить образы для модулей в нашем registry. Очистите папку с образами `/images/*` и загрузите туда наш образ для приложения `hello-world`.
+Полезный подход — хранить образы для модулей в нашем registry. Очистите папку с образами `/images/*` и загрузите туда наш образ для приложения `hello-world`.
 
 ```sh
 rm -rf images/*
