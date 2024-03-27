@@ -203,73 +203,64 @@ lang: ru
 <details><summary>Пример хука ensure_crds.py</summary>
 <pre class="highlight">
 <code>
-  import os
+import os
 
-  import yaml
-  from deckhouse import hook
+import yaml
+from deckhouse import hook
 
 # We expect structure with possible subdirectories like this
-
 #
-
 #   my-module/
-
 #       crds/
-
 #           crd1.yaml
-
 #           crd2.yaml
-
 #           subdir/
-
 #               crd3.yaml
-
 #       hooks/
-
 #           ensure_crds.py # this file
 
-  config = """
-  configVersion: v1
-  onStartup: 5
-  """
+config = """
+configVersion: v1
+onStartup: 5
+"""
 
-  def main(ctx: hook.Context):
-      for crd in iter_manifests(find_crds_root(**file**)):
-          ctx.kubernetes.create_or_update(crd)
+def main(ctx: hook.Context):
+    for crd in iter_manifests(find_crds_root(**file**)):
+        ctx.kubernetes.create_or_update(crd)
 
-  def iter_manifests(root_path: str):
-    if not os.path.exists(root_path):
-        return
+def iter_manifests(root_path: str):
+  if not os.path.exists(root_path):
+      return
 
-    for dirpath, dirnames, filenames in os.walk(top=root_path):
-        for filename in filenames:
-            if not filename.endswith(".yaml"):
-                # Wee only seek manifests
-                continue
-            if filename.startswith("doc-"):
-                # Skip dedicated doc yamls, common for Deckhouse internal modules
-                continue
+  for dirpath, dirnames, filenames in os.walk(top=root_path):
+      for filename in filenames:
+          if not filename.endswith(".yaml"):
+              # Wee only seek manifests
+              continue
+          if filename.startswith("doc-"):
+              # Skip dedicated doc yamls, common for Deckhouse internal modules
+              continue
 
-        crd_path = os.path.join(dirpath, filename)
-        with open(crd_path, "r", encoding="utf-8") as f:
-            for manifest in yaml.safe_load_all(f):
-                if manifest is None:
-                    continue
-                yield manifest
+      crd_path = os.path.join(dirpath, filename)
+      with open(crd_path, "r", encoding="utf-8") as f:
+          for manifest in yaml.safe_load_all(f):
+              if manifest is None:
+                  continue
+              yield manifest
 
-    for dirname in dirnames:
-        subroot = os.path.join(dirpath, dirname)
-        for manifest in iter_manifests(subroot):
-            yield manifest
+  for dirname in dirnames:
+      subroot = os.path.join(dirpath, dirname)
+      for manifest in iter_manifests(subroot):
+          yield manifest
 
-  def find_crds_root(hookpath):
-      hooks_root = os.path.dirname(hookpath)
-      module_root = os.path.dirname(hooks_root)
-      crds_root = os.path.join(module_root, "crds")
-      return crds_root
+def find_crds_root(hookpath):
+    hooks_root = os.path.dirname(hookpath)
+    module_root = os.path.dirname(hooks_root)
+    crds_root = os.path.join(module_root, "crds")
+    return crds_root
 
-  if **name** == "**main**":
-      hook.run(main, config=config)</code>
+if **name** == "**main**":
+    hook.run(main, config=config)</code>
 </pre>
 </details>
 </div>
@@ -310,17 +301,17 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 <details><summary>/openapi/config-values.yaml</summary>
 <pre class="highlight">
 <code>
-  type: object
-  properties:
-    nodeSelector:
-      type: object
-      additionalProperties:
-        type: string
-      description: >
-        The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
+type: object
+properties:
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: >
+      The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-        If the parameter is omitted or `false`, `nodeSelector` will be determined
-        [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
+      If the parameter is omitted or `false`, `nodeSelector` will be determined
+      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
 </pre>
 </details>
 </div>
@@ -331,10 +322,10 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 <details><summary>/openapi/doc-ru-config-values.yaml</summary>
 <pre class="highlight">
 <code>  
-  properties:
-    nodeSelector:
-      description: >
-        Описание на русском языке. Разметка Markdown.</code>
+properties:
+  nodeSelector:
+    description: |
+      Описание на русском языке. Разметка Markdown.</code>
 </pre>
 </details>
 </div>
@@ -350,13 +341,13 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 <details><summary>/openapi/values.yaml</summary>
 <pre class="highlight">
 <code>
-  x-extend:
-    schema: config-values.yaml
-  type: object
-  properties:
-    internal:
-      type: object
-      default: {}</code>
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}</code>
 </pre>
 </details>
 </div>
