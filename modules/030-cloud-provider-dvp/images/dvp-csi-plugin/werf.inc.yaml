@@ -28,9 +28,7 @@ shell:
   - git clone --depth 1 --branch feat/volume-expansion {{ $.SOURCE_REPO }}/deckhouse/virtualization-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
-    VERSION=$(cat VERSION)
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
-    -ldflags '-X github.com/deckhouse/virtualization-csi-driver/driver.version=${VERSION}' \
     -o /go/bin/virtualization-csi-driver \
     github.com/deckhouse/virtualization-csi-driver/images/virtualization-csi-driver/cmd/virtualization-csi-driver/
 
