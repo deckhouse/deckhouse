@@ -523,12 +523,14 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), app.DeckhouseTimeout)
 		defer cancel()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return ErrTimedOut
 			default:
 				ok, err := NewLogPrinter(kubeCl).
+					WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
 					WaitPodBecomeReady().
 					WithExcludeNode(excludeNode).
 					Print(ctx)
