@@ -42,24 +42,24 @@ entries:
                 ru: Описание
               url: /modules-docs/
             - title:
-                en: Module structure
-                ru: Структура модуля
+                en: Structure
+                ru: Структура
               url: /modules-docs/module-anatomy/module-folder/
             - title: 
-                en: Building a module
-                ru: Сборка модуля
+                en: Building and publication
+                ru: Сборка и публикация
               url: /modules-docs/module-anatomy/registry/
             - title:
-                en: Running a module
-                ru: Запуск модуля
+                en: Running in the cluster
+                ru: Запуск в кластере
               url: /modules-docs/deckhouse/
             - title:
-                en: Versioning modules
-                ru: Версионирование модуля
+                en: Versioning
+                ru: Версионирование
               url: /modules-docs/version/
             - title:
-                en: How to adapt an existing chart?
-                ru: Как адаптировать существующий чарт?
+                en: Example
+                ru: Пример
               folders:
                 - title:
                     en: Install tools
@@ -90,13 +90,9 @@ entries:
                     ru: Разверните модуль в кластере
                   url: /modules-docs/chart-adapt/deploy/
             - title:
-                en: Development mode
-                ru: Режим разработчика
+                en: Debug
+                ru: Отладка
               url: /modules-docs/development-mode/
-            - title:
-                en: What's next
-                ru: Что дальше?
-              url: /modules-docs/final-words/
         - title:
             en: Release channels
             ru: Каналы обновлений
