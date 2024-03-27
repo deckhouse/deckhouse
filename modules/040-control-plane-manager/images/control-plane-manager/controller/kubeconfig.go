@@ -39,6 +39,7 @@ func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
 
 	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
+	// if KubernetesVersion >= v1.29.0
 	if semver.Compare("v1.29.0", fmt.Sprintf("v%s", config.KubernetesVersion)) < 1 {
 		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
 	}
