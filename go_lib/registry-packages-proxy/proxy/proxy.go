@@ -22,9 +22,9 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
@@ -34,7 +34,7 @@ type Proxy struct {
 	getter         registry.ClientConfigGetter
 	registryClient registry.Client
 	cache          cache.Cache
-	logger         *log.Entry
+	logger         log.Logger
 }
 
 func NewProxy(

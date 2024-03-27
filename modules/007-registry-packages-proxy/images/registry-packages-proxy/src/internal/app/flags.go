@@ -26,6 +26,7 @@ var (
 	RegistrySecretDiscoveryPeriod = time.Hour
 	KubeConfig                    = ""
 	ListenAddress                 = ":5080"
+	DisableCache                  = false
 	CacheDirectory                = "/var/lib/registry-packages-proxy"
 	CacheRetentionSize            = "1Gi"
 	// CacheRetentionPeriod by default is 30 days
@@ -50,6 +51,10 @@ func InitFlags(cmd *kingpin.Application) {
 		Default(KubeConfig).
 		StringVar(&KubeConfig)
 
+	cmd.Flag("disable-cache", "Disable cache").
+		Envar("DISABLE_CACHE").
+		BoolVar(&DisableCache)
+
 	cmd.Flag("cache-directory", "Path to cache directory").
 		Envar("CACHE_DIRECTORY").
 		Default(CacheDirectory).
@@ -65,13 +70,13 @@ func InitFlags(cmd *kingpin.Application) {
 		Default(CacheRetentionPeriod.String()).
 		DurationVar(&CacheRetentionPeriod)
 
-	cmd.Flag("logger-type", "Format logs output of a discoverer in different ways.").
-		Envar("LOGGER_TYPE").
+	cmd.Flag("log-type", "Format logs output of a proxy in different ways.").
+		Envar("LOG_TYPE").
 		Default(LoggerType).
 		EnumVar(&LoggerType, loggerJSON, loggerSimple)
 
-	cmd.Flag("v", "Logger verbosity").
-		Envar("LOGGER_LEVEL").
+	cmd.Flag("v", "Log verbosity").
+		Envar("LOG_LEVEL").
 		Default(strconv.Itoa(int(LoggerLevel))).
 		IntVar(&LoggerLevel)
 }

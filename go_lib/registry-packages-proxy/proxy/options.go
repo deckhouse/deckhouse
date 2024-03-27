@@ -15,14 +15,13 @@
 package proxy
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 type Options struct {
 	RegistryClient registry.Client
 	Cache          cache.Cache
-	Logger         *log.Entry
+	Logger         log.Logger
 }

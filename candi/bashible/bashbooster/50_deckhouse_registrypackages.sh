@@ -105,14 +105,31 @@ bb-rp-fetch-manifests() {
     "${URLs[@]}"
 }
 
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
+
 # Fetch a package using python.
 # bb-rp-proxy-fetch-blob digest output_file_path
 bb-rp-proxy-fetch-blob() {
-  python3 <<EOF
+  check_python
+
+  cat - <<EOF | $python_binary
 import random
 import socket
 import ssl
-import urllib.request
+
+try:
+    from urllib.request import urlretrieve, build_opener, install_opener
+except ImportError as e:
+    from urllib2 import urlretrieve, build_opener, install_opener
 
 socket.setdefaulttimeout(30)
 
@@ -125,12 +142,12 @@ endpoint = random.choice(endpoints)
 
 token = open("/var/lib/bashible/bootstrap-token", "r").read()
 
-opener = urllib.request.build_opener()
+opener = build_opener()
 opener.addheaders = [('Authorization', f'Bearer {token}')]
-urllib.request.install_opener(opener)
+install_opener(opener)
 
 url = f'https://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
-urllib.request.urlretrieve(url, "$2")
+urlretrieve(url, "$2")
 EOF
 }
 

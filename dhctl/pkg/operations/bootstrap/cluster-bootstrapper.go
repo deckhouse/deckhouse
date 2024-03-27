@@ -378,7 +378,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	err = StartRegistryPackagesProxy(metaConfig.Registry)
+	var clusterDomain string
+	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
+		return err
+	}
+
+	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}

@@ -36,8 +36,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
@@ -205,21 +203,18 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(config config.RegistryData) error {
-	cert, err := generateTLSCertificate()
+func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to generate TLS certificate: %v", err)
 	}
 
 	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
-		Certificates: []tls.Certificate{cert},
+		Certificates: []tls.Certificate{*cert},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
-
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
 
 	clientConfigGetter, err := newRegistryClientConfigGetter(config)
 	if err != nil {
@@ -227,7 +222,7 @@ func StartRegistryPackagesProxy(config config.RegistryData) error {
 	}
 
 	server, err := proxy.NewProxy(listener, http.NewServeMux(), clientConfigGetter, proxy.Options{
-		Logger: logrus.NewEntry(logger),
+		Logger: registryPackagesProxyLogger{},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create registry packages proxy: %v", err)
@@ -243,20 +238,33 @@ func StartRegistryPackagesProxy(config config.RegistryData) error {
 	return nil
 }
 
-func generateTLSCertificate() (tls.Certificate, error) {
+type registryPackagesProxyLogger struct{}
+
+func (r registryPackagesProxyLogger) Errorf(format string, args ...interface{}) {
+	log.ErrorF(format, args...)
+}
+
+func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	now := time.Now()
 
-	template := &x509.Certificate{
+	subjectKeyId := make([]byte, 10)
+
+	_, err := rand.Read(subjectKeyId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate subject key id: %v", err)
+	}
+
+	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(now.Unix()),
 		Subject: pkix.Name{
-			CommonName:         "registry-packages-proxy.deckhouse.io",
-			Country:            []string{"unknown"},
-			Organization:       []string{"deckhouse.io"},
+			CommonName:         fmt.Sprintf("registry-packages-proxy.%s", clusterDomain),
+			Country:            []string{"Unknown"},
+			Organization:       []string{clusterDomain},
 			OrganizationalUnit: []string{"registry-packages-proxy"},
 		},
 		NotBefore:             now,
 		NotAfter:              now.AddDate(0, 0, 1), // Valid for one day
-		SubjectKeyId:          []byte{113, 117, 105, 99, 107, 115, 101, 114, 118, 101},
+		SubjectKeyId:          subjectKeyId,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -266,20 +274,21 @@ func generateTLSCertificate() (tls.Certificate, error) {
 
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %v", err)
+		return nil, fmt.Errorf("failed to generate private key: %v", err)
 	}
 
-	cert, err := x509.CreateCertificate(rand.Reader, template, template,
+	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate,
 		priv.Public(), priv)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %v", err)
+		return nil, fmt.Errorf("failed to create certificate: %v", err)
 	}
 
-	var outCert tls.Certificate
-	outCert.Certificate = append(outCert.Certificate, cert)
-	outCert.PrivateKey = priv
+	tlsCert := &tls.Certificate{
+		Certificate: [][]byte{cert},
+		PrivateKey:  priv,
+	}
 
-	return outCert, nil
+	return tlsCert, nil
 }
 
 func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
