@@ -53,11 +53,19 @@ The main goal of this architecture is to send messages to the queue system as qu
 * The same pros and cons as for centralized architecture, yet one more middle layer storage is added.
 * Increased durability. Suites for all infrastructures where logs delivery is crucial.
 
-## Metadata
+## Log processing
+
+The pipline of log processing consists of the following stages:
+
+![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
+<!-- Source: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
+
+
+### Sources
 
 On collecting, all sources enrich logs with metadata. The enrichment takes place at the `Source` stage.
 
-### Kubernetes
+#### Kubernetes
 
 The following metadata fields will be exposed:
 
@@ -72,24 +80,24 @@ The following metadata fields will be exposed:
 | `node`       | spec.nodeName           |
 | `pod_owner`  | metadata.ownerRef[0]    |
 
-| Label        | Node spec path                            |
-|--------------|-------------------------------------------|
-| `node_group` | metadata.labels[].node.deckhouse.io/group |
+| Label        | Node spec path                              |
+|--------------|---------------------------------------------|
+| `node_group` | metadata.labels[]."node.deckhouse.io/group" |
 
 {% alert -%}
 Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.
 {%- endalert %}
 
-### File
+There is a special `@metadata` field that contains all the labels from the namespace (namespace_labels) and the node (node_labels). 
+This field is not automatically sent to the destination. The main purpose of it is for filtering and adding extra fields to the log message.
+
+#### File
 
 The only exposed label is `host`, which is equal to a node hostname.
 
-## Log filters
+### Log filters
 
 There are a couple of filters to reduce the number of lines sent to the destination — `log filter` and `label filter`.
-
-![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
-<!-- Source: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 
 They are executed right after concatenating lines together with the multiline log parser.
 
@@ -106,6 +114,26 @@ Both filters have the same structured configuration:
 
 You can find examples in the [Examples](examples.html) section of the documentation.
 
+### Destination
+
+The `Destination` stage is the last one in the pipeline. It is responsible for sending logs to the storage.
+
+#### Extra fields
+
+The `extraFields` option allows you to add extra fields to the log message. The fields are added to the root of the message.
+
 {% alert -%}
 Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
 {%- endalert %}
+
+There are four main usecases for `extraFields`:
+* To add a constant value use a simple key-value syntax: `key: "value"`
+* To add a value from the message use a mustache template with the valid [path expression](https://vector.dev/docs/reference/vrl/expressions/#path): `key: "{{ .app }}"`
+* For Kubernetes source, it is also possible to add labels from the `@metadata` field. The syntax is the same as for the message, but the path is always started from the `@metadata` field: `key: "{{ @metadata.namespace_labels.app }}"`.
+* For some destinations, e.g., Elasticsearch or Splunk, it worth to parse the whole message and send it as a nested object. To substitute the message with a nested object use the `message` key: `message: "{{ @parsed_data }}"`.
+
+{% alert -%}
+Templates only work if the message is a valid JSON object.
+{%- endalert %}
+
+You can find examples in the [Examples](examples.html) section of the documentation.

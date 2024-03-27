@@ -36,7 +36,7 @@
       "inputs": [
         "transform/destination/test-es-dest/00_elastic_dedot"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
+      "source": "if !exists(.\"@parsed_data\") {\n    structured, err = parse_json(.message)\n    if err == null {\n        .\"@parsed_data\" = structured\n    } else {\n        .\"@parsed_data\" = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
     },
     "transform/destination/test-es-dest/02_del_parsed_data": {
@@ -44,7 +44,7 @@
       "inputs": [
         "transform/destination/test-es-dest/01_extra_fields"
       ],
-      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "source": "if exists(.\"@parsed_data\") {\n    del(.\"@parsed_data\")\n}\nif exists(.\"@metadata\") {\n    del(.\"@metadata\")\n}",
       "type": "remap"
     },
     "transform/destination/test-logstash-dest/00_elastic_dedot": {
@@ -60,7 +60,7 @@
       "inputs": [
         "transform/destination/test-logstash-dest/00_elastic_dedot"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
+      "source": "if !exists(.\"@parsed_data\") {\n    structured, err = parse_json(.message)\n    if err == null {\n        .\"@parsed_data\" = structured\n    } else {\n        .\"@parsed_data\" = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
     },
     "transform/destination/test-logstash-dest/02_del_parsed_data": {
@@ -68,7 +68,7 @@
       "inputs": [
         "transform/destination/test-logstash-dest/01_extra_fields"
       ],
-      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "source": "if exists(.\"@parsed_data\") {\n    del(.\"@parsed_data\")\n}\nif exists(.\"@metadata\") {\n    del(.\"@metadata\")\n}",
       "type": "remap"
     },
     "transform/destination/test-loki-dest/00_parse_json": {
@@ -76,7 +76,7 @@
       "inputs": [
         "transform/source/test-source/15_log_filter"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "source": "if !exists(.\"@parsed_data\") {\n    structured, err = parse_json(.message)\n    if err == null {\n        .\"@parsed_data\" = structured\n    } else {\n        .\"@parsed_data\" = .message\n    }\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_owner_ref": {
@@ -92,7 +92,7 @@
       "inputs": [
         "transform/source/test-source/00_owner_ref"
       ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "source": "if exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\n\n\nif !exists(.\"@metadata\") {\n\t.\"@metadata\" = {}\n    if exists(.namespace_labels) {\n\t    .\"@metadata\".namespace_labels = .namespace_labels\n    }\n\n    if exists(.node_labels) {\n        .\"@metadata\".node_labels = .node_labels\n    }\n}\n\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\n\ndel(.namespace_labels)\ndel(.node_labels)",
       "type": "remap"
     },
     "transform/source/test-source/02_local_timezone": {
@@ -150,46 +150,46 @@
       "inputs": [
         "transform/source/test-source/08_label_filter"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "source": "if !exists(.\"@parsed_data\") {\n    structured, err = parse_json(.message)\n    if err == null {\n        .\"@parsed_data\" = structured\n    } else {\n        .\"@parsed_data\" = .message\n    }\n}",
       "type": "remap"
     },
     "transform/source/test-source/10_log_filter": {
-      "condition": "exists(.parsed_data.foo)",
+      "condition": "exists(.\"@parsed_data\".foo)",
       "inputs": [
         "transform/source/test-source/09_parse_json"
       ],
       "type": "filter"
     },
     "transform/source/test-source/11_log_filter": {
-      "condition": "!exists(.parsed_data.fo)",
+      "condition": "!exists(.\"@parsed_data\".fo)",
       "inputs": [
         "transform/source/test-source/10_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/12_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.\"@parsed_data\".foo) || is_float(.\"@parsed_data\".foo) {\n    data, err = to_string(.\"@parsed_data\".foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .\"@parsed_data\".foo == null {\n    \"null\";\n} else {\n    includes([\"wvrr\"], .\"@parsed_data\".foo);\n}",
       "inputs": [
         "transform/source/test-source/11_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/13_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.\"@parsed_data\".foo) || is_float(.\"@parsed_data\".foo) {\n    data, err = to_string(.\"@parsed_data\".foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .\"@parsed_data\".foo == null {\n    \"null\";\n} else {\n    !includes([\"wvrr\"], .\"@parsed_data\".foo);\n}",
       "inputs": [
         "transform/source/test-source/12_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/14_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+      "condition": "match!(.\"@parsed_data\".foo, r'^wvrr$')",
       "inputs": [
         "transform/source/test-source/13_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/15_log_filter": {
-      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "condition": "if exists(.\"@parsed_data\".foo) \u0026\u0026 is_string(.\"@parsed_data\".foo) {\n    matched = false\n    matched0, err = match(.\"@parsed_data\".foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
       "inputs": [
         "transform/source/test-source/14_log_filter"
       ],
