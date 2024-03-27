@@ -58,7 +58,7 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
-var mreg = regexp.MustCompile(`/modules/[0-9]+-(\\S+)/requirements`)
+var mreg = regexp.MustCompile(`/modules/[0-9]+-(\S+)/requirements`)
 
 // CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
 func CheckRequirement(key, value string, modulesSetParams ...set.Set) (bool, error) {
@@ -78,13 +78,14 @@ func CheckRequirement(key, value string, modulesSetParams ...set.Set) (bool, err
 			fn := runtime.FuncForPC(pc)
 			fmt.Println("##! RUN CHECK FUNCTION", fn.Name())
 			rr := mreg.FindStringSubmatch(fn.Name())
+			fmt.Println("##! SUMB", rr)
 			var moduleName string
 			if len(rr) > 0 {
 				moduleName = rr[1]
 			}
 			fmt.Println("##! CHECKING MODULE NAME", moduleName)
 
-			if !modulesSet.Has(moduleName) {
+			if moduleName != "" && !modulesSet.Has(moduleName) {
 				// module is disabled, we don't have to run its checks
 				fmt.Println("##! SKIPPING DISABLED MODULE", moduleName)
 				continue
