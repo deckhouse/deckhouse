@@ -227,17 +227,15 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		moduleName := newModule.GetName()
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
+		// update d8service state
+		deckhouseconfig.Service().AddModuleNameToSource(moduleName, src)
+		deckhouseconfig.Service().AddPossibleName(moduleName)
+
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, moduleName, v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, newModule, v1.CreateOptions{})
-				if err != nil {
-					return err
-				}
-				// update d8service state
-				deckhouseconfig.Service().AddModuleNameToSource(moduleName, src)
-				deckhouseconfig.Service().AddPossibleName(moduleName)
-				return nil
+				return err
 			}
 
 			return err

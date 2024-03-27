@@ -37,7 +37,7 @@ func InitService(mm ModuleManager) {
 	serviceInstanceLock.Lock()
 	defer serviceInstanceLock.Unlock()
 
-	possibleNames := set.New(mm.GetModuleNames()...)
+	possibleNames := set.New()
 	possibleNames.Add("global")
 
 	serviceInstance = &ConfigService{
