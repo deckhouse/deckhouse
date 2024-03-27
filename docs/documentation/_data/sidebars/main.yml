@@ -42,15 +42,13 @@ entries:
                 ru: Описание
               url: /modules-docs/
             - title:
-                en: Module anatomy
-                ru: Анатомия модуля
-              folders:
-                - title:
-                    en: Module folder
-                    ru: Папка с модулем
-                  url: /modules-docs/module-anatomy/module-folder/
-                - title: Container registry
-                  url: /modules-docs/module-anatomy/registry/
+                en: Module structure
+                ru: Структура модуля
+              url: /modules-docs/module-anatomy/module-folder/
+            - title: 
+              en: Module build
+              ru: Сборка модуля
+              url: /modules-docs/module-anatomy/registry/
             - title:
                 en: How to publish module in the DKP cluster?
                 ru: Как опубликовать модуль в кластере DKP?
