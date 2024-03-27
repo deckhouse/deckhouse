@@ -12,6 +12,11 @@
       - 3.7.0, 3.7.1, 3.7.2, 6.1.0
 
 ### Building utility binaries
+- `+` `hubble`
+  - based on `BASE_GOLANG_20_BULLSEYE_DEV` image
+  - includes:
+    - src of hubble *(loaded from fox)*
+    - binaries hubble-cli *(builded from src)*
 - `+` `gops`
   - based on `BASE_GOLANG_21_ALPINE_DEV` image
   - includes:
@@ -22,11 +27,6 @@
   - includes:
     - src of cni-plugins *(loaded from fox)*
     - binaries of cni-plugins *(builded from src)*
-- `+` `hubble`
-  - based on `BASE_GOLANG_20_BULLSEYE_DEV` image
-  - includes:
-    - src of hubble *(loaded from fox)*
-    - binaries hubble-cli *(builded from src)*
 - `+` `bpftool`
   - based on `BASE_CILIUM_DEV` image
   - includes:
@@ -37,6 +37,17 @@
   - includes:
     - src of llvm *(loaded from fox)*
     - binaries llvm-10.0.0: clang, llc, llvm-objcopy *(builded from src)*
+- `+` `iptables`
+  - based on `BASE_CILIUM_DEV` image
+  - includes:
+    - src of iptables deb-package *(loaded from fox)*
+    - deb-packages of iptables 1.8.8-1 *(builded from src)*
+- `+` `cilium-envoy`
+  - based on `BASE_CILIUM_DEV` image
+  - includes:
+    - src of cilium/proxy *(loaded from fox)*
+    - src of envoyproxy/envoy *(loaded from fox)*
+    - binaries and libs of cilium-envoy *(builded from src)*
 - `+` `cilium`
   - based on `BASE_CILIUM_DEV` image
   - includes:
@@ -44,43 +55,26 @@
     - binaries from image `bpftool`
     - binaries from image `cni-plugins`
     - binaries from image `gops`
-    - deb-package from image `iptables`
-    - installed packages from image `iptables`
+    - deb-packages loaded from image `iptables` and installed
     - src of cilium *(loaded from fox)*
     - patches
     - binaries and shell-scripts of cilium *(builded from src)*
-- `+` `cilium-envoy`
-  - based on `BASE_UBUNTU` image
-  - includes:
-    - installed packages from repo `(!!! loaded from internet)`
-    - binaries of bazel(6.1.0) `(!!! loaded from internet)`
-    - src of envoyproxy/envoy *(loaded from fox)*
-    - src of cilium/proxy *(loaded from fox)*
-    - binaries cilium-envoy *(builded from src)*
-- `+` `iptables`
-  - based on `ubuntu:22.04` image
-  - includes:
-    - installed packages from repo `(!!! loaded from internet)`:
-      - debian-archive-keyring apt-src ca-certificates
-    - loaded src-deb-package from repo `(!!! loaded from internet)`:
-      - iptables 1.8.8-1
-    - rebuilded deb-package
 
 ### Building an intermediate image for combining all binary files into one place and preparing the target file system.
 
 - `agent-binaries-artifact`
   - based on `BASE_CILIUM_DEV` image
   - includes:
+    - binaries from image `hubble`
     - binaries from image `llvm`
     - binaries from image `bpftool`
     - binaries from image `cni-plugins`
     - binaries from image `gops`
+    - deb-packages loaded from image `iptables` and installed
     - binaries, libs and scripts from image `cilium`
     - binaries and libs from image `cilium-envoy`
-    - binaries from image `hubble`
-    - installed deb-packages from image `iptables`
     - binaries for prepull: pause and true
-    - prepared all binaries, libs and scripts what required for running cilium-agent
+    - prepared all binaries, libs and scripts what required for running cilium-agent and stored in separate dir
 
 ### Building final images (used in helm-templates)
 - `agent-distroless` - the main image of cilium-agent
@@ -94,7 +88,7 @@
 ## How to search for target commits for image-tools
 
 1. Cloning localy https://github.com/cilium/image-tools and go to it
-2. You need to find the tag of the required image from original base dockerfiles(e.g. [here](https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10)) and write it to the `IMAGE_TAG` variable
+2. You need to find the tag of the required image from original base dockerfiles(e.g. [here](https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10)) and write it to the `IMAGE_TAG` variable, for example
    ```
    IMAGE_TAG=a8c542efc076b62ba683e7699c0013adb6955f0f
    ```
