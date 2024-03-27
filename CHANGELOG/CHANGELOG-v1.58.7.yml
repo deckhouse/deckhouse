@@ -1,0 +1,5 @@
+control-plane-manager:
+  features:
+    - summary: Option to change service account tokens issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7892
+
