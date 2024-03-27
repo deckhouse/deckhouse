@@ -43,3 +43,66 @@
         description: |-
           Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD ScrapeConfig instead.
           ```https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md```
+
+- name: d8.grafana.interval_deprecation
+  rules:
+    - alert: GrafanaDashboardPanelIntervalDeprecated
+      expr: |
+        count(d8_grafana_dashboards_deprecated_interval > 0)
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Grafana panel intervals have been found.
+        description: |
+          Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
+          To list all deprecated panel intervals use the expr `sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0`
+
+          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+
+- name: d8.grafana.alert_rule_deprecation
+  rules:
+    - alert: GrafanaDashboardAlertRulesDeprecated
+      expr: |
+        count(d8_grafana_dashboards_deprecated_alert_rule > 0)
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Grafana alerts have been found.
+        description: |
+          Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
+          To list all deprecated alert rules use the expr `sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0`
+
+          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+
+- name: d8.grafana.plugin_deprecation
+  rules:
+    - alert: GrafanaDashboardPluginsDeprecated
+      expr: |
+        count(d8_grafana_dashboards_deprecated_plugin > 0)
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_grafana_deprecations: "GrafanaDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Grafana plugins have been found.
+        description: |
+          Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
+          To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0`
+
+          Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
+          We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
+
+          Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
