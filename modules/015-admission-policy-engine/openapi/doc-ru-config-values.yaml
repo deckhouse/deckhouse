@@ -34,6 +34,11 @@ properties:
 
       Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
+      storageClass:
+        description: |
+          Имя StorageClass для использования `trivy_provider`.
+
+          `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
       enabled:
         description: "Включить trivy-провайдер."
       registrySecrets:

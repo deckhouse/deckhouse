@@ -45,6 +45,10 @@ type Args struct {
 	ObjectName                    string `json:"objectName"`
 	InternalValuesSubPath         string `json:"internalValuesSubPath,omitempty"`
 	D8ConfigStorageClassParamName string `json:"d8ConfigStorageClassParamName,omitempty"`
+
+	// if return value is false - hook will stop its execution
+	// if return value is true - hook will continue
+	BeforeHookCheck func(input *go_hook.HookInput) bool
 }
 
 func RegisterHook(args Args) bool {
@@ -324,6 +328,9 @@ func isEmptyOrFalseStr(sc string) bool {
 
 func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
+		if args.BeforeHookCheck != nil && !args.BeforeHookCheck(input) {
+			return nil
+		}
 		err := storageClassChangeWithArgs(input, dc, args)
 		if err != nil {
 			return err
