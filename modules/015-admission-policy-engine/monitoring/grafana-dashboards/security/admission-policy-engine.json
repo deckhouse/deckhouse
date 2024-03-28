@@ -660,6 +660,18 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Source Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Name"
             },
             "properties": [
@@ -694,7 +706,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -717,7 +729,8 @@
                 "violating_name",
                 "violation_enforcement",
                 "violation_msg",
-                "violating_namespace"
+                "violating_namespace",
+                "source_type"
               ]
             }
           }
@@ -735,7 +748,8 @@
               "violating_name": 4,
               "violating_namespace": 2,
               "violation_enforcement": 5,
-              "violation_msg": 6
+              "violation_msg": 6,
+              "source_type": 7
             },
             "renameByName": {
               "Time": "",
@@ -744,7 +758,8 @@
               "violating_name": "Name",
               "violating_namespace": "Namespace",
               "violation_enforcement": "Enforcement",
-              "violation_msg": "Message"
+              "violation_msg": "Message",
+              "source_type": "Source Type"
             }
           }
         }
