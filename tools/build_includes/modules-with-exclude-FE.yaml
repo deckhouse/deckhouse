@@ -77,6 +77,32 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se/modules/380-metallb
+  to: /deckhouse/modules/380-metallb
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
@@ -324,19 +350,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/380-metallb
-  to: /deckhouse/modules/380-metallb
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   excludePaths:
@@ -365,19 +378,6 @@
     - .build.yaml
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
   excludePaths:
     - docs
     - README.md

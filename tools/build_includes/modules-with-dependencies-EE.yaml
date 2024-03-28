@@ -137,6 +137,52 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se/modules/380-metallb
+  to: /deckhouse/modules/380-metallb
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
@@ -735,29 +781,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb
-  to: /deckhouse/modules/380-metallb
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   excludePaths:
@@ -806,29 +829,6 @@
         - '**/*.go'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
   excludePaths:
     - images
     - templates
