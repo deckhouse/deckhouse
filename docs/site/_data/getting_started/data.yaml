@@ -478,7 +478,7 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
       step3:
         name:
           en: Setting up cluster
@@ -495,6 +495,47 @@ installTypes:
           ru: Завершение установки
         template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
       step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  bm-zvirt:
+    iconPath: images/icons/platforms/bare_metal_zvirt.png
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Zvirt"
+      ru: "Deckhouse Kubernetes Platform на Zvirt"
+    type: baremetal
+    # Например, это надписи на плитке
+    name:
+      en: zVirt
+      ru: zVirt
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Setting up cluster
+          ru: Настройка кластера
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/bm/STEP_FINALIZE.md
+      step7:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
