@@ -1,0 +1,24 @@
+{{- $gopsVersion := "v0.3.28" }}
+---
+# #####################################################################
+# Build gops binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/build-gops.sh
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/gops-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - mkdir -p /go/src/github.com/google/gops
+  - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /go/src/github.com/google/gops
+  - cd /go/src/github.com/google/gops
+  - mkdir -p "/out/linux/amd64/bin"
+  - go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
+  - strip /out/linux/amd64/bin/gops
+---

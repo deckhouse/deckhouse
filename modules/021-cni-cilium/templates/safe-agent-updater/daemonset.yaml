@@ -54,7 +54,7 @@ spec:
       {{- include "module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
       - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
         command:
         - "/usr/bin/true"
         terminationMessagePolicy: FallbackToLogsOnError
@@ -93,7 +93,7 @@ spec:
       containers:
       - name: pause-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
         command:
         - /pause
         resources:

@@ -1,0 +1,26 @@
+{{- $hubbleVersion := "v0.12.3" }}
+---
+# #####################################################################
+# Build hubble-cli binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (hubble stage)
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/download-hubble.sh
+# and https://github.com/cilium/hubble/blob/v0.12.3/Dockerfile
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/hubble-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - mkdir -p /go/src/github.com/cilium/hubble
+  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
+  - cd /go/src/github.com/cilium/hubble
+  - make clean && make hubble
+  - cp /go/src/github.com/cilium/hubble/hubble /hubble
+  - strip /hubble
+  - /hubble completion bash > /bash_completion
+---

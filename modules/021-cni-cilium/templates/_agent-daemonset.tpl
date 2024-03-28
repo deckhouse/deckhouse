@@ -35,7 +35,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
         - cilium-agent
         args:
@@ -212,7 +212,7 @@ spec:
       initContainers:
       {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -249,7 +249,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: apply-sysctl-overwrites
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         env:
         - name: BIN_PATH
           value: /opt/cni/bin
@@ -282,7 +282,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: mount-bpf-fs
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         args:
         - 'mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf'
         command:
@@ -300,7 +300,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: clean-cilium-state
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
         - /init-container.sh
         env:
@@ -361,7 +361,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
           - "/install-plugin.sh"
         resources:

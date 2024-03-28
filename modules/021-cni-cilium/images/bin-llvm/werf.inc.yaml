@@ -1,0 +1,58 @@
+{{- $llvmRev := "llvmorg-10.0.0" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
+{{- $fromCacheVersion := "16" }}
+---
+# #####################################################################
+# Build LLVM binaries (based on base-cilium-dev)
+# Original IMAGE_TAG of LLVM is a8c542efc076b62ba683e7699c0013adb6955f0f
+# Corresponding commit bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28 (https://github.com/cilium/image-tools/tree/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/checkout-llvm.sh
+# and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/llvm-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
+shell:
+  beforeInstall:
+  - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
+  - cd /src/llvm
+  - git config --global user.email "builder@deckhouse.io"
+  - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
+  - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
+  - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
+  - cd -
+  install:
+  - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
+  setup:
+  - mkdir -p /tmp/ccache-dir
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
+  - export CCACHE_DIR="/tmp/ccache-dir"
+  - mkdir -p /src/llvm/llvm/build-native
+  - cd /src/llvm/llvm/build-native
+  - ccache --zero-stats || true
+  - ccache --show-stats -v || true
+  - |
+    cmake .. -G "Ninja" \
+      -DLLVM_TARGETS_TO_BUILD="BPF" \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      -DBUILD_SHARED_LIBS="OFF" \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DLLVM_BUILD_RUNTIME="OFF" \
+      -DCMAKE_INSTALL_PREFIX="/usr/local" \
+      -DLLVM_CCACHE_BUILD="ON" \
+      -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+      -DLLVM_CCACHE_MAXSIZE="0"
+  - ccache --show-stats -v || true
+  - ninja clang llc llvm-objcopy
+  - ccache --show-stats -v || true
+  - strip bin/clang
+  - strip bin/llc
+  - strip bin/llvm-objcopy
+  # - mkdir -p /out/linux/amd64/bin
+  # - cp bin/clang bin/llc bin/llvm-objcopy /out/linux/amd64/bin
+  - cp bin/clang bin/llc bin/llvm-objcopy /usr/local/bin
