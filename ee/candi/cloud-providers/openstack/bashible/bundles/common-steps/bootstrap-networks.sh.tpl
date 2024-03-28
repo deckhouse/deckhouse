@@ -25,8 +25,8 @@ network:
 EOF
 }
 
-count_default=$(ip route show default | wc -l)
-if [[ "$count_default" -gt "1" ]]; then
+count_default_routes=$(ip -4 route show default | wc -l)
+if [[ "$count_default_routes" -gt "1" ]]; then
   configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
   for configured_mac in $configured_macs; do
     ifname="$(ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ")"
