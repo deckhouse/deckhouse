@@ -56,7 +56,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 +		fmt.Println("maxmind tar typeflag ", header.Typeflag)
 +
  		if header.Typeflag == tar.TypeReg {
-+			fmt.Println("maxmind tar name ", header.Name)
++			fmt.Println("maxmind tarf name ", header.Name)
  			if !strings.HasSuffix(header.Name, mmdbFile) {
  				continue
  			}
