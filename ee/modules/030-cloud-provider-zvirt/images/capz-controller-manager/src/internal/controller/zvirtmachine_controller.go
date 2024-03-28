@@ -149,7 +149,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	machine *clusterv1.Machine,
 	zvMachine *infrastructurev1.ZvirtMachine,
 	zvCluster *infrastructurev1.ZvirtCluster,
-) (_ ctrl.Result, reterr error) {
+) (ctrl.Result, error) {
 	var err error
 
 	if zvMachine.Status.FailureReason != nil || zvMachine.Status.FailureMessage != nil {
@@ -187,9 +187,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	logger.Info("Reconciling ZvirtMachine")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-	defer cancel()
-	timeout := ovirt.ContextStrategy(timeoutCtx)
+	timeout := ovirt.Timeout(15 * time.Minute)
 
 	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster, timeout)
 	if err != nil {
@@ -499,10 +497,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	zvMachine *infrastructurev1.ZvirtMachine,
 ) (ctrl.Result, error) {
 	logger.Info("Reconciling Machine delete")
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	timeout := ovirt.ContextStrategy(timeoutCtx)
+	timeout := ovirt.Timeout(5 * time.Minute)
 
 	vm, vmFound, err := r.findVMForMachine(machine, timeout)
 	if err != nil {
