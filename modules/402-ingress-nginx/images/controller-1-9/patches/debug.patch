@@ -1,4 +1,4 @@
-Subject: [PATCH] +++
+Subject: [PATCH] Always auth cookie
 ---
 Index: internal/nginx/maxmind.go
 IDEA additional info:
@@ -7,8 +7,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 --- a/internal/nginx/maxmind.go	(revision be46124ccc9e8158165f06e3f7d2ebd0cbbb284f)
-+++ b/internal/nginx/maxmind.go	(date 1711641961513)
-@@ -139,19 +139,29 @@
++++ b/internal/nginx/maxmind.go	(date 1711642155101)
+@@ -139,19 +139,31 @@
  }
 
  func downloadDatabase(dbName string) error {
@@ -17,6 +17,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 +	fmt.Println("maxmind URL ", newURL)
  	req, err := http.NewRequest(http.MethodGet, newURL, http.NoBody)
  	if err != nil {
++		fmt.Println("maxmind ERR1 ", err)
  		return err
  	}
 +	fmt.Println("maxmind REQUEST ", req.URL.String())
@@ -28,6 +29,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 +
 +	resp, err := cli.Do(req)
  	if err != nil {
++		fmt.Println("maxmind ERR2 ", err)
  		return err
  	}
 +	fmt.Println("maxmind REQUEST DONE")
@@ -39,7 +41,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
  	if resp.StatusCode != http.StatusOK {
  		return fmt.Errorf("HTTP status %v", resp.Status)
  	}
-@@ -163,6 +173,7 @@
+@@ -163,6 +175,7 @@
  	defer archive.Close()
 
  	mmdbFile := dbName + dbExtension
@@ -47,7 +49,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 
  	tarReader := tar.NewReader(archive)
  	for {
-@@ -175,7 +186,10 @@
+@@ -175,7 +188,10 @@
  			return err
  		}
 
@@ -58,7 +60,7 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
  			if !strings.HasSuffix(header.Name, mmdbFile) {
  				continue
  			}
-@@ -184,12 +198,14 @@
+@@ -184,12 +200,14 @@
  				if err != nil {
  					return err
  				}
