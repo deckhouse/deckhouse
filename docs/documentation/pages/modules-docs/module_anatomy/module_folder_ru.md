@@ -262,6 +262,8 @@ def find_crds_root(hookpath):
 if **name** == "**main**":
     hook.run(main, config=config)</code>
 ```
+{% endofftopic %}
+
 
 ### images
 
