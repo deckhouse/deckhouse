@@ -10,26 +10,26 @@ if ! which netplan 2>/dev/null 1>&2; then
 fi
 
 function render_and_deploy_netplan_config() {
-  cat_dev=$1
-  cat_metric=$2
-  cat_mac=$3
-  cat > /etc/netplan/100-cim-"$cat_dev".yaml <<BOOTSTRAP_NETWORK_EOF
+  interface=$1
+  metric=$2
+  mac=$3
+  cat > /etc/netplan/100-cim-"$cat_dev".yaml <<EOF
 network:
   version: 2
   ethernets:
-    $cat_dev:
+    $interface:
       dhcp4-overrides:
-        route-metric: $cat_metric
+        route-metric: $metric
       match:
-        macaddress: $cat_mac
-BOOTSTRAP_NETWORK_EOF
+        macaddress: $mac
+EOF
 }
 
 count_default=$(ip route show default | wc -l)
 if [[ "$count_default" -gt "1" ]]; then
   configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-  for mac in $configured_macs; do
-    ifname="$(ip -o link show | grep "link/ether $mac" | cut -d ":" -f2 | tr -d " ")"
+  for configured_mac in $configured_macs; do
+    ifname="$(ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ")"
     if [[ "$ifname" != "" ]]; then
       configured_ifnames_pattern+="$ifname "
     fi
@@ -40,12 +40,12 @@ if [[ "$count_default" -gt "1" ]]; then
     check_metric=$(grep -Po '(?<=route-metric: ).+' /etc/netplan/50-cloud-init.yaml | wc -l)
     set -e
     if [[ "$check_metric" -eq "0" ]]; then
-      metric=100
+      global_metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
         cim_mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
-        cim_metric=$metric
-        metric=$((metric + 100))
+        cim_metric=$global_metric
+        global_metric=$((global_metric + 100))
         render_and_deploy_netplan_config "$cim_dev" "$cim_metric" "$cim_mac"
       done
       netplan generate
