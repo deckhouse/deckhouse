@@ -225,7 +225,7 @@ index 42c5f56..d7400b5 100644
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
 diff --git a/pkg/service/node.go b/pkg/service/node.go
-index 115b5c7..32fa6f3 100644
+index 115b5c7..e140c56 100644
 --- a/pkg/service/node.go
 +++ b/pkg/service/node.go
 @@ -12,7 +12,7 @@ import (
@@ -253,13 +253,19 @@ index 115b5c7..32fa6f3 100644
  	if err != nil {
  		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.VolumePath, err)
  	}
-@@ -282,6 +280,9 @@ func (n *NodeService) getDeviceByAttachmentId(
+@@ -282,6 +280,15 @@ func (n *NodeService) getDeviceByAttachmentId(
  	volumeID ovirtclient.DiskID,
  	nodeID ovirtclient.VMID,
  ) (string, error) {
 +	klog.Infof("getDeviceByAttachmentId: test connection")
-+	err := n.ovirtClient.Test(ovirtclient.ContextStrategy(ctx))
-+	klog.Infof("getDeviceByAttachmentId: test result %v", err)
++	err := n.ovirtClient.Test(ovirtclient.ReconnectStrategy(n.ovirtClient))
++	if err != nil {
++		klog.Infof("getDeviceByAttachmentId: test result %+v", err)
++		err = n.ovirtClient.Reconnect()
++		if err != nil {
++			return "", err
++		}
++	}
  	attachment, err := diskAttachmentByVmAndDisk(ctx, n.ovirtClient, nodeID, volumeID)
  	if err != nil {
  		return "", fmt.Errorf("failed finding disk attachment, error: %w", err)
