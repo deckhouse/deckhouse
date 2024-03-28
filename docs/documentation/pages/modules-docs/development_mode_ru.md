@@ -1,8 +1,10 @@
 ---
-title: "Режим разработчика"
+title: "Отладка"
 permalink: ru/modules-docs/development-mode/
 lang: ru
 ---
+
+Команда Deckhouse Kubernetes Platform всегда готова проконсультировать. Вы можете обратиться к нам в канале #tech-deckhouse-modules внутреннего слака Flant.
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс *ModulePullOverride*.
 

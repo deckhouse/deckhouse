@@ -1,5 +1,5 @@
 ---
-title: "Папка с модулем"
+title: "Module structure"
 permalink: en/modules-docs/module-anatomy/module-folder/
 ---
 

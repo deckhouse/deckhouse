@@ -1,5 +1,5 @@
 ---
-title: "Container registry"
+title: "Сборка и публикация"
 permalink: ru/modules-docs/module-anatomy/registry/
 lang: ru
 ---
