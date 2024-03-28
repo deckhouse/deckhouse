@@ -1,8 +1,169 @@
 ---
-title: "Разверните модуль в кластере"
-permalink: ru/modules-docs/chart-adapt/deploy/
+title: "Пример создания модуля с адаптацией существующего чарта"
+permalink: ru/modules-docs/example/
 lang: ru
 ---
+
+<!-- DRAFT -->
+
+Команда Deckhouse Kubernetes Platform всегда готова проконсультировать. Вы можете обратиться к нам в канале #tech-deckhouse-modules внутреннего слака Flant.
+
+В качестве примера можно посмотреть на [модули, разработанные компанией Flant](existing_modules/modules.md)
+
+# Установите утилиты
+
+Установите утилиты до выполнения инструкции:
+
+* [git](https://git-scm.com) – система контроля версий;
+* [sed](https://github.com/mirror/sed) – редактор потоков;
+* [yq](https://github.com/mikefarah/yq) – командная строка для JSON и YAML.
+
+# Сделайте форк или скопируйте шаблон репозитория с модулем
+
+Команда Deckhouse Kubernetes Platform подготовила репозиторий для удобного создания модулей. Внутри репозитория представлен пример минимального модуля, который содержит все возможные функции. Предлагаем использовать этот репозиторий как основу.
+
+1. Сделайте форк шаблона для модуля в Gitlab [из репозитория](https://fox.flant.com/deckhouse/modules/template):
+
+   ![Fork](../../images/modules-docs/fork.png)
+
+1. Клонируйте его.
+
+   ```sh
+   git clone git@fox.flant.com:***/hello-world-module.git hello-world-module \
+     && cd hello-world-module
+   ```
+
+   > Подставьте свой адрес для команды `git clone`.
+
+# Адаптируйте шаблоны
+
+Выберите имя, которое будет соответствовать имени модуля в Deckhouse Kubernetes Platform. В некоторых местах оно может быть записано в формате kebab case или camel case. В инструкции следует использовать то же самое имя, которое было выбрано.
+
+Откройте `Chart.yaml` и в параметре `name` впишите имя модуля `hello-world`.
+
+```sh
+sed -Ei '' 's/^name:(.*)/name: hello-world/g' Chart.yaml
+```
+
+## Подготовьте шаблоны
+
+1. Клонируйте исходный код чарта для `hello-world`.
+
+   ```sh
+   git clone https://github.com/giantswarm/hello-world-app .tmp-chart
+   ```
+
+2. Скопируйте шаблоны.
+
+   ```sh
+   rm -rf templates/*
+   cp -fR .tmp-chart/helm/hello-world/templates/ templates/
+   ```
+
+3. Замените в шаблонах путь `.Values` на `.Values.helloWorld`.
+
+   ```sh
+   sed -i '' -e 's/.Values/.Values.helloWorld/g' $(find templates/ -type f)
+   ```
+
+## Добавьте схему для настроек
+
+Чтобы пользователь настраивал модуль, необходимо добавить Open API схему для возможных опций. Это запретит пользователю вводить неверные настройки.
+
+> Команда Deckhouse Kubernetes Platform старается тщательно подходить к выбору параметров, которые могут настраивать пользователи. Мы стремимся помочь пользователям, предоставляя возможность настраивать только те параметры, которые важны для их работы.
+
+В Helm-чарте приложения `hello-world` уже имеется JSON-схема. Преобразуйте ее.
+
+```sh
+yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+```
+
+Если в вашем чарте нет схемы, необходимо написать ее самостоятельно. Посмотрите примеры схем в репозитории, который клонировали на первом шаге.
+
+# Соберите образ контейнера
+
+Полезный подход — хранить образы для модулей в нашем registry. Очистите папку с образами `/images/*` и загрузите туда наш образ для приложения `hello-world`.
+
+```sh
+rm -rf images/*
+mkdir images/hello-world
+echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world/Dockerfile
+```
+
+> Поддерживаются любые Docker файлы. Если необходимо собрать приложение из исходного кода, поместите его рядом с **Dockerfile** и включите его в образ с помощью команды `COPY`.
+
+Чтобы использовать наш образ в шаблонах, замените его в манифестах на хелпер из библиотеки Deckhouse Kubernetes Platform.
+
+```sh
+sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorld") }}/g' templates/deployment.yaml
+```
+
+Проверьте результат командой `cat` и убедитесь, что изменения применились.
+
+> Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
+
+{% endraw %}
+
+# Добавьте хуки
+
+Прочитайте документацию операторов о концепции хуков, например, [что такое конфигурация хука и какие функции она предоставляет](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration).
+
+Хуки используются модулем для динамического взаимодействия с API Kubernetes. Например, они могут быть использованы для обработки событий, связанных с созданием или удалением объектов в кластере.
+
+> Для модулей Deckhouse Kubernetes Platform написание хуков поддерживается только на языке Python.
+
+В репозитории, клонированном на первом шаге, содержатся примеры возможных хуков. Ваш модуль не требует использования хуков, поэтому существующие хуки в примере можно удалить.
+
+<!-- TODO: Пример написания полезного хука -->
+
+```sh
+rm -rf hooks/
+rm -rf crds/
+```
+
+# Опубликуйте модуль
+
+В файле `.gitlab-ci.yml` укажите собственные переменные вместо тех, которые указаны в шаблоне.
+
+```yaml
+MODULES_MODULE_NAME: echoserver
+MODULES_REGISTRY: registry.flant.com
+MODULES_MODULE_SOURCE: registry.flant.com/deckhouse/modules/template
+MODULES_MODULE_TAG: ${CI_COMMIT_REF_NAME}
+```
+
+В GitLab добавьте аутентификационные данные для доступа к container registry в разделе **Settings** → **CI/CD**.
+
+Например:
+
+```text
+MODULES_REGISTRY_LOGIN = username
+MODULES_REGISTRY_PASSWORD = password
+```
+
+> Если вы используете **fox**, то доступы указывать не нужно.
+
+Внесите  изменения в git.
+
+```sh
+rm -rf .tmp-chart
+git add .
+git commit -m "Initial Commit"
+git push --set-upstream origin example
+```
+<!-- TODO: Сквош коммитов? -->
+
+Убедитесь, что сборка прошла успешно.
+
+![Pipeline](../../images/modules-docs/pipeline.png)
+
+Поместите тег v0.0.1. Теперь нажмите кнопку **Deploy to alpha**.
+
+![Deploy](../../images/modules-docs/deploy.png)
+
+Модуль станет доступным для подключения в кластерах Deckhouse Kubernetes Platform.
+
+# Разверните модуль в кластере
 
 ## Подключение модуля
 
@@ -216,3 +377,4 @@ lang: ru
            source: deckhouse
    ...
    ```
+

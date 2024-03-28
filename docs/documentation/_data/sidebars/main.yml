@@ -60,35 +60,7 @@ entries:
             - title:
                 en: Example
                 ru: Пример
-              folders:
-                - title:
-                    en: Install tools
-                    ru: Установите утилиты
-                  url: /modules-docs/chart-adapt/
-                - title:
-                    en: Create a repository
-                    ru: Создайте репозиторий
-                  url: /modules-docs/chart-adapt/clone-repo/
-                - title:
-                    en: Adapt templates
-                    ru: Адаптируйте шаблоны
-                  url: /modules-docs/chart-adapt/modify-templates/
-                - title:
-                    en: Build a container image
-                    ru: Соберите образ контейнера
-                  url: /modules-docs/chart-adapt/build-container-images/
-                - title:
-                    en: Add hooks
-                    ru: Добавьте хуки
-                  url: /modules-docs/chart-adapt/hooks/
-                - title:
-                    en: Publish a module
-                    ru: Опубликуйте модуль
-                  url: /modules-docs/chart-adapt/publish-module/
-                - title:
-                    en: Deploy a module into the cluster
-                    ru: Разверните модуль в кластере
-                  url: /modules-docs/chart-adapt/deploy/
+              url: /modules-docs/example/
             - title:
                 en: Debug
                 ru: Отладка
