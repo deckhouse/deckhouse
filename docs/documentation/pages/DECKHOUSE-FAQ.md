@@ -416,13 +416,13 @@ This feature is available in Enterprise Edition only.
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.56.3 or higher.
+1. Run the Deckhouse installer version 1.58.6 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.4 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
    ```
 
-   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
+   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball and generated [DeckhouseReleases](https://deckhouse.io/documentation/v1/modules/002-deckhouse/cr.html#deckhouserelease) manifests.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
@@ -457,7 +457,7 @@ This feature is available in Enterprise Edition only.
     DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.com/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
-   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
+   > Note: `--license` flag acts as a shortcut for `--source-login ($DHCTL_CLI_MIRROR_SOURCE_LOGIN` and `--source-password ($DHCTL_CLI_MIRROR_SOURCE_PASSWORD)` flags for the Deckhouse registry.
    > If you specify both license and login+password pair for source registry, the latter will be used.
 
    `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
@@ -483,13 +483,19 @@ This feature is available in Enterprise Edition only.
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
 
-   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
+   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags or `DHCTL_CLI_MIRROR_USER`/`DHCTL_CLI_MIRROR_PASS` variables.
 
-1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it (is available in Enterprise Edition only). Refer to the [Getting started](/gs/bm-private/step2.html) guide.
+1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
    To run the installer, use its image from your private registry where Deckhouse images reside, rather than from the public registry. In other words, your address should look something like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
+
+   After installation, apply DeckhouseReleases manifests that were generated during pull operation to your cluster via `kubectl` as follows:
+
+   ```shell
+   kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
+   ```
 
 ### Manually uploading images of Deckhouse modules into an isolated private registry
 
