@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: speaker
+  name: l2-load-balancer-speaker
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "speaker")) | nindent 2 }}
 spec:

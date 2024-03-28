@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: controller
+  name: l2-load-balancer-controller
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "controller")) | nindent 2 }}
 spec:
