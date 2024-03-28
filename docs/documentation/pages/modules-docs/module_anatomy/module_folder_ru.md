@@ -6,7 +6,7 @@ lang: ru
 
 {% raw %}
 
-Модуль представляет собой папку с определенным набором вложенных файлов и папок. Ближайший аналог -- Helm chart.
+Модуль лежит в папке с определенной структурой. Ближайший аналог -- Helm chart.
 
 ```tree
 📁 my-module/
@@ -52,18 +52,17 @@ lang: ru
 
 ### charts
 
-В папке `/charts` лежат вспомогательные чарты, которые используются при рендере шаблонов.
+В папке `/charts` лежат вспомогательные чарты Helm, которые используются при рендере шаблонов.
 
-Рекомендуем прочитать [документацию по доступным шаблонам и хелперам](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib#helm-library-for-deckhouse-modules).
-
-У Deckhouse Kubernetes Platform существует собственная библиотека вспомогательных функций для чартов – [lib-helm](https://github.com/deckhouse/lib-helm), которая добавляется в [каждый модуль](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).  
-Библиотеку также можно положить в модуль как helm subchart. Для этого загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
+У Deckhouse Kubernetes Platform (DKP) существует собственная библиотека вспомогательных шаблонов – [lib-helm](https://github.com/deckhouse/lib-helm). О доступных шаблонах библиотеки можно почитать в [репозитории helm-lib](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).
+ 
+Чтобы положить библиотеку в модуль как helm subchart, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
 
 ### crds
 
-В этой папке лежат [_СustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. Применение CRD в Deckhouse Kubernetes Platform отличается от того, как это предлагает Helm. CRD обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
+В этой папке лежат настройки кастомных ресурсов [_СustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. Применение CRD в DKP отличается от того, как это предлагает Helm. CRD обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
 
-Чтобы включить в работу CRD из определенной папки, нужно добавить в папку `/hooks` модуля специальный [хук](#hooks).
+Чтобы включить в работу CRD из определенной папки, нужно добавить в папку `/hooks` модуля хук из примера в разделе [`/hooks`](#hooks).
 
 Чтобы отобразить CRD из папки `/crds` в документации на сайте или модуле documentation в кластере, выполните следующие шаги:
 * создайте файл перевода со структурой аналогичной файлу ресурса:
@@ -181,25 +180,23 @@ lang: ru
 
 Все изображения, PDF-файлы и другие медиафайлы нужно хранить в папке `docs` или ее подпапках (например, `/docs/images/`). Все ссылки на файлы должны быть относительными.
 
-Для каждого языка нужен отдельный файл с соответствующим суффиксом. Например, `image1.jpg` и `image1.ru.jpg`. Используйте ссылки:
+Для каждого языка нужен файл с соответствующим суффиксом. Например, `image1.jpg` и `image1.ru.jpg`. Используйте ссылки:
 - `[image1](image1.jpg)` в англоязычном документе;
 - `[image1](image1.ru.jpg)` в русскоязычном документе.
 
 ### hooks
 
-Полезно прочитать документацию операторов о концепции хуков, например, [что такое конфигурация хука и какие функции она предоставляет](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration).
+Хук — это реакция на событие. Хуки используются модулем для динамического взаимодействия с API Kubernetes. Например, они могут быть использованы для обработки событий, связанных с созданием или удалением объектов в кластере.
 
-Рекомендуем обратиться к [библиотеке для написания хуков на Python](https://github.com/deckhouse/lib-python).
+> Модули DKP обрабатывают только хуки на языке Python. Для упрощения разработки можно воспользоваться [библиотекой для написания хуков на Python от команды Deckhouse](https://github.com/deckhouse/lib-python).
 
-Хуки используются модулем для динамического взаимодействия с API Kubernetes. Например, они могут быть использованы для обработки событий, связанных с созданием или удалением объектов в кластере.
-
-Каждый хук – это отдельный исполняемый файл, который:
+Каждый хук – это исполняемый файл, который:
 - При запуске с флагом `--config` выводит конфигурацию хука в формате YAML.
 - При обычном запуске выполняет само действие.
 
-> Для модулей Deckhouse Kubernetes Platform написание хуков поддерживается только на языке Python.
-
 Файлы хуков должно иметь права на выполнение. Добавьте их командой `chmod +x <путь до файла с хуком>`.
+
+В примере хука включим в работу CRD из определенной папки:
 
 {% offtopic title="Пример хука ensure_crds.py" %}
 
@@ -268,31 +265,29 @@ if **name** == "**main**":
 
 ### images
 
-В этой папке содержатся инструкции по сборке образов контейнеров модуля. Существует два способа описания образа контейнера:
+В этой папке содержатся инструкции по сборке образов контейнеров модуля. На первом уровне находятся папки для файлов, используемых при создании образа контейнера, на втором — контекст для сборки. 
 
-1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — файл, который содержит команды для быстрой сборки образов.
+Существует два способа описания образа контейнера:
+
+1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — файл, который содержит команды для быстрой сборки образов. Если необходимо собрать приложение из исходного кода, поместите его рядом с Dockerfile и включите его в образ с помощью команды `COPY`.
 2. Файл `werf.inc.yaml`, который является аналогом [секции описания образа из `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
-Поддерживаются любые Docker файлы. Если необходимо собрать приложение из исходного кода, поместите его рядом с _Dockerfile_ и включите его в образ с помощью команды COPY.
+Собранные образы имеют content-based теги, которые можно использовать в шаблонах образа, если подключена библиотека [lib-helm](https://github.com/deckhouse/lib-helm).
 
-Структура папок должна быть плоской. На первом уровне находятся папки для файлов, используемых при создании образа, на втором — контекст для сборки. Вложенная структура папок недопустима.
-
-Собранные образы имеют content-based теги, которые можно использовать в шаблонах образа, если подключена [lib-helm](https://github.com/deckhouse/lib-helm).
+<!-- @TODO: что за ямл?  -->
 
 ```yaml
 image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 ```
 
 > Имя образа совпадает с именем папки для этого модуля, записанным в camel нотации с маленькой буквы.
-> Пример: папка images/echo-server и имя образа echoServer.
+> Пример: папка `/images/echo-server` и имя образа `echoServer`.
 
 ### openapi
 
-Служит для валидации входных параметров модуля. Содержит два файла: [`config-values.yaml`](#config-valuesyaml) и [`values.yaml`](#valuesyaml).
+Чтобы пользователь настраивал модуль, необходимо добавить Open API схему для возможных опций. Это запретит пользователю вводить неверные настройки. 
 
-Чтобы пользователь настраивал модуль, необходимо добавить Open API схему для возможных опций. Это запретит пользователю вводить неверные настройки.
-
-> Команда Deckhouse Kubernetes Platform старается тщательно подходить к выбору параметров, которые могут настраивать пользователи. Мы стремимся помочь пользователям, предоставляя возможность настраивать только те параметры, которые важны для их работы.
+Папка содержит два файла: [`config-values.yaml`](#config-valuesyaml) и [`values.yaml`](#valuesyaml).
 
 #### config-values.yaml
 
@@ -302,9 +297,7 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 - файл `doc-ru-config-values.yaml` со структурой, аналогичной структуре файла `config-values.yaml`. В файле `doc-ru-config-values.yaml` оставьте только переведенные параметры description;
 - файлы `/docs/CONFIGURATION.md` и `/docs/CONFIGURATION.ru.md` — это включит показ данных из файлов `/openapi/config-values.yaml` и `/openapi/doc-ru-config-values.yaml`.
 
-Пример схемы с одним настраиваемым параметром `nodeSelector`:
-
-/openapi/config-values.yaml
+Пример схемы `/openapi/config-values.yaml` с одним настраиваемым параметром `nodeSelector`:
 
 ```yaml
 type: object
@@ -320,9 +313,7 @@ properties:
       [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
 ```
 
-Пример файла для русскоязычного перевода схемы:
-
-/openapi/doc-ru-config-values.yaml
+Пример файла `/openapi/doc-ru-config-values.yaml` для русскоязычного перевода схемы:
 
 ```yaml
 properties:
@@ -338,10 +329,7 @@ properties:
 
 В `values.yaml` можно автоматически добавить валидацию параметров из `config-values.yaml`. В этом случае, минимальный `values.yaml` выглядит следующим образом:
 
-<div markdown="0">
-<details><summary>/openapi/values.yaml</summary>
-<pre class="highlight">
-<code>
+```yaml
 x-extend:
   schema: config-values.yaml
 type: object
@@ -349,9 +337,7 @@ properties:
   internal:
     type: object
     default: {}</code>
-</pre>
-</details>
-</div>
+```
 
 ### templates
 
@@ -361,7 +347,7 @@ properties:
 
 * Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) – это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
 
-* Доступы в registry из ресурса [_ModuleSource_](../deckhouse.ru.md#ресурс-modulesource) доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
+* Доступы в registry из ресурса _ModuleSource_ доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
 
 * Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
@@ -377,11 +363,11 @@ properties:
 
 ### .helmignore
 
-Исключите файлы из папки модуля из секрета Helm-релиза с помощью `.helmignore`. В случае модулей Deckhouse Kubernetes Platform папки `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
+Исключите файлы из секрета Helm-релиза с помощью `.helmignore`. В случае модулей DKP папки `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
 
 ### Chart.yaml
 
-Файл аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать в себе, как минимум, параметры `name` и `version`.
+Обязательный файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать в себе, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
 
 Пример:
 
