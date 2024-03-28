@@ -49,6 +49,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/021-kube-proxy/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-azure/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-gcp/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/031-ceph-csi/hooks"

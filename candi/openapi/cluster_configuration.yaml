@@ -68,6 +68,7 @@ apiVersions:
             - "vSphere"
             - "Azure"
             - "VCD"
+            - "DVP"
           prefix:
             type: string
             description: |

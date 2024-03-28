@@ -34,6 +34,7 @@ var (
 		"vSphere":   "cloudProviderVsphere",
 		"Azure":     "cloudProviderAzure",
 		"VCD":       "cloudProviderVcd",
+		"DVP":       "cloudProviderDvp",
 	}
 )
 
