@@ -27,54 +27,50 @@ You can use several external authentication providers simultaneously.
 
 ## Integration features
 
-### Базовая аутентификация в API Kubernetes
+### Basic authentication for the Kubernetes API requests
 
-[Базовая аутентификация](https://en.wikipedia.org/wiki/Basic_access_authentication) в API Kubernetes на данный момент доступна только для провайдера Crowd (с включением параметра [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth)).
+[Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) for the Kubernetes API requests is currently only available for the Crowd provider (with the [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth) parameter).
 
-> К API Kubernetes можно подключаться и [через другие поддерживаемые внешние провайдеры](#веб-интерфейс-для-генерации-готовых-kubeconfigов).
+> You can also connect to the Kubernetes API [via other supported external providers](#web-interface-for-generating-ready-made-kubeconfig-files).
 
-### Интеграция с приложениями
+### Application integration
 
-Чтобы обеспечить аутентификацию в любом веб-приложении, работающем в Kubernetes, можно создать ресурс [_DexAuthenticator_](cr.html#dexauthenticator) в пространстве имен (_Namespace_) приложения и добавить несколько аннотаций к ресурсу _Ingress_.
-Это позволит:
-* ограничить список групп, которым разрешен доступ;
-* ограничить список адресов, с которых разрешена аутентификация;
-* интегрировать приложение в единую систему аутентификации, если приложение поддерживает OIDC. Для этого в Kubernetes создается ресурс [_DexClient_](cr.html#dexclient) в _Namespace_ приложения. В том же _Namespace_ создается секрет с данными для подключения в Dex по OIDC.
+To enable authentication for any web application running in Kubernetes, create a [_DexAuthenticator_](cr.html#dexauthenticator) resource in the application's _Namespace_ and add several annotations to the _Ingress_ resource.
+This will enable you to:
+* limit the list of groups with access;
+* limit the list of addresses for which authentication is allowed;
+* integrate the application into a unified authentication system if the application supports OIDC. For that, Kubernetes will create a resource [_DexClient_](cr.html#dexclient) in the application _Namespace_. A secret with data for connecting to Dex via OIDC will also be created in that _Namespace_.
 
-После такой интеграции можно:
-* ограничить перечень групп, которым разрешено подключаться;
-* указать перечень клиентов, OIDC-токенам которых можно доверять (`trustedPeers`).
+Following such an integration, you can: 
+* limit the list of groups for which the connection is allowed; 
+* define a list of clients with trusted OIDC tokens (`trustedPeers`).
 
-### Веб-интерфейс для генерации готовых kubeconfig-файлов
+### Web interface for generating ready-made kubeconfig files
 
-Модуль позволяет автоматически создавать конфигурацию для kubectl или других утилит Kubernetes. 
+The module allows you to automatically generate configuration for kubectl or other Kubernetes tools. 
 
-Пользователь получит набор команд для настройки kubectl после авторизации в веб-интерфейсе генератора. Эти команды можно скопировать и вставить в консоль для использования kubectl.
-Механизм аутентификации для kubeconfig использует OIDC-токен. OIDC-сессия может продлеваться автоматически, если использованный в Dex провайдер аутентификации поддерживает продление сессий. Для этого в kubeconfig указывается `refresh token`.
+The user will be presented with a set of commands to configure kubectl once authorized in the generator's web interface. These commands can be copied and pasted into the console to use kubectl.
+The authentication mechanism for kubeconfig uses an OIDC token. The OIDC session can be extended automatically if the authentication provider used in Dex supports session extension. For this, the `refresh token` is specified in kubeconfig.
 
-Дополнительно можно настроить несколько адресов `kube-apiserver` и сертификаты ЦС (CA) для каждого из них. Например, это может потребоваться, если доступ к кластеру Kubernetes осуществляется через VPN или прямое подключение.
+On top of that, you can configure multiple `kube-apiserver` addresses and CA certificates for each of them. This may come in handy, e. g., if access to the Kubernetes cluster is via VPN or direct connection.
 
-## Публикация API kubernetes через Ingress
+## Exposing the Kubernetes API over Ingress
 
-Компонент kube-apiserver без дополнительных настроек доступен только во внутренней сети кластера. Этот модуль решает проблему простого и безопасного доступа к API Kubernetes извне кластера. При этом API-сервер публикуется на специальном домене (подробнее см. [раздел о служебных доменах в документации](../../deckhouse-configure-global.html)).
+The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](../../deckhouse-configure-global.html)).
 
-При настройке можно указать:
-* перечень сетевых адресов, с которых разрешено подключение;
-* перечень групп, которым разрешен доступ к API-серверу;
-* Ingress-контроллер, на котором производится аутентификация.
+When configuring, you can:
+* list network addresses from which connection is allowed;
+* list groups that are allowed to access the API server;
+* specify Ingress-controller to authenticate on.
 
-По умолчанию будет сгенерирован специальный сертификат ЦС (CA) и автоматически настроен генератор kubeconfig.
+By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
 
-## Расширения от Фланта
+## Extensions by Flant
 
-Модуль использует модифицированную версию Dex для поддержки:
-* групп для статических учетных записей пользователей и провайдера Bitbucket Cloud (параметр [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
-* передачи параметра `group` клиентам;
-* механизма `obsolete tokens`, который позволяет избежать состояния гонки при продлении токена OIDC-клиентом.
-
-## Отказоустойчивый режим
-
-Модуль поддерживает режим высокой доступности `highAvailability`. При его включении аутентификаторы, отвечающие на `auth request`-запросы, развертываются с учетом требуемой избыточности для обеспечения непрерывной работы. В случае отказа любого из экземпляров аутентификаторов пользовательские аутентификационные сессии не прерываются.
+The module uses a modified version of Dex to support:
+* groups for static user accounts and Bitbucket Cloud provider (parameter [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
+* passing the `group` parameter to clients;
+* the `obsolete tokens` mechanism to avoid a race condition when an OIDC client renews a token.
 
 ## High availability mode
 
