@@ -20,13 +20,13 @@ permalink: en/modules-docs/module-anatomy/module-folder/
 │  └─ 📝 doc-ru-crd2.yaml
 ├─ 📁 docs/
 │  ├─ 📝 README.md
-│  ├─ 📝 README.ru.md (или README_RU.md)
+│  ├─ 📝 README.ru.md
 │  ├─ 📝 EXAMPLES.md
-│  ├─ 📝 EXAMPLES.ru.md (или EXAMPLES_RU.md)
+│  ├─ 📝 EXAMPLES.ru.md
 │  ├─ 📝 CONFIGURATION.md
-│  ├─ 📝 CONFIGURATION.ru.md (или CONFIGURATION_RU.md)
+│  ├─ 📝 CONFIGURATION.ru.md
 │  ├─ 📝 CR.md
-│  ├─ 📝 CR.ru.md (или CR_RU.md)
+│  ├─ 📝 CR.ru.md
 │  ├─ 📝 FAQ.md
 │  ├─ 📝 FAQ.ru.md
 │  ├─ 📝 ADVANCED_USAGE.md
@@ -152,7 +152,7 @@ permalink: en/modules-docs/module-anatomy/module-folder/
   </details>
   </div>
   
-* `CR.md` и `CR.ru.md` (или `CR_RU.md`) – файл для генерации ресурсов из папки `/crds/` добавьте вручную.  
+* `CR.md` и `CR.ru.md` — файл для генерации ресурсов из папки `/crds/` добавьте вручную.  
 
   <div markdown="0">
   <details><summary>Пример метаданных</summary>
@@ -292,7 +292,7 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 
 Чтобы схема была представлена в документации на сайте или в модуле documentation в кластере, создайте:
 - файл `doc-ru-config-values.yaml` со структурой, аналогичной структуре файла `config-values.yaml`. В файле `doc-ru-config-values.yaml` оставьте только переведенные параметры description;
-- файлы `/docs/CONFIGURATION.md` и `/docs/CONFIGURATION.ru.md` (или `CONFIGURATION_RU.md`) — это включит показ данных из файлов `/openapi/config-values.yaml` и `/openapi/doc-ru-config-values.yaml`.
+- файлы `/docs/CONFIGURATION.md` и `/docs/CONFIGURATION.ru.md` — это включит показ данных из файлов `/openapi/config-values.yaml` и `/openapi/doc-ru-config-values.yaml`.
 
 Пример схемы с одним настраиваемым параметром `nodeSelector`:
 
