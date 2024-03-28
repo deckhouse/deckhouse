@@ -4,22 +4,22 @@ permalink: ru/modules-docs/module-anatomy/registry/
 lang: ru
 ---
 
-После сборки модуль сохраняется в container registry.<!-- @TODO уточнить репозиторий: Для распространения и обновления модулей Deckhouse Kubernetes Platform используется только этот репозиторий.--> Ниже рассмотрено, как выглядит модуль в container registry и из чего он состоит.
+<!-- @TODO добавить сценарий сборки -->
 
-> В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
+После сборки модуль сохраняется в container registry.
 
-## Состав артефакта модуля
+## Состав модуля
 
-Артефакт модуля состоит из трех частей:
+Модуль состоит из трех частей:
 - **Образы контейнеров приложений** запускаются в кластере Deckhouse и указываются в шаблонах. Образы описаны в папке [images](module_folder.md#images). Образы содержат content-based теги. Подробнее о том, как ставить теги можно почитать в документации [werf](https://werf.io/documentation/v1.2/usage/build/process.html#tagging-images).
 - **Образ модуля** загружается в registry аналогично контейнеру. В качестве тегов образов используется `semver`.
-- **Релиз** описывает релиз в `release.yaml`, который загружается в registry. Релизы создаются каждый раз при выходе новой версии и используются в Deckhouse Kubernetes Platform для обновления модуля в кластере. У релизов выставляется два типа тегов: `semver`, как у образа модуля, и тег, соответствующий каналу обновлений, например, `alpha`, `beta`.
+- **Релиз**. Файл `release.yaml`, который загружается в registry. Релизы создаются каждый раз при выходе новой версии и используются в Deckhouse Kubernetes Platform (DKP) для обновления модуля в кластере. У релизов есть два типа тегов: `semver`, как у образа модуля, и тег, соответствующий каналу обновлений, например, `alpha`, `beta`.
 
-## Источник модулей (Module Source)
+## Источник модулей
 
-Модули загружаются в источник модулей: вложенная абстракция, с которой потом работает Deckhouse Kubernetes Platform.
+Модули загружаются в источник модулей: вложенная абстракция, с которой потом работает DKP.
 
-Пример того, как выглядит источник модулей внутри registry, представлен ниже.
+Пример источника модулей внутри registry:
 
 ```tree
 registry.example.io
@@ -49,11 +49,9 @@ registry.example.io
 
 Источник модулей имеет вложенную структуру репозиториев, и container registry должен поддерживать эту функцию. Примеры подобных registry: [Docker Registry v2](https://github.com/distribution/distribution), [Harbor](https://goharbor.io/).
 
-Для доставки модулей в закрытые (air-gapped) окружения есть специальные скрипты в репозитории [tools](https://fox.flant.com/deckhouse/modules/tools).
+## Список команд для работы с источником модулей
 
-## Список полезных команд для работы с источником модулей
-
-> В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
+В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
 
 * Вывод списка модулей в источнике модулей:
 
@@ -61,7 +59,7 @@ registry.example.io
   crane ls registry.example.io/modules-source
   ```
 
-  Пример ответа:
+  Пример вывода:
 
   ```yaml
   module-1
@@ -76,7 +74,7 @@ registry.example.io
   crane ls registry.example.io/modules-source/module-1
   ```
 
-  Пример ответа:
+  Пример вывода:
 
   ```yaml
   v1.23.1
@@ -103,7 +101,7 @@ registry.example.io
     | tar -Oxf - images_digests.json
   ```
 
-  Пример ответа:
+  Пример вывода:
 
   ```json
   {
@@ -118,7 +116,7 @@ registry.example.io
   crane ls registry.example.io/modules-source/module-1/release
   ```
 
-  Пример ответа:
+  Пример вывода:
 
   ```yaml
   v1.23.1
@@ -136,7 +134,7 @@ registry.example.io
     | tar -Oxf - version.json
   ```
 
-  Пример ответа:
+  Пример вывода:
 
   ```json
   {"version":"v1.23.2"}
