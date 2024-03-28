@@ -11,6 +11,6 @@ bb-var BB_YUM_INSTALL_EXTRA_ARGS "--allowerasing"
 
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
-bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
 
 bb-yum-remove yum-cron

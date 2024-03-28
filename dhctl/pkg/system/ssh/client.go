@@ -111,6 +111,11 @@ func (s *Client) Tunnel(ttype, address string) *frontend.Tunnel {
 	return frontend.NewTunnel(s.Settings, ttype, address)
 }
 
+// ReverseTunnel is used to open remote (R) tunnel
+func (s *Client) ReverseTunnel(address string) *frontend.ReverseTunnel {
+	return frontend.NewReverseTunnel(s.Settings, address)
+}
+
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) *frontend.Command {
 	return frontend.NewCommand(s.Settings, name, arg...)

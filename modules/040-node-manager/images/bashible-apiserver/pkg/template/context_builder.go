@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
+	"net"
 	"sort"
 
 	"github.com/mohae/deepcopy"
@@ -356,7 +357,7 @@ func (rid *registryInputData) FromMap(m map[string][]byte) {
 	}
 }
 
-func (rid registryInputData) toRegistry() registry {
+func (rid registryInputData) toRegistry(apiServerEndpoints []string) registry {
 	var auth string
 
 	if len(rid.DockerConfig) > 0 {
@@ -377,13 +378,25 @@ func (rid registryInputData) toRegistry() registry {
 		}
 	}
 
+	var packagesProxyEndpoints []string
+
+	for _, endpoint := range apiServerEndpoints {
+		host, _, err := net.SplitHostPort(endpoint)
+		if err != nil {
+			panic(err)
+		}
+
+		packagesProxyEndpoints = append(packagesProxyEndpoints, net.JoinHostPort(host, "5443"))
+	}
+
 	return registry{
-		Address:   rid.Address,
-		Path:      rid.Path,
-		Scheme:    rid.Scheme,
-		CA:        rid.CA,
-		DockerCFG: rid.DockerConfig,
-		Auth:      auth,
+		Address:                rid.Address,
+		Path:                   rid.Path,
+		Scheme:                 rid.Scheme,
+		CA:                     rid.CA,
+		DockerCFG:              rid.DockerConfig,
+		Auth:                   auth,
+		PackagesProxyEndpoints: packagesProxyEndpoints,
 	}
 }
 
@@ -521,12 +534,13 @@ type normal struct {
 }
 
 type registry struct {
-	Address   string `json:"address" yaml:"address"`
-	Path      string `json:"path" yaml:"path"`
-	Scheme    string `json:"scheme" yaml:"scheme"`
-	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth" yaml:"auth"`
+	Address                string   `json:"address" yaml:"address"`
+	Path                   string   `json:"path" yaml:"path"`
+	Scheme                 string   `json:"scheme" yaml:"scheme"`
+	CA                     string   `json:"ca,omitempty" yaml:"ca,omitempty"`
+	DockerCFG              []byte   `json:"dockerCfg" yaml:"dockerCfg"`
+	Auth                   string   `json:"auth" yaml:"auth"`
+	PackagesProxyEndpoints []string `json:"packagesProxyEndpoints,omitempty" yaml:"packagesProxyEndpoints,omitempty"`
 }
 
 // input from secret
