@@ -93,6 +93,9 @@ type NodeGroupSpec struct {
 
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	// Fencing settings for nodes. Optional.
+	Fencing Fencing `json:"fencing,omitempty"`
 }
 
 type CRI struct {
@@ -335,6 +338,15 @@ const (
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
 		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
+}
+
+type Fencing struct {
+	// Set custom settings for fencing controller
+	Mode string `json:"mode,omitempty"`
+}
+
+func (f Fencing) IsEmpty() bool {
+	return f.Mode == ""
 }
 
 type NodeGroupConditionType string
