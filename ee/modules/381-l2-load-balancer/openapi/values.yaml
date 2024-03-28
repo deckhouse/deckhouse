@@ -21,7 +21,7 @@ properties:
           type: object
           x-required-for-helm:
           - addressPool
-          - labelSelector
+          - selector
           - nodes
           - ports
           properties:
@@ -49,7 +49,7 @@ properties:
                 The same as in the Pods `spec.nodeSelector` parameter in Kubernetes.
 
                 If parameter is omitted, L2 LoadBalancer will be placed on all nodes.
-            labelSelector:
+            selector:
               type: object
               additionalProperties:
                 type: string

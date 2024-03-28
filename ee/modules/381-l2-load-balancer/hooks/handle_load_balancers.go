@@ -70,7 +70,7 @@ func applyLoadBalancerFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Namespace:     lb.Namespace,
 		AddressPool:   lb.Spec.AddressPool,
 		NodeSelector:  lb.Spec.NodeSelector,
-		LabelSelector: lb.Spec.Service.LabelSelector,
+		Selector:      lb.Spec.Service.Selector,
 		Ports:         lb.Spec.Service.Ports,
 		SourceRanges:  lb.Spec.Service.SourceRanges,
 	}, nil

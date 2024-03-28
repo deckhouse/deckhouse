@@ -48,7 +48,7 @@ var _ = Describe("Module :: l2-load-balancer :: helm template ::", func() {
 			f.ValuesSetFromYaml("l2LoadBalancer.internal.l2LoadBalancers", `
 - name: test
   namespace: test
-  labelSelector:
+  selector:
     app: test
   nodes:
   - name: front-1

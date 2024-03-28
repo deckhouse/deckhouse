@@ -42,7 +42,7 @@ spec:
   service:
     sourceRanges:
     - 10.0.0.0/24
-    labelSelector:
+    selector:
       app: test
     ports:
     - name: http
@@ -65,7 +65,7 @@ spec:
 "nodeSelector": {
 	"role": "worker"
 },
-"labelSelector": {
+"selector": {
 	"app": "test"
 },
 "ports": [
@@ -129,7 +129,7 @@ spec:
   nodeSelector:
     node-role.kubernetes.io/frontend: ""
   service:
-    labelSelector:
+    selector:
       app: test
     ports:
     - name: http
@@ -153,7 +153,7 @@ spec:
 "nodeSelector": {
 	"node-role.kubernetes.io/frontend": ""
 },
-"labelSelector": {
+"selector": {
 	"app": "test"
 },
 "ports": [
@@ -238,7 +238,7 @@ spec:
   nodeSelector:
     node-role.kubernetes.io/frontend: ""
   service:
-    labelSelector:
+    selector:
       app: test
     ports:
     - name: http

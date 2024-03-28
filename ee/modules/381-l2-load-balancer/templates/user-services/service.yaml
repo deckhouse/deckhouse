@@ -23,7 +23,7 @@ spec:
       protocol: {{ $port.protocol }}
     {{- end }}
   selector:
-  {{- $loadBalancer.labelSelector | toYaml | nindent 4 }}
+  {{- $loadBalancer.selector | toYaml | nindent 4 }}
   sessionAffinity: None
   {{- end }}
 {{- end }}

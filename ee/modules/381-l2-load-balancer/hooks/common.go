@@ -19,7 +19,7 @@ type L2LoadBalancerInfo struct {
 	AddressPool   string               `json:"addressPool"`
 	SourceRanges  []string             `json:"sourceRanges,omitempty"`
 	NodeSelector  map[string]string    `json:"nodeSelector"`
-	LabelSelector map[string]string    `json:"labelSelector"`
+	Selector      map[string]string    `json:"selector"`
 	Ports         []corev1.ServicePort `json:"ports"`
 	Nodes         []map[string]string  `json:"nodes"`
 }
@@ -42,7 +42,7 @@ type L2LoadBalancerSpec struct {
 }
 
 type L2LoadBalancerSpecService struct {
-	LabelSelector map[string]string    `json:"labelSelector"`
+	Selector      map[string]string    `json:"selector"`
 	Ports         []corev1.ServicePort `json:"ports"`
 	SourceRanges  []string             `json:"sourceRanges,omitempty"`
 }
