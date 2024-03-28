@@ -54,7 +54,7 @@ shell:
   - cd /usr/src/app
   - go install github.com/google/wire/cmd/wire@v0.5.0
   - /go/bin/wire gen -tags oss ./pkg/server
-  - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana-server ./pkg/cmd/grafana-server
+  - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
@@ -79,8 +79,8 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
 from: {{ $.Images.BASE_UBUNTU_DEV }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-  add: /usr/src/app/bin/linux-amd64/grafana-server
-  to: /usr/share/grafana/bin/grafana-server
+  add: /usr/src/app/bin/linux-amd64/grafana
+  to: /usr/share/grafana/bin/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
   add: /usr/src/app/public
@@ -144,7 +144,7 @@ shell:
   - chown -R 64535:64535 /etc/grafana
   - chown -R 64535:64535 /var/lib/grafana
   - chown -R 64535:64535 /var/log/grafana
-  - chmod 0700 ./bin/grafana-server
+  - chmod 0700 ./bin/grafana
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT }}

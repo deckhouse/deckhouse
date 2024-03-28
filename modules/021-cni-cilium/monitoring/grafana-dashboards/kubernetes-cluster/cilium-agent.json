@@ -7940,11 +7940,7 @@
       "steppedLine": false,
       "targets": [
         {
-<<<<<<< HEAD
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"NetworkPolicy\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, action) * 60",
-=======
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"NetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
->>>>>>> 5d90cb75c... Abandon '__interval_sx?' variables
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
