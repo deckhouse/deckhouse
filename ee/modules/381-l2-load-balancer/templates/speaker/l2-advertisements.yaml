@@ -1,0 +1,12 @@
+{{- range $ipaddressPool := .Values.l2LoadBalancer.addressPools }}
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: {{ $ipaddressPool.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
+spec:
+  ipAddressPools:
+  - {{ $ipaddressPool.name }}
+{{- end }}

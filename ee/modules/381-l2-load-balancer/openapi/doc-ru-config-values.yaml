@@ -1,0 +1,18 @@
+type: object
+properties:
+  addressPools:
+    description: |
+      Список диапазонов IP, которые будут выдаваться сервисам.
+
+      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+    items:
+      properties:
+        name:
+          description: |
+            Имя пула, которое можно уточнять с помощью аннотации к сервису `metallb.universe.tf/address-pool: <name>`. Имя должно соответствовать RFC 1123: разделенные точками части в нижнем регистре, состоящие из букв и '-'. Каждое имя должно начинаться и заканчиваться буквой алфавита.
+        addresses:
+          description: |
+            Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон значений с "-" в качестве разделителя.
+        avoid-buggy-ips:
+          description: |
+            Запрещает использование адресов из пула, заканчивающихся на `.0` и `.255`.

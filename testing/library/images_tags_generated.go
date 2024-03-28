@@ -267,6 +267,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeProxy128":  "imageHash-kubeProxy-kubeProxy128",
 		"kubeProxy129":  "imageHash-kubeProxy-kubeProxy129",
 	},
+	"l2LoadBalancer": map[string]interface{}{
+		"controller": "imageHash-l2LoadBalancer-controller",
+		"speaker":    "imageHash-l2LoadBalancer-speaker",
+	},
 	"localPathProvisioner": map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",

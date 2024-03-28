@@ -203,8 +203,8 @@ spec:
                   description: |
                     `HostPort` inlet settings.
                   anyOf:
-                  - {required: ["httpPort"]}
-                  - {required: ["httpsPort"]}
+                    - {required: ["httpPort"]}
+                    - {required: ["httpsPort"]}
                   properties:
                     httpPort:
                       type: integer
@@ -246,8 +246,8 @@ spec:
                   description: |
                     A section of parameters of the `HostPortWithProxyProtocol` inlet.
                   anyOf:
-                  - {required: ['httpPort']}
-                  - {required: ['httpsPort']}
+                    - {required: ['httpPort']}
+                    - {required: ['httpsPort']}
                   properties:
                     httpPort:
                       type: integer
@@ -326,16 +326,16 @@ spec:
                       items:
                         type: string
                         enum:
-                        - GeoIP2-Anonymous-IP
-                        - GeoIP2-Country
-                        - GeoIP2-City
-                        - GeoIP2-Connection-Type
-                        - GeoIP2-Domain
-                        - GeoIP2-ISP
-                        - GeoIP2-ASN
-                        - GeoLite2-ASN
-                        - GeoLite2-Country
-                        - GeoLite2-City
+                          - GeoIP2-Anonymous-IP
+                          - GeoIP2-Country
+                          - GeoIP2-City
+                          - GeoIP2-Connection-Type
+                          - GeoIP2-Domain
+                          - GeoIP2-ISP
+                          - GeoIP2-ASN
+                          - GeoLite2-ASN
+                          - GeoLite2-Country
+                          - GeoLite2-City
                 legacySSL:
                   type: boolean
                   description: |
@@ -538,8 +538,8 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-              - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
+                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
