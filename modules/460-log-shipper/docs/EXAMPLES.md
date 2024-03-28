@@ -22,6 +22,11 @@ kind: ClusterLogDestination
 metadata:
   name: loki-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
@@ -54,6 +59,11 @@ kind: ClusterLogDestination
 metadata:
   name: loki-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
@@ -63,6 +73,11 @@ kind: ClusterLogDestination
 metadata:
   name: es-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
@@ -92,6 +107,11 @@ kind: ClusterLogDestination
 metadata:
   name: loki-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
@@ -119,6 +139,11 @@ kind: ClusterLogDestination
 metadata:
   name: loki-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
@@ -150,6 +175,11 @@ kind: ClusterLogDestination
 metadata:
   name: loki-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   loki:
     auth:
       password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
@@ -191,6 +221,11 @@ kind: ClusterLogDestination
 metadata:
   name: es-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
@@ -211,6 +246,11 @@ kind: ClusterLogDestination
 metadata:
   name: es-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
@@ -227,6 +267,11 @@ kind: ClusterLogDestination
 metadata:
   name: es-storage
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
@@ -252,6 +297,11 @@ kind: ClusterLogDestination
 metadata:
   name: splunk
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Splunk
   splunk:
     endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
@@ -299,6 +349,11 @@ kind: ClusterLogDestination
 metadata:
   name: logstash
 spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
   type: Logstash
   logstash:
     endpoint: logstash.default:12345
