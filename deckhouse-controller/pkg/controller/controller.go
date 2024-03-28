@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -32,7 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -77,12 +75,6 @@ type DeckhouseController struct {
 	moduleSourceController       *source.Controller
 	moduleReleaseController      *release.Controller
 	modulePullOverrideController *release.ModulePullOverrideController
-}
-
-type modulePatch struct {
-	Op    string                `json:"op"`
-	Path  string                `json:"path"`
-	Value v1alpha1.ModuleStatus `json:"value"`
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -339,19 +331,13 @@ func (dml *DeckhouseController) updateModuleStatus(moduleName string) error {
 
 		newModuleStatus := d8config.Service().StatusReporter().ForModule(module, moduleConfig, bundleName)
 		if module.Status.Status != newModuleStatus.Status || module.Status.Message != newModuleStatus.Message || module.Status.HooksState != newModuleStatus.HooksState {
-			patch, _ := json.Marshal([]modulePatch{{
-				Op:   "replace",
-				Path: "/status",
-				Value: v1alpha1.ModuleStatus{
-					Status:     newModuleStatus.Status,
-					Message:    newModuleStatus.Message,
-					HooksState: newModuleStatus.HooksState,
-				},
-			}})
+			module.Status.Status = newModuleStatus.Status
+			module.Status.Message = newModuleStatus.Message
+			module.Status.HooksState = newModuleStatus.HooksState
 
-			log.Debugf("Patch /status for module/%s: status '%s' to '%s', message '%s' to '%s'", moduleName, module.Status.Status, newModuleStatus.Status, module.Status.Message, newModuleStatus.Message)
+			log.Debugf("Update /status for module/%s: status '%s' to '%s', message '%s' to '%s'", moduleName, module.Status.Status, newModuleStatus.Status, module.Status.Message, newModuleStatus.Message)
 
-			_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Patch(dml.ctx, moduleName, types.JSONPatchType, patch, v1.PatchOptions{}, "status")
+			_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().UpdateStatus(dml.ctx, module, v1.UpdateOptions{})
 			return err
 		}
 
