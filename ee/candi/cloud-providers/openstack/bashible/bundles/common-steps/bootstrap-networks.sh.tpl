@@ -27,7 +27,8 @@ EOF
 
 count_default_routes=$(ip -4 route show default | wc -l)
 if [[ "$count_default_routes" -gt "1" ]]; then
-  configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+  CLOUD_INIT_NETPLAN_CFG="/etc/netplan/50-cloud-init.yaml"
+  configured_macs="$(grep -Po '(?<=macaddress: ).+' $CLOUD_INIT_NETPLAN_CFG)"
   for configured_mac in $configured_macs; do
     ifname="$(ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ")"
     if [[ "$ifname" != "" ]]; then
@@ -37,7 +38,7 @@ if [[ "$count_default_routes" -gt "1" ]]; then
   count_configured_ifnames=$(wc -w <<< "$configured_ifnames_pattern")
   if [[ "$count_configured_ifnames" -gt "1" ]]; then
     set +e
-    check_metric=$(grep -Po '(?<=route-metric: ).+' /etc/netplan/50-cloud-init.yaml | wc -l)
+    check_metric=$(grep -Po '(?<=route-metric: ).+' $CLOUD_INIT_NETPLAN_CFG | wc -l)
     set -e
     if [[ "$check_metric" -eq "0" ]]; then
       global_metric=100
