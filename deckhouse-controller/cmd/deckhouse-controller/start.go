@@ -157,7 +157,10 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	deckhouseConfigC := make(chan utils.Values, 1)
 
-	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
+	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
+	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
+
+	operator.SetupKubeConfigManager(kubeConfigBackend)
 	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
@@ -170,6 +173,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
+	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
@@ -186,6 +190,12 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	// Init deckhouse-config service with ModuleManager instance.
 	d8config.InitService(operator.ModuleManager)
+
+	// Init modules' and modules configs' statuses
+	err = dController.InitModulesAndConfigsStatuses()
+	if err != nil {
+		return err
+	}
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {
