@@ -65,6 +65,10 @@ func k8sPostUpgrade(input *go_hook.HookInput) error {
 	}
 
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterAdminsGroupAndClusterRoleBinding,
 		},
