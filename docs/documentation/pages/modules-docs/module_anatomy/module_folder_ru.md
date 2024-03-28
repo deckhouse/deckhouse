@@ -314,7 +314,7 @@ properties:
     type: object
     additionalProperties:
       type: string
-    description: >
+    description: |
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
