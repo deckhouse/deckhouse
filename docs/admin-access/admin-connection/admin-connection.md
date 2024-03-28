@@ -331,7 +331,7 @@ NAME                STATE      VERSION    STATUS    AGE
 user-authn          Disabled   1                    12h
 ```
 
-## Наборы модулей
+### Наборы модулей
 
 В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
