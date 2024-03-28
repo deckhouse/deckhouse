@@ -201,10 +201,8 @@ lang: ru
 
 Файлы хуков должно иметь права на выполнение. Добавьте их командой `chmod +x <путь до файла с хуком>`.
 
-<div markdown="0">
-<details><summary>Пример хука ensure_crds.py</summary>
-<pre class="highlight">
-<code>
+{% offtopic title="Пример хука ensure_crds.py" %}
+```python
 import os
 
 import yaml
@@ -263,9 +261,7 @@ def find_crds_root(hookpath):
 
 if **name** == "**main**":
     hook.run(main, config=config)</code>
-</pre>
-</details>
-</div>
+```
 
 ### images
 
