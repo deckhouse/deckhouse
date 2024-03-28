@@ -34,7 +34,7 @@ if [[ "$count_default_routes" -gt "1" ]]; then
       configured_ifnames_pattern+="$ifname "
     fi
   done
-  count_configured_ifnames=$(echo $configured_ifnames_pattern | wc -w)
+  count_configured_ifnames=$(wc -w <<< "$configured_ifnames_pattern")
   if [[ "$count_configured_ifnames" -gt "1" ]]; then
     set +e
     check_metric=$(grep -Po '(?<=route-metric: ).+' /etc/netplan/50-cloud-init.yaml | wc -l)
