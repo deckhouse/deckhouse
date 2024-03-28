@@ -17,11 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"golang.org/x/mod/semver"
 	rbac "k8s.io/api/rbac/v1"
@@ -33,7 +34,7 @@ import (
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnStartup: &go_hook.OrderedConfig{Order: 15},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "crb",
@@ -49,19 +50,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 	},
-}, k8sPostUpgrade)
+}, dependency.WithExternalDependencies(k8sPostUpgrade))
 
-func k8sPostUpgrade(input *go_hook.HookInput) error {
+func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	if len(input.Snapshots["crb"]) > 0 {
 		// We need this hook to run only once
 		return nil
 	}
 
-	kubernetesVersion := input.Values.Get("global.discovery.kubernetesVersion")
+	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
 
 	// if kubernetesVersion < v1.29.0
-	if semver.Compare("v1.29.0", fmt.Sprintf("v%s", kubernetesVersion)) == 1 {
+	if semver.Compare("v1.29.0", kubernetesVersion) == 1 {
 		return nil
+	}
+
+	kubeCl, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
@@ -86,7 +92,11 @@ func k8sPostUpgrade(input *go_hook.HookInput) error {
 	}
 
 	input.LogEntry.Printf("create clusterrolebinding: %s", clusterAdminsGroupAndClusterRoleBinding)
-	input.PatchCollector.Create(clusterRoleBinding, object_patch.IgnoreIfExists())
+
+	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error create clusterrolebinding: %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+	}
 
 	return nil
 }
