@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -48,6 +49,8 @@ func Serve() error {
 	done := make(chan struct{})
 	defer close(done)
 	globalLock := &sync.Mutex{}
+
+	podName := os.Getenv("HOSTNAME")
 
 	log.Info(
 		"starting grpc server",
@@ -87,7 +90,7 @@ func Serve() error {
 	reflection.Register(s)
 
 	// services
-	dhctlService := dhctl.New()
+	dhctlService := dhctl.New(podName, log)
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
