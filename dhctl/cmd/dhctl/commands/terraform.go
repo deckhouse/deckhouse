@@ -17,6 +17,9 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
@@ -33,7 +36,7 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -48,7 +51,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -69,12 +72,12 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
 		if err != nil {
 			return err
 		}
 
-		statistic, err := converge.CheckState(kubeCl, metaConfig)
+		statistic, err := converge.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), converge.CheckStateOptions{})
 		if err != nil {
 			return err
 		}

@@ -15,6 +15,8 @@
 package operations
 
 import (
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"net/http"
 	"os"
 	"time"
@@ -49,7 +51,8 @@ func (p *previouslyExistedEntities) AddNodeGroup(name string) {
 }
 
 type ConvergeExporter struct {
-	kubeCl *client.KubernetesClient
+	kubeCl           *client.KubernetesClient
+	terraformContext *terraform.TerraformContext
 
 	MetricsPath   string
 	ListenAddress string
@@ -95,10 +98,11 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 	}
 
 	return &ConvergeExporter{
-		MetricsPath:   path,
-		ListenAddress: address,
-		kubeCl:        kubeCl,
-		CheckInterval: interval,
+		MetricsPath:      path,
+		ListenAddress:    address,
+		kubeCl:           kubeCl,
+		terraformContext: terraform.NewTerraformContext(),
+		CheckInterval:    interval,
 
 		existedEntities: newPreviouslyExistedEntities(),
 
@@ -219,14 +223,14 @@ func (c *ConvergeExporter) getStatistic() *converge.Statistics {
 		return nil
 	}
 
-	metaConfig.UUID, err = converge.GetClusterUUID(c.kubeCl)
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil
 	}
 
-	statistic, err := converge.CheckState(c.kubeCl, metaConfig)
+	statistic, err := converge.CheckState(c.kubeCl, metaConfig, c.terraformContext, converge.CheckStateOptions{})
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()

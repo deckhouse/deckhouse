@@ -26,21 +26,27 @@ import (
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
 
 var (
-	SSHAgentPrivateKeys = make([]string, 0)
-	SSHPrivateKeys      = make([]string, 0)
-	SSHBastionHost      = ""
-	SSHBastionPort      = ""
-	SSHBastionUser      = os.Getenv("USER")
-	SSHUser             = os.Getenv("USER")
-	SSHHosts            = make([]string, 0)
-	SSHPort             = ""
-	SSHExtraArgs        = ""
+	SSHPrivateKeys = make([]string, 0)
+
+	ConnectionConfigPath = ""
+	SSHAgentPrivateKeys  = make([]string, 0)
+	SSHBastionHost       = ""
+	SSHBastionPort       = ""
+	SSHBastionUser       = os.Getenv("USER")
+	SSHUser              = os.Getenv("USER")
+	SSHHosts             = make([]string, 0)
+	SSHPort              = ""
+	SSHExtraArgs         = ""
 
 	AskBecomePass = false
 	BecomePass    = ""
 )
 
-func DefineSSHFlags(cmd *kingpin.CmdClause) {
+type connectionConfigParser interface {
+	ParseConnectionConfigFromFile() error
+}
+
+func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
 		StringsVar(&SSHAgentPrivateKeys)
@@ -67,16 +73,23 @@ func DefineSSHFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ssh-extra-args", "extra args for ssh commands (-vvv)").
 		Envar(configEnvName("SSH_EXTRA_ARGS")).
 		StringVar(&SSHExtraArgs)
+	cmd.Flag("connection-config", "SSH connection config file path").
+		Required().
+		Envar(configEnvName("CONNECTION_CONFIG")).
+		StringVar(&ConnectionConfigPath)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
-		if len(SSHAgentPrivateKeys) == 0 {
-			SSHAgentPrivateKeys = append(SSHAgentPrivateKeys, DefaultSSHAgentPrivateKeys)
+		if len(ConnectionConfigPath) == 0 {
+			return nil
 		}
-		SSHPrivateKeys, err = ParseSSHPrivateKeyPaths(SSHAgentPrivateKeys)
-		if err != nil {
-			return fmt.Errorf("ssh private keys: %v", err)
+		return processConnectionConfigFile(parser)
+	})
+
+	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+		if len(SSHPrivateKeys) != 0 {
+			return
 		}
-		return nil
+		return processConnectionConfigFlags()
 	})
 }
 
@@ -113,4 +126,30 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
+}
+
+func processConnectionConfigFile(parser connectionConfigParser) error {
+	for _, flag := range []any{
+		SSHAgentPrivateKeys, SSHBastionHost, SSHBastionPort, SSHBastionUser,
+		SSHUser, SSHHosts, SSHPort, SSHExtraArgs,
+	} {
+		if flag != "" {
+			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
+		}
+	}
+
+	return parser.ParseConnectionConfigFromFile()
+}
+
+func processConnectionConfigFlags() error {
+	if len(SSHAgentPrivateKeys) == 0 {
+		SSHAgentPrivateKeys = append(SSHAgentPrivateKeys, DefaultSSHAgentPrivateKeys)
+	}
+
+	var err error
+	SSHPrivateKeys, err = ParseSSHPrivateKeyPaths(SSHAgentPrivateKeys)
+	if err != nil {
+		return fmt.Errorf("ssh private keys: %w", err)
+	}
+	return nil
 }

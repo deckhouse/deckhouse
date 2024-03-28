@@ -18,22 +18,24 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
-	SSHClient  *ssh.Client
-	StateCache dhctlstate.Cache
-
+	SSHClient     *ssh.Client
+	StateCache    dhctlstate.Cache
 	CommanderMode bool
 	*commander.CommanderModeParams
+
+	TerraformContext *terraform.TerraformContext
 }
 
 type Checker struct {
@@ -48,16 +50,6 @@ func NewChecker(params *Params) *Checker {
 	return &Checker{
 		Params: params,
 	}
-}
-
-type CheckResult struct {
-	Status CheckStatus
-
-	ConfigurationStatus CheckStatus
-
-	InfraStatus        CheckStatus
-	InfraStatusDetails *converge.Statistics
-	InfraStatusMessage string
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
@@ -75,21 +67,29 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		Status: CheckStatusInSync,
 	}
 
-	infraStatus, infraStatusDetails, infraStatusMessage, err := c.checkInfra(ctx, kubeCl, metaConfig)
+	status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check infra state: %w", err)
 	}
-	res.Status = res.Status.CombineStatus(infraStatus)
-	res.InfraStatus = infraStatus
-	res.InfraStatusDetails = infraStatusDetails
-	res.InfraStatusMessage = infraStatusMessage
+	res.Status = res.Status.CombineStatus(status)
+
+	if status == CheckStatusDestructiveOutOfSync {
+		res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+		}
+	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
-	res.ConfigurationStatus = configurationStatus
+
+	res.StatusDetails = StatusDetails{
+		Statistics:          *statusDetails,
+		ConfigurationStatus: configurationStatus,
+	}
 
 	return res, nil
 }
@@ -123,16 +123,16 @@ func (c *Checker) checkConfiguration(_ context.Context, kubeCl *client.Kubernete
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, *converge.Statistics, string, error) {
-	var message string
-
-	stat, err := converge.CheckState(kubeCl, metaConfig)
-
-	// NOTE: According to the current converge.CheckState implementation
-	//       err actually not always an internal-error, but may be a message closely related to the stat
-	//       as these cases are indistinguishable we always treat it as a message
+func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, error) {
+	stat, err := converge.CheckState(
+		kubeCl, metaConfig, terraformContext,
+		converge.CheckStateOptions{
+			CommanderMode: c.CommanderMode,
+			StateCache:    c.StateCache,
+		},
+	)
 	if err != nil {
-		message = err.Error()
+		return CheckStatusDestructiveOutOfSync, stat, err
 	}
 
 	checkStatus := CheckStatusInSync
@@ -147,7 +147,7 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 		checkStatus = checkStatus.CombineStatus(resolveStatisticsStatus(stat.Cluster.Status))
 	}
 
-	return checkStatus, stat, message, nil
+	return checkStatus, stat, nil
 }
 
 func resolveStatisticsStatus(status string) CheckStatus {
@@ -158,17 +158,17 @@ func resolveStatisticsStatus(status string) CheckStatus {
 		// NOTE: Regular out-of-sync state, which can be fixed by the converge run
 		return CheckStatusOutOfSync
 	case converge.DestructiveStatus:
-		// NOTE: Critical error, cannot be healed by the converge run
+		// NOTE: Something will be destroyed by the converge run, such change should be approved
 		return CheckStatusDestructiveOutOfSync
 	case converge.AbandonedStatus:
-		// NOTE: Excess node — treat as out-of-sync for now
-		return CheckStatusOutOfSync
+		// NOTE: Excess node — treat as destructive out-of-sync, because this node will be destroyed during converge run
+		return CheckStatusDestructiveOutOfSync
 	case converge.AbsentStatus:
 		// NOTE: Lost node — treat as out-of-sync for now
 		return CheckStatusOutOfSync
 	case converge.ErrorStatus:
 		// NOTE: Unknown error, probably can be healed by the retry
-		return CheckStatusOutOfSync
+		return CheckStatusDestructiveOutOfSync
 	}
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }

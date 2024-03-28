@@ -17,6 +17,9 @@ package commands
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -41,7 +44,7 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
@@ -65,9 +68,10 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			SSHClient:     sshClient,
-			StateCache:    cache.Global(),
-			SkipResources: app.SkipResources,
+			SSHClient:        sshClient,
+			StateCache:       cache.Global(),
+			SkipResources:    app.SkipResources,
+			TerraformContext: terraform.NewTerraformContext(),
 		})
 		if err != nil {
 			return err

@@ -17,6 +17,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -28,7 +29,7 @@ import (
 
 func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("manager", "Test control plane manager is ready.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, false)
@@ -65,7 +66,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 
 func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("node", "Test control plane node is ready.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, true)
