@@ -37,14 +37,11 @@ if [[ "$count_default_routes" -gt "1" ]]; then
   done
   count_configured_ifnames=$(wc -w <<< "$configured_ifnames_pattern")
   if [[ "$count_configured_ifnames" -gt "1" ]]; then
-    set +e
-    check_metric=$(grep -Po '(?<=route-metric: ).+' $CLOUD_INIT_NETPLAN_CFG | wc -l)
-    set -e
-    if [[ "$check_metric" -eq "0" ]]; then
+    if ! grep -q -Po '(?<=route-metric: ).+' $CLOUD_INIT_NETPLAN_CFG; then
       global_metric=100
       for i in $configured_ifnames_pattern; do
         cim_dev=$i
-        cim_mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
+        cim_mac="$(ip link show dev $i | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
         cim_metric=$global_metric
         global_metric=$((global_metric + 100))
         render_and_deploy_netplan_config "$cim_dev" "$cim_metric" "$cim_mac"
