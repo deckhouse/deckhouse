@@ -89,4 +89,11 @@ spec:
                         targetPort:
                           type: integer
                           description: Number of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535.
+          status:
+            type: object
+            properties:
+              publicAddresses:
+                type: array
+                items:
+                  type: string
 
