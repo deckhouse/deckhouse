@@ -22,8 +22,6 @@ MODULES_REGISTRY_LOGIN = username
 MODULES_REGISTRY_PASSWORD = password
 ```
 
-> Если вы используете **fox**, то доступы указывать не нужно.
-
 Внесите  изменения в git.
 
 ```sh
