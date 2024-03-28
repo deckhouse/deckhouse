@@ -7,7 +7,13 @@ metadata:
 spec:
   type: Loki
   loki:
-    endpoint: "http://loki.d8-monitoring:3100"
+    endpoint: "https://loki.d8-monitoring:3100"
+    auth:
+      strategy: "Bearer"
+      token: {{ .Values.loki.internal.logShipperToken | quote }}
+    tls:
+      verifyHostname: false
+      verifyCertificate: false
 {{- if .Values.loki.storeSystemLogs }}
 ---
 apiVersion: deckhouse.io/v1alpha1

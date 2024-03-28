@@ -34,7 +34,7 @@ type Kafka struct {
 
 	Compression string `json:"compression,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	SASL KafkaSASL `json:"sasl,omitempty"`
 }

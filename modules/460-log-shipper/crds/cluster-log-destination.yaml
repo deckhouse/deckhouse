@@ -176,6 +176,13 @@ spec:
                           type: boolean
                           default: true
                           description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
                 elasticsearch:
                   type: object
                   required:
