@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	ovsdk "github.com/ovirt/go-ovirt-client"
+	ovsdk "github.com/ovirt/go-ovirt-client/v3"
 	"k8s.io/utils/pointer"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -28,7 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	infrastructurev1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 	"github.com/deckhouse/deckhouse/internal/controller"
 	"github.com/deckhouse/deckhouse/internal/credentials"
 	"github.com/deckhouse/deckhouse/internal/ovirt_logger"
@@ -43,7 +43,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -143,6 +143,7 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
+		Zvirt:  zvirtClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ZvirtCluster")
 		os.Exit(1)

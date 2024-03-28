@@ -16,7 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	infrastructurev1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 )
 
 var _ = Describe("ZvirtCluster Controller", func() {
@@ -29,13 +29,13 @@ var _ = Describe("ZvirtCluster Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		zvirtcluster := &infrastructurev1alpha1.ZvirtCluster{}
+		zvirtcluster := &infrastructurev1.ZvirtCluster{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind ZvirtCluster")
 			err := k8sClient.Get(ctx, typeNamespacedName, zvirtcluster)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &infrastructurev1alpha1.ZvirtCluster{
+				resource := &infrastructurev1.ZvirtCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -48,7 +48,7 @@ var _ = Describe("ZvirtCluster Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &infrastructurev1alpha1.ZvirtCluster{}
+			resource := &infrastructurev1.ZvirtCluster{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

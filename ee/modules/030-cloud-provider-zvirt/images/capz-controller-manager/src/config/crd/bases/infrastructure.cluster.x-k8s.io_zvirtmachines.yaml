@@ -14,7 +14,7 @@ spec:
     singular: zvirtmachine
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ZvirtMachine is the Schema for the zvirtmachines API
@@ -39,9 +39,6 @@ spec:
           spec:
             description: ZvirtMachineSpec defines the desired state of ZvirtMachine
             properties:
-              clusterID:
-                description: the zVirt cluster this VM instance belongs too.
-                type: string
               cpu:
                 description: CPU defines the VM CPU.
                 properties:
@@ -95,7 +92,6 @@ spec:
                   VM.
                 type: string
             required:
-            - clusterID
             - cpu
             - nicName
             - rootDiskSizeGb
@@ -123,7 +119,7 @@ spec:
                   type: object
                 type: array
               conditions:
-                description: Conditions defines current service state of the StaticMachine.
+                description: Conditions defines current service state of the ZvirtMachine.
                 items:
                   description: Condition defines an observation of a Cluster API resource
                     operational state.

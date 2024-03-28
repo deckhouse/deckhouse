@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package v1alpha1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +41,6 @@ type ZvirtMachineSpec struct {
 	ProviderID string `json:"providerID,omitempty"`
 	// The VM template this instance will be created from.
 	TemplateName string `json:"template"`
-	// the zVirt cluster this VM instance belongs too.
-	ClusterID string `json:"clusterID"`
 	// VNICProfileID the id of the zVirt vNic profile for the VM.
 	VNICProfileID string `json:"vnicProfileID"`
 	// CPU defines the VM CPU.
@@ -95,7 +93,7 @@ type ZvirtMachineStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions defines current service state of the StaticMachine.
+	// Conditions defines current service state of the ZvirtMachine.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
@@ -126,12 +124,12 @@ type ZvirtMachineList struct {
 	Items           []ZvirtMachine `json:"items"`
 }
 
-// GetConditions gets the StaticInstance status conditions
+// GetConditions gets the ZvirtInstance status conditions
 func (r *ZvirtMachine) GetConditions() clusterv1.Conditions {
 	return r.Status.Conditions
 }
 
-// SetConditions sets the StaticInstance status conditions
+// SetConditions sets the ZvirtInstance status conditions
 func (r *ZvirtMachine) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
 }

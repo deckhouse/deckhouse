@@ -18,10 +18,10 @@ data:
   instanceClassKind: {{ b64enc "ZvirtInstanceClass" | quote }}
   machineClassKind: {{ b64enc "" | quote }}
   capiClusterKind: {{ b64enc "ZvirtCluster" | quote }}
-  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
   capiClusterName: {{ b64enc "zvirt" | quote }}
   capiMachineTemplateKind: {{ b64enc "ZvirtMachineTemplate" | quote }}
-  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
   sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
 
   {{- $zvirtValues := dict }}
@@ -31,5 +31,6 @@ data:
   {{- $_ := set $zvirtValues "username" $providerClusterConfiguration.provider.username }}
   {{- $_ := set $zvirtValues "password" $providerClusterConfiguration.provider.password }}
   {{- $_ := set $zvirtValues "insecure" $providerClusterConfiguration.provider.insecure }}
+  {{- $_ := set $zvirtValues "clusterId" $providerClusterConfiguration.clusterId }}
 
   zvirt: {{ $zvirtValues | toJson | b64enc | quote }}

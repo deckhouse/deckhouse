@@ -1,6 +1,0 @@
-## Append samples of your project ##
-resources:
-- infrastructure_v1alpha1_zvirtcluster.yaml
-- infrastructure_v1alpha1_zvirtmachine.yaml
-- infrastructure_v1alpha1_zvirtmachinetemplate.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
