@@ -102,8 +102,6 @@ sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "hel
 
 > Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
 
-{% endraw %}
-
 ## Добавьте хуки
 
 Прочитайте документацию операторов о концепции хуков, например, [что такое конфигурация хука и какие функции она предоставляет](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration).
