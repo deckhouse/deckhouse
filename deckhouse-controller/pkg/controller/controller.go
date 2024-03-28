@@ -175,31 +175,34 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 // InitModulesAndConfigsStatuses inits modules' and moduleconfigs' status fields at start up
 func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		modules, err := dml.kubeClient.DeckhouseV1alpha1().Modules().List(dml.ctx, v1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		for _, module := range modules.Items {
-			err := dml.updateModuleStatus(module.Name)
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			modules, err := dml.kubeClient.DeckhouseV1alpha1().Modules().List(dml.ctx, v1.ListOptions{})
 			if err != nil {
-				return fmt.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
+				return err
 			}
-		}
 
-		configs, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().List(dml.ctx, v1.ListOptions{})
-		if err != nil {
-			return err
-		}
+			for _, module := range modules.Items {
+				err := dml.updateModuleStatus(module.Name)
+				if err != nil {
+					log.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
+					return err
+				}
+			}
 
-		for _, config := range configs.Items {
-			err := dml.updateModuleConfigStatus(config.Name)
+			configs, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().List(dml.ctx, v1.ListOptions{})
 			if err != nil {
-				return fmt.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
+				return err
 			}
-		}
 
-		return nil
+			for _, config := range configs.Items {
+				err := dml.updateModuleConfigStatus(config.Name)
+				if err != nil {
+					log.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
+					return err
+				}
+			}
+			return nil
+		})
 	})
 }
 
