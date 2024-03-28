@@ -19,45 +19,24 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"golang.org/x/mod/semver"
 	rbac "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 15},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "crb",
-			ApiVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubeadm:cluster-admins"},
-			},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				return obj.GetName(), nil
-			},
-		},
-	},
 }, dependency.WithExternalDependencies(k8sPostUpgrade))
 
 func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.Snapshots["crb"]) > 0 {
-		// We need this hook to run only once
-		return nil
-	}
-
 	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
 
 	// if kubernetesVersion < v1.29.0
@@ -68,6 +47,15 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
+	}
+
+	_, err = kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
+	if err == nil {
+		return nil
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error: %v", err)
 	}
 
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
