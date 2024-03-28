@@ -77,7 +77,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		pec = phases.NewPhasedExecutionContext(params.OnPhaseFunc)
 	}
 
-	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
+	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader terraform.StateLoader
 	if params.CommanderMode {
