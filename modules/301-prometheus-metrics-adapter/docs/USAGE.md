@@ -3,28 +3,30 @@ title: "The prometheus-metrics-adapter module: usage"
 search: autoscaler, HorizontalPodAutoscaler
 ---
 
-Ниже рассматривается только HPA (Horizontal Pod Autoscaling) с [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
+Note that only HPA (Horizontal Pod Autoscaling) with [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), whose support has been available since Kubernetes v1.12, is discussed below.
 
-Для настройки HPA требуется:
-* определить, что именно масштабируется (`.spec.scaleTargetRef`);
-* определить диапазон масштабирования (`.spec.minReplicas`, `.scale.maxReplicas`);
-* зарегистрировать в API Kubernetes и определить метрики, на основе которых производится масштабирование (`.spec.metrics`).
+Configuring HPA requires:
+* defining what is being scaled (`.spec.scaleTargetRef`);
+* defining the scaling range (`.spec.minReplicas`, `.scale.maxReplicas`);
+* defining metrics to be used as the basis for scaling (`.spec.metrics`) and registering them with the Kubernetes API.
 
-Метрики с точки зрения HPA бывают трех видов:
-* [классические](#классическое-масштабирование-по-потреблению-ресурсов) — с типом (`.spec.metrics[].type`) «Resource», используются для простейшего масштабирования по потреблению процессора и памяти;
-* [кастомные](#масштабирование-по-кастомным-метрикам) — с типами (`.spec.metrics[].type`) «Pods» или «Object»;
-* [внешние](#применяем-внешние-метрики-в-hpa) — с типом (`.spec.metrics[].type`) «External».
+Metrics in terms of HPA are of three types:
+* [classic](#classic-scaling-by-custom-resource-consumption) — of type (`.spec.metrics[].type`) "Resource"; these are used for simple scaling based on CPU and memory consumption;
+* [custom](#scaling-by-custom-metrics) — of type (`.spec.metrics[].type`) "Pods" or "Object";
+* [external](#apply-external-metrics-to-hpa) — of type (`.spec.metrics[].type`) "External".
 
-**Важно!** [По умолчанию](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA использует разные подходы при масштабировании:
-* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на требование масштабировать **вверх**, это происходит незамедлительно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста: за 15 секунд поды могут удвоиться, но если подов меньше 4, добавятся 4 новых пода.
-* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на то, что требуется масштабировать **вниз**, это происходит в течение 5 минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): собираются предложения о новом количестве реплик, в результате чего выбирается самое большое значение. Нет ограничений на количество удаляемых подов за один раз.
 
-Если имеются проблемы с колебаниями метрик и происходит резкое увеличение ненужных реплик приложения, применяются следующие подходы:
-* Оборачивание метрики агрегирующей функцией (например, `avg_over_time()`), если метрика определена PromQL-запросом. Подробнее см. [пример](#пример-использования-нестабильной-кастомной-метрики).
-* Увеличение времени стабилизации (параметр `spec.behavior.scaleUp.stabilizationWindowSeconds`) в ресурсе _HorizontalPodAutoscaler_. В течение обозначенного периода будут собираться предложения об увеличении количества реплик, в результате чего будет выбрано самое скромное предложение. Это решение тождественно применению агрегирующей функции `min_over_time(<stabilizationWindowSeconds>)`, но только в том случае, если метрика растет и требуется масштабирование **вверх**. Для масштабирования **вниз**, как правило, достаточно стандартных настроек. Подробнее см. [пример](#классическое-масштабирование-по-потреблению-ресурсов).
-* Ограничение скорости прироста новых реплик с помощью политик `spec.behavior.scaleUp.policies`.
 
-## Типы масштабирования
+**Caution!** [By default,](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA uses different approaches for scaling:
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **up** is required, it is done immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation is the rate of increase: pods can double in 15 seconds, but if there are less than 4 pods, 4 new pods will be added.
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **down** is required, it happens within 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): suggestions for a new number of replicas are calculated, then the largest value is selected. There is no limit on the number of pods to be removed at once.
+
+If metrics are subject to fluctuations that result in a surge of unnecessary application replicas, the following approaches are used:
+* Wrapping the metric with an aggregation function (e. g., `avg_over_time()`) if the metric is defined by a PromQL query. For more details, see. [example](#example-use-unstable-custom-metrics).
+* Increasing the stabilization window (parameter `spec.behavior.scaleUp.stabilizationWindowSeconds`) in the _HorizontalPodAutoscaler_ resource. During the this period, requests to increase the number of replicas will be accumulated, then the most modest request will be selected. This method is identical to applying the `min_over_time(<stabilizationWindowSeconds>)` aggregation function, but only if the metric is increasing and scaling **up** is required. For scaling **down**, the default settings usually work good enough. For more details, see [example](#classical-scaling-by-resource-consumption).
+* Limiting the rate of increase of the new replica count with `spec.behavior.scaleUp.policies`.
+
+## Scaling types
 
 Используйте следующие метрики для масштабирования приложений:
 1. [Классического типа](#классическое-масштабирование-по-потреблению-ресурсов).
