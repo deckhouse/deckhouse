@@ -10,6 +10,7 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -35,6 +36,7 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}

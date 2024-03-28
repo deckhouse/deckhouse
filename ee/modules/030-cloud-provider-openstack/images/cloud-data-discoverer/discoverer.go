@@ -6,7 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -184,6 +187,22 @@ func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercl
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
 	}
 
+	// Check if a custom CA cert was provided.
+	if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
+		caCert, err := os.ReadFile(caCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading CA Cert: %s", err)
+		}
+		config := &tls.Config{}
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(bytes.TrimSpace(caCert)); !ok {
+			return nil, fmt.Errorf("error parsing CA Cert from %s", caCertPath)
+		}
+		config.RootCAs = caCertPool
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = config
+		provider.HTTPClient = http.Client{Transport: transport}
+	}
 	provider.MaxBackoffRetries = 3
 	provider.RetryFunc = RetryFunc(logger)
 	provider.RetryBackoffFunc = RetryBackoffFunc(logger)
@@ -314,7 +333,7 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 		Region: d.region,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ComputeV2 client: %v", err)
+		return nil, fmt.Errorf("failed to create NetworkV2 client: %v", err)
 	}
 
 	client.Context = ctx
