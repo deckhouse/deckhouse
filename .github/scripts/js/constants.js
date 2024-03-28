@@ -25,6 +25,7 @@ const labels = {
   'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
+  'skip/release-requirements': { type: 'skip-validation', validation_name: 'release_requirements' },
 
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },
