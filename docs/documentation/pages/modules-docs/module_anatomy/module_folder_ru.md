@@ -304,10 +304,9 @@ image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
 
 Пример схемы с одним настраиваемым параметром `nodeSelector`:
 
-<div markdown="0">
-<details><summary>/openapi/config-values.yaml</summary>
-<pre class="highlight">
-<code>
+/openapi/config-values.yaml
+
+```yaml
 type: object
 properties:
   nodeSelector:
@@ -319,23 +318,18 @@ properties:
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
       [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
-</pre>
-</details>
-</div>
+```
 
 Пример файла для русскоязычного перевода схемы:
 
-<div markdown="0">
-<details><summary>/openapi/doc-ru-config-values.yaml</summary>
-<pre class="highlight">
-<code>  
+/openapi/doc-ru-config-values.yaml
+
+```yaml
 properties:
   nodeSelector:
     description: |
       Описание на русском языке. Разметка Markdown.</code>
-</pre>
-</details>
-</div>
+```
 
 #### values.yaml
 
