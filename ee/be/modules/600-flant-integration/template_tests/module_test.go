@@ -96,6 +96,10 @@ internal:
     masterIsDedicated: true
     masterMinCPU: 4
     masterMinMemory: 800000
+  nodeGroupsCapacity:
+    master:
+      CPU: 4
+      memory: 8589934592
   prometheusAPIClientTLS:
     certificate: string
     key: string
@@ -131,6 +135,10 @@ internal:
     masterIsDedicated: true
     masterMinCPU: 4
     masterMinMemory: 800000
+  nodeGroupsCapacity:
+    master:
+      CPU: 4
+      memory: 8589934592
   prometheusAPIClientTLS:
     certificate: string
     key: string
@@ -226,6 +234,8 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
   value: /root/.kube/config
 - name: FP_KUBEALL_CONTEXT
   value: ""
+- name: FP_NODE_GROUPS_CAPACITY
+  value: '{"master":{"CPU":4,"memory":8589934592}}'
 `
 
 			Expect(ds.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(expectedEnvsDS))
