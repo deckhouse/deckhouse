@@ -182,7 +182,7 @@ RUN bash -eu -c ' \
 COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
-RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
+RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip && chown -R www-data.www-data /chroot/etc/ingress-controller/geoip \
   # fix simlink to proper pcre jit version
   && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
   && cd / \
