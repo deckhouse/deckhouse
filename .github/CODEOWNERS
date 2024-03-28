@@ -1,47 +1,72 @@
-.github/                    @name212
-002-deckhouse/              @yalosev
-010-operator-prometheus-crd/ @nabokihms
-010-prometheus-crd/         @nabokihms
-015-admission-policy-engine/ @yalosev
-021-cni-cilium/             @apolovov
-030-cloud-provider-openstack/ @RomanenkoDenys @name212
-030-cloud-provider-vsphere/ @RomanenkoDenys
-041-linstor/                @AleksZimin
-031-local-path-provisioner/ @RomanenkoDenys @name212
-040-control-plane-manager/  @RomanenkoDenys @name212
-040-node-manager/           @RomanenkoDenys @name212
-040-terraform-manager/      @name212
-101-cert-manager/           @yalosev
-110-istio/                  @apolovov
-140-user-authz/             @nabokihms @apolovov
-150-user-authn/             @nabokihms
-160-multitenancy-manager/   @yalosev @Dmitrykob
-200-operator-prometheus/    @nabokihms
-340-extended-monitoring/    @nabokihms
-340-monitoring-*/           @nabokihms
-300-prometheus/             @nabokihms
-301-prometheus-*/           @nabokihms
-303-prometheus-*/           @nabokihms
-350-node-local-dns/         @RomanenkoDenys
-380-metallb/                @RomanenkoDenys @apolovov
-402-ingress-nginx/          @miklezzzz @yalosev
-460-log-shipper/            @nabokihms
-470-chrony/                 @RomanenkoDenys
+.github/                        @name212
+002-deckhouse/                  @yalosev @miklezzzz
+005-external-module-manager/    @yalosev @miklezzzz
+007-registrypackages/           @RomanenkoDenys
+010-cloud-data-crd/             @nabokihms
+010-operator-prometheus-crd/    @nabokihms
+010-prometheus-crd/             @nabokihms
+010-snapshot-controller-crd/    @AleksZimin
+010-user-authn-crd/             @nabokihms
+010-vertical-pod-autoscaler-crd/ @nabokihms
+011-flow-schema/                @RomanenkoDenys @name212
+015-admission-policy-engine/    @yalosev @miklezzzz
+021-cni-cilium/                 @apolovov
+021-kube-proxy/                 @RomanenkoDenys
+030-cloud-provider-aws/         @RomanenkoDenys @name212
+030-cloud-provider-azure/       @RomanenkoDenys @name212
+030-cloud-provider-gcp/         @RomanenkoDenys @name212
+030-cloud-provider-yandex/      @RomanenkoDenys @name212 @aleksey-su
+030-cloud-provider-openstack/   @RomanenkoDenys @name212
+030-cloud-provider-vsphere/     @RomanenkoDenys
+031-local-path-provisioner/     @RomanenkoDenys @name212
+035-cni-flannel/                @apolovov
+035-cni-simple-bridge/          @apolovov
+040-control-plane-manager/      @RomanenkoDenys @name212
+040-node-manager/               @RomanenkoDenys @name212 @aleksey-su
+040-terraform-manager/          @name212 @aleksey-su
+041-ceph-csi/                   @RomanenkoDenys @name212
+042-kube-dns/                   @nabokihms
+045-snapshot-controller/        @AleksZimin
+050-network-policy-engine/      @apolovov
+101-cert-manager/               @yalosev @miklezzzz
+110-istio/                      @apolovov
+140-user-authz/                 @nabokihms @apolovov
+150-user-authn/                 @nabokihms
+160-multitenancy-manager/       @yalosev @Dmitrykob @miklezzzz
+200-operator-prometheus/        @nabokihms
+300-prometheus/                 @nabokihms
+301-prometheus-*/               @nabokihms
+302-vertical-pod-autoscaler/    @RomanenkoDenys
+303-prometheus-*/               @nabokihms
+340-extended-monitoring/        @nabokihms
+340-monitoring-*/               @nabokihms
+350-node-local-dns/             @RomanenkoDenys
+380-metallb/                    @RomanenkoDenys @apolovov
+400-descheduler/                @RomanenkoDenys @name212
+402-ingress-nginx/              @miklezzzz @yalosev
+460-log-shipper/                @nabokihms
+462-loki/                       @nabokihms
+465-pod-reloader/               @RomanenkoDenys
+470-chrony/                     @RomanenkoDenys
 491-containerized-data-importer @fl64
-500-openvpn/                @vitaliy-sn
-500-upmeter/                @shvgn
-500-operator-trivy/         @miklezzzz
-502-delivery/               @shvgn
-600-flant-integration/      @nabokihms
-650-runtime-audit-engine/   @nabokihms
-810-documentation/          @z9r5 @nabokihms @konstantin-axenov
-bashible-apiserver/         @RomanenkoDenys @name212
-candi/                      @RomanenkoDenys @name212
-cloud-controller-manager/   @RomanenkoDenys @name212
-csi/                        @AleksZimin
-deckhouse-controller/       @yalosev
-dhctl/                      @name212
-docs/                       @z9r5 @nabokihms @konstantin-axenov
-helm_lib/                   @name212
-crds/                       @nabokihms @konstantin-axenov @z9r5
-openapi/                    @nabokihms @konstantin-axenov @z9r5
+500-openvpn/                    @vitaliy-sn
+500-cilium-hubble/              @apolovov
+500-dashboard/                  @nabokihms
+500-upmeter/                    @nabokihms
+500-okmeter/                    @nabokihms
+500-operator-trivy/             @miklezzzz @yalosev
+502-delivery/                   @shvgn
+600-flant-integration/          @nabokihms
+600-namespace-configurator/     @yalosev @miklezzzz
+650-runtime-audit-engine/       @nabokihms
+810-documentation/              @z9r5 @nabokihms
+bashible-apiserver/             @RomanenkoDenys @name212
+candi/                          @RomanenkoDenys @name212
+cloud-controller-manager/       @RomanenkoDenys @name212 @aleksey-su
+csi/                            @AleksZimin
+deckhouse-controller/           @yalosev @miklezzzz
+dhctl/                          @name212 @aleksey-su
+docs/                           @z9r5 @nabokihms
+helm_lib/                       @name212
+crds/                           @nabokihms @konstantin-axenov @z9r5
+openapi/                        @nabokihms @konstantin-axenov @z9r5

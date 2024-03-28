@@ -14,9 +14,10 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 RUN git clone -c advice.detachedHead=false --branch 2.28.0 --depth 1 ${SOURCE_REPO}/falcosecurity/falcosidekick.git . && \
-    go get -u github.com/nats-io/nkeys@v0.4.6 && \
-    go get -u golang.org/x/net@v0.17.0 && \
-    go get -u google.golang.org/grpc@v1.56.3 && \
+    go get github.com/nats-io/nkeys@v0.4.6 && \
+    go get golang.org/x/net@v0.17.0 && \
+    go get google.golang.org/grpc@v1.56.3 && \
+    go mod tidy && \
     make falcosidekick && \
     chown -R 64535:64535 /src/falcosidekick && \
     chmod 0755 /src/falcosidekick

@@ -40,6 +40,10 @@ var (
 	}
 )
 
+func (dml *DeckhouseController) LoadModule(_, _ string) (*modules.BasicModule, error) {
+	return nil, fmt.Errorf("not implemented yet")
+}
+
 func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	result := make([]*modules.BasicModule, 0, len(dml.deckhouseModules))
 
@@ -126,17 +130,14 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.De
 			continue
 		}
 
-		definition, err := dml.moduleFromFile(absPath)
+		definition, err := dml.moduleFromDirName(name, absPath)
 		if err != nil {
 			return nil, err
 		}
 
-		if definition == nil {
-			log.Debugf("module.yaml for module %q does not exist", name)
-			definition, err = dml.moduleFromDirName(name, absPath)
-			if err != nil {
-				return nil, err
-			}
+		definition, err = dml.overwriteModuleFromModuleYamlFile(absPath, definition)
+		if err != nil {
+			return nil, err
 		}
 
 		definitions = append(definitions, *definition)
@@ -153,11 +154,11 @@ const (
 	ModuleNameIdx  = 3
 )
 
-func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.DeckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) overwriteModuleFromModuleYamlFile(absPath string, definition *models.DeckhouseModuleDefinition) (*models.DeckhouseModuleDefinition, error) {
 	mFilePath := filepath.Join(absPath, models.ModuleDefinitionFile)
 	if _, err := os.Stat(mFilePath); err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return definition, nil
 		}
 
 		return nil, err
@@ -175,13 +176,16 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.Deckhous
 		return nil, err
 	}
 
-	if def.Name == "" || def.Weight == 0 {
-		return nil, nil
+	if def.Name != "" {
+		definition.Name = def.Name
 	}
+	if def.Weight != 0 {
+		definition.Weight = def.Weight
+	}
+	definition.Description = def.Description
+	definition.Stage = def.Stage
 
-	def.Path = absPath
-
-	return &def, nil
+	return definition, nil
 }
 
 // moduleFromDirName returns Module instance filled with name, order and its absolute path.

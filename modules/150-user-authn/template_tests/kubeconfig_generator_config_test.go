@@ -93,6 +93,7 @@ Multiline
 	Context("Default config", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.enable", true)
+			hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
 
 			hec.HelmRender()
 		})
@@ -119,6 +120,7 @@ Multiline
 		Context("With discoveredDexCA", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("userAuthn.publishAPI.enable", true)
+				hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
 				hec.ValuesSet("userAuthn.internal.discoveredDexCA", "discoveredDexCAText")
 				hec.HelmRender()
 			})
@@ -135,6 +137,7 @@ Multiline
 		Context("Publish API", func() {
 			JustBeforeEach(func() {
 				hec.ValuesSet("userAuthn.publishAPI.enable", true)
+				hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
 				hec.HelmRender()
 			})
 

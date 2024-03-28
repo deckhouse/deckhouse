@@ -201,6 +201,22 @@ func (aic *openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 	return catalog.Get(aic)
 }
 
+type vcdInstanceClass struct {
+	SizingPolicy string `json:"sizingPolicy,omitempty"`
+}
+
+func (aic *vcdInstanceClass) GetCapacity() *Capacity {
+	return nil
+}
+
+func (aic *vcdInstanceClass) GetType() string {
+	return aic.SizingPolicy
+}
+
+func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	return catalog.Get(aic)
+}
+
 type testInstanceClass struct {
 	Capacity *Capacity `json:"capacity,omitempty"`
 	Type     string    `json:"type,omitempty"`
@@ -255,6 +271,10 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	case "OpenStackInstanceClass":
 		var spec openStackInstanceClass
+		extractor = &spec
+
+	case "VCDInstanceClass":
+		var spec vcdInstanceClass
 		extractor = &spec
 
 	case "D8TestInstanceClass":

@@ -55,7 +55,7 @@ func setProviderIDNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		}
 	}
 
-	if !hasUninitializedTaint && node.Spec.ProviderID == "" && node.Labels["node.deckhouse.io/type"] != "CloudEphemeral" {
+	if !hasUninitializedTaint && node.Spec.ProviderID == "" && node.Labels["node.deckhouse.io/type"] == "Static" {
 		needPatch = true
 	}
 

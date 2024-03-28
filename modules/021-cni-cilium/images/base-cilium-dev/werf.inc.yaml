@@ -1,0 +1,104 @@
+{{- $goVersion := "1.21.5" }}
+{{- $protocVersion := "22.3" }}
+{{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.1.0" }}
+{{- $fromCacheVersion := "16" }}
+---
+# #####################################################################
+# BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
+# based on original images: runtime, builder, compilers, cilium-envoy, iptables
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/builder/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-bazel.sh
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
+# and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
+#
+# Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
+# Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
+# Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
+# Corresponding commit is ad82c7c56e88989992fd25d8d67747de865c823b
+# Original IMAGE_TAG of cilium/iptables is 67f517af50e18f64cd12625021f1c39246bb4f92
+# Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
+# #####################################################################
+---
+image: {{ $.ModuleName }}/base-cilium-dev
+from: {{ $.Images.BASE_UBUNTU }}
+fromCacheVersion: {{ $fromCacheVersion }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  - apt-get update && apt-get upgrade -y --no-install-recommends
+  # apt install
+  - |
+    apt-get install -y --no-install-recommends \
+    debian-archive-keyring apt-transport-https apt-src curl \
+    jq tzdata software-properties-common \
+    bash-completion iproute2 iptables ipset kmod ca-certificates \
+    coreutils binutils make cmake ccache automake autoconf ccache patch patchelf \
+    git zip unzip wget \
+    gcc gcc-9 g++ gcc-x86-64-linux-gnu g++-x86-64-linux-gnu \
+    libc6-dev libc6-dev-amd64-cross libelf-dev libmnl-dev \
+    bison flex \
+    build-essential libtool ninja-build pkg-config git-buildpackage \
+    python2 python3 python3-pip virtualenv \
+    libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev
+  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
+  - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+  - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
+  # for debug
+  - apt-get install -y --no-install-recommends strace
+  # apt clean
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  # download-only
+  - |
+    apt-get update && apt-get install -y --no-install-recommends --download-only \
+    libcap-dev \
+    python-is-python3 \
+    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  install:
+  # Install Go
+  - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
+  - rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - go version
+  # Install protoc and plugins
+  - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
+  - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
+  # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
+  - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@8ba23be9613c672d40ae261d2a1335d639bdd59b
+  - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
+  - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
+  - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
+  # Install multiversion bazel
+  - bazel_versions=({{ $bazelVersions }})
+  # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
+  - curl --fail --show-error --silent --location https://raw.githubusercontent.com/bazelbuild/bazel/${bazel_versions[-1]}/scripts/packages/bazel.sh --output /usr/local/bin/bazel
+  - chmod +x /usr/local/bin/bazel
+  - |
+    for bazel_version in ${bazel_versions[@]} ; do
+      # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
+      # so for multiple versions to be usable files will need to moved around, which would be more tedious
+      long_binary_name="bazel-${bazel_version}-linux-x86_64"
+      curl --fail --show-error --silent --location https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      chmod +x "/usr/local/bin/${long_binary_name}"
+      USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
+    done
+docker:
+  ENV:
+    GOROOT: "/usr/local/go"
+    GOPATH: "/go"
+    PATH: "${PATH}:${GOROOT}/bin:${GOPATH}/bin"
+    GOOS: "linux"
+    GOARCH: "amd64"

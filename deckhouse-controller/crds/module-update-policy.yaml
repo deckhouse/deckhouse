@@ -79,6 +79,7 @@ spec:
                       enum:
                         - 'Auto'
                         - 'Manual'
+                        - 'Ignore'
                     windows:
                       type: array
                       description: |
@@ -172,7 +173,7 @@ spec:
                         matchLabels:
                           type: object
                           description: A number of equality-based label filters.
-                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          x-doc-examples: [{ "source": "deckhouse", "module": "deckhouse-admin" }]
                           additionalProperties:
                             type: string
       additionalPrinterColumns:

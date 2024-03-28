@@ -35,6 +35,12 @@ spec:
   version: 1
   settings:
     param1: val1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: module-one
+properties:
 `
 
 var enabledModuleConfigYaml = `
@@ -48,6 +54,43 @@ spec:
   settings:
     param1: val1
   enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: module-one
+properties:
+`
+
+var moduleConfigWithWrongSchema = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: module-one
+spec:
+  version: 1
+  settings:
+    param2: val2
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: module-one
+properties:
+`
+
+var moduleConfigWithWrongVersion = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: module-one
+spec:
+  version: 2
+  settings:
+    param1: val1
 `
 
 var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig status ::", func() {
@@ -71,25 +114,13 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			f.RunHook()
 		})
 
-		It("Should be enabled in status", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.state").String()).To(Equal("Enabled"), "should update status")
-		})
-
-		It("Should be with the empty type", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal(""), "should update status")
-		})
-
 		It("Should be ready", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.status").String()).To(Equal("Converging: module is waiting for the first run"), "should update status")
+			promModule := f.KubernetesGlobalResource("Module", "module-one")
+			Expect(promModule.Field("status.status").String()).To(Equal("Converging: module is waiting for the first run"), "should update status")
+			promCfg := f.KubernetesGlobalResource("Module", "module-one")
+			Expect(promCfg.Field("status.message").String()).To(Equal(""), "should update status")
 		})
 	})
 
@@ -112,60 +143,77 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 		It("Should not be enabled in status", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			promModule := f.KubernetesGlobalResource("Module", "module-one")
+			Expect(promModule.Field("status.status").String()).To(ContainSubstring("Info: turned off by 'enabled'-script, refer to the module documentation"), "should be disabled by script, got %s", promModule.Field("status.status").String())
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.state").String()).To(ContainSubstring("Disabled"), "should be disabled by script, got %s", promCfg.Field("status").String())
-		})
-
-		It("Should be with the empty type", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal(""), "should update status")
-		})
-
-		It("Should be disabled by enabled script", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.status").String()).To(
-				Equal("Info: turned off by 'enabled'-script, refer to the module documentation"),
-				"should update status",
-			)
+			Expect(promCfg.Field("status.message").String()).To(Equal(""), "should have an empty message field, got %s", promCfg.Field("status").String())
 		})
 	})
 
-	Context("Module from a module source", func() {
+	Context("Should report missing module", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(moduleConfigYaml)
+			f.KubeStateSet(enabledModuleConfigYaml)
 
-			mm := mock.NewModuleManager(
-				mock.NewModule("module-one", nil, mock.EnabledByScript),
-			)
-			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
-			Expect(err).ShouldNot(HaveOccurred())
+			mm := mock.NewModuleManager()
 			d8config.InitService(mm)
-
-			d8config.Service().SetModuleNameToSources(map[string]string{
-				"module-one": "repo.one/modules",
-			})
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
 
-		It("Should be with repo", func() {
+		It("Should report that the module is unknown", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.type").String()).To(Equal("repo.one/modules"), "should update status")
-		})
-
-		It("Should be ready", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
-			Expect(promCfg.Field("status.status").String()).To(Equal("Converging: module is waiting for the first run"), "should update status")
+			Expect(promCfg.Field("status.message").String()).To(ContainSubstring("Ignored: unknown module name"), "should report that the module is absent, got %s", promCfg.Field("status").String())
 		})
 	})
 
+	Context("Should report invalid module config settings", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(moduleConfigWithWrongSchema)
+
+			// status.go doesn't validate values, mock is sufficient here.
+			mm := mock.NewModuleManager(
+				mock.NewModule("module-one", mock.EnabledByBundle, mock.DisabledByScript),
+			)
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
+			Expect(err).ShouldNot(HaveOccurred())
+			d8config.InitService(mm)
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should report invalid module settings", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.message").String()).To(ContainSubstring("Error: spec.settings are not valid (version 1):  1 error occurred: * moduleOne.param2 is a forbidden property"), "should report invalid settings, got %s", promCfg.Field("status.message").String())
+		})
+	})
+
+	Context("Should report invalid schema version", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(moduleConfigWithWrongVersion)
+
+			// status.go doesn't validate values, mock is sufficient here.
+			mm := mock.NewModuleManager(
+				mock.NewModule("module-one", mock.EnabledByBundle, mock.DisabledByScript),
+			)
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
+			Expect(err).ShouldNot(HaveOccurred())
+			d8config.InitService(mm)
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should report invalid schema version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.message").String()).To(ContainSubstring("Error: invalid spec.version, use version 1"), "should report invalid schema version, got %s", promCfg.Field("status.message").String())
+		})
+	})
 })

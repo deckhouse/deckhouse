@@ -1,0 +1,68 @@
+{{- if and .Values.nodeManager.internal.capiControllerManagerEnabled (hasKey .Values.nodeManager.internal "cloudProvider") }}
+  {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
+  {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
+
+
+{{- include "capi_infrastructure_cluster" . }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ $prefix }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+  #  annotations:
+  #    cluster.x-k8s.io/paused: "true"
+  # A finalizer has been added to prevent cascading removing of all capi resources after deleting the cluster resource.
+  finalizers:
+    - deckhouse.io/capi-controller-manager
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - {{ .Values.global.clusterConfiguration.podSubnetCIDR }}
+    services:
+      cidrBlocks:
+        - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
+    serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
+  infrastructureRef:
+    apiVersion: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIVersion }}
+    kind: {{ .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
+    namespace:  {{ .Values.nodeManager.internal.cloudProvider.capiClusterNamespace }}
+    name: {{ $prefix }}
+  controlPlaneRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: DeckhouseControlPlane
+    namespace: d8-cloud-instance-manager
+    name: {{ $prefix }}-control-plane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DeckhouseControlPlane
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: {{ $prefix }}-control-plane
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: {{ $prefix }}-machine-health-check
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+spec:
+  clusterName: {{ $prefix }}
+  nodeStartupTimeout: 20m
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ $prefix }}
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 5m
+    - type: Ready
+      status: "False"
+      timeout: 5m
+  {{- end }}
+{{- end }}
+
+

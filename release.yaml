@@ -26,7 +26,11 @@ requirements:
   "k8s": "1.25.0" # modules/040-control-plane-manager/requirements/check.go
   "ingressNginx": "1.1" # modules/402-ingress-nginx/requirements/check.go
   "nodesMinimalOSVersionUbuntu": "18.04" # modules/040-node-manager/requirements/check.go
+#  "nodesMinimalOSVersionDebian": "10" # modules/040-node-manager/requirements/check.go
   "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go
+  "istioMinimalVersion": "1.16" # modules/110-istio/requirements/check.go
+
+  # TODO: Delete in D8 1.60, migrating to istioMinimalVersion
   "istioVer": "1.16" # modules/110-istio/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release

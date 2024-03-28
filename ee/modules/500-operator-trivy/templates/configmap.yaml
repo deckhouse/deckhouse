@@ -34,12 +34,10 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
-  {{- $registryBase := .Values.global.modulesImages.registry.base | split "/" }}
-
-  {{/* This is a hack to properly run trivy scanners, DON'T change ':' to '@' */}}
-  {{- $imageStringSlice := include "helm_lib_module_image" (list . "trivy") | split ":" }}
-  trivy.repository: {{ $imageStringSlice._0 }}
-  trivy.tag: {{ $imageStringSlice._1 }}
+  # Break down the trivy image string into trivy.repository and trviy.tag parts by ":" delimiter. Internally, these parts are just concatenated back into a single image string
+  {{- $image := (include "helm_lib_module_image" (list . "trivy")) | splitn ":" 2 }}
+  trivy.repository: {{ $image._0 }}
+  trivy.tag: {{ $image._1 }}
   trivy.additionalVulnerabilityReportFields: ""
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   trivy.slow: "true"

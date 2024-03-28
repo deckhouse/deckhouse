@@ -1,0 +1,89 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /entrypoint
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /entrypoint
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o entrypoint main.go
+  - chown -R 64535:64535 /entrypoint/
+  - chmod 0700 /entrypoint/entrypoint
+---
+artifact: {{ .ModuleName }}/build-artifact
+from: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/metrics
+  to: /metrics
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export BUILD_DIR="/build/ebpf-exporter"
+  - mkdir -p ${BUILD_DIR}
+  - git clone --branch=v2.3.0 --depth=1 {{ $.SOURCE_REPO }}/cloudflare/ebpf_exporter.git ${BUILD_DIR}
+  - rm -rf ${BUILD_DIR}/libbpf
+  - git clone --branch v1.2.2 --depth=1 {{ $.SOURCE_REPO }}/libbpf/libbpf.git ${BUILD_DIR}/libbpf
+  - cd ${BUILD_DIR}
+  - make -C ${BUILD_DIR}/libbpf/src LIBSUBDIR=lib DESTDIR=../dest install install_uapi_headers
+  - export CGO_LDFLAGS="-L${BUILD_DIR}/libbpf/dest/usr/lib -l bpf"
+  - export CGO_CFLAGS="-I${BUILD_DIR}/libbpf/dest/usr/include"
+  - |
+    GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o ./ebpf_exporter -v -ldflags=" \
+    -extldflags "-static"
+    -X github.com/prometheus/common/version.Version=$(git describe --tags) \
+    -X github.com/prometheus/common/version.Branch=$(git rev-parse --abbrev-ref HEAD) \
+    -X github.com/prometheus/common/version.Revision=$(git rev-parse --short HEAD) \
+    -X github.com/prometheus/common/version.BuildUser=docker@$(hostname) \
+    -X github.com/prometheus/common/version.BuildDate=$(date --iso-8601=seconds) \
+    " ./cmd/ebpf_exporter
+  - mkdir -p ${BUILD_DIR}/metrics
+  - cp /metrics/* ${BUILD_DIR}/metrics
+  - make -C metrics clean build
+---
+{{ $copyFiles := "/sbin/setcap" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $copyFiles }}" -o /relocate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
+  add: /entrypoint/entrypoint
+  to: /usr/local/bin/entrypoint
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- artifact: {{ .ModuleName }}/build-artifact
+  add: /build/ebpf-exporter/ebpf_exporter
+  to: /usr/local/bin/ebpf_exporter
+  before: setup
+- artifact: {{ .ModuleName }}/build-artifact
+  add: /build/ebpf-exporter/metrics
+  to: /metrics
+  before: setup
+  includePaths:
+  - '**/*.yaml'
+  - '**/*.o'
+docker:
+  ENTRYPOINT: ["/usr/local/bin/entrypoint"]

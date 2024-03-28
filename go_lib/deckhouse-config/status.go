@@ -28,11 +28,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type Status struct {
-	State   string
+type ModuleConfigStatus struct {
 	Version string
-	Status  string
-	Type    string
+	Message string
+}
+
+type ModuleStatus struct {
+	Status string
 }
 
 type StatusReporter struct {
@@ -47,16 +49,94 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string, modulesToSource map[string]string, enabled bool) Status {
-	// Special case: unknown module name.
-	moduleType, fromSource := modulesToSource[cfg.GetName()]
+func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.ModuleConfig, bundleName string) ModuleStatus {
+	// Figure out additional statuses for known modules.
+	statusMsgs := make([]string, 0)
 
-	if !s.possibleNames.Has(cfg.GetName()) && !fromSource {
-		return Status{
-			State:   "N/A",
+	mod := s.moduleManager.GetModule(module.GetName())
+	// return error if module manager doesn't have such a module
+	if mod == nil {
+		return ModuleStatus{
+			Status: "Error: failed to fetch module metadata",
+		}
+	}
+
+	// Calculate state and status.
+	if s.moduleManager.IsModuleEnabled(module.GetName()) {
+		lastHookErr := mod.GetLastHookError()
+		if lastHookErr != nil {
+			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
+		}
+		if mod.GetModuleError() != nil {
+			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.GetModuleError()))
+		}
+
+		if len(statusMsgs) == 0 { // no errors were added
+			// Best effort alarm!
+			//
+			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.c
+			// The right approach is to check the queue for the module run task.
+			// However, there are too many addon-operator internals involved.
+			// We should consider moving these statuses to the `Module` resource,
+			// which is directly controlled by addon-operator.
+			switch mod.GetPhase() {
+			case modules.CanRunHelm:
+				statusMsgs = append(statusMsgs, "Ready")
+				// enrich status message with a notification that module config has something to say
+				if cfg != nil {
+					cfgStatus := s.ForConfig(cfg)
+					if len(cfgStatus.Message) > 0 {
+						statusMsgs = append(statusMsgs, "Info: module configuration reports some remarks")
+					}
+				}
+			case modules.HooksDisabled:
+				statusMsgs = append(statusMsgs, "Pending: hooks are disabled")
+			default:
+				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
+			}
+		}
+	} else {
+		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
+		if cfg == nil || (cfg != nil && cfg.Spec.Enabled == nil) {
+			// for external modules it makes sense to notify that they must be explicitly enabled via module configs
+			if module.Properties.Source != "Embedded" {
+				statusMsgs = append(statusMsgs, "Info: apply module config to enable")
+			} else {
+				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
+				enabledMsg := "disabled"
+				// TODO(yalosev): think about it
+				if s.moduleManager.IsModuleEnabled(mod.GetName()) {
+					enabledMsg = "enabled"
+				}
+				statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
+			}
+		}
+
+		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
+		if cfg != nil {
+			if cfg.Spec.Enabled != nil {
+				if *cfg.Spec.Enabled {
+					statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
+				} else {
+					statusMsgs = append(statusMsgs, "Info: disabled by module config")
+				}
+			}
+		}
+	}
+
+	return ModuleStatus{
+		Status: strings.Join(statusMsgs, ", "),
+	}
+}
+
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatus {
+	statusMsgs := make([]string, 0)
+
+	// Special case: unknown module name.
+	if !s.possibleNames.Has(cfg.GetName()) {
+		return ModuleConfigStatus{
 			Version: "",
-			Status:  "Ignored: unknown module name",
-			Type:    "N/A",
+			Message: "Ignored: unknown module name",
 		}
 	}
 
@@ -67,17 +147,9 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
 		res := Service().ConfigValidator().Validate(cfg)
 		if res.HasError() {
-			var prefix = "Ignored"
-			if enabled {
-				prefix = "Error"
-			}
-
-			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
-			return Status{
-				State:   "N/A",
+			return ModuleConfigStatus{
 				Version: "",
-				Status:  invalidMsg,
-				Type:    moduleType,
+				Message: fmt.Sprintf("Error: %s", res.Error),
 			}
 		}
 	}
@@ -102,71 +174,18 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig, bundleName string
 
 	// 'global' config is always enabled.
 	if cfg.GetName() == "global" {
-		return Status{
-			State:   "Enabled",
+		return ModuleConfigStatus{
 			Version: version,
-			Status:  versionWarning,
-			Type:    moduleType,
+			Message: versionWarning,
 		}
 	}
 
-	// Figure out additional statuses for known modules.
-	statusMsgs := make([]string, 0)
 	if versionWarning != "" {
 		statusMsgs = append(statusMsgs, versionWarning)
 	}
 
-	mod := s.moduleManager.GetModule(cfg.GetName())
-
-	// Calculate state and status.
-	stateMsg := "Disabled"
-	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
-		stateMsg = "Enabled"
-
-		lastHookErr := mod.GetLastHookError()
-		if lastHookErr != nil {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
-		}
-		if mod.GetModuleError() != nil {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.GetModuleError()))
-		}
-
-		if len(statusMsgs) == 0 { // no errors were added
-			// Best effort alarm!
-			//
-			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.c
-			// The right approach is to check the queue for the module run task.
-			// However, there are too many addon-operator internals involved.
-			// We should consider moving these statuses to the `Module` resource,
-			// which is directly controlled by addon-operator.
-			if mod.GetPhase() == modules.CanRunHelm {
-				statusMsgs = append(statusMsgs, "Ready")
-			} else {
-				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
-			}
-		}
-	} else {
-		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
-		if cfg.Spec.Enabled == nil {
-			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-			enabledMsg := "disabled"
-			// TODO(yalosev): think about it
-			if s.moduleManager.IsModuleEnabled(mod.GetName()) {
-				enabledMsg = "enabled"
-			}
-			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
-		}
-
-		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
-		}
-	}
-
-	return Status{
+	return ModuleConfigStatus{
 		Version: version,
-		State:   stateMsg,
-		Status:  strings.Join(statusMsgs, ", "),
-		Type:    moduleType,
+		Message: strings.Join(statusMsgs, ", "),
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -53,6 +54,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			  }
 			}
 }`, `{}`)
+	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "yes")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
@@ -60,6 +62,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 	Context("Update out of window", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "10:00"}]`))
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -154,6 +162,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -169,6 +183,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -301,9 +321,10 @@ spec:
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
-		It("Should remove deckhouse pod", func() {
+		It("Should set restart annotation to the deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-system", "deckhouse-6f46df5bd7-nk4j7").Exists()).To(BeFalse())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.metadata.annotations.kubectl\\.kubernetes\\.io/restartedAt").String()).To(BeEquivalentTo("2021-01-01T13:30:00Z"))
 		})
 	})
 
@@ -845,6 +866,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -860,6 +887,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))

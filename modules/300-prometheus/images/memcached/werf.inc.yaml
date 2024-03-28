@@ -1,0 +1,52 @@
+{{ $memcachedExporterVersion := "0.14.1" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache git
+  install:
+    - mkdir -p /usr/src/app
+    - cd /usr/src/app
+    - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git memcached_exporter
+
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+    add: /usr/src/app
+    to: /usr/src/app
+    before: install
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get -y --no-install-recommends install git gcc musl musl-tools
+  install:
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+    - cd /usr/src/app/memcached_exporter
+    - make build
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache memcached
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+    add: /usr/src/app/memcached_exporter/memcached_exporter
+    to: /usr/bin/memcached_exporter
+    before: install
+docker:
+  EXPOSE:
+    - "9150"
+  ENTRYPOINT:
+    - "/usr/bin/memcached_exporter"

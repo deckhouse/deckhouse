@@ -29,6 +29,16 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se/modules/380-metallb
+  to: /deckhouse/modules/380-metallb
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
@@ -36,6 +46,11 @@
         - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/030-cloud-provider-vcd
+  to: /deckhouse/modules/030-cloud-provider-vcd
   stageDependencies:
     setup:
         - '**/*.go'
@@ -51,6 +66,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/vcd
+  to: /deckhouse/modules/040-node-manager/capi/vcd
   stageDependencies:
     setup:
         - '**/*.go'
@@ -149,11 +169,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb
-  to: /deckhouse/modules/380-metallb
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   stageDependencies:
@@ -166,11 +181,6 @@
         - '**/*.go'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
   stageDependencies:
     setup:
         - '**/*.go'

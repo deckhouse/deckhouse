@@ -14,7 +14,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src/
 COPY exporter/ /src/
-RUN go get -u golang.org/x/net@v0.17.0 \
+RUN go get golang.org/x/net@v0.17.0 \
     && go mod tidy \
     && go build -ldflags="-s -w" -o loop main.go && \
     chown -R 64535:64535 /src/ && \

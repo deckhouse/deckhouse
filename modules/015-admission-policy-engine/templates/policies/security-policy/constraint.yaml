@@ -18,6 +18,12 @@
   {{- if hasKey $cr.spec.policies "readOnlyRootFilesystem" }}
     {{- include "read_only_root_filesystem" (list $context $cr) }}
   {{- end }}
+  {{- if not $cr.spec.policies.automountServiceAccountToken }}
+    {{- include "automount_service_account_token" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedClusterRoles" }}
+    {{- include "allowed_cluster_roles" (list $context $cr) }}
+  {{- end }}
   {{- if hasKey $cr.spec.policies "allowedFlexVolumes" }}
     {{- include "allowed_flex_volumes" (list $context $cr) }}
   {{- end }}
@@ -163,6 +169,47 @@ spec:
         kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "automount_service_account_token" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AutomountServiceAccountTokenPod
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allowed_cluster_roles" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedClusterRoles
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["RoleBinding"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedClusterRoles:
+      {{- $cr.spec.policies.allowedClusterRoles | toYaml | nindent 6 }}
 {{- end }}
 
 {{- define "allowed_flex_volumes" }}

@@ -28,7 +28,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: 'fd8q0kjl4l1iovds9f29'
+    imageID: 'fd8rfb93hae3rsv7a5a1' #RED OS MUROM (7.3.4)
     diskSizeGB: 50
     externalIPAddresses:
     - Auto

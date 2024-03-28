@@ -66,3 +66,7 @@ variable "volume_zone" {
 variable "zone" {
   type = string
 }
+
+variable "server_group" {
+  type = any
+}

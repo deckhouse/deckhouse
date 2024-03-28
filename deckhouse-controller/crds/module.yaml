@@ -41,9 +41,25 @@ spec:
                 source:
                   type: string
                   description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                stage:
+                  type: string
+                  description: 'The current stage of the module life cycle.'
+                  enum:
+                    - Sandbox
+                    - Incubating
+                    - Graduated
+                    - Deprecated
                 description:
                   type: string
                   description: 'Module description.'
+            status:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: "Module state explanation, version warning or last error"
+      subresources:
+        status: {}
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
@@ -57,3 +73,11 @@ spec:
           jsonPath: .properties.source
           type: string
           description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+        - name: stage
+          jsonPath: .properties.stage
+          type: string
+          description: 'The current stage of the module life cycle'
+        - name: Status
+          type: string
+          description: "Module state explanation or last error"
+          jsonPath: .status.status

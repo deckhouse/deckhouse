@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -41,6 +42,7 @@ type input struct {
 	maxUsedControlPlaneVersion string
 	configVersion              string
 	controlPlaneVersions       []string
+	defaultVersionInSecret     string
 }
 
 type output struct {
@@ -112,6 +114,7 @@ metadata:
   namespace: kube-system
 data:
   maxUsedControlPlaneKubernetesVersion: "<<PLACEHOLDER_B64>>"
+  <<PLACEHOLDER_DEFAULT>>
 `
 
 	var b strings.Builder
@@ -137,7 +140,12 @@ data:
 		b.WriteString(kubeSchedulerManifest)
 	}
 
-	b.WriteString(strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion))))
+	secretContent := strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion)))
+	deckhouseDefaultKubernetesVersion := ""
+	if caseInput.defaultVersionInSecret != "" {
+		deckhouseDefaultKubernetesVersion = fmt.Sprintf("deckhouseDefaultKubernetesVersion: %s", base64.StdEncoding.EncodeToString([]byte(caseInput.defaultVersionInSecret)))
+	}
+	b.WriteString(strings.ReplaceAll(secretContent, "<<PLACEHOLDER_DEFAULT>>", deckhouseDefaultKubernetesVersion))
 
 	clusterConf := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
@@ -186,6 +194,10 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				decodedMaxUsedKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.maxUsedControlPlaneKubernetesVersion").String())
 				Expect(err).To(BeNil())
 				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(out.maxUsedControlPlaneVersion))
+
+				defaultKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.deckhouseDefaultKubernetesVersion").String())
+				Expect(err).To(BeNil())
+				Expect(string(defaultKubernetesVersion)).To(Equal(config.DefaultKubernetesVersion))
 
 				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
 
@@ -289,6 +301,20 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 					maxUsedControlPlaneVersion: "1.28",
 					configVersion:              "1.26",
 					controlPlaneVersions:       []string{"1.26", "1.26", "1.26"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.28",
+					effectiveVersion:           "1.26",
+					minUsedVersion:             "1.25.2",
+				},
+			),
+			Entry("deckhouse default version should be changed",
+				input{
+					nodeVersions:               []string{"v1.25.4", "v1.25.3", "v1.25.5", "v1.25.2"},
+					maxUsedControlPlaneVersion: "1.28",
+					configVersion:              "1.26",
+					controlPlaneVersions:       []string{"1.26", "1.26", "1.26"},
+					defaultVersionInSecret:     "1.24",
 				},
 				output{
 					maxUsedControlPlaneVersion: "1.28",

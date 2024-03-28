@@ -219,6 +219,15 @@ EOF
     fi
   fi
 
+  # Forbid more than one taint with the same key and effect
+  if context::jq -e -r '.review.request.object.spec.nodeTemplate.taints // [] | group_by(.key,.effect)[] | select(length > 1)' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.nodeTemplate.taints must contains only one taint with the same key and effect"}
+EOF
+    return 0
+  fi
+
+
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF

@@ -43,18 +43,25 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
-// CheckRequirement run check function for `key` requirement. Returns true if check is passed, false otherwise
+// CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
 func CheckRequirement(key, value string) (bool, error) {
 	if defaultRegistry == nil {
 		return true, nil
 	}
 
-	f, err := defaultRegistry.GetCheckByKey(key)
+	fs, err := defaultRegistry.GetChecksByKey(key)
 	if err != nil {
 		return false, err
 	}
 
-	return f(value, memoryStorage)
+	for _, f := range fs {
+		passed, ferr := f(value, memoryStorage)
+		if ferr != nil || !passed {
+			return passed, ferr
+		}
+	}
+
+	return true, nil
 }
 
 // HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
@@ -99,33 +106,33 @@ type ValueGetter interface {
 
 type requirementsResolver interface {
 	RegisterCheck(key string, f CheckFunc)
-	GetCheckByKey(key string) (CheckFunc, error)
+	GetChecksByKey(key string) ([]CheckFunc, error)
 
 	RegisterDisruption(key string, f DisruptionFunc)
 	GetDisruptionByKey(key string) (DisruptionFunc, error)
 }
 
 type requirementsRegistry struct {
-	checkers    map[string]CheckFunc
+	checkers    map[string][]CheckFunc
 	disruptions map[string]DisruptionFunc
 }
 
 func newRegistry() *requirementsRegistry {
 	return &requirementsRegistry{
-		checkers:    make(map[string]CheckFunc),
+		checkers:    make(map[string][]CheckFunc),
 		disruptions: make(map[string]DisruptionFunc),
 	}
 }
 
 func (r *requirementsRegistry) RegisterCheck(key string, f CheckFunc) {
-	r.checkers[key] = f
+	r.checkers[key] = append(r.checkers[key], f)
 }
 
 func (r *requirementsRegistry) RegisterDisruption(key string, f DisruptionFunc) {
 	r.disruptions[key] = f
 }
 
-func (r *requirementsRegistry) GetCheckByKey(key string) (CheckFunc, error) {
+func (r *requirementsRegistry) GetChecksByKey(key string) ([]CheckFunc, error) {
 	f, ok := r.checkers[key]
 	if !ok {
 		return nil, errors.Wrap(ErrNotRegistered, fmt.Sprintf("requirement with a key: %s", key))

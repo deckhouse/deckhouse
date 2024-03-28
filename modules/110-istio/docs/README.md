@@ -175,12 +175,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 The main purpose of the activation is to add a sidecar container to the application Pods so that Istio can manage the traffic.
 
 The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
-{% alert level="info" %}
-When using Deckhouse version >= 1.55 and the [admission-policy-engine](../015-admission-policy-engine/) module is enabled, it works in `Baseline` mode by default. In this regard, Istio's init-containers can't configure rules for application's traffic interception, so the Pod's can't start. The solution is either configure the admission-policy-engine module to work in `Restricted` mode or add a label `security.deckhouse.io/pod-policy=privileged` to application's Namespace.
-{% endalert %}
-
-* A label attached to a **namespace** allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
-  * `istio-injection=enabled` — use the latest installed version of Istio;
+* A label attached to a namespace allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
+  * `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
   * `istio.io/rev=v1x16` — use the specific Istio version for a given namespace.
 * The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
@@ -214,6 +210,11 @@ Below are their fundamental differences:
 
 ### Federation
 
+#### Requirements for clusters
+
+* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). The default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) can be the same.
+
 #### General principles of federation
 
 * Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -246,6 +247,11 @@ To establish a federation, you must:
 > It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
 
 ### Multicluster
+
+#### Requirements for clusters
+
+* Cluster domains in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
 
 #### General principles
 

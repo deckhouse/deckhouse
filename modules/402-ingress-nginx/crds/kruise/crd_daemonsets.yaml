@@ -410,6 +410,9 @@ spec:
                     pod
                   format: int32
                   type: integer
+                labelSelector:
+                  description: A serialized label selector in string form
+                  type: string
               required:
                 - currentNumberScheduled
                 - daemonSetHash
@@ -426,6 +429,7 @@ spec:
         scale:
           specReplicasPath: .spec.replicas
           statusReplicasPath: .status.numberAvailable
+          labelSelectorPath: .status.labelSelector
 status:
   acceptedNames:
     kind: ""

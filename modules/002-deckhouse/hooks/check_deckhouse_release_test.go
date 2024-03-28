@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strconv"
 	"testing"
@@ -501,6 +502,13 @@ global:
 					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f63859")
 				},
 			}, nil)
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()

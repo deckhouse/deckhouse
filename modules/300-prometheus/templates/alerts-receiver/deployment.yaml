@@ -59,7 +59,7 @@ spec:
         - name: PORT
           value: "8080"
         - name: ALERTS_QUEUE_LENGTH
-          value: "100"
+          value: "500"
         ports:
         - containerPort: 8080
           name: http

@@ -422,7 +422,7 @@ func (m *MetaConfig) CachePath() string {
 }
 
 func (m *MetaConfig) DeepCopy() *MetaConfig {
-	out := MetaConfig{}
+	out := &MetaConfig{}
 
 	if m.ClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
@@ -482,7 +482,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.UUID = m.UUID
 	}
 
-	return m
+	return out
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {

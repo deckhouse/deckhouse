@@ -44,6 +44,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
 		hec.ValuesSet("userAuthn.publishAPI.enable", true)
+		hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
 	})
 
 	Context("By default", func() {

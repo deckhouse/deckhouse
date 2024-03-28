@@ -197,6 +197,41 @@ apiVersions:
             additionalProperties:
               type: string
               minLength: 1
+          serverGroup:
+            type: object
+            description: |
+              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+            required: [policy]
+            properties:
+              policy:
+                type: string
+                enum: [AntiAffinity, ManuallyManaged]
+                description: |
+                  The policy that determines how instances are distributed among hypervisors.
+
+                  - `AntiAffinity` — instances are placed on different hypervisors. This policy is managed by Deckhouse.
+                  - `ManuallyManaged` — instances are placed on different hypervisors. This policy is managed outside of Deckhouse.
+              manuallyManaged:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    description: |
+                      The id of the existing `ServerGroup` object managed outside of Deckhouse.
+            oneOf:
+              - properties:
+                  policy:
+                    enum:
+                      - AntiAffinity
+                  manuallyManaged:
+                    not: {}
+              - properties:
+                  policy:
+                    enum:
+                      - ManuallyManaged
+                required:
+                  - manuallyManaged
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).

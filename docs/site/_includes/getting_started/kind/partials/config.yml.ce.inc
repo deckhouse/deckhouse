@@ -34,9 +34,11 @@ spec:
     modules:
       # [<en>] Template for Ingress resources of Deckhouse modules.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
       # [<en>] The sslip.io service is used as as a working example.
       # [<ru>] Шаблон для создания Ingress-ресурсов модулей Deckhouse.
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
+      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] В качестве рабочего примера используется сервис sslip.io.
       publicDomainTemplate: "%s.127.0.0.1.sslip.io"
       https:

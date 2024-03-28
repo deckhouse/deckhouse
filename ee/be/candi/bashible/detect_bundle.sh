@@ -40,7 +40,7 @@ case "$ID" in
     name_is_not_supported
   ;;
   debian)
-    case "$VERSION_ID" in 9|10|11)
+    case "$VERSION_ID" in 10|11|12)
       echo "debian" && exit 0 ;;
     esac
     name_is_not_supported

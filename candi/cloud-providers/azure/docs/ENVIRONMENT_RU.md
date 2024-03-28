@@ -20,6 +20,19 @@ description: "Настройка Azure для работы облачного п
    az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
    ```
 
+   Пример вывода команды:
+
+   ```console
+   {
+     "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",     <-- используется в параметре clientId ресурса AzureClusterConfiguration 
+     "displayName": "DeckhouseCANDI",
+     "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", <-- используется в параметре clientSecret ресурса AzureClusterConfiguration
+     "tenant": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"    <-- используется в параметре tenantId ресурса AzureClusterConfiguration
+   }
+   ```
+
+   > По умолчанию срок действия секрета созданного service account (используется в параметре [clientSecret](cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) ресурса `AzureClusterConfiguration`) — один год без автоматического продления. Чтобы создать service account с большим сроком действия секрета обратитесь к [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
+
 Для дальнейшей работы с утилитой `az` необходимо авторизоваться, используя данные (login, password, tenant) созданного service account:
 
 ```shell

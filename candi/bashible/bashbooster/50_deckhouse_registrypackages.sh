@@ -159,11 +159,9 @@ bb-rp-fetch() {
   fi
 
   bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch manifests"' ERR
   bb-rp-fetch-manifests PACKAGES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch manifests"
-    return "${BB_ERROR}"
-  fi
+  trap - ERR
 
   declare -A BLOB_FILES_MAP
   local PACKAGE_DIGEST
@@ -174,11 +172,9 @@ bb-rp-fetch() {
   done
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch packages"' ERR
   bb-rp-fetch-blobs BLOB_FILES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch packages"
-    return "${BB_ERROR}"
-  fi
+  trap - ERR
   bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
 }
 
@@ -206,25 +202,23 @@ bb-rp-install() {
     bb-log-info "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
+    trap '
+      rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+      bb-log-error "Failed to unpack package "${PACKAGE}", it may be corrupted. The package will be refetched on the next attempt"
+    ' ERR
     tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
-    if bb-error?
-    then
-        rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
-        bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
-        return "${BB_ERROR}"
-    fi
+    trap - ERR
 
     bb-log-info "Installing package '${PACKAGE}'"
     # shellcheck disable=SC2164
     pushd "${TMP_DIR}" >/dev/null
+    trap '
+      popd >/dev/null
+      rm -rf "${TMP_DIR}"
+      bb-log-error "Failed to install package "${PACKAGE}""
+    ' ERR
     ./install
-    if bb-error?
-    then
-        popd >/dev/null
-        rm -rf "${TMP_DIR}"
-        bb-log-error "Failed to install package '${PACKAGE}'"
-        return "${BB_ERROR}"
-    fi
+    trap - ERR
     popd >/dev/null
 
     # Write digest to hold file

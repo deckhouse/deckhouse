@@ -1,0 +1,81 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vcdinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/) module).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required: [template, storageProfile]
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    root disk size in gigabytes.
+                  x-doc-examples: [20]
+                  default: 20
+                  type: integer
+                placementPolicy:
+                  description: |
+                    PlacementPolicy is the placement policy to be used on this machine.
+                    If no placement policy is specified, default placement policy will be used to create the nodes.
+                  type: string
+                  x-doc-examples: [Hypervisor1]
+                sizingPolicy:
+                  description: |
+                    SizingPolicy is the sizing policy to be used on this machine.
+                    If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                  type: string
+                  x-doc-examples: [4Cpu8Memory]
+                storageProfile:
+                  description: |
+                    StorageProfile is the storage profile to be used on this machine.
+                  type: string
+                  x-doc-examples: [ssd]
+                template:
+                  description: |
+                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                  type: string
+                  x-doc-examples: [Linux/ubuntu2204-cloud-ova]
+                mainNetwork:
+                  description: |
+                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+                  x-doc-examples: [internal]
+                  type: string
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: vcdinstanceclasses
+    singular: vcdinstanceclass
+    kind: VCDInstanceClass
+    categories:
+      - cloudinstanceclasses

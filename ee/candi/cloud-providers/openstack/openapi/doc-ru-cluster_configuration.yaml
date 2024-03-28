@@ -95,6 +95,21 @@ apiVersions:
               Полезные команды:
               - `openstack availability zone list` — получить список зон доступности.
               - `openstack volume type list` — получить список типов дисков.
+          serverGroup:
+            description: |
+              ServerGroup объединяет инстансы в группу. Инстансы в такой группе будут размещены на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволяет повысить отказоустойчивость кластера.
+            properties:
+              policy:
+                description: |
+                  Политика распределения инстансов:
+
+                  - `AntiAffinity` — размещает инстансы на разных гипервизорах.
+                  - `ManuallyManaged` — позволяет указать существующую ServerGroup по идентификатору.
+              manuallyManaged:
+                properties:
+                  id:
+                    description: |
+                      Идентификатор объекта ServerGroup.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).

@@ -7,7 +7,7 @@ if bb-is-redos-version? 7.3; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python"
 fi
 
-bb-yum-install python3-dnf-plugin-versionlock
+bb-var BB_YUM_INSTALL_EXTRA_ARGS "--allowerasing"
 
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 

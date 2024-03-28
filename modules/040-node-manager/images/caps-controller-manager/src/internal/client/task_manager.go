@@ -18,39 +18,39 @@ package client
 
 import (
 	"sync"
-
-	"caps-controller-manager/internal/providerid"
 )
 
 type taskManager struct {
 	tasksMutex sync.Mutex
-	tasks      map[providerid.ProviderID]*bool
+	tasks      map[taskID]*bool
 }
+
+type taskID string
 
 func newTaskManager() *taskManager {
 	return &taskManager{
-		tasks: make(map[providerid.ProviderID]*bool),
+		tasks: make(map[taskID]*bool),
 	}
 }
 
 // spawn spawns a new task if it doesn't exist yet.
-func (m *taskManager) spawn(providerID providerid.ProviderID, task func() bool) bool {
+func (m *taskManager) spawn(taskID taskID, task func() bool) bool {
 	m.tasksMutex.Lock()
 	defer m.tasksMutex.Unlock()
 
-	// Avoid spawning multiple tasks for the same providerID.
-	done, ok := m.tasks[providerID]
+	// Avoid spawning multiple tasks for the same taskID.
+	done, ok := m.tasks[taskID]
 	if ok {
 		if done == nil {
 			return false
 		}
 
-		delete(m.tasks, providerID)
+		delete(m.tasks, taskID)
 
 		return *done
 	}
 
-	m.tasks[providerID] = nil
+	m.tasks[taskID] = nil
 
 	go func() {
 		var done bool
@@ -59,7 +59,7 @@ func (m *taskManager) spawn(providerID providerid.ProviderID, task func() bool) 
 			m.tasksMutex.Lock()
 			defer m.tasksMutex.Unlock()
 
-			m.tasks[providerID] = &done
+			m.tasks[taskID] = &done
 		}()
 
 		done = task()

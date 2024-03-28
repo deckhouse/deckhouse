@@ -1,0 +1,190 @@
+{{- define "istio_cni_resources" }}
+cpu: 100m
+memory: 100Mi
+{{- end }}
+
+{{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $imageSuffix := get $versionInfo "imageSuffix" }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istio-cni-node
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: istio-cni-node
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
+      - containerName: "install-cni"
+        minAllowed:
+          cpu: 100m
+          memory: 100Mi
+        maxAllowed:
+          cpu: 200m
+          memory: 200Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: istio-cni-node
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node")) | nindent 2 }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: istio-cni-node
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: istio-cni-node
+        sidecar.istio.io/inject: "false"
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+        - name: install-cni
+          args:
+            - --log_output_level=default:info
+          command:
+            - install-cni
+          {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 10 }}
+          env:
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  key: cni_network_config
+                  name: istio-cni-config
+            - name: CNI_NET_DIR
+              value: /etc/cni/net.d
+            - name: CHAINED_CNI_PLUGIN
+              value: "true"
+            - name: REPAIR_ENABLED
+              value: "true"
+            - name: REPAIR_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: REPAIR_LABEL_PODS
+              value: "true"
+            - name: REPAIR_DELETE_PODS
+              value: "true"
+            - name: REPAIR_RUN_AS_DAEMON
+              value: "true"
+            - name: REPAIR_SIDECAR_ANNOTATION
+              value: sidecar.istio.io/status
+            - name: REPAIR_INIT_CONTAINER_NAME
+              value: istio-validation
+            - name: REPAIR_BROKEN_POD_LABEL_KEY
+              value: cni.istio.io/uninitialized
+            - name: REPAIR_BROKEN_POD_LABEL_VALUE
+              value: "true"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: LOG_LEVEL
+              value: debug
+          image: {{ include "helm_lib_module_image" (list $ (printf "cni%s" $imageSuffix)) }}
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            requests:
+              {{- include "istio_cni_resources" . | nindent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          volumeMounts:
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+            - mountPath: /var/run/istio-cni
+              name: cni-log-dir
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:15014/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ .Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: istio-cni-node
+          ports:
+            - containerPort: 9734
+              name: https-metrics
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      serviceAccountName: cni
+      terminationGracePeriodSeconds: 5
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      volumes:
+        - hostPath:
+            path: /opt/cni/bin
+            type: ""
+          name: cni-bin-dir
+        - hostPath:
+            path: /etc/cni/net.d
+            type: ""
+          name: cni-net-dir
+        - hostPath:
+            path: /var/run/istio-cni
+            type: ""
+          name: cni-log-dir
+{{- end }}

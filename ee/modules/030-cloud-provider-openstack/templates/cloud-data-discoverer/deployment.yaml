@@ -127,6 +127,8 @@ spec:
             secretKeyRef:
               key: moduleConfig
               name: cloud-data-discoverer
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID | quote }}
         livenessProbe:
           httpGet:
             path: /healthz

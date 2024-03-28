@@ -29,22 +29,45 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 	requirements.RemoveValue(minVersionValuesKey)
 	t.Run("requirement met", func(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.16.2")
-		ok, err := requirements.CheckRequirement("istioVer", "1.16")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.13")
-		ok, err := requirements.CheckRequirement("istioVer", "1.16")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
 		requirements.RemoveValue(minVersionValuesKey)
-		ok, err := requirements.CheckRequirement("istioVer", "1.16")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
 		assert.True(t, ok)
 		require.NoError(t, err)
+	})
+
+	requirements.RemoveValue(isK8sVersionAutomaticKey)
+	requirements.RemoveValue(istioToK8sCompatibilityMapKey)
+	requirements.RemoveValue(minVersionValuesKey)
+	t.Run("requirement for k8s version pass", func(t *testing.T) {
+		requirements.SaveValue(isK8sVersionAutomaticKey, true)
+		requirements.SaveValue(minVersionValuesKey, "1.13")
+		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
+		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
+		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.20")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("requirement for k8s version failed", func(t *testing.T) {
+		requirements.SaveValue(isK8sVersionAutomaticKey, true)
+		requirements.SaveValue(minVersionValuesKey, "1.13")
+		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
+		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
+		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22")
+		assert.False(t, ok)
+		require.Error(t, err)
 	})
 }

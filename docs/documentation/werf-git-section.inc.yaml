@@ -64,6 +64,23 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
+{{- if or (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+- add: /ee/se/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+- add: /ee/se/modules
+  to: /src/se/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
+{{- end }}
 {{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
@@ -79,7 +96,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
 - add: /ee/candi/cloud-providers/openstack/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
@@ -103,6 +120,20 @@
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/vsphere/openapi
   to: /src/ee/modules/030-cloud-provider-vsphere/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/vcd/openapi
+  to: /src/ee/modules/030-cloud-provider-vcd/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/vcd/openapi
+  to: /src/ee/modules/030-cloud-provider-vcd/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
@@ -196,6 +227,13 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
+- add: /ee/candi/cloud-providers/vcd/docs
+  to: /src/ee/modules/030-cloud-provider-vcd/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
+  stageDependencies:
+    setup: ['**/*']
 - add: /candi/cloud-providers/azure/openapi
   to: /src/modules/030-cloud-provider-azure/crds
   owner: jekyll
@@ -254,6 +292,12 @@
   - verticalpodautoscalercheckpoint.yaml
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /editions.yaml
+  to: /srv/jekyll-data/documentation/_data/editions-source.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:

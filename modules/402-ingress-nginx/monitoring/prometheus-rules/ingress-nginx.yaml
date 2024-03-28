@@ -24,7 +24,7 @@
         3. Probably, there is an error in configuration-snippet or server-snippet.
       summary: Config test failed on NGINX Ingress {{ $labels.controller }} in the {{ $labels.controller_namespace }} Namespace.
   - alert: NginxIngressSslWillExpire
-    expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
     for: 1h
     labels:
       severity_level: "5"
@@ -33,9 +33,10 @@
       plk_protocol_version: "1"
       description: |-
         SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks.
+        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
       summary: Certificate expires soon.
   - alert: NginxIngressSslExpired
-    expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
     for: 1m
     labels:
       severity_level: "4"
@@ -44,6 +45,7 @@
       plk_protocol_version: "1"
       description: |-
         SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired.
+        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
 
         https://{{ $labels.host }} version of site doesn't work!
       summary: Certificate has expired.
@@ -107,6 +109,7 @@
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
@@ -131,6 +134,7 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
@@ -178,7 +182,7 @@
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
       summary: |-
-        Ingress version 1.1 will be disabled in Deckhouse release 1.57
+        Ingress version 1.1 will be disabled in upcoming Deckhouse releases
       description: |-
         There is at least one ingress nginx controller with deprecated version 1.1. Ingress nginx version 1.1 will be disabled in upcoming Deckhouse releases. Consider upgrading to a newer version of Ingress nginx controller (all the pods of the affected Ingress Nginx controllers will be consequently recreated during upgrade).
         Use the following command to list the affected Ingress nginx controllers:

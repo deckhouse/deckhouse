@@ -1,0 +1,149 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+    cluster.x-k8s.io/provider: vcd
+    cluster.x-k8s.io/v1beta1: v1beta2
+  name: vcdclustertemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: VCDClusterTemplate
+    listKind: VCDClusterTemplateList
+    plural: vcdclustertemplates
+    singular: vcdclustertemplate
+  scope: Namespaced
+  versions:
+  - name: v1beta2
+    schema:
+      openAPIV3Schema:
+        description: VCDClusterTemplate is the Schema for the vcdclustertemplates
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VCDClusterTemplateSpec defines the desired state of VCDClusterTemplate
+            properties:
+              template:
+                properties:
+                  spec:
+                    description: VCDClusterSpec defines the desired state of VCDCluster
+                    properties:
+                      controlPlaneEndpoint:
+                        description: APIEndpoint represents a reachable Kubernetes
+                          API endpoint.
+                        properties:
+                          host:
+                            description: Host is the hostname on which the API server
+                              is serving.
+                            type: string
+                          port:
+                            description: Port is the port on which the API server
+                              is serving.
+                            type: integer
+                        required:
+                        - host
+                        - port
+                        type: object
+                      loadBalancerConfigSpec:
+                        description: LoadBalancerConfig defines load-balancer configuration
+                          for the Cluster both for the control plane nodes and for
+                          the CPI
+                        properties:
+                          useOneArm:
+                            description: UseOneArm defines the intent to une OneArm
+                              when upgrading CAPVCD from 0.5.x to 1.0.0
+                            type: boolean
+                          vipSubnet:
+                            type: string
+                        type: object
+                      org:
+                        type: string
+                      ovdc:
+                        type: string
+                      ovdcNetwork:
+                        type: string
+                      parentUid:
+                        type: string
+                      proxyConfigSpec:
+                        description: ProxyConfig defines HTTP proxy environment variables
+                          for containerd
+                        properties:
+                          httpProxy:
+                            type: string
+                          httpsProxy:
+                            type: string
+                          noProxy:
+                            type: string
+                        type: object
+                      rdeId:
+                        type: string
+                      site:
+                        type: string
+                      useAsManagementCluster:
+                        default: false
+                        type: boolean
+                      userContext:
+                        properties:
+                          password:
+                            type: string
+                          refreshToken:
+                            type: string
+                          secretRef:
+                            description: SecretReference represents a Secret Reference.
+                              It has enough information to retrieve secret in any
+                              namespace
+                            properties:
+                              name:
+                                description: name is unique within a namespace to
+                                  reference a secret resource.
+                                type: string
+                              namespace:
+                                description: namespace defines the space within which
+                                  the secret name must be unique.
+                                type: string
+                            type: object
+                          username:
+                            type: string
+                        type: object
+                    required:
+                    - org
+                    - ovdc
+                    - ovdcNetwork
+                    - site
+                    - userContext
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

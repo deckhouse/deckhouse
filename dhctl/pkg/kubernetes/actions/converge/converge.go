@@ -805,7 +805,16 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		return err
 	}
 
+	nodeNames := make([]string, 0, len(nodeGroup.State))
+
 	for nodeName := range nodeGroup.State {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	// Sort the nodes to obtain a deterministic order
+	sort.Strings(nodeNames)
+
+	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
 		err := log.Process("converge", processTitle, func() error {

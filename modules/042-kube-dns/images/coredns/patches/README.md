@@ -11,6 +11,7 @@ Upstream [PR](https://github.com/coredns/coredns/pull/5491).
 To create this patch run commands:
 
 ```shell
-go get -u google.golang.org/grpc@v1.57.1
+go get google.golang.org/grpc@v1.57.1
+go mod tidy
 git diff
 ```

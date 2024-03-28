@@ -33,7 +33,7 @@ metadata:
   {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   targetRef:
-    apiVersion: "apps/v1"
+    apiVersion: "apps.kruise.io/v1alpha1"
     kind: DaemonSet
     name: controller-{{ $name }}
     {{- if eq ($resourcesRequests.mode | default "") "VPA" }}

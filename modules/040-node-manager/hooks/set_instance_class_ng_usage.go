@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -26,6 +28,10 @@ import (
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
+
+var kindToVersion = map[string]string{
+	"vcdinstanceclass": "deckhouse.io/v1",
+}
 
 var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
 	Queue: "/modules/node-manager/update_instance_class_ng",
@@ -149,7 +155,14 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 				"nodeGroupConsumers": ngNames,
 			},
 		}
-		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", ic.Kind, "", ic.Name, object_patch.IgnoreMissingObject())
+
+		apiVersion := "deckhouse.io/v1"
+		// instance class can be v1alpha1 for example
+		if v, ok := kindToVersion[strings.ToLower(ic.Kind)]; ok {
+			apiVersion = v
+		}
+
+		input.PatchCollector.MergePatch(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.IgnoreMissingObject())
 	}
 
 	return nil

@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -40,7 +39,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		ExecutionMinInterval: 1 * time.Second,
 		ExecutionBurst:       2,
 	},
-	Queue: "/modules/node-manager/instance_controller",
+	AllowFailure: true,
+	Queue:        "/modules/node-manager/instance_controller",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "instances",
@@ -204,7 +204,9 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range machines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+
+			continue
 		}
 
 		if ic, ok := instances[name]; ok {
@@ -231,7 +233,9 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range clusterAPIMachines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			return fmt.Errorf("NodeGroup %s not found", machine.NodeGroup)
+			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+
+			continue
 		}
 
 		if ic, ok := instances[name]; ok {

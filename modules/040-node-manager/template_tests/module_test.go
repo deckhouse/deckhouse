@@ -690,6 +690,8 @@ const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/clo
 const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
 const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
 const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
+const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -699,12 +701,16 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove(openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -1730,6 +1736,183 @@ ccc: ddd
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
 				Expect(checksum).To(Equal("55b0c5ac9c7e72252f509bc825f5046e198eab25ebd80efa3258cfb38e881359"))
+			})
+		})
+	})
+
+	Context("CAPI", func() {
+		assertClusterResources := func(f *Config, clusterName string) {
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", clusterName)
+			Expect(cluster.Exists()).To(BeTrue())
+
+			Expect(cluster.Field("spec.clusterNetwork.pods.cidrBlocks.0").String()).To(Equal("10.111.0.0/16"))
+			Expect(cluster.Field("spec.clusterNetwork.services.cidrBlocks.0").String()).To(Equal("10.222.0.0/16"))
+			Expect(cluster.Field("spec.clusterNetwork.serviceDomain").String()).To(Equal("cluster.local"))
+
+			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(cluster.Field("spec.controlPlaneRef.kind").String()).To(Equal("DeckhouseControlPlane"))
+			Expect(cluster.Field("spec.controlPlaneRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
+			Expect(cluster.Field("spec.controlPlaneRef.name").String()).To(Equal(fmt.Sprintf("%s-control-plane", clusterName)))
+
+			controlPlane := f.KubernetesResource("DeckhouseControlPlane", "d8-cloud-instance-manager", fmt.Sprintf("%s-control-plane", clusterName))
+			Expect(controlPlane.Exists()).To(BeTrue())
+
+			healthCheck := f.KubernetesResource("MachineHealthCheck", "d8-cloud-instance-manager", fmt.Sprintf("%s-machine-health-check", clusterName))
+			Expect(healthCheck.Exists()).To(BeTrue())
+			Expect(healthCheck.Field("spec.clusterName").String()).To(Equal(clusterName))
+
+			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
+			Expect(capiDeploy.Exists()).To(BeTrue())
+		}
+
+		Context("VCD", func() {
+			const nodeManagerVCD = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: vcd
+    machineClassKind: ""
+    capiClusterKind: "VCDCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "app"
+    capiMachineTemplateKind: "VCDMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    vcd:
+      sshPublicKey: ssh-rsa AAAAA
+      organization: org
+      virtualDataCenter: dc
+      virtualApplicationName: app
+      server: https://localhost:5000
+      username: user
+      password: pass
+      insecure: true
+  nodeGroups:
+  - name: worker
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Docker"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+      - zoneb
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerVCD)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertVCDCluster := func(f *Config) {
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "capi-user-credentials")
+					Expect(secret.Exists()).To(BeTrue())
+					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
+					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
+
+					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
+					Expect(vcdCluster.Exists()).To(BeTrue())
+					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
+					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
+					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
+
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
+						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
+					}))
+				}
+
+				type mdParams struct {
+					name         string
+					templateName string
+				}
+
+				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
+					Expect(md.Exists()).To(BeTrue())
+
+					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
+					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+
+					annotations := md.Field("metadata.annotations").Map()
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
+					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"].String()).To(Equal("2"))
+					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/memory"].String()).To(Equal("2Gi"))
+
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					Expect(secret.Exists()).To(BeTrue())
+
+					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
+					Expect(vcdTemplate.Exists()).To(BeTrue())
+
+					Expect(vcdTemplate.Field("spec.template.spec.diskSize").String()).To(Equal("21474836480"))
+					Expect(vcdTemplate.Field("spec.template.spec.sizingPolicy").String()).To(Equal("s-c572-MSK1-S1-vDC1"))
+					Expect(vcdTemplate.Field("spec.template.spec.placementPolicy").String()).To(Equal("policy"))
+					Expect(vcdTemplate.Field("spec.template.spec.storageProfile").String()).To(Equal("vHDD"))
+					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
+
+					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+				}
+
+				namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
+				Expect(namespace.Exists()).To(BeTrue())
+
+				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+				Expect(registrySecret.Exists()).To(BeTrue())
+
+				assertClusterResources(f, "app")
+
+				assertVCDCluster(f)
+
+				// zonea
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-02320933",
+					templateName: "worker-6656f66e",
+				})
+
+				// zoneb
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-6bdb5b0d",
+					templateName: "worker-d30762c9",
+				})
 			})
 		})
 	})

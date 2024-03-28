@@ -28,7 +28,7 @@ shell:
     - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
     - for ifile in $(ls /patches/*.patch); do git apply $ifile; done
-    - go get -u github.com/prometheus/client_golang@v1.17.0
+    - go get github.com/prometheus/client_golang@v1.17.0
     - go mod tidy
     - go mod vendor
     - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner

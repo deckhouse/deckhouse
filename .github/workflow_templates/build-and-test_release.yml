@@ -101,6 +101,19 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_ee) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "build_se" "Build SE") }!}
+  build_se:
+    name: {!{ $jobNames.build_se }!}
+    needs:
+      - git_info
+      - go_generate
+      - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_se) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "build_be" "Build BE") }!}
   build_be:
     name: {!{ $jobNames.build_be }!}
@@ -255,6 +268,7 @@ jobs:
       - build_ee
       - build_ce
       - build_be
+      - build_se
       - doc_web_build
       - main_web_build
       - deploy_latest_web_site_prod_sel

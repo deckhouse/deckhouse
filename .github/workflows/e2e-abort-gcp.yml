@@ -258,6 +258,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -271,12 +274,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -522,6 +522,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -535,12 +538,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -786,6 +786,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -799,12 +802,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1050,6 +1050,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1063,12 +1066,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1314,6 +1314,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1327,12 +1330,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup

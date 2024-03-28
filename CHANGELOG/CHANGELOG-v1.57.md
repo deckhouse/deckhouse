@@ -5,7 +5,6 @@
 
  - All containers that use `spotify/scratch` image will be restarted (almost all Deckhouse containers).
  - Deckhouse will not upgrade if the istio version in the cluster is lower than `1.16`.
- - The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
 
 ## Features
 
@@ -48,6 +47,7 @@
  - **[candi]** Wait for a node to be added to the cluster before annotating the node. [#6443](https://github.com/deckhouse/deckhouse/pull/6443)
  - **[common]** Fixed vulnerabilities in csi livenessprobe and node-driver-registrar: CVE-2022-41723, CVE-2023-39325, GHSA-m425-mq94-257g [#6956](https://github.com/deckhouse/deckhouse/pull/6956)
     csi-controller pod will restart.
+ - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7866](https://github.com/deckhouse/deckhouse/pull/7866)
  - **[deckhouse]** Keep enabled modules without helm charts after converge. [#7315](https://github.com/deckhouse/deckhouse/pull/7315)
  - **[deckhouse-controller]** fix for `change-registry` helper's handling of registry credentials. [#7095](https://github.com/deckhouse/deckhouse/pull/7095)
  - **[deckhouse-controller]** Fix ModuleConfig validation for configs with empty settings. [#7064](https://github.com/deckhouse/deckhouse/pull/7064)
@@ -101,9 +101,6 @@
  - **[istio]** Add the [ingressClass](https://deckhouse.io/documentation/latest/modules/110-istio/configuration.html#parameters-ingressclass) parameter to the module configuration. [#7007](https://github.com/deckhouse/deckhouse/pull/7007)
  - **[keepalived]** keepalived is now based on a distroless image. [#6962](https://github.com/deckhouse/deckhouse/pull/6962)
     keepalived pods will restart.
- - **[linstor]** Disable Deckhouse update while `legacy` linstor module is enabled. [#7088](https://github.com/deckhouse/deckhouse/pull/7088)
- - **[linstor]** Add a validating webhook to prevent the linstor module from being enabled. [#7086](https://github.com/deckhouse/deckhouse/pull/7086)
-    The `linstor` module is deprecated. Please switch to [sds-drbd](https://deckhouse.io/modules/sds-drbd/stable/) module ASAP. The `linstor` module cannot be enabled but will continue to work if it was already enabled before.
  - **[monitoring-kubernetes]** Move `helm` module to `monitoring-kubernetes` module. [#6726](https://github.com/deckhouse/deckhouse/pull/6726)
  - **[prometheus]** Fix concurrent map access error. [#7261](https://github.com/deckhouse/deckhouse/pull/7261)
     Internal alerts-receiver will restart.

@@ -88,6 +88,46 @@ function __main__() {
       fi
     fi
 
+    # Not allow to downgrade more than 1 minor kubernetes version
+    newKubernetesVersion=$(yq eval '.kubernetesVersion' - <<< "$newConfig")
+    oldKubernetesVersion=$(yq eval '.kubernetesVersion' - <<< "$oldConfig")
+    # Possible kubernetes versions are "Automatic" or semver(1.28)
+    if [ "${newKubernetesVersion}" != "Automatic" ]; then
+      maxUsedControlPlaneKubernetesVersionB64=$(context::jq -r '.review.request.object.data."maxUsedControlPlaneKubernetesVersion"')
+      if [ "${maxUsedControlPlaneKubernetesVersionB64}" != "null" ]; then
+        maxUsedControlPlaneKubernetesVersion="$(echo "$maxUsedControlPlaneKubernetesVersionB64" | base64 -d )"
+
+        majMaxKubeVersion=$(echo "$maxUsedControlPlaneKubernetesVersion" | cut -d "." -f 1)
+        minMaxKubeVersion=$(echo "$maxUsedControlPlaneKubernetesVersion" | cut -d "." -f 2)
+
+        majNewKubeVersion=$(echo "$newKubernetesVersion" | cut -d "." -f 1)
+        minNewKubeVersion=$(echo "$newKubernetesVersion" | cut -d "." -f 2)
+
+        if [ $(("${majMaxKubeVersion}" - "${majNewKubeVersion}")) -gt 0 ] || [ $(("${minMaxKubeVersion}" - "${minNewKubeVersion}")) -gt 1 ]; then
+          echo '{"allowed":false, "message":"can not downgrade kubernetes version more than 1 minor version. maxUsedControlPlaneKubernetesVersion='"${maxUsedControlPlaneKubernetesVersion}"" newKubernetesVersion=${newKubernetesVersion}"'"}' > "$VALIDATING_RESPONSE_PATH"
+          return 0
+        fi
+      fi
+    elif [ "${newKubernetesVersion}" == "Automatic" ] && [ "$oldKubernetesVersion" != "Automatic" ]; then
+      # switch from concrete version to Automatic
+      # we should check that Automatic (default in deckhouse) version >= concrete version
+      automaticVersionB64=$(context::jq -r '.review.request.object.data."deckhouseDefaultKubernetesVersion"')
+      if [ "${automaticVersionB64}" != "null" ]; then
+        automaticVersion="$(echo "$automaticVersionB64" | base64 -d )"
+
+        majAutomaticVersion=$(echo "$automaticVersion" | cut -d "." -f 1)
+        minAutomaticVersion=$(echo "$automaticVersion" | cut -d "." -f 2)
+
+        majOldKubeVersion=$(echo "$oldKubernetesVersion" | cut -d "." -f 1)
+        minOldKubeVersion=$(echo "$oldKubernetesVersion" | cut -d "." -f 2)
+
+        if [ $(("${majOldKubeVersion}" - "${majAutomaticVersion}")) -gt 0 ] || [ $(("${minOldKubeVersion}" - "${minAutomaticVersion}")) -gt 0 ]; then
+          echo '{"allowed":false, "message":"can not set Automatic because it will downgrade kubernetes version. Automatic='"${automaticVersion}"" oldKubernetesVersion=${oldKubernetesVersion}"'"}' > "$VALIDATING_RESPONSE_PATH"
+          return 0
+        fi
+      fi
+    fi
+
     # defaultCRI cannot be changed if count of endpoints < 3
     endpointsCount=$(context::jq -r '.snapshots.endpoints[].filterResult.count')
     oldDefaultCRI=$(yq eval '.defaultCRI // "Containerd"' - <<< "$oldConfig")

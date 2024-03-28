@@ -1,4 +1,5 @@
 {{- if .Values.nodeManager.earlyOomEnabled }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,4 +31,5 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-cloud-instance-manager
-{{- end }}
+  {{- end }}
+{{- end}}

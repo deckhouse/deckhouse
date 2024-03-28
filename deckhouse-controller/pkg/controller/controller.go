@@ -23,16 +23,18 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
@@ -58,7 +60,8 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModules map[string]string
+	sourceModules           map[string]string
+	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
 
 	// separate controllers
 	informerFactory              externalversions.SharedInformerFactory
@@ -67,7 +70,7 @@ type DeckhouseController struct {
 	modulePullOverrideController *release.ModulePullOverrideController
 }
 
-func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager) (*DeckhouseController, error) {
+func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -85,6 +88,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 
 	httpClient := d8http.NewClient()
+	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	}
 
 	return &DeckhouseController{
 		ctx:        ctx,
@@ -92,17 +101,20 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		dirs:       utils.SplitToPaths(mm.ModulesDir),
 		mm:         mm,
 
-		deckhouseModules: make(map[string]*models.DeckhouseModule),
-		sourceModules:    make(map[string]string),
+		deckhouseModules:        make(map[string]*models.DeckhouseModule),
+		sourceModules:           make(map[string]string),
+		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 
 		informerFactory:              informerFactory,
-		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient),
+		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, embeddedDeckhousePolicy),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage, embeddedDeckhousePolicy),
 		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
 	}, nil
 }
 
-func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
+// Start runs preflight checks and load all deckhouse modules from the FS
+// it doesn't start controllers for ModuleSource/ModuleRelease objects
+func (dml *DeckhouseController) Start(ec chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	dml.informerFactory.Start(dml.ctx.Done())
 
 	err := dml.moduleReleaseController.RunPreflightCheck(dml.ctx)
@@ -118,16 +130,38 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent) error {
 	}
 
 	go dml.runEventLoop(ec)
-
-	go dml.moduleSourceController.Run(dml.ctx, 3)
-	go dml.moduleReleaseController.Run(dml.ctx, 3)
-	go dml.modulePullOverrideController.Run(dml.ctx, 1)
+	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
 
 	return nil
 }
 
-func (dml *DeckhouseController) ReloadModule(_, _ string) (*modules.BasicModule, error) {
-	return nil, fmt.Errorf("not implemented yet")
+// RunControllers function starts all child controllers linked with Modules
+func (dml *DeckhouseController) RunControllers() {
+	go dml.moduleSourceController.Run(dml.ctx, 3)
+	go dml.moduleReleaseController.Run(dml.ctx, 3)
+	go dml.modulePullOverrideController.Run(dml.ctx, 1)
+}
+
+func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
+	for {
+		cfg := <-deckhouseConfigC
+
+		b, _ := cfg.AsBytes("yaml")
+		mups := &v1alpha1.ModuleUpdatePolicySpec{
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: "Auto",
+			},
+			ReleaseChannel: "Stable",
+		}
+		err := yaml.Unmarshal(b, mups)
+		if err != nil {
+			log.Errorf("Error occurred during the Deckhouse embedded policy build: %s", err)
+			continue
+		}
+		dml.embeddedDeckhousePolicy.ReleaseChannel = mups.ReleaseChannel
+		dml.embeddedDeckhousePolicy.Update.Mode = mups.Update.Mode
+		dml.embeddedDeckhousePolicy.Update.Windows = mups.Update.Windows
+	}
 }
 
 func (dml *DeckhouseController) runEventLoop(ec chan events.ModuleEvent) {
@@ -222,31 +256,13 @@ func (dml *DeckhouseController) handleEnabledModule(m *models.DeckhouseModule, e
 		}
 
 		obj.Properties.State = "Disabled"
+		obj.Status.Status = "Disabled"
 		if enable {
 			obj.Properties.State = "Enabled"
+			obj.Status.Status = "Enabled"
 		}
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, obj, v1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-
-		// Update ModuleConfig if exists
-		mc, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return nil
-			}
-
-			return err
-		}
-
-		mc.Status.Status = "Disabled"
-		if enable {
-			mc.Status.Status = "Enabled"
-		}
-
-		_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(dml.ctx, mc, v1.UpdateOptions{})
 
 		return err
 	})

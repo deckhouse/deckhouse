@@ -99,7 +99,8 @@ shell:
   - cp target/release/vector /usr/bin/vector
   - export LD_LIBRARY_PATH="/usr/local/lib"
   - /binary_replace.sh -i /usr/bin/vector -o /relocate
-
+  - mkdir -p /relocate/etc
+  - cp -pr /etc/pki /relocate/etc
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}

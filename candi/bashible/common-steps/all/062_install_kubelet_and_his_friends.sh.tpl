@@ -52,3 +52,11 @@ completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bas
 if ! grep -qF -- "$completion"  /root/.bashrc; then
   echo "$completion" >> /root/.bashrc
 fi
+
+# Install d8 with completion
+bb-rp-install "d8:{{ .images.registrypackages.d8003 }}"
+
+if [ ! -f "/etc/bash_completion.d/d8" ]; then
+  mkdir -p /etc/bash_completion.d
+  d8 completion bash > /etc/bash_completion.d/d8
+fi

@@ -1,0 +1,199 @@
+{{- define "mimir_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+{{- define "promxy_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: aggregating-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: aggregating-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: mimir
+        minAllowed:
+          {{- include "mimir_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 50m
+          memory: 100Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
+      - containerName: promxy
+        minAllowed:
+          {{- include "promxy_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 50m
+          memory: 100Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aggregating-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: aggregating-proxy
+  template:
+    metadata:
+      labels:
+        app: aggregating-proxy
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/aggregating-proxy/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "aggregating-proxy")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: aggregating-proxy
+      initContainers:
+        - name: wait-memcached
+          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+          command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached:11211; do sleep 1; done' ]
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+      containers:
+        - name: mimir
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "mimir") }}
+          args:
+            - "-target=query-frontend"
+            - "-config.file=/etc/mimir/config.yaml"
+            - "-config.expand-env"
+            - "-log.format=json"
+            - "-log.level=info"
+          volumeMounts:
+            - mountPath: /etc/mimir/config.yaml
+              name: aggregating-proxy-config
+              subPath: mimir.yaml
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 8443
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8443
+              scheme: HTTPS
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "mimir_resources" . | nindent 14 }}
+              {{- end }}
+        - name: promxy
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "promxy") }}
+          args:
+            - "--bind-addr=127.0.0.1:8082"
+            - "--config=/etc/promxy/config.yaml"
+            - "--log-format=json"
+            - "--log-level=info"
+          volumeMounts:
+            - mountPath: /etc/promxy/config.yaml
+              name: aggregating-proxy-config
+              subPath: promxy.yaml
+          livenessProbe:
+            httpGet:
+              path: /promxy/ready
+              port: 8443
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /promxy/ready
+              port: 8443
+              scheme: HTTPS
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "promxy_resources" . | nindent 14 }}
+              {{- end }}
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+          args:
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
+          ports:
+            - containerPort: 8443
+              name: https
+          env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              value: "0.0.0.0"
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                excludePaths:
+                - /ready
+                - /promxy/ready
+                upstreams:
+                - upstream: http://127.0.0.1:8080/
+                  path: /
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-monitoring
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: http
+                      name: aggregating-proxy
+                - upstream: http://127.0.0.1:8080/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-monitoring
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: aggregating-proxy
+                - upstream: http://127.0.0.1:8082/metrics
+                  path: /promxy/metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-monitoring
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: aggregating-proxy
+                - upstream: http://127.0.0.1:8082/-/ready
+                  path: /promxy/ready
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+              {{- end }}
+      volumes:
+        - name: aggregating-proxy-config
+          configMap:
+            name: aggregating-proxy-config
+      imagePullSecrets:
+        - name: deckhouse-registry

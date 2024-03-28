@@ -565,7 +565,7 @@ ingress_check() {
       echo "Here is the output of the 'kubectl -n d8-ingress-nginx get all' command:"
       ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get all
       echo
-      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'\""
+      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'\""
       echo
       cluster_deletion_info
       exit 1
@@ -589,14 +589,14 @@ generate_ee_access_string() {
 install_show_credentials() {
 
   local prometheus_password
-  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
+  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'")
   if [ "$?" -ne "0" ] || [ -z "$prometheus_password" ]; then
     printf "
 Error getting Prometheus password.
 
 Try to run the following command to get Prometheus password:
 
-    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}"
   else

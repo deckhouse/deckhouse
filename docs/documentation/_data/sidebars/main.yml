@@ -291,6 +291,46 @@ entries:
                   url: /modules/030-cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
+            - title: VMware Cloud Director
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/030-cloud-provider-vcd/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/030-cloud-provider-vcd/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/030-cloud-provider-vcd/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/030-cloud-provider-vcd/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/030-cloud-provider-vcd/configuration.html
+                    - title: Custom Resources
+                      url: /modules/030-cloud-provider-vcd/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/030-cloud-provider-vcd/examples.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-vcd/faq.html
             - title: Yandex Cloud
               folders:
                 - title:
@@ -1080,31 +1120,6 @@ entries:
                   url: /modules/031-ceph-csi/cr.html
             - title: FAQ
               url: /modules/031-ceph-csi/faq.html
-        - title: linstor
-          featureStatus: deprecated
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/041-linstor/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/041-linstor/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/041-linstor/configuration.html
-                - title:
-                    en: Advanced Usage
-                    ru: Расширенная конфигурация
-                  url: /modules/041-linstor/advanced_usage.html
-            - title: FAQ
-              url: /modules/041-linstor/faq.html
         - title: local-path-provisioner
           folders:
             - title:

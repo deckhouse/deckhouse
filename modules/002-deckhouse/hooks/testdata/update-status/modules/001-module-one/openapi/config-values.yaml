@@ -1,4 +1,5 @@
 ---
+x-config-version: 1
 type: object
 default: {}
 additionalProperties: false

@@ -24,6 +24,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/logs"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -33,6 +34,10 @@ import (
 )
 
 func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
+	if app.IsDebug {
+		logs.Debug.SetOutput(os.Stderr)
+	}
+
 	cmd := parent.Command("mirror", "Copy Deckhouse images from Deckhouse registry to local filesystem and to third-party registry")
 	app.DefineMirrorFlags(cmd)
 

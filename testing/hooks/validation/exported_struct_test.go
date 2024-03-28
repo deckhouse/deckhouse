@@ -32,6 +32,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 // Check that structures which are used by FilterFunc don't have unexported fields
@@ -62,13 +63,41 @@ type structCheckResult struct {
 	Line     int
 }
 
+type edition struct {
+	Name       string `yaml:"name,omitempty"`
+	ModulesDir string `yaml:"modulesDir,omitempty"`
+}
+
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+func getPossiblePathToModules() []string {
+	content, err := os.ReadFile("/deckhouse/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	modulesDir := make([]string, 0)
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+		modulesDir = append(modulesDir, fmt.Sprintf("/deckhouse/%s/*/hooks", ed.ModulesDir))
+	}
+
+	return modulesDir
+}
+
 func collectGoHooks() []string {
 	var hookDirs []string
-	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/hooks",
-		"/deckhouse/ee/modules/*/hooks",
-		"/deckhouse/ee/fe/modules/*/hooks",
-	} {
+	for _, possibleDir := range getPossiblePathToModules() {
 		result, err := filepath.Glob(possibleDir)
 		if err != nil {
 

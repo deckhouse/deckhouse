@@ -2,25 +2,65 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-At this point, you have created a cluster that consists of a **single** master node. Since only a limited set of system components run on the master node by default, <a href="/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">you have to add</a> at least one worker node to the cluster for the cluster to work properly.
+At this point, you have created a cluster that consists of a **single** master node. Only a limited set of system components run on the master node by default. You have to either add at least one worker node to the cluster for the cluster to work properly, or allow the rest of the Deckhouse components to work on the master node.
 
-{% offtopic title="If a single master node is all you need…" %}
-<div>
-<p>A single-node cluster may be sufficient for <strong>familiarization purposes</strong>. In this case, you do not need to add more nodes to the cluster. To permit the other Deckhouse components to run on the master node, remove the taint from the master node by running the following command on it:</p>
+Select one of the two options below to continue installing the cluster:
 
-<div markdown="0">
+<div class="tabs">
+        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
+        A cluster of several nodes
+        </a>
+        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
+        A cluster of a single node
+        </a>
+</div>
+
+<div id="block_layout_master" class="tabs__content_master" style="display: none;">
+<p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
+<ul>
+  <li>
+<p>Run the following command on the <strong>master node</strong>, to remove the taint from the master node and permit the other Deckhouse components to run on it:</p>
+
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
+  </li>
+  <li>
+<p>Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-deckhouse
+spec:
+  nodeGroups:
+  - master
+  path: "/opt/local-path-provisioner"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+<p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
+  </li>
+</ul>
 </div>
 
-<p><strong>Note that you do not need to follow the steps below on how to add a new node to the cluster.</strong></p>
-</div>
-{%- endofftopic %}
-
-Add a new node to the cluster:
+<div id="block_layout_worker" class="tabs__content_worker">
+<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
   <li>
@@ -44,7 +84,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-  Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:
+  <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
@@ -52,7 +92,7 @@ sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kub
 {% endsnippetcut %}
   </li>
   <li>
-    Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:
+    <p>Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -67,7 +107,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-    Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):
+    <p>Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):</p>
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
@@ -75,21 +115,15 @@ sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-b
 {% endsnippetcut %}
   </li>
   <li>
-    On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:    
+    <p>On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:</p>
 {% snippetcut %}
 ```bash
 echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
 ```
 {% endsnippetcut %}
   </li>
-</ul>
-
-<p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
-
-Before you go further:
-<ul><li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
+  <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>
-
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl get no
@@ -105,6 +139,12 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 ```
 {%- endofftopic %}
 </li>
+</ul>
+</div>
+
+<p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
+
+<ul>
 <li><p>Make sure the Kruise controller manager is <code>Ready</code> before continuing.</p>
 <p>On the <strong>master node</strong>, run the following command:</p>
 
@@ -123,7 +163,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 {%- endofftopic %}
 </li></ul>
 
-Next, you will need to create an Ingress controller, a Storage Class for data storage, a user to access the web interfaces, and configure the DNS.
+Next, you will need to create an Ingress controller, a user to access the web interfaces, and configure the DNS.
 <ul><li><p><strong>Setting up an Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
   {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}

@@ -184,10 +184,10 @@ spec:
         {{ with .parameters.resourceQuota.requests.storage }}requests.storage: {{ . }}{{ end }}
         {{ with .parameters.resourceQuota.limits.cpu }}limits.cpu: {{ . }}{{ end }}
         {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
+    {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
     # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
-    {{- if eq .parameters.networkPolicy "Isolated" }}
     kind: NetworkPolicy
     apiVersion: networking.k8s.io/v1
     metadata:
@@ -233,9 +233,9 @@ spec:
             - protocol: UDP
               port: 53
     {{- end }}
+    {{- with .parameters.clusterLogDestinationName }}
     ---
     # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
-    {{- with .parameters.clusterLogDestinationName }}
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -261,12 +261,12 @@ spec:
           labelSelector:
             matchLabels:
               kubernetes.io/metadata.name: "{{ .projectName }}"
+    {{- if .parameters.runtimeAuditEnabled }}
+    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
     # Refer to https://deckhouse.io/documentation/v1/modules/650-runtime-audit-engine/examples.html
-    {{- if .parameters.enabledAudit }}
-    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
     metadata:

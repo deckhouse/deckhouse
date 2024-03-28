@@ -67,6 +67,7 @@ apiVersions:
             - "Yandex"
             - "vSphere"
             - "Azure"
+            - "VCD"
           prefix:
             type: string
             description: |
@@ -97,7 +98,10 @@ apiVersions:
           > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
       clusterDomain:
         type: string
-        description: Cluster domain (used for local routing).
+        description: |
+          Cluster domain (used for local routing).
+
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
         default: "cluster.local"
       defaultCRI:
         type: string
@@ -118,7 +122,7 @@ apiVersions:
 
           Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
 
-          If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
+          If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
         - "1.25"

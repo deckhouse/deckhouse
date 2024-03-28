@@ -211,6 +211,31 @@
 
         You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
 
+  - alert: NodeStuckInDraining
+    expr: |
+      max by (message, node, node_group) (
+        d8_node_draining *
+        on (node) group_left (node_group) node_group_node_status{status="Draining"} *
+        on (node) group_left () (max by (node) ((kube_node_status_condition == 1)))
+      ) > 0
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: message
+      summary: The {{ $labels.node }} Node is stuck in draining.
+      description: |
+        The {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup stuck in draining.
+
+        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'`
+
+        The error message is: {{ $labels.message }}
+
   - alert: D8BashibleApiserverLocked
     expr: d8_bashible_apiserver_locked == 1
     for: 15m

@@ -10,19 +10,19 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.19": { "fullVersion": "1.19.4", "revision": "1x19", "imageSuffix": "V1x19x4", "isReady": false } } # must be real
+          - {"1.19": { "fullVersion": "1.19.7", "revision": "1x19", "imageSuffix": "V1x19x7", "isReady": false } } # must be real
         additionalProperties:
           type: object
           properties:
             fullVersion:
               type: string
-              x-examples: ["1.19.4"]
+              x-examples: ["1.19.7"]
             revision:
               type: string
               x-examples: ["v1x19"]
             imageSuffix:
               type: string
-              x-examples: ["V1x19x4"]
+              x-examples: ["V1x19x7"]
             isReady:
               type: boolean
               x-examples: [false]
@@ -39,6 +39,23 @@ properties:
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
+      dataPlane:
+        type: object
+        default: {}
+        properties:
+          trafficRedirectionSetupMode:
+            type: string
+            description: |
+              Managing application traffic redirection modes using Istio in the Pod Network.
+              - `InitContainer` — the classic mode, in which `sidecar-injector` adds an init container to application pods, configuring traffic redirection at the start of the pod. This mode requires superuser rights and does not work if one of the strict modes is enabled in the `admission-policy-engine` module.
+              - `CNIPlugin` — In this mode, the CNI plugin, which runs on each cluster node and does not require privileges at the pod manifest level, is responsible for configuring the pod network environment.
+              There is CNIPlugin trafficRedirectionSetupMode in Istio module by default
+              To change this mode to InitContainer we should create secret
+              d8-istio-configuration in d8-istio namespace with trafficRedirectionSetupMode key
+              kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=InitContainer
+            default: "CNIPlugin"
+            enum: ["CNIPlugin", "InitContainer"]
+            x-examples: ["CNIPlugin", "InitContainer"]
       ca:
         type: object
         default: {}

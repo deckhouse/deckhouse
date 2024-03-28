@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -11,7 +12,7 @@ spec:
       rules:
         - record: kube_adapter_metric_d8_ingress_nginx_ds_cpu_utilization
           expr: avg by (controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) round(rate(container_cpu_usage_seconds_total{container!="POD"}[1m]) * 100))
-
+{{- end }}
 
 {{- define "ingress-controller-lb-hpa" }}
 {{- $context := index . 0 }}

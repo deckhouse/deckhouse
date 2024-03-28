@@ -339,29 +339,31 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
 
-* Включен `Docker Bearer Token Realm`.
-* Создан проксирующий репозиторий Docker.
-* Параметр `Allow anonymous docker pull` должен быть включен.
+* Включен `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*).
+* Создан **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*):
+  * Параметр `Allow anonymous docker pull` для репозитория должен быть включен. Данный параметр включает поддержку авторизации с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * Параметр `Maximum metadata age` для репозитория должен быть установлен в `0`.
 * Должен быть настроен контроль доступа:
-  * Создана роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
-  * Создан пользователь Nexus с ролью, созданной выше.
-* Параметр `Maximum metadata age` созданного репозитория должен быть установлен в 0.
+  * Создана роль **Nexus** (*Administration* -> *Security* -> *Roles*) со следующими полномочиями:
+    * `nx-repository-view-docker-<репозиторий>-browse`
+    * `nx-repository-view-docker-<репозиторий>-read`
+  * Создан пользователь (*Administration* -> *Security* -> *Users*) с ролью, созданной выше.
 
-Настройка:
+**Настройка**:
 
-* Включите `Docker Bearer Token Realm`:
+* Включите `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
   ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
-* Создайте проксирующий репозиторий Docker, указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
+* Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
-* Заполните поля страницы создания следующим образом:
+* Заполните поля страницы создания репозитория следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
-  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/en/anonymous-access.html) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в *Settings* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * `Allow anonymous docker pull` должно быть включено, чтобы работала авторизация с помощью Bearer-токенов. При этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
   * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
-  * `Maximum Metadata Age` должно быть равно 0.
+  * `Maximum Metadata Age` должно быть равно `0`.
   * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
     * `Authentication Type` должно иметь значение `Username`.
     * `Username` должно иметь значение `license-token`.
@@ -372,11 +374,11 @@ Deckhouse поддерживает работу только с Bearer token-с�
   ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
-  * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+  * Создайте роль **Nexus** (*Administration* -> *Security* -> *Roles*) с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
 
     ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
 
-  * Создайте пользователя Nexus с ролью, созданной выше.
+  * Создайте пользователя (*Administration* -> *Security* -> *Users*) с ролью, созданной выше.
 
     ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
 
@@ -418,7 +420,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.3 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.56.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.4 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse.
@@ -430,7 +432,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Следующая команда скачает образы Deckhouse тех версий, которые находятся на каналах обновлений (о текущем статусе версий на каналах обновлений можно узнать на [flow.deckhouse.io](https://flow.deckhouse.io)):
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Если загрузка образов будет прервана, повторный вызов команды проверит загруженные образы и продолжит загрузку с момента ее остановки. Продолжение загрузки возможно только если с момента остановки прошло не более суток.
@@ -441,7 +443,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Например, для загрузки всех версий Deckhouse, начиная с версии 1.45, используйте команду:
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
 
    > Обратите внимание, параметр `--min-version` будет проигнорирован если вы укажете версию выше находящейся в канале обновлений rock-solid.
@@ -453,7 +455,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Например, вот как можно загрузить образы из стороннего registry:
 
    ```shell
-   dhctl mirror --source="corp.company.ru/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.ru/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > Параметр `--license` действует как сокращение для параметров `--source-login` и `--source-password` и предназначен для использования с официальным registry Deckhouse.
@@ -476,7 +478,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Пример команды для загрузки образов из файла `/tmp/d8-images/d8.tar`:
 
    ```shell
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
    ```
 
    > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse/ee).
@@ -497,7 +499,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.58.4 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы модулей и YAML-манифест [ModuleSource](cr.html#modulesource), описывающий источник модулей.
@@ -526,7 +528,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Пример команды для загрузки образов из директории `/tmp/d8-modules`:
 
    ```shell
-   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
    ```
 
    > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse-modules).

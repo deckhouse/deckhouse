@@ -43,6 +43,10 @@ properties:
 
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
+          **Pay attention to the following:**
+          - Domain must be different from [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
+          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+
           If this parameter is omitted, no Ingress resources will be created.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]

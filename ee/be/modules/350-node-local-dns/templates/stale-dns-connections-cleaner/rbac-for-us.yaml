@@ -1,0 +1,43 @@
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stale-dns-connections-cleaner
+  namespace: kube-system
+  {{ include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner")) | nindent 2 }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:stale-dns-connections-cleaner
+  {{ include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner")) | nindent 2 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - pods
+  verbs:
+    - get
+    - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:stale-dns-connections-cleaner
+  {{ include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: stale-dns-connections-cleaner
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:stale-dns-connections-cleaner
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

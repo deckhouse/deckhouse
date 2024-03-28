@@ -75,6 +75,8 @@ type Controller struct {
 
 	externalModulesDir string
 
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+
 	rwlock                sync.RWMutex
 	moduleSourcesChecksum sourceChecksum
 }
@@ -86,6 +88,7 @@ func NewController(
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -108,8 +111,9 @@ func NewController(
 
 		logger: lg,
 
-		externalModulesDir:    os.Getenv("EXTERNAL_MODULES_DIR"),
-		moduleSourcesChecksum: make(sourceChecksum),
+		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
+		moduleSourcesChecksum:   make(sourceChecksum),
+		deckhouseEmbeddedPolicy: embeddedPolicy,
 	}
 
 	// Set up an event handler for when ModuleSource resources change
@@ -397,7 +401,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 
 	// check if we have an update policy for the moduleName
-	policy, err := getReleasePolicy(ms.Name, moduleName, policies)
+	policy, err := c.getReleasePolicy(ms.Name, moduleName, policies)
 	if err != nil {
 		// if policy not found - drop all previous module's errors
 		if errors.Is(err, ErrNoPolicyFound) {
@@ -407,6 +411,10 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 		return "", av, err
 	}
 	av.Policy = policy.Name
+
+	if policy.Spec.Update.Mode == "Ignore" {
+		return "", av, nil
+	}
 
 	downloadResult, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
 	if err != nil {
@@ -523,6 +531,7 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			ModuleName: moduleName,
 			Version:    semver.MustParse(result.ModuleVersion),
 			Weight:     result.ModuleWeight,
+			Changelog:  v1alpha1.Changelog(result.Changelog),
 		},
 	}
 
@@ -567,18 +576,25 @@ func (c *Controller) updateModuleSourceStatus(msCopy *v1alpha1.ModuleSource) err
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
 // if several policies match the module release labels, conflict=true is returned
-func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
+func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
 	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
 	var found bool
+
 	for _, policy := range policies {
 		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
 			if err != nil {
 				return nil, err
 			}
+			selectorSourceName, sourceLabelExists := selector.RequiresExactMatch("source")
+			if sourceLabelExists && selectorSourceName != sourceName {
+				// 'source' label is set, but does not match the given ModuleSource
+				continue
+			}
 
 			if selector.Matches(releaseLabelsSet) {
+				// ModuleUpdatePolicy matches ModuleSource and specified Module
 				if found {
 					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
 				}
@@ -589,7 +605,17 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 	}
 
 	if !found {
-		return nil, ErrNoPolicyFound
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
+		return &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
+			},
+			Spec: *c.deckhouseEmbeddedPolicy,
+		}, nil
 	}
 
 	return matchedPolicy, nil

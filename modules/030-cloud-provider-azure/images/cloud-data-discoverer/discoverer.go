@@ -40,12 +40,12 @@ type Discoverer struct {
 func NewDiscoverer(logger *log.Entry) *Discoverer {
 	location := os.Getenv("AZURE_LOCATION")
 	if location == "" {
-		logger.Fatalf("Cannnot get AZURE_LOCATION env")
+		logger.Fatalf("Cannot get AZURE_LOCATION env")
 	}
 
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
 	if location == "" {
-		logger.Fatalf("Cannnot get AZURE_SUBSCRIPTION_ID env")
+		logger.Fatalf("Cannot get AZURE_SUBSCRIPTION_ID env")
 	}
 
 	return &Discoverer{
@@ -162,4 +162,9 @@ func (d *Discoverer) continueProcessing(r *armcompute.ResourceSKU) (bool, error)
 
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	return nil, nil
+}
+
+// NotImplemented
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	return []v1alpha1.DiskMeta{}, nil
 }

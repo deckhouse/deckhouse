@@ -39,6 +39,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 )
@@ -73,14 +74,13 @@ func TestMirrorE2E_Insecure(t *testing.T) {
 		ValidationMode:        mirror.NoValidation,
 	}
 
-	err = MirrorDeckhouseToLocalFS(
-		pullCtx,
-		[]semver.Version{
-			*semver.MustParse("v1.56.5"),
-			*semver.MustParse("v1.55.7"),
-		},
-	)
+	versionsToPull := []semver.Version{
+		*semver.MustParse("v1.56.5"),
+		*semver.MustParse("v1.55.7"),
+	}
+	err = MirrorDeckhouseToLocalFS(pullCtx, versionsToPull)
 	require.NoError(t, err, "Pull should be completed without errors")
+	validateDeckhouseReleasesManifests(t, pullCtx, versionsToPull)
 	for _, layoutName := range []string{"", "install", "release-channel"} {
 		require.DirExists(t, filepath.Join(pullCtx.UnpackedImagesPath, layoutName), "Image layouts should exist after pull")
 		require.DirExists(t, filepath.Join(pullCtx.UnpackedImagesPath, layoutName, "blobs"), "Blobs should exist after pull")
@@ -237,10 +237,16 @@ func createDeckhouseReleaseChannelImageInRegistry(t *testing.T, repo, tag, versi
 	layers := make([]v1.Layer, 0)
 
 	// COPY ./version.json /version.json
-	l, err := crane.Layer(map[string][]byte{
-		"version.json": []byte(fmt.Sprintf(`{"version": %q}`, version)),
-	})
+	changelog, err := yaml.JSONToYAML([]byte(`{"candi":{"fixes":[{"summary":"Fix deckhouse containerd start after installing new containerd-deckhouse package.","pull_request":"https://github.com/deckhouse/deckhouse/pull/6329"}]}}`))
 	require.NoError(t, err)
+	versionInfo := fmt.Sprintf(
+		`{"disruptions":{"1.56":["ingressNginx"]},"requirements":{"containerdOnAllNodes":"true","ingressNginx":"1.1","k8s":"1.23.0","nodesMinimalOSVersionUbuntu":"18.04"},"version":%q}`,
+		"v"+version,
+	)
+	l, err := crane.Layer(map[string][]byte{
+		"version.json":   []byte(versionInfo),
+		"changelog.yaml": changelog,
+	})
 	layers = append(layers, l)
 
 	img, err := mutate.AppendLayers(base, layers...)
@@ -257,6 +263,47 @@ func createDeckhouseReleaseChannelImageInRegistry(t *testing.T, repo, tag, versi
 	require.NoError(t, err)
 
 	return digestHash.String()
+}
+
+func validateDeckhouseReleasesManifests(t *testing.T, pullCtx *mirror.Context, versions []semver.Version) {
+	t.Helper()
+	deckhouseReleasesManifestsFilepath := filepath.Join(filepath.Dir(pullCtx.TarBundlePath), "deckhousereleases.yaml")
+	actualManifests, err := os.ReadFile(deckhouseReleasesManifestsFilepath)
+	require.NoError(t, err)
+
+	expectedManifests := strings.Builder{}
+	for _, version := range versions {
+		expectedManifests.WriteString(fmt.Sprintf(`---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v%[1]s
+spec:
+  changelog:
+    candi:
+      fixes:
+      - summary: Fix deckhouse containerd start after installing new containerd-deckhouse package.
+        pull_request: https://github.com/deckhouse/deckhouse/pull/6329
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v%[1]s
+  disruptions:
+  - ingressNginx
+  requirements:
+    containerdOnAllNodes: 'true'
+    ingressNginx: '1.1'
+    k8s: 1.23.0
+    nodesMinimalOSVersionUbuntu: '18.04'
+  version: v%[1]s
+status:
+  approved: false
+  message: ""
+  transitionTime: "0001-01-01T00:00:00Z"
+`, version.String()))
+	}
+
+	require.FileExists(t, deckhouseReleasesManifestsFilepath, "deckhousereleases.yaml should be generated next tar bundle")
+	require.YAMLEq(t, expectedManifests.String(), string(actualManifests))
 }
 
 type ListableBlobHandler struct {

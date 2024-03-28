@@ -90,10 +90,69 @@ func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	}
 }
 
+func LockDeckhouseQueueBeforeCreatingModuleConfigs(kubeCl *client.KubernetesClient) (*actions.ManifestTask, error) {
+	deckhouseDeploymentPresent := false
+
+	err := retry.NewLoop("Get deckhouse manifest", 10, 5*time.Second).Run(func() error {
+		_, err := kubeCl.AppsV1().Deployments("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+
+			deckhouseDeploymentPresent = false
+			return nil
+		}
+
+		deckhouseDeploymentPresent = true
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if deckhouseDeploymentPresent {
+		// we need create lock cm only one first deckhouse install attempt
+		return nil, nil
+	}
+
+	return &actions.ManifestTask{
+		Name: `ConfigMap "deckhouse-bootstrap-lock"`,
+		Manifest: func() interface{} {
+			return &apiv1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deckhouse-bootstrap-lock",
+					Namespace: "d8-system",
+				},
+			}
+		},
+		CreateFunc: func(manifest interface{}) error {
+			cm := manifest.(*apiv1.ConfigMap)
+			_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+				Create(context.TODO(), cm, metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			return nil
+		},
+	}, nil
+}
+
 func UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).Run(func() error {
-		return kubeCl.CoreV1().ConfigMaps("d8-system").
+		err := kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(context.TODO(), "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
+
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
 	})
 }
 
@@ -171,30 +230,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			UpdateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Update(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
 				return err
-			},
-		},
-		{
-			Name: `ConfigMap "deckhouse-bootstrap-lock"`,
-			Manifest: func() interface{} {
-				return &apiv1.ConfigMap{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "deckhouse-bootstrap-lock",
-						Namespace: "d8-system",
-					},
-				}
-			},
-			CreateFunc: func(manifest interface{}) error {
-				cm := manifest.(*apiv1.ConfigMap)
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
-					Create(context.TODO(), cm, metav1.CreateOptions{})
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				return nil
 			},
 		},
 		{
@@ -383,6 +418,14 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		})
 	}
 
+	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(kubeCl)
+	if err != nil {
+		return err
+	}
+	if lockCmTask != nil {
+		tasks = append(tasks, *lockCmTask)
+	}
+
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
 	if len(cfg.ModuleConfigs) > 0 {
@@ -455,7 +498,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		}
 	}
 
-	err := log.Process("default", "Create Manifests", func() error {
+	err = log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
 			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).Run(task.CreateOrUpdate)
 			if err != nil {

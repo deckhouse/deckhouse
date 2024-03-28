@@ -28,7 +28,7 @@ metadata:
 spec:
   rootDiskSize: 20
   flavorName: m1.large
-  imageName: "debian-11-genericcloud-amd64-20220911-1135"
+  imageName: "debian-12-genericcloud-amd64"
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

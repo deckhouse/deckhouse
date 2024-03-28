@@ -305,6 +305,17 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 		return ctrl.Result{Requeue: true}, err
 	}
+	// disable target module hooks so as not to invoke them before restart
+	if c.modulesValidator.GetModule(mo.Name) != nil {
+		c.modulesValidator.DisableModuleHooks(mo.Name)
+	}
+	defer func() {
+		c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
+		err := syscall.Kill(1, syscall.SIGUSR2)
+		if err != nil {
+			c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
+		}
+	}()
 
 	mo.Status.Message = ""
 	mo.Status.ImageDigest = newChecksum
@@ -316,12 +327,6 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	if _, ok := mo.Labels["renew"]; ok {
 		delete(mo.Labels, "renew")
 		_, _ = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
-	}
-
-	c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
-	err = syscall.Kill(1, syscall.SIGUSR2)
-	if err != nil {
-		c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil

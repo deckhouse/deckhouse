@@ -15,7 +15,7 @@ ENV GOPROXY=${GOPROXY} \
 RUN git clone --depth 1 --branch v2.7.7 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
 
-RUN go get -u golang.org/x/net@v0.17.0 \
+RUN go get golang.org/x/net@v0.17.0 \
     && go mod tidy \
     && go mod vendor
 RUN go build -ldflags="-s -w" -o loki cmd/loki/main.go && \

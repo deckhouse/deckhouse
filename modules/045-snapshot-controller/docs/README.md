@@ -11,4 +11,4 @@ Deckhouse CSI-drivers that support snapshots:
 - [cloud-provider-aws](../030-cloud-provider-aws/)
 - [cloud-provider-azure](../030-cloud-provider-azure/)
 - [cloud-provider-gcp](../030-cloud-provider-gcp/)
-- [linstor](../041-linstor/)
+- [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/).

@@ -3,6 +3,11 @@ bashible:
     '7.3':
   astra: &astra
     '1.7':
+  altlinux:
+    'p10':
+    '10.0':
+    '10.1':
+    '10.2':
 k8s:
   '1.25':
     bashible:
@@ -10,27 +15,47 @@ k8s:
         !!merge <<: *redos
       astra:
         !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
   '1.26':
     bashible:
       redos:
         !!merge <<: *redos
       astra:
         !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
   '1.27':
     bashible:
       redos:
         !!merge <<: *redos
       astra:
         !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
   '1.28':
     bashible:
       redos:
         !!merge <<: *redos
       astra:
         !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
   '1.29':
     bashible:
       redos:
         !!merge <<: *redos
       astra:
         !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1

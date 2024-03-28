@@ -199,7 +199,7 @@ import:
   - lib64/libexpat.so*
   - lib64/libssl.so.*
   - lib64/libcrypto.so.*
-  - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+  - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
   - usr/bin/python3.9
@@ -215,6 +215,17 @@ import:
   - usr/bin/vim-console
 
   {{- include "base components imports" . }}
+
+- image: common/distroless
+  add: /etc/ssl
+  to: /etc/ssl
+  before: setup
+
+- artifact: registrypackages/d8-curl-artifact-8-2-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+
 ansible:
   beforeInstall:
   {{- include "base components" . | nindent 2 }}
@@ -402,6 +413,7 @@ git:
   - testing
   - go.mod
   - go.sum
+  - editions.yaml
   excludePaths:
   {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
   - docs
@@ -620,7 +632,7 @@ import:
   to: /
   before: setup
   includePaths:
-  - etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+  - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/share/vim
   - etc/vim

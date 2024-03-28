@@ -1,0 +1,54 @@
+{{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
+{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
+{{- $fromCacheVersion := "16" }}
+---
+# #####################################################################
+# Build cilium-envoy binaries
+# Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
+# Corresponding commit is ad82c7c56e88989992fd25d8d67747de865c823b
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile
+# and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/.github/workflows/build-envoy-images-release.yaml
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -p /cilium/proxy
+  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
+  - cd /cilium/proxy
+  - git checkout {{ $ciliumProxyRev }}
+  install:
+  - |
+    apt-get install -y --no-install-recommends \
+    libcap-dev \
+    python-is-python3 \
+    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+  - apt-get purge --auto-remove && apt-get clean
+  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  beforeSetup:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /cilium/proxy
+  - make -C proxylib all
+  - mkdir -p /tmp/install/usr/lib
+  - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
+  setup:
+  - export TARGETARCH=amd64 ARCH="x86_64"
+  - export BAZEL_VERSION="6.1.0" USE_BAZEL_VERSION="6.1.0"
+  - cd /cilium/proxy
+  - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
+  - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
+  - mkdir -p /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  - make bazel-bin/cilium-envoy
+  - ./bazel/get_workspace_status
+  - make install

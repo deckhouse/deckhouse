@@ -33,6 +33,17 @@ kubernetes:
         "name": .metadata.name,
         "address": .spec.address,
       }
+  - name: sshCredentials
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SSHCredentials
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+      }
 kubernetesValidating:
 - name: staticinstances-unique.deckhouse.io
   group: main
@@ -48,10 +59,18 @@ EOF
 function __main__() {
   name=$(context::jq -r '.review.request.object.metadata.name')
   address=$(context::jq -r '.review.request.object.spec.address')
+  credentialsName=$(context::jq -r '.review.request.object.spec.credentialsRef.name')
 
   if instanceWithTheSameAddress="$(context::jq -er --arg name "$name" --arg address "$address" '.snapshots.instances[].filterResult | select(.name != $name) | select(.address == $address) | .name' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", static instance \"$instanceWithTheSameAddress\" is already using the address \"$address\"" }
+EOF
+    return 0
+  fi
+
+  if ! context::jq -er --arg name "$credentialsName" '.snapshots.sshCredentials[].filterResult | select(.name == $name) | length == 1' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", ssh credentials \"$credentialsName\" does not exist" }
 EOF
     return 0
   fi

@@ -127,7 +127,6 @@ apiVersions:
                 global:
                   modules:
                     publicDomainTemplate: "%s.k8s.company.my"
-                linstorEnabled: true
                 monitoringPingEnabled: false
                 userAuthn:
                   publishAPI:

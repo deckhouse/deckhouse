@@ -321,6 +321,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -954,6 +955,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1742,6 +1744,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -2046,7 +2049,7 @@ spec:
                             Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
                         static:
                           type: object
-                          oneOf:
+                          anyOf:
                           - required: ["cpu"]
                           - required: ["memory"]
                           - required: ["ephemeralStorage"]

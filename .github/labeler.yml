@@ -115,7 +115,6 @@ area/security:
 area/storage:
   - modules/031-ceph-csi/**
   - modules/031-local-path-provisioner/**
-  - modules/041-linstor/**
   - modules/045-snapshot-controller/**
   - modules/491-containerized-data-importer/**
 

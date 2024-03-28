@@ -273,6 +273,22 @@ function cleanup() {
   destroy_eks_infra || return $?
 }
 
+function chmod_dirs_for_cleanup() {
+
+  if [ -n $USER_RUNNER_ID ]; then
+    echo "Fix temp directories owner before cleanup ..."
+    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+    chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+    chown -R $USER_RUNNER_ID /tmp || true
+  else
+    echo "Fix temp directories permissions before cleanup ..."
+    chmod -f -R 777 "$(pwd)/testing" || true
+    chmod -f -R 777 "/deckhouse/testing" || true
+    chmod -f -R 777 /tmp || true
+  fi
+}
+
+
 function main() {
    >&2 echo "Start cloud test script"
    if ! prepare_environment ; then
@@ -313,6 +329,8 @@ function main() {
   else
     echo "E2E test: fail."
   fi
+
+  chmod_dirs_for_cleanup
   exit $exitCode
 }
 

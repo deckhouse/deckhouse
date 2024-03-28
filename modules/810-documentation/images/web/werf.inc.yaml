@@ -120,6 +120,13 @@ ansible:
         warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/_data/
+    - name: "Convert editions structure"
+      shell: |
+        /usr/local/bin/yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - name: "Converting public documentation links to internal relative..."
       shell: |
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
@@ -171,6 +178,11 @@ ansible:
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
+import:
+  - artifact: yq4-artifact
+    add: /usr/local/bin/yq
+    to: /usr/local/bin/yq
+    before: install
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
@@ -205,6 +217,22 @@ git:
   - ee/modules/**/docs/README.md
 - add: /{{ .ModulePath }}ee/fe
   to: /comparison/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/be
+  to: /comparison/be
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se
+  to: /comparison/se
   owner: jekyll
   group: jekyll
   stageDependencies:

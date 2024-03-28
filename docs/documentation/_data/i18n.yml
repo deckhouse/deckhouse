@@ -56,6 +56,9 @@ common:
   deprecated_parameter:
     en: Deprecated
     ru: Параметр устарел
+  deprecated_resource:
+    en: Deprecated resource. Support for the resource might be removed in a later release.
+    ru: Устаревший ресурс. Поддержка ресурса может быть исключена в следующих версиях.
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.

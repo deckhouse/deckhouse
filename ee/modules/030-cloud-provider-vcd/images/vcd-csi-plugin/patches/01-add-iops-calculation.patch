@@ -1,0 +1,111 @@
+Subject: [PATCH] iops calculate
+---
+Index: pkg/vcdcsiclient/disks.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
+--- a/pkg/vcdcsiclient/disks.go	(revision 89ff1aeab1be77cdf6536f1e1002bdc58dde63f2)
++++ b/pkg/vcdcsiclient/disks.go	(date 1707645953306)
+@@ -9,17 +9,19 @@
+ 	"context"
+ 	"encoding/json"
+ 	"fmt"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdtypes"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/version"
++	"net/http"
++	"strings"
++	"time"
++
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_36_0"
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
+ 	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	"k8s.io/klog"
+-	"net/http"
+-	"strings"
+-	"time"
++
++	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
++	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdtypes"
++	"github.com/vmware/cloud-director-named-disk-csi-driver/version"
+ )
+
+ type DiskManager struct {
+@@ -151,6 +153,8 @@
+ 		Xmlns: types.XMLNamespaceVCloud,
+ 		Disk:  d,
+ 	}
++	klog.Infof("Storage profile: %s", storageProfile)
++
+ 	if storageProfile != "" {
+ 		storageReference, err := diskManager.VCDClient.VDC.FindStorageProfileReference(storageProfile)
+ 		if err != nil {
+@@ -161,6 +165,29 @@
+ 		diskParams.Disk.StorageProfile = &types.Reference{
+ 			HREF: storageReference.HREF,
+ 		}
++
++		storageProfileData, err := diskManager.VCDClient.VCDClient.GetStorageProfileByHref(storageReference.HREF)
++		if err != nil {
++			return nil, fmt.Errorf("unable to get storage profile [%s] for disk [%s] by HREF [%s]",
++				storageProfile, diskName, storageReference.HREF)
++		}
++
++		klog.Infof("Storage profile data iops settings [%s]: %v", storageProfileData.Name, storageProfileData.IopsSettings)
++		klog.Infof("Storage profile data iops allocated [%s] %v", storageProfileData.Name, storageProfileData.IopsAllocated)
++
++		if storageProfileData.IopsSettings != nil {
++			if storageProfileData.IopsSettings.Enabled {
++				// If storageProfile Max IOPS per Gb is set
++				iops := storageProfileData.IopsSettings.DiskIopsPerGbMax * d.SizeMb / 1024
++				if iops == 0 {
++					iops = storageProfileData.IopsSettings.DiskIopsMax
++					if iops == 0 {
++						iops = storageProfileData.IopsSettings.DiskIopsDefault
++					}
++				}
++				d.Iops = iops
++			}
++		}
+ 	}
+
+ 	task, err := diskManager.createDisk(diskParams)
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.sum b/go.sum
+--- a/go.sum	(revision 89ff1aeab1be77cdf6536f1e1002bdc58dde63f2)
++++ b/go.sum	(date 1707644360350)
+@@ -370,8 +370,8 @@
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
+ github.com/vmware/cloud-provider-for-cloud-director v0.0.0-20230928223648-8134f65b3f61 h1:5OBXV9Q84GleGRrznPmKsEYKFtbaS8tTFL8d/hsDvy4=
+ github.com/vmware/cloud-provider-for-cloud-director v0.0.0-20230928223648-8134f65b3f61/go.mod h1:LXs88jpAH7nny7nQcLaXzjyCvg4Q1JhttSoD9mI5kaQ=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3 h1:VJolXzgomaRPrgzSr0EduuUtJIJEf5RdoLbktZFQqIc=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3/go.mod h1:2BS1yw61VN34WI0/nUYoInFvBc3Zcuf84d4ESiAAl68=
++github.com/vmware/go-vcloud-director/v2 v2.21.0 h1:zIONrJpM+Fj+rDyXmsRfMAn1sP5WAP87USL0T9GS4DY=
++github.com/vmware/go-vcloud-director/v2 v2.21.0/go.mod h1:QPxGFgrUcSyzy9IlpwDE4UNT3tsOy2047tJOPEJ4nlw=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision 89ff1aeab1be77cdf6536f1e1002bdc58dde63f2)
++++ b/go.mod	(date 1707644360350)
+@@ -13,7 +13,7 @@
+ 	github.com/stretchr/testify v1.7.0
+ 	github.com/thecodeteam/gofsutil v0.1.2 // indirect
+ 	github.com/vmware/cloud-provider-for-cloud-director v0.0.0-20230928223648-8134f65b3f61
+-	github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3
++	github.com/vmware/go-vcloud-director/v2 v2.21.0
+ 	golang.org/x/oauth2 v0.4.0 // indirect
+ 	golang.org/x/sys v0.5.0
+ 	google.golang.org/grpc v1.53.0

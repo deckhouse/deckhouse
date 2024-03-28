@@ -85,6 +85,8 @@ properties:
   clusterDomainAliases:
     description: |
       A list of cluster domain aliases; these are resolved on par with `global.discovery.clusterDomain`.
+
+      **Please note:** the domain aliase must not match the domain used in the DNS name template in the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
     type: array
     items:
       type: string

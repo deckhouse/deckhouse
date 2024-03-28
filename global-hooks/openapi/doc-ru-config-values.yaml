@@ -26,7 +26,9 @@ properties:
 
           Например, для шаблона `%s.kube.company.my` модуль prometheus создаст Ingress-ресурс на адрес `grafana.kube.company.my` для доступа к Grafana.
 
-          **Нельзя** использовать в кластере DNS-имена (создавать соответствующие Ingress-ресурсы), подпадающие под указанный шаблон! Это может вызвать пересечения с создаваемыми Deckhouse Ingress-ресурсами.
+          **Обратите внимание:**
+          - Нельзя использовать в кластере DNS-имена (создавать соответствующие Ingress-ресурсы), подпадающие под указанный шаблон. Это может вызвать пересечения с создаваемыми Deckhouse Ingress-ресурсами.
+          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain). Например, если `clusterDomain` установлен в `cluster.local` (значение по умолчанию), то `publicDomainTemplate` не может быть `%s.cluster.local`.
 
           Если параметр не указан, Ingress-ресурсы создаваться не будут.
       placement:

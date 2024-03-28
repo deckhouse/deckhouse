@@ -48,7 +48,6 @@ properties:
         type: boolean
       capsControllerManagerEnabled:
         type: boolean
-
       clusterMasterAddresses:
         type: array
         description: |
