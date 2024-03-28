@@ -1,0 +1,265 @@
+diff --git a/cmd/ovirt-csi-driver/ovirt-csi-driver.go b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
+index ac4b09a..5574862 100644
+--- a/cmd/ovirt-csi-driver/ovirt-csi-driver.go
++++ b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
+@@ -9,7 +9,7 @@ import (
+ 
+ 	"github.com/ovirt/csi-driver/internal/ovirt"
+ 	"github.com/ovirt/csi-driver/pkg/service"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/client-go/kubernetes"
+ 	"k8s.io/klog"
+diff --git a/go.mod b/go.mod
+index a81a290..8f38a92 100644
+--- a/go.mod
++++ b/go.mod
+@@ -8,7 +8,7 @@ require (
+ 	github.com/kubernetes-csi/csi-lib-utils v0.7.0
+ 	github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0
+ 	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0
+-	github.com/ovirt/go-ovirt-client/v2 v2.0.1
++	github.com/ovirt/go-ovirt-client/v3 v3.2.0
+ 	github.com/pkg/errors v0.9.1
+ 	golang.org/x/net v0.17.0
+ 	golang.org/x/sys v0.13.0
+@@ -32,7 +32,7 @@ require (
+ 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+ 	github.com/google/go-cmp v0.5.5 // indirect
+ 	github.com/google/gofuzz v1.1.0 // indirect
+-	github.com/google/uuid v1.3.0 // indirect
++	github.com/google/uuid v1.6.0 // indirect
+ 	github.com/googleapis/gnostic v0.5.5 // indirect
+ 	github.com/hashicorp/golang-lru v0.5.4 // indirect
+ 	github.com/imdario/mergo v0.3.12 // indirect
+diff --git a/go.sum b/go.sum
+index 0735fe7..18e19d3 100644
+--- a/go.sum
++++ b/go.sum
+@@ -207,8 +207,9 @@ github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm4
+ github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+-github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+ github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
++github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
++github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+vpHVxEJEs9eg=
+ github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
+ github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTVRp3pOg5EKY=
+@@ -348,8 +349,8 @@ github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0 h1:lQJGJ1VIDMgFiU4J5yXo9npvC
+ github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0/go.mod h1:Bo83WSGfqYsatXlrOnG0jp8fvrmf5xGzJnpJqVsS+1s=
+ github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 h1:uvACVHYhYPMkNJrrgWiABcfELB6qoFfsDDUTbpb4Jv4=
+ github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
+-github.com/ovirt/go-ovirt-client/v2 v2.0.1 h1:Avznl0vB5kCeOf1Wxg/kWjZ7cr2sIc4sGKwD4T+/C9o=
+-github.com/ovirt/go-ovirt-client/v2 v2.0.1/go.mod h1:Zi2RF2khEr+hcr3fCAf6WL7OEoUwUHeWWiob/WcEaDc=
++github.com/ovirt/go-ovirt-client/v3 v3.2.0 h1:gDQhxtubwzdlDIm2lh4XiOwkte2nR3JX1Q0O8iLGY84=
++github.com/ovirt/go-ovirt-client/v3 v3.2.0/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
+ github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
+ github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
+ github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
+diff --git a/internal/ovirt/ovirt.go b/internal/ovirt/ovirt.go
+index df687ae..4119b3f 100644
+--- a/internal/ovirt/ovirt.go
++++ b/internal/ovirt/ovirt.go
+@@ -6,7 +6,7 @@ import (
+ 	"path/filepath"
+ 
+ 	kloglogger "github.com/ovirt/go-ovirt-client-log-klog/v2"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"gopkg.in/yaml.v2"
+ )
+ 
+@@ -31,7 +31,7 @@ func NewClient() (ovirtclient.Client, error) {
+ 		tls.CACertsFromFile(ovirtConfig.CAFile)
+ 	}
+ 	logger := kloglogger.New()
+-	//TODO: HANDLE VERBUSE
++	// TODO: HANDLE VERBUSE
+ 	client, err := ovirtclient.New(
+ 		ovirtConfig.URL,
+ 		ovirtConfig.Username,
+diff --git a/pkg/service/controller.go b/pkg/service/controller.go
+index d522cef..6106562 100644
+--- a/pkg/service/controller.go
++++ b/pkg/service/controller.go
+@@ -5,7 +5,7 @@ import (
+ 	"strconv"
+ 
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"golang.org/x/net/context"
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+@@ -94,7 +94,8 @@ func (c *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
+ 
+ func (c *ControllerService) createDisk(
+ 	ctx context.Context, diskName string, storageDomainName string,
+-	size int64, thinProvisioning bool) (ovirtclient.Disk, error) {
++	size int64, thinProvisioning bool,
++) (ovirtclient.Disk, error) {
+ 	var err error
+ 	params := ovirtclient.CreateDiskParams()
+ 	params, err = params.WithSparse(thinProvisioning)
+@@ -128,12 +129,12 @@ func (c *ControllerService) createDisk(
+ 	}
+ 	klog.Infof("Finished creating disk %s", diskName)
+ 	return disk, nil
+-
+ }
+ 
+ func handleCreateVolumeImageFormat(
+ 	storageType ovirtclient.StorageDomainType,
+-	thinProvisioning bool) ovirtclient.ImageFormat {
++	thinProvisioning bool,
++) ovirtclient.ImageFormat {
+ 	// Use COW diskformat only when thin provisioning is requested and storage domain
+ 	// is a non file storage type (for example ISCSI)
+ 	if !isFileDomain(storageType) && thinProvisioning {
+@@ -176,7 +177,8 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
+ 
+ // ControllerPublishVolume takes a volume, which is an oVirt disk, and attaches it to a node, which is an oVirt VM.
+ func (c *ControllerService) ControllerPublishVolume(
+-	ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
++	ctx context.Context, req *csi.ControllerPublishVolumeRequest,
++) (*csi.ControllerPublishVolumeResponse, error) {
+ 	vId := ovirtclient.DiskID(req.VolumeId)
+ 	if len(vId) == 0 {
+ 		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
+@@ -312,7 +314,8 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
+ 			volumeID, diskSize, newSize)
+ 		return &csi.ControllerExpandVolumeResponse{
+ 			CapacityBytes:         diskSize,
+-			NodeExpansionRequired: false}, nil
++			NodeExpansionRequired: false,
++		}, nil
+ 	}
+ 
+ 	params := ovirtclient.UpdateDiskParams()
+@@ -331,7 +334,8 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
+ 	}
+ 	return &csi.ControllerExpandVolumeResponse{
+ 		CapacityBytes:         newSize,
+-		NodeExpansionRequired: nodeExpansionRequired}, nil
++		NodeExpansionRequired: nodeExpansionRequired,
++	}, nil
+ }
+ 
+ func (c *ControllerService) isNodeExpansionRequired(
+diff --git a/pkg/service/controller_test.go b/pkg/service/controller_test.go
+index fb55c28..976a48e 100644
+--- a/pkg/service/controller_test.go
++++ b/pkg/service/controller_test.go
+@@ -6,7 +6,7 @@ import (
+ 
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
+ 	"github.com/ovirt/csi-driver/pkg/service"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ )
+ 
+ func TestVolumeCreation(t *testing.T) {
+diff --git a/pkg/service/driver.go b/pkg/service/driver.go
+index 16a3a53..a5791f4 100644
+--- a/pkg/service/driver.go
++++ b/pkg/service/driver.go
+@@ -1,7 +1,7 @@
+ package service
+ 
+ import (
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"k8s.io/klog"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ )
+diff --git a/pkg/service/helper.go b/pkg/service/helper.go
+index ed6de01..057a8d1 100644
+--- a/pkg/service/helper.go
++++ b/pkg/service/helper.go
+@@ -3,7 +3,7 @@ package service
+ import (
+ 	"fmt"
+ 
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"github.com/pkg/errors"
+ 	"golang.org/x/net/context"
+ )
+@@ -76,7 +76,8 @@ func findDiskAttachmentByDiskInCluster(
+ func getStorageDomainByName(
+ 	ctx context.Context,
+ 	ovirtClient ovirtclient.Client,
+-	storageDomainName string) (ovirtclient.StorageDomain, error) {
++	storageDomainName string,
++) (ovirtclient.StorageDomain, error) {
+ 	sds, err := ovirtClient.ListStorageDomains(ovirtclient.ContextStrategy(ctx))
+ 	if err != nil {
+ 		return nil, err
+diff --git a/pkg/service/helper_test.go b/pkg/service/helper_test.go
+index 3bb32ad..7327bf0 100644
+--- a/pkg/service/helper_test.go
++++ b/pkg/service/helper_test.go
+@@ -4,7 +4,7 @@ import (
+ 	"testing"
+ 
+ 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ )
+ 
+ func getMockHelper(t *testing.T) ovirtclient.TestHelper {
+diff --git a/pkg/service/identity.go b/pkg/service/identity.go
+index 42c5f56..d7400b5 100644
+--- a/pkg/service/identity.go
++++ b/pkg/service/identity.go
+@@ -3,7 +3,7 @@ package service
+ import (
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
+ 	"github.com/golang/protobuf/ptypes/wrappers"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"golang.org/x/net/context"
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+diff --git a/pkg/service/node.go b/pkg/service/node.go
+index 115b5c7..6fb9720 100644
+--- a/pkg/service/node.go
++++ b/pkg/service/node.go
+@@ -12,7 +12,7 @@ import (
+ 
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
+ 	volumemanager "github.com/ovirt/csi-driver/pkg/utils"
+-	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
++	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+ 	"golang.org/x/net/context"
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+@@ -174,7 +174,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
+ 	}
+ 
+ 	isBlock, err := volumemanager.IsBlockDevice(req.VolumePath)
+-
+ 	if err != nil {
+ 		return nil, status.Errorf(codes.Internal, "Failed to determine whether %s is block device: %v", req.VolumePath, err)
+ 	}
+@@ -197,7 +196,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
+ 
+ 	// We assume filesystem presence on volume as raw block device is ruled out and try to get fs stats
+ 	available, capacity, used, inodesFree, inodes, inodesUsed, err := volumemanager.StatFS(req.VolumePath)
+-
+ 	if err != nil {
+ 		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.VolumePath, err)
+ 	}
+@@ -282,6 +280,9 @@ func (n *NodeService) getDeviceByAttachmentId(
+ 	volumeID ovirtclient.DiskID,
+ 	nodeID ovirtclient.VMID,
+ ) (string, error) {
++	klog.V(1).Infof("getDeviceByAttachmentId: test connection")
++	err := n.ovirtClient.Test()
++	klog.V(1).Infof("getDeviceByAttachmentId: test result %s", err.Error())
+ 	attachment, err := diskAttachmentByVmAndDisk(ctx, n.ovirtClient, nodeID, volumeID)
+ 	if err != nil {
+ 		return "", fmt.Errorf("failed finding disk attachment, error: %w", err)
