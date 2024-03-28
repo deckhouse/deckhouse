@@ -40,6 +40,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
+	sm "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/source_modules"
+	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
@@ -60,7 +62,7 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModules           map[string]string
+	sourceModules           *sm.SourceModules
 	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
 
 	// separate controllers
@@ -88,6 +90,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 
 	httpClient := d8http.NewClient()
+	sourceModules := sm.InitSourceModules()
 	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
@@ -102,13 +105,13 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		mm:         mm,
 
 		deckhouseModules:        make(map[string]*models.DeckhouseModule),
-		sourceModules:           make(map[string]string),
+		sourceModules:           sourceModules,
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 
 		informerFactory:              informerFactory,
 		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, embeddedDeckhousePolicy),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage, embeddedDeckhousePolicy),
-		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage, embeddedDeckhousePolicy, sourceModules),
+		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm, sourceModules),
 	}, nil
 }
 
@@ -121,8 +124,6 @@ func (dml *DeckhouseController) Start(ec chan events.ModuleEvent, deckhouseConfi
 	if err != nil {
 		return err
 	}
-
-	dml.sourceModules = dml.moduleReleaseController.GetModuleSources()
 
 	err = dml.searchAndLoadDeckhouseModules()
 	if err != nil {
@@ -221,11 +222,16 @@ func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) err
 
 func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		src := dml.sourceModules[m.GetBasicModule().GetName()]
+		src := dml.sourceModules.GetSource(m.GetBasicModule().GetName())
 		newModule := m.AsKubeObject(src)
+		moduleName := newModule.GetName()
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
-		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, newModule.GetName(), v1.GetOptions{})
+		// update d8service state
+		deckhouseconfig.Service().AddModuleNameToSource(moduleName, src)
+		deckhouseconfig.Service().AddPossibleName(moduleName)
+
+		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, moduleName, v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Create(dml.ctx, newModule, v1.CreateOptions{})
@@ -255,6 +261,8 @@ func (dml *DeckhouseController) handleEnabledModule(m *models.DeckhouseModule, e
 			return err
 		}
 
+		// update module's properties
+		obj.Properties.Weight = m.GetBasicModule().GetOrder()
 		obj.Properties.State = "Disabled"
 		obj.Status.Status = "Disabled"
 		if enable {

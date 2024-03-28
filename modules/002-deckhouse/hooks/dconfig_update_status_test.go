@@ -109,6 +109,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
+			d8config.Service().AddPossibleName("module-one")
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -135,6 +136,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
+			d8config.Service().AddPossibleName("module-one")
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -180,6 +182,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
+			d8config.Service().AddPossibleName("module-one")
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -204,6 +207,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
+			d8config.Service().AddPossibleName("module-one")
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()

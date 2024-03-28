@@ -177,15 +177,15 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	operator.ModuleManager.SetModuleLoader(dController)
 
+	// Init deckhouse-config service with ModuleManager instance.
+	d8config.InitService(operator.ModuleManager)
+
 	err = operator.Start()
 	if err != nil {
 		return err
 	}
 
 	dController.RunControllers()
-
-	// Init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {
