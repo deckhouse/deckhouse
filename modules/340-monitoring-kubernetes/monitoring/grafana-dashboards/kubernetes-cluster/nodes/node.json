@@ -99,7 +99,7 @@
       "pluginVersion": "7.4.2",
       "targets": [
         {
-          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
+          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "",
@@ -1052,7 +1052,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1061,7 +1061,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1070,7 +1070,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1078,7 +1078,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1086,7 +1086,7 @@
           "step": 240
         },
         {
-          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1094,7 +1094,7 @@
           "step": 240
         },
         {
-          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Idle",
@@ -1411,7 +1411,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -1419,7 +1419,7 @@
           "step": 240
         },
         {
-          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -1656,7 +1656,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "System - Processes executing in kernel mode",
@@ -1664,7 +1664,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='user',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User - Normal processes executing in user mode",
@@ -1672,7 +1672,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='nice',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='nice',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Nice - Niced processes executing in user mode",
@@ -1680,7 +1680,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Idle - Waiting for something to happen",
@@ -1688,7 +1688,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='iowait',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Iowait - Waiting for I/O to complete",
@@ -1696,7 +1696,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='irq',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='irq',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Irq - Servicing interrupts",
@@ -1704,7 +1704,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='softirq',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='softirq',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Softirq - Servicing softirqs",
@@ -1712,7 +1712,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Steal - Time spent in other operating systems when running in a virtualized environment",
@@ -1720,7 +1720,7 @@
               "step": 240
             },
             {
-              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='guest',node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='guest',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Guest - Time spent running a virtual CPU for a guest operating system",
@@ -2036,7 +2036,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -2044,7 +2044,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])*8",
+              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -2346,14 +2346,14 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -2485,7 +2485,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2494,7 +2494,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2605,7 +2605,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"} [$__interval_sx4])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"} [$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4792,7 +4792,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgpgin{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pgpgin{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesin - Page in operations",
@@ -4800,7 +4800,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgpgout{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pgpgout{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesout - Page out operations",
@@ -4907,7 +4907,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pswpin{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pswpin{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpin - Pages swapped in",
@@ -4915,7 +4915,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pswpout{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pswpout{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpout - Pages swapped out",
@@ -5044,7 +5044,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgfault - Page major and minor fault operations",
@@ -5052,7 +5052,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmajfault - Major page fault operations",
@@ -5060,7 +5060,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])  - rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])  - rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgminfault - Minor page fault operations",
@@ -5186,7 +5186,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_vmstat_oom_kill{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_vmstat_oom_kill{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "oom killer invocations ",
@@ -5983,7 +5983,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_forks_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_forks_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -6468,7 +6468,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_context_switches_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_context_switches_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Context switches",
@@ -6476,7 +6476,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_intr_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_intr_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -6698,7 +6698,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(process_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Time spent",
@@ -7145,14 +7145,14 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -7342,7 +7342,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Read bytes",
@@ -7350,7 +7350,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Written bytes",
@@ -7543,7 +7543,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4]) / rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "{{device}} - r_await",
@@ -7551,7 +7551,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4]) / rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "{{device}} - w_await",
@@ -7740,7 +7740,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
               "refId": "A",
@@ -7932,14 +7932,14 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Read merged",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Write merged",
               "refId": "B",
@@ -8127,14 +8127,14 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_discard_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_discard_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - discard",
               "refId": "B",
@@ -8322,7 +8322,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_io_now{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_io_now{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO now",
               "refId": "A",
@@ -8528,14 +8528,14 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_disk_discards_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_discards_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Discards completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_discards_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_disk_discards_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Discards merged",
               "refId": "B",
@@ -9244,7 +9244,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -9252,7 +9252,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -9363,7 +9363,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive errors",
@@ -9371,7 +9371,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Rransmit errors",
@@ -9482,7 +9482,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive drop",
@@ -9490,7 +9490,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit drop",
@@ -9601,7 +9601,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive compressed",
@@ -9609,7 +9609,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit compressed",
@@ -9720,7 +9720,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive multicast",
@@ -9831,7 +9831,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive fifo",
@@ -9839,7 +9839,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit fifo",
@@ -9951,7 +9951,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_receive_frame_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_receive_frame_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -10060,7 +10060,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_transmit_carrier_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_carrier_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Statistic transmit_carrier",
@@ -10171,7 +10171,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_network_transmit_colls_total{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_network_transmit_colls_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit colls",
@@ -11550,7 +11550,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InOctets{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_IpExt_InOctets{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InOctets - Received octets",
@@ -11558,7 +11558,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutOctets{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_IpExt_OutOctets{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutOctets - Sent octets",
@@ -11781,7 +11781,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InMsgs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Icmp_InMsgs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InMsgs -  Messages which the entity received. Note that this counter includes all those counted by icmpInErrors",
@@ -11789,7 +11789,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutMsgs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Icmp_OutMsgs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutMsgs - Messages which this entity attempted to send. Note that this counter includes all those counted by icmpOutErrors",
@@ -11901,7 +11901,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Icmp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - Messages which the entity received but determined as having ICMP-specific errors (bad ICMP checksums, bad length, etc.)",
@@ -12017,7 +12017,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_InDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDatagrams - Datagrams received",
@@ -12025,7 +12025,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_OutDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_OutDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDatagrams - Datagrams sent",
@@ -12131,7 +12131,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - UDP Datagrams that could not be delivered to an application",
@@ -12139,7 +12139,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_NoPorts{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_NoPorts{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NoPorts - UDP Datagrams received on a port with no listener",
@@ -12147,12 +12147,12 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_UdpLite_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_UdpLite_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "InErrors Lite - UDPLite Datagrams that could not be delivered to an application",
               "refId": "C"
             },
             {
-              "expr": "rate(node_netstat_Udp_RcvbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_RcvbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RcvbufErrors - UDP buffer errors received",
@@ -12160,7 +12160,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_SndbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Udp_SndbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SndbufErrors - UDP buffer errors send",
@@ -12278,7 +12278,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_InSegs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_InSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -12287,7 +12287,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_OutSegs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_OutSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutSegs - Segments sent, including those on current connections but excluding those containing only retransmitted octets",
@@ -12395,7 +12395,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_ListenOverflows{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_ListenOverflows{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12404,7 +12404,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_ListenDrops{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_ListenDrops{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12413,7 +12413,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSynRetrans - SYN-SYN/ACK retransmits to break down retransmissions in SYN, fast/timeout retransmits",
@@ -12421,12 +12421,12 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_RetransSegs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_RetransSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "RetransSegs - Segments retransmitted - that is, the number of TCP segments transmitted containing one or more previously transmitted octets",
               "refId": "D"
             },
             {
-              "expr": "rate(node_netstat_Tcp_InErrs{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_InErrs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "InErrs - Segments received in error (e.g., bad TCP checksums)",
               "refId": "E"
             }
@@ -12660,7 +12660,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12669,7 +12669,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12678,7 +12678,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12784,7 +12784,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_ActiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_ActiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ActiveOpens - TCP connections that have made a direct transition to the SYN-SENT state from the CLOSED state",
@@ -12792,7 +12792,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_PassiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_Tcp_PassiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "PassiveOpens - TCP connections that have made a direct transition to the SYN-RCVD state from the LISTEN state",
@@ -12897,7 +12897,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TW{node=~\"$node\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_TW{node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12906,7 +12906,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWKilled{node=~\"$node\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_TWKilled{node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12915,7 +12915,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWRecycled{node=~\"$node\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_TWRecycled{node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12924,7 +12924,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{node=~\"$node\"}[$__interval_sx4])",
+              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPTimeWaitOverflow - Occurences of time wait bucket overflow",

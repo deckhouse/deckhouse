@@ -394,6 +394,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/grafana-v10/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/trickster/entrypoint"
   labels:
   - "type/dependencies"

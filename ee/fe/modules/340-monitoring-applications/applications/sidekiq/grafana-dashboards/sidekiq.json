@@ -85,7 +85,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(sidekiq_queue_latency_seconds{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_queue_latency_seconds{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{name}}",
@@ -171,7 +171,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(sidekiq_queue_enqueued_jobs{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_queue_enqueued_jobs{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{name}}",
@@ -257,14 +257,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(sidekiq_scheduled_jobs{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_scheduled_jobs{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "scheduled",
           "refId": "A"
         },
         {
-          "expr": "increase(sidekiq_enqueued_jobs{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_enqueued_jobs{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "enqueued",
@@ -371,7 +371,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(sidekiq_failed_jobs_total{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_failed_jobs_total{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -379,14 +379,14 @@
           "refId": "A"
         },
         {
-          "expr": "increase(sidekiq_retry_jobs{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_retry_jobs{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "retry",
           "refId": "B"
         },
         {
-          "expr": "increase(sidekiq_dead_jobs{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_dead_jobs{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "dead",
@@ -472,7 +472,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(sidekiq_processed_jobs_total{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "rate(sidekiq_processed_jobs_total{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "processed",
@@ -558,7 +558,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(sidekiq_busy_workers{namespace=\"$namespace\"}[$__interval_sx4])",
+          "expr": "increase(sidekiq_busy_workers{namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "workers",
