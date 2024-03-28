@@ -13,7 +13,7 @@ function render_and_deploy_netplan_config() {
   interface=$1
   metric=$2
   mac=$3
-  cat > /etc/netplan/100-cim-"$cat_dev".yaml <<EOF
+  cat > /etc/netplan/100-cim-"$interface".yaml <<EOF
 network:
   version: 2
   ethernets:
