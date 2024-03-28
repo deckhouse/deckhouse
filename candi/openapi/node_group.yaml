@@ -2044,7 +2044,7 @@ spec:
 
                             * `Off` — disables resource reservation.
                             * `Auto` — reserves resources based on the Node capacity.
-                            * `Static` — provides your own resource reservation values via the `static` parameter.
+                            * `Static` — reserves resources based on the values provided by the user via the `static` parameter.
 
                             Note that currently we do not use a dedicated group `cgroup` for resource reservation (`-system-reserved-cgroup` is not used).
                         static:
@@ -2081,7 +2081,7 @@ spec:
 
                         The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
 
-                        In a cluster with [NUMA](https://ru.wikipedia.org/wiki/Non-Uniform_Memory_Access)nodes, the topology manager can optimise application performance by placing containers on these NUMA nodes for efficient resource usage.
+                        In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
 
                         For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
@@ -2094,9 +2094,9 @@ spec:
                           type: string
                           x-doc-default: Container
                           description: |
-                            Определение гранулярности выравнивания ресурсов:
-                            - `Container`. Вычисление предпочтительных ресурсов выполняется для контейнера. При вычислении не учитывается, что несколько контейнеров относятся к одному поду.
-                            - `Pod`. Вычисление предпочтительных ресурсов выполняется для пода. Все контейнеры пода рассматриваются как единое целое при вычислении.
+                            Defines granularity with which resources are aligned:
+                            - `Container`. The preferred resources are computed for a container. The computation does not take into account that multiple containers may belong to the same pod.
+                            - `Pod`. The preferred resources are computed for the pod. All containers in the pod are treated as a whole in the computation.
                           enum:
                             - Container
                             - Pod
@@ -2104,15 +2104,15 @@ spec:
                           type: string
                           x-doc-default: None
                           description: |
-                            Определение политики выравнивания ресурсов с учетом топологии узлов при планировании пода.
+                            Resource/topology alignment policy to use when scheduling a pod.
 
-                            Поддерживаются четыре политики:
-                            - `None` — выравнивание ресурсов не выполняется (используется по умолчанию).
-                            - `BestEffort` — для каждого контейнера определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под будет запланирован на узел без учета данных менеджера топологии, а уже запущенный под продолжит работу.
-                            - `Restricted` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под не будет запланирован на узел, а уже запущенный под будет остановлен.
-                            - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
+                            There are four supported policies:
+                            - `None` — no resource alignment (default).
+                            - `BestEffort` — a preferred NUMA node is defined for each container. If there are no preferred nodes for the pod available, it will be scheduled to a node without taking topology manager data into account, while the already running pod will keep running.
+                            - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
+                            - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
 
-                            Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                            More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
                           enum:
                             - None
                             - BestEffort
