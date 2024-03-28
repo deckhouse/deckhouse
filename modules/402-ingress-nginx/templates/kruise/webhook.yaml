@@ -38,7 +38,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     sideEffects: None
-    timeoutSeconds: 30
+    timeoutSeconds: 28
     name: mpod.kb.io
     namespaceSelector:
       matchExpressions:
@@ -72,7 +72,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     sideEffects: None
-    timeoutSeconds: 30
+    timeoutSeconds: 28
     name: vdaemonset.kb.io
     rules:
       - apiGroups:
