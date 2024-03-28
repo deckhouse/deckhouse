@@ -54,15 +54,13 @@ lang: ru
 
 В папке `/charts` лежат вспомогательные чарты Helm, которые используются при рендере шаблонов.
 
-У Deckhouse Kubernetes Platform (DKP) существует собственная библиотека вспомогательных шаблонов – [lib-helm](https://github.com/deckhouse/lib-helm). О доступных шаблонах библиотеки можно почитать в [репозитории helm-lib](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md).
- 
-Чтобы положить библиотеку в модуль как helm subchart, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
+У Deckhouse Kubernetes Platform (DKP) существует собственная библиотека для работы с шаблонами – [lib-helm](https://github.com/deckhouse/lib-helm). О возможностях библиотеки можно почитать в [репозитории helm-lib](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). Чтобы положить библиотеку в модуль как чарт Helm, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в папку `/charts` модуля.
 
 ### crds
 
-В этой папке лежат настройки кастомных ресурсов [_СustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. Применение CRD в DKP отличается от того, как это предлагает Helm. CRD обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
+В этой папке лежат настройки кастомных ресурсов [_СustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. CRD обновляются каждый раз, когда запускается модуль, если есть какие-то обновления.
 
-Чтобы включить в работу CRD из определенной папки, нужно добавить в папку `/hooks` модуля хук из примера в разделе [`/hooks`](#hooks).
+Чтобы включить в работу CRD из определенной папки, нужно добавить хук из примера в разделе [`/hooks`](#hooks).
 
 Чтобы отобразить CRD из папки `/crds` в документации на сайте или модуле documentation в кластере, выполните следующие шаги:
 * создайте файл перевода со структурой аналогичной файлу ресурса:
@@ -198,8 +196,6 @@ lang: ru
 
 В примере хука включим в работу CRD из определенной папки:
 
-{% offtopic title="Пример хука ensure_crds.py" %}
-
 ```python
 import os
 
@@ -260,8 +256,6 @@ def find_crds_root(hookpath):
 if **name** == "**main**":
     hook.run(main, config=config)</code>
 ```
-
-{% endofftopic %}
 
 ### images
 
