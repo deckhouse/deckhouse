@@ -85,7 +85,7 @@ func k8sPostUpgrade(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.LogEntry.Printf("create ClusterRoleBinding %s", clusterAdminsGroupAndClusterRoleBinding)
+	input.LogEntry.Printf("create clusterrolebinding %s", clusterAdminsGroupAndClusterRoleBinding)
 	input.PatchCollector.Create(clusterRoleBinding, object_patch.IgnoreIfExists())
 
 	return nil
