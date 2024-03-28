@@ -9,7 +9,7 @@ if ! which netplan 2>/dev/null 1>&2; then
   exit 0
 fi
 
-function cat_file() {
+function render_and_deploy_netplan_config() {
   cat_dev=$1
   cat_metric=$2
   cat_mac=$3
@@ -46,7 +46,7 @@ if [[ "$count_default" -gt "1" ]]; then
         cim_mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
         cim_metric=$metric
         metric=$((metric + 100))
-        cat_file "$cim_dev" "$cim_metric" "$cim_mac"
+        render_and_deploy_netplan_config "$cim_dev" "$cim_metric" "$cim_mac"
       done
       netplan generate
       netplan apply
