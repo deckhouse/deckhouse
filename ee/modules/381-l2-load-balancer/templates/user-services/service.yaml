@@ -7,7 +7,7 @@ kind: Service
 metadata:
   name: d8-l2-load-balancer-{{ $loadBalancer.name }}-{{ $index }}
   namespace: {{ $loadBalancer.namespace }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app"  "l2-load-balancer" "instance" $loadBalancer.name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "l2-load-balancer" "instance" $loadBalancer.name)) | nindent 2 }}
   annotations:
     metallb.universe.tf/preferredL2SpeakerNode: {{ $node.name }}
     metallb.universe.tf/address-pool: {{ $loadBalancer.addressPool }}
