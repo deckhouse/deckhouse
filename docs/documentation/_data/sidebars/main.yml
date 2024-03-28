@@ -56,15 +56,15 @@ entries:
             - title:
                 en: Versioning
                 ru: Версионирование
-              url: /modules-docs/version/
-            - title:
-                en: Example
-                ru: Пример
-              url: /modules-docs/example/
+              url: /modules-docs/version/            
             - title:
                 en: Debug
                 ru: Отладка
               url: /modules-docs/development-mode/
+            - title:
+                en: Example
+                ru: Пример
+              url: /modules-docs/example/
         - title:
             en: Release channels
             ru: Каналы обновлений

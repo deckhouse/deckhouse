@@ -1,14 +1,14 @@
 ---
-title: "Как опубликовать модуль в кластере DKP?"
+title: "Как запустить модуль в кластере DKP?"
 permalink: ru/modules-docs/deckhouse/
 lang: ru
 ---
 
-В этой разделе рассмотрен процесс публикации настроенного модуля в кластере Deckhouse Kubernetes Platform, а также представлена информация, где можно просмотреть результаты.
+В этой разделе рассмотрен процесс запуска настроенного модуля в кластере Deckhouse Kubernetes Platform (DKP).
 
 ## Создайте ресурс ModuleSource
 
-Чтобы выложить модули в кластер, создайте ресурс *ModuleSource*. Этот ресурс определяет container registry, откуда Deckhouse Kubernetes Platform будет загружать модули.
+Чтобы выложить модуль в кластер, создайте источник модулей — ресурс *ModuleSource*. Этот ресурс определяет container registry, откуда DKP будет загружать модули.
 
 Пример *ModuleSource*:
 
@@ -29,7 +29,7 @@ spec:
 kubectl get ms
 ```
 
-Пример ответа:
+Пример вывода:
 
 ```yaml
 NAME        COUNT   SYNC   MSG
@@ -42,7 +42,7 @@ example     2       16s
 kubectl get ms example -o yaml
 ```
 
-Пример ответа:
+Пример вывода:
 
 ```yaml
 ...
@@ -56,19 +56,15 @@ status:
   syncTime: "2023-08-13T22:12:00.033854109Z"
 ```
 
-> Deckhouse обновляет список модулей и версий один раз в 3 минуты.
-
-На этом этапе модули еще не установлены, так как не хватает модуля *ModuleUpdatePolicy*. Необходимо установить этот модуль.
+DKP обновляет список модулей и версий один раз в 3 минуты.
 
 ## Создайте ресурс ModuleUpdatePolicy
 
-Ресурс *ModuleUpdatePolicy* используется для определения списка модулей, которые будут установлены.
+Ресурс *ModuleUpdatePolicy* определит список модулей, которые будут установлены. Если настройки *ModuleUpdatePolicy* для *ModuleSource* не указаны, то используются настройки релизного канала и обновлений, установленные для DKP.
 
-Политика релизного канала и обновлений может быть ручная, автоматическая или автоматизированная с техническими окнами обслуживания (Manual/Auto/Auto with maintenance windows). Если настройки *ModuleUpdatePolicy* для *ModuleSource* не будут указаны, то используются настройки релизного канала и обновлений, установленные для Deckhouse Kubernetes Platform.
+Чтобы не скачивать модули, установите режим `mode: Ignore`.
 
-Также, можно установить `mode: Ignore` для того, чтобы не скачивать модули.
-
-В следующем примере с *ModuleUpdatePolicy*, обратите внимание на параметр `labelSelector`, который ограничивает действие политики модулем `module-1`, полученным из `example` источника модулей *ModuleSource*:
+В примере *ModuleUpdatePolicy* параметр `labelSelector` ограничивает действие политики модулем `module-1`, полученным из источника модулей с именем `example`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -86,26 +82,28 @@ spec:
     mode: Manual    
 ```
 
-## Создайте ресурс ModuleRelease
+## Проверьте релизы модуля
 
-По аналогии с [*DeckhouseRelease*](../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей тоже есть релизы.
+По аналогии с [*DeckhouseRelease*](../../../../modules/002-deckhouse/cr.html#deckhouserelease), у модулей есть релизы. Для исправления бага в модуле не нужно ждать нового релиза DKP.
 
-> Модули из источника модулей имеют собственный цикл обновлений в отличии от Deckhouse Kubernetes Platform. Для исправления бага в модуле не нужно ждать нового релиза Deckhouse Kubernetes Platform.
+DKP создает ресурсы *ModuleRelease* исходя из того, что хранится в container registry.
 
-Deckhouse Kubernetes Platform самостоятельно создает ресурсы *ModuleRelease* исходя из того, что хранится в registry контейнеров.
+Проверьте доступные релизы модуля:
 
 ```shell
 kubectl get mr
 ```
 
-Пример ответа:
+Пример вывода:
 
 ```yaml
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
 ```
 
-Так как в *ModuleSource* был указан канал обновления `alpha`, были загружены новые версии модулей. Так как режим обновления политики установлен в `Manual`, необходимо вручную подтвердить установку новой версии. Для этого добавьте аннотацию к указанному релизу:
+Так как в *ModuleSource* был указан канал обновления `alpha`, были загружены новые версии модулей. 
+
+Режим обновления политики установлен в `Manual`, поэтому необходимо вручную подтвердить установку новой версии. Для этого добавьте аннотацию к указанному релизу:
 
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
@@ -113,15 +111,15 @@ kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 
 Если используется автоматический режим обновлений (Auto), будет установлен автоматический релиз при ближайшем релизном окне или при фактической загрузке, если окна не указаны.
 
-## Создайте ресурс Module
+## Проверьте доступность модулей
 
-После загрузки и установки можно проверить, доступны ли модули для использования. Для этого выведите список всех доступных модулей Deckhouse Kubernetes Platform:
+После загрузки и установки можно проверить, доступны ли модули для использования. Для этого выведите список всех доступных модулей DKP:
 
 ```sh
 kubectl get modules | grep example
 ```
 
-Пример ответа:
+Пример вывода:
 
 ```yaml
 NAME                                  WEIGHT   STATE      SOURCE
@@ -133,7 +131,9 @@ module-2                              900      Disabled   example
 
 ## Создайте ресурс ModuleConfig
 
-Теперь можно работать с модулями, как с обычными модулями Deckhouse Kubernetes Platform. Создайте *ModuleConfig*, чтобы включить `module-1`.
+Теперь можно работать с модулями, как с обычными модулями DKP. 
+
+Создайте *ModuleConfig*, чтобы включить `module-1`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -146,13 +146,13 @@ spec:
   version: 1
 ```
 
-Если появятся проблемы с модулем, то Deckhouse Kubernetes Platform запишет ошибку в *ModuleConfig*. Проверьте, что ошибка не отображается:
+Если появятся проблемы с модулем, то DKP запишет ошибку в *ModuleConfig*. Проверьте, что ошибка не отображается:
 
 ```shell
 kubectl get moduleconfig module-1
 ```
 
-Пример ответа:
+Пример вывода:
 
 ```yaml
 NAME              STATE     VERSION   AGE   TYPE                  STATUS
