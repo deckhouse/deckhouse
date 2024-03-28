@@ -2,137 +2,161 @@
 title: "The metallb module: examples"
 ---
 
+Metallb can be used in Static (Bare Metal) clusters when the cloud provider does not provide a load balancer. Metallb can work in L2 or BGP modes.
+
+## Example of Metallb usage in L2 mode
+
 {% raw %}
+Below is a small step-by-step guide on how to enable the metallb module, create an Ingress controller with `inlet: LoadBalancer`, and grant access to an Nginx web server.
 
-Metallb can be used in Static (Bare Metal) clusters when you can't order a load balancer from a cloud provider. Metallb can work in L2 or BGP modes. Below is an example of Metallb usage in L2 mode.
+1. Specify node groups ([_NodeGroup_](../040-node-manager/cr.html#nodegroup)) to run the applications to grant access to.
 
-We will create an Ingress Controller with `LoadBalancer` inlet. And we will also expose standalone Nginx web server using a Service with the `LoadBalancer` type.
+   For example, Ingress controllers are run on frontend nodes while the Nginx web server is run on a worker node. All nodes have a common label `node-role/metallb=""`.
 
-First, you have to decide, which NodeGroups will be used to deploy applications that have to be exposed by the LoadBalancer service.
-Ingress controllers run on frontend nodes, and Nginx web server runs on a worker node in this example. They have common label `node-role/metallb=""`.
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: frontend
+   spec:
+     disruptions:
+       approvalMode: Manual
+     nodeTemplate:
+       labels:
+         node-role.deckhouse.io/frontend: ""
+         node-role/metallb: ""
+       taints:
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         value: frontend
+     nodeType: Static
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     disruptions:
+       approvalMode: Manual
+     nodeTemplate:
+       labels:
+         node-role/metallb: ""
+     nodeType: Static
+   ```
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: frontend
-spec:
-  disruptions:
-    approvalMode: Manual
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/frontend: ""
-      node-role/metallb: ""
-    taints:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
-  nodeType: Static
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  disruptions:
-    approvalMode: Manual
-  nodeTemplate:
-    labels:
-      node-role/metallb: ""
-  nodeType: Static
-```
+1. Make sure the nodes are labeled correctly:
 
-Check that nodes have the correct labels.
+   ```bash
+   kubectl get nodes -l node-role/metallb
+   ```
 
-```bash
-kubectl get nodes -l node-role/metallb
-NAME              STATUS   ROLES      AGE   VERSION
-demo-frontend-0   Ready    frontend   61d   v1.21.14
-demo-frontend-1   Ready    frontend   61d   v1.21.14
-demo-worker-0     Ready    worker     61d   v1.21.14
-```
+   Your output should look something like this:
 
-Module `metallb` is disabled by default, so you have to explicitly enable it. You also have to set the correct `nodeSelector` and `tolerations` for Metallb speakers.
+   ```bash
+   $ kubectl get nodes -l node-role/metallb
+   NAME              STATUS   ROLES      AGE   VERSION
+   demo-frontend-0   Ready    frontend   61d   v1.21.14
+   demo-frontend-1   Ready    frontend   61d   v1.21.14
+   demo-worker-0     Ready    worker     61d   v1.21.14
+   ```
 
-An example of the module configuration:
+1. Enable the metallb module and set the `nodeSelector` and `tolerations` parameters for the MetalLB speakers.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: metallb
-spec:
-  version: 1
-  enabled: true
-  settings:
-    addressPools:
-    - addresses:
-      - 192.168.199.100-192.168.199.102
-      name: frontend-pool
-      protocol: layer2
-    speaker:
-      nodeSelector:
-        node-role/metallb: ""
-      tolerations:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
-        operator: Equal
-        value: frontend
-```
+   Below is an example of the module configuration:
+  
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: metallb
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       addressPools:
+       - addresses:
+         - 192.168.199.100-192.168.199.102
+         name: frontend-pool
+         protocol: layer2
+       speaker:
+         nodeSelector:
+           node-role/metallb: ""
+         tolerations:
+         - effect: NoExecute
+           key: dedicated.deckhouse.io
+           operator: Equal
+           value: frontend
+   ```
 
-Create `IngressNginxController`.
+1. Create the _IngressNginxController_ custom resource.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-  nodeSelector:
-    node-role.deckhouse.io/frontend: ""
-  tolerations:
-  - effect: NoExecute
-    key: dedicated.deckhouse.io
-    value: frontend
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: IngressNginxController
+   metadata:
+     name: main
+   spec:
+     ingressClass: nginx
+     inlet: LoadBalancer
+     nodeSelector:
+       node-role.deckhouse.io/frontend: ""
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+   ```
 
-Check that service with the type `LoadBalancer` is created in the namespace `d8-ingress-nginx`.
+1. Check that the service with type `LoadBalancer` has been created in the `d8-ingress-nginx`  _Namespace_:
 
-```shell
-kubectl -n d8-ingress-nginx get svc main-load-balancer 
-NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)                      AGE
-main-load-balancer   LoadBalancer   10.222.255.194   192.168.199.100   80:30236/TCP,443:32292/TCP   30s
-```
+   ```shell
+   kubectl -n d8-ingress-nginx get svc main-load-balancer
+   ```
 
-Your Ingress controller is accessible on an external IP address.
+   Your output should look something like this:
 
-```shell
-curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
-404
-```
+   ```shell
+   $ kubectl -n d8-ingress-nginx get svc main-load-balancer 
+   NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)                      AGE
+   main-load-balancer   LoadBalancer   10.222.255.194   192.168.199.100   80:30236/TCP,443:32292/TCP   30s
+   ```
 
-Expose your standalone Nginx web server on `8080` port.
+1. Check if the Ingress controller is reachable at an external IP address.
 
-```shell
-kubectl create deploy nginx --image=nginx
-kubectl create svc loadbalancer nginx --tcp=8080:80
-```
+   Example:
 
-Check service.
+   ```console
+   $ curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
+   404
+   ```
 
-```shell
-kubectl get svc nginx
-NAME    TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)          AGE
-nginx   LoadBalancer   10.222.9.190   192.168.199.101   8080:31689/TCP   3m11s
-```
+1. Grant access to the Nginx web server on port `8080`:
 
-Now you can access the application using curl.
+   ```shell
+   kubectl create deploy nginx --image=nginx
+   kubectl create svc loadbalancer nginx --tcp=8080:80
+   ```
 
-```shell
-curl -s -o /dev/null -w "%{http_code}" 192.168.199.101:8080
-200
-```
+1. Verify that the service has been created:
+
+   ```shell
+   kubectl get svc nginx
+   ```
+
+   Your output should look something like this:
+
+   ```shell
+   $ kubectl get svc nginx
+   NAME    TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)          AGE
+   nginx   LoadBalancer   10.222.9.190   192.168.199.101   8080:31689/TCP   3m11s
+   ```
+
+1. Check if the application is accessible.
+
+   Example:
+
+   ```console
+   $ curl -s -o /dev/null -w "%{http_code}" 192.168.199.101:8080
+   200
+   ```
 
 {% endraw %}
