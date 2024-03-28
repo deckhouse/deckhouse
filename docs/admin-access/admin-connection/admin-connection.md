@@ -22,7 +22,8 @@
 
 * 8 ядер CPU;
 * 16 ГБ RAM;
-* 100 ГБ дискового пространства.
+* 100 ГБ дискового пространства;
+* HTTPS-доступ к хранилищу образов контейнеров registry.deckhouse.io.
 
 ### Необходимые ресурсы
 
@@ -55,13 +56,116 @@
 ### Подготовка образа виртуальной машины
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
-
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция _Generic Cloud / OpenStack_)
+* [РЕД ОС](ссылка);
+* [AlterOS](ссылка);
+* [Astra Linux Special Edition](ссылка);
+* [**Ubuntu**](https://cloud-images.ubuntu.com/);
+* [**Debian**](https://cloud.debian.org/images/cloud/);
+* [**CentOS**](https://cloud.centos.org/);
+* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция _Generic Cloud / OpenStack_).
 
 Если необходимо использовать собственный образ, обратитесь к [документации](/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+
+1. Загрузите ОС и настройте доступ по ключу с основного ПК:
+
+   ```
+   $ ssh-copy-id <IP-адрес сервера>
+   ```
+
+1. Сгенерируйте ключ командой `ssh-keygen -t rsa`.
+
+1. Подключитесь к серверу, чтобы убедиться в корректных настройках (ниже представлен пример успешной работы на ОС Ubuntu):
+
+   ```
+   $ ssh 192.168.2.38
+   Welcome to Ubuntu 22.04.2 LTS (GNU/Linux 5.15.0-60-generic x86_64)
+   
+    * Documentation:  https://help.ubuntu.com
+    * Management:     https://landscape.canonical.com
+    * Support:        https://ubuntu.com/advantage
+   
+     System information as of Wed Mar  1 11:23:13 AM UTC 2023
+   
+     System load:  0.0                Temperature:             46.0 C
+     Usage of /:   2.7% of 292.35GB   Processes:               135
+     Memory usage: 2%                 Users logged in:         0
+     Swap usage:   0%                 IPv4 address for enp3s0: 192.168.2.38
+   
+   
+    * Introducing Expanded Security Maintenance for Applications.
+      Receive updates to over 25,000 software packages with your
+      Ubuntu Pro subscription. Free for personal use.
+   
+        https://ubuntu.com/pro
+  
+   Expanded Security Maintenance for Applications is not enabled.
+   
+   0 updates can be applied immediately.
+   
+   Enable ESM Apps to receive additional future security updates.
+   See https://ubuntu.com/esm or run: sudo pro status
+   
+   
+   Last login: Wed Mar  1 10:34:01 2023 from 192.168.2.35
+   ```
+
+1. Отключитесь от сервера, выполнив команду `exit` или нажав сочетание клавиш **Ctrl** + **D**.
+
+### Установка кластера
+
+Установите кластер. Нажмите кнопку **Устанрвка**, как описано в разделе [Быстрый старт](https://deckhouse.ru/gs/). На странице отобразится сгенерированное содержимое для файла конфигурации `config.yml`. Введенный ранее шаблон доменных имен появится в секции `publicDomainTemplate`:
+
+```
+# Cекция с общими параметрами кластера (ClusterConfiguration).
+# Используемая версия API Deckhouse Platform.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: ClusterConfiguration
+# Тип инфраструктуры: bare metal (Static) или облако (Cloud).
+clusterType: Static
+# Адресное пространство Pod'ов кластера.
+podSubnetCIDR: 10.111.0.0/16
+# Адресное пространство для Service'ов кластера.
+serviceSubnetCIDR: 10.222.0.0/16
+# Устанавливаемая версия Kubernetes.
+kubernetesVersion: "1.23"
+# Домен кластера.
+clusterDomain: "cluster.local"
+---
+# Секция первичной инициализации кластера Deckhouse (InitConfiguration).
+# Используемая версия API Deckhouse.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: InitConfiguration
+# Секция с параметрами Deckhouse.
+deckhouse:
+  # Используемый канал обновлений.
+  releaseChannel: Stable
+  configOverrides:
+    global:
+      modules:
+        # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+        # Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
+        publicDomainTemplate: "%s.example.com"
+    # Включить модуль cni-cilium.
+    cniCiliumEnabled: true
+    # Конфигурация модуля
+    cniCilium:
+      # Режим работы туннеля.
+      tunnelMode: VXLAN
+---
+# Cекция с параметрами bare metal кластера (StaticClusterConfiguration).
+# Используемая версия API Deckhouse.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: StaticClusterConfiguration
+# Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
+# Если каждый узел в кластере имеет только один сетевой интерфейс,
+# ресурс StaticClusterConfiguration можно не создавать.
+internalNetworkCIDRs:
+- '192.168.2.0/24'
+```
 
 ### Развертывание кластера
 
