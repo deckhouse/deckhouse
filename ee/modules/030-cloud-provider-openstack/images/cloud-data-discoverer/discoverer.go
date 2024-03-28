@@ -183,6 +183,10 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 
 func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercloud.ProviderClient, error) {
 	provider, err := openstack.AuthenticatedClient(authOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
+	}
+
 	// Check if a custom CA cert was provided.
 	if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
 		caCert, err := os.ReadFile(caCertPath)
@@ -199,10 +203,6 @@ func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercl
 		transport.TLSClientConfig = config
 		provider.HTTPClient = http.Client{Transport: transport}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
-	}
-
 	provider.MaxBackoffRetries = 3
 	provider.RetryFunc = RetryFunc(logger)
 	provider.RetryBackoffFunc = RetryBackoffFunc(logger)
