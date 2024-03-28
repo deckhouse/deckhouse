@@ -64,7 +64,6 @@ func k8sPostUpgrade(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.LogEntry.Printf("create ClusterRoleBinding %s", clusterAdminsGroupAndClusterRoleBinding)
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -86,6 +85,7 @@ func k8sPostUpgrade(input *go_hook.HookInput) error {
 		},
 	}
 
+	input.LogEntry.Printf("create ClusterRoleBinding %s", clusterAdminsGroupAndClusterRoleBinding)
 	input.PatchCollector.Create(clusterRoleBinding, object_patch.IgnoreIfExists())
 
 	return nil
