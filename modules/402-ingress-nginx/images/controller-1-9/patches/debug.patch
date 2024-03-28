@@ -1,0 +1,63 @@
+Subject: [PATCH] debug
+---
+Index: internal/nginx/maxmind.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+--- a/internal/nginx/maxmind.go	(revision be46124ccc9e8158165f06e3f7d2ebd0cbbb284f)
++++ b/internal/nginx/maxmind.go	(date 1711639544943)
+@@ -139,7 +139,9 @@
+ }
+
+ func downloadDatabase(dbName string) error {
++	fmt.Println("maxmind DOWNLOADING ", dbName)
+ 	newURL := createURL(MaxmindMirror, MaxmindLicenseKey, dbName)
++	fmt.Println("maxmind URL ", newURL)
+ 	req, err := http.NewRequest(http.MethodGet, newURL, http.NoBody)
+ 	if err != nil {
+ 		return err
+@@ -152,6 +154,8 @@
+
+ 	defer resp.Body.Close()
+
++	fmt.Println("maxmind RESPONSE STATUS CODE ", resp.StatusCode)
++
+ 	if resp.StatusCode != http.StatusOK {
+ 		return fmt.Errorf("HTTP status %v", resp.Status)
+ 	}
+@@ -163,6 +167,7 @@
+ 	defer archive.Close()
+
+ 	mmdbFile := dbName + dbExtension
++	fmt.Println("maxmind MMDB file ", mmdbFile)
+
+ 	tarReader := tar.NewReader(archive)
+ 	for {
+@@ -175,7 +180,10 @@
+ 			return err
+ 		}
+
++		fmt.Println("maxmind tar typeflag ", header.Typeflag)
++
+ 		if header.Typeflag == tar.TypeReg {
++			fmt.Println("maxmind tar name ", header.Name)
+ 			if !strings.HasSuffix(header.Name, mmdbFile) {
+ 				continue
+ 			}
+@@ -184,12 +192,14 @@
+ 				if err != nil {
+ 					return err
+ 				}
++				fmt.Println("maxmind out file ", outFile.Name())
+
+ 				defer outFile.Close()
+
+ 				if _, err := io.CopyN(outFile, tarReader, header.Size); err != nil {
+ 					return err
+ 				}
++				fmt.Println("maxmind file copied")
+ 				return nil
+ 			}()
+ 		}
