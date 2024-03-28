@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 )
 
@@ -633,8 +634,15 @@ func (du *DeckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult)
 }
 
 func (du *DeckhouseUpdater) checkReleaseRequirements(rl *DeckhouseRelease) bool {
+	modulesSet := set.New()
+	modules := du.input.Values.Get("global.enabledModules").Array()
+	for _, module := range modules {
+		moduleName := module.String()
+		modulesSet.Add(moduleName)
+	}
+
 	for key, value := range rl.Requirements {
-		passed, err := requirements.CheckRequirement(key, value)
+		passed, err := requirements.CheckRequirement(key, value, modulesSet)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.Version, err)
 			if errors.Is(err, requirements.ErrNotRegistered) {
