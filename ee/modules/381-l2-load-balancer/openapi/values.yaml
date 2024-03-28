@@ -1,0 +1,89 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+    - l2LoadBalancers
+    - speakerNodes
+    properties:
+      speakerNodes:
+        type: array
+        default: []
+        items:
+          type: string
+      l2LoadBalancers:
+        type: ['null', array]
+        default: []
+        items:
+          type: object
+          x-required-for-helm:
+          - addressPool
+          - labelSelector
+          - nodes
+          - ports
+          properties:
+            name:
+              type: string
+              x-examples: ["test"]
+            namespace:
+              type: string
+            addressPool:
+              type: string
+            sourceRanges:
+              type: array
+              default: []
+              description: |
+                IP ranges (CIDR) that are allowed to access the load balancer.
+
+                The cloud provider may not support this option or ignore it.                       .
+              items:
+                type: string
+            nodeSelector:
+              type: object
+              additionalProperties:
+                type: string
+              description: |
+                The same as in the Pods `spec.nodeSelector` parameter in Kubernetes.
+
+                If parameter is omitted, L2 LoadBalancer will be placed on all nodes.
+            labelSelector:
+              type: object
+              additionalProperties:
+                type: string
+              description: |
+                The same as in the Service `spec.selector` parameter in Kubernetes.
+            nodes:
+              type: array
+              description: |
+                Names of nodes
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+            ports:
+              type: array
+              description: |
+                The list of ports that are exposed by this service.
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: |
+                      The name of this port within the service. This must be a DNS_LABEL.
+                      All ports within a ServiceSpec must have unique names.
+                      When considering the endpoints for a Service, this must match the 'name' field in the EndpointPort
+                  port:
+                    type: integer
+                    description: The port that will be exposed by this service.
+                  protocol:
+                    type: string
+                    default: "TCP"
+                    description: The IP protocol for this port. Supports "TCP", "UDP", and "SCTP". Default is TCP.
+                  targetPort:
+                    type: integer
+                    description: Number of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535.

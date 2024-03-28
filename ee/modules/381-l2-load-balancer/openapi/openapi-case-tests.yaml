@@ -1,0 +1,14 @@
+positive:
+  configValues:
+    - addressPools:
+      - name: my-pool
+        addresses:
+          - 192.168.100.1-192.168.100.10
+          - 192.168.101.0/24
+negative:
+  configValues:
+  # Invalid value: "frontend_pool": a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character
+    - addressPools:
+      - addresses:
+        - 192.168.199.100-192.168.199.102
+        name: frontend_pool

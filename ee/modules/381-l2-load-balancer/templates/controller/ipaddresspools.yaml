@@ -1,0 +1,14 @@
+{{- range $ipaddressPool := .Values.l2LoadBalancer.addressPools }}
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ $ipaddressPool.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "controller")) | nindent 2 }}
+spec:
+  addresses:
+  {{- $ipaddressPool.addresses | toYaml | nindent 4 }}
+  autoAssign: false
+  avoidBuggyIPs: {{ index $ipaddressPool "avoid-buggy-ips" }}
+{{- end }}
