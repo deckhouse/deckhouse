@@ -227,12 +227,12 @@ RUN  chmod 1777 /tmp \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
-  && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
+  && mkdir -p /etc/ingress-controller/geoip \
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
   && touch /chroot/var/log/nginx/access.log \
   && chown www-data:www-data /chroot/var/log/nginx/access.log \
   && echo "" > /chroot/etc/resolv.conf \
-  && chown -R www-data.www-data /var/log /chroot/var/log /chroot/etc/resolv.conf /chroot/etc/ingress-controller/geoip \
+  && chown -R www-data.www-data /var/log /chroot/var/log /chroot/etc/resolv.conf /etc/ingress-controller/ \
   && mknod -m 0666 /chroot/dev/null c 1 3 \
   && mknod -m 0666 /chroot/dev/random c 1 8 \
   && mknod -m 0666 /chroot/dev/urandom c 1 9 \
