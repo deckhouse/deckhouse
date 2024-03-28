@@ -20,54 +20,103 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"strconv"
-	"strings"
+	"log/slog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	// todo: support task cancellation messages
-	r, err := server.Recv()
-	if err != nil {
-		if errors.Is(err, io.EOF) {
-			return nil
+	ctx, cancel := context.WithCancel(server.Context())
+	defer cancel()
+
+	gr, ctx := errgroup.WithContext(ctx)
+
+	f := fsm.New("initial", s.checkServerTransitions())
+
+	gr.Go(func() error {
+		for {
+			request, err := server.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
+				return status.Errorf(codes.Internal, "receiving message: %s", err)
+			}
+
+			switch message := request.Message.(type) {
+			case *pb.CheckRequest_Start:
+				err = f.Event("start")
+				if err != nil {
+					s.log.Error("got unprocessable message",
+						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
+					continue
+				}
+				err = s.startCheck(ctx, gr, server, message.Start)
+
+			case *pb.CheckRequest_Stop:
+				err = f.Event("stop")
+				if err != nil {
+					s.log.Error("got unprocessable message",
+						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
+					continue
+				}
+				err = s.stopCheck(cancel, message.Stop)
+
+			default:
+				s.log.Error("got unprocessable message",
+					slog.String("message", fmt.Sprintf("%T", message)))
+				continue
+			}
 		}
-		return status.Errorf(codes.Internal, "receiving message: %s", err)
-	}
-
-	request := r.GetStart()
-	if request == nil {
-		return status.Errorf(codes.Unimplemented, "message not supported")
-	}
-
-	result, err := s.check(server.Context(), request, &logWriter{server: server})
-	if err != nil {
-		return err
-	}
-
-	err = server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Result{
-			Result: result,
-		},
 	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "sending message: %s", err)
-	}
+
+	return gr.Wait()
+}
+
+func (s *Service) startCheck(
+	ctx context.Context,
+	gr *errgroup.Group,
+	server pb.DHCTL_CheckServer,
+	request *pb.CheckStart,
+) error {
+	gr.Go(func() error {
+		result, err := s.check(ctx, request, &checkLogWriter{server: server})
+		if err != nil {
+			return err
+		}
+
+		err = server.Send(&pb.CheckResponse{
+			Message: &pb.CheckResponse_Result{
+				Result: result,
+			},
+		})
+		if err != nil {
+			return status.Errorf(codes.Internal, "sending message: %s", err)
+		}
+		return nil
+	})
+
+	return nil
+}
+
+func (s *Service) stopCheck(
+	cancel context.CancelFunc,
+	_ *pb.CheckStop,
+) error {
+	cancel()
 	return nil
 }
 
@@ -85,6 +134,8 @@ func (s *Service) check(
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+
+	log.InfoF("Task has been started by DHCTL Server pod/%s\n", s.podName)
 
 	// parse connection config
 	connectionConfig, err := config.ParseConnectionConfig(
@@ -158,77 +209,11 @@ func (s *Service) check(
 	return &pb.CheckResult{Result: string(resultString)}, nil
 }
 
-func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
-	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
-	for _, key := range config.SSHConfig.SSHAgentPrivateKeys {
-		keyPath, err := writeTempFile([]byte(strings.TrimSpace(key.Key) + "\n"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to write ssh private key: %w", err)
-		}
-		keysPaths = append(keysPaths, keyPath)
-	}
-	normalizedKeysPaths, err := app.ParseSSHPrivateKeyPaths(keysPaths)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing ssh agent private keys %v: %w", normalizedKeysPaths, err)
-	}
-	keys := make([]session.AgentPrivateKey, 0, len(normalizedKeysPaths))
-	for i, key := range normalizedKeysPaths {
-		keys = append(keys, session.AgentPrivateKey{
-			Key:        key,
-			Passphrase: config.SSHConfig.SSHAgentPrivateKeys[i].Passphrase,
-		})
-	}
-
-	var sshHosts []string
-	if len(config.SSHHosts) > 0 {
-		for _, h := range config.SSHHosts {
-			sshHosts = append(sshHosts, h.Host)
-		}
-	} else {
-		mastersIPs, err := bootstrap.GetMasterHostsIPs()
-		if err != nil {
-			return nil, err
-		}
-		sshHosts = mastersIPs
-	}
-
-	sess := session.NewSession(session.Input{
-		User:           config.SSHConfig.SSHUser,
-		Port:           portToString(config.SSHConfig.SSHPort),
-		BastionHost:    config.SSHConfig.SSHBastionHost,
-		BastionPort:    portToString(config.SSHConfig.SSHBastionPort),
-		BastionUser:    config.SSHConfig.SSHBastionUser,
-		ExtraArgs:      config.SSHConfig.SSHExtraArgs,
-		AvailableHosts: sshHosts,
-	})
-
-	sshClient, err := ssh.NewClient(sess, keys).Start()
-	if err != nil {
-		return nil, err
-	}
-
-	return sshClient, nil
-}
-
-func writeTempFile(data []byte) (string, error) {
-	f, err := os.CreateTemp("", "*")
-	if err != nil {
-		return "", fmt.Errorf("creating temp file: %w", err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		return "", fmt.Errorf("writing temp file: %w", err)
-	}
-
-	return f.Name(), nil
-}
-
-type logWriter struct {
+type checkLogWriter struct {
 	server pb.DHCTL_CheckServer
 }
 
-func (w *logWriter) Write(p []byte) (int, error) {
+func (w *checkLogWriter) Write(p []byte) (int, error) {
 	err := w.server.Send(&pb.CheckResponse{
 		Message: &pb.CheckResponse_Logs{
 			Logs: &pb.Logs{
@@ -242,26 +227,17 @@ func (w *logWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func portToString(p *int32) string {
-	if p == nil {
-		return ""
+func (s *Service) checkServerTransitions() []fsm.Transition {
+	return []fsm.Transition{
+		{
+			Event:       "start",
+			Sources:     []fsm.State{"initial"},
+			Destination: "started",
+		},
+		{
+			Event:       "stop",
+			Sources:     []fsm.State{"started"},
+			Destination: "stopped",
+		},
 	}
-	return strconv.Itoa(int(*p))
-}
-
-func combineYAMLs(yamls ...string) string {
-	var res string
-	for _, yaml := range yamls {
-		if yaml == "" {
-			continue
-		}
-
-		if res != "" {
-			res += "---\n"
-		}
-
-		res = res + strings.TrimSpace(yaml) + "\n"
-	}
-
-	return res
 }
