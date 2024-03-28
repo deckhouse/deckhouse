@@ -377,4 +377,3 @@ git push --set-upstream origin example
            source: deckhouse
    ...
    ```
-

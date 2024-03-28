@@ -63,7 +63,7 @@ registry.example.io
 
   Пример ответа:
 
-  ```
+  ```yaml
   module-1
   module-2
   ```
@@ -78,7 +78,7 @@ registry.example.io
 
   Пример ответа:
 
-  ```
+  ```yaml
   v1.23.1
   d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
   e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
@@ -120,7 +120,7 @@ registry.example.io
 
   Пример ответа:
 
-  ```
+  ```yaml
   v1.23.1
   v1.23.2
   alpha
