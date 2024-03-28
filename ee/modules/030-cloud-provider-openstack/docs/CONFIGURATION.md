@@ -14,3 +14,41 @@ If you need to configure a module because, say, you have a bare metal cluster an
 To authenticate using the `user-authn` module, you need to create a new `Generic` application in the project's Crowd.
 
 {% include module-settings.liquid %}
+
+## List of required OpenStack services
+
+A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
+
+<table>
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>API Version</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Identity (Keystone)</code></td>
+      <td><code>v3</code></td>
+    </tr>
+    <tr>
+      <td><code>Compute (Nova)</code></td>
+      <td><code>v2</code></td>
+    </tr>
+    <tr>
+      <td><code>Network (Neutron)</code></td>
+      <td><code>v2</code></td>
+    </tr>
+    <tr>
+      <td><code>Block Storage (Cinder)</code></td>
+      <td><code>v3</code></td>
+    </tr>
+    <tr>
+      <td colspan="2">If the Load Balancer ordering functionality will be used:</td>
+    </tr>
+    <tr>
+      <td><code>Load Balancing (Octavia)</code></td>
+      <td><code>v2</code></td>
+    </tr>
+  </tbody>
+</table>
