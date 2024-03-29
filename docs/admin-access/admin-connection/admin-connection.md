@@ -22,7 +22,8 @@
 
 * 8 ядер CPU;
 * 16 ГБ RAM;
-* 100 ГБ дискового пространства.
+* 100 ГБ дискового пространства;
+* HTTPS-доступ к хранилищу образов контейнеров registry.deckhouse.io.
 
 ### Необходимые ресурсы
 
@@ -33,6 +34,8 @@
 * **Datastore** в любом количестве, с соответствующими[тегами](#конфигурация-datastore).
 * **Template** —[подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
 
+Список необходимых ресурсов выбирается в заивисимости от [провайдера](ссылка).
+
 Для работы кластера необходим VLAN с DHCP и доступом в интернет с условиями:
 
 * Если VLAN публичный (публичные адреса), нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен).
@@ -41,27 +44,134 @@
 * Если балансировщик отсутствует, для организации отказоустойчивых сервисов *LoadBalancer* рекомендуется использовать MetalLB в режиме BGP. В кластере будут созданы frontend-узлы с двумя интерфейсами. Для этого дополнительно потребуются отдельный VLAN обмена трафиком между BGP-роутерами и MetalLB. В этом VLAN должны быть DHCP, доступ в интернет и IP-адреса BGP-роутеров.
 * ASN (номер автономной системы) на BGP-роутере.
 * ASN (номер автономной системы) в кластере.
-* Диапазон, из которого анонсировать адреса.
+* Диапазона, из которого анонсированы адреса.
 
-### Хранилища данных и список необходимых ресурсов
+### Хранилища данных
 
 В кластере может одновременно использоваться различное количество типов хранилищ. В минимальной конфигурации потребуются:
 
 * Datastore, в котором Kubernetes-кластер будет заказывать способы хранения *PersistentVolume*;
 * Datastore, в котором будут заказываться root-диски для виртуальной машины (это может быть тот же Datastore, что и для *PersistentVolume*).
 
-Список необходимых ресурсов выбирается в заивисмотси от [провайдера](ссылка).
-
 ### Подготовка образа виртуальной машины
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
-
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция _Generic Cloud / OpenStack_)
+* [РЕД ОС](ссылка);
+* [AlterOS](ссылка);
+* [Astra Linux Special Edition](ссылка);
+* [**Ubuntu**](https://cloud-images.ubuntu.com/);
+* [**Debian**](https://cloud.debian.org/images/cloud/);
+* [**CentOS**](https://cloud.centos.org/);
+* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция _Generic Cloud / OpenStack_).
 
 Если необходимо использовать собственный образ, обратитесь к [документации](/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+
+1. Загрузите ОС и настройте доступ по ключу с основного ПК:
+
+   ```
+   $ ssh-copy-id <IP-адрес сервера>
+   ```
+
+1. Сгенерируйте ключ командой `ssh-keygen -t rsa`.
+
+1. Подключитесь к серверу, чтобы убедиться в корректных настройках (ниже представлен пример успешной работы на ОС Ubuntu):
+
+   ```
+   $ ssh 192.168.2.38
+   Welcome to Ubuntu 22.04.2 LTS (GNU/Linux 5.15.0-60-generic x86_64)
+   
+    * Documentation:  https://help.ubuntu.com
+    * Management:     https://landscape.canonical.com
+    * Support:        https://ubuntu.com/advantage
+   
+     System information as of Wed Mar  1 11:23:13 AM UTC 2023
+   
+     System load:  0.0                Temperature:             46.0 C
+     Usage of /:   2.7% of 292.35GB   Processes:               135
+     Memory usage: 2%                 Users logged in:         0
+     Swap usage:   0%                 IPv4 address for enp3s0: 192.168.2.38
+   
+   
+    * Introducing Expanded Security Maintenance for Applications.
+      Receive updates to over 25,000 software packages with your
+      Ubuntu Pro subscription. Free for personal use.
+   
+        https://ubuntu.com/pro
+  
+   Expanded Security Maintenance for Applications is not enabled.
+   
+   0 updates can be applied immediately.
+   
+   Enable ESM Apps to receive additional future security updates.
+   See https://ubuntu.com/esm or run: sudo pro status
+   
+   
+   Last login: Wed Mar  1 10:34:01 2023 from 192.168.2.35
+   ```
+
+1. Отключитесь от сервера, выполнив команду `exit` или нажав сочетание клавиш **Ctrl** + **D**.
+
+### Установка кластера
+
+Установите кластер. Нажмите кнопку **Устанрвка**, как описано в разделе [Быстрый старт](https://deckhouse.ru/gs/). На странице отобразится сгенерированное содержимое для файла конфигурации `config.yml`. Введенный ранее шаблон доменных имен появится в секции `publicDomainTemplate`:
+
+```
+# Cекция с общими параметрами кластера (ClusterConfiguration).
+# Используемая версия API Deckhouse Platform.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: ClusterConfiguration
+# Тип инфраструктуры: bare metal (Static) или облако (Cloud).
+clusterType: Static
+# Адресное пространство Pod'ов кластера.
+podSubnetCIDR: 10.111.0.0/16
+# Адресное пространство для Service'ов кластера.
+serviceSubnetCIDR: 10.222.0.0/16
+# Устанавливаемая версия Kubernetes.
+kubernetesVersion: "1.23"
+# Домен кластера.
+clusterDomain: "cluster.local"
+---
+# Секция первичной инициализации кластера Deckhouse (InitConfiguration).
+# Используемая версия API Deckhouse.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: InitConfiguration
+# Секция с параметрами Deckhouse.
+deckhouse:
+  # Используемый канал обновлений.
+  releaseChannel: Stable
+  configOverrides:
+    global:
+      modules:
+        # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+        # Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
+        publicDomainTemplate: "%s.example.com"
+    # Включить модуль cni-cilium.
+    cniCiliumEnabled: true
+    # Конфигурация модуля
+    cniCilium:
+      # Режим работы туннеля.
+      tunnelMode: VXLAN
+---
+# Cекция с параметрами bare metal кластера (StaticClusterConfiguration).
+# Используемая версия API Deckhouse.
+apiVersion: deckhouse.io/v1
+# Тип секции конфигурации.
+kind: StaticClusterConfiguration
+# Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
+# Если каждый узел в кластере имеет только один сетевой интерфейс,
+# ресурс StaticClusterConfiguration можно не создавать.
+internalNetworkCIDRs:
+- '192.168.2.0/24'
+```
+
+> Обратите внимание: в последнем разделе сгенерированного файла конфигурации *StaticClusterConfiguration* укажите сеть, в которую направлен основной сетевой интерфейс сервера, поскольку на борту имеется несколько интерфейсов. Если в виртуальной машине один сетевой интерфейс — эту секцию можно удалить.
+>
+> Модуль, отвечающий за реализацию CNI, был заменен с `cni-flannel` на `cni-cilium`. Это требуется для корректной работы виртуальных машин, так как их сетевое взаимодействие основано на Cilium. В настройках также указан параметр, определяющий режим работы туннелей, который установлен в значение `VXLAN`.
+
+Сохраните содержимое в файле `config.yml`, положив его в любой отдельную директорию.
 
 ### Развертывание кластера
 
@@ -75,9 +185,7 @@
 
 2. Создайте роль с необходимыми [правами](ссылка на раздел RBAC)
 
-### Выбор способа конфигурации
-
-## Подключение к мастер-узлу
+### Подключение к мастер-узлу
 
 1. Подключитесь к мастер-узлу по SSH (IP-адрес мастер-узла выводится инсталлятором по завершении установки, но также можно его найти, используя веб-интерфейс или CLI‑утилиты облачного провайдера):
 
@@ -150,7 +258,7 @@
 
 ### Настройка Grafana
 
-Установите [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/).
+Настройте [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/). <!-- подробнее описать? -->
 
 ### Настройка модулей
 
@@ -160,7 +268,7 @@ Deckhouse настраивается с помощью:
 
 * **[Глобальных настроек](deckhouse-configure-global.html).** Глобальные настройки хранятся в custom resource `ModuleConfig/global`. Глобальные настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
 * **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
-* **Custom resource'ов.** Некоторые модули настраиваются с помощью дополнительных custom resource'ов.
+* **Кастомных ресурсов** Некоторые модули настраиваются с помощью дополнительных custom resource'ов.
 
 > При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту _звезду_.
 
@@ -223,7 +331,7 @@ NAME                STATE      VERSION    STATUS    AGE
 user-authn          Disabled   1                    12h
 ```
 
-## Наборы модулей
+### Наборы модулей
 
 В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
@@ -483,5 +591,6 @@ user-authn          Disabled   1                    12h
 
 Добавьте аннотации prometheus.deckhouse.io/custom-target: "my-app" и prometheus.deckhouse.io/port: "80" к созданному Service’у.
 Настройте [monitoring-custom](https://deckhouse.ru/documentation/v1/modules/340-monitoring-custom/)
+
 
 
