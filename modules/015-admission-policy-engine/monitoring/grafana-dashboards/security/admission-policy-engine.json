@@ -660,7 +660,19 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Source Type"
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 205
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Policy Name"
             },
             "properties": [
               {
@@ -672,12 +684,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Name"
+              "options": "Policy Type"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 205
+                "value": 99
               }
             ]
           }
@@ -706,7 +718,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -730,7 +742,8 @@
                 "violation_enforcement",
                 "violation_msg",
                 "violating_namespace",
-                "source_type"
+                "source_type",
+                "name"
               ]
             }
           }
@@ -743,13 +756,14 @@
             },
             "indexByName": {
               "Time": 0,
-              "kind": 1,
-              "violating_kind": 3,
-              "violating_name": 4,
-              "violating_namespace": 2,
-              "violation_enforcement": 5,
-              "violation_msg": 6,
-              "source_type": 7
+              "source_type": 1,
+              "name": 2,
+              "kind": 3,
+              "violating_kind": 5,
+              "violating_name": 6,
+              "violating_namespace": 4,
+              "violation_enforcement": 7,
+              "violation_msg": 8
             },
             "renameByName": {
               "Time": "",
@@ -759,7 +773,8 @@
               "violating_namespace": "Namespace",
               "violation_enforcement": "Enforcement",
               "violation_msg": "Message",
-              "source_type": "Source Type"
+              "source_type": "Policy Type",
+              "name": "Policy Name"
             }
           }
         }
