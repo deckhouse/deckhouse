@@ -102,7 +102,6 @@ spec:
           - "--health-probe-bind-address=:9445"
           - "--webhook-port=9444"
           - "--use-kubernetes-host-env-as-control-plane-host"
-          - "--use-normal-vms-creation-instead-tkg"
           - "--pass-hostname-by-guest-info"
           - "--skip-post-bootstrap-phases-checking"
           - "--default-network-mode-for-new-vm=DHCP"
