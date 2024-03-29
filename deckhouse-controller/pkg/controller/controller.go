@@ -251,6 +251,7 @@ func (dml *DeckhouseController) runEventLoop(moduleEventCh <-chan events.ModuleE
 			continue
 
 		case events.ModuleConfigChanged:
+			log.Infof("DEBUG: ConfigChanged event received for module %s", event.ModuleName)
 			if d8config.IsServiceInited() {
 				err := dml.updateModuleConfigStatus(event.ModuleName)
 				if err != nil {
@@ -304,6 +305,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
 			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
 			moduleConfig, moduleErr := dml.moduleConfigsLister.Get(configName)
+			log.Infof("DEBUG: ConfigChanged get module %s: err: %s", configName, moduleErr)
 
 			// if module config found
 			if moduleErr == nil {
@@ -328,6 +330,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				// update metrics
 				chain := conversion.Registry().Chain(moduleConfig.Name)
 
+				log.Infof("DEBUG: ConfigChanged update metrics for module %s", configName)
 				if moduleConfig.Spec.Version > 0 && chain.Conversion(moduleConfig.Spec.Version) != nil {
 					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
