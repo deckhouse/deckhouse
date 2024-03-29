@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 
 	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -126,7 +125,7 @@ func (r *ZvirtClusterReconciler) checkZvirtClusterID(ctx context.Context, id str
 		return errors.New(infrastructurev1.ClusterIDNotProvidedMessage)
 	}
 
-	_, err := r.Zvirt.WithContext(ctx).GetCluster(ovirt.ClusterID(id), ovirt.Timeout(15*time.Second))
+	_, err := r.Zvirt.WithContext(ctx).GetCluster(ovirt.ClusterID(id) /*ovirt.Timeout(15*time.Second)*/)
 	if err != nil {
 		if ovirt.HasErrorCode(err, ovirt.ENotFound) {
 			return fmt.Errorf("Cluster with specified ID doesn't exist in zVirt: %w", err)
