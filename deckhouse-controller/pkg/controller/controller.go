@@ -303,10 +303,10 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
 			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
-			moduleConfig, err := dml.moduleConfigsLister.Get(configName)
+			moduleConfig, moduleErr := dml.moduleConfigsLister.Get(configName)
 
 			// if module config found
-			if err == nil {
+			if moduleErr == nil {
 				newModuleConfigStatus := d8config.Service().StatusReporter().ForConfig(moduleConfig)
 				if (moduleConfig.Status.Message != newModuleConfigStatus.Message) || (moduleConfig.Status.Version != newModuleConfigStatus.Version) {
 					moduleConfig.Status.Message = newModuleConfigStatus.Message
@@ -319,7 +319,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 						moduleConfig.Status.Message, newModuleConfigStatus.Message,
 					)
 
-					_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().UpdateStatus(dml.ctx, moduleConfig, v1.UpdateOptions{})
+					_, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().UpdateStatus(dml.ctx, moduleConfig, v1.UpdateOptions{})
 					if err != nil {
 						return err
 					}
@@ -338,14 +338,14 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 			}
 
 			// update the related module if it exists
-			if err == nil || (err != nil && errors.IsNotFound(err)) {
+			if moduleErr == nil || (moduleErr != nil && errors.IsNotFound(moduleErr)) {
 				err := dml.updateModuleStatus(configName)
 				// it's possible that such a module doesn't exist
 				if err != nil && !errors.IsNotFound(err) {
 					return err
 				}
 			}
-			return nil
+			return moduleErr
 		})
 	})
 }
