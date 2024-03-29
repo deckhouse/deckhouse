@@ -38,6 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
+	input.LogEntry.Printf("debug kubernetesVersion: %s (%v)", kubernetesVersion, semver.Compare("v1.29.0", kubernetesVersion))
 	input.LogEntry.Println("debug 1")
 	// if kubernetesVersion < v1.29.0
 	if semver.Compare("v1.29.0", kubernetesVersion) == 1 {
