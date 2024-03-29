@@ -38,26 +38,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
-
+	input.LogEntry.Println("debug 1")
 	// if kubernetesVersion < v1.29.0
 	if semver.Compare("v1.29.0", kubernetesVersion) == 1 {
 		return nil
 	}
-
+	input.LogEntry.Println("debug 2")
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
+	input.LogEntry.Println("debug 3")
+
 	_, err = kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
 	if err == nil {
 		return nil
 	}
-
+	input.LogEntry.Println("debug 4")
 	if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("error: %v", err)
 	}
-
+	input.LogEntry.Println("debug 5")
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
