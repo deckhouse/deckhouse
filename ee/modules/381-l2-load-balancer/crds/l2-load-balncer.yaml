@@ -19,6 +19,7 @@ spec:
     schema: &schema
       openAPIV3Schema:
         type: object
+        description: The interface for configuring distributed L2 load balancers.
         x-doc-d8Revision: ee
         required: ['spec']
         properties:
@@ -29,6 +30,7 @@ spec:
             properties:
               addressPool:
                 type: string
+                description: MetalLB address pool for public IP address allocation.
                 x-doc-d8Revision: ee
               nodeSelector:
                 type: object
@@ -36,11 +38,14 @@ spec:
                 additionalProperties:
                   type: string
                 description: |
+                  The group of load balancer nodes to serve the public IP addresses.
+
                   The same as in the Pods `spec.nodeSelector` parameter in Kubernetes.
 
                   If parameter is omitted, L2 LoadBalancer's speakers will be placed on all nodes.
               service:
                 type: object
+                description: The spec of application's Service.
                 x-doc-d8Revision: ee
                 required: ['selector', 'ports']
                 properties:
