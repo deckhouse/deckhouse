@@ -4,14 +4,17 @@ webIfaces:
 - name: istio
 ---
 
-## Таблица совместимости поддерживаемых версий:
+## Таблица совместимости поддерживаемых версий
 
-| Версия Istio |      [Поддерживаемые версии K8S](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases)       | Статус в текущем релизе D8 |
+| Версия Istio |      [Версии K8S, поддерживаемые Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases)       | Статус в текущем релизе D8 |
 |:------------:|:--------------------------------------:|:--------------------------:|
 |     1.12     |     *1.19*, *1.20*, *1.21*, *1.22*     |  Устарела и будет удалена  |
 |     1.13     |     *1.20*, *1.21*, *1.22*, *1.23*     |  Устарела и будет удалена  |
 |     1.16     |    *1.22*, *1.23*, *1.24*, **1.25**    |          Устарела          |
 |     1.19     | **1.25**, **1.26**, **1.27**, **1.28** |       Поддерживается       |
+
+- **Жирным шрифтом** выделены версии K8S, которые поддерживаются в текущем релизе D8.
+- *Курсивом* выделены версии K8S, которые НЕ поддерживаются в текущем релизе D8.
 
 {::options parse_block_html="false" /}
 
@@ -219,8 +222,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). По умолчанию значение параметра — `cluster.local`.
-* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) не должны быть уникальными.
+* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration). По умолчанию значение параметра — `cluster.local`.
+* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) не должны быть уникальными.
 
 #### Общие принципы федерации
 
@@ -256,8 +259,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
-* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого члена мультикластера.
+* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
+* Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого члена мультикластера.
 
 #### Общие принципы
 
