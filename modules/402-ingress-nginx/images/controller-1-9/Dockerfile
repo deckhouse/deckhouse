@@ -125,6 +125,8 @@ RUN bash -eu -c ' \
   writeDirs=( \
     /chroot/etc/nginx \
     /chroot/usr/local/nginx \
+    /chroot/usr/share \
+    /chroot/usr/bin \
     /chroot/etc/ingress-controller \
     /chroot/etc/ingress-controller/ssl \
     /chroot/etc/ingress-controller/auth \
@@ -152,6 +154,9 @@ RUN bash -eu -c ' \
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
+  && cp -a /etc/pki /chroot/etc/pki \
+  && cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates \
+  && cp -a /usr/bin/curl /chroot/usr/bin/curl \
   && cp -a /lib64/* /chroot/lib64/ \
   && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
@@ -206,9 +211,6 @@ RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
     -s /sbin/nologin -c www-data www-data
 
 COPY --from=chroot /chroot /chroot
-COPY --from=chroot /etc/pki /etc/pki
-COPY --from=chroot /usr/share/ca-certificates /usr/share/ca-certificates
-COPY --from=chroot /usr/bin/curl /chroot/usr/bin/curl
 
 COPY --from=controller-builder /src/rootfs/bin/amd64/dbg /
 COPY --from=controller-builder /src/rootfs/bin/amd64/nginx-ingress-controller  /
