@@ -28,17 +28,17 @@ If metrics are subject to fluctuations that result in a surge of unnecessary app
 
 ## Scaling types
 
-Используйте следующие метрики для масштабирования приложений:
-1. [Классического типа](#классическое-масштабирование-по-потреблению-ресурсов).
-1. [Кастомные namespace-scoped-метрики](#масштабирование-по-кастомным-метрикам). При условии, если у вас одно приложение, источник метрик находится внутри namespace и связан с одним из объектов.
-1. [Кастомные cluster-wide-метрики](#масштабирование-по-кастомным-метрикам). При условии, если у вас много приложений используют одинаковую метрику, источник которой находится в namespace приложения, и она связана с одним из объектов. Подобные метрики предусмотрены на случай необходимости выделения общих инфраструктурных компонентов в отдельный деплой («infra»).
-1. Если источник метрики не привязан к namespace приложения, используйте [внешние](#применяем-внешние-метрики-в-hpa) метрики. Например, метрики облачного провайдера или внешнего SaaS-сервиса.
+The following metrics can be used to scale applications:
+1. [Classic metrics](#classic-resource-consumption-based-scaling).
+1. [Custom namespace-scoped metrics](#scaling-based-on-custom-metrics). This type is suitable if you have a single application, the source of the metrics is in the namespace and it is tied to one of the objects.
+1. [Custom cluster-wide metrics](#scaling-based-on-custom-metrics). This type is suitable if you have many applications using the same metric, whose source is in the application namespace, and it is associated with one of the objects. Such metrics let you put common infrastructure components into a separate deployment ("infra").
+1. If the metric source is not tied to the application namespace, you can use [external](#using-external-metrics-in-hpa) metrics. For example, metrics provided by a cloud provider or an external SaaS service.
 
-**Важно!** Рекомендуется использовать вариант 1 ([классические](#классическое-масштабирование-по-потреблению-ресурсов) метрики), или вариант 2 ([кастомные](#масштабирование-по-кастомным-метрикам) метрики, определяемые в _Namespace_). В этом случае, рекомендуется определить конфигурацию приложения, включающую его автоматическое масштабирование, в репозиторий самого приложения. Следует рассматривать варианты 3 и 4 только в том случае, если у вас имеется большая коллекция идентичных микросервисов.
+**Caution!** We recommend using option 1 ([classic](#classic-scaling-by-consumption-resources) metrics), or option 2 ([custom](#scaling-by-custom-metrics) metrics defined in the _Namespace_). In this case, we suggest defining the application configuration (including its autoscaling) in the app repository. You should consider options 3 and 4 only if you have a large collection of identical microservices.
 
-## Классическое масштабирование по потреблению ресурсов
+## Classic resource consumption-based scaling
 
-Пример HPA для масштабирования по базовым метрикам из `metrics.k8s.io`: CPU и памяти подов. Особое внимание на `averageUtulization` — это значение отражает целевой процент ресурсов, который был **реквестирован**.
+Below is an example HPA configuration for scaling based on the classic metrics from `metrics.k8s.io`: CPU and memory utilization for pods. The `averageUtulization` value reflects the target percentage of resources that have been **requested**.
 
 {% raw %}
 
@@ -49,48 +49,48 @@ metadata:
   name: app-hpa
   namespace: app-prod
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # Indicates the controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: app
-  # Границы масштабирования контроллера.
+  # Controller scaling limits.
   minReplicas: 1
   maxReplicas: 10
-  # Если для приложения характерны кратковременные скачки потребления CPU,
-  # можно отложить принятие решения о масштабировании, чтобы убедиться, что оно необходимо.
-  # По умолчанию масштабирование вверх происходит немедленно.
+  # If the application is prone to short-term spikes in CPU consumption,
+  # you can postpone the scaling decision to see if it is necessary.
+  # By default, scaling up occurs immediately.
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 300
   metrics:
-  # Масштабирование по CPU и памяти.
+  # CPU- and memory-based scaling.
   - type: Resource
     resource:
       name: cpu
       target:
-        # Масштабирование, когда среднее использование CPU всех подов в scaleTargetRef превышает заданное значение.
-        # Для метрики с type: Resource доступен только type: Utilization.
+        # Scaling will occur when the average CPU utilization of all pods in scaleTargetRef exceeds the specified value.
+        # For a metric with type: Resource, only type: Utilization is available.
         type: Utilization
-        # Масштабирование, если для всех подов из Deployment запрошено по 1 ядру и в среднем уже используется более 700m.
+        # Scaling will occur if 1 core is requested for all Deployment pods and if over 700m is already in use on average.
         averageUtilization: 70
   - type: Resource
     resource:
       name: memory
       target:
-        # Пример масштабирования, когда среднее использование памяти всех подов в scaleTargetRef превышает заданное значение.
+        # Example of a scaling rule when the average memory usage of all pods in scaleTargetRef exceeds the given value.
         type: Utilization
-        # Масштабирование, если для подов запрошено по 1 ГБ памяти и в среднем использовано уже более 800 МБ.
+        # Scaling will occur if 1 GB of memory is requested for the pods and more than 800 MB is already in use on average.
         averageUtilization: 80
 ```
 
 {% endraw %}
 
-## Масштабирование по кастомным метрикам
+## Scaling based on custom metrics
 
-### Регистрация кастомных метрик в Kubernetes API
+### Registering custom metrics with Kubernetes API
 
-Кастомные метрики необходимо регистрировать в API `/apis/custom.metrics.k8s.io/`, эту регистрацию производит prometheus-metrics-adapter (и он же реализует API). На эти метрики можно будет ссылаться из объекта _HorizontalPodAutoscaler_. Настройка ванильного prometheus-metrics-adapter — трудоемкий процесс, мы его упростили, определив набор [Custom Resources](cr.html) с разным Scope:
+Custom metrics must be registered with the `/apis/custom.metrics.k8s.io/` API, this registration is done by prometheus-metrics-adapter (and it also implements the API). The metrics can then be referenced using the _HorizontalPodAutoscaler_ object. Customizing a vanilla prometheus-metrics-adapter is a time-consuming process. We made it easier by defining a set of [Custom Resources](cr.html) with different Scopes:
 * Namespaced:
   * `ServiceMetric`;
   * `IngressMetric`;
@@ -98,22 +98,22 @@ spec:
   * `DeploymentMetric`;
   * `StatefulsetMetric`;
   * `NamespaceMetric`;
-  * `DaemonSetMetric` (недоступен пользователям).
+  * `DaemonSetMetric` (unavailable to users).
 * Cluster:
-  * `ClusterServiceMetric` (недоступен пользователям);
-  * `ClusterIngressMetric` (недоступен пользователям);
-  * `ClusterPodMetric` (недоступен пользователям);
-  * `ClusterDeploymentMetric` (недоступен пользователям);
-  * `ClusterStatefulsetMetric` (недоступен пользователям);
-  * `ClusterDaemonSetMetric` (недоступен пользователям).
+  * `ClusterServiceMetric` (unavailable to users);
+  * `ClusterIngressMetric` (unavailable to users);
+  * `ClusterPodMetric` (unavailable to users);
+  * `ClusterDeploymentMetric` (unavailable to users);
+  * `ClusterStatefulsetMetric` (unavailable to users);
+  * `ClusterDaemonSetMetric` (unavailable to users).
 
-С помощью cluster-wide-ресурса можно задать глобальное определение метрики, а с помощью _Namespace_ можно переопределить её локально. [Формат](cr.html) для всех custom resource — одинаковый.
+You can use the cluster-wide resource to define the metric globally, and use the _Namespace_ to redefine it locally. [Format](cr.html) is the same for all custom resources.
 
-### Применяем кастомные метрики в HPA
+### Using custom metrics in HPA
 
-После регистрации кастомной метрики на нее можно ссылаться. С точки зрения HPA, кастомные метрики бывают двух видов — `Pods` и `Object`.
+Once a custom metric is registered, it can be referenced. In terms of HPA, custom metrics can be of two types - `Pods` and `Object`.
 
-`Object` — отсылает к объекту в кластере, который имеет в Prometheus метрики с соответствующими лейблами (`namespace=XXX,ingress=YYY`). Эти лейблы будут подставляться вместо `<<.LabelMatchers>>` в вашем кастомном запросе.
+`Object` refers to an object in the cluster that has metrics in Prometheus with corresponding labels (`namespace=XXX,ingress=YYYYY`). These labels will be substituted in place of `<<.LabelMatchers>>` in your custom request.
 
 {% raw %}
 
@@ -132,41 +132,41 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # Specifies the controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
   minReplicas: 1
   maxReplicas: 2
-  # Метрики, используемые для масштабирования.
-  # Пример использования кастомных метрик.
+  # Metrics to use for scaling.
+  # An example of using custom metrics.
   metrics:
   - type: Object
     object:
-      # Объект, который обладает метриками в Prometheus.
+      # An object that has metrics in Prometheus.
       describedObject:
         apiVersion: networking.k8s.io/v1
         kind: Ingress
         name: myingress
       metric:
-        # Метрика, зарегистрированная с помощью custom resource IngressMetric или ClusterIngressMetric.
-        # Можно использовать rps_1m, rps_5m или rps_15m которые поставляются с модулем prometheus-metrics-adapter.
+        # A metric registered with the IngressMetric or ClusterIngressMetric custom resource.
+        # You can use rps_1m, rps_5m, or rps_15m that come with the prometheus-metrics-adapter module.
         name: mymetric
       target:
-        # Для метрик типа Object можно использовать `Value` или `AverageValue`.
+        # You can use `Value` or `AverageValue` for metrics of type Object.
         type: AverageValue
-        # Масштабирование происходит, если среднее значение кастомной метрики для всех подов в Deployment сильно отличается от 10.
+        # Scaling occurs if the average value of the custom metric for all pods in the Deployment deviates significantly from 10.
         averageValue: 10
 ```
 
 {% endraw %}
 
-`Pods` — из ресурса, которым управляет HPA, будут выбраны все поды и для каждого пода будут собраны метрики с соответствующими лейблами (`namespace=XXX`, `pod=YYY-sadiq`, `namespace=XXX`, `pod=YYY-e3adf`, и т. д.). Из этих показателей HPA рассчитает среднее значение и использует для [масштабирования](#примеры-с-использованием-кастомных-метрик-типа-pods).
+`Pods` — all pods will be selected from the resource managed by HPA and metrics will be collected for each pod with the relevant labels (`namespace=XXX`, `pod=YYYY-sadiq`, `namespace=XXX`, `pod=YYYY-e3adf`, etc.). Then the HPA will calculate an average value based on these metrics and will use it for [scaling](#examples-involving-custom-metrics-of-type-pods).
 
-#### Пример использования кастомных метрик с размером очереди RabbitMQ
+#### Using custom metrics with the RabbitMQ queue size
 
-В представленном примере рассматривается очередь `send_forum_message` в RabbitMQ, для которого зарегистрирован сервис `rmq`. Если количество сообщений в этой очереди превышает 42, выполняется масштабирование.
+In the example below, scaling is performed based on the `send_forum_message` queue in RabbitMQ for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling is carried out.
 
 {% raw %}
 
@@ -185,7 +185,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # The controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -208,11 +208,11 @@ spec:
 
 {% endraw %}
 
-#### Пример использования нестабильной кастомной метрики
+#### Using volatile custom metrics
 
-Улучшение предыдущего примера.
+This example improves on the previous one.
 
-В представленном примере рассматривается очередь `send_forum_message` в RabbitMQ, для которого зарегистрирован сервис `rmq`. Если количество сообщений в этой очереди превышает 42, выполняется масштабирование. Мы не хотим реагировать на краткосрочные всплески, поэтому используется MQL-функцию `avg_over_time()`, чтобы усреднить метрику.
+In the example below, scaling is based on the `send_forum_message` queue in RabbitMQ, for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling takes place. The MQL function `avg_over_time()` smoothes (averages the metric) to avoid over-scaling due to short-term spikes in the number of messages.
 
 {% raw %}
 
@@ -231,7 +231,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # The controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -254,9 +254,10 @@ spec:
 
 {% endraw %}
 
-#### Примеры с использованием кастомных метрик типа `Pods`
-Пример масштабирования воркеров по процентному количеству активных php-fpm-воркеров.
-В представленом примере среднее количество php-fpm-воркеров в _Deployment_ `mybackend` не больше 5.
+#### Examples involving custom metrics of type `Pods`
+
+In the example below, the number of workers is scaled based on the percentage of active php-fpm workers.
+The trigger is the average number of php-fpm-workers in `mybackend` _Deployment_, which should not exceed 5.
 
 {% raw %}
 
@@ -274,7 +275,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # The controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -282,23 +283,23 @@ spec:
   minReplicas: 1
   maxReplicas: 5
   metrics:
-  # Указание HPA обойти все поды Deployment'а и собрать с них метрики.
+  # HPA has to loop through all the Deployment pods and collect metrics from them.
   - type: Pods
-    # Указывать describedObject в отличие от type: Object не надо.
+    # Unlike type: Object, you don't have to specify describedObject.
     pods:
       metric:
-        # Кастомная метрика, зарегистрированная с помощью custom resource PodMetric.
+        # A custom metric registered using the PodMetric custom resource.
         name: php-fpm-active-workers
       target:
-        # Для метрик с type: Pods можно использовать только AverageValue.
+        # For metrics of type: Pods, only AverageValue can be used.
         type: AverageValue
-        # Масштабирование, если среднее значение метрики у всех подов Deployment'а больше 5.
+        # The scaling will take place if the average metric value of all Deployment pods exceeds 5.
         averageValue: 5
 ```
 
 {% endraw %}
 
-Масштабируется Deployment по процентному количеству активных php-fpm-воркеров.
+Scaling the Deployment based on the percentage number of active php-fpm-workers:
 
 {% raw %}
 
@@ -309,7 +310,7 @@ kind: PodMetric
 metadata:
   name: php-fpm-active-worker
 spec:
-  # Процент активных php-fpm-воркеров. Функция round() для того, чтобы не смущаться от миллипроцентов в HPA.
+  # Percentage of active php-fpm-workers. The round() function gets rid of millipercentages in HPA.
   query: round(sum by(<<.GroupBy>>) (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) / sum by(<<.GroupBy>>) (phpfpm_processes_total{<<.LabelMatchers>>}) * 100)
 ---
 kind: HorizontalPodAutoscaler
@@ -317,7 +318,7 @@ apiVersion: autoscaling/v2
 metadata:
   name: {{ .Chart.Name }}-hpa
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # The cpntroller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1beta1
     kind: Deployment
@@ -331,23 +332,21 @@ spec:
         name: php-fpm-active-worker
       target:
         type: AverageValue
-        # Масштабирование, если в среднем по Deployment 80% воркеров заняты.
+        # Scaling will take place if, on average, the Deployment has 80% of the workers in use.
         averageValue: 80
 ```
 
 {% endraw %}
 
-### Регистрация внешних метрик в Kubernetes API
+### Registering external metrics with the Kubernetes API
 
-Модуль `prometheus-metrics-adapter` поддерживает механизм `externalRules`, с помощью которого можно определять кастомные PromQL-запросы и регистрировать их как метрики.
+The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. It allows you to define custom PromQL queries and register them as metrics.
 
-В примерах инсталляций добавлено универсальное правило, которое позволяет создавать собственные метрики без настроек в `prometheus-metrics-adapter`, — «любая метрика в Prometheus с именем `kube_adapter_metric_<name>` будет зарегистрирована в API под именем `<name>`». После чего, остается написать экспортер (exporter), который будет экспортировать подобную метрику, или создать правило [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) в Prometheus, которое будет агрегировать вашу метрику на основе других метрик.
+A universal rule that allows you to create your own metrics without customization in `prometheus-metrics-adapter` has been added in the installation examples - "any metric in Prometheus with the name `kube_adapter_metric_<name>` will be registered in the API under the name `<name>`". Then, you just need to write an exporter that will export such a metric or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
 
-Пример _CustomPrometheusRules_:
+Below is an example of _CustomPrometheusRules_:
 
-В примере представлены пользовательские правила Prometheus для метрики `mymetric`.
-
-В примере представлены пользовательские правила Prometheus для метрики `mymetric`.
+The example showcases Prometheus custom rules for the `mymetric` metric.
 
 {% raw %}
 
@@ -355,25 +354,25 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
-  # Рекомендованный шаблон для названия ваших CustomPrometheusRules.
+  # The recommended template for naming your CustomPrometheusRules.
   name: prometheus-metrics-adapter-mymetric
 spec:
   groups:
-  # Рекомендованный шаблон.
+  # The recommended template
   - name: prometheus-metrics-adapter.mymetric
     rules:
-    # Название вашей новой метрики.
-    # Важно! Префикс 'kube_adapter_metric_' обязателен.
+    # The name of your new metric
+    # Note that the 'kube_adapter_metric_' prefix is mandatory.
     - record: kube_adapter_metric_mymetric
-      # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в нее лишние лейблы.
+      # A request with results that will end up in the final metric; there's no point in attaching extra labels to it.
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
 {% endraw %}
 
-### Применение внешних метрик в HPA
+### Using external metrics in HPA
 
-После регистрации внешней метрики на нее можно сослаться.
+Once an external metric is registered, you can refer to it.
 
 {% raw %}
 
@@ -384,7 +383,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  # The controller to be scaled (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -392,37 +391,37 @@ spec:
   minReplicas: 1
   maxReplicas: 2
   metrics:
-  # Используем внешние метрики для масштабирования.
+  # Scaling based on the external metrics
   - type: External
     external:
       metric:
-        # Метрика, которую мы зарегистрировали с помощью создания метрики в Prometheus kube_adapter_metric_mymetric, но без префикса 'kube_adapter_metric_'.
+        # The metric we registered by creating a metric in Prometheus (kube_adapter_metric_mymetric), but without the prefix 'kube_adapter_metric_'.
         name: mymetric
         selector:
-          # Для внешних метрик можно и нужно уточнять запрос с помощью лейблов.
+          # For external metrics, you can and should refine the request with labels.
           matchLabels:
             namespace: mynamespace
             ingress: myingress
       target:
-        # Для метрик типа External можно использовать только `type: Value`.
+        # Only `type: Value` can be used for metrics of type External.
         type: Value
-        # Масштабирование, если значение нашей метрики больше 10.
+        # Scaling will take place if the value of our metric exceeds 10.
         value: 10
 ```
 
 {% endraw %}
 
-### Пример с размером очереди в Amazon SQS
+### Using the queue size in Amazon SQS
 
-Чтобы установить экспортер для интеграции с SQS:
-1. Cоздайте отдельный "служебный" репозиторий Git (или, к примеру, можно использовать "инфраструктурный" репозиторий).
-1. Pазместите в нем инсталляцию экспортера и сценарий для создания требуемого _CustomPrometheusRules_.
+To install an exporter to integrate with SQS:
+1. Create a dedicated "service" Git repository ( alternatively, you could use, e.g., an "infrastructure" repository).
+1. Copy the exporter installation and the script to it — these will be used to create the necessary _CustomPrometheusRules_.
 
-Готово, вы объединили кластер. Если необходимо настроить автомасштабирование только для одного приложения (в одном пространстве имен), лучше ставить экспортер вместе с этим приложением и воспользоваться `NamespaceMetrics`.
+That's it, you have integrated the cluster. In case you need to configure autoscaling for just one application (in a single namespace), we recommend installing the exporter together with that application and using `NamespaceMetrics`.
 
-Ниже приведен пример экспортера (например, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)) для получения метрик из Amazon SQS, если:
-* в Amazon SQS работает очередь `send_forum_message`;
-* выполняется масштабирование при количестве сообщений в этой очереди больше 42.
+The following is an example of an exporter (e. g., [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)) to retrieve metrics from Amazon SQS if:
+* a `send_forum_message` queue is running in Amazon SQS;
+* scaling is done when the number of messages in that queue exceeds 42.
 
 {% raw %}
 
@@ -441,7 +440,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # The targets of scaling (link to a deployment or statefulset).
+  # The targets of scaling (reference to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
