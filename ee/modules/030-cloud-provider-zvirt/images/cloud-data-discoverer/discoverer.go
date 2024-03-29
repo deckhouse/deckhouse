@@ -149,7 +149,7 @@ func (d *Discoverer) getStorageDomains(
 	ctx context.Context,
 	zvirtClient ovirtclient.ClientWithLegacySupport,
 ) ([]ovirtclient.StorageDomain, error) {
-	sd, err := zvirtClient.ListStorageDomains(getRetryStrategy(ctx)...)
+	sd, err := zvirtClient.WithContext(ctx).ListStorageDomains()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 		return nil, err
 	}
 
-	disks, err := zvirtClient.ListDisks(getRetryStrategy(ctx)...)
+	disks, err := zvirtClient.WithContext(ctx).ListDisks()
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	if err != nil {
 		return nil, err
 	}
-	vms, err := zvirtClient.ListVMs(getRetryStrategy(ctx)...)
+	vms, err := zvirtClient.WithContext(ctx).ListVMs()
 	if err != nil {
 		return nil, err
 	}
@@ -260,11 +260,4 @@ func mergeStorageDomains(
 		result[0].IsDefault = true
 	}
 	return result
-}
-
-func getRetryStrategy(ctx context.Context) []ovirtclient.RetryStrategy {
-	return []ovirtclient.RetryStrategy{
-		ovirtclient.AutoRetry(),
-		ovirtclient.ContextStrategy(ctx),
-	}
 }
