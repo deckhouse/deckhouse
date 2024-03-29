@@ -189,16 +189,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/docs/EXAMPLES.md
-  to: /deckhouse/modules/402-ingress-nginx/docs/EXAMPLES.md
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/docs/EXAMPLES_RU.md
-  to: /deckhouse/modules/402-ingress-nginx/docs/EXAMPLES_RU.md
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/402-ingress-nginx/templates/controller-l2
   to: /deckhouse/modules/402-ingress-nginx/templates/controller-l2
   stageDependencies:
