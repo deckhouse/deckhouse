@@ -44,6 +44,8 @@ github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH
 github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
+github.com/flant/go-ovirt-client/v3 v3.2.0-flant h1:LpX1XTvdK9f7m18Dqpw2H2n3zqOiaH1tUdhxGnBcOGc=
+github.com/flant/go-ovirt-client/v3 v3.2.0-flant/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -143,8 +145,6 @@ github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c h1:jXRFpl7+W0YZj/fg
 github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c/go.mod h1:Zkdj9/rW6eyuw0uOeEns6O3pP5G2ak+bI/tgkQ/tEZI=
 github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 h1:uvACVHYhYPMkNJrrgWiABcfELB6qoFfsDDUTbpb4Jv4=
 github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
-github.com/ovirt/go-ovirt-client/v3 v3.2.0 h1:gDQhxtubwzdlDIm2lh4XiOwkte2nR3JX1Q0O8iLGY84=
-github.com/ovirt/go-ovirt-client/v3 v3.2.0/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
