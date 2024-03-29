@@ -229,6 +229,8 @@ RUN  chmod 1777 /tmp \
   && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && ln -sf /chroot/etc/pki /etc/pki \
+  && ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates \
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
