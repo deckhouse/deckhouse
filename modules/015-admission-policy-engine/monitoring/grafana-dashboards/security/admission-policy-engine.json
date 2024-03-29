@@ -397,27 +397,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "PSS": {
-                  "text": "PodSecurityStandard",
-                  "index": 0
-                }
-              }
-            },
-            {
-              "type": "regex",
-              "options": {
-                "pattern": "^d8-pod-security-([a-zA-Z]+)-.*",
-                "result": {
-                  "text": "$1",
-                  "index": 1
-                }
-              }
-            }
-          ],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -565,7 +545,27 @@
             "filterable": false,
             "inspect": false
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "PSS": {
+                  "text": "PodSecurityStandard",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^d8-pod-security-([a-zA-Z]+)-.*",
+                "result": {
+                  "text": "$1",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
