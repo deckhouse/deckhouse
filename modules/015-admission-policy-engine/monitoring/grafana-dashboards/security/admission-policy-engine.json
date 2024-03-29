@@ -397,7 +397,27 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "PSS": {
+                  "text": "PodSecurityStandard",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^d8-pod-security-([a-zA-Z]+)-.*",
+                "result": {
+                  "text": "$1",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -617,7 +637,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 233
+                "value": 140
               }
             ]
           },
@@ -677,7 +697,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 99
+                "value": 140
               }
             ]
           },
@@ -689,7 +709,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 99
+                "value": 170
               }
             ]
           }
