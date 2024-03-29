@@ -15,8 +15,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/l2-load-balancer/status",
+	Queue: "/modules/l2-load-balancer/status",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "l2loadbalancers",
@@ -36,6 +35,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 		},
+	},
+	Schedule: []go_hook.ScheduleConfig{
+		{Name: "cron", Crontab: "* * * * *"},
 	},
 }, handleLoadBalancerStatus)
 
@@ -89,13 +91,16 @@ func patchLoadBalancerStatus(pc *object_patch.PatchCollector, name, namespace st
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "L2LoadBalancer", namespace, name, object_patch.WithSubresource("/status"))
+	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "L2LoadBalancer", namespace, name, object_patch.WithSubresource("/status"), object_patch.IgnoreMissingObject())
 }
 
 func loadFromServicesInfo(servicesInfo []go_hook.FilterResult) (result map[string][]string) {
 	result = make(map[string][]string)
 	for _, si := range servicesInfo {
 		serviceInfo := si.(ServiceInfo)
+		if _, exists := result[serviceInfo.LoadBalancerName]; !exists {
+			result[serviceInfo.LoadBalancerName] = make([]string, 0, 4)
+		}
 		result[serviceInfo.LoadBalancerName] = append(result[serviceInfo.LoadBalancerName], serviceInfo.ExternalIP)
 	}
 	return
