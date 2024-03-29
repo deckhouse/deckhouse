@@ -483,7 +483,7 @@ This feature is available in Enterprise Edition only.
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
 
-   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags or `DHCTL_CLI_MIRROR_USER`/`DHCTL_CLI_MIRROR_PASS` variables.
+   If your registry does not require authentication, you may omit both `--registry-login` and `--registry-password` flags as well as `DHCTL_CLI_MIRROR_USER`/`DHCTL_CLI_MIRROR_PASS` variables.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
