@@ -107,7 +107,7 @@ func (r *ZvirtClusterReconciler) reconcile(
 
 	clusterScope.ZvirtCluster.Status.Ready = true
 
-	if err = r.checkZvirtClusterID(clusterScope.ZvirtCluster.Spec.ID); err != nil {
+	if err = r.checkZvirtClusterID(ctx, clusterScope.ZvirtCluster.Spec.ID); err != nil {
 		clusterScope.ZvirtCluster.Status.Ready = false
 		clusterScope.ZvirtCluster.Status.FailureReason = infrastructurev1.ClusterMisconfiguredReason
 		clusterScope.ZvirtCluster.Status.FailureMessage = err.Error()
@@ -121,12 +121,12 @@ func (r *ZvirtClusterReconciler) reconcile(
 	return ctrl.Result{}, nil
 }
 
-func (r *ZvirtClusterReconciler) checkZvirtClusterID(id string) error {
+func (r *ZvirtClusterReconciler) checkZvirtClusterID(ctx context.Context, id string) error {
 	if id == "" {
 		return errors.New(infrastructurev1.ClusterIDNotProvidedMessage)
 	}
 
-	_, err := r.Zvirt.GetCluster(ovirt.ClusterID(id), ovirt.Timeout(15*time.Second))
+	_, err := r.Zvirt.WithContext(ctx).GetCluster(ovirt.ClusterID(id), ovirt.Timeout(15*time.Second))
 	if err != nil {
 		if ovirt.HasErrorCode(err, ovirt.ENotFound) {
 			return fmt.Errorf("Cluster with specified ID doesn't exist in zVirt: %w", err)
