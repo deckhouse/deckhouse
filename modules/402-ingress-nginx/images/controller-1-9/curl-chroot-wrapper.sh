@@ -14,5 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cat /etc/resolv.conf > /chroot/etc/resolv.conf
 unshare  -S 101 -R /chroot /usr/bin/curl "$@"
