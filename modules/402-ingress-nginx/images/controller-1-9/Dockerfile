@@ -214,6 +214,7 @@ COPY --from=controller-builder /src/rootfs/bin/amd64/dbg /
 COPY --from=controller-builder /src/rootfs/bin/amd64/nginx-ingress-controller  /
 COPY --from=controller-builder /src/rootfs/bin/amd64/wait-shutdown /
 COPY --chown=www-data:www-data nginx-chroot-wrapper.sh /usr/bin/nginx
+COPY --chown=www-data:www-data curl-chroot-wrapper.sh /usr/bin/curl
 
 COPY --from=dumb-init-builder /dumb-init/dumb-init /usr/bin/dumb-init
 
