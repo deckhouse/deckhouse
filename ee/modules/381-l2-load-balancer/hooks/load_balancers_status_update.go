@@ -91,7 +91,7 @@ func patchLoadBalancerStatus(pc *object_patch.PatchCollector, name, namespace st
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "L2LoadBalancer", namespace, name, object_patch.WithSubresource("/status"), object_patch.IgnoreMissingObject())
+	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "L2LoadBalancer", namespace, name, object_patch.WithSubresource("/status"))
 }
 
 func loadFromServicesInfo(servicesInfo []go_hook.FilterResult) (result map[string][]string) {
