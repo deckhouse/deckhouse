@@ -37,6 +37,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-pod-reloader",
 	"d8-runtime-audit-engine",
 	"d8-snapshot-controller",
+	"d8-static-routing-manager",
 	"d8-system",
 	"d8-upmeter",
 	"d8-user-authn",

@@ -1,0 +1,65 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: routingtable.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: static-routing-manager
+spec:
+  group: network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: routingtables
+    singular: routingtable
+    kind: RoutingTable
+  preserveUnknownFields: false
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        description: |
+          routingtable crd
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            required:
+            - routes
+            - nodeSelector
+            additionalProperties: false
+            properties:
+              ipRouteTableID:
+                type: integer
+                minimum: 10000
+                maximum: 4294967295
+              routes:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - destination
+                  - gateway
+                  additionalProperties: false
+                  properties:
+                    destination:
+                      type: string
+                      format: cidr
+                    gateway:
+                      type: string
+                      format: ipv4
+              nodeSelector:
+                type: object
+                additionalProperties:
+                  type: string
+          status:
+            type: object
+            properties:
+              ipRouteTableID:
+                type: integer
+                minimum: 10000
+                maximum: 4294967295
+
