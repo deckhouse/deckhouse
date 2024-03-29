@@ -142,7 +142,7 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 	go dml.runEventLoop(moduleEventC)
 	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
 
-	// Init modules configs' statuses as soon as Module Manager's moduleset gets Inited flag (all modules are registered)
+	// Init modules' and modules configs' statuses as soon as Module Manager's moduleset gets Inited flag (all modules are registered)
 	go func() {
 		// Check if Module Manager has been initialized
 		_ = wait.PollUntilContextCancel(dml.ctx, d8utils.SyncedPollPeriod, false,
@@ -150,9 +150,9 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 				return dml.mm.AreModulesInited(), nil
 			})
 
-		err := dml.InitModuleConfigsStatuses()
+		err := dml.InitModulesAndConfigsStatuses()
 		if err != nil {
-			log.Errorf("Error occurred when setting module configs' initial statuses: %s", err)
+			log.Errorf("Error occurred when setting modules and module configs' initial statuses: %s", err)
 		}
 	}()
 
@@ -188,9 +188,22 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 	}
 }
 
-// InitModuleConfigsStatuses inits and moduleconfigs' status fields at start up
-func (dml *DeckhouseController) InitModuleConfigsStatuses() error {
+// InitModulesAndConfigsStatuses inits and moduleconfigs' status fields at start up
+func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
+		modules, err := dml.kubeClient.DeckhouseV1alpha1().Modules().List(dml.ctx, v1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, module := range modules.Items {
+			err := dml.updateModuleStatus(module.Name)
+			if err != nil {
+				log.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
+				return err
+			}
+		}
+
 		configs, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().List(dml.ctx, v1.ListOptions{})
 		if err != nil {
 			return err
@@ -395,7 +408,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
 
-		return dml.updateModuleStatus(moduleName)
+		return err
 	})
 }
 
