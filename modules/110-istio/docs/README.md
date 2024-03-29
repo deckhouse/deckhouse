@@ -4,11 +4,13 @@ webIfaces:
 - name: istio
 ---
 
-Currently supported Istio versions:
-* 1.12 (deprecated)
-* 1.13 (deprecated)
-* 1.16 (deprecated)
-* 1.19
+## Compatibility table for supported versions:
+| Istio version |        [Supported K8S Versions](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases)        |          Status in D8          |
+|:-------------:|:--------------------------------------:|:------------------------------:|
+|     1.12      |     *1.19*, *1.20*, *1.21*, *1.22*     | deprecated and will be deleted |
+|     1.13      |     *1.20*, *1.21*, *1.22*, *1.23*     | deprecated and will be deleted |
+|     1.16      |    *1.22*, *1.23*, *1.24*, **1.25**    |           deprecated           |
+|     1.19      | **1.25**, **1.26**, **1.27**, **1.28** |           supported            |
 
 ## What issues does Istio help to resolve?
 
