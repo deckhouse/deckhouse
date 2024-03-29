@@ -2,16 +2,16 @@
 title: "The metallb module: примеры"
 ---
 
-Metallb можно использовать в статических кластерах (bare metal), когда облачный провайдер не предоставляет балансировщик (load balancer). Metallb может работать в L2- или BGP-режиме.
+Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 или BGP.
 
 ## Пример использования metallb в L2-режиме
 
 {% raw %}
-Пример включения модуля metallb, создания Ingress-контроллера с `inlet: LoadBalancer` и предоставления доступа к отдельно запущенному веб-серверу Nginx.
+Пример включения модуля metallb и публикации отдельно запущенного приложения (веб-сервер Nginx).
 
 1. Задайте группы узлов ([_NodeGroup_](../040-node-manager/cr.html#nodegroup)) для запуска приложений, к которым предоставляется доступ.
 
-   Например, Ingress-контроллеры запускаются на frontend-узлах, а веб-сервер Nginx — на worker-узле. У всех узлов есть общий лейбл `node-role/metallb=""`.
+   Например, Ingress-контроллеры запускаются на frontend-узлах, а веб-сервер Nginx — на worker-узле. У frontend-узлов есть лейбл `node-role.deckhouse.io/metallb=""`.
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -24,7 +24,7 @@ Metallb можно использовать в статических класт
      nodeTemplate:
        labels:
          node-role.deckhouse.io/frontend: ""
-         node-role/metallb: ""
+         node-role.deckhouse.io/metallb: ""
        taints:
        - effect: NoExecute
          key: dedicated.deckhouse.io
@@ -38,26 +38,22 @@ Metallb можно использовать в статических класт
    spec:
      disruptions:
        approvalMode: Manual
-     nodeTemplate:
-       labels:
-         node-role/metallb: ""
      nodeType: Static
    ```
 
 1. Проверьте, что на узлах проставлен корректный лейбл:
 
    ```bash
-   kubectl get nodes -l node-role/metallb
+   kubectl get nodes -l node-role.deckhouse.io/metallb
    ```
 
    Пример вывода:
 
    ```bash
-   $ kubectl get nodes -l node-role/metallb
+   $ kubectl get nodes -l node-role.deckhouse.io/metallb
    NAME              STATUS   ROLES      AGE   VERSION
    demo-frontend-0   Ready    frontend   61d   v1.21.14
    demo-frontend-1   Ready    frontend   61d   v1.21.14
-   demo-worker-0     Ready    worker     61d   v1.21.14
    ```
 
 1. Включите модуль metallb и задайте параметры `nodeSelector` и `tolerations` для спикеров MetalLB.
@@ -80,7 +76,7 @@ Metallb можно использовать в статических класт
          protocol: layer2
        speaker:
          nodeSelector:
-           node-role/metallb: ""
+           node-role.deckhouse.io/metallb: ""
          tolerations:
          - effect: NoExecute
            key: dedicated.deckhouse.io
@@ -88,48 +84,7 @@ Metallb можно использовать в статических класт
            value: frontend
    ```
 
-1. Создайте кастомный ресурс _IngressNginxController_.
-
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: IngressNginxController
-   metadata:
-     name: main
-   spec:
-     ingressClass: nginx
-     inlet: LoadBalancer
-     nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-   ```
-
-1. Проверьте, что сервис с типом `LoadBalancer` создан в _Namespace_ `d8-ingress-nginx`:
-
-   ```shell
-   kubectl -n d8-ingress-nginx get svc main-load-balancer
-   ```
-
-   Пример вывода:
-
-   ```shell
-   $ kubectl -n d8-ingress-nginx get svc main-load-balancer 
-   NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)                      AGE
-   main-load-balancer   LoadBalancer   10.222.255.194   192.168.199.100   80:30236/TCP,443:32292/TCP   30s
-   ```
-
-1. Проверьте, что Ingress-контроллер доступен по внешнему IP-адресу.
-
-   Пример:
-
-   ```console
-   $ curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
-   404
-   ```
-
-1. Предоставьте доступ к веб-серверу Nginx на порту `8080`:
+1. Проинсталлируем приложение (nginx) и опубликуем на порту `8080`:
 
    ```shell
    kubectl create deploy nginx --image=nginx
