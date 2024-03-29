@@ -820,7 +820,7 @@ dependencies:
   {{- else }}
   {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
   {{- end }}
-  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
   {{- $moduleName := $ImageData._2 }}
   # exclude modules and images from editions
   {{- if hasKey $ExcludedModulesDict $moduleName }}

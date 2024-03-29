@@ -167,7 +167,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{job=\"memcached\",status=\"hit\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4]\n))",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\",status=\"hit\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval]\n))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -269,7 +269,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_items_evicted_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_items_evicted_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "evicts",
@@ -278,7 +278,7 @@
           "target": ""
         },
         {
-          "expr": "sum (rate (memcached_items_reclaimed_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_items_reclaimed_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -544,7 +544,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"hit\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"hit\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -553,7 +553,7 @@
           "step": 5
         },
         {
-          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"miss\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"miss\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "miss",
@@ -919,7 +919,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_read_bytes_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_read_bytes_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "read",
@@ -928,7 +928,7 @@
           "target": ""
         },
         {
-          "expr": "sum (rate (memcached_written_bytes_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "sum (rate (memcached_written_bytes_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "written",
@@ -1226,7 +1226,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (memcached_commands_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__interval_sx4])) by (command)",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\",pod=\"$pod\",namespace=\"$namespace\"}[$__rate_interval])) by (command)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{command}}",

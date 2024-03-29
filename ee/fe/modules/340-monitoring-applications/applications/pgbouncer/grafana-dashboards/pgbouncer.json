@@ -81,7 +81,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (pgbouncer_databases_current_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
@@ -176,7 +176,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (pgbouncer_pools_client_active_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
@@ -271,7 +271,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (irate(pgbouncer_stats_queries_duration_seconds_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
@@ -367,7 +367,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (irate(pgbouncer_stats_queries_pooled_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
@@ -462,7 +462,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (pgbouncer_pools_server_active_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
@@ -586,7 +586,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "sum by (service, database) (irate(pgbouncer_stats_sent_bytes_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
           "format": "time_series",
@@ -599,7 +599,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -695,7 +695,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (service, database) (irate(pgbouncer_pools_client_waiting_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
@@ -777,7 +777,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "$ds_prometheus"
         },
         "definition": "label_values(pgbouncer_databases_current_connections, namespace)",
         "hide": 0,
@@ -811,7 +811,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "$ds_prometheus"
         },
         "definition": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\"}, service)",
         "hide": 0,
@@ -845,7 +845,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "P0D6E4079E36703EB"
+          "uid": "$ds_prometheus"
         },
         "definition": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\",service=~\"$service\"}, database)",
         "hide": 0,

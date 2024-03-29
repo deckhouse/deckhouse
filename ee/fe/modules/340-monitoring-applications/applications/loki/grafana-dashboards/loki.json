@@ -1131,7 +1131,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "topk(10,sum by (tenant, reason) (rate(loki_discarded_samples_total{namespace=\"$namespace\",job=\"loki\"}[$__interval_sx4])))",
+              "expr": "topk(10,sum by (tenant, reason) (rate(loki_discarded_samples_total{namespace=\"$namespace\",job=\"loki\"}[$__rate_interval])))",
               "legendFormat": "{{ tenant }} - {{ reason }}",
               "refId": "A"
             }
@@ -1256,7 +1256,7 @@
           ],
           "targets": [
             {
-              "expr": "topk(10, sum by (tenant, reason) (sum_over_time(increase(loki_discarded_samples_total{namespace=\"$namespace\",job=\"loki\"}[$__interval_sx4])[$__range:1m])))",
+              "expr": "topk(10, sum by (tenant, reason) (sum_over_time(increase(loki_discarded_samples_total{namespace=\"$namespace\",job=\"loki\"}[$__rate_interval])[$__range:1m])))",
               "format": "table",
               "instant": true,
               "legendFormat": "{{ tenant }} - {{ reason }}",
