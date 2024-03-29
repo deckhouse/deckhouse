@@ -545,7 +545,27 @@
             "filterable": false,
             "inspect": false
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "PSS": {
+                  "text": "PodSecurityStandard",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^d8-pod-security-([a-zA-Z]+)-.*",
+                "result": {
+                  "text": "$1",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -617,7 +637,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 233
+                "value": 140
               }
             ]
           },
@@ -668,6 +688,30 @@
                 "value": 205
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Policy Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Policy Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
           }
         ]
       },
@@ -694,7 +738,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -717,7 +761,9 @@
                 "violating_name",
                 "violation_enforcement",
                 "violation_msg",
-                "violating_namespace"
+                "violating_namespace",
+                "source_type",
+                "name"
               ]
             }
           }
@@ -730,12 +776,14 @@
             },
             "indexByName": {
               "Time": 0,
-              "kind": 1,
-              "violating_kind": 3,
-              "violating_name": 4,
-              "violating_namespace": 2,
-              "violation_enforcement": 5,
-              "violation_msg": 6
+              "source_type": 1,
+              "name": 2,
+              "kind": 3,
+              "violating_kind": 5,
+              "violating_name": 6,
+              "violating_namespace": 4,
+              "violation_enforcement": 7,
+              "violation_msg": 8
             },
             "renameByName": {
               "Time": "",
@@ -744,7 +792,9 @@
               "violating_name": "Name",
               "violating_namespace": "Namespace",
               "violation_enforcement": "Enforcement",
-              "violation_msg": "Message"
+              "violation_msg": "Message",
+              "source_type": "Policy Type",
+              "name": "Policy Name"
             }
           }
         }
