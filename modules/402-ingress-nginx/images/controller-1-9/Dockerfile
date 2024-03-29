@@ -208,7 +208,7 @@ RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
 COPY --from=chroot /chroot /chroot
 COPY --from=chroot /etc/pki /etc/pki
 COPY --from=chroot /usr/share/ca-certificates /usr/share/ca-certificates
-COPY --from=chroot /usr/bin/curl /usr/bin/curl
+COPY --from=chroot /usr/bin/curl /chroot/usr/bin/curl
 
 COPY --from=controller-builder /src/rootfs/bin/amd64/dbg /
 COPY --from=controller-builder /src/rootfs/bin/amd64/nginx-ingress-controller  /
