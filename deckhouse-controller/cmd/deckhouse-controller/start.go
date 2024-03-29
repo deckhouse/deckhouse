@@ -174,6 +174,8 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	}
 
 	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
+
+	// Starts main event lop
 	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
@@ -181,21 +183,15 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	operator.ModuleManager.SetModuleLoader(dController)
 
+	// Init deckhouse-config service with ModuleManager instance.
+	d8config.InitService(operator.ModuleManager)
+
 	err = operator.Start()
 	if err != nil {
 		return err
 	}
 
 	dController.RunControllers()
-
-	// Init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
-
-	// Init modules' and modules configs' statuses
-	err = dController.InitModulesAndConfigsStatuses()
-	if err != nil {
-		return err
-	}
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {

@@ -31,6 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -42,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
+	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
@@ -140,6 +142,20 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 	go dml.runEventLoop(moduleEventC)
 	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
 
+	// Init modules configs' statuses as soon as Module Manager's moduleset gets Inited flag (all modules are registered)
+	go func() {
+		// Check if Module Manager has been initialized
+		_ = wait.PollUntilContextCancel(dml.ctx, d8utils.SyncedPollPeriod, false,
+			func(context.Context) (bool, error) {
+				return dml.mm.AreModulesInited(), nil
+			})
+
+		err := dml.InitModuleConfigsStatuses()
+		if err != nil {
+			log.Errorf("Error occurred when setting module configs' initial statuses: %s", err)
+		}
+	}()
+
 	return nil
 }
 
@@ -172,37 +188,22 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 	}
 }
 
-// InitModulesAndConfigsStatuses inits modules' and moduleconfigs' status fields at start up
-func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
+// InitModuleConfigsStatuses inits and moduleconfigs' status fields at start up
+func (dml *DeckhouseController) InitModuleConfigsStatuses() error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			modules, err := dml.kubeClient.DeckhouseV1alpha1().Modules().List(dml.ctx, v1.ListOptions{})
+		configs, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().List(dml.ctx, v1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, config := range configs.Items {
+			err := dml.updateModuleConfigStatus(config.Name)
 			if err != nil {
+				log.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
 				return err
 			}
-
-			for _, module := range modules.Items {
-				err := dml.updateModuleStatus(module.Name)
-				if err != nil {
-					log.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
-					return err
-				}
-			}
-
-			configs, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().List(dml.ctx, v1.ListOptions{})
-			if err != nil {
-				return err
-			}
-
-			for _, config := range configs.Items {
-				err := dml.updateModuleConfigStatus(config.Name)
-				if err != nil {
-					log.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
-					return err
-				}
-			}
-			return nil
-		})
+		}
+		return nil
 	})
 }
 
@@ -267,84 +268,86 @@ func (dml *DeckhouseController) runEventLoop(moduleEventCh <-chan events.ModuleE
 
 func (dml *DeckhouseController) updateModuleConfigStatus(configName string) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-		dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
-		moduleConfig, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, configName, v1.GetOptions{})
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
+			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
+			moduleConfig, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, configName, v1.GetOptions{})
 
-		// if module config found
-		if err == nil {
-			newModuleConfigStatus := d8config.Service().StatusReporter().ForConfig(moduleConfig)
-			if (moduleConfig.Status.Message != newModuleConfigStatus.Message) || (moduleConfig.Status.Version != newModuleConfigStatus.Version) {
-				moduleConfig.Status.Message = newModuleConfigStatus.Message
-				moduleConfig.Status.Version = newModuleConfigStatus.Version
+			// if module config found
+			if err == nil {
+				newModuleConfigStatus := d8config.Service().StatusReporter().ForConfig(moduleConfig)
+				if (moduleConfig.Status.Message != newModuleConfigStatus.Message) || (moduleConfig.Status.Version != newModuleConfigStatus.Version) {
+					moduleConfig.Status.Message = newModuleConfigStatus.Message
+					moduleConfig.Status.Version = newModuleConfigStatus.Version
 
-				log.Debugf(
-					"Update /status for moduleconfig/%s: version '%s' to %s', message '%s' to '%s'",
-					moduleConfig.Name,
-					moduleConfig.Status.Version, newModuleConfigStatus.Version,
-					moduleConfig.Status.Message, newModuleConfigStatus.Message,
-				)
+					log.Debugf(
+						"Update /status for moduleconfig/%s: version '%s' to %s', message '%s' to '%s'",
+						moduleConfig.Name,
+						moduleConfig.Status.Version, newModuleConfigStatus.Version,
+						moduleConfig.Status.Message, newModuleConfigStatus.Message,
+					)
 
-				_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().UpdateStatus(dml.ctx, moduleConfig, v1.UpdateOptions{})
-				if err != nil {
-					return err
+					_, err = dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().UpdateStatus(dml.ctx, moduleConfig, v1.UpdateOptions{})
+					if err != nil {
+						return err
+					}
+				}
+
+				// update metrics
+				chain := conversion.Registry().Chain(moduleConfig.Name)
+
+				if moduleConfig.Spec.Version > 0 && chain.Conversion(moduleConfig.Spec.Version) != nil {
+					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+						"name":    moduleConfig.Name,
+						"version": strconv.Itoa(moduleConfig.Spec.Version),
+						"latest":  strconv.Itoa(chain.LatestVersion()),
+					})
 				}
 			}
 
-			// update metrics
-			chain := conversion.Registry().Chain(moduleConfig.Name)
-
-			if moduleConfig.Spec.Version > 0 && chain.Conversion(moduleConfig.Spec.Version) != nil {
-				dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
-					"name":    moduleConfig.Name,
-					"version": strconv.Itoa(moduleConfig.Spec.Version),
-					"latest":  strconv.Itoa(chain.LatestVersion()),
-				})
+			// update the related module if it exists
+			if err == nil || (err != nil && errors.IsNotFound(err)) {
+				err := dml.updateModuleStatus(configName)
+				// it's possible that such a module doesn't exist
+				if err != nil && !errors.IsNotFound(err) {
+					return err
+				}
 			}
-		}
-
-		// update the related module if it exists
-		if err == nil || (err != nil && errors.IsNotFound(err)) {
-			err := dml.updateModuleStatus(configName)
-			// it's possible that such a module doesn't exist
-			if err != nil && !errors.IsNotFound(err) {
-				return err
-			}
-		}
-
-		return nil
+			return nil
+		})
 	})
 }
 
 func (dml *DeckhouseController) updateModuleStatus(moduleName string) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		module, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, moduleName, v1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		moduleConfig, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, moduleName, v1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				moduleConfig = nil
-			} else {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			module, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, moduleName, v1.GetOptions{})
+			if err != nil {
 				return err
 			}
-		}
 
-		newModuleStatus := d8config.Service().StatusReporter().ForModule(module, moduleConfig, bundleName)
-		if module.Status.Status != newModuleStatus.Status || module.Status.Message != newModuleStatus.Message || module.Status.HooksState != newModuleStatus.HooksState {
-			module.Status.Status = newModuleStatus.Status
-			module.Status.Message = newModuleStatus.Message
-			module.Status.HooksState = newModuleStatus.HooksState
+			moduleConfig, err := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, moduleName, v1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					moduleConfig = nil
+				} else {
+					return err
+				}
+			}
 
-			log.Debugf("Update /status for module/%s: status '%s' to '%s', message '%s' to '%s'", moduleName, module.Status.Status, newModuleStatus.Status, module.Status.Message, newModuleStatus.Message)
+			newModuleStatus := d8config.Service().StatusReporter().ForModule(module, moduleConfig, bundleName)
+			if module.Status.Status != newModuleStatus.Status || module.Status.Message != newModuleStatus.Message || module.Status.HooksState != newModuleStatus.HooksState {
+				module.Status.Status = newModuleStatus.Status
+				module.Status.Message = newModuleStatus.Message
+				module.Status.HooksState = newModuleStatus.HooksState
 
-			_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().UpdateStatus(dml.ctx, module, v1.UpdateOptions{})
-			return err
-		}
+				log.Debugf("Update /status for module/%s: status '%s' to '%s', message '%s' to '%s'", moduleName, module.Status.Status, newModuleStatus.Status, module.Status.Message, newModuleStatus.Message)
 
-		return nil
+				_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().UpdateStatus(dml.ctx, module, v1.UpdateOptions{})
+				return err
+			}
+			return nil
+		})
 	})
 }
 
@@ -364,9 +367,14 @@ func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) err
 
 func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		src := dml.sourceModules[m.GetBasicModule().GetName()]
+		moduleName := m.GetBasicModule().GetName()
+		src := dml.sourceModules[moduleName]
 		newModule := m.AsKubeObject(src)
 		newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
+
+		// update d8service state
+		d8config.Service().AddModuleNameToSource(moduleName, src)
+		d8config.Service().AddPossibleName(moduleName)
 
 		existModule, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, newModule.GetName(), v1.GetOptions{})
 		if err != nil {
@@ -387,7 +395,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 
 		_, err = dml.kubeClient.DeckhouseV1alpha1().Modules().Update(dml.ctx, existModule, v1.UpdateOptions{})
 
-		return err
+		return dml.updateModuleStatus(moduleName)
 	})
 }
 
