@@ -37,7 +37,7 @@ func InitService(mm ModuleManager) {
 	serviceInstanceLock.Lock()
 	defer serviceInstanceLock.Unlock()
 
-	possibleNames := set.New(mm.GetModuleNames()...)
+	possibleNames := set.New()
 	possibleNames.Add("global")
 
 	serviceInstance = &ConfigService{
@@ -112,4 +112,10 @@ func (srv *ConfigService) GetValuesValidator() *validation.ValuesValidator {
 
 func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {
 	return srv.moduleManager.ValidateModule(module)
+}
+
+func (srv *ConfigService) AddPossibleName(name string) {
+	serviceInstanceLock.Lock()
+	srv.possibleNames.Add(name)
+	serviceInstanceLock.Unlock()
 }
