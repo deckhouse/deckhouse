@@ -727,6 +727,9 @@ entries:
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
+                - title: FAQ
+                  url: /modules/460-log-shipper/faq.html
+
             - title:
                 en: Short-term storage
                 ru: Кратковременное хранение
