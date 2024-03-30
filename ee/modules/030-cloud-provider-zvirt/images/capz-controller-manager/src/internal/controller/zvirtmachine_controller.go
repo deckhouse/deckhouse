@@ -529,7 +529,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 		}
 		for _, disk := range disks {
 			if !disk.Bootable() {
-				logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", vm.Name())
+				logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", "vm", vm.Name())
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}
