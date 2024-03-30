@@ -523,14 +523,18 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	}
 	if vmFound {
 		vmid := vm.ID()
-		disks, err := zVirtClient.ListDiskAttachments(vmid /*timeout*/)
+		disks, err := zVirtClient.WithContext(ctx).ListDiskAttachments(vmid /*timeout*/)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("List zVirt VM disks: %w", err)
 		}
 		for _, disk := range disks {
 			if !disk.Bootable() {
-				logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", "vm", vm.Name())
-				return ctrl.Result{Requeue: true}, nil
+				err := disk.Remove()
+				if err != nil {
+					return ctrl.Result{Requeue: true}, fmt.Errorf("Detach disk %v from vm %s. %w", disk.DiskID(), vm.Name(), err)
+				}
+				// logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", "vm", vm.Name())
+				// return ctrl.Result{Requeue: true}, nil
 			}
 		}
 
