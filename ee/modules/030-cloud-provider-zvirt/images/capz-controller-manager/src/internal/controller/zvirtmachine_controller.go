@@ -216,7 +216,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		if err = zVirtClient.RemoveVM(vmid /*timeout*/); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Cannot delete misconfigured VM: %w", err)
 		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	zvMachine.Spec.ID = string(vmid)
