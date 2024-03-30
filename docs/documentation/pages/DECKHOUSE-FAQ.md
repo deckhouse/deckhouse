@@ -422,7 +422,7 @@ This feature is available in Enterprise Edition only.
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
    ```
 
-   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball and generated [DeckhouseReleases](https://deckhouse.io/documentation/v1/modules/002-deckhouse/cr.html#deckhouserelease) manifests.
+   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball and generated [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease) manifests.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
