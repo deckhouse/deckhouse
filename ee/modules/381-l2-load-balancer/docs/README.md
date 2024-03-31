@@ -1,5 +1,5 @@
 ---
-title: "The metallb module"
+title: "The l2-load-balancer module"
 ---
 
 The module implements an improved (relative to the standard [[L2 mode in MetalLB]](../../modules/380-metallb/#layer-2-mode)) balancing mechanism for services in bare metal clusters when there is no option to use cloud load balancers or [MetalLB](../../modules/380-metallb/#mode-bgp) in BGP mode with Equal-cost multi-path (ECMP) configured.
