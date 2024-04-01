@@ -104,14 +104,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cloudProviderZvirt": map[string]interface{}{
-		"capzControllerManager":     "imageHash-cloudProviderZvirt-capzControllerManager",
-		"cloudControllerManager125": "imageHash-cloudProviderZvirt-cloudControllerManager125",
-		"cloudControllerManager126": "imageHash-cloudProviderZvirt-cloudControllerManager126",
-		"cloudControllerManager127": "imageHash-cloudProviderZvirt-cloudControllerManager127",
-		"cloudControllerManager128": "imageHash-cloudProviderZvirt-cloudControllerManager128",
-		"cloudControllerManager129": "imageHash-cloudProviderZvirt-cloudControllerManager129",
-		"cloudDataDiscoverer":       "imageHash-cloudProviderZvirt-cloudDataDiscoverer",
-		"zvirtCsiDriver":            "imageHash-cloudProviderZvirt-zvirtCsiDriver",
+		"capzControllerManager":  "imageHash-cloudProviderZvirt-capzControllerManager",
+		"cloudControllerManager": "imageHash-cloudProviderZvirt-cloudControllerManager",
+		"cloudDataDiscoverer":    "imageHash-cloudProviderZvirt-cloudDataDiscoverer",
+		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
 	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",

@@ -7,10 +7,12 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 
+	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -20,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 	"github.com/deckhouse/deckhouse/internal/scopes"
 )
 
@@ -29,6 +31,7 @@ type ZvirtClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Config *rest.Config
+	Zvirt  ovirt.Client
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=zvirtclusters,verbs=get;list;watch;create;update;patch;delete
@@ -45,7 +48,7 @@ func (r *ZvirtClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	logger.Info("Reconciling ZvirtCluster")
 
-	zvirtCluster := &infrastructurev1alpha1.ZvirtCluster{}
+	zvirtCluster := &infrastructurev1.ZvirtCluster{}
 	err := r.Get(ctx, req.NamespacedName, zvirtCluster)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -103,17 +106,40 @@ func (r *ZvirtClusterReconciler) reconcile(
 
 	clusterScope.ZvirtCluster.Status.Ready = true
 
+	if err = r.checkZvirtClusterID(ctx, clusterScope.ZvirtCluster.Spec.ID); err != nil {
+		clusterScope.ZvirtCluster.Status.Ready = false
+		clusterScope.ZvirtCluster.Status.FailureReason = infrastructurev1.ClusterMisconfiguredReason
+		clusterScope.ZvirtCluster.Status.FailureMessage = err.Error()
+	}
+
 	err = clusterScope.Patch(ctx)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("Failed to patch StaticCluster: %w", err)
+		return ctrl.Result{}, fmt.Errorf("Failed to patch ZvirtCluster: %w", err)
 	}
 
 	return ctrl.Result{}, nil
 }
 
+func (r *ZvirtClusterReconciler) checkZvirtClusterID(ctx context.Context, id string) error {
+	if id == "" {
+		return errors.New(infrastructurev1.ClusterIDNotProvidedMessage)
+	}
+
+	_, err := r.Zvirt.WithContext(ctx).GetCluster(ovirt.ClusterID(id) /*ovirt.Timeout(15*time.Second)*/)
+	if err != nil {
+		if ovirt.HasErrorCode(err, ovirt.ENotFound) {
+			return fmt.Errorf("Cluster with specified ID doesn't exist in zVirt: %w", err)
+		}
+
+		return fmt.Errorf("ZvirtCluster ID validation failed: %w", err)
+	}
+
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZvirtClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.ZvirtCluster{}).
+		For(&infrastructurev1.ZvirtCluster{}).
 		Complete(r)
 }

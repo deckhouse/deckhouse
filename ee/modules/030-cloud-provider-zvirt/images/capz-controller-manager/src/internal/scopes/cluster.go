@@ -14,7 +14,7 @@ import (
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/patch"
 
-	infrastructurev1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 )
 
 // ClusterScope defines a scope defined around a cluster.
@@ -22,13 +22,13 @@ type ClusterScope struct {
 	*Scope
 
 	Cluster      *clusterv1.Cluster
-	ZvirtCluster *infrastructurev1alpha1.ZvirtCluster
+	ZvirtCluster *infrastructurev1.ZvirtCluster
 }
 
 func NewClusterScope(
 	base *Scope,
 	cluster *clusterv1.Cluster,
-	zvirtCluster *infrastructurev1alpha1.ZvirtCluster,
+	zvirtCluster *infrastructurev1.ZvirtCluster,
 ) (*ClusterScope, error) {
 	if base == nil {
 		return nil, errors.New("Scope is required when creating a ClusterScope")
@@ -54,13 +54,13 @@ func NewClusterScope(
 	}, nil
 }
 
-// Fail marks the StaticCluster as failed.
+// Fail marks the ZvirtCluster as failed.
 func (c *ClusterScope) Fail(reason capierrors.ClusterStatusError, err error) {
 	c.ZvirtCluster.Status.FailureReason = string(reason)
 	c.ZvirtCluster.Status.FailureMessage = err.Error()
 }
 
-// Patch updates the StaticCluster resource.
+// Patch updates the ZvirtCluster resource.
 func (c *ClusterScope) Patch(ctx context.Context) error {
 	err := c.PatchHelper.Patch(ctx, c.ZvirtCluster)
 	if err != nil {

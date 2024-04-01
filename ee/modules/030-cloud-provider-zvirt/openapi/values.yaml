@@ -27,15 +27,13 @@ properties:
           - apiVersion: deckhouse.io/v1
             kind: ZvirtClusterConfiguration
             layout: Standard
+            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             masterNodeGroup:
               replicas: 1
               instanceClass:
-                clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
                 numCPUs: 4
                 memory: 8192
                 template: debian-bookworm
-                os: debian_9
-                vmType: high_performance
                 vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                 nicName: "nic1"
                 storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
@@ -43,7 +41,6 @@ properties:
               - name: worker
                 replicas: 1
                 instanceClass:
-                  clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
                   numCPUs: 4
                   memory: 8192
                   template: debian-bookworm
@@ -52,17 +49,22 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [apiVersion, kind, masterNodeGroup, layout, provider]
+        required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
-            enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
             enum: [ZvirtClusterConfiguration]
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
+          clusterId:
+            type: string
+            description: |
+              cluster id.
+            example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           masterNodeGroup:
             type: object
             additionalProperties: false
@@ -81,15 +83,10 @@ properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [clusterId, numCPUs, memory, template]
+                required: [numCPUs, memory, template]
                 description: |
                   Partial contents of the fields of the
                 properties: &instanceClassProperties
-                  clusterId:
-                    type: string
-                    description: |
-                      cluster id.
-                    example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                   numCPUs:
                     type: integer
                     description: |
@@ -115,11 +112,6 @@ properties:
                     description: |
                       Template name to be cloned.
                     example: debian-bookworm
-                  vmType:
-                    type: string
-                    description: |
-                      Load profile.
-                    example: high_performance
                   vnicProfileId:
                     type: string
                     description: |
@@ -197,7 +189,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [clusterId, numCPUs, memory, template]
+                  required: [numCPUs, memory, template]
                   description: |
                     Partial contents of the fields of the.
                   properties:

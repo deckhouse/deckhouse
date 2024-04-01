@@ -10,15 +10,14 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	ovirt "github.com/ovirt/go-ovirt-client"
+	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	infrastructurev1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
-	"github.com/deckhouse/deckhouse/internal/controller/utils"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 )
 
 var _ = Describe("ZvirtMachine Controller", func() {
@@ -29,24 +28,23 @@ var _ = Describe("ZvirtMachine Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: utils.ProviderNamespace,
+			Namespace: "d8-cloud-provider-zvirt",
 		}
-		zvirtmachine := &infrastructurev1alpha1.ZvirtMachine{}
+		zvirtmachine := &infrastructurev1.ZvirtMachine{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind ZvirtMachine")
 			err := k8sClient.Get(ctx, typeNamespacedName, zvirtmachine)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &infrastructurev1alpha1.ZvirtMachine{
+				resource := &infrastructurev1.ZvirtMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: utils.ProviderNamespace,
+						Namespace: "d8-cloud-provider-zvirt",
 					},
-					Spec: infrastructurev1alpha1.ZvirtMachineSpec{
+					Spec: infrastructurev1.ZvirtMachineSpec{
 						TemplateName:  "astra-175",
-						ClusterID:     "eed0004f-7c13-4649-b958-e3c18d7d6e8c",
 						VNICProfileID: "411768ee-9d95-4d03-90b5-18bf4e4a78a0",
-						CPU:           infrastructurev1alpha1.CPU{Sockets: 4, Cores: 1, Threads: 1},
+						CPU:           infrastructurev1.CPU{Sockets: 4, Cores: 1, Threads: 1},
 						Memory:        8192,
 					},
 				}
@@ -55,7 +53,7 @@ var _ = Describe("ZvirtMachine Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &infrastructurev1alpha1.ZvirtMachine{}
+			resource := &infrastructurev1.ZvirtMachine{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
