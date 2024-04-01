@@ -6,9 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	ovsdk "github.com/ovirt/go-ovirt-client/v3"
@@ -32,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/internal/controller"
 	"github.com/deckhouse/deckhouse/internal/credentials"
 	"github.com/deckhouse/deckhouse/internal/ovirt_logger"
+	"github.com/deckhouse/deckhouse/internal/tagger"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -139,6 +142,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	tg := tagger.NewTagger(zvirtClient)
+	if err = tg.InitTags(context.Background(), strings.Fields(os.Getenv("ZVIRT_VM_TAGS"))); err != nil {
+		setupLog.Error(err, "zVirt tags cannot be initialized")
+		os.Exit(1)
+	}
+
 	if err = (&controller.ZvirtClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -152,6 +161,7 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Zvirt:  zvirtClient,
+		Tagger: tg,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ZvirtMachine")
 		os.Exit(1)
