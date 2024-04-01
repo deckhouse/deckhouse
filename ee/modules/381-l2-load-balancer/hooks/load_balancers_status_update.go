@@ -28,7 +28,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Service",
 			FilterFunc: applyServiceFilter,
-			// ignore d8 services, we don't use misconfigured external services
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
