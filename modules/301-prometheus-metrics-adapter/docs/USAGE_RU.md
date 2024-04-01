@@ -3,6 +3,8 @@ title: "Модуль prometheus-metrics-adapter: примеры конфигур
 search: autoscaler, HorizontalPodAutoscaler
 ---
 
+{% raw %}
+
 Ниже рассматривается только HPA (Horizontal Pod Autoscaling) с [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
 
 Для настройки HPA требуется:
@@ -37,8 +39,6 @@ search: autoscaler, HorizontalPodAutoscaler
 ## Классическое масштабирование по потреблению ресурсов
 
 Пример HPA для масштабирования по базовым метрикам из `metrics.k8s.io`: CPU и памяти подов. Особое внимание на `averageUtulization` — это значение отражает целевой процент ресурсов, который был **реквестирован**.
-
-{% raw %}
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -82,8 +82,6 @@ spec:
         averageUtilization: 80
 ```
 
-{% endraw %}
-
 ## Масштабирование по кастомным метрикам
 
 ### Регистрация кастомных метрик в Kubernetes API
@@ -112,8 +110,6 @@ spec:
 После регистрации кастомной метрики на нее можно ссылаться. С точки зрения HPA, кастомные метрики бывают двух видов — `Pods` и `Object`.
 
 `Object` — отсылает к объекту в кластере, который имеет в Prometheus метрики с соответствующими лейблами (`namespace=XXX,ingress=YYY`). Эти лейблы будут подставляться вместо `<<.LabelMatchers>>` в вашем кастомном запросе.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -158,15 +154,11 @@ spec:
         averageValue: 10
 ```
 
-{% endraw %}
-
 `Pods` — из ресурса, которым управляет HPA, будут выбраны все поды и для каждого пода будут собраны метрики с соответствующими лейблами (`namespace=XXX`, `pod=YYY-sadiq`, `namespace=XXX`, `pod=YYY-e3adf`, и т. д.). Из этих показателей HPA рассчитает среднее значение и использует для [масштабирования](#примеры-с-использованием-кастомных-метрик-типа-pods).
 
 #### Пример использования кастомных метрик с размером очереди RabbitMQ
 
 В представленном примере рассматривается очередь `send_forum_message` в RabbitMQ, для которого зарегистрирован сервис `rmq`. Если количество сообщений в этой очереди превышает 42, выполняется масштабирование.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -204,15 +196,11 @@ spec:
         value: 42
 ```
 
-{% endraw %}
-
 #### Пример использования нестабильной кастомной метрики
 
 Улучшение предыдущего примера.
 
 В представленном примере рассматривается очередь `send_forum_message` в RabbitMQ, для которого зарегистрирован сервис `rmq`. Если количество сообщений в этой очереди превышает 42, выполняется масштабирование. Мы не хотим реагировать на краткосрочные всплески, поэтому используется MQL-функцию `avg_over_time()`, чтобы усреднить метрику.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -250,14 +238,10 @@ spec:
         value: 42
 ```
 
-{% endraw %}
-
 #### Примеры с использованием кастомных метрик типа `Pods`
 
 Пример масштабирования воркеров по процентному количеству активных php-fpm-воркеров.
 В представленом примере среднее количество php-fpm-воркеров в _Deployment_ `mybackend` не больше 5.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -295,11 +279,7 @@ spec:
         averageValue: 5
 ```
 
-{% endraw %}
-
 Масштабируется Deployment по процентному количеству активных php-fpm-воркеров.
-
-{% raw %}
 
 ```yaml
 ---
@@ -334,8 +314,6 @@ spec:
         averageValue: 80
 ```
 
-{% endraw %}
-
 ### Регистрация внешних метрик в Kubernetes API
 
 Модуль `prometheus-metrics-adapter` поддерживает механизм `externalRules`, с помощью которого можно определять кастомные PromQL-запросы и регистрировать их как метрики.
@@ -347,8 +325,6 @@ spec:
 В примере представлены пользовательские правила Prometheus для метрики `mymetric`.
 
 В примере представлены пользовательские правила Prometheus для метрики `mymetric`.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -368,13 +344,9 @@ spec:
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
-{% endraw %}
-
 ### Применение внешних метрик в HPA
 
 После регистрации внешней метрики на нее можно сослаться.
-
-{% raw %}
 
 ```yaml
 kind: HorizontalPodAutoscaler
@@ -409,8 +381,6 @@ spec:
         value: 10
 ```
 
-{% endraw %}
-
 ### Пример с размером очереди в Amazon SQS
 
 Чтобы установить экспортер для интеграции с SQS:
@@ -422,8 +392,6 @@ spec:
 Ниже приведен пример экспортера (например, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)) для получения метрик из Amazon SQS, если:
 * в Amazon SQS работает очередь `send_forum_message`;
 * выполняется масштабирование при количестве сообщений в этой очереди больше 42.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -467,8 +435,6 @@ spec:
         value: 42
 ```
 
-{% endraw %}
-
 ## Способы отладки
 
 ### Как получить список кастомных метрик?
@@ -497,3 +463,5 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/me
 kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
 kubectl get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
 ```
+
+{% endraw %}

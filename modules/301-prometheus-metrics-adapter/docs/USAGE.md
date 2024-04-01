@@ -3,6 +3,8 @@ title: "The prometheus-metrics-adapter module: usage"
 search: autoscaler, HorizontalPodAutoscaler
 ---
 
+{% raw %}
+
 Note that only HPA (Horizontal Pod Autoscaling) with [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), whose support has been available since Kubernetes v1.12, is discussed below.
 
 Configuring HPA requires:
@@ -37,8 +39,6 @@ The following metrics can be used to scale applications:
 ## Classic resource consumption-based scaling
 
 Below is an example HPA configuration for scaling based on the classic metrics from `metrics.k8s.io`: CPU and memory utilization for pods. The `averageUtulization` value reflects the target percentage of resources that have been **requested**.
-
-{% raw %}
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -82,8 +82,6 @@ spec:
         averageUtilization: 80
 ```
 
-{% endraw %}
-
 ## Scaling based on custom metrics
 
 ### Registering custom metrics with Kubernetes API
@@ -112,8 +110,6 @@ You can use the cluster-wide resource to define the metric globally, and use the
 Once a custom metric is registered, it can be referenced. In terms of HPA, custom metrics can be of two types - `Pods` and `Object`.
 
 `Object` refers to an object in the cluster that has metrics in Prometheus with corresponding labels (`namespace=XXX,ingress=YYYYY`). These labels will be substituted in place of `<<.LabelMatchers>>` in your custom request.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -158,15 +154,11 @@ spec:
         averageValue: 10
 ```
 
-{% endraw %}
-
 `Pods` — all pods will be selected from the resource managed by HPA and metrics will be collected for each pod with the relevant labels (`namespace=XXX`, `pod=YYYY-sadiq`, `namespace=XXX`, `pod=YYYY-e3adf`, etc.). Then the HPA will calculate an average value based on these metrics and will use it for [scaling](#examples-involving-custom-metrics-of-type-pods).
 
 #### Using custom metrics with the RabbitMQ queue size
 
 In the example below, scaling is performed based on the `send_forum_message` queue in RabbitMQ for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling is carried out.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -204,15 +196,11 @@ spec:
         value: 42
 ```
 
-{% endraw %}
-
 #### Using volatile custom metrics
 
 This example improves on the previous one.
 
 In the example below, scaling is based on the `send_forum_message` queue in RabbitMQ, for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling takes place. The MQL function `avg_over_time()` smoothes (averages the metric) to avoid over-scaling due to short-term spikes in the number of messages.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -250,14 +238,10 @@ spec:
         value: 42
 ```
 
-{% endraw %}
-
 #### Examples involving custom metrics of type `Pods`
 
 In the example below, the number of workers is scaled based on the percentage of active php-fpm workers.
 The trigger is the average number of php-fpm-workers in `mybackend` _Deployment_, which should not exceed 5.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1
@@ -295,11 +279,7 @@ spec:
         averageValue: 5
 ```
 
-{% endraw %}
-
 Scaling the Deployment based on the percentage number of active php-fpm-workers:
-
-{% raw %}
 
 ```yaml
 ---
@@ -334,8 +314,6 @@ spec:
         averageValue: 80
 ```
 
-{% endraw %}
-
 ### Registering external metrics with the Kubernetes API
 
 The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. It allows you to define custom PromQL queries and register them as metrics.
@@ -345,8 +323,6 @@ A universal rule that allows you to create your own metrics without customizatio
 Below is an example of _CustomPrometheusRules_:
 
 The example showcases Prometheus custom rules for the `mymetric` metric.
-
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -366,13 +342,9 @@ spec:
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
-{% endraw %}
-
 ### Using external metrics in HPA
 
 Once an external metric is registered, you can refer to it.
-
-{% raw %}
 
 ```yaml
 kind: HorizontalPodAutoscaler
@@ -407,8 +379,6 @@ spec:
         value: 10
 ```
 
-{% endraw %}
-
 ### Using the queue size in Amazon SQS
 
 To install an exporter to integrate with SQS:
@@ -421,16 +391,25 @@ The following is an example of an exporter (e. g., [sqs-exporter](https://github
 * a `send_forum_message` queue is running in Amazon SQS;
 * scaling is done when the number of messages in that queue exceeds 42.
 
-{% raw %}
-
 ```yaml
-apiVersion: deckhouse.io/v1beta1
-kind: ServiceMetric
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
 metadata:
-  name: rmq-queue-forum-messages
-  namespace: mynamespace
+  # The recommended name — prometheus-metrics-adapter-<metric name>.
+  name: prometheus-metrics-adapter-sqs-messages-visible
+  # Pay attention!
+  namespace: d8-monitoring
+  labels:
+    # Pay attention!
+    prometheus: main
+    # Pay attention!
+    component: rules
 spec:
-  query: sum (avg_over_time(rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}[5m])) by (<<.GroupBy>>)
+  groups:
+  - name: prometheus-metrics-adapter.sqs_messages_visible # the recommended template
+    rules:
+    - record: kube_adapter_metric_sqs_messages_visible # Pay attention! The 'kube_adapter_metric_' prefix is required.
+      expr: sum (sqs_messages_visible) by (queue)
 ---
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2
@@ -438,7 +417,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  # The targets of scaling (reference to a deployment or statefulset).
+  # The targets of scaling (link to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -446,20 +425,18 @@ spec:
   minReplicas: 1
   maxReplicas: 5
   metrics:
-  - type: Object
-    object:
-      describedObject:
-        apiVersion: v1
-        kind: Service
-        name: rmq
+  - type: External
+    external:
       metric:
-        name: rmq-queue-forum-messages
+        # Must match CustomPrometheusRules record name without 'kube_adapter_metric_' prefix.
+        name: sqs_messages_visible
+        selector:
+          matchLabels:
+            queue: send_forum_messages
       target:
         type: Value
         value: 42
 ```
-
-{% endraw %}
 
 ## Debugging
 
@@ -489,3 +466,5 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/me
 kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
 kubectl get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
 ```
+
+{% endraw %}
