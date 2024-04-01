@@ -313,7 +313,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="debian"
+    ssh_user="redos"
     ;;
 
   "vSphere")
