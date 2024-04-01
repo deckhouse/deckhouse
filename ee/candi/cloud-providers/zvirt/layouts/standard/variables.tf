@@ -10,7 +10,7 @@ variable "providerClusterConfiguration" {
 }
 
 variable "url" {
-  description = "oVirt API URL"
+  description = "zVirt API URL"
 }
 
 variable "username" {
