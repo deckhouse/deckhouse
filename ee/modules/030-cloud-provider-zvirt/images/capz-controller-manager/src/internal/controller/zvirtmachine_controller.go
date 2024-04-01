@@ -29,6 +29,7 @@ import (
 
 	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 	"github.com/deckhouse/deckhouse/internal/controller/utils"
+	"github.com/deckhouse/deckhouse/internal/tagger"
 )
 
 const ProviderIDPrefix = "zvirt://"
@@ -38,6 +39,8 @@ type ZvirtMachineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Zvirt  ovirt.Client
+
+	Tagger tagger.Tagger
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=zvirtmachines,verbs=get;list;watch;create;update;patch;delete
@@ -386,6 +389,10 @@ func (r *ZvirtMachineReconciler) createVM(
 	}
 
 	vmid := vm.ID()
+
+	if err = r.Tagger.TagVM(ctx, vmid); err != nil {
+		return nil, fmt.Errorf("Apply tags to VM: %w", err)
+	}
 
 	if _, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusDown, retryStrategy...); err != nil {
 		return nil, fmt.Errorf("Tired of waiting for VM to be created: %w", err)
