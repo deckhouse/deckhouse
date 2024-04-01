@@ -73,11 +73,11 @@ func applyLoadBalancerStatusFilter(obj *unstructured.Unstructured) (go_hook.Filt
 
 func handleLoadBalancerStatus(input *go_hook.HookInput) error {
 	l2LBsSnapshot := input.Snapshots["l2loadbalancers"]
-	serviceToLoadBalancerMap := loadFromServicesInfo(input.Snapshots["services"])
+	servicesGroupedByLoadBalancerName := loadFromServicesInfo(input.Snapshots["services"])
 
 	for _, lb := range l2LBsSnapshot {
 		loadBalancer := lb.(L2LoadBalancerInfo)
-		if externalIPs, ok := serviceToLoadBalancerMap[loadBalancer.Name]; ok {
+		if externalIPs, ok := servicesGroupedByLoadBalancerName[loadBalancer.Name]; ok {
 			patchLoadBalancerStatus(input.PatchCollector, loadBalancer.Name, loadBalancer.Namespace, externalIPs)
 		}
 	}
