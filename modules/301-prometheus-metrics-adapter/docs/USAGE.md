@@ -107,7 +107,7 @@ You can use the cluster-wide resource to define the metric globally, and use the
 
 ### Using custom metrics in HPA
 
-Once a custom metric is registered, it can be referenced. In terms of HPA, custom metrics can be of two types - `Pods` and `Object`.
+Once a custom metric is registered, it can be referenced. In terms of HPA, custom metrics can be of two types — `Pods` and `Object`.
 
 `Object` refers to an object in the cluster that has metrics in Prometheus with corresponding labels (`namespace=XXX,ingress=YYYYY`). These labels will be substituted in place of `<<.LabelMatchers>>` in your custom request.
 
@@ -318,7 +318,7 @@ spec:
 
 The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. It allows you to define custom PromQL queries and register them as metrics.
 
-A universal rule that allows you to create your own metrics without customization in `prometheus-metrics-adapter` has been added in the installation examples - "any metric in Prometheus with the name `kube_adapter_metric_<name>` will be registered in the API under the name `<name>`". Then, you just need to write an exporter that will export such a metric or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
+A universal rule that allows you to create your own metrics without customization in `prometheus-metrics-adapter` has been added in the installation examples — "any metric in Prometheus with the name `kube_adapter_metric_<name>` will be registered in the API under the name `<name>`". Then, you just need to write an exporter that will export such a metric or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
 
 Below is an example of _CustomPrometheusRules_:
 
