@@ -13,14 +13,14 @@
  - **[candi]** Add Kubernetes 1.29 support. [#7247](https://github.com/deckhouse/deckhouse/pull/7247)
     All control plane components will restart.
  - **[candi]** Add support for the new cloud provider — VMware Cloud Director. [#6527](https://github.com/deckhouse/deckhouse/pull/6527)
+ - **[control-plane-manager]** Option to change service account tokens issuer. [#7892](https://github.com/deckhouse/deckhouse/pull/7892)
  - **[dhctl]** Generate `DeckhouseRelease` manifests for mirrored releases. [#7697](https://github.com/deckhouse/deckhouse/pull/7697)
  - **[documentation]** Module documentation is available in the cluster. [#6449](https://github.com/deckhouse/deckhouse/pull/6449)
  - **[extended-monitoring]** Support custom container registry CA, registry credentials and insecure (HTTP) registries in the image-availability-exporter. Change ModuleConfig settings. [#7354](https://github.com/deckhouse/deckhouse/pull/7354)
  - **[flant-integration]** flant-pricing based on ALT Linux image, grafana-agent and madison-proxy images based on a distroless image. [#6957](https://github.com/deckhouse/deckhouse/pull/6957)
  - **[ingress-nginx]** The controller image is now based on ALT Linux. [#7002](https://github.com/deckhouse/deckhouse/pull/7002)
  - **[kube-dns]** Added a parameter that allows you to change the upstream transport protocol (tcp/udp). [#7541](https://github.com/deckhouse/deckhouse/pull/7541)
- - **[metallb]** MetalLB dashboard for Grafana [#7459](https://github.com/deckhouse/deckhouse/pull/7459)
- - **[multitenancy-manager]** Prevent manual modification of Project resources. [#7480](https://github.com/deckhouse/deckhouse/pull/7480)
+ - **[metallb]** MetalLB dashboard for Grafana [#7459](https://github.com/deckhouse/deckhouse/pull/7459) - **[multitenancy-manager]** Prevent manual modification of Project resources. [#7480](https://github.com/deckhouse/deckhouse/pull/7480)
  - **[multitenancy-manager]** Remove all namespace from the `Project`, except the project one. [#7443](https://github.com/deckhouse/deckhouse/pull/7443)
  - **[openvpn]** Images are based on a distroless image. [#6245](https://github.com/deckhouse/deckhouse/pull/6245)
  - **[upmeter]** Add the ability to configure some TLS parameters in `UpmeterRemoteWrite` CR. [#7495](https://github.com/deckhouse/deckhouse/pull/7495)
@@ -57,6 +57,7 @@
  - **[control-plane-manager]** Fix serviceaccounts generation in `basicAuditPolicy`. [#7342](https://github.com/deckhouse/deckhouse/pull/7342)
  - **[control-plane-manager]** Remove `/healthz` HTTP endpoint from the `kubernetes-api-proxy-reloader`. [#7311](https://github.com/deckhouse/deckhouse/pull/7311)
  - **[dashboard]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[deckhouse]** Run `DeckhouseRelease` requirements checks only for enabled modules. [#7925](https://github.com/deckhouse/deckhouse/pull/7925)
  - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7867](https://github.com/deckhouse/deckhouse/pull/7867)
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
@@ -74,6 +75,8 @@
  - **[flow-schema]** Change apiVersion for `FlowSchema` and `PriorityLevelConfiguration` to the minimum available. [#7750](https://github.com/deckhouse/deckhouse/pull/7750)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ - **[ingress-nginx]** Аix MaxMind DB download for controller `1.9`. [#7944](https://github.com/deckhouse/deckhouse/pull/7944)
+    Ingress-nginx 1.9 controller will restart.
  - **[ingress-nginx]** Add missed libraries to the Ingress controller v1.6 image. [#7764](https://github.com/deckhouse/deckhouse/pull/7764)
     Ingress controller v1.6 will restart.
  - **[ingress-nginx]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
@@ -90,7 +93,7 @@
  - **[local-path-provisioner]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[log-shipper]** Add missing ca-certs to prevent errors with HTTPS connections. [#7686](https://github.com/deckhouse/deckhouse/pull/7686)
  - **[loki]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
- - **[metallb]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[metallb]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521) 
  - **[monitoring-custom]** Add the `reserved_domain_nodes` metrics. [#7361](https://github.com/deckhouse/deckhouse/pull/7361)
  - **[monitoring-kubernetes]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
