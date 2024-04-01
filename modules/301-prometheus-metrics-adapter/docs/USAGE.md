@@ -13,17 +13,17 @@ Configuring HPA requires:
 * defining metrics to be used as the basis for scaling (`.spec.metrics`) and registering them with the Kubernetes API.
 
 Metrics in terms of HPA are of three types:
-* [classic](#classic-scaling-by-custom-resource-consumption) — of type (`.spec.metrics[].type`) "Resource"; these are used for simple scaling based on CPU and memory consumption;
-* [custom](#scaling-by-custom-metrics) — of type (`.spec.metrics[].type`) "Pods" or "Object";
-* [external](#apply-external-metrics-to-hpa) — of type (`.spec.metrics[].type`) "External".
+* [classic](#classic-resource-consumption-based-scaling) — of type (`.spec.metrics[].type`) "Resource"; these are used for simple scaling based on CPU and memory consumption;
+* [custom](#scaling-based-on-custom-metrics) — of type (`.spec.metrics[].type`) "Pods" or "Object";
+* [external](#using-external-metrics-in-hpa) — of type (`.spec.metrics[].type`) "External".
 
 **Caution!** [By default,](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA uses different approaches for scaling:
 * If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **up** is required, it is done immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation is the rate of increase: pods can double in 15 seconds, but if there are less than 4 pods, 4 new pods will be added.
 * If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **down** is required, it happens within 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): suggestions for a new number of replicas are calculated, then the largest value is selected. There is no limit on the number of pods to be removed at once.
 
 If metrics are subject to fluctuations that result in a surge of unnecessary application replicas, the following approaches are used:
-* Wrapping the metric with an aggregation function (e. g., `avg_over_time()`) if the metric is defined by a PromQL query. For more details, see. [example](#example-use-unstable-custom-metrics).
-* Increasing the stabilization window (parameter `spec.behavior.scaleUp.stabilizationWindowSeconds`) in the _HorizontalPodAutoscaler_ resource. During the this period, requests to increase the number of replicas will be accumulated, then the most modest request will be selected. This method is identical to applying the `min_over_time(<stabilizationWindowSeconds>)` aggregation function, but only if the metric is increasing and scaling **up** is required. For scaling **down**, the default settings usually work good enough. For more details, see [example](#classical-scaling-by-resource-consumption).
+* Wrapping the metric with an aggregation function (e. g., `avg_over_time()`) if the metric is defined by a PromQL query. For more details, see. [example](#using-volatile-custom-metrics).
+* Increasing the stabilization window (parameter `spec.behavior.scaleUp.stabilizationWindowSeconds`) in the _HorizontalPodAutoscaler_ resource. During the this period, requests to increase the number of replicas will be accumulated, then the most modest request will be selected. This method is identical to applying the `min_over_time(<stabilizationWindowSeconds>)` aggregation function, but only if the metric is increasing and scaling **up** is required. For scaling **down**, the default settings usually work good enough. For more details, see [example](#classic-resource-consumption-based-scaling).
 * Limiting the rate of increase of the new replica count with `spec.behavior.scaleUp.policies`.
 
 ## Scaling types
@@ -34,7 +34,7 @@ The following metrics can be used to scale applications:
 1. [Custom cluster-wide metrics](#scaling-based-on-custom-metrics). This type is suitable if you have many applications using the same metric, whose source is in the application namespace, and it is associated with one of the objects. Such metrics let you put common infrastructure components into a separate deployment ("infra").
 1. If the metric source is not tied to the application namespace, you can use [external](#using-external-metrics-in-hpa) metrics. For example, metrics provided by a cloud provider or an external SaaS service.
 
-**Caution!** We recommend using option 1 ([classic](#classic-scaling-by-consumption-resources) metrics), or option 2 ([custom](#scaling-by-custom-metrics) metrics defined in the _Namespace_). In this case, we suggest defining the application configuration (including its autoscaling) in the app repository. You should consider options 3 and 4 only if you have a large collection of identical microservices.
+**Caution!** We recommend using option 1 ([classic](#classic-resource-consumption-based-scaling) metrics), or option 2 ([custom](#scaling-based-on-custom-metrics) metrics defined in the _Namespace_). In this case, we suggest defining the application configuration (including its autoscaling) in the app repository. You should consider options 3 and 4 only if you have a large collection of identical microservices.
 
 ## Classic resource consumption-based scaling
 
