@@ -76,7 +76,7 @@
  - **[flow-schema]** Change apiVersion for `FlowSchema` and `PriorityLevelConfiguration` to the minimum available. [#7750](https://github.com/deckhouse/deckhouse/pull/7750)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
- - **[ingress-nginx]** Аix MaxMind DB download for controller `1.9`. [#7944](https://github.com/deckhouse/deckhouse/pull/7944)
+ - **[ingress-nginx]** Fix MaxMind DB download for controller `1.9`. [#7944](https://github.com/deckhouse/deckhouse/pull/7944)
     Ingress-nginx 1.9 controller will restart.
  - **[ingress-nginx]** Add missed libraries to the Ingress controller v1.6 image. [#7764](https://github.com/deckhouse/deckhouse/pull/7764)
     Ingress controller v1.6 will restart.
