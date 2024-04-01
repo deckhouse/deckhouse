@@ -9,11 +9,6 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "node_name_prefix" {
-  description = "Prefix for Node naming"
-  default = "d8"
-}
-
 variable "nodeIndex" {
   type    = number
   default = 0
