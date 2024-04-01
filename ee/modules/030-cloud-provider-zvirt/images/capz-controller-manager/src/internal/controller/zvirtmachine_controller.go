@@ -187,9 +187,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	logger.Info("Reconciling ZvirtMachine")
-	// timeout := ovirt.Timeout(15 * time.Minute)
 
-	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster /*timeout*/)
+	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see ZvirtMachine status for details")
 		conditions.MarkFalse(
@@ -204,7 +203,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	vmid := vm.ID()
-	vmMisconfigured, err := r.checkIfVirtualMachineIsMisconfigured(ctx, vmid, zvMachine, logger /*timeout*/)
+	vmMisconfigured, err := r.checkIfVirtualMachineIsMisconfigured(ctx, vmid, zvMachine, logger)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Check if VM is misconfigured and should be recreated: %w", err)
 	}
@@ -212,8 +211,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	zVirtClient := r.Zvirt.WithContext(ctx)
 	if vmMisconfigured {
 		// TODO(mvasl) We probably should detach all of the disks except bootable before removing VM.
-		_ = zVirtClient.StopVM(vmid, true /*timeout*/)
-		if err = zVirtClient.RemoveVM(vmid /*timeout*/); err != nil {
+		_ = zVirtClient.StopVM(vmid, true)
+		if err = zVirtClient.RemoveVM(vmid); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Cannot delete misconfigured VM: %w", err)
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -236,7 +235,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		conditions.MarkTrue(zvMachine, infrastructurev1.VMReadyCondition)
 		zvMachine.Status.Ready = true
 
-		addrs, err := zVirtClient.WaitForNonLocalVMIPAddress(vmid /*timeout*/)
+		addrs, err := zVirtClient.WaitForNonLocalVMIPAddress(vmid)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("Tired of waiting for VM to get IP address: %w", err)
 		}
@@ -293,10 +292,10 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		return ctrl.Result{}, nil
 	case ovirt.VMStatusDown:
 		logger.Info("VM is DOWN, starting it", "id", vmid)
-		if err = zVirtClient.StartVM(vmid /*timeout*/); err != nil {
+		if err = zVirtClient.StartVM(vmid); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Cannot start VM %q : %w", vmid, err)
 		}
-		_, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusUp /*timeout*/)
+		_, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusUp)
 		if err != nil {
 			conditions.MarkFalse(
 				zvMachine,
@@ -514,34 +513,30 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	zvMachine *infrastructurev1.ZvirtMachine,
 ) (ctrl.Result, error) {
 	logger.Info("Reconciling Machine delete")
-	// timeout := ovirt.Timeout(5 * time.Minute)
 	zVirtClient := r.Zvirt.WithContext(ctx)
 
-	vm, vmFound, err := r.findVMForMachine(ctx, machine /*timeout*/)
+	vm, vmFound, err := r.findVMForMachine(ctx, machine)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Find zVirt VM for Machine: %w", err)
 	}
 	if vmFound {
 		vmid := vm.ID()
-		disks, err := zVirtClient.WithContext(ctx).ListDiskAttachments(vmid /*timeout*/)
+		if err = zVirtClient.ShutdownVM(vmid, true); err != nil {
+			return ctrl.Result{}, fmt.Errorf("Shutdown zVirt VM: %w", err)
+		}
+
+		disks, err := zVirtClient.ListDiskAttachments(vmid)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("List zVirt VM disks: %w", err)
 		}
 		for _, disk := range disks {
 			if !disk.Bootable() {
-				err := disk.Remove()
-				if err != nil {
-					return ctrl.Result{Requeue: true}, fmt.Errorf("Detach disk %v from vm %s. %w", disk.DiskID(), vm.Name(), err)
+				if err = disk.Remove(); err != nil {
+					return ctrl.Result{}, fmt.Errorf("Detach disk %v from vm %s. %w", disk.DiskID(), vm.Name(), err)
 				}
-				// logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", "vm", vm.Name())
-				// return ctrl.Result{Requeue: true}, nil
 			}
 		}
-
-		if err = zVirtClient.ShutdownVM(vmid, true /*timeout*/); err != nil {
-			return ctrl.Result{}, fmt.Errorf("Shutdown zVirt VM: %w", err)
-		}
-		if err = zVirtClient.RemoveVM(vmid /*timeout*/); err != nil {
+		if err = zVirtClient.RemoveVM(vmid); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Delete zVirt VM: %w", err)
 		}
 	} else {
