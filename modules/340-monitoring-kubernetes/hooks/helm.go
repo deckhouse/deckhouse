@@ -17,28 +17,19 @@ limitations under the License.
 package hooks
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"sync"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/kube-client/manifest/releaseutil"
-	"github.com/golang/protobuf/proto" // nolint: staticcheck
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/flant/kube-client/manifest/releaseutil" // nolint: staticcheck
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -97,9 +88,6 @@ const (
 	delta = 2
 	// objectBatchSize - how many secrets to list from k8s at once
 	objectBatchSize = int64(10)
-	// fetchSecretsInterval pause between fetching the helm secrets from apiserver
-	// need for avoiding apiserver overload
-	fetchSecretsInterval = 3 * time.Second
 )
 
 var helmStorage unsupportedVersionsStore
@@ -110,6 +98,9 @@ func init() {
 		log.Fatal(err)
 	}
 }
+
+// maximum time deep for cached releases. Variable required for overriding in tests.
+var helmReleasesInterval = helmreleases.IntervalHours1
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/monitoring-kubernetes/helm_releases",
@@ -122,9 +113,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{
 		Order: 1,
 	},
-}, dependency.WithExternalDependencies(handleHelmReleases))
+}, dependency.WithExternalDependencies(handleHelmReleasesBySchedule))
 
-func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
+func handleHelmReleasesBySchedule(input *go_hook.HookInput, dc dependency.Container) error {
+	return handleHelmReleases(input, dc, helmReleasesInterval)
+}
+
+func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container, interval helmreleases.Interval) error {
+	var (
+		totalHelm3Releases uint32
+		totalHelm2Releases uint32
+	)
+
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
@@ -138,7 +138,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	// this give as ability to handle in memory only objectBatchSize * 2 amount of helm releases
 	// because this counter also used as a limit to apiserver
 	// we have `objectBatchSize` (25) objects in channel and max `objectBatchSize` (25) objects in goroutine waiting for channel
-	releasesC := make(chan *release, objectBatchSize)
+	releasesC := make(chan *helmreleases.Release, objectBatchSize)
 	doneC := make(chan bool)
 
 	// helm3 and helm2 are listed and parsed in goroutines
@@ -151,34 +151,9 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 		return err
 	}
 
-	var (
-		wg                 sync.WaitGroup
-		totalHelm3Releases uint32
-		totalHelm2Releases uint32
-	)
-	wg.Add(2)
 	go func() {
-		defer wg.Done()
-		var err error
-		totalHelm3Releases, err = getHelm3Releases(ctx, client, releasesC)
-		if err != nil {
-			input.LogEntry.Error(err)
-			return
-		}
+		totalHelm3Releases, totalHelm2Releases, err = helmreleases.GetHelmReleases(ctx, client, releasesC, interval)
 	}()
-
-	go func() {
-		defer wg.Done()
-		var err error
-		totalHelm2Releases, err = getHelm2Releases(ctx, client, releasesC)
-		if err != nil {
-			input.LogEntry.Error(err)
-			return
-		}
-	}()
-
-	wg.Wait()
-	close(releasesC)
 	<-doneC
 
 	// to avoid data race
@@ -188,102 +163,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	return nil
 }
 
-func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
-	var totalReleases uint32
-	var next string
-
-	for {
-		secretsList, err := client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{
-			LabelSelector: "owner=helm,status=deployed",
-			Limit:         objectBatchSize,
-			Continue:      next,
-			// https://kubernetes.io/docs/reference/using-api/api-concepts/#semantics-for-get-and-list
-			// set explicit behavior:
-			//   Return data at any resource version. The newest available resource version is preferred, but strong consistency is not required; data at any resource version may be served.
-			ResourceVersion:      "0",
-			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
-		})
-		if err != nil {
-			return 0, err
-		}
-
-		for _, secret := range secretsList.Items {
-			releaseData := secret.Data["release"]
-			if len(releaseData) == 0 {
-				continue
-			}
-
-			release, err := helm3DecodeRelease(string(releaseData))
-			if err != nil {
-				return 0, err
-			}
-			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
-			// fetch namespace from secret is more reliable
-			release.Namespace = secret.Namespace
-			release.HelmVersion = "3"
-
-			releasesC <- release
-			totalReleases++
-		}
-
-		if secretsList.Continue == "" {
-			break
-		}
-
-		next = secretsList.Continue
-		time.Sleep(fetchSecretsInterval)
-	}
-
-	return totalReleases, nil
-}
-
-func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
-	var totalReleases uint32
-	var next string
-
-	for {
-		cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{
-			LabelSelector:        "OWNER=TILLER,STATUS=DEPLOYED",
-			Limit:                objectBatchSize,
-			Continue:             next,
-			ResourceVersion:      "0",
-			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
-		})
-		if err != nil {
-			return 0, err
-		}
-
-		for _, secret := range cmList.Items {
-			releaseData := secret.Data["release"]
-			if len(releaseData) == 0 {
-				continue
-			}
-
-			release, err := helm2DecodeRelease(releaseData)
-			if err != nil {
-				return 0, err
-			}
-			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
-			// fetch namespace from secret is more reliable
-			release.Namespace = secret.Namespace
-			release.HelmVersion = "2"
-
-			releasesC <- release
-			totalReleases++
-		}
-
-		if cmList.Continue == "" {
-			break
-		}
-
-		next = cmList.Continue
-		time.Sleep(fetchSecretsInterval)
-	}
-
-	return totalReleases, nil
-}
-
-func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releasesC <-chan *release, doneC chan<- bool) {
+func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releasesC <-chan *helmreleases.Release, doneC chan<- bool) {
 	defer func() {
 		doneC <- true
 	}()
@@ -315,16 +195,6 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 			}
 		}
 	}
-}
-
-// protobuf for handling helm2 releases - https://github.com/helm/helm/blob/47f0b88409e71fd9ca272abc7cd762a56a1c613e/pkg/proto/hapi/release/release.pb.go#L24
-type release struct {
-	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name,proto3"`
-	Namespace string `json:"namespace,omitempty" protobuf:"bytes,8,opt,name=namespace,proto3"`
-	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3"`
-
-	// set helm version manually
-	HelmVersion string `json:"-"`
 }
 
 type manifest struct {
@@ -399,78 +269,3 @@ func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(resourceAPI, resource
 
 	return false
 }
-
-// helm3 decoding
-
-var magicGzip = []byte{0x1f, 0x8b, 0x08}
-
-// Import this from helm3 lib - https://github.com/helm/helm/blob/49819b4ef782e80b0c7f78c30bd76b51ebb56dc8/pkg/storage/driver/util.go#L56
-// helm3DecodeRelease decodes the bytes of data into a release
-// type. Data must contain a base64 encoded gzipped string of a
-// valid release, otherwise an error is returned.
-func helm3DecodeRelease(data string) (*release, error) {
-	// base64 decode string
-	b, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return nil, err
-	}
-
-	// For backwards compatibility with releases that were stored before
-	// compression was introduced we skip decompression if the
-	// gzip magic header is not found
-	if bytes.Equal(b[0:3], magicGzip) {
-		r, err := gzip.NewReader(bytes.NewReader(b))
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-		b2, err := io.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
-		b = b2
-	}
-
-	var rls release
-	// unmarshal release object bytes
-	if err := json.Unmarshal(b, &rls); err != nil {
-		return nil, err
-	}
-	return &rls, nil
-}
-
-// https://github.com/helm/helm/blob/47f0b88409e71fd9ca272abc7cd762a56a1c613e/pkg/storage/driver/util.go#L57
-func helm2DecodeRelease(data string) (*release, error) {
-	// base64 decode string
-	b, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return nil, err
-	}
-
-	// For backwards compatibility with releases that were stored before
-	// compression was introduced we skip decompression if the
-	// gzip magic header is not found
-	if bytes.Equal(b[0:3], magicGzip) {
-		r, err := gzip.NewReader(bytes.NewReader(b))
-		if err != nil {
-			return nil, err
-		}
-		b2, err := io.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
-		b = b2
-	}
-
-	var rls release
-	// unmarshal protobuf bytes
-	if err := proto.Unmarshal(b, &rls); err != nil {
-		return nil, err
-	}
-	return &rls, nil
-}
-
-// protobuf methods for helm2
-func (m *release) Reset()         { *m = release{} }
-func (m *release) String() string { return proto.CompactTextString(m) }
-func (*release) ProtoMessage()    {}

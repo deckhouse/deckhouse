@@ -27,11 +27,13 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
+	helmReleasesInterval = helmreleases.IntervalImmediately
 
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {

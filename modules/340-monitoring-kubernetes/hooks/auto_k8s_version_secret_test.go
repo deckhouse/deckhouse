@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -73,6 +74,7 @@ data:
 	)
 
 	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {}}}", "{}")
+	autoK8sVersionSecretInterval = helmreleases.IntervalImmediately
 	Context("helm3 release with deprecated versions", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
