@@ -31,13 +31,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			// ignore d8 services, we don't use misconfigured external services
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "l2-load-balancer",
+					"heritage": "deckhouse",
+					"app":      "l2-load-balancer",
 				},
 			},
 		},
-	},
-	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "* * * * *"},
 	},
 }, handleLoadBalancerStatus)
 
@@ -72,10 +70,9 @@ func applyLoadBalancerStatusFilter(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 func handleLoadBalancerStatus(input *go_hook.HookInput) error {
-	l2LBsSnapshot := input.Snapshots["l2loadbalancers"]
-	servicesGroupedByLoadBalancerName := loadFromServicesInfo(input.Snapshots["services"])
+	servicesGroupedByLoadBalancerName := servicesSnapshotsToMap(input.Snapshots["services"])
 
-	for _, lb := range l2LBsSnapshot {
+	for _, lb := range input.Snapshots["l2loadbalancers"] {
 		loadBalancer := lb.(L2LoadBalancerInfo)
 		if externalIPs, ok := servicesGroupedByLoadBalancerName[loadBalancer.Name]; ok {
 			patchLoadBalancerStatus(input.PatchCollector, loadBalancer.Name, loadBalancer.Namespace, externalIPs)
@@ -94,7 +91,7 @@ func patchLoadBalancerStatus(pc *object_patch.PatchCollector, name, namespace st
 	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "L2LoadBalancer", namespace, name, object_patch.WithSubresource("/status"))
 }
 
-func loadFromServicesInfo(servicesInfo []go_hook.FilterResult) (result map[string][]string) {
+func servicesSnapshotsToMap(servicesInfo []go_hook.FilterResult) (result map[string][]string) {
 	result = make(map[string][]string)
 	for _, si := range servicesInfo {
 		serviceInfo := si.(ServiceInfo)
