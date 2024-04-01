@@ -1,0 +1,77 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: iprulesets.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: static-routing-manager
+spec:
+  group: network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: iprulesets
+    singular: ipruleset
+    kind: IPRuleSet
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            iprulesets crd
+          required:
+          - spec
+          properties:
+            spec:
+              type: object
+              required:
+              - rules
+              - nodeSelector
+              properties:
+                rules:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - from
+                      - to
+                      - lookup
+                    properties:
+                      priority:
+                        type: integer
+                        minimum: 0
+                        maximum: 32767
+                      from:
+                        type: string
+                        format: cidr
+                      to:
+                        type: string
+                        format: cidr
+                      lookup:
+                        type: object
+                        oneOf:
+                        - required: [ipRouteTableID]
+                        - required: [routeTableName]
+                        properties:
+                          ipRouteTableID:
+                            type: integer
+                            minimum: 0
+                            maximum: 4294967295
+                          routeTableName:
+                            type: string
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+            status:
+              type: object
+              properties:
+                ipRouteTableID:
+                  type: integer
+                  minimum: 0
+                  maximum: 4294967295
+                routeTableName:
+                  type: string

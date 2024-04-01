@@ -21,18 +21,18 @@ shell:
   - cd /src
   - go mod download
   setup:
-  - export GOOS=linux GOARCH=amd64
-  - export CGO_ENABLED=0
-  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/cmd
   - go build -ldflags="-s -w" -o controller .
-  - chown 64535:64535 /src/controller
-  - chmod 0700 /src/controller
+  - chown 64535:64535 /src/cmd/controller
+  - chmod 0700 /src/cmd/controller
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/controller
+  add: /src/cmd/controller
   to: /controller
   before: install
 docker:
