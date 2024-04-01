@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	ovirt "github.com/ovirt/go-ovirt-client"
+	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -26,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	zv1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
+	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
 	"github.com/deckhouse/deckhouse/internal/controller/utils"
 )
 
@@ -51,7 +52,7 @@ type ZvirtMachineReconciler struct {
 func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	zvMachine := &zv1alpha1.ZvirtMachine{}
+	zvMachine := &infrastructurev1.ZvirtMachine{}
 	err := r.Client.Get(ctx, req.NamespacedName, zvMachine)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -76,6 +77,18 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("cluster", cluster.Name)
+
+	zvCluster := &infrastructurev1.ZvirtCluster{}
+	err = r.Client.Get(ctx, types.NamespacedName{
+		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}, zvCluster)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("Error getting ZvirtCluster: %w", err)
+	}
 
 	if annotations.IsPaused(cluster, zvMachine) {
 		logger.Info("ZvirtMachine or linked Cluster is marked as paused. Will not reconcile.")
@@ -102,24 +115,24 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Handle non-deleted clusters
-	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine)
+	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine, zvCluster)
 }
 
 func patchZvirtMachine(
 	ctx context.Context,
 	patchHelper *patch.Helper,
-	zvirtMachine *zv1alpha1.ZvirtMachine,
+	zvirtMachine *infrastructurev1.ZvirtMachine,
 	options ...patch.Option,
 ) error {
 	conditions.SetSummary(zvirtMachine,
-		conditions.WithConditions(zv1alpha1.VMReadyCondition),
+		conditions.WithConditions(infrastructurev1.VMReadyCondition),
 	)
 
 	// Patch the object, ignoring conflicts on the conditions owned by this controller.
 	options = append(options,
 		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
 			clusterv1.ReadyCondition,
-			zv1alpha1.VMReadyCondition,
+			infrastructurev1.VMReadyCondition,
 		}},
 	)
 	return patchHelper.Patch(ctx, zvirtMachine, options...)
@@ -134,8 +147,9 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	logger logr.Logger,
 	cluster *clusterv1.Cluster,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
-) (_ ctrl.Result, reterr error) {
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
+) (ctrl.Result, error) {
 	var err error
 
 	if zvMachine.Status.FailureReason != nil || zvMachine.Status.FailureMessage != nil {
@@ -144,7 +158,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	// If ZvirtMachine is not under finalizer yet, set it now.
-	if controllerutil.AddFinalizer(zvMachine, zv1alpha1.MachineFinalizer) {
+	if controllerutil.AddFinalizer(zvMachine, infrastructurev1.MachineFinalizer) {
 		return ctrl.Result{}, nil
 	}
 
@@ -152,8 +166,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("Waiting for Cluster infrastructure to become Ready")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.WaitingForClusterInfrastructureReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.WaitingForClusterInfrastructureReason,
 			clusterv1.ConditionSeverityInfo,
 			"",
 		)
@@ -164,8 +178,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("Bootstrap cloud-init secret reference is missing from Machine")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.WaitingForBootstrapScriptReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.WaitingForBootstrapScriptReason,
 			clusterv1.ConditionSeverityInfo,
 			"",
 		)
@@ -173,17 +187,15 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	}
 
 	logger.Info("Reconciling ZvirtMachine")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-	defer cancel()
-	timeout := ovirt.ContextStrategy(timeoutCtx)
+	// timeout := ovirt.Timeout(15 * time.Minute)
 
-	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, timeout)
+	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster /*timeout*/)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see ZvirtMachine status for details")
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMErrorReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMErrorReason,
 			clusterv1.ConditionSeverityError,
 			"No VM can be found or created for Machine: %v",
 			err,
@@ -191,25 +203,28 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		return ctrl.Result{}, fmt.Errorf("Find or create new VM for ZvirtMachine: %w", err)
 	}
 
-	vmMisconfigured, err := r.checkIfVirtualMachineIsMisconfigured(vm, zvMachine, logger, timeout)
+	vmid := vm.ID()
+	vmMisconfigured, err := r.checkIfVirtualMachineIsMisconfigured(ctx, vmid, zvMachine, logger /*timeout*/)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Check if VM is misconfigured and should be recreated: %w", err)
 	}
 
+	zVirtClient := r.Zvirt.WithContext(ctx)
 	if vmMisconfigured {
-		_ = vm.Stop(true, timeout)
-		if err = vm.Remove(timeout); err != nil {
+		// TODO(mvasl) We probably should detach all of the disks except bootable before removing VM.
+		_ = zVirtClient.StopVM(vmid, true /*timeout*/)
+		if err = zVirtClient.RemoveVM(vmid /*timeout*/); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Cannot delete misconfigured VM: %w", err)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	zvMachine.Spec.ID = string(vm.ID())
-	zvMachine.Spec.ProviderID = string(ProviderIDPrefix + vm.ID())
+	zvMachine.Spec.ID = string(vmid)
+	zvMachine.Spec.ProviderID = string(ProviderIDPrefix + vmid)
 
 	// Node usually joins the cluster if the CSR generated by kubelet with the node name is approved.
 	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
-	zvMachine.Status.Addresses = []zv1alpha1.VMAddress{
+	zvMachine.Status.Addresses = []infrastructurev1.VMAddress{
 		{Type: clusterv1.MachineHostName, Address: machine.Name},
 		{Type: clusterv1.MachineInternalDNS, Address: machine.Name},
 	}
@@ -217,11 +232,11 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	vmStatus := vm.Status()
 	switch vmStatus {
 	case ovirt.VMStatusUp:
-		logger.Info("VM state is UP", "id", vm.ID())
-		conditions.MarkTrue(zvMachine, zv1alpha1.VMReadyCondition)
+		logger.Info("VM state is UP", "id", vmid)
+		conditions.MarkTrue(zvMachine, infrastructurev1.VMReadyCondition)
 		zvMachine.Status.Ready = true
 
-		addrs, err := vm.WaitForNonLocalIPAddress(timeout)
+		addrs, err := zVirtClient.WaitForNonLocalVMIPAddress(vmid /*timeout*/)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("Tired of waiting for VM to get IP address: %w", err)
 		}
@@ -250,7 +265,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 			)
 		}
 
-		zvMachine.Status.Addresses = append(zvMachine.Status.Addresses, []zv1alpha1.VMAddress{
+		zvMachine.Status.Addresses = append(zvMachine.Status.Addresses, []infrastructurev1.VMAddress{
 			{Type: clusterv1.MachineInternalIP, Address: machineAddress},
 			{Type: clusterv1.MachineExternalIP, Address: machineAddress},
 		}...)
@@ -262,7 +277,7 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		// If the machine has a NodeRef then it must have been working at some point,
 		// so the error could be something temporary.
 		// If not, it is more likely a configuration error, so we record failure and never retry.
-		logger.Info("VM failed", "id", vm.ID(), "state", vmStatus)
+		logger.Info("VM failed", "id", vmid, "state", vmStatus)
 		if machine.Status.NodeRef == nil {
 			err = fmt.Errorf("VM state %q is unexpected", vmStatus)
 			zvMachine.Status.FailureReason = pointer.String(string(capierrors.UpdateMachineError))
@@ -270,23 +285,23 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		}
 		conditions.MarkFalse(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMInFailedStateReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMInFailedStateReason,
 			clusterv1.ConditionSeverityError,
 			"",
 		)
 		return ctrl.Result{}, nil
 	case ovirt.VMStatusDown:
-		logger.Info("VM is DOWN, starting it", "id", vm.ID())
-		if err = vm.Start(timeout); err != nil {
-			return ctrl.Result{}, fmt.Errorf("Cannot start VM %q : %w", vm.ID(), err)
+		logger.Info("VM is DOWN, starting it", "id", vmid)
+		if err = zVirtClient.StartVM(vmid /*timeout*/); err != nil {
+			return ctrl.Result{}, fmt.Errorf("Cannot start VM %q : %w", vmid, err)
 		}
-		vm, err = vm.WaitForStatus(ovirt.VMStatusUp, timeout)
+		_, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusUp /*timeout*/)
 		if err != nil {
 			conditions.MarkFalse(
 				zvMachine,
-				zv1alpha1.VMReadyCondition,
-				zv1alpha1.VMErrorReason,
+				infrastructurev1.VMReadyCondition,
+				infrastructurev1.VMErrorReason,
 				clusterv1.ConditionSeverityError,
 				"%v", err,
 			)
@@ -295,11 +310,11 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	default:
 		// The other states are normal (for example, migration or shutoff) but we don't want to proceed until it's up
 		// due to potential conflict or unexpected actions
-		logger.Info("Waiting for VM to become UP", "id", vm.ID(), "status", vmStatus)
+		logger.Info("Waiting for VM to become UP", "id", vmid, "status", vmStatus)
 		conditions.MarkUnknown(
 			zvMachine,
-			zv1alpha1.VMReadyCondition,
-			zv1alpha1.VMNotReadyReason,
+			infrastructurev1.VMReadyCondition,
+			infrastructurev1.VMNotReadyReason,
 			"VM is not ready, state is %s",
 			vmStatus,
 		)
@@ -313,10 +328,11 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 func (r *ZvirtMachineReconciler) getOrCreateVM(
 	ctx context.Context,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
 	retryStrategy ...ovirt.RetryStrategy,
 ) (ovirt.VM, error) {
-	vm, foundVM, err := r.findVMForMachine(machine, retryStrategy...)
+	vm, foundVM, err := r.findVMForMachine(ctx, machine, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Lookup VM by name of Machine: %w", err)
 	}
@@ -325,14 +341,15 @@ func (r *ZvirtMachineReconciler) getOrCreateVM(
 		return vm, nil
 	}
 
-	return r.createVM(ctx, machine, zvMachine, retryStrategy)
+	return r.createVM(ctx, machine, zvMachine, zvCluster, retryStrategy...)
 }
 
 func (r *ZvirtMachineReconciler) createVM(
 	ctx context.Context,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
-	retryStrategy []ovirt.RetryStrategy,
+	zvMachine *infrastructurev1.ZvirtMachine,
+	zvCluster *infrastructurev1.ZvirtCluster,
+	retryStrategy ...ovirt.RetryStrategy,
 ) (ovirt.VM, error) {
 	dataSecretName := *machine.Spec.Bootstrap.DataSecretName
 	bootstrapDataSecret := &corev1.Secret{}
@@ -357,21 +374,25 @@ func (r *ZvirtMachineReconciler) createVM(
 		return nil, err
 	}
 
-	tpl, err := r.Zvirt.GetTemplateByName(zvMachine.Spec.TemplateName, retryStrategy...)
+	zVirtClient := r.Zvirt.WithContext(ctx)
+
+	tpl, err := zVirtClient.GetTemplateByName(zvMachine.Spec.TemplateName, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get VM template %q: %w", zvMachine.Spec.TemplateName, err)
 	}
 
-	vm, err := r.Zvirt.CreateVM(ovirt.ClusterID(zvMachine.Spec.ClusterID), tpl.ID(), machine.Name, vmConfig, retryStrategy...)
+	vm, err := zVirtClient.CreateVM(ovirt.ClusterID(zvCluster.Spec.ID), tpl.ID(), machine.Name, vmConfig, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create VM: %w", err)
 	}
 
-	if vm, err = vm.WaitForStatus(ovirt.VMStatusDown, retryStrategy...); err != nil {
+	vmid := vm.ID()
+
+	if _, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusDown, retryStrategy...); err != nil {
 		return nil, fmt.Errorf("Tired of waiting for VM to be created: %w", err)
 	}
 
-	disks, err := vm.ListDiskAttachments(retryStrategy...)
+	disks, err := zVirtClient.ListDiskAttachments(vmid, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot resize VM boot disk: %w", err)
 	}
@@ -382,12 +403,13 @@ func (r *ZvirtMachineReconciler) createVM(
 	diskResized := false
 	for _, diskAttach := range disks {
 		if diskAttach.Bootable() && diskAttach.Active() {
-			diskParams, err := ovirt.UpdateDiskParams().WithProvisionedSize(uint64(zvMachine.Spec.RootDiskSize * 1024 * 1024 * 1024))
+			diskParams, err := ovirt.UpdateDiskParams().
+				WithProvisionedSize(uint64(zvMachine.Spec.RootDiskSize * 1024 * 1024 * 1024))
 			if err != nil {
 				return nil, fmt.Errorf("Cannot resize VM boot disk: %w", err)
 			}
 
-			if _, err = r.Zvirt.UpdateDisk(diskAttach.DiskID(), diskParams); err != nil {
+			if _, err = zVirtClient.UpdateDisk(diskAttach.DiskID(), diskParams); err != nil {
 				return nil, fmt.Errorf("Cannot resize VM boot disk: %w", err)
 			}
 
@@ -399,16 +421,22 @@ func (r *ZvirtMachineReconciler) createVM(
 		return nil, fmt.Errorf("Cannot find any active bootable disks on created VM, check if your template is configured correctly: %w", err)
 	}
 
-	_, err = vm.CreateNIC(zvMachine.Spec.NicName, ovirt.VNICProfileID(zvMachine.Spec.VNICProfileID), nil, retryStrategy...)
+	_, err = zVirtClient.CreateNIC(
+		vmid,
+		ovirt.VNICProfileID(zvMachine.Spec.VNICProfileID),
+		zvMachine.Spec.NicName,
+		nil,
+		retryStrategy...,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Attach vNIC to the VM: %w", err)
 	}
 
-	if err = vm.Start(retryStrategy...); err != nil {
+	if err = zVirtClient.StartVM(vmid, retryStrategy...); err != nil {
 		return nil, fmt.Errorf("Cannot start VM: %w", err)
 	}
 
-	addrs, err := vm.WaitForNonLocalIPAddress(retryStrategy...)
+	addrs, err := zVirtClient.WaitForNonLocalVMIPAddress(vmid, retryStrategy...)
 	if err != nil {
 		return nil, fmt.Errorf("Tired of waiting for VM to get IP address: %w", err)
 	}
@@ -441,17 +469,20 @@ func (r *ZvirtMachineReconciler) createVM(
 }
 
 func (r *ZvirtMachineReconciler) checkIfVirtualMachineIsMisconfigured(
-	vm ovirt.VM,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	ctx context.Context,
+	vmid ovirt.VMID,
+	zvMachine *infrastructurev1.ZvirtMachine,
 	logger logr.Logger,
 	retryStrategy ...ovirt.RetryStrategy,
 ) (bool, error) {
-	nics, err := vm.ListNICs(retryStrategy...)
+	zVirtClient := r.Zvirt.WithContext(ctx)
+
+	nics, err := zVirtClient.ListNICs(vmid, retryStrategy...)
 	if err != nil {
 		return false, fmt.Errorf("Error checking if VM was configured properly: %w", err)
 	}
 
-	disks, err := vm.ListDiskAttachments(retryStrategy...)
+	disks, err := zVirtClient.ListDiskAttachments(vmid, retryStrategy...)
 	if err != nil {
 		return false, fmt.Errorf("Error checking if VM was configured properly: %w", err)
 	}
@@ -480,36 +511,54 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	machine *clusterv1.Machine,
-	zvMachine *zv1alpha1.ZvirtMachine,
+	zvMachine *infrastructurev1.ZvirtMachine,
 ) (ctrl.Result, error) {
 	logger.Info("Reconciling Machine delete")
+	// timeout := ovirt.Timeout(5 * time.Minute)
+	zVirtClient := r.Zvirt.WithContext(ctx)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	timeout := ovirt.ContextStrategy(timeoutCtx)
-
-	vm, vmFound, err := r.findVMForMachine(machine, timeout)
+	vm, vmFound, err := r.findVMForMachine(ctx, machine /*timeout*/)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Find zVirt VM for Machine: %w", err)
 	}
 	if vmFound {
-		if err := vm.Shutdown(true, timeout); err != nil {
+		vmid := vm.ID()
+		disks, err := zVirtClient.WithContext(ctx).ListDiskAttachments(vmid /*timeout*/)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("List zVirt VM disks: %w", err)
+		}
+		for _, disk := range disks {
+			if !disk.Bootable() {
+				err := disk.Remove()
+				if err != nil {
+					return ctrl.Result{Requeue: true}, fmt.Errorf("Detach disk %v from vm %s. %w", disk.DiskID(), vm.Name(), err)
+				}
+				// logger.Info("Cowardly refusing to delete VM %q that has non-bootable disks, will wait for CSI to detach them first", "vm", vm.Name())
+				// return ctrl.Result{Requeue: true}, nil
+			}
+		}
+
+		if err = zVirtClient.ShutdownVM(vmid, true /*timeout*/); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Shutdown zVirt VM: %w", err)
 		}
-		if err := vm.Remove(timeout); err != nil {
+		if err = zVirtClient.RemoveVM(vmid /*timeout*/); err != nil {
 			return ctrl.Result{}, fmt.Errorf("Delete zVirt VM: %w", err)
 		}
 	} else {
 		logger.Info("VM not found in zVirt, nothing to do")
 	}
 
-	controllerutil.RemoveFinalizer(zvMachine, zv1alpha1.MachineFinalizer)
+	controllerutil.RemoveFinalizer(zvMachine, infrastructurev1.MachineFinalizer)
 	logger.Info("Reconciled Machine delete successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *ZvirtMachineReconciler) findVMForMachine(machine *clusterv1.Machine, retryStrategy ...ovirt.RetryStrategy) (ovirt.VM, bool, error) {
-	vm, err := r.Zvirt.GetVMByName(machine.Name, retryStrategy...)
+func (r *ZvirtMachineReconciler) findVMForMachine(
+	ctx context.Context,
+	machine *clusterv1.Machine,
+	retryStrategy ...ovirt.RetryStrategy,
+) (ovirt.VM, bool, error) {
+	vm, err := r.Zvirt.WithContext(ctx).GetVMByName(machine.Name, retryStrategy...)
 	switch {
 	case err != nil && ovirt.HasErrorCode(err, ovirt.ENotFound):
 		return nil, false, nil
@@ -522,7 +571,7 @@ func (r *ZvirtMachineReconciler) findVMForMachine(machine *clusterv1.Machine, re
 
 func (r *ZvirtMachineReconciler) vmConfigFromZvirtMachineSpec(
 	hostname string,
-	machineSpec *zv1alpha1.ZvirtMachineSpec,
+	machineSpec *infrastructurev1.ZvirtMachineSpec,
 	cloudInitScript []byte,
 ) (ovirt.BuildableVMParameters, error) {
 	ramBytes := int64(machineSpec.Memory) * 1024 * 1024
@@ -562,6 +611,6 @@ func (r *ZvirtMachineReconciler) vmConfigFromZvirtMachineSpec(
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZvirtMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&zv1alpha1.ZvirtMachine{}).
+		For(&infrastructurev1.ZvirtMachine{}).
 		Complete(r)
 }

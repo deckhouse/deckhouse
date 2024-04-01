@@ -12,8 +12,8 @@ resource "ovirt_vm" "master_vm" {
   template_id = tolist(data.ovirt_templates.master_template.templates)[0].id
   clone = true
 
-  cpu_sockets = local.master_cpus
-  cpu_cores   = 1
+  cpu_sockets = 1
+  cpu_cores   = local.master_cpus
   cpu_threads = 1
 
   memory         = local.master_ram_mb * 1024 * 1024
@@ -26,6 +26,7 @@ resource "ovirt_vm" "master_vm" {
 
   lifecycle {
     ignore_changes = [
+      os_type,
       initialization_custom_script,
       placement_policy_affinity,
       placement_policy_host_ids
