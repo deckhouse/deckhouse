@@ -25,7 +25,6 @@ apiVersions:
         masterNodeGroup:
           replicas: 1
           instanceClass:
-            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             numCPUs: 4
             memory: 8192
             template: debian-bookworm
@@ -36,7 +35,6 @@ apiVersions:
           - name: worker
             replicas: 1
             instanceClass:
-              clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
               numCPUs: 4
               memory: 8192
               template: debian-bookworm
@@ -79,15 +77,10 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [clusterId, numCPUs, memory, template]
+            required: [numCPUs, memory, template]
             description: |
               Partial contents of the fields of the [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties
-              clusterId:
-                type: string
-                description: |
-                  Cluster id.
-                example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               numCPUs:
                 type: integer
                 description: |
@@ -192,7 +185,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [clusterId, numCPUs, memory, template]
+              required: [numCPUs, memory, template]
               description: |
                 Partial contents of the fields of the.
               properties:
