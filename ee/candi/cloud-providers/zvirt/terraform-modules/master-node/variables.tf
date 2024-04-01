@@ -28,7 +28,7 @@ locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
   vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnicProfileId", [])
   storage_domain_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageDomainId", [])
-  cluster_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "clusterId", [])
+  cluster_id = lookup(var.providerClusterConfiguration, "clusterId", [])
   template_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "template", [])
   master_node_name = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
   master_cpus = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "numCPUs", [])

@@ -1,7 +1,11 @@
 {{- $providerClusterConfiguration := .zvirt | required "internal.providerClusterConfiguration is required" }}
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1
 kind: ZvirtCluster
 metadata:
   name: "zvirt"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
+spec:
+  {{- if $providerClusterConfiguration.clusterId }}
+  id: {{ $providerClusterConfiguration.clusterId | quote }}
+  {{- end }}

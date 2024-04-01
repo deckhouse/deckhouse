@@ -24,7 +24,7 @@ func NewComputeService(client ovirtclient.ClientWithLegacySupport) *ComputeServi
 }
 
 func (cSvc *ComputeService) GetVMByName(ctx context.Context, name string) (ovirtclient.VM, error) {
-	vm, err := cSvc.client.GetVMByName(name, getRetryStrategy(ctx)...)
+	vm, err := cSvc.client.WithContext(ctx).GetVMByName(name)
 	if err != nil && ovirtclient.HasErrorCode(err, ovirtclient.ENotFound) {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, err.Error())
 	} else if err != nil {
@@ -34,7 +34,7 @@ func (cSvc *ComputeService) GetVMByName(ctx context.Context, name string) (ovirt
 }
 
 func (cSvc *ComputeService) GetVMByID(ctx context.Context, id string) (ovirtclient.VM, error) {
-	vm, err := cSvc.client.GetVM(ovirtclient.VMID(id))
+	vm, err := cSvc.client.WithContext(ctx).GetVM(ovirtclient.VMID(id))
 	if err != nil && ovirtclient.HasErrorCode(err, ovirtclient.ENotFound) {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, err.Error())
 	} else if err != nil {
@@ -50,7 +50,7 @@ func (cSvc *ComputeService) GetVMIPAddresses(ctx context.Context, vm ovirtclient
 	externalIPs := []string{}
 	localIPs := []string{}
 
-	vmExternalIPs, err := vm.GetNonLocalIPAddresses(getRetryStrategy(ctx)...)
+	vmExternalIPs, err := vm.GetNonLocalIPAddresses()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +69,7 @@ func (cSvc *ComputeService) GetVMIPAddresses(ctx context.Context, vm ovirtclient
 		}
 	}
 
-	vmIPs, err := vm.GetIPAddresses(ovirtclient.NewVMIPSearchParams(), getRetryStrategy(ctx)...)
+	vmIPs, err := vm.GetIPAddresses(ovirtclient.NewVMIPSearchParams())
 	if err != nil {
 		return nil, nil, err
 	}

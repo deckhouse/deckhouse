@@ -2,13 +2,13 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 variable "url" {
-  description = "oVirt API URL"
+  description = "zVirt API URL"
 }
 variable "username" {
-  description = "oVirt Admin user"
+  description = "zVirt Admin user"
 }
 variable "password" {
-  description = "oVirt Admin password"
+  description = "zVirt Admin password"
 }
 variable "insecure_mode" {
   description = "TLS validation"
@@ -50,7 +50,3 @@ variable "instance_vm_type" {
   default = "high_performance"
 }
 
-variable "node_name_prefix" {
-  description = "Prefix for Node naming"
-  default = "d8"
-}

@@ -3,11 +3,7 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
-{{- if $ccmImage }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -78,7 +74,7 @@ spec:
       containers:
         - name: zvirt-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ $ccmImage }}
+          image: {{ include "helm_lib_module_image" (list . "cloudControllerManager") }}
           args:
           - --leader-elect=true
           - --cloud-provider=zvirt
@@ -117,7 +113,6 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "zvirt_cloud_controller_manager_resources" . | nindent 14 }}
-  {{- end }}
 {{- end }}
