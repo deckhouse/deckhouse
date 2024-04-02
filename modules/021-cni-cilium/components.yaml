@@ -1,0 +1,38 @@
+components:
+- name: agent
+  description: TODO
+  namespace: d8-cni-cilium
+  labelSelector:
+    app: agent
+  network:
+    hostNetwork: true
+    listenPorts:
+    - number: 9734
+      description: metrics exporter
+      name: metrics
+    output:
+    - type: APIServer
+    input:
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]
+- name: operator
+  description: TODO
+  namespace: d8-cni-cilium
+  labelSelector:
+    app: operator
+  network:
+    listenPorts:
+    - number: 9735
+      name: metrics
+      description: metrics exporter
+    output:
+    - type: APIServer
+    input:
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]

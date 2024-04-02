@@ -1,0 +1,45 @@
+components:
+- name: cert-manager
+  description: TODO
+  namespace: d8-cert-manager
+  labelSelector:
+    app: cert-manager
+  network:
+    listenPorts:
+    - number: 9404
+      description: metrics exporter
+      name: metrics
+    output:
+    - type: WorldPorts
+      worldPorts:
+        tcp: [80, 443]
+    - type: APIServer
+    input:
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]
+- name: cainjector
+  description: TODO
+  namespace: d8-cert-manager
+  labelSelector:
+    app: cainjector
+  network:
+    output:
+    - type: APIServer
+- name: webhook
+  description: TODO
+  namespace: d8-cert-manager
+  labelSelector:
+    app: webhook
+  network:
+    listenPorts:
+    - number: 6443
+      description: TODO
+      name: https
+    output:
+    - type: APIServer
+    input:
+    - type: APIServer
+      ports: [https]

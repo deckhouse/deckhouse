@@ -1,0 +1,30 @@
+components:
+- name: istiod
+  description: The istio control-plane.
+  namespace: d8-istio
+  labelSelector:
+    app: istiod
+  network:
+    listenPorts:
+    - number: 15012
+      description: Discovery port for Istio sidecars.
+      name: xds
+    - number: 15014
+      description: Metrics exporter.
+      name: metrics
+    - number: 15017
+      description: Mutating/validating webhook handler.
+      name: webhook
+    output:
+    - type: APIServer
+    # TODO: multicluster/federation apiserver/metadata???
+    input:
+    - type: APIServer
+      ports: [webhook]
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]
+    - type: Cluster
+      ports: [xds]

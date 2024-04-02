@@ -1,0 +1,10 @@
+components:
+- name: control-plane-manager
+  description: The controller to render control-plane manifests with kubeadm.
+  namespace: kube-system
+  labelSelector:
+    app: d8-control-plane-manager
+  network:
+    hostNetwork: true
+    output:
+    - type: APIServer

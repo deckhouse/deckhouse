@@ -1,0 +1,34 @@
+components:
+- name: gatekeeper
+  description: The main mutating/validating webhook handler
+  namespace: d8-admission-policy-engine
+  labelSelector:
+    app: gatekeeper
+    control-plane: controller-manager
+  network:
+    listenPorts:
+    - number: 8443
+      description: gatekeeper webhook server
+      name: webhook
+    - number: 10354
+      description: metrics exporter
+      name: metrics
+    output:
+    - type: APIServer
+    input:
+    - type: APIServer
+      ports: [webhook]
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]
+- name: audit
+  description: TODO
+  namespace: d8-admission-policy-engine
+  labelSelector:
+    app: gatekeeper
+    control-plane: audit-controller
+  network:
+    output:
+    - type: APIServer

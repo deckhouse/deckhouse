@@ -1,0 +1,10 @@
+components:
+- name: local-path-provisioner
+  namespace: d8-local-path-provisioner
+  description: Local path provisioner agent
+  labelSelector:
+    app: local-path-provisioner
+  network:
+    hostNetwork: true
+    output:
+    - type: APIServer
