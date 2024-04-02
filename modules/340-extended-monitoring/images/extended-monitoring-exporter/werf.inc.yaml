@@ -36,5 +36,5 @@ shell:
   setup:
     - cd /src
     - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /image-availability-exporter .
-    - chown 64535:64535 /src/image-availability-exporter
-    - chmod 0700 /src/image-availability-exporter
+    - chown 64535:64535 /image-availability-exporter
+    - chmod 0700 /image-availability-exporter
