@@ -294,14 +294,19 @@ func ValidateProviderSpecificClusterConfiguration(
 		return nil
 	}
 
-	providerKind, ok := cloudProviderToProviderKind[clusterConfig.Cloud.Provider]
-	if !ok {
-		return fmt.Errorf("unknown cloud provider %q", clusterConfig.Cloud.Provider)
-	}
-
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(providerSpecificClusterConfiguration), -1)
 	errs := &ValidationError{}
 	var clusterConfigDocsCount int
+
+	providerKind, ok := cloudProviderToProviderKind[clusterConfig.Cloud.Provider]
+	if !ok {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Sprintf(
+				"unknown cloud provider '%s', check if 'ClusterConfiguration' is valid",
+				clusterConfig.Cloud.Provider,
+			)},
+		})
+	}
 
 	for i, doc := range docs {
 		if doc == "" {
