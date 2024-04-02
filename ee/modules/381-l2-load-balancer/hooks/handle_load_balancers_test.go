@@ -42,6 +42,7 @@ spec:
   service:
     sourceRanges:
     - 10.0.0.0/24
+    externalTrafficPolicy: Local
     selector:
       app: test
     ports:
@@ -132,6 +133,7 @@ spec:
   service:
     selector:
       app: test
+    externalTrafficPolicy: Local
     ports:
     - name: http
       protocol: TCP

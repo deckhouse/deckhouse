@@ -94,6 +94,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 			testD := hec.KubernetesResource("L2LoadBalancer", "d8-ingress-nginx", "test")
 			Expect(testD.Exists()).To(BeTrue())
 			Expect(testD.Field("spec.service").String()).To(MatchYAML(`
+externalTrafficPolicy: Local
 labelSelector:
   app: controller
   name: test
