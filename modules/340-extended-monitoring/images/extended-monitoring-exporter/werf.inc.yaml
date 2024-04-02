@@ -4,42 +4,37 @@ fromImage: common/distroless
 docker:
   ENTRYPOINT: ["/image-availability-exporter"]
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /image-availability-exporter
-  to: /image-availability-exporter
-  after: setup
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /image-availability-exporter
+    to: /image-availability-exporter
+    after: setup
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
-- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src
-  excludePaths:
-    - "**/*.md"
-    - "**/*.yaml"
-    - hack
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-    setup:
-      - go.mod
-      - go.sum
-      - "**/*.go"
+  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - go.mod
+        - go.sum
+        - "**/*.go"
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
-  beforeInstall:
-  - |
-    apk upgrade --available --no-cache && \
-    apk add --no-cache ca-certificates git make
   install:
-  - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+    - cd /src
+    - GOPROXY={{ $.GOPROXY }} go mod download
   setup:
-  - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /image-availability-exporter .
-  - chown 64535:64535 /src/image-availability-exporter
-  - chmod 0755 /src/image-availability-exporter
+    - cd /src
+    - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /image-availability-exporter .
+    - chown 64535:64535 /src/image-availability-exporter
+    - chmod 0700 /src/image-availability-exporter
