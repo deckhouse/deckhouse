@@ -27,4 +27,4 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 | Block Storage (Cinder)            | v3          |
 | Load Balancing (Octavia) &#8432;  | v2          |
 
-&#8432;  If the Load Balancer ordering functionality will be used.
+&#8432;  If you need to order a Load Balancer.

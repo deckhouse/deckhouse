@@ -27,4 +27,4 @@ title: "Сloud provider — OpenStack: настройки"
 | Block Storage (Cinder)           | v3         |
 | Load Balancing (Octavia) &#8432; | v2         |
 
-&#8432;  Если будет использована функциональность заказа Load Balancer.
+&#8432;  Если нужно заказывать Load Balancer.
