@@ -61,7 +61,7 @@ title: "The l2-load-balancer module: примеры"
   
   Назначенные IP адреса можно также увидеть в разделе Status объекта L2LoadBalacner:
   ```bash
-  kubectl describe l2loadbalancers.deckhouse.io test
+  kubectl describe l2loadbalancers.deckhouse.io nginx
   ...
   Status:
     Public Addresses:

@@ -60,7 +60,7 @@ title: "The l2-load-balancer module: examples"
   ```
   The assigned IP addresses can also be seen in the Status section of the custom resource L2LoadBalancer:
   ```bash
-  kubectl describe l2loadbalancers.deckhouse.io test
+  kubectl describe l2loadbalancers.deckhouse.io nginx
   ...
   Status:
     Public Addresses:
