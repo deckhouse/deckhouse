@@ -11,7 +11,7 @@ title: "Сloud provider — OpenStack: настройки"
 Если вам необходимо настроить модуль, потому что, например, у вас bare-metal-кластер, для которого нужно включить возможность добавлять дополнительные инстансы из OpenStack, смотрите раздел [Как настроить Hybrid-кластер в OpenStack](faq.html#как-поднять-гибридный-кластер).
 
 > **Внимание!** При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее [в документации модуля node-manager](../../modules/040-node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
-Для настройки аутентификации с помощью модуля `user-authn` необходимо в Crowd'е проекта создать новое `Generic` приложение.
+> Для настройки аутентификации с помощью модуля `user-authn` необходимо в Crowd'е проекта создать новое `Generic` приложение.
 
 {% include module-settings.liquid %}
 
@@ -19,10 +19,12 @@ title: "Сloud provider — OpenStack: настройки"
 
 Список сервисов OpenStack, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
 
-| Сервис | Версия API |
-| :------------- | :------------- |
-| Identity (Keystone) | v3 |
-| Compute (Nova) | v2 |
-| Network (Neutron) | v2 |
-| Block Storage (Cinder) | Если будет использована функциональность заказа Load Balancer: v3 |
-| Load Balancing (Octavia) | v2 |
+| Сервис                           | Версия API |
+|:---------------------------------|:----------:|
+| Identity (Keystone)              | v3         |
+| Compute (Nova)                   | v2         |
+| Network (Neutron)                | v2         |
+| Block Storage (Cinder)           | v3         |
+| Load Balancing (Octavia) &#8432; | v2         |
+
+&#8432;  Если будет использована функциональность заказа Load Balancer.
