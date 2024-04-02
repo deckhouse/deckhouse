@@ -815,17 +815,24 @@ kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approv
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
   - Установлен параметр [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) и указанное в нем время еще не прошло.
 
-### Информация о предстоящем обновлении
+### Обновление версий Kubernetes
 
-Получать заранее информацию об обновлении минорных версий Deckhouse на канале обновлений можно следующими способами:
-- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
-- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
+Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
+1. Выполните команду:
 
-### Поддержка более 2-ух последних версий Kubernetes (CE)
+   ```shell
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+1. Измените параметр `kubernetesVersion`.
+1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
+## Поддержка более 2-ух последних версий Kubernetes (CE)
 
 В базовых редакциях поддерживается только две последних версии Kubernetes, в более продвинутых поддерживается 4 последние вышедшие версии Kubernetes.						
 
-### Поддержка LTS (EE)
+## Поддержка LTS (EE)
 
 Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
 
@@ -833,11 +840,15 @@ kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approv
 
 Подробный список изменений можно найти в Changelog, ссылка на который есть в каждом [релизе](https://github.com/deckhouse/deckhouse/releases).
 
-Долгосрочная поддержка (LTS) относится к поддержке определенного выпуска (обычно это самая последняя версия, которая поддерживается в течение длительного периода времени). Чтобы настроить LTS в кластере Deckhouse Kubernetes Platform, выполните следующие шаги:
+Долгосрочная поддержка (LTS) относится к поддержке определенного выпуска (обычно это самая последняя версия, которая поддерживается в течение длительного периода времени).
 
 <!--нужен этот сценарий-->
 
 ### Уведомление о процедуре обновления в кластере
+
+Получать заранее информацию об обновлении минорных версий Deckhouse на канале обновлений можно следующими способами:
+- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
+- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
 
 Во время обновления:
 - горит алерт `DeckhouseUpdating`;
@@ -923,18 +934,6 @@ status:
   type: Embedded
   version: "1"
 ```
-### Как обновить версию Kubernetes в кластере?
-
-Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
-1. Выполните команду:
-
-   ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
-   ```
-
-1. Измените параметр `kubernetesVersion`.
-1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 ### Как запускать Deckhouse Kubernetes Platform на произвольном узле?
 
