@@ -20,7 +20,7 @@ docker:
     crictl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -28,8 +28,6 @@ git:
       setup:
       - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache git make
   setup:
   - export GOPROXY={{ $.GOPROXY }}
   - git clone --depth 1 --branch v{{ $version }}.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git

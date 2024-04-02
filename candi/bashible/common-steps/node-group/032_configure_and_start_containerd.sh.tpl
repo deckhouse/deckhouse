@@ -15,16 +15,10 @@
 {{- if eq .cri "Containerd" }}
 _on_containerd_config_changed() {
   {{ if ne .runType "ImageBuilding" -}}
-  systemctl restart containerd-deckhouse.service
+  bb-flag-set containerd-need-restart
   bb-flag-set kubelet-need-restart
   {{- end }}
 }
-
-if bb-flag? containerd-need-restart; then
-  bb-log-warning "'containerd-need-restart' flag was set. Containerd should be restarted!"
-  _on_containerd_config_changed
-  bb-flag-unset containerd-need-restart
-fi
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
@@ -202,4 +196,13 @@ timeout: 2
 debug: false
 pull-image-on-create: false
 EOF
+
+if bb-flag? containerd-need-restart; then
+  bb-log-warning "'containerd-need-restart' flag was set. Containerd should be restarted!"
+  {{ if ne .runType "ImageBuilding" -}}
+  systemctl restart containerd-deckhouse.service
+  {{- end }}
+  bb-flag-unset containerd-need-restart
+fi
+
 {{- end }}

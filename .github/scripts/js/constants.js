@@ -22,6 +22,7 @@ const labels = {
   'skip/no-cyrillic-validation': { type: 'skip-validation', validation_name: 'no_cyrillic' },
   'skip/documentation-validation': { type: 'skip-validation', validation_name: 'doc_changes' },
   'skip/copyright-validation': { type: 'skip-validation', validation_name: 'copyright' },
+  'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
 
@@ -40,11 +41,11 @@ const labels = {
   'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'Containerd' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.24': { type: 'e2e-use', ver: '1.24' },
   'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },
   'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
+  'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
@@ -55,7 +56,9 @@ const labels = {
 
   // Edition for build-and-test workflow
   'edition/ce': { type: 'edition', edition: 'CE' },
-  'edition/ee': { type: 'edition', edition: 'EE' }
+  'edition/ee': { type: 'edition', edition: 'EE' },
+  'edition/be': { type: 'edition', edition: 'BE' },
+  'edition/se': { type: 'edition', edition: 'SE' }
 };
 module.exports.knownLabels = labels;
 
@@ -148,6 +151,8 @@ module.exports.e2eDefaults = {
 const editions = [
   'CE',
   'EE',
-  'FE'
+  'FE',
+  'BE',
+  'SE'
 ];
 module.exports.knownEditions = editions;

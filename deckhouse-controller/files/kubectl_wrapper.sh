@@ -24,11 +24,11 @@ else
 fi
 
 case "$kubernetes_version" in
-  1.23.* | 1.24.* | 1.25.* )
-    kubectl_version="1.24"
+  1.24.* | 1.25.* | 1.26.* )
+    kubectl_version="1.25"
     ;;
-  1.26.* | 1.27.* | 1.28.* )
-    kubectl_version="1.27"
+  1.27.* | 1.28.* | 1.29.* )
+    kubectl_version="1.28"
     ;;
   *)
     >&2 echo "ERROR: unsupported kubernetes version $kubernetes_version"

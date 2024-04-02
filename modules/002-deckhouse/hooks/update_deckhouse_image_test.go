@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -37,6 +38,7 @@ import (
 var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
+          "clusterIsBootstrapped": true,
           "modulesImages": {
 			"registry": {
 				"base": "my.registry.com/deckhouse"
@@ -52,6 +54,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			  }
 			}
 }`, `{}`)
+	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "yes")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
@@ -59,6 +62,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 	Context("Update out of window", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "10:00"}]`))
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -153,6 +162,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -168,6 +183,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -300,9 +321,10 @@ spec:
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
-		It("Should remove deckhouse pod", func() {
+		It("Should set restart annotation to the deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-system", "deckhouse-6f46df5bd7-nk4j7").Exists()).To(BeFalse())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.metadata.annotations.kubectl\\.kubernetes\\.io/restartedAt").String()).To(BeEquivalentTo("2021-01-01T13:30:00Z"))
 		})
 	})
 
@@ -355,7 +377,8 @@ spec:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
-			f.KubeStateSet(deckhouseBootstrapPod + deckhouseDeployment + deckhousePatchRelease)
+			f.ValuesDelete("global.clusterIsBootstrapped")
+			f.KubeStateSet(deckhousePodYaml + deckhousePatchRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -386,11 +409,12 @@ spec:
 		})
 	})
 
-	Context("Pending Manual release", func() {
+	Context("Pending Manual release on cluster bootstrap", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
-			f.KubeStateSet(deckhouseBootstrapPod + deckhouseDeployment + `
+			f.ValuesDelete("global.clusterIsBootstrapped")
+			f.KubeStateSet(deckhousePodYaml + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -842,6 +866,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
 
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
 			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -857,6 +887,12 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
 
 			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + appliedNowReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -932,25 +968,7 @@ status:
       imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
       ready: true
 `
-	deckhouseBootstrapPod = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: deckhouse-6f46df5bd7-nk4j7
-  namespace: d8-system
-  labels:
-    app: deckhouse
-spec:
-  containers:
-    - name: deckhouse
-      image: dev-registry.deckhouse.io:5000/sys/deckhouse-oss:alpha
-status:
-  containerStatuses:
-    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
-      imageID: dev-registry.deckhouse.io:5000/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
-      ready: true
-`
+
 	deckhouseNotReadyPod = `
 ---
 apiVersion: v1

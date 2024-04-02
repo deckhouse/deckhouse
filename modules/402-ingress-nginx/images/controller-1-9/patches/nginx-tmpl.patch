@@ -1,5 +1,5 @@
 diff --git a/chroot/etc/nginx/template/nginx.tmpl b/chroot/etc/nginx/template/nginx.tmpl
-index 958397dd5..8b6de93c5 100755
+index 94dc12412..93b7d2efc 100644
 --- a/chroot/etc/nginx/template/nginx.tmpl
 +++ b/chroot/etc/nginx/template/nginx.tmpl
 @@ -12,6 +12,9 @@
@@ -39,16 +39,24 @@ index 958397dd5..8b6de93c5 100755
      }
  
      {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
-@@ -739,7 +757,7 @@ stream {
-     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;";
+@@ -166,6 +167,16 @@ http {
  
-     lua_shared_dict tcp_udp_configuration_data 5M;
--    
+     {{ end }}
+ 
++    {{ if $cfg.UseGeoIP }}
++    {{/* databases used to determine the country depending on the client IP address */}}
++    {{/* http://nginx.org/en/docs/http/ngx_http_geoip_module.html */}}
++    {{/* this is require to calculate traffic for individual country using GeoIP in the status page */}}
++    geoip_country       /etc/nginx/geoip/GeoIP.dat;
++    geoip_city          /etc/nginx/geoip/GeoLiteCity.dat;
++    geoip_org           /etc/nginx/geoip/GeoIPASNum.dat;
++    geoip_proxy_recursive on;
++    {{ end }}
 +
-     {{ buildResolvers $cfg.Resolver $cfg.DisableIpv6DNS }}
+     {{ if $cfg.UseGeoIP2 }}
+     # https://github.com/leev/ngx_http_geoip2_module#example-usage
  
-     init_by_lua_block {
-@@ -910,9 +928,7 @@ stream {
+@@ -928,9 +939,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -59,7 +67,7 @@ index 958397dd5..8b6de93c5 100755
              }
          }
          {{ end }}
-@@ -1203,6 +1219,10 @@ stream {
+@@ -1223,6 +1232,10 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -67,10 +75,10 @@ index 958397dd5..8b6de93c5 100755
 +            set $total_upstream_response_time "0";
 +            set $upstream_retries "0";
 +
-             {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
+             {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1233,11 +1253,9 @@ stream {
+@@ -1253,11 +1266,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -83,16 +91,15 @@ index 958397dd5..8b6de93c5 100755
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1546,7 +1547,7 @@ stream {
+@@ -1531,14 +1542,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
 -        location {{ $all.HealthzURI }} {
 +        location = {{ $all.HealthzURI }} {
-             {{ if $all.Cfg.EnableOpentracing }}
-             opentracing off;
-             {{ end }}
-@@ -1556,7 +1557,8 @@ stream {
+ 
+             {{ if $all.Cfg.EnableOpentelemetry }}
+             opentelemetry off;
              {{ end }}
  
              access_log off;

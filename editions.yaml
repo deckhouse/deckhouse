@@ -1,0 +1,60 @@
+# file contains setting for werf render for different editions
+editions:
+- name: CE
+  # path to version map file. Can be empty if version map does not exist
+  versionMapFile: "candi/version_map.yml"
+  # path to dir with modules
+  # path should contain next files:
+  #   values-default.yaml
+  #   values-managed.yaml
+  #   values-minimal.yaml
+  modulesDir: "modules"
+  # available terraform providers for edition. Can be empty for edition
+  terraformProviders:
+      # key in terraform_versions.yaml file
+    - aws
+    - azure
+    - gcp
+    - yandex
+  # skip adding fix imports for release. need only for CE edition in general case
+  skipFixingImports: true
+
+  # skip collect images. Unfortunately we cannot handle error from .Files.Glob
+  # for some editions we cannot have any images
+  # skipCollectImages: true
+
+  # settings for tools/build.go
+  buildIncludes:
+    # skipping write build includes candi-%s.yaml file for edition
+    skipCandi: true
+    # skipping write build includes files:
+    #   modules-%s.yaml
+    #   modules-with-exclude-%s.yaml
+    #	modules-with-dependencies-%s.yaml
+    # for edition
+    skipModules: true
+
+- name: BE
+  versionMapFile: "ee/be/candi/version_map.yml"
+  modulesDir: "ee/be/modules"
+
+  # exclude modules from templates and images
+  excludeModules:
+  - ceph-csi
+  - openvpn
+
+- name: SE
+  modulesDir: "ee/se/modules"
+
+  excludeModules:
+  - dashboard
+
+- name: EE
+  modulesDir: "ee/modules"
+  terraformProviders:
+    - openstack
+    - vsphere
+    - vcd
+
+- name: FE
+  modulesDir: "ee/fe/modules"

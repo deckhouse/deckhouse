@@ -34,7 +34,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap() error {
 		return nil
 	}
 
-	if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{InitialState: b.InitialState}); err != nil {
+	if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf("Can not init cache: %v", err)
 	}
 

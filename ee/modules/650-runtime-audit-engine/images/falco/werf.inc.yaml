@@ -1,17 +1,38 @@
 {{- $falcoVersion := "0.35.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_ALT }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /falco-package
+  to: /
+  includePaths:
+  - usr/bin/
+  - usr/share/
+  - etc/
+  before: install
 shell:
   beforeInstall:
-    - apt-get update
-    - apt-get install tar gzip curl -y
-    - curl -sfL https://download.falco.org/packages/bin/x86_64/falco-{{ $falcoVersion }}-x86_64.tar.gz --output /tmp/falco.tar.gz
-    - tar -zxvf /tmp/falco.tar.gz --strip-components 1 --directory /
-    - rm -f /tmp/falco.tar.gz
+  - rm -df /lib/modules
+  - ln -s $HOST_ROOT/lib/modules /lib/modules
   install:
-    - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
-    - rm -df /lib/modules
-    - ln -s $HOST_ROOT/lib/modules /lib/modules
+  - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
 docker:
   CMD: ["/usr/bin/falco"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  install:
+  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
+  - mkdir -p /falco/build
+  - cd /falco/build
+  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco-deps.git .
+  - tar -zxvf grpc.tar.gz
+  - rm -f /usr/bin/clang
+  - ln -s /usr/bin/clang-15 /usr/bin/clang
+  - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION="{{ $falcoVersion }}" -DUSE_BUNDLED_DEPS=ON /falco
+  - sed -i "s/DEB;RPM;TGZ/TGZ/" ./CPackConfig.cmake
+  - make package -j4
+  - mkdir -p /falco-package
+  - tar -zxvf falco-{{ $falcoVersion }}-x86_64.tar.gz --strip-components 1 -C /falco-package

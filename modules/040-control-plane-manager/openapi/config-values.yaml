@@ -15,6 +15,14 @@ properties:
         description: |
           ServiceAccount issuing settings.
         properties:
+          issuer:
+            type: string
+            description: |
+              ServiceAccount issuer. This is the URL of the API server. The values of this field are used as the `iss` claim of the token and to verify Service Account JWT tokens.
+
+              **Note**, all pods in the cluster using ServiceAccount tokens must be restarted upon changing this option.
+            x-examples:
+              - "https://api.example.com"
           additionalAPIAudiences:
             type: array
             description: |
@@ -28,6 +36,8 @@ properties:
 
           **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
           - `ExtendedResourceToleration`
+          - `PodNodeSelector`
+          - `PodTolerationRestriction`
           - `EventRateLimit` with the following config:
 
             ```yaml

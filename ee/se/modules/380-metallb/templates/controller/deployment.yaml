@@ -1,0 +1,109 @@
+{{- define "controller_resources" }}
+cpu: 10m
+memory: 30Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: controller
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: controller
+      minAllowed:
+        {{- include "controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 60Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: controller
+  template:
+    metadata:
+      labels:
+        app: controller
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - args:
+            - --port=7472
+            - --webhook-mode=disabled
+          env:
+          - name: METALLB_ML_SECRET_NAME
+            value: memberlist
+          - name: METALLB_DEPLOYMENT
+            value: controller
+          image: {{ include "helm_lib_module_image" (list . "controller") }}
+          imagePullPolicy: IfNotPresent
+          name: controller
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "controller_resources" . | nindent 14 }}
+{{- end }}
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+          args:
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7473"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
+          ports:
+            - containerPort: 7473
+              name: https-metrics
+          env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                upstreams:
+                - upstream: http://127.0.0.1:7472/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-{{ .Chart.Name }}
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: metallb
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "controller_resources" . | nindent 14 }}
+{{- end }}
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 0

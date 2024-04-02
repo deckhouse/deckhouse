@@ -4,7 +4,7 @@ url: modules/readme.html
 layout: modules
 ---
 
-Deckhouse Platform имеет модульную структуру. Модули могут быть как встроенные в Deckhouse, так и обычные — подключаемые с помощью ресурса `ModuleSource`.
+Deckhouse Kubernetes Platform имеет модульную структуру. Модули могут быть как встроенные в Deckhouse, так и обычные — подключаемые с помощью ресурса `ModuleSource`.
 
 Основное отличие _встроенного_ модуля Deckhouse в том, что встроенный модуль поставляется в составе платформы Deckhouse и имеет общий с Deckhouse релизный цикл. Документацию по встроенным модулям Deckhouse можно найти в разделе [документации Deckhouse](/documentation/v1/).
 

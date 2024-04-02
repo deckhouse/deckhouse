@@ -41,7 +41,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.deckhouse.io/deckhouse/fe")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.1")
@@ -161,6 +161,11 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
   spec:
     inlet: "HostPort"
     waitLoadBalancerOnTerminating: 0
+- name: filter
+  spec:
+    inlet: "HostWithFailover"
+    acceptRequestsFrom:
+    - 67.34.56.23/32
 `)
 			hec.HelmRender()
 		})
@@ -182,6 +187,7 @@ memory: 200Mi`))
 			Expect(cm.Exists()).To(BeTrue())
 			Expect(cm.Field("data.log-format-upstream").String()).To(ContainSubstring(`"my-cookie": "$cookie_MY_COOKIE"`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "proxy-test-failover-config").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
 
 			fakeIng := hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-custom-headers-reload")
@@ -217,6 +223,7 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "proxy-test-lbwpp-failover-config").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-lbwpp-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Exists()).To(BeTrue())
@@ -250,6 +257,7 @@ memory: 200Mi`))
 
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-custom-headers").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "proxy-test-next-failover-config").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-next-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-next-load-balancer").Exists()).ToNot(BeTrue())
@@ -299,6 +307,10 @@ memory: 500Mi`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "solid-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-solid-auth-tls").Exists()).To(BeTrue())
 
+			proxyConfigMap := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "proxy-solid-failover-config")
+			Expect(proxyConfigMap.Exists()).To(BeTrue())
+			Expect(proxyConfigMap.Field(`data.accept-requests-from\.conf`).String()).To(Equal(""))
+
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "controller-solid-failover").Exists()).To(BeTrue())
 
 			waitLbNonDefaultDs := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-wait-lb-non-default")
@@ -308,6 +320,12 @@ memory: 500Mi`))
 			waitLbZeroDs := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-wait-lb-zero")
 			Expect(waitLbZeroDs.Exists()).To(BeTrue())
 			Expect(waitLbZeroDs.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=0`)))
+
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-filter").Exists()).To(BeTrue())
+			proxyFilterConfigMap := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "proxy-filter-failover-config")
+			Expect(proxyFilterConfigMap.Exists()).To(BeTrue())
+			Expect(proxyFilterConfigMap.Field(`data.accept-requests-from\.conf`).String()).To(Equal(`allow 67.34.56.23/32;
+deny all;`))
 		})
 
 		Context("Vertical pod autoscaler CRD is disabled", func() {

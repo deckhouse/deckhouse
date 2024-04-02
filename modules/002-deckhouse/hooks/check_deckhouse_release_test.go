@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strconv"
 	"testing"
@@ -501,6 +502,13 @@ global:
 					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f63859")
 				},
 			}, nil)
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
@@ -655,26 +663,26 @@ func (fl fakeLayer) Size() (int64, error) {
 
 func TestSort(t *testing.T) {
 	s1 := updater.DeckhouseRelease{
-		Version: semver.MustParse("v1.24.0"),
+		Version: semver.MustParse("v1.29.0"),
 	}
 	s2 := updater.DeckhouseRelease{
-		Version: semver.MustParse("v1.24.1"),
+		Version: semver.MustParse("v1.29.1"),
 	}
 	s3 := updater.DeckhouseRelease{
-		Version: semver.MustParse("v1.24.2"),
+		Version: semver.MustParse("v1.29.2"),
 	}
 	s4 := updater.DeckhouseRelease{
-		Version: semver.MustParse("v1.24.3"),
+		Version: semver.MustParse("v1.29.3"),
 	}
 	s5 := updater.DeckhouseRelease{
-		Version: semver.MustParse("v1.24.4"),
+		Version: semver.MustParse("v1.29.4"),
 	}
 
 	releases := []updater.DeckhouseRelease{s3, s4, s1, s5, s2}
 	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
 
 	for i, rl := range releases {
-		if rl.Version.String() != "1.24."+strconv.FormatInt(int64(4-i), 10) {
+		if rl.Version.String() != "1.29."+strconv.FormatInt(int64(4-i), 10) {
 			t.Fail()
 		}
 	}

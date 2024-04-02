@@ -29,7 +29,8 @@ func applyCloudProviderSecretFilter(obj *unstructured.Unstructured) (go_hook.Fil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
+	Queue:        "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cloud_provider_secret",

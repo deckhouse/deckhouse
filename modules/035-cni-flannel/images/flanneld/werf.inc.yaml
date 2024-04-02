@@ -1,11 +1,9 @@
 {{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - apt-get update
-    - apt-get install -y iptables iptables-nft
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
@@ -15,7 +13,7 @@ shell:
       touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
 - add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint
   to: /src
@@ -24,15 +22,14 @@ git:
       - '**/*'
 shell:
   install:
-    - apk add --no-cache git
+    - export GOPROXY={{ $.GOPROXY }}
     - cd /src
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
 ---
 artifact: {{ .ModuleName }}/flanneld-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   install:
-    - apk add --no-cache git make bash gcc glib-static musl-dev linux-headers
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 --branch v0.23.0 {{ $.SOURCE_REPO }}/flannel-io/flannel.git .
@@ -52,8 +49,11 @@ import:
   to: /
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib64/iptables
-  to: /lib64/iptables
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
   before: setup
 - artifact: {{ .ModuleName }}/entrypoint-artifact
   add: /entrypoint

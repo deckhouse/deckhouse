@@ -15,6 +15,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: GCPClusterConfiguration
@@ -58,6 +59,7 @@ apiVersions:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         description: A subnet to use for cluster nodes.
+        x-unsafe: true
       sshKey:
         type: string
         description: A public key to access nodes as `user`.
@@ -104,6 +106,7 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
+            x-unsafe-rules: [updateReplicas]
           additionalNetworkTags:
             description: |
               The list of additional tags.
@@ -250,6 +253,7 @@ apiVersions:
           `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard)
 
           `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat)
+        x-unsafe: true
       standard:
         type: object
         description: Settings for the `Standard` layout.
@@ -276,6 +280,7 @@ apiVersions:
           region:
             type: string
             description: The name of the region where instances will be provisioned.
+            x-unsafe: true
           serviceAccountJSON:
             type: string
             description: |

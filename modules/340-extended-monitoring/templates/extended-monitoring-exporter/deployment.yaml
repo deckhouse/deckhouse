@@ -96,7 +96,9 @@ spec:
           name: https-metrics
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:

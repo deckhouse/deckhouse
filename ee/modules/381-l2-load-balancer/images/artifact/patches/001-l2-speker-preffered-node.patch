@@ -1,0 +1,38 @@
+diff --git a/speaker/layer2_controller.go b/speaker/layer2_controller.go
+index 13ade79f..2afabb34 100644
+--- a/speaker/layer2_controller.go
++++ b/speaker/layer2_controller.go
+@@ -28,6 +28,11 @@ import (
+ 	"go.universe.tf/metallb/internal/layer2"
+ 	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/utils/strings/slices"
++)
++
++const (
++	annotationPreferredL2SpeakerNode = "metallb.universe.tf/preferredL2SpeakerNode"
+ )
+ 
+ type layer2Controller struct {
+@@ -128,6 +133,21 @@ func (c *layer2Controller) ShouldAnnounce(l log.Logger, name string, toAnnounce
+ 		return bytes.Compare(hi[:], hj[:]) < 0
+ 	})
+ 
++	preferredNode, ok := svc.Annotations[annotationPreferredL2SpeakerNode]
++	if ok {
++		// If there is a Service annotation with preferred Node, we are the Node and our Node is available,
++		// then we should announce.
++		if preferredNode == c.myNode && slices.Contains(availableNodes, c.myNode) {
++			return ""
++		}
++
++		// If there is another available preferred Node, we should skip announcing.
++		if slices.Contains(availableNodes, preferredNode) {
++			level.Debug(l).Log("event", "skipping should announce l2", "service", name, "reason", "there is another available preferred node "+preferredNode)
++			return "notOwner"
++		}
++	}
++
+ 	// Are we first in the list? If so, we win and should announce.
+ 	if len(availableNodes) > 0 && availableNodes[0] == c.myNode {
+ 		return ""

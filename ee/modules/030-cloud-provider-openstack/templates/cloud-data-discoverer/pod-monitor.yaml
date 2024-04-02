@@ -18,7 +18,7 @@ spec:
       honorLabels: true
       scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
       relabelings:
-      - regex: endpoint|namespace|pod|container
+      - regex: endpoint|pod|container
         action: labeldrop
       - targetLabel: job
         replacement: cloud-data-discoverer

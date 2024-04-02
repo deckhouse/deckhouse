@@ -272,7 +272,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="cloud-user"
+    ssh_user="redos"
     ;;
 
   "GCP")
@@ -313,7 +313,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="debian"
+    ssh_user="redos"
     ;;
 
   "vSphere")
@@ -414,19 +414,19 @@ function bootstrap_static() {
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
-  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
     return 1
   fi
-  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
-  if ! worker_ip="$(grep "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! worker_ip="$(grep "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse worker_ip from terraform.log"
     return 1
   fi
-  if ! bastion_ip="$(grep "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! bastion_ip="$(grep "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse bastion_ip from terraform.log"
     return 1
   fi
@@ -564,6 +564,12 @@ ENDSSH
     return 1
   fi
 
+  # Prepare resources.yaml for starting working node with CAPS
+  # shellcheck disable=SC2016
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
+      envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
+      <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
@@ -597,23 +603,6 @@ ENDSSH
     return 1
   fi
 
-  for ((i=0; i<10; i++)); do
-    bootstrap_worker="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq -r '.data."bootstrap.sh"'
-ENDSSH
-)" && break
-    >&2 echo "Attempt to get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace #$i failed. Sleeping 30 seconds..."
-    sleep 30
-  done
-
-  if [[ -z "$bootstrap_worker" ]]; then
-    >&2 echo "Couldn't get secret manual-bootstrap-for-worker in d8-cloud-instance-manager namespace."
-    return 1
-  fi
-
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
@@ -623,16 +612,9 @@ set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
 ENDSSH
 
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH || true
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-base64 -d <<< "$bootstrap_worker" | bash
-ENDSSH
-
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
-  for ((i=1; i<=10; i++)); do
+  for ((i=1; i<=20; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
@@ -769,16 +751,6 @@ function wait_cluster_ready() {
   infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
-#  if [[ "$PROVIDER" == "Static" ]]; then
-#    if ! run_linstor_tests; then
-#      >&2 echo -n "Linstor tests failed"
-#      >&2 echo -n "Fetch Deckhouse logs after test ..."
-#      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
-#      return 1
-#    fi
-#  fi
-#  echo "Linstor test suite: success"
-
   test_failed=
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
@@ -801,17 +773,14 @@ function wait_cluster_ready() {
 
   testAlerts=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
-  testRunAttempts=5
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
-      sleep 30
-    fi
-  done
+  test_failed="true"
+  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
+    test_failed=""
+  else
+    test_failed="true"
+    >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+    sleep 30
+  fi
 
   if [[ $test_failed == "true" ]] ; then
       return 1
@@ -820,58 +789,29 @@ function wait_cluster_ready() {
   write_deckhouse_logs
 }
 
-# run_linstor_tests executes helm test for linstor module
-#
-# Arguments:
-#  - ssh_private_key_path
-#  - ssh_user
-#  - master_ip
-#
-# TODO: replace with testing framework: https://github.com/deckhouse/deckhouse/issues/2380
-function run_linstor_tests() {
-  test_failed=
-
-  testScript=$(cat <<"END_SCRIPT"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
->&2 echo "Linstor test suite"
-set -x
->&2 echo "Download helm3 binary..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- curl https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -o /tmp/helm.tar.gz
->&2 echo "Extract helm3 binary..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
->&2 echo "Running linstor test suite ..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
-END_SCRIPT
-)
-
-  testRunAttempts=5
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
-      sleep 30
-    fi
-  done
-
-  if [[ $test_failed == "true" ]] ; then
-    return 1
-  fi
-
-}
-
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."
-  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$bootstrap_log")"; then
+  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ")((\d{1,3}\.){3}\d{1,3})(?=")' "$bootstrap_log")"; then
     >&2 echo "    ERROR: can't parse master_ip from bootstrap.log"
     return 1
   fi
   echo "${master_ip}"
 }
+
+function chmod_dirs_for_cleanup() {
+  if [ -n $USER_RUNNER_ID ]; then
+    echo "Fix temp directories owner before cleanup ..."
+    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+    chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+    chown -R $USER_RUNNER_ID /tmp || true
+  else
+    echo "Fix temp directories permissions before cleanup ..."
+    chmod -f -R 777 "$(pwd)/testing" || true
+    chmod -f -R 777 "/deckhouse/testing" || true
+    chmod -f -R 777 /tmp || true
+  fi
+}
+
 
 function main() {
   >&2 echo "Start cloud test script"
@@ -908,6 +848,8 @@ function main() {
   else
     echo "E2E test: fail."
   fi
+
+  chmod_dirs_for_cleanup
   exit $exitCode
 }
 

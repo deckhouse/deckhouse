@@ -15,6 +15,9 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
       "glob_minimum_cooldown_ms": 1000,
       "use_apiserver_cache": true
     }
@@ -89,7 +92,7 @@
       "inputs": [
         "transform/source/test-source/00_owner_ref"
       ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
       "type": "remap"
     },
     "transform/source/test-source/02_local_timezone": {
@@ -299,6 +302,7 @@
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
         "pod": "{{ pod }}",
         "pod_ip": "{{ pod_ip }}",
         "pod_labels_*": "{{ pod_labels }}",

@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/documentation/v1/modules/030-cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
+You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/documentation/v1/modules/030-cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
 
 Create the `JSON specification` using the following command.
 

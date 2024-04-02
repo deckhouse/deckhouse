@@ -6,191 +6,200 @@ spec:
           description: |
             Описывает политику безопасности для кластера.
 
-            Каждый ресурс `SecurityPolicy` описывает правила для объектов в кластере.
+            Каждый custom resource `SecurityPolicy` задает правила для объектов в кластере.
           properties:
             spec:
               properties:
                 enforcementAction:
                   description: |
-                    Действие, которое будет выполнено по результатам проверки ограничений:
+                    Реакция на нарушение политики:
                     - `Deny` — запрет;
-                    - `Dryrun` — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
-                    - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
+                    - `Dryrun` — событие без действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
+                    - `Warn` — событие без действия, аналогичное `Dryrun`. Содержит информацию об ограничении (constraint), которое вызвало бы запрет, если бы было использовано действие `Deny`.
                 policies:
                   type: object
+                  description: Набор политик, условиям которых должны соответствовать поды и контейнеры.
                   properties:
                     allowedHostPaths:
-                      description: "Список префиксов путей, разрешенных для монтирования в контейнере."
+                      description: Список префиксов путей, разрешенных для монтирования в контейнерах. Если список пуст, то можно использовать любой путь.
                       items:
                         properties:
                           pathPrefix:
                             description: |
-                              Префикс, который используется для определения того, какие директории хоста доступны для монтирования в контейнерах.
+                              Префикс определяет, какие директории хоста доступны для монтирования в контейнерах.
 
                               Использование маски `*` недопустимо. Завершающие слеши отбрасываются при сопоставлении пути и префикса.
 
                               Например, префикс `/foo` разрешает пути `/foo`, `/foo/` и `/foo/bar`. Напротив, пути `/food` или `/etc/foo` будут недоступны.
                           readOnly:
                             description: |
-                              Включает проверку на то, что все `volumeMount`, попадающие в префикс (параметр [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (readOnly: true).
+                              Проверяет, что все `volumeMount`, попадающие в префикс (с параметром [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (`readOnly: true`).
                     allowHostIPC:
-                      description: "Разрешает контейнерам доступ к IPC-пространству имен хоста."
+                      description: Разрешает контейнерам доступ к IPC-пространству имен хоста.
                     allowHostPID:
-                      description: "Разрешает контейнерам доступ к PID-пространству имен хоста."
+                      description: Разрешает контейнерам доступ к PID-пространству имен хоста.
                     allowHostNetwork:
-                      description: "Разрешает контейнерам доступ к Network-пространству имен хоста."
+                      description: Разрешает контейнерам доступ к Network-пространству имен хоста.
                     allowedHostPorts:
-                      description: "Определяет список диапазонов портов хоста, доступных для использования в качестве `hostPort`."
+                      description: Cписок диапазонов портов хоста (`hostPort`), разрешенных для использования в контейнерах.
                       items:
                         properties:
                           min:
-                            description: "Минимальное значение диапазона."
+                            description: Минимальное значение диапазона.
                           max:
-                            description: "Максимальное значение диапазона."
+                            description: Максимальное значение диапазона.
                     allowPrivileged:
-                      description: "Разрешает запуск контейнеров в привилегированном режиме."
+                      description: Разрешает запускать контейнеры в привилегированном режиме.
                     allowPrivilegeEscalation:
-                      description: "Разрешает процессам в контейнере запрашивать более широкий относительно родительского процесса список привилегий."
+                      description: Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
                     allowedProcMount:
-                      description: "Определяет допустимые значения монтирования `/proc` для контейнера."
+                      description: Разрешает монтирование `/proc` для контейнеров.
                     allowedCapabilities:
                       description: |
-                        Список привилегий (linux capabilities), доступных контейнеру.
+                        Список привилегий (linux capabilities), доступных контейнерам.
 
-                        Используйте `ALL` для разрешения всех привилегий.
+                        Используйте `ALL`, чтобы разрешить все привилегии.
+                      items:
+                        description: Привилегия (linux capability).
                     requiredDropCapabilities:
                       description: |
                         Список привилегий (linux capabilities), обязательных к исключению.
 
-                        Используйте `ALL` для исключения всех привилегий.
+                        Используйте `ALL`, чтобы исключить все привилегии.
+                      items:
+                        description: Привилегия (linux capability).
                     allowedAppArmor:
                       type: array
                       description: |
-                        Список допустимых к использованию контейнерами профилей AppArmor.
+                        Список разрешенных для контейнеров профилей AppArmor.
                       example: ["runtime/default", "unconfined"]
                       items:
                         type: string
-                        description: "Профиль AppArmor."
+                        description: Профиль AppArmor.
                     allowedFlexVolumes:
-                      description: "Список допустимых к использованию драйверов Flex Volumes."
+                      description: Список разрешенных драйверов Flex Volumes.
                       items:
                         properties:
                           driver:
-                            description: "Название драйвера."
+                            description: Название драйвера.
                     allowedUnsafeSysctls:
                       description: |
-                        Список небезопасных ключей sysctl, доступных к использованию.
+                        Список разрешенных небезопасных ключей sysctl.
 
-                        Используйте `*` для разрешения всех ключей.
+                        Используйте `*`, чтобы разрешить все ключи.
                     forbiddenSysctls:
                       description: |
-                        Список запрещенных к использованию ключей sysctl.
+                        Список запрещенных ключей sysctl.
 
-                        Имеет преимущество перед [allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls).
+                        Имеет преимущество перед параметром [allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls).
                     fsGroup:
-                      description: "Определяет допустимые к использованию значения `fsGroup`."
+                      description: Задает группы, разрешенные для использования как `fsGroup` в параметре `securityContext`.
                       properties:
                         rule:
-                          description: "Правило определения доступных значений `fsGroup`."
+                          description: Правило определения разрешенных значений `fsGroup`.
                         ranges:
-                          description: "Список диапазонов ID для `fsGroup`, доступных к использованию в режиме `MustRunAs`."
+                          description: Список диапазонов идентификаторов для `fsGroup`, разрешенных в режиме `MustRunAs`.
                           items:
                             properties:
                               min:
-                                description: "Минимальное значение диапазона."
+                                description: Минимальное значение диапазона.
                               max:
-                                description: "Максимальное значение диапазона."
+                                description: Максимальное значение диапазона.
                     runAsUser:
-                      description: "Определяет допустимые к использованию значения `runAsUser`."
+                      description: Задает разрешенные в параметре `securityContext` идентификаторы пользователей (`runAsUser`).
                       properties:
                         rule:
-                          description: "Правило определения доступных значений `runAsUser`."
+                          description: Правило определения разрешенных значений `runAsUser`.
                         ranges:
-                          description: "Список диапазонов ID для `runAsUser`, доступных к использованию в режиме `MustRunAs`."
+                          description: Список диапазонов идентификаторов пользователей для `runAsUser`, разрешенных в режиме `MustRunAs`.
                           items:
                             properties:
                               min:
-                                description: "Минимальное значение диапазона."
+                                description: Минимальное значение диапазона.
                               max:
-                                description: "Максимальное значение диапазона."
+                                description: Максимальное значение диапазона.
                     runAsGroup:
-                      description: "Определяет допустимые к использованию значения `runAsGroup`."
+                      description: Задает основные группы (`runAsGroup`), разрешенные для использования в параметре `securityContext`.
                       properties:
                         rule:
-                          description: "Правило определения доступных значений `runAsGroup`."
+                          description: Правило определения разрешенных значений `runAsGroup`.
                         ranges:
-                          description: "Список диапазонов ID для `runAsGroup`, доступных к использованию в режиме `MustRunAs`."
+                          description: Список диапазонов идентификаторов групп для `runAsGroup`, разрешенных в режиме `MustRunAs`.
                           items:
                             properties:
                               min:
-                                description: "Минимальное значение диапазона."
+                                description: Минимальное значение диапазона.
                               max:
-                                description: "Максимальное значение диапазона."
+                                description: Максимальное значение диапазона.
                     supplementalGroups:
-                      description: "Определяет допустимые к использованию значения `supplementalGroups`."
+                      description: Задает дополнительные группы (`supplementalGroups`), разрешенные для использования в параметре `securityContext`.
                       properties:
                         rule:
-                          description: "Правило определения доступных значений `supplementalGroups`."
+                          description: Правило определения разрешенных значений `supplementalGroups`.
                         ranges:
-                          description: "Список диапазонов ID для `supplementalGroups`, доступных к использованию в режиме `MustRunAs`."
+                          description: Список диапазонов идентификаторов групп для `supplementalGroups`, разрешенных в режиме `MustRunAs`.
                           items:
                             properties:
                               min:
-                                description: "Минимальное значение диапазона."
+                                description: Минимальное значение диапазона.
                               max:
-                                description: "Максимальное значение диапазона."
+                                description: Максимальное значение диапазона.
                     readOnlyRootFilesystem:
-                      description: "Определяет необходимость запуска контейнеров с корневой файловой системой, доступной только для чтения"
+                      description: |
+                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в [документации Kubernetes](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core).
+                    automountServiceAccountToken:
+                      description: Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
                     seccompProfiles:
-                      description: "Определяет список доступных к использованию seccomp-профилей."
+                      description: Задает список разрешенных seccomp-профилей для аннотаций подов и контейнеров.
                       properties:
                         allowedProfiles:
-                          description: "Список seccomp-профилей, доступных к использованию."
+                          description: Список разрешенных seccomp-профилей для подов и контейнеров.
                         allowedLocalhostFiles:
                           description: |
-                            Определяет локальные профили seccomp (в формате JSON), доступные к использованию, в случае указания `Localhost` в поле `allowedProfiles`.
+                            Определяет локальные профили seccomp (в формате JSON), разрешенные после указания `Localhost` в параметре `allowedProfiles`.
 
-                            Пустой список запрещает использование любых локальных профилей.
+                            Пустой список запрещает использование локальных профилей.
                     seLinux:
-                      description: "Определяет допустимые к использованию значения SElinux-меток."
+                      description: Определяет разрешенные для использования в параметре `secutiryContext` значения SELinux-меток.
                       items:
                         properties:
                           level:
-                            description: "Значения для SELinux level-меток."
+                            description: Значения для SELinux level-меток.
                           role:
-                            description: "Значения для SELinux role-меток."
+                            description: Значения для SELinux role-меток.
                           type:
-                            description: "Значения для SELinux type-меток."
+                            description: Значения для SELinux type-меток.
                           user:
-                            description: "Значения для SELinux user-меток."
+                            description: Значения для SELinux user-меток.
                     allowedVolumes:
-                      description: "Список volume-плагинов, доступных к использованию."
+                      description: Список разрешенных volume-плагинов.
                 match:
+                  description: Условия фильтрации контейнеров. С помощью условий можно выбрать группу подов или контейнеров, к которой будут применены политики.
                   properties:
                     namespaceSelector:
                       description: Указывает селектор пространства имен для фильтрации объектов.
                       properties:
                         matchNames:
-                          description: "Включать только определенный набор пространств имен."
+                          description: Выбирает пространства имен, соответствующие списку. Допускается использование шаблонов (glob patterns).
                         excludeNames:
-                          description: "Включить все пространства имен, кроме определенного набора."
+                          description: Выбирает все пространства имен, которых нет в списке.  Допускается использование шаблонов (glob patterns).
                         labelSelector:
                           description: |
                             Указывает селектор меток для фильтрации пространств имен.
 
-                            Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:
                             matchLabels:
                               description: Список лейблов, которые должно иметь пространство имен.
                             matchExpressions:
-                              description: Список выражений лейблов для пространств имен.
+                              description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для пространств имен.
                     labelSelector:
                       description: |
                         Указывает селектор лейблов для фильтрации подов.
 
-                        Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь под.
                         matchExpressions:
-                          description: Список выражений лейблов для подов.
+                          description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для подов.

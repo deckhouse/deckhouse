@@ -5,26 +5,26 @@ Context:
 .langData — map, containing the preferable language data. Can be empty.
 */}}
 
-{{ $data := .data }}
-{{ $langData := .langData }}
+{{- $data := .data }}
+{{- $langData := .langData }}
 
-{{ $configVersion := 1 }}
-{{ if index $data "x-config-version" }}
-  {{ $configVersion = index $data "x-config-version" }}
-{{ end }}
+{{- $configVersion := 1 }}
+{{- if index $data "x-config-version" }}
+  {{- $configVersion = index $data "x-config-version" }}
+{{- end }}
 
 {{/* TODO: format_examples $data */}}
 
-{{ if $data.properties }}
+{{- if $data.properties }}
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
 
 <ul class="resources">
 
-  {{ range $property, $propertyData := $data.properties }}
-    {{ if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
-    {{ $propertyLangData := index $langData.properties $property }}
-    {{ partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters") }}
-  {{ end }}
+  {{- range $property, $propertyData := $data.properties }}
+    {{- if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
+    {{- $propertyLangData := index $langData.properties $property }}
+    {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters") }}
+  {{- end }}
 
 </ul>
-{{ end }}
+{{- end }}

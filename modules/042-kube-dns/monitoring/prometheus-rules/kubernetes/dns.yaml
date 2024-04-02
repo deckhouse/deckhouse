@@ -17,7 +17,7 @@
       summary: CoreDNS has critical errors.
 - name: deckhouse.kube-dns.legacy-services
   rules:
-  - alert: D8KubeDnsServiceWithDeprecatedAnnotation
+  - alert: KubeDnsServiceWithDeprecatedAnnotation
     expr: max by (service_namespace, service_name) (d8_kube_dns_deprecated_service_annotation) == 1
     for: 5m
     labels:
@@ -25,8 +25,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_kube_dns_deprecated_resources: D8KubeDnsDeprecatedResources,tier=~tier,d8_module=kube-dns,d8_component=kube-dns
-      plk_grouped_by__d8_kube_dns_deprecated_resources: D8KubeDnsDeprecatedResources,tier=~tier,d8_module=kube-dns,d8_component=kube-dns
+      plk_create_group_if_not_exists__d8_kube_dns_deprecated_resources: KubeDnsDeprecatedResources,tier=~tier,d8_module=kube-dns,d8_component=kube-dns
+      plk_grouped_by__d8_kube_dns_deprecated_resources: KubeDnsDeprecatedResources,tier=~tier,d8_module=kube-dns,d8_component=kube-dns
       summary: Deprecated Service annotation found.
       description: |
         Replace deprecated Service annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints` with `spec.publishNotReadyAddresses: true`.
@@ -35,5 +35,5 @@
         You can get the service with deprecated annotation with the following command:
 
             ```
-            kubectl -n {{$labels.namespace}} get svc {{$labels.name}} -o yaml
+            kubectl -n {{$labels.service_namespace}} get svc {{$labels.service_name}} -o yaml
             ```

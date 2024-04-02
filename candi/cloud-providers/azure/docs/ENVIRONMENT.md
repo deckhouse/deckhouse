@@ -20,6 +20,19 @@ You have to create a service account with Microsoft Azure so that Deckhouse can 
    az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
    ```
 
+   Example output of the command:
+
+   ```console
+   {
+     "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",     <-- used in the clientId parameter of the AzureClusterConfiguration resource 
+     "displayName": "DeckhouseCANDI",
+     "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", <-- used in the clientSecret parameter of the AzureClusterConfiguration resource
+     "tenant": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"    <-- used in the tenantId parameter of the AzureClusterConfiguration resource
+   }
+   ```
+
+   > By default, service account will be created with a secret (used in the [clientSecret](cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) parameter of the `AzureClusterConfiguration` resource) validity period of one year without automatic renewal. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
+
 You have to be logged in for further work with the `az` tool. Use the service account username, password, and tenant to log in:
 
 ```shell

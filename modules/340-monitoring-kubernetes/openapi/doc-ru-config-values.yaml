@@ -1,5 +1,8 @@
 type: object
 properties:
+  ebpfExporterEnabled:
+    description: |
+      Флаг отключения ebpf_exporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -17,13 +20,12 @@ properties:
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   vpa:
-    type: object
     description: |
-      Настройки VPA для деплоймента kube-state-metrics.
+      Настройки VPA для подов `kube-state-metrics`.
     properties:
       kubeStateMetricsMaxCPU:
         description: |
-          Настройки лимита CPU в VPA для kube-state-metrics.
+          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
       kubeStateMetricsMaxMemory:
         description: |
-          Настройки лимита памяти в VPA для kube-state-metrics.
+          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).

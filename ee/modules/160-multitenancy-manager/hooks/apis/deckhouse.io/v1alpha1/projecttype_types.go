@@ -24,12 +24,6 @@ type ProjectTypeSpec struct {
 	ResourcesTemplate string `json:"resourcesTemplate,omitempty" yaml:"resourcesTemplate,omitempty"`
 }
 
-type NamespaceMetadata struct {
-	Labels map[string]string `json:"labels,omitempty" yaml:"labels"`
-
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations"`
-}
-
 type AuthorizationRule struct {
 	// Kind of the target resource to apply access to project (`ServiceAccount`, `Group` or `User`).
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`

@@ -196,7 +196,7 @@ properties:
               - `Disabled` — smoke-mini will work over HTTP only;
               - `CertManager` — smoke-mini will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
               - `CustomCertificate` — smoke-mini will use HTTPS using the certificate from the `d8-system` namespace.
-              - `OnlyInURI` — smoke-mini will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+              - `OnlyInURI` — smoke-mini will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
             enum:
               - "Disabled"
               - "CertManager"
@@ -273,7 +273,7 @@ properties:
           - `Disabled` — webui/status will work over HTTP only;
           - `CertManager` — webui/status will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — webui/status will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — webui/status will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — webui/status will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

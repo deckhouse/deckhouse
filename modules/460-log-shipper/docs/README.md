@@ -10,7 +10,7 @@ Each agent is a [vector](https://vector.dev/) instance running with a configurat
 ![log-shipper architecture](../../images/460-log-shipper/log_shipper_architecture.svg)
 <!-- Source: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse is watching `ClusterLoggingConfig`, `ClusterLogsDestination` and `PodLoggingConfig` custom resources.
+1. Deckhouse is watching [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) and [PodLoggingConfig](cr.html#podloggingconfig) custom resources.
   The combination of a logging source and log destination is called `pipeline`.
 2. Deckhouse generates a configuration file and stores it into Kubernetes `Secret`.
 3. `Secret` is mounted to all log-shipper agent Pods and the configuration is reloaded on changes by the `reloader` sidecar container.
@@ -71,6 +71,10 @@ The following metadata fields will be exposed:
 | `container`  | spec.containers[].name  |
 | `node`       | spec.nodeName           |
 | `pod_owner`  | metadata.ownerRef[0]    |
+
+| Label        | Node spec path                            |
+|--------------|-------------------------------------------|
+| `node_group` | metadata.labels[].node.deckhouse.io/group |
 
 {% alert -%}
 Splunk destination does not use `pod_labels`, because it is a nested object with keys and values.

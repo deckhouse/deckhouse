@@ -4,6 +4,8 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
+The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+
 {% raw %}
 
 ```yaml
@@ -29,6 +31,8 @@ spec:
 
 ### GitHub
 
+The example shows the provider's settings for integration with GitHub.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -51,6 +55,8 @@ Paste the generated `Client ID` and `Client Secret` into the [DexProvider](cr.ht
 If the GitHub organization is managed by the client, go to `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` and request confirmation by clicking on `Send Request`. Then ask the client to confirm the request that will be sent to him by email.
 
 ### GitLab
+
+The example shows the provider's settings for integration with GitLab.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -80,6 +86,8 @@ Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html
 
 ### Atlassian Crowd
 
+The example shows the provider's settings for integration with Atlassian Crowd.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -108,6 +116,8 @@ CROWD groups are specified in the lowercase format for the custom resource `DexP
 
 ### Bitbucket Cloud
 
+The example shows the provider's settings for integration with Bitbucket Cloud.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -133,6 +143,8 @@ Paste the generated `Key` and `Secret` into the [DexProvider](cr.html#dexprovide
 
 ### OIDC (OpenID Connect)
 
+The example shows the provider's settings for integration with Okta.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -154,6 +166,8 @@ Authentication through the OIDC provider requires registering a client (or "crea
 Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
 ### LDAP
+
+The example shows the provider's settings for integration with Active Directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -269,6 +283,8 @@ spec:
 
 {% endraw %}
 
+By default, the user is assigned the [role User](../140-user-authz/#default-access-list-for-each-role).
+
 ## Example of adding a static user to a group
 
 {% raw %}
@@ -286,3 +302,7 @@ spec:
 ```
 
 {% endraw %}
+
+## How to set permissions for a user or group
+
+Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) are used for configuration.

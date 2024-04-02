@@ -47,7 +47,7 @@ spec:
                     We recommend using the values `>= 1100` to avoid conflicts with manually created users.
 
                     This parameter does not change during the entire resource life.
-                  x-doc-examples: ['1100']
+                  x-doc-examples: [1100]
                   minimum: 1001
                   x-doc-required: true
                 sshPublicKey:

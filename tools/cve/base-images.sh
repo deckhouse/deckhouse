@@ -46,7 +46,6 @@ function base_images_tags() {
 
   base_images=$(grep -v "REGISTRY_PATH" <<<"$base_images") # Not an image
   base_images=$(grep -v "BASE_GOLANG" <<<"$base_images")   # golang images are used for multistage builds
-  base_images=$(grep -v "BASE_RUST" <<<"$base_images")     # rust images are used for multistage builds
   base_images=$(grep -v "BASE_JEKYLL" <<<"$base_images")   # images to build docs
   base_images=$(grep -v "BASE_NODE" <<<"$base_images")     # js bundles compilation
 

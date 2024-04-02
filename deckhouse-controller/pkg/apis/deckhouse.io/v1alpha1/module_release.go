@@ -76,6 +76,27 @@ func (mr *ModuleRelease) GetModuleSource() string {
 	return mr.Labels["source"]
 }
 
+type Changelog map[string]any
+
+func (c Changelog) DeepCopy() Changelog {
+	if c == nil {
+		return nil
+	}
+
+	data, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+
+	var out Changelog
+	err = json.Unmarshal(data, &out)
+	if err != nil {
+		panic(err)
+	}
+
+	return out
+}
+
 type ModuleReleaseSpec struct {
 	ModuleName string          `json:"moduleName"`
 	Version    *semver.Version `json:"version,omitempty"`
@@ -83,13 +104,16 @@ type ModuleReleaseSpec struct {
 
 	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
 	Requirements map[string]string `json:"requirements,omitempty"`
+	Changelog    Changelog         `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
-	Phase          string      `json:"phase,omitempty"`
-	Approved       bool        `json:"approved"`
-	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
-	Message        string      `json:"message"`
+	Phase          string          `json:"phase,omitempty"`
+	Approved       bool            `json:"approved"`
+	TransitionTime metav1.Time     `json:"transitionTime,omitempty"`
+	Message        string          `json:"message"`
+	Size           uint32          `json:"size"`
+	PullDuration   metav1.Duration `json:"pullDuration"`
 }
 
 type moduleReleaseKind struct{}

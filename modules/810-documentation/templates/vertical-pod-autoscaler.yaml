@@ -3,6 +3,11 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- define "builder_resources" }}
+cpu: 100m
+memory: 50Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -27,4 +32,10 @@ spec:
       maxAllowed:
         cpu: 200m
         memory: 100Mi
+    - containerName: "builder"
+      minAllowed:
+        {{- include "builder_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 500Mi
 {{- end }}

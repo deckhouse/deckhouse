@@ -51,6 +51,8 @@
       type="text" id="proxyHttpURI"
       name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
          Leave it blank if you don't use the HTTP proxy server.
       </span>
@@ -65,6 +67,8 @@
       type="text" id="proxyHttpsURI"
       name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
         Leave it blank if you don't use the HTTP proxy server.
       </span>
@@ -79,6 +83,8 @@
       type="text" id="noProxyAddressList"
       name="noProxyAddressList" placeholder=""
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">The addresses must match the templates <code>127.0.0.1</code>, <code>192.168.0.0/24</code>, <code>example.com</code> and <code>".example.com"</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
       <span class="info">
          Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". Leave it blank if there are no such exceptions.
       </span>

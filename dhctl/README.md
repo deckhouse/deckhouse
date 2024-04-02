@@ -27,7 +27,7 @@ Basic features:
 ### Preparations
 
 The first step is setting up a host.
-Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` OS are supported.
+Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 10`, `Debian 11`, `Debian 12` OS are supported.
 
 * **Bare metal** - provide SSH access to the host and sudo access.
 * **Cloud provider** - ensure that Deckhouse supports your cloud.
@@ -50,7 +50,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "1.27"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---

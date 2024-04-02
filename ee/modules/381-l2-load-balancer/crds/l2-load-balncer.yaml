@@ -1,0 +1,101 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: l2loadbalancers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: l2-load-balancer
+spec:
+  group: deckhouse.io
+  names:
+    kind: L2LoadBalancer
+    plural: l2loadbalancers
+    singular: l2loadbalancer
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        description: The interface for configuring distributed L2 load balancers.
+        x-doc-d8Revision: ee
+        required: ['spec']
+        properties:
+          spec:
+            type: object
+            x-doc-d8Revision: ee
+            required: ['addressPool', 'service']
+            properties:
+              addressPool:
+                type: string
+                description: MetalLB address pool for public IP address allocation.
+                x-doc-d8Revision: ee
+              nodeSelector:
+                type: object
+                x-doc-d8Revision: ee
+                additionalProperties:
+                  type: string
+                description: |
+                  The group of load balancer nodes to serve the public IP addresses.
+
+                  The same as in the Pods `spec.nodeSelector` parameter in Kubernetes.
+
+                  If parameter is omitted, L2 LoadBalancer's speakers will be placed on all nodes.
+              service:
+                type: object
+                description: The spec of application's Service.
+                x-doc-d8Revision: ee
+                required: ['selector', 'ports']
+                properties:
+                  sourceRanges:
+                    type: array
+                    x-doc-d8Revision: ee
+                    default: []
+                    description: |
+                      IP ranges (CIDR) that are allowed to access the load balancer.
+                    items:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                  selector:
+                    type: object
+                    x-doc-d8Revision: ee
+                    additionalProperties:
+                      type: string
+                    description: |
+                      The same as in the Service `spec.selector` parameter in Kubernetes.
+                  ports:
+                    type: array
+                    x-doc-d8Revision: ee
+                    description: |
+                      The list of ports that are exposed by this service.
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: |
+                            The name of this port within the service. This must be a DNS_LABEL.
+                            All ports within a ServiceSpec must have unique names.
+                            When considering the endpoints for a Service, this must match the 'name' field in the EndpointPort
+                        port:
+                          type: integer
+                          description: The port that will be exposed by this service.
+                        protocol:
+                          type: string
+                          default: "TCP"
+                          description: The IP protocol for this port. Supports "TCP", "UDP", and "SCTP". Default is TCP.
+                        targetPort:
+                          type: integer
+                          description: Number of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535.
+          status:
+            type: object
+            properties:
+              publicAddresses:
+                type: array
+                items:
+                  type: string
+

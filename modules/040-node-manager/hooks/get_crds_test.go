@@ -1081,8 +1081,8 @@ metadata:
 		})
 	})
 
-	// config    1.24
-	// apiserver 1.24.X  |  effective 1.24
+	// config    1.29
+	// apiserver 1.29.X  |  effective 1.29
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1100,15 +1100,15 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.24")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.24.0")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.24.0")
+			setK8sVersionAsClusterConfig(f, "1.29")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.24", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.29", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.24"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.29"))
 		})
 	})
 
@@ -1144,7 +1144,7 @@ spec:
 	})
 
 	// config    null
-	// apiserver 1.24  |  target 1.24
+	// apiserver 1.29  |  target 1.29
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1162,14 +1162,14 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.24.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.24.0")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.24", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.29", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.24"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.29"))
 		})
 	})
 

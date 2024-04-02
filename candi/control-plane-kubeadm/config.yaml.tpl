@@ -3,8 +3,8 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare "< 1.25" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "CustomResourceValidationExpressions=true" | join "," }}
+{{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
@@ -46,12 +46,20 @@ apiServer:
   extraArgs:
 {{- if .apiserver.serviceAccount }}
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- if .apiserver.serviceAccount.issuer }}
+    service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
+    {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
-    enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration,NodeRestriction{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
+    {{ $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" }}
+    {{- if .apiserver.admissionPlugins }}
+      {{ $admissionPlugins = concat $admissionPlugins .apiserver.admissionPlugins | uniq }}
+    {{- end }}
+    enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
@@ -59,6 +67,11 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
+{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
+{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -143,9 +156,6 @@ controllerManager:
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -172,9 +182,6 @@ scheduler:
     profiling: "false"
     feature-gates: {{ $featureGates | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}

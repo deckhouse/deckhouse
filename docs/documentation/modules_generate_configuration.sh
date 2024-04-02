@@ -27,7 +27,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
 done
 
 if [ -d /src/global ]; then
-  mkdir -p /srv/jekyll-data/documentation/_data/schemas/global
+  mkdir -p /srv/jekyll-data/documentation/_data/schemas/global/crds
   # OpenAPI spec for Deckhouse global config
   cp -f /src/global/config-values.yaml _data/schemas/global/
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/config-values.yaml
@@ -44,4 +44,11 @@ if [ -d /src/global ]; then
   cp -f /src/global/static_cluster_configuration.yaml _data/schemas/global/static_cluster_configuration.yaml
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/static_cluster_configuration.yaml
   cat /src/global/doc-ru-static_cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/static_cluster_configuration.yaml
+  # "Global" CRDS (from the deckhouse-controller/crds)
+  cp /src/global/crds/module* /srv/jekyll-data/documentation/_data/schemas/global/crds
+  for i in /src/global/crds/module* ; do
+    cp -v $i /srv/jekyll-data/documentation/_data/schemas/global/crds/
+    echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
+    cat /src/global/crds/doc-ru-$(echo $i | sed 's#/src/global/crds/##' ) | sed 's/^/    /' >>_data/schemas/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
+  done
 fi

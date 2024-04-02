@@ -77,8 +77,8 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 }
 
 func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
-	done := c.cleanupTaskManager.spawn(instanceScope.MachineScope.StaticMachine.Spec.ProviderID, func() bool {
-		err := ssh.ExecSSHCommand(instanceScope, "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing", nil)
+	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
+		err := ssh.ExecSSHCommand(instanceScope, "if [[ ! -f /var/lib/bashible/cleanup_static_node.sh ]]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
 

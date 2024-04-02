@@ -1,7 +1,6 @@
 {% unless page.hide_sidebar %}
 {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
 
-  {% unless site.mode == "local" %}
     <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
       <div class="channel-menu submenu-parent">
 
@@ -10,7 +9,7 @@
         <div class="submenu-container">
           <ul class="submenu">
             <li class="submenu-item">
-              <a data-proofer-ignore='' class='submenu-item-link' href='/modules/'>
+              <a data-proofer-ignore='' class='submenu-item-link' href='{% if site.mode == "module" %}/{{ page.lang }}{% endif %}/modules/'>
                 <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
               </a>
             </li>
@@ -18,16 +17,18 @@
         </div>
       </div>
 
+      {% unless site.mode == 'module' %}
       <!-- module-version-badge -->
       <div id="doc-versions-menu" class="channel-menu submenu-parent">
         <!--#include virtual="/includes/channel-menu-v2.html" -->
       </div>
+      {% endunless %}
     </div>
-  {% endunless %}
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
 
       <ul class="sidebar" id="mysidebar">
+
         {%- for entry in sidebar.folders %}
         {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
         {%- endfor %}

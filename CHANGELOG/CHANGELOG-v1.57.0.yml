@@ -1,0 +1,174 @@
+candi:
+  features:
+    - summary: Set curl connect timeout to 10s and explicitly set overall timeout to 300s.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7059
+  fixes:
+    - summary: Raise the priority for NodeUser step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7140
+    - summary: Decrease shutdownGracePeriod for YandexCloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6897
+    - summary: Fixes for compliance with CIS Benchmarks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6647
+    - summary: Wait for a node to be added to the cluster before annotating the node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6443
+ceph-csi:
+  features:
+    - summary: ceph-csi module is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6724
+ci:
+  features:
+    - summary: Add npm proxy var.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7171
+cloud-provider-aws:
+  fixes:
+    - summary: Update the description of the additionalRolePolicies parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7165
+cloud-provider-yandex:
+  features:
+    - summary: Add alert about deprecated NAT Instance zone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6736
+common:
+  features:
+    - summary: shell-operator image is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7047
+  fixes:
+    - summary: >-
+        Fixed vulnerabilities in csi livenessprobe and node-driver-registrar: CVE-2022-41723,
+        CVE-2023-39325, GHSA-m425-mq94-257g
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6956
+      impact: csi-controller pod will restart.
+deckhouse-controller:
+  fixes:
+    - summary: fix for `change-registry` helper's handling of registry credentials.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7095
+    - summary: Fix ModuleConfig validation for configs with empty settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7064
+    - summary: Drop error message on registry reconnection.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6995
+delivery:
+  features:
+    - summary: Redis image is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6224
+dhctl:
+  features:
+    - summary: Retry failed pull/push operations during the mirroring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7080
+    - summary: Added a flag that forces mirror to accept non-trusted registry certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7068
+  fixes:
+    - summary: Fix skipping preflight check about registry-through-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7135
+    - summary: Avoid unnecessary redirects by testing registry through proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7060
+    - summary: 'Fix ModuleConfig update error: ''Invalid value: 0x0: must be specified for an update'''
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7048
+docs:
+  fixes:
+    - summary: Change registry watcher log level.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6895
+documentation:
+  features:
+    - summary: Improved stability of the documentation site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6873
+extended-monitoring:
+  features:
+    - summary: '`extended-monitoring-exporter` image is based on a distroless image.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7164
+    - summary: Group `CronJobFailed` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6715
+external-module-manager:
+  features:
+    - summary: Always create default MUP for Deckhouse
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7185
+  fixes:
+    - summary: Fix outdated module versions in multi-master environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7234
+ingress-nginx:
+  fixes:
+    - summary: Fix readme notes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7031
+    - summary: Fix cleanup for a chrooted environment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6988
+      impact: All pods of ingress nginx controllers of versions 1.6 and 1.9 will be recreated.
+    - summary: Fix ingress controller clean up routine.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6985
+      impact: All pods of ingress nginx controllers of versions 1.6 and 1.9 will be recreated.
+istio:
+  fixes:
+    - summary: Improved checking for currently running deprecated versions of Istio in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7028
+    - summary: After disabling the module, clean up any orphaned Istio components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6906
+kube-dns:
+  fixes:
+    - summary: Change D8KubeDnsServiceWithDeprecatedAnnotation alert name
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7056
+monitoring-kubernetes:
+  features:
+    - summary: Add `NodeFilesystemIsRO` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6744
+    - summary: '`ebpf_exporter` image is based on a distroless image. Bump version to `v2.3.0`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6241
+  fixes:
+    - summary: Fix a grammatical error in the `PodStatusIsIncorrect` alert annotations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7211
+    - summary: Fix generation of `metrics kube_persistentvolume_is_local` recording rule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6755
+    - summary: Bump `node-exporter` to `v1.7.0`. Fix crashes of `node-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6730
+    - summary: Fix AppArmor rule in `kubelet-eviction-thresholds-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6711
+network-gateway:
+  features:
+    - summary: network-gateway module is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6968
+  fixes:
+    - summary: Fix distroless build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7250
+network-policy-engine:
+  fixes:
+    - summary: Module images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6460
+node-manager:
+  features:
+    - summary: Allow specifying the `CloudStatic` type in the `staticInstance` field of a NodeGroup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7178
+  fixes:
+    - summary: Add RBAC rules for kube-rbac-proxy in capi-controller-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6854
+operator-trivy:
+  features:
+    - summary: Disable non-remote image source for remote scans.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7016
+      impact: trivy-operator pod will be recreated.
+  fixes:
+    - summary: CIS compliance checks are now available immediately after activating the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6951
+prometheus:
+  features:
+    - summary: Add the ability to specify a CA certificate in `PrometheusRemoteWrite` CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6933
+prometheus-pushgateway:
+  features:
+    - summary: Pushgateway image is based on a distroless image. Bump version to `v1.6.2`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7058
+runtime-audit-engine:
+  features:
+    - summary: Module images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7035
+terraform-manager:
+  fixes:
+    - summary: >-
+        Rename plugin `terraform-provider-gcp` to `terraform-provider-google` in
+        `terraform-state-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7156
+testing:
+  features:
+    - summary: Change worker node bootstrap from manual to CAPS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7061
+upmeter:
+  features:
+    - summary: database retention
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7153
+      impact: The upmeter database will only store data for the last 548 days.
+

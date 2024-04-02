@@ -215,8 +215,19 @@ jobs:
             const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-            const edition = hasCE ? 'CE' : (hasEE ? 'EE' : defaultEdition);
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}`);
+            const hasBE = pr.labels.some((l) => l.name === 'edition/be');
+            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
+            let edition = defaultEdition;
+            if (hasCE) {
+              edition = 'CE';
+            } else if (hasEE) {
+              edition = 'EE';
+            } else if (hasBE) {
+              edition = 'BE';
+            } else if (hasSE) {
+              edition = 'SE';
+            }
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -304,6 +315,8 @@ jobs:
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
+      run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
+      label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
     steps:
 
       # <template: checkout_step>
@@ -427,6 +440,35 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_copyright }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh
+
+  grafana_dashboard_validation:
+    name: Grafana Dashboard Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_grafana_dashboard == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_grafana_dashboard }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_grafana_dashboard.sh
 
   markdown_linter:
     name: Markdown Linter

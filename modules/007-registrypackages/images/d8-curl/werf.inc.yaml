@@ -19,7 +19,7 @@ docker:
     curl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -27,8 +27,6 @@ git:
       setup:
       - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache git build-base clang openssl-dev nghttp2-dev nghttp2-static libssh2-dev libssh2-static openssl-libs-static zlib-static autoconf automake libtool
   setup:
   - export CC=clang
   - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git

@@ -150,9 +150,6 @@ spec:
         name: user_known_pod_debug_activities
         condition: (always_true)
     - macro:
-        name: trusted_sa
-        condition: (always_true)
-    - macro:
         name: system_namespace
         condition: ((ka.target.namespace in (kube-system, kube-public, default)) or (ka.target.name startswith "d8-"))
     - rule:
@@ -244,7 +241,7 @@ spec:
     - rule:
         name: ServiceAccount created in a system namespace
         condition: |
-          kevt and serviceaccount and kcreate and system_namespace and response_successful and not trusted_sa
+          kevt and serviceaccount and kcreate and system_namespace and response_successful
         desc: Detect any attempt to create a serviceaccount in the kube-system or kube-public namespaces
         output: Service account created in kube namespace (user=%ka.user.name serviceaccount=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace)
         priority: Warning

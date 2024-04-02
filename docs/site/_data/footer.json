@@ -5,12 +5,12 @@
         "title": "Products",
         "items": [
           {
-            "title": "Deckhouse Platform EE",
+            "title": "Deckhouse Kubernetes Platform EE",
             "url": "/products/enterprise-edition/",
             "target": ""
           },
           {
-            "title": "Deckhouse Platform CE",
+            "title": "Deckhouse Kubernetes Platform CE",
             "url": "/community/community-edition/",
             "target": ""
           }
@@ -57,12 +57,12 @@
         "title": "Продукты",
         "items": [
           {
-            "title": "Deckhouse Platform EE",
+            "title": "Deckhouse Kubernetes Platform EE",
             "url": "/products/enterprise-edition/",
             "target": ""
           },
           {
-            "title": "Deckhouse Platform CE",
+            "title": "Deckhouse Kubernetes Platform CE",
             "url": "/community/community-edition/",
             "target": ""
           },

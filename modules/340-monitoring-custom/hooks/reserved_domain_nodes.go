@@ -52,7 +52,6 @@ func applyLabelTaintFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	for k := range node.ObjectMeta.Labels {
 		if strings.HasPrefix(k, "node-role.deckhouse.io/") {
 			usedLabelsAndTaints.Add(strings.Split(k, "/")[1])
-			break
 		}
 	}
 

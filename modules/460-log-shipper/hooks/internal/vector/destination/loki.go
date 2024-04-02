@@ -39,7 +39,7 @@ type Loki struct {
 
 	Auth LokiAuth `json:"auth,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Labels map[string]string `json:"labels,omitempty"`
 
@@ -72,6 +72,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		"pod_ip":       "{{ pod_ip }}",
 		"stream":       "{{ stream }}",
 		"pod_labels_*": "{{ pod_labels }}",
+		"node_group":   "{{ node_group }}",
 		"pod_owner":    "{{ pod_owner }}",
 		// File labels
 		// TODO(nabokihms): think about removing this label and always use the `node` labels.

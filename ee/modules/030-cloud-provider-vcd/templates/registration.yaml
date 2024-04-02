@@ -1,0 +1,37 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderVcd.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  type: {{ b64enc "vcd" | quote }}
+  # vcloud director does not contain meaning regions and zones
+  # but out machinery use them. we use default as region and as one zone
+  region: {{ b64enc "default" | quote }}
+  zones: {{ .Values.cloudProviderVcd.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "VCDInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "" | quote }}
+  capiClusterKind: {{ b64enc "VCDCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
+  capiClusterName: {{ $providerClusterConfiguration.virtualApplicationName | b64enc | quote }}
+  capiMachineTemplateKind: {{ b64enc "VCDMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
+  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+
+  {{- $vcdValues := dict }}
+
+  {{- $_ := set $vcdValues "sshPublicKey" $providerClusterConfiguration.sshPublicKey }}
+  {{- $_ := set $vcdValues "organization" $providerClusterConfiguration.organization }}
+  {{- $_ := set $vcdValues "virtualDataCenter" $providerClusterConfiguration.virtualDataCenter  }}
+  {{- $_ := set $vcdValues "mainNetwork" $providerClusterConfiguration.mainNetwork  }}
+  {{- $_ := set $vcdValues "virtualApplicationName" $providerClusterConfiguration.virtualApplicationName }}
+  {{- $_ := set $vcdValues "server" $providerClusterConfiguration.provider.server }}
+  {{- $_ := set $vcdValues "username" $providerClusterConfiguration.provider.username }}
+  {{- $_ := set $vcdValues "password" $providerClusterConfiguration.provider.password }}
+  {{- $_ := set $vcdValues "insecure" $providerClusterConfiguration.provider.insecure }}
+
+  vcd: {{ $vcdValues | toJson | b64enc | quote }}

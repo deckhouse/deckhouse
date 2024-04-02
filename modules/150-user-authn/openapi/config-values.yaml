@@ -36,7 +36,9 @@ properties:
             description: |
               The mode of issuing certificates for the Ingress resource.
 
-              In the `SelfSigned` mode, a self-signed certificate will be issued for the Ingress resource.
+              In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
+
+              Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
@@ -51,6 +53,10 @@ properties:
                   If you are using certificates issued by the `cert-manager` module and Let's Encrypt in your cluster, you should set an empty string `""` as the value.
 
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
+      addKubeconfigGeneratorEntry:
+        type: boolean
+        default: true
+        description: 'Setting it to `false` will remove an entry in kubeconfig-generator'
   kubeconfigGenerator:
     type: array
     description: |
@@ -164,7 +170,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Dex/kubeconfig-generator will use HTTPS using the certificate from the `d8-system` namespace.
           - `Disabled` — Dex/kubeconfig-generator will work over HTTP only;
-          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

@@ -92,7 +92,7 @@ properties:
           - `Disabled` — Grafana/Prometheus будут работать только по HTTP;
           - `CertManager` — Grafana/Prometheus будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Grafana/Prometheus будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -108,30 +108,32 @@ properties:
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   vpa:
+    description: |
+      Настройки VPA для подов.
     properties:
       maxCPU:
         description: |
-          Максимальная граница реквестов к CPU, выставляемая VPA-контроллером для подов основного Prometheus.
+          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests) для подов основного Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       maxMemory:
         description: |
-          Максимальная граница реквестов к памяти, выставляемая VPA-контроллером для подов основного Prometheus.
+          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests) для подов основного Prometheus..
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       longtermMaxCPU:
         description: |
-          Максимальная граница реквестов к CPU, выставляемая VPA-контроллером для подов Longterm Prometheus.
+          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests) для подов Longterm Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       longtermMaxMemory:
         description: |
-          Максимальная граница реквестов к памяти, выставляемая VPA-контроллером для подов Longterm Prometheus.
+          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests) для подов Longterm Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       updateMode:
         description: |
-          Режим обновления подов.
+          Режим работы VPA.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.

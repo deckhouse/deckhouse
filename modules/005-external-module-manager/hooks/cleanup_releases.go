@@ -94,6 +94,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		}
 
 		for _, release := range releases {
+			input.LogEntry.Infof("Cleanup release %q because module %q does not exist", release.Name, release.Module)
 			deleteModuleRelease(input, externalModulesDir, release)
 		}
 	}
@@ -104,6 +105,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 		if len(releases) > keepReleaseCount {
 			for i := keepReleaseCount; i < len(releases); i++ {
+				input.LogEntry.Infof("Cleanup release %q because it's outdated", releases[i].Name)
 				deleteModuleRelease(input, externalModulesDir, releases[i])
 			}
 		}

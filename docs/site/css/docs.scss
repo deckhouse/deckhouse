@@ -430,6 +430,7 @@
 .sidebar .sidebar__item_ee > a::after,
 .sidebar .sidebar__item_proprietaryOkmeter > a::after,
 .sidebar .sidebar__item_experimental > a::after,
+.sidebar .sidebar__item_deprecated > a::after,
 .sidebar .sidebar__item_temporaryDeprecated > a::after,
 a.comparison-table__module::after {
     display: inline-block;
@@ -478,6 +479,11 @@ a.comparison-table__module {
 .sidebar .sidebar__item_experimental > a::after,
 a.comparison-table__module-experimental::after {
     content: 'Experimental';
+}
+
+.sidebar .sidebar__item_deprecated > a::after,
+a.comparison-table__module-deprecated::after {
+    content: 'Temporary deprecated';
 }
 
 .sidebar .sidebar__item_temporaryDeprecated > a::after,
@@ -923,7 +929,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding: 2px 4px;
     font-size: 90%;
     background: #eef2ff;
-    white-space: nowrap;
+    white-space: normal;
     border-radius: 4px;
 }
 
@@ -995,6 +1001,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
+.docs .table-wrapper {
+    overflow: auto;
+}
+
 .docs table {
     width: 100%;
     border-spacing: 0;
@@ -1030,6 +1040,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs table thead tr th:last-child {
     border-top-right-radius: 10px;
+}
+
+.docs table thead tr th a {
+    color: #fff;
+    text-decoration: underline;
 }
 
 .docs table tbody tr td {

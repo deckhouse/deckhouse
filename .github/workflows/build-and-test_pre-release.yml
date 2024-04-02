@@ -40,7 +40,6 @@ env:
   # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
-  CRATESPROXY: "${{secrets.CRATESPROXY}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same branch.
@@ -173,7 +172,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -341,7 +340,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -546,7 +545,7 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -603,7 +602,7 @@ jobs:
 
 
       - name: Run main web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -688,14 +687,14 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.4-bullseye@sha256:c788418a026eb1666ed3d61dfbd259b9dd5efdc206a9d276a774318bcfd3c8d0"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-modules
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
     # </template: tests_before_build_template>
 
   matrix_tests:
@@ -771,7 +770,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.4-bullseye@sha256:c788418a026eb1666ed3d61dfbd259b9dd5efdc206a9d276a774318bcfd3c8d0"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -962,7 +961,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOFLAGS=\"-buildvcs=false\" golangci-lint run"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -1115,7 +1114,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1391,7 +1390,7 @@ jobs:
       # </template: doc_release_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to preproduction
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
@@ -1514,7 +1513,7 @@ jobs:
       # </template: doc_release_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to stage
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"

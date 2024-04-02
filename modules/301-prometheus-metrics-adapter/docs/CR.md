@@ -6,7 +6,7 @@ search: autoscaler, HorizontalPodAutoscaler
 {% capture cr_spec %}
 * `.metadata.name` — the name of the metric (used in HPA).
 * `.spec.query` — a custom PromQL query that returns a unique value for your label set (you can use `sum() by()`, `max() by()`, etc., operators for grouping). The following keys **must be used** in the request:
-  * `<<.LabelMatchers>>` — will be replaced with a set of `{namespace="mynamespace"###PLACEHOLDER###}` labels. You can add your own comma-separated labels list (as in the [example](usage.html#example-of-using-rabbitmq-queue-size-based-custom-metrics)).
+  * `<<.LabelMatchers>>` — will be replaced with a set of `{namespace="mynamespace"###PLACEHOLDER###}` labels. You can add your own comma-separated labels list (as in the [example](usage.html#using-custom-metrics-with-the-rabbitmq-queue-size)).
   * `<<.GroupBy>>` — will be replaced with `namespace###PLACEHOLDER2###` labels for grouping (`max() by(...)`, `sum() by (...)`, etc.).
 {% endcapture %}
 

@@ -44,11 +44,14 @@ func newReleasePredictor(releases []*v1alpha1.ModuleRelease) *releasePredictor {
 
 func (rp *releasePredictor) calculateRelease() {
 	for index, rl := range rp.releases {
-		switch rl.Status.Phase {
-		case v1alpha1.PhaseDeployed:
+		if rl.Status.Phase == v1alpha1.PhaseDeployed {
 			rp.currentReleaseIndex = index
+			break
+		}
+	}
 
-		case v1alpha1.PhasePending:
+	for index, rl := range rp.releases {
+		if rl.Status.Phase == v1alpha1.PhasePending {
 			if rp.desiredReleaseIndex >= 0 {
 				previousPredictedRelease := rp.releases[rp.desiredReleaseIndex]
 				if previousPredictedRelease.Spec.Version.Major() != rl.Spec.Version.Major() {
@@ -62,7 +65,15 @@ func (rp *releasePredictor) calculateRelease() {
 				rp.skippedPatchesIndexes = append(rp.skippedPatchesIndexes, rp.desiredReleaseIndex)
 			}
 
-			// release is predicted to be Deployed
+			// if we have a deployed a release
+			if rp.currentReleaseIndex >= 0 {
+				// if deployed version is greater than the pending one, this pending release should be superseded
+				if rp.releases[rp.currentReleaseIndex].Spec.Version.GreaterThan(rl.Spec.Version) {
+					rp.skippedPatchesIndexes = append(rp.skippedPatchesIndexes, index)
+					continue
+				}
+			}
+			// in other cases we have a new desired version of a module
 			rp.desiredReleaseIndex = index
 		}
 	}

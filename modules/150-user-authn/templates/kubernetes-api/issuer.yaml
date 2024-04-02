@@ -9,6 +9,8 @@ metadata:
 spec:
   ca:
     secretName: kubernetes-api-ca-key-pair
+{{- end }}
+{{- if and (.Values.userAuthn.internal.selfSignedCA.cert) (.Values.userAuthn.internal.selfSignedCA.key) }}
 ---
 apiVersion: v1
 kind: Secret

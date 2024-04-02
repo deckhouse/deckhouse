@@ -1,11 +1,10 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_16_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 ARG BASE_DISTROLESS
-FROM $BASE_GOLANG_16_ALPINE as artifact
+FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
 WORKDIR /src/
 COPY / /src/
-RUN apk add --no-cache git && \
-    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-extldflags "-static" -s -w' -o ./protobuf_exporter ./main.go
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-extldflags "-static" -s -w' -o ./protobuf_exporter ./main.go
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /src/protobuf_exporter /protobuf_exporter

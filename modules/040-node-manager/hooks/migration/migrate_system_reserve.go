@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	systemReserveMigrationCM = "system-reserve-config-migration"
-	systemReserveMigrationNS = "d8-system"
+	systemReserveMigrationCM    = "system-reserve-config-migration"
+	systemReserveMigrationCMNew = "kubelet-resource-reservation-migration"
+	systemReserveMigrationNS    = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -55,11 +56,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 		},
+		{
+			Name:                         "cmNew",
+			ApiVersion:                   "v1",
+			Kind:                         "ConfigMap",
+			NameSelector:                 &types.NameSelector{MatchNames: []string{systemReserveMigrationCMNew}},
+			FilterFunc:                   configMapName,
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+		},
 	},
 }, systemReserve)
 
 type NodeGroup struct {
-	Name string
+	Name                    string
+	ResourceReservationMode string
 }
 
 func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -70,7 +81,8 @@ func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return &NodeGroup{
-		Name: ng.Name,
+		Name:                    ng.Name,
+		ResourceReservationMode: string(ng.Spec.Kubelet.ResourceReservation.Mode),
 	}, nil
 }
 
@@ -89,7 +101,7 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func systemReserve(input *go_hook.HookInput) error {
-	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
+	if cmSnapshotNew := input.Snapshots["cmNew"]; len(cmSnapshotNew) > 0 {
 		log.Debug("System reserved Nodes are already migrated, skipping...")
 		return nil
 	}
@@ -97,6 +109,11 @@ func systemReserve(input *go_hook.HookInput) error {
 	ngsSnapshot := input.Snapshots["ngs"]
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
+		skipMigration := ng.ResourceReservationMode != ""
+		input.LogEntry.Printf("NodeGroupName: %s, KubeletResourceReservationMode: %s, skipMigration: %t", ng.Name, ng.ResourceReservationMode, skipMigration)
+		if skipMigration {
+			continue
+		}
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")
@@ -113,11 +130,16 @@ func systemReserve(input *go_hook.HookInput) error {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      systemReserveMigrationCM,
+			Name:      systemReserveMigrationCMNew,
 			Namespace: systemReserveMigrationNS,
 			Labels:    map[string]string{"heritage": "deckhouse"},
 		},
 	}, object_patch.IgnoreIfExists())
+
+	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
+		log.Debugf("Delete old migration configmap (d8-system/%s).", systemReserveMigrationCM)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
+	}
 
 	return nil
 }

@@ -1,2 +1,56 @@
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ .Images.BASE_SHELL_OPERATOR }}
+{{- $shellOperatorVersion := "v1.4.6"}}
+{{- $jqVersion := "b6be13d5"}}
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALT }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /shell-operator/shell-operator
+  to: /shell-operator
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /shell-operator/shell_lib.sh
+  to: /shell_lib.sh
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /shell-operator/frameworks
+  to: /frameworks
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /jq/jq
+  to: /usr/local/bin/jq
+  before: setup
+{{- $k8sVersion := "1.27" }}
+{{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/local/bin/kubectl
+  before: setup
+docker:
+  ENTRYPOINT: ["/shell-operator"]
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+shell:
+  install:
+    - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
+    - git clone {{ .SOURCE_REPO }}/flant/jq.git
+    - cd /jq
+    - git reset --hard {{ $jqVersion }}
+    - |
+      cat > .gitmodules <<"EOF"
+      [submodule "modules/oniguruma"]
+          path = modules/oniguruma
+          url = {{ .SOURCE_REPO }}/flant/oniguruma.git
+      EOF
+    - git submodule update --init
+    - autoreconf -fi
+    - ./configure CFLAGS=-fPIC --disable-maintainer-mode --enable-all-static --disable-shared --disable-docs --disable-tls --disable-valgrind --with-oniguruma=builtin --prefix=/libjq
+    - make -j4
+    - make install-libLTLIBRARIES install-includeHEADERS
+    - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
+    - cd /
+    - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git
+    - cd /shell-operator
+    - go mod tidy
+    - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version=latest'" -tags use_libjq -o shell-operator ./cmd/shell-operator

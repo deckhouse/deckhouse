@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/bin/operator"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/200-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
@@ -21,9 +21,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-    - apt update
-    - apt install patch -y
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - export GOOS=linux
@@ -34,7 +31,7 @@ shell:
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
     - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
-    - go get -u golang.org/x/net@v0.17.0
+    - go get golang.org/x/net@v0.17.0
     - go mod tidy
     - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o operator cmd/operator/main.go
     - chmod 0700 /prometheus-operator/operator

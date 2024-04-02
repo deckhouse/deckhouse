@@ -28,15 +28,17 @@ var (
 	agentInstance          *frontend.Agent
 )
 
-func initAgentInstance(privateKeys []string, reinitializeAgentPrivateKeys bool) (*frontend.Agent, error) {
+// initializeNewInstance disables singleton logic
+func initAgentInstance(privateKeys []string, initializeNewInstance bool) (*frontend.Agent, error) {
 	var err error
 
-	if reinitializeAgentPrivateKeys {
-		if agentInstance != nil {
-			agentInstance.Stop()
-			agentInstance = nil
-		}
-		agentInstanceSingleton = sync.Once{}
+	if initializeNewInstance {
+		inst := frontend.NewAgent(&session.AgentSettings{
+			PrivateKeys: privateKeys,
+		})
+
+		err = inst.Start()
+		return inst, err
 	}
 
 	agentInstanceSingleton.Do(func() {
@@ -60,7 +62,7 @@ func initAgentInstance(privateKeys []string, reinitializeAgentPrivateKeys bool) 
 	})
 
 	if err != nil {
-		// NOTICE: agentInstance will remain nil forever in the case of err, so give it another try in the next init-retry
+		// NOTICE: agentInstance will remain nil forever in the case of err, so give it another try in the next possible init-retry
 		agentInstanceSingleton = sync.Once{}
 	}
 
@@ -72,8 +74,8 @@ func NewClient(session *session.Session, privKeys []string) *Client {
 		Settings:    session,
 		PrivateKeys: privKeys,
 
-		// We use arbitrary privKeys param, so always reinitialize keys
-		ReinitializeAgentPrivateKeys: true,
+		// We use arbitrary privKeys param, so always reinitialize agent with privKeys
+		InitializeNewAgent: true,
 	}
 }
 
@@ -81,8 +83,10 @@ type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
 
-	PrivateKeys                  []string
-	ReinitializeAgentPrivateKeys bool
+	PrivateKeys        []string
+	InitializeNewAgent bool
+
+	kubeProxies []*frontend.KubeProxy
 }
 
 func (s *Client) Start() (*Client, error) {
@@ -90,7 +94,7 @@ func (s *Client) Start() (*Client, error) {
 		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
-	a, err := initAgentInstance(s.PrivateKeys, s.ReinitializeAgentPrivateKeys)
+	a, err := initAgentInstance(s.PrivateKeys, s.InitializeNewAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +118,9 @@ func (s *Client) Command(name string, arg ...string) *frontend.Command {
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
 func (s *Client) KubeProxy() *frontend.KubeProxy {
-	return frontend.NewKubeProxy(s.Settings)
+	p := frontend.NewKubeProxy(s.Settings)
+	s.kubeProxies = append(s.kubeProxies, p)
+	return p
 }
 
 // File is used to upload and download files and directories
@@ -132,8 +138,17 @@ func (s *Client) Check() *frontend.Check {
 	return frontend.NewCheck(s.Settings)
 }
 
-// Stop stop client
+// Stop the client
 func (s *Client) Stop() {
-	// do nothing
 	// stop agent on shutdown because agent is singleton
+
+	if s.InitializeNewAgent {
+		s.Agent.Stop()
+		s.Agent = nil
+		s.Settings.AgentSettings = nil
+	}
+	for _, p := range s.kubeProxies {
+		p.StopAll()
+	}
+	s.kubeProxies = nil
 }

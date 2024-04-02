@@ -73,8 +73,20 @@ spec:
         {{- end }}
         - '--ignored-images={{ $ignoredImages | join "~" }}'
         - --namespace-label=extended-monitoring.deckhouse.io/enabled
-        {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
-        - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify }}
+        - --skip-registry-cert-verification
+        {{- end }}
+        {{- if eq .Values.extendedMonitoring.imageAvailability.registry.scheme "HTTP" }}
+        - --allow-plain-http
+        {{- end }}
+        {{- with .Values.global.modulesImages.registry.CA }}
+        - --capath=/deckhouse-registry-root-ca/ca.crt
+        {{- end }}
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+        - --capath=/registry-root-ca/ca.crt
+        {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers }}
+        - '--force-check-disabled-controllers={{ .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers | join "," | replace "All" "*" }}'
         {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
@@ -89,6 +101,19 @@ spec:
             path: /healthz
             scheme: HTTPS
             port: 8081
+        volumeMounts:
+        {{- with .Values.global.modulesImages.registry.dockercfg }}
+        - name: deckhouse-registry-dockercfg
+          mountPath: /.docker
+        {{- end }}
+        {{- with .Values.global.modulesImages.registry.CA }}
+        - name: deckhouse-registry-root-ca
+          mountPath: /deckhouse-registry-root-ca
+        {{- end }}
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+        - name: registry-root-ca
+          mountPath: /registry-root-ca
+        {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -127,4 +152,23 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
   {{- end }}
+      volumes:
+      {{- with .Values.global.modulesImages.registry.dockercfg }}
+      - name: deckhouse-registry-dockercfg
+        secret:
+          secretName: deckhouse-registry
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+      {{- end }}
+      {{- with .Values.global.modulesImages.registry.CA }}
+      - name: deckhouse-registry-root-ca
+        configMap:
+          name: deckhouse-registry-root-ca.crt
+      {{- end }}
+      {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+      - name: registry-root-ca
+        configMap:
+          name: registry-root-ca.crt
+      {{- end }}
 {{- end }}

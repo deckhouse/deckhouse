@@ -14,7 +14,7 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 ## Как зарезервировать публичный IP-адрес?
 
-Для использования в `externalIPAddresses` и `natInstanceExternalAddress` выполните следующую команду:
+Для использования в `externalIPAddresses` и `natInstanceExternalAddress` (также может быть использован для bastion-хоста) выполните следующую команду:
 
 ```shell
 $ yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -70,3 +70,33 @@ reserved: true
 ```shell
 kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
+
+## Как создать кластер в новом VPC и развернуть bastion-хост для доступа к узлам?
+
+1. Выполните bootstrap базовой инфраструктуры кластера:
+
+   ```shell
+   dhctl bootstrap-phase base-infra --config config.yml
+   ```
+
+2. Создайте bastion-хост:
+
+   ```shell
+   yc compute instance create \
+   --name bastion \
+   --hostname bastion \
+   --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
+   --memory 2 \
+   --cores 2 \
+   --core-fraction 100 \
+   --ssh-key ~/.ssh/id_rsa.pub \
+   --zone ru-central1-a \
+   --public-address 178.154.226.159
+   ```
+
+3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кэш Terraform ответьте `y`:
+
+   ```shell
+   dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+   ```

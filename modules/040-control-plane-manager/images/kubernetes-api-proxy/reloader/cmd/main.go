@@ -21,6 +21,5 @@ import (
 )
 
 func main() {
-	go src.WatchNginxConf()
-	src.InitHealtcheck()
+	src.WatchNginxConf()
 }

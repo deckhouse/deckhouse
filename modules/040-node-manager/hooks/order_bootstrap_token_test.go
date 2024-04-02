@@ -157,7 +157,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 		It("A new token for NG static-0 must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(HaveLen(23))
@@ -209,7 +209,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(HaveLen(23))
@@ -263,7 +263,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-kkkkkk").Exists()).To(BeTrue())
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(len(bootstrapToken)).To(Equal(23))
@@ -330,9 +330,9 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 				Group:    "",
 				Resource: "secrets",
 			}).List(context.Background(), v1.ListOptions{})
-			Expect(len(slist.Items)).To(Equal(3))
+			Expect(len(slist.Items)).To(Equal(4))
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))
@@ -366,9 +366,9 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 				Group:    "",
 				Resource: "secrets",
 			}).List(context.Background(), v1.ListOptions{})
-			Expect(len(slist.Items)).To(Equal(3))
+			Expect(len(slist.Items)).To(Equal(4))
 
-			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
+			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(2))
 
 			bootstrapToken := f.ValuesGet("nodeManager.internal.bootstrapTokens.static-0").String()
 			Expect(bootstrapToken).To(Equal("ssssss.ssssssssssssssss"))

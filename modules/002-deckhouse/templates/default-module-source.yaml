@@ -1,0 +1,16 @@
+{{- if .Values.global.clusterIsBootstrapped }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  registry:
+    {{- if $.Values.global.modulesImages.registry.CA }}
+    ca: {{ $.Values.global.modulesImages.registry.CA | nindent 6 }}
+    {{- end }}
+    dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
+    repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
+    scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}
+{{- end }}

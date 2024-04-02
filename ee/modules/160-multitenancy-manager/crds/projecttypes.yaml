@@ -30,6 +30,7 @@ spec:
             spec:
               properties:
                 namespaceMetadata:
+                  x-doc-deprecated: true
                   description:
                     Labels and annotations that apply to created
                     namespaces when setting up the environment.
@@ -38,10 +39,12 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                      x-doc-deprecated: true
                     labels:
                       additionalProperties:
                         type: string
                       type: object
+                      x-doc-deprecated: true
                   type: object
                 openAPI:
                   additionalProperties:
@@ -49,11 +52,12 @@ spec:
                   description:
                     OpenAPI specification for template values (the [resourcesTemplate](#projecttype-v1alpha1-spec-resourcestemplate) parameter).
                   type: object
+                  x-doc-deprecated: true
                 resourcesTemplate:
                   description: |
                     Resource templates in `helm` format to be created when setting up a new environment.
 
-                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-an-isolated-environment)...
+                    Templates are fully compatible with all `helm` functions. Read more about [creating an isolated Environment](usage.html#creating-a-project)...
 
                     The following values are also available in templates:
                     - `{{ .projectName }}` — the name of the `Project` (environment) for which the template is being rendered.
@@ -63,10 +67,12 @@ spec:
                     > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
                     > as they are automatically set with the name of the created environment (CR `Project`).
                   type: string
+                  x-doc-deprecated: true
                 subjects:
                   description:
                     List of ServiceAccounts, Groups and Users to provide
                     access to the created environment (project).
+                  x-doc-deprecated: true
                   items:
                     oneOf:
                       - properties:
@@ -102,12 +108,14 @@ spec:
                           - User
                           - Group
                         type: string
+                        x-doc-deprecated: true
                       name:
                         description:
                           The name of the target resource to apply access
                           to the environment.
                         minLength: 1
                         type: string
+                        x-doc-deprecated: true
                       namespace:
                         description:
                           The namespace of the target resource to apply environment access to.
@@ -115,6 +123,7 @@ spec:
                           Required only when using `ServiceAccount` from another namespace.
                         pattern: "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
                         type: string
+                        x-doc-deprecated: true
                       role:
                         description: Role name from [user-authz module](../140-user-authz/cr.html#clusterauthorizationrule-v1-spec-accesslevel)
                         enum:
@@ -123,6 +132,7 @@ spec:
                           - Editor
                           - Admin
                         type: string
+                        x-doc-deprecated: true
                     type: object
                   type: array
               type: object
@@ -138,5 +148,7 @@ spec:
           type: object
       served: true
       storage: true
+      deprecated: true
+      deprecationWarning: "ProjectType is deprecated. Use ProjectTemplate instead"
       subresources:
         status: {}

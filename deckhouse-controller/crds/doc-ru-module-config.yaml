@@ -1,17 +1,20 @@
 spec:
   versions:
-    - name: v1
+    - name: v1alpha1
       schema:
         openAPIV3Schema:
           description: |
             Определяет конфигурацию модуля Deckhouse. Название ресурса ModuleConfig должно соответствовать названию модуля (например, `control-plane-manager` для модуля `control-plane-manager`).
           properties:
-            enabled:
-              description: |
-                Включить или выключить модуль.
-            version:
-              description: |
-                Версия схемы настроек модуля.
-            settings:
-              description: |
-                Настройки модуля.
+            spec:
+              type: object
+              properties:
+                enabled:
+                  description: |
+                    Включить или выключить модуль.
+                version:
+                  description: |
+                    Версия схемы настроек модуля.
+                settings:
+                  description: |
+                    Настройки модуля.

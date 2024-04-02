@@ -16,12 +16,15 @@ package preflight
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
 func TestCheckRegistryAccessThroughProxy(t *testing.T) {
@@ -111,6 +114,70 @@ func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s.NoError(err)
 	s.Nil(proxyURL)
 	s.Nil(noProxyList)
+}
+
+func TestTryToSkippingCheck(t *testing.T) {
+	s := require.New(t)
+
+	var tests = []struct {
+		registryAddress  string
+		noProxyAddresses []string
+		skipped          bool
+	}{
+		{
+			registryAddress:  "192.168.199.129/d8/deckhouse/ee",
+			noProxyAddresses: []string{"127.0.0.1", "192.168.199.0/24"},
+			skipped:          true,
+		},
+		{
+			registryAddress:  "registry.deckhouse.io/ce",
+			noProxyAddresses: []string{"registry.deckhouse.io"},
+			skipped:          true,
+		},
+		{
+			registryAddress:  "quay.io",
+			noProxyAddresses: []string{"docker.io"},
+			skipped:          false,
+		},
+	}
+
+	for _, test := range tests {
+		clusterConfig := fmt.Sprintf(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+clusterDomain: "cluster.local"
+proxy:
+  httpProxy: http://proxyuser:proxypassword@192.168.199.236:8888
+  httpsProxy: http://proxyuser:proxypassword@192.168.199.236:8888
+  noProxy: ["%s"]
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: %s
+  registryDockerCfg: eyJhdXRocyI6eyIxOTIuMTY4LjE5OS4xMjkiOnsiYXV0aCI6ImEyOTJZV3hyYjNZNldHVnBiamxoWm1VPSJ9fX0K
+  registryScheme: HTTP
+`, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress)
+
+		metaConfig, err := config.ParseConfigFromData(clusterConfig)
+		s.NoError(err)
+
+		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+		s.NoError(err)
+
+		preflightChecker := NewChecker(&ssh.Client{}, installer, metaConfig)
+
+		err = preflightChecker.CheckRegistryAccessThroughProxy()
+		if test.skipped {
+			s.NoError(err)
+		} else {
+			s.Error(err)
+		}
+	}
 }
 
 func checkResponseSuccess_OKResponse(t *testing.T) {

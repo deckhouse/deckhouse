@@ -1,0 +1,30 @@
+---
+artifact: {{ .ModuleName }}/madison-proxy-artifact
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+    - cd /src
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /madison-proxy
+    - chown 64535:64535 /madison-proxy
+    - chmod 0755 /madison-proxy
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/madison-proxy-artifact
+  add: /madison-proxy
+  to: /madison-proxy
+  before: setup
+docker:
+  ENTRYPOINT: ["/madison-proxy"]

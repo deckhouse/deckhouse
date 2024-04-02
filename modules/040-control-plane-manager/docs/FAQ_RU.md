@@ -34,14 +34,25 @@ title: "Управление control plane: FAQ"
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   Ответ должен сообщить вам, что Terraform не хочет ничего менять.
+   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
 
-1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество реплик в параметре `masterNodeGroup.replicas`:
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество мастер-узлов в параметре `masterNodeGroup.replicas`:
 
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST>
    ```
+
+   > Для **Yandex Cloud**, при использовании внешних адресов на мастер-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству мастер-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству мастер-узлов.
+   >
+   > Например, при трех мастер-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```bash
+   > externalIPAddresses:
+   > - "Auto"
+   > - "Auto"
+   > - "Auto"
+   > ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
@@ -263,9 +274,6 @@ title: "Управление control plane: FAQ"
 ## Как изменить образ ОС в single-master-кластере?
 
 1. Преобразуйте single-master-кластер в multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
-
-   > Помимо увеличения числа реплик, вы можете сразу указать образ с необходимой версией ОС в параметре `masterNode.instanceClass`.
-
 1. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ос-в-multi-master-кластере).
 1. Преобразуйте multi-master-кластер в single-master в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master)
 

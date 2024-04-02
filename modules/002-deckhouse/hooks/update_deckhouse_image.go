@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -30,10 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
@@ -110,31 +114,6 @@ type deckhousePodInfo struct {
 	Namespace string `json:"namespace"`
 	Image     string `json:"image"`
 	ImageID   string `json:"imageID"`
-	Ready     bool   `json:"ready"`
-}
-
-// while cluster bootstrapping we have the tag for deckhouse image like: alpha, beta, early-access, stable, rock-solid
-// it is set via dhctl, which does not know anything about releases and tags
-// We can use this bootstrap image for applying first release without any requirements (like update windows, canary, etc)
-// We must check even digest or tag, for different cases. In fact, this function checks only if image is from release channel.
-func (dpi deckhousePodInfo) isBootstrapImage() bool {
-	isDigest := strings.LastIndex(dpi.Image, "@sha256")
-	if isDigest != -1 {
-		_, err := gcr.NewDigest(dpi.Image)
-		if err != nil {
-			return false
-		}
-	} else {
-		tag, err := gcr.NewTag(dpi.Image)
-		if err != nil {
-			return false
-		}
-		switch strings.ToLower(tag.TagStr()) {
-		case "alpha", "beta", "early-access", "stable", "rock-solid":
-			return true
-		}
-	}
-	return false
 }
 
 const (
@@ -143,15 +122,20 @@ const (
 )
 
 func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
-	deckhousePod := getDeckhousePod(input.Snapshots["deckhouse_pod"])
-	if deckhousePod == nil {
-		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping update")
+	deckhousePods, err := getDeckhousePods(input.Snapshots["deckhouse_pod"])
+	if err != nil {
+		input.LogEntry.Warnf("Error getting deckhouse pods: %s", err)
+		return nil
+	}
+
+	if len(deckhousePods) == 0 {
+		input.LogEntry.Warn("Deckhouse pods not found. Skipping update")
 		return nil
 	}
 
 	if !input.Values.Exists("deckhouse.releaseChannel") {
 		// dev upgrade - by tag
-		return tagUpdate(input, dc, deckhousePod)
+		return tagUpdate(input, dc, deckhousePods)
 	}
 
 	// production upgrade
@@ -165,12 +149,14 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// initialize deckhouseUpdater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	// if values key does not exist, then cluster is just bootstrapping
+	clusterBootstrapping := !input.Values.Exists("global.clusterIsBootstrapped")
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc.GetHTTPClient()), clusterBootstrapping)
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if deckhousePod.Ready {
+	if isDeckhousePodReady(dc.GetHTTPClient()) {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -358,11 +344,8 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		imageName = pod.Spec.Containers[0].Image
 	}
 
-	var ready bool
-
 	if len(pod.Status.ContainerStatuses) > 0 {
 		imageID = pod.Status.ContainerStatuses[0].ImageID
-		ready = pod.Status.ContainerStatuses[0].Ready
 	}
 
 	return deckhousePodInfo{
@@ -370,31 +353,32 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		ImageID:   imageID,
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
-		Ready:     ready,
 	}, nil
 }
 
 // tagUpdate update by tag, in dev mode or specified image
-func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *deckhousePodInfo) error {
-	if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
-		// pod is restarting or something like that, try more in 15 seconds
-		return nil
+func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePods []deckhousePodInfo) error {
+	for _, deckhousePod := range deckhousePods {
+		if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
+			// pod is restarting or something like that, try more in 15 seconds
+			return nil
+		}
+
+		if deckhousePod.Image == "" || deckhousePod.ImageID == "" {
+			input.LogEntry.Debug("Deckhouse pod is not ready. Try to update later")
+			return nil
+		}
 	}
 
-	if deckhousePod.Image == "" || deckhousePod.ImageID == "" {
-		input.LogEntry.Debug("Deckhouse pod is not ready. Try to update later")
-		return nil
-	}
-
-	idSplitIndex := strings.LastIndex(deckhousePod.ImageID, "@")
+	idSplitIndex := strings.LastIndex(deckhousePods[0].ImageID, "@")
 	if idSplitIndex == -1 {
-		return fmt.Errorf("image hash not found: %s", deckhousePod.ImageID)
+		return fmt.Errorf("image hash not found: %s", deckhousePods[0].ImageID)
 	}
-	imageHash := deckhousePod.ImageID[idSplitIndex+1:]
+	imageHash := deckhousePods[0].ImageID[idSplitIndex+1:]
 
-	imageRepoTag, err := gcr.NewTag(deckhousePod.Image)
+	imageRepoTag, err := gcr.NewTag(deckhousePods[0].Image)
 	if err != nil {
-		return fmt.Errorf("incorrect image: %s", deckhousePod.Image)
+		return fmt.Errorf("incorrect image: %s", deckhousePods[0].Image)
 	}
 	repo := imageRepoTag.Context().Name()
 	tag := imageRepoTag.TagStr()
@@ -425,30 +409,71 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *
 
 	input.LogEntry.Info("New deckhouse image found. Restarting")
 
-	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
+	now := time.Now().Format(time.RFC3339)
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC).Format(time.RFC3339)
+	}
+
+	annotationsPatch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"template": map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]string{
+						"kubectl.kubernetes.io/restartedAt": now,
+					},
+				},
+			},
+		},
+	}
+
+	input.PatchCollector.MergePatch(annotationsPatch, "apps/v1", "Deployment", deckhousePods[0].Namespace, "deckhouse")
 
 	return nil
 }
 
-func getDeckhousePod(snap []go_hook.FilterResult) *deckhousePodInfo {
-	var deckhousePod deckhousePodInfo
+func getDeckhousePods(snap []go_hook.FilterResult) ([]deckhousePodInfo, error) {
+	if len(snap) == 0 {
+		return nil, nil
+	}
 
-	switch len(snap) {
-	case 0:
-		return nil
+	var image, imageID string
+	deckhousePods := make([]deckhousePodInfo, 0, len(snap))
 
-	case 1:
-		deckhousePod = snap[0].(deckhousePodInfo)
-
-	default:
-		for _, sn := range snap {
-			if sn == nil {
+	for _, sn := range snap {
+		if sn == nil {
+			continue
+		}
+		deckhousePod := sn.(deckhousePodInfo)
+		deckhousePods = append(deckhousePods, deckhousePod)
+		// init image and imageID for comparison images/imageIDs across all pods if there are more than one pod in the snapshot
+		if len(snap) > 1 {
+			if len(image)+len(imageID) == 0 && len(deckhousePod.Image) != 0 && len(deckhousePod.ImageID) != 0 {
+				image, imageID = deckhousePod.Image, deckhousePod.ImageID
 				continue
 			}
-			deckhousePod = sn.(deckhousePodInfo)
-			break
+
+			if image != deckhousePod.Image || imageID != deckhousePod.ImageID {
+				return nil, fmt.Errorf("deckhouse pods run different images")
+			}
 		}
 	}
 
-	return &deckhousePod
+	return deckhousePods, nil
+}
+
+func isDeckhousePodReady(httpClient d8http.Client) bool {
+	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+
+	url := fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		klog.Errorf("error getting deckhouse pod readyz status: %s", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	return true
 }

@@ -39,7 +39,9 @@
     <a href="#">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
     {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
-          experimental
+          Experimental
+        {%- elsif entry.featureStatus == "deprecated" %}
+          Deprecated
         {%- elsif entry.featureStatus == "temporaryDeprecated" %}
           Temporary deprecated
         {%- elsif entry.featureStatus == "proprietaryOkmeter" %}

@@ -35,6 +35,9 @@ sysctl -w net.netfilter.nf_conntrack_max=$NF_CONNTRACK_MAX # set a limit on the 
 sysctl -w net.nf_conntrack_max=$NF_CONNTRACK_MAX
 echo $(( $NF_CONNTRACK_MAX / 4 )) > /sys/module/nf_conntrack/parameters/hashsize # set the proportional size of the hash table for search by contact
 
+# Prevent ipv4 forwarding from being disabled
+sysctl -w net.ipv4.conf.all.forwarding=1
+
 # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
 sysctl -w vm.swappiness=0
 sysctl -w net.core.somaxconn=1000

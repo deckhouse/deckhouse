@@ -1,0 +1,59 @@
+{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
+---
+artifact: {{ .ModuleName }}/build-keepalived
+from: {{ .Images.BASE_ALPINE_DEV }}
+shell:
+  install:
+    - mkdir build && cd build
+    - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
+    - cd ./src
+    - ./autogen.sh
+    - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
+    - make
+    - DESTDIR=/opt/keepalived-static make install
+    - chown -R 64535:64535 /opt/keepalived-static
+    - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
+    - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+---
+artifact: {{ $.ModuleName }}/python
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir /empty
+    - chmod 644 /empty
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+    to: /prepare-config.py
+import:
+  - artifact: {{ $.ModuleName }}/python
+    add: /relocate
+    to: /
+    before: install
+  - artifact: {{ $.ModuleName }}/python
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: install
+  - artifact: {{ $.ModuleName }}/python
+    add: /usr/local/lib/python3/site-packages
+    to: /usr/local/lib/python3/site-packages
+    before: install
+  - artifact: {{ $.ModuleName }}/python
+    add: /usr/lib64/python3.9
+    to: /usr/lib64/python3.9
+    before: install
+  - artifact: {{ $.ModuleName }}/build-keepalived
+    add: /opt/keepalived-static/usr/sbin/keepalived
+    to: /usr/sbin/keepalived
+    before: install
+  - artifact: {{ $.ModuleName }}/build-keepalived
+    add: /opt/keepalived-static/usr/bin/genhash
+    to: /usr/bin/genhash
+    before: install
+  - artifact: {{ $.ModuleName }}/python
+    add: /empty
+    to: /run
+    before: setup

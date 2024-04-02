@@ -38,7 +38,6 @@ env:
   # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
-  CRATESPROXY: "${{secrets.CRATESPROXY}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
@@ -197,8 +196,19 @@ jobs:
             const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-            const edition = hasCE ? 'CE' : (hasEE ? 'EE' : defaultEdition);
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}`);
+            const hasBE = pr.labels.some((l) => l.name === 'edition/be');
+            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
+            let edition = defaultEdition;
+            if (hasCE) {
+              edition = 'CE';
+            } else if (hasEE) {
+              edition = 'EE';
+            } else if (hasBE) {
+              edition = 'BE';
+            } else if (hasSE) {
+              edition = 'SE';
+            }
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -378,6 +388,26 @@ jobs:
       - run: |
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
+  enable_be:
+    if: ${{ needs.pull_request_info.outputs.edition == 'BE' }}
+    name: Enable BE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_se:
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE' }}
+    name: Enable SE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -425,7 +455,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -597,7 +627,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -775,7 +805,7 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -833,7 +863,7 @@ jobs:
 
 
       - name: Run main web build
-        uses: werf/actions/build@v1.2
+        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -921,14 +951,14 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.4-bullseye@sha256:c788418a026eb1666ed3d61dfbd259b9dd5efdc206a9d276a774318bcfd3c8d0"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-modules
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
     # </template: tests_before_build_template>
 
   matrix_tests:
@@ -1007,7 +1037,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.4-bullseye@sha256:c788418a026eb1666ed3d61dfbd259b9dd5efdc206a9d276a774318bcfd3c8d0"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1204,7 +1234,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOFLAGS=\"-buildvcs=false\" golangci-lint run"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -1354,7 +1384,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>

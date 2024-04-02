@@ -67,7 +67,9 @@ There are two possible cases:
 ## Adding CloudStatic nodes to a cluster
 
 To add a pre-created VM as a node to a cluster, follow these steps:
-1. Attach a security group `<prefix>-node`.
+
+1. Attach a security group `<prefix>-node` to the virtual machine.
+1. Attach the IAM role `<prefix>-node` to the virtual machine.
 1. Add the following tags to the virtual machine (so that `cloud-controller-manager` can find virtual machines in the cloud):
 
    ```text

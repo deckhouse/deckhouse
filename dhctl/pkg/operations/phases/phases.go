@@ -41,12 +41,13 @@ var (
 )
 
 type PhasedExecutionContext struct {
-	onPhaseFunc            OnPhaseFunc
-	lastState              DhctlState
-	completedPhase         OperationPhase
-	failedPhase            OperationPhase
-	currentPhase           OperationPhase
-	stopOperationCondition bool
+	onPhaseFunc               OnPhaseFunc
+	lastState                 DhctlState
+	completedPhase            OperationPhase
+	failedPhase               OperationPhase
+	currentPhase              OperationPhase
+	stopOperationCondition    bool
+	pipelineCompletionCounter int
 }
 
 func NewPhasedExecutionContext(onPhaseFunc OnPhaseFunc) *PhasedExecutionContext {
@@ -62,43 +63,83 @@ func (pec *PhasedExecutionContext) setLastState(stateCache dstate.Cache) error {
 	return nil
 }
 
-func (pec *PhasedExecutionContext) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, nextPhase OperationPhase, nextPhaseIsCritical bool) (bool, error) {
+func (pec *PhasedExecutionContext) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
 	if pec.onPhaseFunc == nil {
 		return false, nil
 	}
-	err := pec.onPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseIsCritical)
-	if errors.Is(err, StopOperationCondition) {
-		return true, nil
-	} else {
-		return false, err
+
+	onPhaseErr := pec.onPhaseFunc(completedPhase, completedPhaseState, nextPhase, nextPhaseIsCritical)
+
+	if onPhaseErr != nil {
+		if err := pec.setLastState(stateCache); err != nil {
+			return false, err
+		}
+
+		pec.stopOperationCondition = true
+
+		if errors.Is(onPhaseErr, StopOperationCondition) {
+			return true, nil
+		} else {
+			return false, onPhaseErr
+		}
 	}
+
+	return false, nil
 }
 
-func (pec *PhasedExecutionContext) Init(stateCache dstate.Cache) error {
-	return pec.setLastState(stateCache)
+// InitPipeline initializes PhasedExecutionContext before usage.
+// It is not possible to use PhasedExecutionContext before InitPipeline called.
+func (pec *PhasedExecutionContext) InitPipeline(stateCache dstate.Cache) error {
+	if err := pec.setLastState(stateCache); err != nil {
+		return err
+	}
+	pec.pipelineCompletionCounter++
+	return nil
 }
 
+// Finalize supposed to always be called when errors or no errors have occured (use defer pec.Finalize() for example).
+// Call Finalize in the same scope where InitPipeline has been called.
+//
+// It is not possible to use PhasedExecutionContext after Finalize called.
 func (pec *PhasedExecutionContext) Finalize(stateCache dstate.Cache) error {
-	return pec.CommitState(stateCache)
-}
-
-func (pec *PhasedExecutionContext) StartPhase(phase OperationPhase, isCritical bool) (bool, error) {
-	if pec.stopOperationCondition {
-		return false, nil
-	}
-
-	pec.currentPhase = phase
-	return pec.callOnPhase(pec.completedPhase, pec.lastState, phase, isCritical)
-}
-
-func (pec *PhasedExecutionContext) CommitState(stateCache dstate.Cache) error {
 	if pec.stopOperationCondition {
 		return nil
 	}
 	return pec.setLastState(stateCache)
 }
 
-func (pec *PhasedExecutionContext) Complete() error {
+// StartPhase starts a new phase of some process behind current PhasedExecutionContext.
+// StartPhase could be called either after InitPipeline to start first phase or after CompletePhase to start N-th phase.
+func (pec *PhasedExecutionContext) StartPhase(phase OperationPhase, isCritical bool, stateCache dstate.Cache) (bool, error) {
+	if pec.stopOperationCondition {
+		return true, nil
+	}
+
+	pec.currentPhase = phase
+	return pec.callOnPhase(pec.completedPhase, pec.lastState, phase, isCritical, stateCache)
+}
+
+// CompletePhase stops previously started phase and saves current snapshot of state::Cache into the PhasedExecutionContext.
+func (pec *PhasedExecutionContext) CompletePhase(stateCache dstate.Cache) error {
+	if pec.stopOperationCondition {
+		return nil
+	}
+	pec.completedPhase = pec.currentPhase
+	return pec.setLastState(stateCache)
+}
+
+func (pec *PhasedExecutionContext) commitState(stateCache dstate.Cache) error {
+	if pec.stopOperationCondition {
+		return nil
+	}
+	return pec.setLastState(stateCache)
+}
+
+// CompletePipeline stops whole phased process execution pipeline (onPhaseFunc will be called).
+// CompletePipeline or CompletePhaseAndPipeline could be called only once for a given PhasedExecutionContext.
+// CompletePipeline or CompletePhaseAndPipeline should be called in the same scope where InitPipeline has been called.
+func (pec *PhasedExecutionContext) CompletePipeline(stateCache dstate.Cache) error {
+	pec.pipelineCompletionCounter--
 	if pec.stopOperationCondition {
 		return nil
 	}
@@ -106,26 +147,32 @@ func (pec *PhasedExecutionContext) Complete() error {
 	if pec.completedPhase == "" {
 		return nil
 	}
-	_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false)
-	return err
-}
-
-// SwitchPhase — is a shortcut to call stop-current-phase & start-next-phase
-func (pec *PhasedExecutionContext) SwitchPhase(phase OperationPhase, isCritical bool, stateCache dstate.Cache) (bool, error) {
-	if err := pec.CommitState(stateCache); err != nil {
-		return false, err
-	}
-	return pec.StartPhase(phase, isCritical)
-}
-
-// StopAndFinalize — is a shortcut to call stop-current-phase & finalize execution
-func (pec *PhasedExecutionContext) CommitAndComplete(stateCache dstate.Cache) error {
-	if err := pec.CommitState(stateCache); err != nil {
+	if pec.pipelineCompletionCounter == 0 {
+		_, err := pec.callOnPhase(pec.completedPhase, pec.lastState, "", false, stateCache)
 		return err
 	}
-	return pec.Complete()
+	return nil
 }
 
+// SwitchPhase is a shortcut to complete current phase & start next phase in one-step.
+func (pec *PhasedExecutionContext) SwitchPhase(phase OperationPhase, isCritical bool, stateCache dstate.Cache) (bool, error) {
+	if err := pec.CompletePhase(stateCache); err != nil {
+		return false, err
+	}
+	return pec.StartPhase(phase, isCritical, stateCache)
+}
+
+// CompletePhaseAndPipeline is a shortcut to commit current phase & complete PhasedExecutionContext phased process execution pipeline.
+// Complete or CompletePhaseAndPipeline could be called only once for a given PhasedExecutionContext.
+// Complete or CompletePhaseAndPipeline should be called in the same scope where InitPipeline has been called.
+func (pec *PhasedExecutionContext) CompletePhaseAndPipeline(stateCache dstate.Cache) error {
+	if err := pec.CompletePhase(stateCache); err != nil {
+		return err
+	}
+	return pec.CompletePipeline(stateCache)
+}
+
+// GetLastState gets last committed state from PhasedExecutionContext.
 func (pec *PhasedExecutionContext) GetLastState() DhctlState {
 	return pec.lastState
 }

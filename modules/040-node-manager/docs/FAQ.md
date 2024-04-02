@@ -129,7 +129,11 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to delete the corresponding  [Instance](cr.html#instance) resource, and then the `StaticInstance` will be deleted automatically.
+To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
+1. Wait until the `StaticInstance` status becomes `Pending`.
+1. Delete the `StaticInstance`.
+1. Decrease the `NodeGroup.spec.staticInstances.count` field by 1.
 
 ### How do I change the IP address of a StaticInstance?
 
@@ -156,7 +160,7 @@ Applying the changes will take some time.
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
-> **Note!** Evict resources from the node and remove the node from LINSTOR using the [instruction](../041-linstor/faq.html#how-to-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR storage pools.
+> **Note!** Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
 
 1. Delete the node from the Kubernetes cluster:
 

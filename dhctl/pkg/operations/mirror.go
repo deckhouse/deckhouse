@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -32,7 +33,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+const customTrivyMediaTypesWarning = `` +
+	"It looks like you are using Project Quay registry and it is not configured correctly for hosting Deckhouse.\n" +
+	"See the docs at https://deckhouse.io/documentation/v1/supported_versions.html#container-registry for more details.\n\n" +
+	"TL;DR: You should retry mirror push after allowing some additional types of OCI artifacts in your config.yaml as follows:\n" +
+	`FEATURE_GENERAL_OCI_SUPPORT: true
+ALLOWED_OCI_ARTIFACT_TYPES:
+  "application/vnd.aquasec.trivy.config.v1+json":
+    - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"`
 
 func MirrorDeckhouseToLocalFS(
 	mirrorCtx *mirror.Context,
@@ -77,6 +88,14 @@ func MirrorDeckhouseToLocalFS(
 	if err = mirror.PullDeckhouseReleaseChannels(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull release channels: %w", err)
 	}
+
+	log.InfoF("Generating DeckhouseRelease manifests...\t")
+	deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.TarBundlePath), "deckhousereleases.yaml")
+	if err := mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
+		return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
+	}
+	log.InfoLn("✅")
+
 	if err = mirror.PullDeckhouseImages(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull Deckhouse: %w", err)
 	}
@@ -88,6 +107,20 @@ func MirrorDeckhouseToLocalFS(
 	if err = validateLayoutsIfRequired(layouts, mirrorCtx.ValidationMode); err != nil {
 		return err
 	}
+
+	// Trivy database image is not strictly compliant to OCI specs, it lacks platform data and uses custom layer media type.
+	// We avoid its validation by adding it after all validations on the Deckhouse distribution are performed.
+	log.InfoLn("Pulling Trivy vulnerability database...")
+	if err = mirror.PullTrivyVulnerabilityDatabaseImageToLayout(
+		mirrorCtx.DeckhouseRegistryRepo,
+		mirrorCtx.RegistryAuth,
+		layouts.Security,
+		mirrorCtx.Insecure,
+		mirrorCtx.SkipTLSVerification,
+	); err != nil {
+		return fmt.Errorf("pull vulnerability database: %w", err)
+	}
+	log.InfoLn("Trivy vulnerability database pulled")
 
 	return nil
 }
@@ -112,12 +145,6 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 	}
 	log.InfoLn("✅")
 
-	log.InfoF("Validating downloaded Deckhouse images...\t")
-	if err = mirror.ValidateLayouts(maputil.Values(ociLayouts), mirrorCtx.ValidationMode); err != nil {
-		return fmt.Errorf("OCI Image Layouts are invalid: %w", err)
-	}
-	log.InfoLn("✅")
-
 	refOpts, remoteOpts := mirror.MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 
 	for originalRepo, ociLayout := range ociLayouts {
@@ -138,7 +165,6 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 			tag := manifest.Annotations["io.deckhouse.image.short_tag"]
 			imageRef := repo + ":" + tag
 
-			log.InfoF("[%d / %d] Pushing image %s...\t", pushCount, len(indexManifest.Manifests), imageRef)
 			img, err := index.Image(manifest.Digest)
 			if err != nil {
 				return fmt.Errorf("read image: %w", err)
@@ -148,10 +174,25 @@ func PushDeckhouseToRegistry(mirrorCtx *mirror.Context) error {
 			if err != nil {
 				return fmt.Errorf("parse oci layout reference: %w", err)
 			}
-			if err = remote.Write(ref, img, remoteOpts...); err != nil {
-				return fmt.Errorf("write %s to registry: %w", ref.String(), err)
+
+			err = retry.NewLoop(
+				fmt.Sprintf("[%d / %d] Pushing image %s...", pushCount, len(indexManifest.Manifests), imageRef),
+				20,
+				3*time.Second,
+			).Run(func() error {
+				if err = remote.Write(ref, img, remoteOpts...); err != nil {
+					if mirror.IsTrivyMediaTypeNotAllowedError(err) {
+						log.WarnLn(customTrivyMediaTypesWarning)
+						os.Exit(1)
+					}
+					return fmt.Errorf("write %s to registry: %w", ref.String(), err)
+				}
+				return nil
+			})
+			if err != nil {
+				return err
 			}
-			log.InfoLn("✅")
+
 			pushCount++
 		}
 		log.InfoF("Repo %s is mirrored ✅\n", originalRepo)
@@ -206,10 +247,12 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []str
 	deckhouseIndexRef := mirrorCtx.RegistryHost + mirrorCtx.RegistryPath
 	installersIndexRef := filepath.Join(deckhouseIndexRef, "install")
 	releasesIndexRef := filepath.Join(deckhouseIndexRef, "release-channel")
+	securityIndexRef := filepath.Join(deckhouseIndexRef, "security", "trivy-db")
 
 	deckhouseLayoutPath := mirrorCtx.UnpackedImagesPath
 	installersLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "install")
 	releasesLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "release-channel")
+	securityLayoutPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "security", "trivy-db")
 
 	deckhouseLayout, err := layout.FromPath(deckhouseLayoutPath)
 	if err != nil {
@@ -223,12 +266,17 @@ func findLayoutsToPush(mirrorCtx *mirror.Context) (map[string]layout.Path, []str
 	if err != nil {
 		return nil, nil, err
 	}
+	securityLayout, err := layout.FromPath(securityLayoutPath)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	modulesPath := filepath.Join(mirrorCtx.UnpackedImagesPath, "modules")
 	ociLayouts := map[string]layout.Path{
 		deckhouseIndexRef:  deckhouseLayout,
 		installersIndexRef: installersLayout,
 		releasesIndexRef:   releasesLayout,
+		securityIndexRef:   securityLayout,
 	}
 
 	modulesNames := make([]string, 0)

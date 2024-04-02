@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -54,7 +54,7 @@ var (
 func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       ProjectsQueue,
-		ApiVersion: APIVersion,
+		ApiVersion: ProjectAPIVersion,
 		Kind:       ProjectKind,
 		FilterFunc: filterFunc,
 	}
@@ -62,13 +62,13 @@ func projectHookConfig(filterFunc go_hook.FilterFunc) go_hook.KubernetesConfig {
 
 type ProjectSnapshotWithStatus struct {
 	Snapshot ProjectSnapshot
-	Status   v1alpha1.ProjectStatus
+	Status   v1alpha2.ProjectStatus
 }
 
 type ProjectSnapshot struct {
-	ProjectName     string                 `json:"projectName" yaml:"projectName"`
-	ProjectTypeName string                 `json:"projectTypeName" yaml:"projectTypeName"`
-	Template        map[string]interface{} `json:"params" yaml:"params"`
+	ProjectName         string                 `json:"projectName" yaml:"projectName"`
+	ProjectTemplateName string                 `json:"projectTemplateName" yaml:"projectTemplateName"`
+	Parameters          map[string]interface{} `json:"parameters" yaml:"parameters"`
 }
 
 func filterProjects(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -92,44 +92,46 @@ func filterProjectReleaseSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 }
 
 func projectSnapshotFromUnstructed(obj *unstructured.Unstructured) (*ProjectSnapshotWithStatus, error) {
-	project := &v1alpha1.Project{}
+	project := &v1alpha2.Project{}
 	if err := sdk.FromUnstructured(obj, project); err != nil {
 		return nil, err
 	}
 
-	return &ProjectSnapshotWithStatus{
+	projectSnapshotWithStatus := ProjectSnapshotWithStatus{
 		Snapshot: ProjectSnapshot{
-			ProjectName:     project.Name,
-			ProjectTypeName: project.Spec.ProjectTypeName,
-			Template:        project.Spec.Template,
+			ProjectName:         project.Name,
+			ProjectTemplateName: project.Spec.ProjectTemplateName,
+			Parameters:          project.Spec.Parameters,
 		},
 		Status: project.Status,
-	}, nil
+	}
+
+	return &projectSnapshotWithStatus, nil
 }
 
-func validateProject(project ProjectSnapshot, projectTypes map[string]ProjectTypeSnapshot) error {
-	if project.ProjectTypeName == "" {
-		return fmt.Errorf("ProjectType not set for Project '%s'", project.ProjectName)
+func validateProject(project ProjectSnapshot, projectTemplates map[string]ProjectTemplateSnapshot) error {
+	if project.ProjectTemplateName == "" {
+		return fmt.Errorf("TemplateName not set for Project '%s'", project.ProjectName)
 	}
 
-	ptSpecValues, ok := projectTypes[project.ProjectTypeName]
+	ptSpecValues, ok := projectTemplates[project.ProjectTemplateName]
 	if !ok {
-		return fmt.Errorf("can't find valid ProjectType '%s' for Project", project.ProjectTypeName)
+		return fmt.Errorf("can't find valid ProjectTemplates '%s' for Project", project.ProjectTemplateName)
 	}
 
-	sc, err := LoadOpenAPISchema(ptSpecValues.Spec.OpenAPI)
+	sc, err := LoadOpenAPISchema(ptSpecValues.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
-		return fmt.Errorf("can't load '%s' ProjectType OpenAPI schema: %v", project.ProjectTypeName, err)
+		return fmt.Errorf("can't load '%s' ProjectType OpenAPI schema: %v", project.ProjectTemplateName, err)
 	}
 
 	sc = schema.TransformSchema(sc, &schema.AdditionalPropertiesTransformer{})
-	if err := validate.AgainstSchema(sc, project.Template, strfmt.Default); err != nil {
-		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectType: %v", project.ProjectTypeName, err)
+	if err := validate.AgainstSchema(sc, project.Parameters, strfmt.Default); err != nil {
+		return fmt.Errorf("template data doesn't match the OpenAPI schema for '%s' ProjectTemplate: %v", project.ProjectTemplateName, err)
 	}
 	return nil
 }
 
-func GetProjectSnapshots(input *go_hook.HookInput, projectTypes map[string]ProjectTypeSnapshot) map[string]ProjectSnapshot {
+func GetProjectSnapshots(input *go_hook.HookInput, projectTemplates map[string]ProjectTemplateSnapshot) map[string]ProjectSnapshot {
 	projectSnapshots := make(map[string]ProjectSnapshot)
 
 	for _, projectSnap := range input.Snapshots[ProjectsQueue] {
@@ -139,7 +141,7 @@ func GetProjectSnapshots(input *go_hook.HookInput, projectTypes map[string]Proje
 			continue
 		}
 
-		if err := validateProject(project, projectTypes); err != nil {
+		if err := validateProject(project, projectTemplates); err != nil {
 			input.LogEntry.Errorf("validation project: %v, error: %v", project.ProjectName, err)
 			SetProjectStatusError(input.PatchCollector, project.ProjectName, err.Error())
 			continue
@@ -148,30 +150,6 @@ func GetProjectSnapshots(input *go_hook.HookInput, projectTypes map[string]Proje
 		projectSnapshots[project.ProjectName] = project
 
 		SetProjectStatusDeploying(input.PatchCollector, project.ProjectName)
-	}
-
-	return projectSnapshots
-}
-
-func GetProjectSnapshotsWithStatus(input *go_hook.HookInput, projectTypes map[string]ProjectTypeSnapshot) map[string]*ProjectSnapshotWithStatus {
-	projectSnapshots := make(map[string]*ProjectSnapshotWithStatus)
-
-	for _, projectSnap := range input.Snapshots[ProjectsQueue] {
-		project, ok := projectSnap.(*ProjectSnapshotWithStatus)
-		if !ok {
-			input.LogEntry.Errorf("can't convert snapshot to 'projectSnapshot': %v", project)
-			continue
-		}
-
-		if err := validateProject(project.Snapshot, projectTypes); err != nil {
-			input.LogEntry.Errorf("validation project: %v, error: %v", project.Snapshot.ProjectName, err)
-			SetProjectStatusError(input.PatchCollector, project.Snapshot.ProjectName, err.Error())
-			continue
-		}
-
-		projectSnapshots[project.Snapshot.ProjectName] = project
-
-		SetProjectStatusDeploying(input.PatchCollector, project.Snapshot.ProjectName)
 	}
 
 	return projectSnapshots

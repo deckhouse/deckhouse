@@ -1,8 +1,8 @@
 # Based on https://github.com/open-policy-agent/gatekeeper/blob/master/Dockerfile
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_20_ALPINE_DEV
 ARG BASE_DISTROLESS
 
-FROM $BASE_GOLANG_20_ALPINE as build
+FROM $BASE_GOLANG_20_ALPINE_DEV as build
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -15,7 +15,6 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 
-RUN apk add --no-cache git
 RUN git clone --depth 1 --branch v3.13.0 ${SOURCE_REPO}/open-policy-agent/gatekeeper.git .
 RUN go build -mod vendor -ldflags="-s -w" -o gatekeeper
 

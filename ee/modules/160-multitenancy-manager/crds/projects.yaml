@@ -15,48 +15,101 @@ spec:
     singular: project
   scope: Cluster
   versions:
-    - additionalPrinterColumns:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
         - jsonPath: .status.sync
           name: Ready
           type: boolean
         - jsonPath: .spec.description
           name: Description
           type: string
-      name: v1alpha1
       schema:
         openAPIV3Schema:
+          type: object
           properties:
             spec:
+              type: object
               properties:
                 description:
-                  description: Arbitrary description of the purpose of the environment.
+                  description: |
+                    Arbitrary description of the project's purpose. Specify an empty string if no description is required.
                   type: string
                 projectTypeName:
                   description: |
-                    The name of the custom resource [ProjectType](cr.html#projecttype) to be used
-                    as a template for creating resources for the environment.
+                    The name of the [ProjectType](cr.html#projecttype) resource that defines which resources will be created in the project.
                   type: string
                 template:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
-                  description:
-                    Values for [resource templates](cr.html#projecttype-v1alpha1-spec-resourcestemplate) from the environment template (CR [ProjectType](cr.html#projecttype) in helm values format that map to the OpenAPI specification (the [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) parameter of the environment template).
+                  description: |
+                    Values passed to the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Before creation, the values are validated against the [schema](cr.html#projecttype-v1alpha1-spec-openapi) of the template's input parameters.
                   type: object
-              type: object
             status:
+              type: object
               properties:
                 message:
-                  description: Status message.
+                  description: Message indicating the cause of the current status.
                   type: string
                 state:
-                  description: Summary of the status.
+                  description: Brief description of the project status, such as Ready, Error, Pending, etc.
                   type: string
                 sync:
-                  description: Project definition sync with cluster.
+                  description: Indicates that the project parameters have been successfully applied after creation or modification.
                   type: boolean
-              type: object
-          type: object
+    - name: v1alpha2
       served: true
       storage: true
+      deprecated: false
       subresources:
         status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .spec.projectTemplateName
+          name: Project template
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  description: |
+                    Arbitrary description of the project's purpose. Specify an empty string if no description is required.
+                  type: string
+                projectTemplateName:
+                  description: |
+                    The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+                  type: string
+                parameters:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+
+                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                  type: object
+            status:
+              type: object
+              properties:
+                message:
+                  description: Message indicating the cause of the current status.
+                  type: string
+                state:
+                  description: Brief description of the project status, such as Ready, Error, Pending, etc.
+                  type: string
+                sync:
+                  description: Indicates that the project parameters have been successfully applied after creation or modification.
+                  type: boolean

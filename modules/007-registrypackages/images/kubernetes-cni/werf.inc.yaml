@@ -1,4 +1,4 @@
-{{- $cni_version := "1.2.0" }}
+{{- $cni_version := "1.4.0" }}
 {{- $flannel_version := "1.1.2" }}
 {{- $image_version := $cni_version | replace "." "-" }}
 ---
@@ -23,6 +23,7 @@ import:
   - ptp
   - sbr
   - static
+  - tap
   - tuning
   - vlan
   - vrf
@@ -38,7 +39,7 @@ docker:
     flannel: {{ $flannel_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -46,8 +47,6 @@ git:
     setup:
     - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache git bash make
   setup:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git

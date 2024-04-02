@@ -15,8 +15,12 @@
         summary: NodeGroup {{ $labels.node_group }} contains Nodes with deprecated availability zone.
         description: |
           Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
-          You should migrate your Nodes to `ru-central1-a` or `ru-central1-b` zone.
+          You should migrate your Nodes, Disks and LoadBalancers to `ru-central1-a`, `ru-central1-b` or `ru-central1-d` (introduced in v1.56).
           To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
+
+          You can use [Yandex Migration Guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) (mostly applicable to the `ru-central1-d' zone only).
+
+          **IMPORTANT** You cannot migrate public IP addresses between zones. Check out the Yandex Migration Guide for details.
     - alert: NATInstanceWithDeprecatedAvailabilityZone
       expr: |
         d8_cloud_provider_yandex_nat_instance_zone_deprecated > 0
@@ -36,7 +40,7 @@
 
           You can use the following instructions to migrate.
 
-          **IMPORTANT** The following actions are destructive changes and cause downtime (typically a few minutes, but may be longer depending on the response time of Yandex Cloud).
+          **IMPORTANT** The following actions are destructive changes and cause downtime (typically a several tens of minutes, also it depending on the response time of Yandex Cloud).
 
           1. Migrate NAT Instance.
 
@@ -60,11 +64,27 @@
                   kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
                   ```
 
-          1. Run dhctl converge
+          1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine (change the container registry address if necessary) and do converge.
 
-              ```
-              kubectl -n d8-system exec -it deploy/terraform-auto-converger -- dhctl converge --kube-client-from-cluster
-              ```
+              1. Get edition and version of the Deckhouse:
+
+                  ```
+                  DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
+                  DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
+                  echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
+                  ```
+
+              1. Run the installer:
+
+                  ```
+                  docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+                  ```
+
+              1. Do converge:
+
+                  ```
+                  dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+                  ```
 
           1. Update route table
 

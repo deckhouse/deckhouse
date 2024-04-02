@@ -1,5 +1,5 @@
 ---
-title: "Модуль deckhouse: Custom Resource"
+title: "Модуль deckhouse: Custom Resources"
 ---
 
 <!-- SCHEMA -->

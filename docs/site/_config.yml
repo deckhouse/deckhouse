@@ -104,6 +104,12 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/030-cloud-provider-vcd"
+      type: "pages"
+    values:
+      d8Revision: ee
+      featureStatus: experimental
+  - scope:
       path: "*/462-loki"
       type: "pages"
     values:
@@ -119,11 +125,6 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
-      featureStatus: experimental
-  - scope:
-      path: "*/041-linstor"
-      type: "pages"
-    values:
       featureStatus: experimental
   - scope:
       path: "*/350-node-local-dns"

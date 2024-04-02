@@ -9,7 +9,7 @@ network:
 		docker network inspect deckhouse 2>&1 1>/dev/null || docker network create deckhouse
 
 up: network
-		werf compose up --follow --docker-compose-command-options='-d' --env local
+		werf compose up --follow --docker-compose-command-options='-d' --env module
 
 down:
 		docker rm -f documentation

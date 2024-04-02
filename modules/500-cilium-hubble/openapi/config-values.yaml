@@ -5,6 +5,13 @@ properties:
     type: boolean
     default: false
     description: Enabled debug logging for Cilium Hubble component.
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Hubble.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
   nodeSelector:
     type: object
     additionalProperties:
@@ -94,7 +101,7 @@ properties:
           - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter;
           - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace;
           - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP;
-          - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

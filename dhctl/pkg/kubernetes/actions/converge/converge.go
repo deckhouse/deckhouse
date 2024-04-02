@@ -15,10 +15,14 @@
 package converge
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
@@ -66,17 +70,14 @@ type Runner struct {
 	excludedNodes map[string]bool
 	skipPhases    map[Phase]bool
 
+	commanderMode       bool
+	commanderModeParams *commander.CommanderModeParams
+
 	stateCache dstate.Cache
 }
 
-type RunnerOptions struct {
-	PhasedExecutionContext *phases.PhasedExecutionContext
-}
-
-func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache, opts RunnerOptions) *Runner {
+func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache) *Runner {
 	return &Runner{
-		PhasedExecutionContext: opts.PhasedExecutionContext,
-
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
 		lockRunner:     lockRunner,
@@ -85,6 +86,21 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateC
 		skipPhases:    make(map[Phase]bool),
 		stateCache:    stateCache,
 	}
+}
+
+func (r *Runner) WithCommanderModeParams(params *commander.CommanderModeParams) *Runner {
+	r.commanderModeParams = params
+	return r
+}
+
+func (r *Runner) WithCommanderMode(commanderMode bool) *Runner {
+	r.commanderMode = commanderMode
+	return r
+}
+
+func (r *Runner) WithPhasedExecutionContext(pec *phases.PhasedExecutionContext) *Runner {
+	r.PhasedExecutionContext = pec
+	return r
 }
 
 func (r *Runner) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *Runner {
@@ -128,14 +144,25 @@ func (r *Runner) RunConverge() error {
 }
 
 func (r *Runner) converge() error {
-	metaConfig, err := GetMetaConfig(r.kubeCl)
-	if err != nil {
-		return err
+	var metaConfig *config.MetaConfig
+	var err error
+	if r.commanderMode {
+		metaConfig, err = commander.ParseMetaConfig(r.stateCache, r.commanderModeParams)
+		if err != nil {
+			return fmt.Errorf("unable to parse meta configuration: %w", err)
+		}
+	} else {
+		metaConfig, err = GetMetaConfig(r.kubeCl)
+		if err != nil {
+			return err
+		}
 	}
 
-	if !r.isSkip(PhaseBaseInfra) {
+	skipTerraform := metaConfig.ClusterType == config.StaticClusterType
+
+	if !skipTerraform && !r.isSkip(PhaseBaseInfra) {
 		if r.PhasedExecutionContext != nil {
-			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true); err != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, r.stateCache); err != nil {
 				return err
 			} else if shouldStop {
 				return nil
@@ -147,7 +174,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CommitState(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
 				return err
 			}
 		}
@@ -155,77 +182,107 @@ func (r *Runner) converge() error {
 		log.InfoLn("Skip converge base infrastructure")
 	}
 
-	if r.isSkip(PhaseAllNodes) {
-		log.InfoLn("Skip converge nodes")
-		return nil
-	}
-
-	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
+	if !skipTerraform && !r.isSkip(PhaseAllNodes) {
+		if r.PhasedExecutionContext != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.stateCache); err != nil {
+				return err
+			} else if shouldStop {
+				return nil
+			}
 		}
-	}
 
-	var nodesState map[string]NodeGroupTerraformState
+		var nodesState map[string]NodeGroupTerraformState
 
-	err = log.Process("converge", "Gather Nodes Terraform state", func() error {
-		nodesState, err = GetNodesStateFromCluster(r.kubeCl)
+		err = log.Process("converge", "Gather Nodes Terraform state", func() error {
+			nodesState, err = GetNodesStateFromCluster(r.kubeCl)
+			if err != nil {
+				return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
+			}
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-
-	desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
-	for _, group := range terraNodeGroups {
-		desiredQuantity += group.Replicas
-	}
-
-	// dhctl has nodes to create, and there are no nodes in the cluster.
-	if len(nodesState) == 0 && desiredQuantity > 0 {
-		confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
-		if !r.changeSettings.AutoApprove && !confirmation.Ask() {
-			log.InfoLn("Aborted")
-			return nil
-		}
-	}
-
-	var nodeGroupsWithStateInCluster []string
-
-	for _, group := range terraNodeGroups {
-		// Skip if node group terraform state exists, we will update node group state below
-		if _, ok := nodesState[group.Name]; ok {
-			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
-			continue
-		}
-		if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
 			return err
 		}
-	}
 
-	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
-		ngState := nodesState[nodeGroupName]
-		controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
-		controller.WithChangeSettings(r.changeSettings)
-		controller.WithExcludedNodes(r.excludedNodes)
+		terraNodeGroups := metaConfig.GetTerraNodeGroups()
 
-		if err := controller.Run(); err != nil {
-			return err
+		desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
+		for _, group := range terraNodeGroups {
+			desiredQuantity += group.Replicas
 		}
-	}
 
-	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CommitState(r.stateCache)
+		// dhctl has nodes to create, and there are no nodes in the cluster.
+		if len(nodesState) == 0 && desiredQuantity > 0 {
+			confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
+			if !r.changeSettings.AutoApprove && !confirmation.Ask() {
+				log.InfoLn("Aborted")
+				return nil
+			}
+		}
+
+		var nodeGroupsWithStateInCluster []string
+
+		for _, group := range terraNodeGroups {
+			// Skip if node group terraform state exists, we will update node group state below
+			if _, ok := nodesState[group.Name]; ok {
+				nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
+				continue
+			}
+			if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
+				return err
+			}
+		}
+
+		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
+			ngState := nodesState[nodeGroupName]
+			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
+			controller.WithChangeSettings(r.changeSettings)
+			controller.WithCommanderMode(r.commanderMode)
+			controller.WithExcludedNodes(r.excludedNodes)
+
+			if err := controller.Run(); err != nil {
+				return err
+			}
+		}
+
+		if r.PhasedExecutionContext != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+				return err
+			}
+		}
 	} else {
-		return nil
+		log.InfoLn("Skip converge nodes")
 	}
+
+	if r.commanderMode {
+		if r.PhasedExecutionContext != nil {
+			if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.InstallDeckhousePhase, false, r.stateCache); err != nil {
+				return err
+			} else if shouldStop {
+				return nil
+			}
+		}
+
+		clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to get cluster config yaml: %w", err)
+		}
+		providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		}
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, metaConfig.UUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
+		}
+
+		if r.PhasedExecutionContext != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
@@ -240,10 +297,14 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", r.stateCache).
+			WithSkipChangesOnDeny(true).
 			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState).
 			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
 			WithAutoApprove(r.changeSettings.AutoApprove)
+		if !r.commanderMode {
+			baseRunner = baseRunner.WithState(clusterState)
+		}
+
 		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 		baseRunner.WithAdditionalStateSaverDestination(NewClusterStateSaver(r.kubeCl))
@@ -296,6 +357,8 @@ type NodeGroupController struct {
 	nodeToHost map[string]string
 	name       string
 	state      NodeGroupTerraformState
+
+	commanderMode bool
 }
 
 type NodeGroupGroupOptions struct {
@@ -321,6 +384,11 @@ func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.M
 		name:  name,
 		state: state,
 	}
+}
+
+func (c *NodeGroupController) WithCommanderMode(commanderMode bool) *NodeGroupController {
+	c.commanderMode = commanderMode
+	return c
 }
 
 func (c *NodeGroupController) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *NodeGroupController {
@@ -350,6 +418,9 @@ func (c *NodeGroupController) populateNodeToHost() error {
 	}
 
 	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
+		if c.commanderMode {
+			return true
+		}
 		return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 
@@ -498,11 +569,13 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
-		WithState(state).
 		WithName(nodeName).
 		WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
 		WithAutoApprove(c.changeSettings.AutoApprove).
 		WithHook(checker)
+	if !c.commanderMode {
+		nodeRunner = nodeRunner.WithState(state)
+	}
 
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
@@ -580,11 +653,14 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 
 		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
-			WithState(state).
 			WithName(name).
 			WithAllowedCachedState(true).
 			WithSkipChangesOnDeny(true).
-			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive)
+			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
+			WithAutoApprove(c.changeSettings.AutoApprove)
+		if !c.commanderMode {
+			nodeRunner = nodeRunner.WithState(state)
+		}
 
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
@@ -729,7 +805,16 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		return err
 	}
 
+	nodeNames := make([]string, 0, len(nodeGroup.State))
+
 	for nodeName := range nodeGroup.State {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	// Sort the nodes to obtain a deterministic order
+	sort.Strings(nodeNames)
+
+	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
 		err := log.Process("converge", processTitle, func() error {

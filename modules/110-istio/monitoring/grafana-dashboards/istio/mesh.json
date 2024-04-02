@@ -111,7 +111,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "round(sum(rate(istio_requests_total{reporter=\"source\"}[$__interval_sx4])), 0.001)",
+          "expr": "round(sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval])), 0.001)",
           "intervalFactor": 1,
           "refId": "A",
           "step": 4
@@ -204,7 +204,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__interval_sx4])) / sum(rate(istio_requests_total{reporter=\"source\"}[$__interval_sx4]))",
+          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -298,7 +298,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code=~\"4.*\"}[$__interval_sx4]))",
+          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code=~\"4.*\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -392,7 +392,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code=~\"5.*\"}[$__interval_sx4]))",
+          "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code=~\"5.*\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -1363,7 +1363,7 @@
       ],
       "targets": [
         {
-          "expr": "label_join(sum(rate(istio_requests_total{reporter=\"source\", response_code=\"200\"}[$__interval_sx4])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join(sum(rate(istio_requests_total{reporter=\"source\", response_code=\"200\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1372,7 +1372,7 @@
           "refId": "A"
         },
         {
-          "expr": "label_join((histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.50, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join((histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.50, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1381,7 +1381,7 @@
           "refId": "B"
         },
         {
-          "expr": "label_join((histogram_quantile(0.90, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.90, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join((histogram_quantile(0.90, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.90, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1390,7 +1390,7 @@
           "refId": "C"
         },
         {
-          "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__interval_sx4])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1399,7 +1399,7 @@
           "refId": "D"
         },
         {
-          "expr": "label_join((sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__interval_sx4])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"source\"}[$__interval_sx4])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join((sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1557,7 +1557,7 @@
       ],
       "targets": [
         {
-          "expr": "label_join(sum(rate(istio_tcp_received_bytes_total{reporter=\"source\"}[$__interval_sx4])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join(sum(rate(istio_tcp_received_bytes_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1566,7 +1566,7 @@
           "refId": "A"
         },
         {
-          "expr": "label_join(sum(rate(istio_tcp_sent_bytes_total{reporter=\"source\"}[$__interval_sx4])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+          "expr": "label_join(sum(rate(istio_tcp_sent_bytes_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
           "format": "table",
           "hide": false,
           "instant": true,

@@ -32,18 +32,16 @@ type Composer struct {
 	Dest   []v1alpha1.ClusterLogDestination
 }
 
-func FromInput(input *go_hook.HookInput) *Composer {
+func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) *Composer {
 	sourceSnap := input.Snapshots["cluster_log_source"]
 	namespacedSourceSnap := input.Snapshots["namespaced_log_source"]
-	destSnap := input.Snapshots["cluster_log_destination"]
 
 	res := &Composer{
 		Source: make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
-		Dest:   make([]v1alpha1.ClusterLogDestination, 0, len(destSnap)),
+		Dest:   make([]v1alpha1.ClusterLogDestination, 0, len(destinations)),
 	}
 
-	for _, d := range destSnap {
-		dest := d.(v1alpha1.ClusterLogDestination)
+	for _, dest := range destinations {
 		res.Dest = append(res.Dest, dest)
 		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}

@@ -6,7 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +20,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
@@ -33,18 +37,21 @@ type Discoverer struct {
 	authOpts     gophercloud.AuthOptions
 	region       string
 	moduleConfig []byte
+	clusterUUID  string
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
-		logger.Fatalf("Cannnot get opts from env: %v", err)
+		logger.Fatalf("Cannot get opts from env: %v", err)
 	}
 
 	region := os.Getenv("OS_REGION")
 	if region == "" {
-		logger.Fatalf("Cannnot get OS_REGION env")
+		logger.Fatalf("Cannot get OS_REGION env")
 	}
+
+	clusterUUID := os.Getenv("CLUSTER_UUID")
 
 	moduleConfig := os.Getenv("MODULE_CONFIG")
 
@@ -53,6 +60,7 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		region:       region,
 		authOpts:     authOpts,
 		moduleConfig: []byte(moduleConfig),
+		clusterUUID:  clusterUUID,
 	}
 }
 
@@ -153,12 +161,52 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	return discoveryDataJson, nil
 }
 
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	provider, err := newProvider(d.authOpts, d.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
+	}
+
+	disks, err := d.getVolumes(ctx, provider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get volumes: %v", err)
+	}
+
+	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
+
+	for _, volume := range disks {
+		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: volume.ID, Name: volume.Name})
+	}
+
+	return disksMeta, nil
+}
+
 func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercloud.ProviderClient, error) {
-	provider, err := openstack.AuthenticatedClient(authOpts)
+	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
 	}
 
+	// Check if a custom CA cert was provided.
+	if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
+		caCert, err := os.ReadFile(caCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading CA Cert: %s", err)
+		}
+		config := &tls.Config{}
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(bytes.TrimSpace(caCert)); !ok {
+			return nil, fmt.Errorf("error parsing CA Cert from %s", caCertPath)
+		}
+		config.RootCAs = caCertPool
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = config
+		provider.HTTPClient = http.Client{Transport: transport}
+	}
+	err = openstack.Authenticate(provider, authOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate OpenStack client: %v", err)
+	}
 	provider.MaxBackoffRetries = 3
 	provider.RetryFunc = RetryFunc(logger)
 	provider.RetryBackoffFunc = RetryBackoffFunc(logger)
@@ -187,6 +235,33 @@ func (d *Discoverer) getFlavors(ctx context.Context, provider *gophercloud.Provi
 	}
 
 	return flavors, nil
+}
+
+func (d *Discoverer) getVolumes(ctx context.Context, provider *gophercloud.ProviderClient) ([]volumes.Volume, error) {
+	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{
+		Region: d.region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BlockStorageV3 client: %v", err)
+	}
+
+	client.Context = ctx
+
+	allPages, err := volumes.List(client, volumes.ListOpts{
+		Metadata: map[string]string{
+			"cinder.csi.openstack.org/cluster": d.clusterUUID,
+		},
+	}).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list volumes: %v", err)
+	}
+
+	cloudVolumes, err := volumes.ExtractVolumes(allPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract volumes: %v", err)
+	}
+
+	return cloudVolumes, nil
 }
 
 func (d *Discoverer) getVolumeTypes(ctx context.Context, provider *gophercloud.ProviderClient) ([]v1alpha1.OpenStackCloudProviderDiscoveryDataVolumeType, error) {
@@ -262,7 +337,7 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 		Region: d.region,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ComputeV2 client: %v", err)
+		return nil, fmt.Errorf("failed to create NetworkV2 client: %v", err)
 	}
 
 	client.Context = ctx

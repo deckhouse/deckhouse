@@ -338,29 +338,31 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
-* `Docker Bearer Token Realm` must be enabled.
-* Docker proxy repository must be pre-created.
-* `Allow anonymous docker pull` must be enabled.
+* `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
+* Docker **proxy** repository must be pre-created (*Administration* -> *Repository* -> *Repositories*):
+  * `Allow anonymous docker pull` must be enabled. This option enables Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access*, and the `anonymous` user is not granted access rights to the created repository.
+  * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
-  * The Nexus role with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions must be created.
-  * The Nexus user must be created with the above role granted.
-* `Maximum metadata age` for the created repository must be set to 0.
+  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
+    * `nx-repository-view-docker-<repo>-browse`
+    * `nx-repository-view-docker-<repo>-read`
+  * The user (*Administration* -> *Security* -> *Users*) must be created with the above role granted.
 
-Configuration:
+**Configuration**:
 
-* Enable `Docker Bearer Token Realm`:
+* Enable `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
   ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
-* Create a docker proxy repository pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
+* Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
 
-* Fill in the fields on the Create page  as follows:
+* Fill in the fields on the Create page as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms). Note, however, that anonymous access [won't work](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it is explicitly enabled in *Settings* -> *Security* -> *Anonymous Access* and the `anonymous` user has been granted access rights to the created repository.
+  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user is not granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
-  * `Maximum Metadata Age` must be set to 0.
+  * `Maximum Metadata Age` must be set to `0`.
   * `Authentication` must be enabled if you plan to use Deckhouse Enterprise Edition and the related fields must be set as follows:
     * `Authentication Type` must be set to `Username`.
     * `Username` must be set to `license-token`.
@@ -371,11 +373,11 @@ Configuration:
   ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Configure Nexus access control to allow Nexus access to the created repository:
-  * Create a Nexus role with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
+  * Create a **Nexus** role (*Administration* -> *Security* -> *Roles*) with the `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
 
     ![Create a Nexus role](images/registry/nexus/nexus-role.png)
 
-  * Create a Nexus user with the role above granted.
+  * Create a user with the role above granted.
 
     ![Create a Nexus user](images/registry/nexus/nexus-user.png)
 
@@ -414,13 +416,13 @@ This feature is available in Enterprise Edition only.
    docker login -u license-token registry.deckhouse.io
    ```
 
-1. Run the Deckhouse installer version 1.56.3 or higher.
+1. Run the Deckhouse installer version 1.58.6 or higher.
 
    ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.56.3 bash
+   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
    ```
 
-   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball.
+   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball and generated [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease) manifests.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
@@ -429,7 +431,7 @@ This feature is available in Enterprise Edition only.
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
@@ -440,7 +442,7 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull all Deckhouse version images starting from version 1.45:
 
    ```shell
-   dhctl mirror --license="<DECKHOUSE_LICENSE_KEY>" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
+   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
    ```
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
@@ -452,10 +454,10 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull images from a third-party registry:
 
    ```shell
-   dhctl mirror --source="corp.company.com/sys/deckhouse" --source-login="user" --source-password="password" --images-bundle-path /tmp/d8-images/d8.tar
+    DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.com/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
    ```
 
-   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
+   > Note: `--license` flag acts as a shortcut for `--source-login ($DHCTL_CLI_MIRROR_SOURCE_LOGIN` and `--source-password ($DHCTL_CLI_MIRROR_SOURCE_PASSWORD)` flags for the Deckhouse registry.
    > If you specify both license and login+password pair for source registry, the latter will be used.
 
    `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
@@ -475,35 +477,43 @@ This feature is available in Enterprise Edition only.
    Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
 
    ```shell
-   dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
 
-   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
+   If your registry does not require authentication, you may omit both `--registry-login` and `--registry-password` flags as well as `DHCTL_CLI_MIRROR_USER`/`DHCTL_CLI_MIRROR_PASS` variables.
 
-1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it (is available in Enterprise Edition only). Refer to the [Getting started](/gs/bm-private/step2.html) guide.
+1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
    To run the installer, use its image from your private registry where Deckhouse images reside, rather than from the public registry. In other words, your address should look something like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
-### Manually uploading images of third-party Deckhouse modules into an isolated private registry
+   After installation, apply DeckhouseReleases manifests that were generated during pull operation to your cluster via `kubectl` as follows:
+
+   ```shell
+   kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
+   ```
+
+### Manually uploading images of Deckhouse modules into an isolated private registry
+
+The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
 1. Run Deckhouse installer version 1.56.0 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.56.0 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.4 bash
    ```
 
-   Note that the directory from the host file system is mounted in the installer container. It will store module images and the ModuleSource YAML manifest describing the source of third-party modules.
+   Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
 
-1. Pull module images from their source registry, defined as a ModuleSource resource, into a dedicated directory using the command `dhctl mirror-modules`.
+1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `dhctl mirror-modules`.
 
    `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying.
 
-   The following command will pull module images from the source described in the ModuleSource resource located in the `$HOME/module_source.yml` file:
+   The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
    ```shell
    dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
@@ -522,7 +532,7 @@ This feature is available in Enterprise Edition only.
    Below is an example of a command for pulling images from the `/tmp/d8-modules` directory:
 
    ```shell
-   dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USERNAME>" --registry-password="<PASSWORD>"
+   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
@@ -530,12 +540,12 @@ This feature is available in Enterprise Edition only.
 
    If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
 
-1. After uploading the images to the air-gapped registry, edit the ModuleSource YAML manifest:
+1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest:
 
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
 
-1. Apply the ModuleSource manifest you got in the previous step to the cluster.
+1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 
    ```shell
    kubectl apply -f $HOME/module_source.yml
@@ -674,7 +684,7 @@ After saving the changes, Deckhouse will bring the cluster configuration to the 
 
 ### How do I change the configuration of a cloud provider in a cluster?
 
-Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'local' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
 
 Regardless of the cloud provider used, its settings can be changed using the following command:
 

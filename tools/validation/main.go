@@ -62,6 +62,8 @@ func main() {
 		exitCode = RunNoCyrillicValidation(diffInfo, title, description)
 	case "doc-changes":
 		exitCode = RunDocChangesValidation(diffInfo)
+	case "grafana-dashboard":
+		exitCode = RunGrafanaDashboardValidation(diffInfo)
 	case "dump":
 		fmt.Printf("%s\n", diffInfo.Dump())
 	default:

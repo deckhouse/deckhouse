@@ -1,18 +1,16 @@
 ---
 artifact: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - mkdir /src
   - cd /src
   - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git .
   - go mod edit -go 1.20
-  - go get -u github.com/prometheus/client_golang@v1.17.0
+  - go get github.com/prometheus/client_golang@v1.17.0
   - go mod tidy
   - go mod vendor
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-s -w -X main.version=0.8.0 -X main.gitCommit=f0173677183c840e90a56e48082e36ac687e1a30' -o exporter .

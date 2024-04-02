@@ -1,6 +1,6 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
-args: 'make tests-modules'
+args: 'make tests-controller tests-modules'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # <template: unit_run_args>
 {!{- end -}!}
@@ -21,7 +21,7 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
-args: 'sh -c "go generate tools/register.go && GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
+args: 'sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: golangci_lint_run_args>
 {!{- end -}!}

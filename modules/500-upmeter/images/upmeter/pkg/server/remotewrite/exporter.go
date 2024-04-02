@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -309,12 +310,25 @@ func (e *exporter) buildTLSConfig() (*tls.Config, error) {
 	// Load certificates from CA file if it exists.
 	caFile := e.config.TLSConfig["ca_file"]
 	if caFile != "" {
-		caFileData, err := ioutil.ReadFile(caFile)
+		caFileData, err := os.ReadFile(caFile)
 		if err != nil {
 			return nil, err
 		}
 		certPool := x509.NewCertPool()
 		certPool.AppendCertsFromPEM(caFileData)
+		tlsConfig.RootCAs = certPool
+	}
+
+	// Load certificates from CA field if it exists.
+	ca := e.config.TLSConfig["ca"]
+	if ca != "" {
+		var certPool *x509.CertPool
+		if tlsConfig.RootCAs != nil {
+			certPool = tlsConfig.RootCAs
+		} else {
+			certPool = x509.NewCertPool()
+		}
+		certPool.AppendCertsFromPEM([]byte(ca))
 		tlsConfig.RootCAs = certPool
 	}
 

@@ -1,0 +1,419 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: secure-with-dedicated-nodes
+spec:
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      required:
+      - administrators
+      - resourceQuota
+      properties:
+        resourceQuota:
+          type: object
+          description: |
+            Resource quota for the project.
+            Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+          properties:
+            requests:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                storage:
+                  type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+            limits:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+        administrators:
+          description: |
+            Users and groups that will have admin access to the project.
+            Administrators are eligible to manage roles and access to the project.
+          type: array
+          items:
+            type: object
+            required:
+              - subject
+              - name
+            properties:
+              subject:
+                description: |
+                  Kind of the target resource to apply access to the
+                  environment (`Group` or `User`).
+                enum:
+                  - User
+                  - Group
+                type: string
+              name:
+                description: |
+                  The name of the target resource to apply access
+                  to the environment.
+                minLength: 1
+                type: string
+        networkPolicy:
+          description: |
+            NotRestricted — Allow all traffic by default.
+            Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+          enum:
+            - Isolated
+            - NotRestricted
+          type: string
+          default: Isolated
+        podSecurityProfile:
+          description: |
+            Pod security profile name.
+
+            The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
+            - Privileged — Unrestricted policy. Provides the widest possible permission level;
+            - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
+            - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+          type: string
+          default: Baseline
+          enum:
+            - Baseline
+            - Restricted
+            - Privileged
+        extendedMonitoringEnabled:
+          description: |
+            Enable extended monitoring for the project.
+            When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
+             - Controller outages and restarts
+             - 5xx errors in ingress-nginx
+             - Low free space on the persistent volumes
+          type: boolean
+          default: true
+        clusterLogDestinationName:
+          description: |
+            If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
+            The names of the custom resource must be specified in the `clusterLogDestinationName` field.
+          type: string
+        securityScanningEnabled:
+          description: |
+            Allows you to run periodic vulnerability scans. It is based on the Trivy project.
+            Scanning is performed every 24 hours.
+          type: boolean
+          default: true
+        allowedUIDs:
+          description: |
+            Range of IDs allowed for users in the container.
+            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+          required:
+            - min
+            - max
+          properties:
+            max:
+              type: number
+            min:
+              type: number
+        allowedGIDs:
+          description: |
+            Range of IDs allowed for groups in the container.
+            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+          required:
+            - min
+            - max
+          properties:
+            max:
+              type: number
+            min:
+              type: number
+        runtimeAuditEnabled:
+          description: |
+            Enable runtime audit rules to catch syscalls to the kernel and find malicious activities.
+            Works only if allowed UID/GID range is specified.
+          type: boolean
+          default: false
+        dedicatedNodes:
+          type: object
+          anyOf:
+            - required:
+              - labelSelector
+            - required:
+              - defaultTolerations
+          description: |
+            Settings to allocate dedicated nodes for the project.
+          properties:
+            labelSelector:
+              description: |
+                A label selector is a label query over a set
+                of resources. The result of matchLabels and matchExpressions
+                are ANDed. An empty label selector matches all objects.
+                A null label selector matches no objects.
+
+                This field value will automatically substitute the `nodeSelector` parameter of all pods in the project by default.
+              properties:
+                matchExpressions:
+                  description: |
+                    matchExpressions is a list of label selector
+                    requirements. The requirements are ANDed.
+                  items:
+                    description: |
+                      A label selector requirement is a selector
+                      that contains values, a key, and an operator that
+                      relates the key and values.
+                    properties:
+                      key:
+                        description: |
+                          key is the label key that the selector
+                          applies to.
+                        type: string
+                      operator:
+                        description: |
+                          operator represents a key's relationship
+                          to a set of values. Valid operators are In, NotIn,
+                          Exists and DoesNotExist.
+                        type: string
+                      values:
+                        description: |
+                          values is an array of string values.
+                          If the operator is In or NotIn, the values array
+                          must be non-empty. If the operator is Exists or
+                          DoesNotExist, the values array must be empty.
+                          This array is replaced during a strategic merge
+                          patch.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                      - key
+                      - operator
+                    type: object
+                  type: array
+                matchLabels:
+                  additionalProperties:
+                    type: string
+                  description: |
+                    matchLabels is a map of {key,value} pairs.
+                    A single {key,value} in the matchLabels map is equivalent
+                    to an element of matchExpressions, whose key field is
+                    "key", the operator is "In", and the values array contains
+                    only "value". The requirements are ANDed.
+                  type: object
+              type: object
+            defaultTolerations:
+              type: array
+              description: |
+                The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
+
+                If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+
+                These tolerations will be added to the pods in the project by default.
+              items:
+                type: object
+                properties:
+                  effect:
+                    type: string
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                  tolerationSeconds:
+                    type: integer
+                    format: int64
+                  value:
+                    type: string
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      {{ with .projectName }}name: {{ . }}{{ end }}
+      labels:
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+        {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
+      {{- with .parameters.dedicatedNodes }}
+      annotations:
+        {{ with .parameters.defaultTolerations }}scheduler.alpha.kubernetes.io/defaultTolerations: '{{ . | toJson }}'{{ end }}
+        {{ with .parameters.nodeSelector }}scheduler.alpha.kubernetes.io/node-selector: '{{ . | toJson }}'{{ end }}
+      {{- end }}
+    {{- range $administrator := .parameters.administrators }}
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: AuthorizationRule
+    metadata:
+      name: {{ $administrator.name }}
+    spec:
+      accessLevel: Admin
+      subjects:
+      - kind: {{ $administrator.subject }}
+        name: {{ $administrator.name }}
+    {{- end }}
+    ---
+    # Max requests and limits for resource and storage consumption for all pods in a namespace.
+    # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: all-pods
+    spec:
+      hard:
+        {{ with .parameters.resourceQuota.requests.cpu }}requests.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.memory }}requests.memory: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.storage }}requests.storage: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.cpu }}limits.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
+    {{- if eq .parameters.networkPolicy "Isolated" }}
+    ---
+    # Deny all network traffic by default except namespaced traffic and dns.
+    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    kind: NetworkPolicy
+    apiVersion: networking.k8s.io/v1
+    metadata:
+      name: isolated
+    spec:
+      podSelector:
+        matchLabels: {}
+      policyTypes:
+        - Ingress
+        - Egress
+      ingress:
+        - from:
+            # Traffic within the project is allowed.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+            # Metrics scraping from Prometheus.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-monitoring"
+                podSelector:
+                  matchLabels:
+                    app: prometheus
+            # Ingress nginx traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-ingress-nginx"
+                podSelector:
+                  matchLabels:
+                    app: controller
+      egress:
+        # Traffic within the project is allowed.
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+        # Allow DNS traffic (both kube-dns and nodelocaldns).
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-system
+          ports:
+            - protocol: UDP
+              port: 53
+    {{- end }}
+    {{- with .parameters.clusterLogDestinationName }}
+    ---
+    # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: PodLoggingConfig
+    metadata:
+      name: default
+    spec:
+      clusterDestinationRefs:
+        - {{ . }}
+    {{- end }}
+    ---
+    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      policies:
+        requiredResources:
+          requests:
+            - cpu
+            - memory
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: "{{ .projectName }}"
+    {{- if .parameters.runtimeAuditEnabled }}
+    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
+    ---
+    # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
+    # As example send notifications when a shell is run in a container.
+    # Refer to https://deckhouse.io/documentation/v1/modules/650-runtime-audit-engine/examples.html
+    apiVersion: deckhouse.io/v1alpha1
+    kind: FalcoAuditRules
+    metadata:
+      name: container-dift-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      rules:
+      - macro:
+          name: spawned_process
+          condition: (evt.type in (execve, execveat) and evt.dir=<)
+      - macro:
+          name: container
+          condition: (container.id != host)
+      - list:
+          name: known_drop_and_execute_containers
+          items: []
+      - rule:
+          name: Drop and execute new binary in container in {{ .projectName }} project
+          condition: |
+            spawned_process and container and proc.is_exe_upper_layer=true and not container.image.repository in (known_drop_and_execute_containers) {{ with .parameters.allowedUIDs }} and user.uid > {{ .min }} and user.uid < {{ .max }} {{ end }} {{ with .parameters.allowedGIDs }} and user.gid >= {{ .min }} and user.gid <= {{ .max }} {{ end }}
+          desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
+          output: |
+            Executing binary not part of base image (project={{ .projectName }} user=%user.name user_loginuid=%user.loginuid user_uid=%user.uid comm=%proc.cmdline exe=%proc.exe container_id=%container.id image=%container.image.repository proc.name=%proc.name proc.sname=%proc.sname proc.pname=%proc.pname proc.aname[2]=%proc.aname[2] exe_flags=%evt.arg.flags proc.exe_ino=%proc.exe_ino proc.exe_ino.ctime=%proc.exe_ino.ctime proc.exe_ino.mtime=%proc.exe_ino.mtime proc.exe_ino.ctime_duration_proc_start=%proc.exe_ino.ctime_duration_proc_start proc.exepath=%proc.exepath proc.cwd=%proc.cwd proc.tty=%proc.tty container.start_ts=%container.start_ts proc.sid=%proc.sid proc.vpgid=%proc.vpgid evt.res=%evt.res)
+          priority: Critical
+          tags:
+            - container_drift
+    {{ end }}
+    {{ end }}
+    ---
+    # Allowed uids/gids with the SecurityPolicy
+    # Refer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: allowed-uid-gid-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      enforcementAction: Deny
+      policies:
+        {{- with .parameters.allowedGIDs }}
+        runAsGroup:
+          ranges:
+          - max: {{ .max }}
+            min: {{ .min }}
+          rule: MustRunAs
+        {{- end }}
+        {{- with .parameters.allowedUIDs }}
+        runAsUser:
+          ranges:
+          - max: {{ .max }}
+            min: {{ .min }}
+          rule: MustRunAs
+        {{- end }}
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .projectName }}

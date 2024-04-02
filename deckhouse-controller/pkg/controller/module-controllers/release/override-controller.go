@@ -41,6 +41,7 @@ import (
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
 // ModulePullOverrideController is the controller implementation for ModulePullOverride resources
@@ -128,6 +129,13 @@ func (c *ModulePullOverrideController) Run(ctx context.Context, workers int) {
 
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+
+	// Check if controller's dependencies have been initialized
+	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+		func(context.Context) (bool, error) {
+			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			return deckhouseconfig.IsServiceInited(), nil
+		})
 
 	// Start the informer factories to begin populating the informer caches
 	c.logger.Info("Starting controller")
@@ -274,10 +282,11 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
+	// what if it is nil?
 	if moduleDef != nil {
 		err = validateModule(c.modulesValidator, *moduleDef)
 		if err != nil {
-			mo.Status.Message = "Openapi config is invalid"
+			mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
@@ -296,6 +305,17 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 		return ctrl.Result{Requeue: true}, err
 	}
+	// disable target module hooks so as not to invoke them before restart
+	if c.modulesValidator.GetModule(mo.Name) != nil {
+		c.modulesValidator.DisableModuleHooks(mo.Name)
+	}
+	defer func() {
+		c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
+		err := syscall.Kill(1, syscall.SIGUSR2)
+		if err != nil {
+			c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
+		}
+	}()
 
 	mo.Status.Message = ""
 	mo.Status.ImageDigest = newChecksum
@@ -307,12 +327,6 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	if _, ok := mo.Labels["renew"]; ok {
 		delete(mo.Labels, "renew")
 		_, _ = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
-	}
-
-	c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
-	err = syscall.Kill(1, syscall.SIGUSR2)
-	if err != nil {
-		c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil

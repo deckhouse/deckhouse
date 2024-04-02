@@ -21,7 +21,7 @@
       "inputs": [
         "cluster_logging_config/test-source"
       ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
       "type": "remap"
     },
     "transform/source/test-source/01_local_timezone": {
@@ -43,7 +43,11 @@
         "enabled": false
       },
       "version": "2",
-      "address": "192.168.1.1:9200"
+      "address": "192.168.1.1:9200",
+      "tls": {
+        "verify_certificate": false,
+        "verify_hostname": false
+      }
     }
   }
 }

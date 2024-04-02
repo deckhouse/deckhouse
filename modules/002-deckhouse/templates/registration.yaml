@@ -1,5 +1,3 @@
-{{/* Release channel and bundle for 600-flant-integration module.  */}}
-{{- if (.Values.global.enabledModules | has "flant-integration") }}
 ---
 apiVersion: v1
 kind: Secret
@@ -11,4 +9,6 @@ type: Opaque
 data:
   bundle: {{ b64enc .Values.deckhouse.bundle }}
   releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
+{{- if .Values.deckhouse.update }}
+  updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
 {{- end }}

@@ -1,0 +1,28 @@
+{{- $options := dict -}}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
+{{- end }}
+
+{{- $sizingPolicy := .nil }}
+{{- if .nodeGroup.instanceClass.sizingPolicy }}
+  {{- $sizingPolicy = .nodeGroup.instanceClass.sizingPolicy }}
+{{- end }}
+
+{{- $placementPolicy := .nil }}
+{{- if .nodeGroup.instanceClass.placementPolicy }}
+  {{- $placementPolicy = .nodeGroup.instanceClass.placementPolicy }}
+{{- end }}
+
+{{- $_ := set $options "storageProfile" .nodeGroup.instanceClass.storageProfile -}}
+{{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
+{{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
+{{- $_ := set $options "sizingPolicy" $sizingPolicy -}}
+{{- $_ := set $options "placementPolicy" $placementPolicy -}}
+
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

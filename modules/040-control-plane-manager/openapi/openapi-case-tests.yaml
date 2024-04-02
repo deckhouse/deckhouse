@@ -7,7 +7,7 @@ positive:
           port: 2533
   values:
     - internal:
-        effectiveKubernetesVersion: "1.24"
+        effectiveKubernetesVersion: "1.29"
         etcdServers:
         - 1.2.3.4
         - 4.3.2.1

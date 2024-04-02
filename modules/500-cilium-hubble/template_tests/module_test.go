@@ -39,7 +39,7 @@ clusterConfiguration:
   kind: ClusterConfiguration
   clusterDomain: cluster.local
   clusterType: Static
-  kubernetesVersion: "1.24"
+  kubernetesVersion: "1.29"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16

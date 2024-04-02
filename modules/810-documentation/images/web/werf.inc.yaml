@@ -5,7 +5,7 @@ fromImage: common/nginx-static
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
-  to: /app
+  to: /app/platform
   before: setup
   excludePaths:
   - '*/gs/'
@@ -40,6 +40,8 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - name: "{{ .Env }} version. Merging modules of different releases..."
       shell: |
+        cp -rf /src/be/modules /src >& /dev/null
+        cp -rf /src/se/modules /src >& /dev/null
         cp -rf /src/ee/modules /src >& /dev/null
         cp -rf /src/fe/modules /src >& /dev/null
         cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
@@ -118,6 +120,13 @@ ansible:
         warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/_data/
+    - name: "Convert editions structure"
+      shell: |
+        /usr/local/bin/yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - name: "Converting public documentation links to internal relative..."
       shell: |
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
@@ -133,6 +142,10 @@ ansible:
         content: |
           {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 10 }}
         dest: /srv/jekyll-data/documentation/_data/topnav.yml
+    - copy:
+        content: |
+          {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 10 }}
+        dest: /srv/jekyll-data/site/_data/topnav.yml
     - copy:
         content: |
           {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 10 }}
@@ -165,6 +178,11 @@ ansible:
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
+import:
+  - artifact: yq4-artifact
+    add: /usr/local/bin/yq
+    to: /usr/local/bin/yq
+    before: install
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
@@ -183,6 +201,8 @@ git:
     - documentation/config
     - site/pages/*.html
     - site/_includes/footer.html
+    - site/_data/topnav.*
+    - site/backends
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
@@ -203,4 +223,21 @@ git:
     setup: ['**/*']
   includePaths:
   - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/be
+  to: /comparison/be
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se
+  to: /comparison/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) (dict "ctx" . "mode" "module") }}

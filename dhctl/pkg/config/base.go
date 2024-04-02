@@ -17,12 +17,13 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -32,9 +33,10 @@ import (
 )
 
 const (
-	candiDir                 = "/deckhouse/candi"
-	modulesDir               = "/deckhouse/modules"
-	globalHooksModule        = "/deckhouse/global-hooks"
+	candiDir          = "/deckhouse/candi"
+	modulesDir        = "/deckhouse/modules"
+	globalHooksModule = "/deckhouse/global-hooks"
+	// don't forget to update the version in release requirements (release.yaml)
 	DefaultKubernetesVersion = "1.25"
 )
 
@@ -232,7 +234,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
-	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
@@ -254,4 +256,31 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
+}
+
+// ValidateClusterSettings parses and validates cluster configuration and resources.
+// It checks the cluster configuration yamls for compliance with the yaml format and schema.
+// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
+// It can be used as an imported functionality in external modules.
+func ValidateClusterSettings(configData string) error {
+	schemaStore := NewSchemaStore()
+
+	bigFileTmp := strings.TrimSpace(configData)
+	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
+
+	metaConfig := MetaConfig{}
+	for _, doc := range docs {
+		err := parseDocument(doc, &metaConfig, schemaStore)
+		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
+		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
+			return err
+		}
+	}
+
+	_, err := metaConfig.Prepare()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

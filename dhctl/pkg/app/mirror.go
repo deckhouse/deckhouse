@@ -40,27 +40,28 @@ const (
 )
 
 var (
-	MirrorRegistry         = ""
-	MirrorRegistryHost     = ""
-	MirrorRegistryPath     = ""
-	MirrorRegistryUsername = ""
-	MirrorRegistryPassword = ""
+	MirrorRegistry         string
+	MirrorRegistryHost     string
+	MirrorRegistryPath     string
+	MirrorRegistryUsername string
+	MirrorRegistryPassword string
 
-	MirrorInsecure       = false
-	MirrorDHLicenseToken = ""
-	MirrorTarBundlePath  = ""
+	MirrorInsecure       bool
+	MirrorTLSSkipVerify  bool
+	MirrorDHLicenseToken string
+	MirrorTarBundlePath  string
 
-	mirrorMinVersionString                 = ""
-	MirrorMinVersion       *semver.Version = nil
+	mirrorMinVersionString string
+	MirrorMinVersion       *semver.Version
 
-	MirrorSourceRegistryRepo     = enterpriseEditionRepo
-	MirrorSourceRegistryLogin    = ""
-	MirrorSourceRegistryPassword = ""
+	MirrorSourceRegistryRepo     = enterpriseEditionRepo // Fallback to EE just in case.
+	MirrorSourceRegistryLogin    string
+	MirrorSourceRegistryPassword string
 
-	MirrorValidationMode = ""
+	MirrorValidationMode string
 
-	MirrorDoGOSTDigest            = false
-	MirrorDontContinuePartialPull = false
+	MirrorDoGOSTDigest            bool
+	MirrorDontContinuePartialPull bool
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -105,18 +106,19 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Short('v').
 		Envar(configEnvName("MIRROR_MIN_VERSION")).
 		StringVar(&mirrorMinVersionString)
-	cmd.Flag("validation", "Validation of mirrored indexes and images. "+
-		`Defaults to "fast" validation, which only checks if manifests and indexes are compliant with OCI specs, `+
-		`"full" validation also checks images contents for corruption`).
+	cmd.Flag("validation", "Validate mirrored indexes and images after pull is complete. "+
+		`Defaults to "fast" validation, which only checks if manifests, configs and indexes are compliant with OCI specs, `+
+		`"full" validation also checks images contents for corruption.`).
 		Hidden().
 		Default(mirrorFastValidation).
-		Envar(configEnvName("MIRROR_VALIDATION")).
 		EnumVar(&MirrorValidationMode, mirrorNoValidation, mirrorFastValidation, mirrorFullValidation)
 	cmd.Flag("gost-digest", "Calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle").
 		Envar(configEnvName("MIRROR_DO_GOST_DIGESTS")).
 		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
 		BoolVar(&MirrorDontContinuePartialPull)
+	cmd.Flag("tls-skip-verify", "Disable TLS certificate validation.").
+		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
 		BoolVar(&MirrorInsecure)
 

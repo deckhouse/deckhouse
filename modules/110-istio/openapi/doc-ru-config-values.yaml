@@ -12,6 +12,11 @@ properties:
       Как поступать с запросами в сторону внешних, то есть не учтенных в mesh'е сервисов:
       - `AllowAny` — пропускать;
       - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для Kiali, metadata-exporter и api-proxy.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   federation:
     description: Параметры федерации с другими кластерами.
     properties:
@@ -198,58 +203,118 @@ properties:
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
           Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-      resourcesManagement:
+      replicasManagement:
         description: |
-          Настройки управления ресурсами istiod.
+          Настройки управления репликами и горизонтальным масштабированием istiod.
         properties:
           mode:
+            description: |
+              Режим работы с репликами:
+              - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability));
+              - `Static` — режим, где количество реплик указывается явно (параметр [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas));
+              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
+          static:
+            description: |
+              Параметры управления репликами и масштабированием в режиме Static.
+            properties:
+              replicas:
+                description: |
+                  Желаемое количество реплик.
+          hpa:
+            description: |
+              Параметры управления репликами и масштабированием в режиме HPA.
+            properties:
+              minReplicas:
+                description: |
+                  Минимальное количество реплик, которое может быть установлено HPA.
+              maxReplicas:
+                description: |
+                  Максимальное количество реплик, которое может быть установлено HPA. Не может быть меньше `minReplicas`.
+              metrics:
+                description: |
+                  HPA будет основываться на этих метриках при принятии решения об увеличении или уменьшении количества реплик.
+                items:
+                  properties:
+                    type:
+                      description: |
+                        Тип метрики.
+                    targetAverageUtilization:
+                      description: |
+                        Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.
+      resourcesManagement:
+        description: |
+          Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами istiod.
+        properties:
+          mode:
+            description: |
+              Режим управления ресурсами:
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-controlplane-resourcesmanagement-static);
+              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-controlplane-resourcesmanagement-vpa).
           vpa:
             description: |
-              Параметры для режима VPA.
+              Параметры управления ресурсами в режиме VPA.
             properties:
               mode:
                 description: |
                   Режим работы VPA.
               cpu:
-                min:
-                  description: |
-                    Минимально допустимые реквесты к CPU.
-                max:
-                  description: |
-                    Максимально допустимые реквесты к CPU.
-                limitRatio:
-                  description: |
-                    Коэффициент для вычисления лимитов для CPU. Опционально используется для подсчета первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
+                description: |
+                  Настройки VPA при работе с CPU.
+                properties:
+                  min:
+                    description: |
+                      Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                  max:
+                    description: |
+                      Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                  limitRatio:
+                    description: |
+                      Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                      Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                      Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
               memory:
-                min:
-                  description: |
-                    Минимально допустимые реквесты к памяти.
-                max:
-                  description: |
-                    Максимально допустимые реквесты к памяти.
-                limitRatio:
-                  description: |
-                    Коэффициент для вычисления лимитов для CPU. Опционально используется для подсчета первичных лимитов для CPU у пода. VPA при своей работе сохраняет пропорцию лимиты/реквесты и при вычислении подходящих актуальных реквестов настраивает лимиты в том же соотношении.
+                description: |
+                  Настройки VPA при работе с памятью.
+                properties:
+                  min:
+                    description: |
+                      Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                  max:
+                    description: |
+                      Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                  limitRatio:
+                    description: |
+                      Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                      Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                      Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
           static:
             description: |
-              Настройки управления ресурсами в статическом режиме.
+              Настройка управления ресурсами в режиме `Static`.
             properties:
               requests:
+                description: |
+                  Настройки запросов ресурсов (requests) подов.
                 properties:
                   cpu:
                     description: |
-                      Реквесты к CPU.
+                      Настройка запроса CPU (CPU requests).
                   memory:
                     description: |
-                      Реквесты к памяти.
+                      Настройка запроса памяти (memory requests).
               limits:
+                description: |
+                  Настройка ограничений (limits) использования CPU и памяти.
                 properties:
                   cpu:
                     description: |
-                      Лимиты для CPU.
+                      Настройка ограничений использования CPU (CPU limits).
                   memory:
                     description: |
-                      Лимиты для памяти.
+                      Настройка ограничений использования памяти (memory limits).
   nodeSelector:
     description: |
       Опциональный селектор для компонентов istio-operator, metadata-exporter и Kiali.
@@ -275,7 +340,7 @@ properties:
           Режим работы HTTPS:
           - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer заданном в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
 
           **Важно!** В отличие от остальных модулей, istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
       certManager:

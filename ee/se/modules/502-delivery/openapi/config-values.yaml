@@ -1,0 +1,119 @@
+x-config-version: 1
+type: object
+required: []
+properties:
+  argocd:
+    type: object
+    default: {}
+    description: "Argo CD configuration."
+    properties:
+      admin:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Enables Argo CD `admin` user.
+
+              Might be helpful when Dex is not used or for argocd CLI access (read the [Usage](usage.html) article for more information).
+  storageClass:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    x-examples: [false, "default"]
+    description: |
+      The name of the StorageClass to use.
+
+      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss.
+
+      Setting it to `false` forces the use of an emptyDir volume.
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with Argo CD web-interface.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        description: |
+          The HTTPS usage mode:
+          - `Disabled` — Argo CD web-interface will work over HTTP only;
+          - `CertManager` — Argo CD web-interface will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Argo CD web-interface will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — Argo CD web-interface will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for Argo CD web-interface.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Argo CD web-interface.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      Node selector for the Argo CD server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      - - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      Node tolerations for the Argo CD server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).

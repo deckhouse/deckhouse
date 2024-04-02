@@ -5,16 +5,12 @@
   {{- $full_version := printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-    {{- if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-    {{- else if semverCompare ">=1.25" $version }}
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-    {{- else if semverCompare ">=1.24" $version }}
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
-    {{- else if semverCompare ">=1.23" $version }}
-from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
+    {{- if semverCompare ">=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
     {{- else }}
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
     {{- end }}
 git:
 - add: /{{ $.ModulePath }}/modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -26,8 +22,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache make bash git patch rsync gcc musl-dev
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -43,8 +37,6 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  - find /patches/kube-apiserver/{{ $version }} -name '*.patch' -exec git apply {} \;
-  - find /patches/kube-controller-manager/{{ $version }} -name '*.patch' -exec git apply {} \;
-  - find /patches/kubeadm/{{ $version }} -name '*.patch' -exec git apply {} \;
+  - find /patches/*/{{ $version }} -name '*.patch' | xargs git apply
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
 {{- end }}

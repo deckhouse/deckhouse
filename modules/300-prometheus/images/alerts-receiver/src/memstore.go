@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -26,23 +27,30 @@ import (
 )
 
 type memStore struct {
-	alerts map[model.Fingerprint]*types.Alert
+	alerts          map[string]*types.Alert
+	capacity        int
+	lastDMSReceived time.Time
 	sync.RWMutex
 }
 
 func newMemStore(l int) *memStore {
-	a := make(map[model.Fingerprint]*types.Alert, l)
-	return &memStore{alerts: a}
+	a := make(map[string]*types.Alert, l)
+	return &memStore{alerts: a, capacity: l}
 }
 
 // Add or update alert in internal store
-func (a *memStore) insertAlert(alert *model.Alert) {
+func (a *memStore) insertAlert(alert *model.Alert) error {
 	a.Lock()
 	defer a.Unlock()
 
 	now := time.Now()
 
-	removePlkAnnotations(alert)
+	// check if alert is DeadMan'sSwitch
+	if alert.Name() == DMSAlertName {
+		log.Infof("Received %s alert", DMSAlertName)
+		a.lastDMSReceived = now
+		return nil
+	}
 
 	ta := &types.Alert{
 		Alert:     *alert,
@@ -64,31 +72,85 @@ func (a *memStore) insertAlert(alert *model.Alert) {
 		ta.Timeout = true
 		ta.EndsAt = now.Add(resolveTimeout)
 	}
-	fingerprint := ta.Fingerprint()
 
-	if _, ok := a.alerts[fingerprint]; ok {
-		log.Infof("alert with fingerprint %s updated in queue", fingerprint)
-		a.alerts[fingerprint] = ta.Merge(a.alerts[fingerprint])
-	} else {
+	fingerprint := fingerprintWithoutSeverity(alert)
+
+	al, ok := a.alerts[fingerprint]
+	if !ok {
+		if len(a.alerts) == a.capacity {
+			return fmt.Errorf("cannot add alert to queue (capacity = %d), queue is full", a.capacity)
+		}
 		log.Infof("alert with fingerprint %s added to queue", fingerprint)
+		a.alerts[fingerprint] = ta
+		return nil
 	}
-	a.alerts[fingerprint] = ta
 
-	return
+	if ta.Labels[severityLabel] > al.Labels[severityLabel] {
+		log.Infof("alert with fingerprint %s and severity level less than %s exists in queue", fingerprint, ta.Labels[severityLabel])
+		return nil
+	}
+
+	log.Infof("alert with fingerprint %s updated in queue", fingerprint)
+	a.alerts[fingerprint] = ta.Merge(a.alerts[fingerprint])
+	return nil
 }
 
-// Remove alert from internal store
-func (a *memStore) removeAlert(fingerprint model.Fingerprint) {
+// Remove resolved alerts from internal store
+func (a *memStore) removeResolvedAlerts() {
 	a.Lock()
 	defer a.Unlock()
-	log.Infof("alert with fingerprint %s removed from queue", fingerprint)
-	delete(a.alerts, fingerprint)
+	for fingerprint, alert := range a.alerts {
+		if !alert.Resolved() {
+			continue
+		}
+		log.Infof("alert with fingerprint %s removed from queue", fingerprint)
+		delete(a.alerts, fingerprint)
+	}
 }
 
 // Get alert from internal store
-func (a *memStore) getAlert(fingerprint model.Fingerprint) (*types.Alert, bool) {
+func (a *memStore) getAlert(fingerprint string) (*types.Alert, bool) {
 	a.Lock()
 	defer a.Unlock()
 	alert, ok := a.alerts[fingerprint]
 	return alert, ok
+}
+
+// deep copy alerts
+func (a *memStore) deepCopy() map[string]*types.Alert {
+	a.Lock()
+	defer a.Unlock()
+	alerts := make(map[string]*types.Alert, len(a.alerts))
+	for k, v := range a.alerts {
+		alerts[k] = v
+	}
+	return alerts
+}
+
+// Calculate alert fingerprint without severity level to combine alerts with the same labels but with different severity
+func fingerprintWithoutSeverity(ta *model.Alert) string {
+	labels := ta.Labels.Clone()
+	delete(labels, severityLabel)
+	return labels.Fingerprint().String()
+}
+
+// Generate an alert
+func generateAlert(alertName, message string) *types.Alert {
+	now := time.Now()
+	alert := &types.Alert{
+		Alert: model.Alert{
+			Labels: model.LabelSet{
+				"alertname":      model.LabelValue(alertName),
+				"prometheus":     "deckhouse",
+				"severity_level": "1",
+			},
+			Annotations: model.LabelSet{
+				"description": model.LabelValue(message),
+				"summary":     model.LabelValue(fmt.Sprintf("Alerting %s", alertName)),
+			},
+			EndsAt: now.Add(resolveTimeout),
+		},
+		UpdatedAt: now,
+	}
+	return alert
 }

@@ -1,0 +1,78 @@
+{{- define "stale_sockets_cleaner_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+---
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: stale-dns-connections-cleaner
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: stale-dns-connections-cleaner
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: stale-dns-connections-cleaner
+      minAllowed:
+        {{- include "stale_sockets_cleaner_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stale-dns-connections-cleaner
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: stale-dns-connections-cleaner
+  template:
+    metadata:
+      labels:
+        app: stale-dns-connections-cleaner
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: stale-dns-connections-cleaner
+      containers:
+      - name: stale-dns-connections-cleaner
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "staleDnsConnectionsCleaner") }}
+        command: ["/stale-dns-connections-cleaner"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            host: 127.0.0.1
+            port: 9000
+            scheme: HTTP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "stale_sockets_cleaner_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

@@ -1,6 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/build-python-static-artifact
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ .Images.BASE_UBUNTU_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/Setup.local
   to: /build/Setup.local
@@ -9,7 +9,6 @@ git:
     - '**/*'
 shell:
   install:
-  - apt update && apt install -y --no-install-recommends build-essential tar gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev uuid-dev zlib1g-dev coreutils ca-certificates git
   - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
   - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /build/src
   - cp /build/Setup.local /build/src/Modules/Setup.local

@@ -5,7 +5,7 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Congratulations, your Deckhouse platform is up and running!
+## Congratulations, your Deckhouse Kubernetes platform is up and running!
 
 Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
 

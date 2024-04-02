@@ -4,6 +4,8 @@ title: "Модуль user-authn: примеры конфигурации"
 
 ## Пример конфигурации модуля
 
+В примере представлена конфигурация модуля `user-authn` в Deckhouse Kubernetes Platform.
+
 {% raw %}
 
 ```yaml
@@ -29,6 +31,8 @@ spec:
 
 ### GitHub
 
+В примере представлены настройки провайдера для интеграции с GitHub.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -44,13 +48,16 @@ spec:
 
 В организации GitHub необходимо создать новое приложение.
 
-Для этого необходимо перейти в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+Для этого выполните следующие шаги:
+Перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+Полученные `Client ID` и `Client Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
 
-В том случае, если организация GitHub находится под управлением клиента, необходимо перейти в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и запросить подтверждение нажатием на `Send Request`. После попросить клиента подтвердить запрос, который придет к нему на email.
+Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
 
 ### GitLab
+
+В примере представлены настройки провайдера для интеграции с GitLab.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -71,14 +78,16 @@ spec:
 
 В GitLab проекта необходимо создать новое приложение.
 
-Для этого необходимо:
-* **self-hosted**: перейти в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейти в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
+Для этого выполните следующие шаги:
+* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
 
-Полученные `Application ID` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+Полученные `Application ID` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
 
 ### Atlassian Crowd
+
+В примере представлены настройки провайдера для интеграции с Atlassian Crowd.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -100,13 +109,16 @@ spec:
 
 В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
 
-Для этого необходимо перейти в `Applications` -> `Add application`.
+Для этого выполните следующие шаги:
+Перейдите в `Applications` -> `Add application`.
 
-Полученные `Application Name` и `Password` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+Полученные `Application Name` и `Password` укажите в custom ресурсе [DexProvider](cr.html#dexprovider).
 
-Группы CROWD указываются в lowercase-формате для custom resource `DexProvider`.
+Группы CROWD укажите в lowercase-формате для кастомного ресурса `DexProvider`.
 
 ### Bitbucket Cloud
+
+В примере представлены настройки провайдера для интеграции с Bitbucket.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -127,11 +139,14 @@ spec:
 
 Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
 
-Для этого необходимо перейти в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешить доступ для `Account: Read` и `Workspace membership: Read`.
+Для этого выполните следующие шаги:
+Перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Полученные `Key` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+Полученные `Key` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
+
+В примере представлены настройки провайдера для интеграции с Okta.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -151,9 +166,11 @@ spec:
 
 Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
 
 ### LDAP
+
+В примере представлены настройки провайдера для интеграции с Active Directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -189,16 +206,16 @@ spec:
       nameAttr: cn
 ```
 
-Для настройки аутентификации необходимо завести в LDAP read-only-пользователя (service account).
+Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль необходимо указать в полях `bindDN` и `bindPW` custom resource [DexProvider](cr.html#dexprovider).
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомном ресурсе [DexProvider](cr.html#dexprovider).
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В поле `bindPW` необходимо указывать пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Данный вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи oauth2-proxy.
-Чтобы позволить подобным приложениям взаимодействовать с Dex, используется custom resource [`DexClient`](cr.html#dexclient).
+Этот вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
+Чтобы позволить подобным приложениям взаимодействовать с Dex, используется кастомном ресурс [`DexClient`](cr.html#dexclient).
 
 {% raw %}
 
@@ -223,7 +240,7 @@ spec:
 
 После создания такого ресурса в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-myname@mynamespace`.
 
-Пароль для доступа к клиенту (**clientSecret**) будет сохранен в Secret'е:
+Пароль доступа к клиенту (**clientSecret**) сохранится в секрете:
 {% raw %}
 
 ```yaml
@@ -266,6 +283,8 @@ spec:
 
 {% endraw %}
 
+По умолчанию пользователь получит роль [`User`](../140-user-authz/#список-доступа-для-каждой-роли-модуля-по-умолчанию).
+
 ## Пример добавления статического пользователя в группу
 
 {% raw %}
@@ -283,3 +302,7 @@ spec:
 ```
 
 {% endraw %}
+
+## Выдача прав пользователю или группе
+
+Для настройки используются параметры в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).

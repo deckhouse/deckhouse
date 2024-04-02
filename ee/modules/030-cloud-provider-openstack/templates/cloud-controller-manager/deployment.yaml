@@ -92,6 +92,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           ports:
           - name: https
             containerPort: 10471

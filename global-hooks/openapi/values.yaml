@@ -55,7 +55,7 @@ properties:
     x-examples: [ dev ]
   deckhouseEdition:
     type: string
-    enum: [Unknown, CE, FE, EE, CSE ]
+    enum: [Unknown, CE, FE, EE, CSE, BE, SE ]
     x-examples: [ FE ]
   enabledModules:
     type: array
@@ -148,14 +148,14 @@ properties:
         description: |
           K8s versions for each control-plane node
         x-examples:
-        - [ "1.24.2", "1.24.3", "1.24.2" ]
+        - [ "1.29.2", "1.29.3", "1.29.2" ]
       kubernetesVersion:
         type: string
         # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
         pattern: ^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         description: |
           Effective (minimal from each control plane node) k8s version
-        x-examples: [ "1.24.2" ]
+        x-examples: [ "1.29.2" ]
       extensionAPIServerAuthenticationRequestheaderClientCA:
         type: string
         description: |

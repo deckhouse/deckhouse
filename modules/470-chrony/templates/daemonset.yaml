@@ -130,6 +130,10 @@ spec:
           value: {{ join " " $ntpServers | quote }}
         - name: CHRONY_MASTERS_SERVICE
           value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.clusterConfiguration.clusterDomain | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         ports:
         - name: ntp
           containerPort: 123
@@ -242,6 +246,10 @@ spec:
           value: source
         - name: NTP_SERVERS
           value: {{ join " " $ntpServers | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         ports:
         - name: ntp
           containerPort: 123

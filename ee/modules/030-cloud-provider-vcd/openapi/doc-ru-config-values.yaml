@@ -1,0 +1,17 @@
+type: object
+properties:
+  storageClass:
+    description: |
+      Автоматическое создание StorageClass'ов, которые есть в OpenStack.
+    properties:
+      exclude:
+        description: |
+          Полные имена (или regex выражения имен) StorageClass'ов, которые не будут созданы в кластере.
+      default:
+        description: |
+          Имя StorageClass'а, который будет использоваться в кластере по умолчанию.
+
+          Если параметр не задан, фактическим StorageClass'ом по умолчанию будет:
+            * присутствующий в кластере произвольный StorageClass с default-аннотацией;
+            * storagaClass для которого используется default StorageProfile;
+            * первый StorageClass из создаваемых модулем.

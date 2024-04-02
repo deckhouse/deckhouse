@@ -9,22 +9,24 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /livenessprobe
     to: /livenessprobe
-    includePaths:
-      - livenessprobe
     before: setup
 docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   beforeInstall:
-    - apk add --no-cache make bash git patch rsync gcc musl-dev
     - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git /src
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    {{- if semverCompare "<1.29" $version }}
+    - go get golang.org/x/net@v0.17.0
+    - go get google.golang.org/grpc@v1.56.3
+    - go mod tidy
+    - go mod vendor
+    {{- end }}
     - make build
     - cp bin/livenessprobe /livenessprobe
     - chown 64535:64535 /livenessprobe

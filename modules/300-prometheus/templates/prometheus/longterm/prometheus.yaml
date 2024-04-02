@@ -52,7 +52,7 @@ spec:
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.44.0
+  version: v2.45.2
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -146,8 +146,8 @@ spec:
   serviceAccountName: prometheus
   podMetadata:
     labels:
-      threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "97"
-      threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "99"
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "94"
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "96"
     annotations:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   secrets:

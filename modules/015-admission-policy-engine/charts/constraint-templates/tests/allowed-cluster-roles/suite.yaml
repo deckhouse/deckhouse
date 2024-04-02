@@ -1,0 +1,27 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-cluster-roles
+tests:
+  - name: security-policy
+    template: ../../templates/security/allowed-cluster-roles.yaml
+    constraint: constraint-allowed-admin.yaml
+    cases:
+      - name: allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: samples/allowed.yaml
+        assertions:
+          - violations: no
+      - name: allowed2
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: samples/allowed2.yaml
+        assertions:
+          - violations: no
+      - name: disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: samples/disallowed.yaml
+        assertions:
+          - violations: yes

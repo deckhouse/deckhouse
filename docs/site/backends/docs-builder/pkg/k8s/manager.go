@@ -17,15 +17,16 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
 	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	"os"
-	"strings"
-	"time"
 
 	coordination "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,22 +52,24 @@ func NewLeasesManager() (*LeasesManager, error) {
 	}
 
 	podName := os.Getenv("POD_NAME")
-	splittedPodName := strings.Split(podName, "-")
-	if len(splittedPodName) != 3 {
+	splitPodName := strings.Split(podName, "-")
+	if len(splitPodName) != 3 {
 		return nil, fmt.Errorf("unexpected POD_NAME %q", podName)
 	}
 
 	return &LeasesManager{
-		kclient:      kclient,
-		podIP:        os.Getenv("POD_IP"),
-		podNamespace: os.Getenv("POD_NAMESPACE"),
-		name:         strings.Join([]string{"module-docs-builder", splittedPodName[2]}, "-"),
+		kclient:       kclient,
+		podIP:         os.Getenv("POD_IP"),
+		podNamespace:  os.Getenv("POD_NAMESPACE"),
+		clusterDomain: os.Getenv("CLUSTER_DOMAIN"),
+		name:          strings.Join([]string{"module-docs-builder", splitPodName[2]}, "-"),
 	}, nil
 }
 
 type LeasesManager struct {
-	podIP        string
-	podNamespace string
+	podIP         string
+	podNamespace  string
+	clusterDomain string
 
 	name    string
 	kclient *kubernetes.Clientset
@@ -154,9 +157,10 @@ func (m *LeasesManager) Remove(ctx context.Context) error {
 
 func (m *LeasesManager) newLease() *coordination.Lease {
 	address := fmt.Sprintf(
-		"%s.%s.pod.cluster.local:8081",
+		"%s.%s.pod.%s:8081",
 		strings.ReplaceAll(m.podIP, ".", "-"),
 		m.podNamespace,
+		m.clusterDomain,
 	)
 
 	now := metav1.NowMicro()

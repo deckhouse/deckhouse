@@ -1,0 +1,21 @@
+candi:
+  fixes:
+    - summary: Deckhouse Kubernetes Platform BE improvements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7338
+ci:
+  fixes:
+    - summary: Fix build main branch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7330
+dhctl:
+  fixes:
+    - summary: Mirroring will now include Trivy vulnerability database image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7359
+kube-dns:
+  fixes:
+    - summary: Change the description field for the `KubeDnsServiceWithDeprecatedAnnotation` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7366
+operator-trivy:
+  fixes:
+    - summary: Fix `node-collector` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7329
+

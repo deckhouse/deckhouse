@@ -24,6 +24,13 @@ properties:
       - `AllowAny` — allow.
       - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
     default: AllowAny
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
   enableHTTP10:
     type: boolean
     default: false
@@ -376,6 +383,25 @@ properties:
     type: object
     description: istiod specific settings.
     default: {}
+    oneOf:
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['Standard', 'Static']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static', 'VPA']
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['HPA']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static']
     properties:
       nodeSelector:
         type: object
@@ -405,9 +431,89 @@ properties:
               format: int64
             value:
               type: string
+      replicasManagement:
+        description: |
+          Replication management settings and scaling of istiod.
+        type: object
+        default: {}
+        x-examples:
+        - mode: Standard
+        - mode: Static
+          static:
+            replicas: 3
+        x-doc-examples:
+        - mode: Standard
+        - mode: Static
+          static:
+            replicas: 3
+        - mode: HPA
+          hpa:
+            minReplicas: 2
+            maxReplicas: 5
+            metrics:
+            - type: CPU
+              targetAverageUtilization: 80
+        properties:
+          mode:
+            type: string
+            description: |
+              Replicas management mode:
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
+              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
+              - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
+            enum: ['Standard', 'Static', 'HPA']
+            default: 'Standard'
+          static:
+            type: object
+            description: |
+              Options for replicas management for the `Static` mode.
+            required: ["replicas"]
+            properties:
+              replicas:
+                type: number
+                minimum: 1
+                description: |
+                  Desired number of replicas.
+          hpa:
+            type: object
+            description: |
+              Options for replicas management for the `HPA` mode.
+            required: ["minReplicas", "maxReplicas", "metrics"]
+            properties:
+              minReplicas:
+                type: number
+                minimum: 1
+                description: |
+                  The lower limit for the number of replicas to which the HPA can scale down.
+              maxReplicas:
+                type: number
+                minimum: 1
+                description: |
+                  The upper limit for the number of replicas to which the HPA can scale up. It cannot be less that `minReplicas`.
+              metrics:
+                type: array
+                description: |
+                  The HPA will use these metrics to decide whether to increase or decrease the number of replicates.
+                minItems: 1
+                items:
+                  type: object
+                  required: ["type","targetAverageUtilization"]
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Metric type.
+                      enum: ['CPU']
+                    targetAverageUtilization:
+                      type: number
+                      description: |
+                        The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
+                      minimum: 1
+                      maximum: 100
       resourcesManagement:
         description: |
-          istiod resources management options.
+          Settings for CPU and memory requests and limits by istiod pods.
+        type: object
         default: {}
         x-examples:
         - mode: VPA
@@ -427,36 +533,38 @@ properties:
               cpu: "55m"
               memory: "256Mi"
             limits:
-              cpu: 2
+              cpu: "2"
               memory: "2Gi"
         properties:
           mode:
             type: string
             description: |
-              The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+              Resource management mode:
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-controlplane-resourcesmanagement-static) parameter section;
+              - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-controlplane-resourcesmanagement-vpa) parameter section.
             enum: ['VPA', 'Static']
             default: 'VPA'
           vpa:
             type: object
             default: {}
             description: |
-              Parameters of the VPA mode.
+              Resource management options for the `VPA` mode.
             properties:
               mode:
                 type: string
                 description: |
-                  The VPA usage mode.
+                  VPA operating mode.
                 enum: ['Initial', 'Auto']
                 default: 'Auto'
               cpu:
                 type: object
                 default: {}
                 description: |
-                  CPU-related parameters.
+                  CPU-related VPA settings.
                 properties:
                   max:
                     description: |
-                      Maximum allowed CPU requests.
+                      The maximum value that the VPA can set for the CPU requests.
                     default: 2
                     oneOf:
                     - type: string
@@ -464,7 +572,7 @@ properties:
                     - type: number
                   min:
                     description: |
-                      Minimum allowed CPU requests.
+                      The minimum value that the VPA can set for the CPU requests.
                     default: '50m'
                     oneOf:
                     - type: string
@@ -474,16 +582,20 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                      The CPU limits/requests ratio.
+
+                      This ratio is used for calculating the initial CPU limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
               memory:
                 type: object
                 default: {}
                 description: |
-                  The amount of memory requested.
+                  Memory-related VPA settings.
                 properties:
                   max:
                     description: |
-                      Maximum allowed memory requests.
+                      The maximum memory requests the VPA can set.
                     default: '2Gi'
                     oneOf:
                     - type: string
@@ -491,7 +603,7 @@ properties:
                     - type: number
                   min:
                     description: |
-                      Minimum allowed memory requests.
+                      The minimum memory requests the VPA can set.
                     default: '256Mi'
                     oneOf:
                     - type: string
@@ -501,16 +613,20 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                      The memory limits/requests ratio.
+
+                      This ratio is used for calculating the initial memory limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
           static:
             type: object
             description: |
-              Static resource management settings.
+              Resource management options for the `Static` mode.
             properties:
               requests:
                 type: object
                 description: |
-                  Requests configuration.
+                  Resource requests settings for pods.
                 properties:
                   cpu:
                     oneOf:
@@ -518,18 +634,18 @@ properties:
                       pattern: "^[0-9]+m?$"
                     - type: number
                     description: |
-                      CPU requests.
+                      Configuring CPU requests.
                   memory:
                     oneOf:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
                     description: |
-                      Memory requests.
+                      Configuring memory requests.
               limits:
                 type: object
                 description: |
-                  Limits configuration.
+                  Configuring CPU and memory limits.
                 properties:
                   cpu:
                     oneOf:
@@ -537,14 +653,14 @@ properties:
                       pattern: "^[0-9]+m?$"
                     - type: number
                     description: |
-                      CPU limits.
+                      Configuring CPU limits.
                   memory:
                     oneOf:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
                     description: |
-                      Memory limits.
+                      Configuring memory limits.
   nodeSelector:
     type: object
     additionalProperties:
@@ -594,7 +710,7 @@ properties:
           The HTTPS usage mode:
           - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
 
           **Caution!** Unlike other modules, Istio doesn't support non-secured HTTP (`mode: Disabled`).
         enum:

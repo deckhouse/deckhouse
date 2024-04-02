@@ -69,6 +69,9 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      d8Name,
 			Namespace: d8Namespace,
+			Annotations: map[string]string{
+				"created-by": podName,
+			},
 			Labels: map[string]string{
 				"app":                        d8Name,
 				"module":                     d8Name,
@@ -119,6 +122,9 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      d8Name,
 			Namespace: d8Namespace,
+			Annotations: map[string]string{
+				"created-by": podName,
+			},
 			Labels: map[string]string{
 				"app":                        d8Name,
 				"module":                     d8Name,

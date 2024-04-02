@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: aggregating-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: aggregating-proxy

@@ -1,11 +1,9 @@
-{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /usr/bin/ip /usr/sbin/conntrack" }}
+{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-    - apt-get update
-    - apt-get install -y iptables iptables-nft ipset iproute2 conntrack-tools
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
@@ -15,10 +13,9 @@ shell:
       touch /iptables-wrapper
 ---
 artifact: {{ .ModuleName }}/kube-router-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   install:
-    - apk add --no-cache git make
     - mkdir -p /src
     - cd /src
     - git clone --branch v2.0.1 --depth 1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git .
@@ -30,21 +27,24 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ .ModuleName }}/kube-router-artifact
-    add: /src/kube-router
-    to: /opt/bin/kube-router
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /lib64/iptables
-    to: /lib64/iptables
-    before: setup
-  - image: common/iptables-wrapper
-    add: /iptables-wrapper
-    to: /iptables-wrapper
-    before: setup
+- artifact: {{ .ModuleName }}/kube-router-artifact
+  add: /src/kube-router
+  to: /opt/bin/kube-router
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
 docker:
   ENTRYPOINT: ["/opt/bin/kube-router"]

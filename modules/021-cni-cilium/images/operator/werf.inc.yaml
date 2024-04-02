@@ -1,19 +1,35 @@
+# #####################################################################
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/operator/Dockerfile
+# #####################################################################
+---
 {{- $ciliumVersion := "1.14.5" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: quay.io/cilium/operator:v{{- $ciliumVersion }}@sha256:56cc1822109c4b34d192784a3106150cfb645252ce0b34aab67e9c820ac41bab
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache make git bash
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64
+  - mkdir -p /go/src/github.com/cilium/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
+  - cd /go/src/github.com/cilium/cilium
+  - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
+  - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
+  - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/builder-cert-artifact
-  add: /etc/ssl/certs/ca-certificates.crt
-  to: /etc/ssl/certs/ca-certificates.crt
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/bin/cilium-operator
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
 docker:
-  USER: nobody
+  USER: 64535
   ENTRYPOINT: ["/usr/bin/cilium-operator"]

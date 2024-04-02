@@ -265,10 +265,11 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.23.1"}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.29.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
 
 	const nowTime = "2023-03-03T16:49:52Z"
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)

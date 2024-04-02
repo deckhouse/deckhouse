@@ -1,0 +1,13 @@
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
+{{- with .Values.global.modulesImages.registry.CA }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse-registry-root-ca.crt
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "image-availability")) | nindent 2 }}
+data:
+  ca.crt: |
+    {{- . | nindent 4 }}
+{{- end }}
+{{- end }}

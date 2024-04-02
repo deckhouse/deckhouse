@@ -74,6 +74,7 @@ func cwd() string {
 func walkModules(namespaces, sas *[]string, workDir string) error {
 	chartNames := make(map[string]string)
 	saNames := make(map[string][]string)
+	namespace := ""
 
 	err := filepath.Walk(workDir, func(path string, f os.FileInfo, err error) error {
 		if f != nil && f.IsDir() {
@@ -108,7 +109,7 @@ func walkModules(namespaces, sas *[]string, workDir string) error {
 			if err != nil {
 				return err
 			}
-			namespace := strings.Trim(string(ns), "\r\n")
+			namespace = strings.Trim(string(ns), "\r\n")
 
 			if !strings.HasPrefix(namespace, "d8-") && namespace != "kube-system" {
 				return nil
@@ -136,7 +137,10 @@ metadata:
 					return err
 				}
 
-				saNames[modulePath] = append(saNames[modulePath], saName)
+				saNames[modulePath] = append(
+					saNames[modulePath],
+					fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName),
+				)
 			}
 		}
 

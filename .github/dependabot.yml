@@ -43,6 +43,33 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/140-user-authz/images/webhook"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/600-flant-integration/images/madison-proxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
   labels:
   - "type/dependencies"
@@ -61,7 +88,16 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/140-user-authz/images/webhook"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -71,15 +107,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/500-operator-trivy/images/report-updater"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/600-flant-integration/images/madison-proxy"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -142,6 +169,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/safe-agent-updater"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/021-kube-proxy/images/init-container/entrypoint"
   labels:
   - "type/dependencies"
@@ -170,6 +206,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -251,15 +296,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/early-oom/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/041-linstor/images/linstor-pools-importer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -358,6 +394,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/grafana-v10/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/trickster/entrypoint"
   labels:
   - "type/dependencies"
@@ -368,6 +413,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -448,6 +502,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/500-openvpn/images/openvpn/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/500-upmeter/images/smoke-mini"
   labels:
   - "type/dependencies"
@@ -485,7 +548,7 @@ updates:
 
 # pip
 - package-ecosystem: "pip"
-  directory: "/ee/modules/600-flant-integration/images/flant-pricing"
+  directory: "/ee/be/modules/600-flant-integration/images/flant-pricing/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

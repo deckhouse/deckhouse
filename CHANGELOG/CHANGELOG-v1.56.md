@@ -37,6 +37,10 @@
  - **[candi]** Restart kubelet after containerd restart to fix containerd.sock loose. [#6735](https://github.com/deckhouse/deckhouse/pull/6735)
  - **[cni-cilium]** Cilium version bumped to 1.14.5 [#6872](https://github.com/deckhouse/deckhouse/pull/6872)
     Cilium agents will restart, during restart some policies won't work.
+ - **[deckhouse]** Webhook-handler can ignore validation error during a cluster bootstrap. [#6980](https://github.com/deckhouse/deckhouse/pull/6980)
+ - **[deckhouse-controller]** Fix modules registration on startup. [#7129](https://github.com/deckhouse/deckhouse/pull/7129)
+ - **[deckhouse-controller]** Disable the requirement that blocks Deckhouse updates when the built-in embedded virtualization module is enabled. [#7084](https://github.com/deckhouse/deckhouse/pull/7084)
+ - **[deckhouse-controller]** Fix config values for dynamically enabled modules. [#7036](https://github.com/deckhouse/deckhouse/pull/7036)
  - **[deckhouse-controller]** Fix global values change and source modules validation. [#6814](https://github.com/deckhouse/deckhouse/pull/6814)
  - **[deckhouse-controller]** Create module directory with desired version only when ModuleRelease is deployed. [#6807](https://github.com/deckhouse/deckhouse/pull/6807)
  - **[deckhouse-controller]** Bump addon-operator. Change internal work with modules. Behavior of commands `deckhouse-controller module values <name>` was changed, no more top levels keys by default. To have old behavior use '-g' flag. [#6495](https://github.com/deckhouse/deckhouse/pull/6495)
@@ -47,11 +51,18 @@
  - **[dhctl]** Fix mirror not adding module-named tags at modules repo root. [#6782](https://github.com/deckhouse/deckhouse/pull/6782)
  - **[dhctl]** Validate passed credentials against registry prior to mirroring. [#6629](https://github.com/deckhouse/deckhouse/pull/6629)
  - **[extended-monitoring]** Fix wrong permissions for `k8s-image-availability-exporter`. [#6754](https://github.com/deckhouse/deckhouse/pull/6754)
+ - **[external-module-manager]** Fix multiple symlinks for a single module in the symlink folder. [#7228](https://github.com/deckhouse/deckhouse/pull/7228)
+ - **[external-module-manager]** Fix outdated module versions in multi-master environment. [#7222](https://github.com/deckhouse/deckhouse/pull/7222)
+ - **[external-module-manager]** Fix ModuleRelease nightly cleanup. [#7108](https://github.com/deckhouse/deckhouse/pull/7108)
+ - **[external-module-manager]** Get scheme for `deckhouse` ModuleSource from the deckhouse values. [#7105](https://github.com/deckhouse/deckhouse/pull/7105)
  - **[external-module-manager]** Remove default `ModuleUpdatePolicy` for the `deckhouse` ModuleSource. [#6822](https://github.com/deckhouse/deckhouse/pull/6822)
  - **[external-module-manager]** Absent module sources are restored on Deckhouse startup. [#6607](https://github.com/deckhouse/deckhouse/pull/6607)
+ - **[flant-integration]** Correct `metrics_path`. [#7198](https://github.com/deckhouse/deckhouse/pull/7198)
  - **[flant-integration]** Run hook envs_from_nodes OnBeforeHelm to prevent main queue stuck. [#6750](https://github.com/deckhouse/deckhouse/pull/6750)
  - **[go_lib]** Restore `.global.enabledModules` values field for source modules. [#6935](https://github.com/deckhouse/deckhouse/pull/6935)
  - **[go_lib]** Limit registry client operations with 30 seconds timeout. [#6701](https://github.com/deckhouse/deckhouse/pull/6701)
+ - **[ingress-nginx]** Fix `HostWithFailover` inlet proxy filter. [#7183](https://github.com/deckhouse/deckhouse/pull/7183)
+ - **[istio]** Fix diagnostic instructions in istio federation/multicluster alerts. [#7197](https://github.com/deckhouse/deckhouse/pull/7197)
  - **[istio]** Adding alert about istio and K8s versions incompatibility. [#6919](https://github.com/deckhouse/deckhouse/pull/6919)
  - **[istio]** Remove istio/k8s compatibility check. [#6914](https://github.com/deckhouse/deckhouse/pull/6914)
  - **[linstor]** Fix the `D8DrbdPeerDeviceIsOutOfSync` alert. [#6778](https://github.com/deckhouse/deckhouse/pull/6778)
@@ -71,11 +82,14 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images: `v1.26.12`, `v1.27.9`, `v1.28.5`. [#7022](https://github.com/deckhouse/deckhouse/pull/7022)
+    Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Fix release requirements. [#7003](https://github.com/deckhouse/deckhouse/pull/7003)
  - **[cni-cilium]** Enabled pprof interface in cilium-agent. [#6874](https://github.com/deckhouse/deckhouse/pull/6874)
     cillium-agent pods will restart.
  - **[cni-simple-bridge]** Use distroless based image. [#6469](https://github.com/deckhouse/deckhouse/pull/6469)
     `simple-bridge` pods will restart; affected clouds are AWS, Azure, GCP, Yandex.Cloud.
+ - **[deckhouse-controller]** Use uniform method to install CRDs for hooks and `deckhouse-controller`. [#6960](https://github.com/deckhouse/deckhouse/pull/6960)
  - **[deckhouse-controller]** Bump Go and Kubernetes client versions. [#6698](https://github.com/deckhouse/deckhouse/pull/6698)
  - **[deckhouse-controller]** Remove virtualization embedded module [#5554](https://github.com/deckhouse/deckhouse/pull/5554)
     Uninstalling the virtualization module will destroy all the virtual machines created with the module. Take care to save virtual machine data if necessary.
@@ -85,5 +99,7 @@
  - **[ingress-nginx]** Add validation for httpsPort field of the IngressNginxController CRD. [#6631](https://github.com/deckhouse/deckhouse/pull/6631)
     Ingress controller pods will restart.
  - **[linstor]** Simultaneously enabling the Linstor and SDS-DRBD modules is prohibited. [#6776](https://github.com/deckhouse/deckhouse/pull/6776)
+ - **[monitoring-kubernetes]** Correct the `LoadBalancerServiceWithoutExternalIP` alert. [#7150](https://github.com/deckhouse/deckhouse/pull/7150)
+ - **[prometheus]** Add examples of CustomAlertmanager for Slack and Opsgenie. [#7030](https://github.com/deckhouse/deckhouse/pull/7030)
  - **[terraform-manager]** Build distroless-based terraform-manager images. [#6639](https://github.com/deckhouse/deckhouse/pull/6639)
 

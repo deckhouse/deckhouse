@@ -22,7 +22,6 @@ docker:
     kubelet: {{ printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromCacheVersion: 20230426
 from: {{ $.Images.BASE_SCRATCH }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts

@@ -23,9 +23,14 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
   {{- end }}
-      rewrite ^/$ /en/ permanent;
+      rewrite ^/$ /en/platform/ permanent;
+      rewrite ^/(en|ru)/$ /$1/platform/ permanent;
       rewrite ^/modules/(.+) /en/modules/$1 permanent;
+      rewrite ^/platform/(.+) /en/platform/$1 permanent;
+      rewrite ^/(ru|en)/(modules/[0-9]+-[^/]+/.*)$ /$1/platform/$2 permanent;
       rewrite ^/(en|ru)/modules/810-deckhouse-web(/.*)$ /$1/modules/810-documentation$2 permanent;
+      rewrite ^/documentation/v[\d]+[^\/]*/(.*)?$ /en/platform/$3 permanent;
+      rewrite ^(/(ru|en))/documentation/v[\d]+[^\/]*/(.*)?$ $1/platform/$3 permanent;
   {{- if .Values.documentation.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}
@@ -42,6 +47,13 @@ spec:
               name: http
         path: /
         pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: documentation
+            port:
+              name: http
+        path: /modules
+        pathType: Prefix
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:

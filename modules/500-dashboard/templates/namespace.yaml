@@ -4,3 +4,5 @@ kind: Namespace
 metadata:
   name: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
+---
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}

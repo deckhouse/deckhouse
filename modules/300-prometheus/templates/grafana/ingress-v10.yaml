@@ -1,0 +1,75 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-v10
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
+  annotations:
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | replace "grafana-dex-authenticator.d8-monitoring" "grafana-v10-dex-authenticator.d8-monitoring" | quote }}
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+  {{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+  {{- end }}
+  {{- if .Values.prometheus.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- if .Values.prometheus.auth.satisfyAny }}
+    nginx.ingress.kubernetes.io/satisfy: "any"
+  {{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+    # In Deckhouse, Grafana is an "IAC" configured platform.
+    # This rewrite forbids users to log in and get higher privileges.
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /login {
+        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana-v10") }} permanent;
+      }
+    nginx.ingress.kubernetes.io/affinity: cookie
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: grafana-v10
+            port:
+              name: https
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-v10
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "grafana-v10") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}

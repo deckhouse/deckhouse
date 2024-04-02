@@ -36,10 +36,12 @@ apiVersions:
         enum: [InitConfiguration]
       deckhouse:
         type: object
+        x-unsafe: true
         description: Initial parameters required to install Deckhouse.
         properties:
           imagesRepo:
             type: string
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
             description: |
               Address of a container registry with Deckhouse images.
 
@@ -125,7 +127,6 @@ apiVersions:
                 global:
                   modules:
                     publicDomainTemplate: "%s.k8s.company.my"
-                linstorEnabled: true
                 monitoringPingEnabled: false
                 userAuthn:
                   publishAPI:

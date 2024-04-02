@@ -45,6 +45,12 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
+	// Database retention
+	cmd.Flag("db-retention", "Database episodes 5m retention days").
+		Envar("UPMETER_RETENTION_DAYS").
+		Default("548").
+		IntVar(&config.DatabaseRetentionDays)
+
 	// Origins count
 	cmd.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
 		Required().

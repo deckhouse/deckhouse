@@ -1,0 +1,41 @@
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+docker:
+  ENTRYPOINT: ["/iptables-loop.sh"]
+---
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /usr/bin/inotifywait" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /relocate
+  stageDependencies:
+    install:
+    - '**/*'
+  includePaths:
+    - '*.sh'
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/sbin/${cmd}"
+        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      done

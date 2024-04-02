@@ -45,6 +45,7 @@ apiVersions:
           region: eu-central-1
         tags:
           team: rangers
+    x-unsafe-rules: [deleteZones]
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, masterNodeGroup, sshPublicKey]
     properties:
@@ -77,6 +78,7 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
+            x-unsafe-rules: [updateReplicas]
           instanceClass:
             type: object
             required: [instanceType, ami]
@@ -358,6 +360,7 @@ apiVersions:
           A subnet to use in the VPC being created.
 
           **A mandatory parameter** if the `existingVPCID` parameter is omitted.
+        x-unsafe: true
       nodeNetworkCIDR:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -370,6 +373,7 @@ apiVersions:
           If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC. Thus, the entire VPC is allocated for the cluster networks, and you will not be able to add other resources to this VPC.
 
           The `nodeNetworkCIDR` range is distributed between subnets depending on the number of availability zones in the selected region. For example, if `nodeNetworkCIDR: "10.241.1.0/20"` and there are three availability zones in the region, subnets will be created with the `/22` mask.
+        x-unsafe: true
       existingVPCID:
         type: string
         description: |
@@ -417,6 +421,7 @@ apiVersions:
             type: string
             description: |
               The name of the AWS region where instances will be provisioned.
+            x-unsafe: true
       zones:
         type: array
         items:
@@ -428,14 +433,15 @@ apiVersions:
         type: array
         items:
           type: string
-          pattern: '^(\w+):(\w+)$'
+          pattern: '^([a-zA-Z0-9_\-]+):([a-zA-Z0-9_\-\*\?]+)$'
         minItems: 1
         description: |
-          List containing an additional policies for IAM roles.
-          * Additional policies would be attached to default IAM role policies.
-          * Parameter is optional. If ommitted, only default IAM role policies are used.
+          A list containing additional policy actions for IAM roles.
+          * Additional policy actions would be attached to the default IAM role policy actions.
+          * Parameter is optional. If omitted, only default IAM role policy actions are used.
+          * Example of policy actions: `ecr:ListImages`, `s3:GetObject`, etc.
 
-          Default IAM role policies contain the following roles:
+          Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
     allOf:

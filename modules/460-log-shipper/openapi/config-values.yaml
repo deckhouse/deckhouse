@@ -77,13 +77,15 @@ properties:
       mode:
         type: string
         description: |
-          The mode for managing resource requests.
+          Resource request management mode:
+          - `Static` is a classic one. In it, you explicitly specify requests. The parameters of this mode are defined in the [static](#parameters-resourcesrequests-static) parameter section;
+          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
         enum: ["VPA", "Static"]
         default: "VPA"
       vpa:
         type: object
         description: |
-          Parameters of the VPA mode.
+          Resource request management options for the VPA mode.
         required:
           - mode
           - cpu
@@ -108,7 +110,7 @@ properties:
                     pattern: "^[0-9]+m?$"
                   - type: number
                 description: |
-                  Maximum allowed CPU requests.
+                  The maximum value that the VPA can set for the CPU requests.
                 default: "500m"
               min:
                 oneOf:
@@ -116,7 +118,7 @@ properties:
                     pattern: "^[0-9]+m?$"
                   - type: number
                 description: |
-                  Minimum allowed CPU requests.
+                  The minimum value that the VPA can set for the CPU requests.
                 default: "50m"
           memory:
             type: object
@@ -130,7 +132,7 @@ properties:
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Maximum allowed memory requests.
+                  The maximum memory requests the VPA can set.
                 default: "2048Mi"
               min:
                 oneOf:
@@ -138,12 +140,12 @@ properties:
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Minimum allowed memory requests.
+                  The minimum memory requests the VPA can set.
                 default: "64Mi"
       static:
         type: object
         description: |
-          Static mode settings.
+          Resource request management options for the `Static` mode.
         required:
           - cpu
           - memory
@@ -155,7 +157,7 @@ properties:
                 pattern: "^[0-9]+m?$"
               - type: number
             description: |
-              CPU requests.
+              Configuring CPU requests.
             default: "50m"
           memory:
             oneOf:
@@ -163,5 +165,5 @@ properties:
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
               - type: number
             description: |
-              Memory requests.
+              Configuring memory requests.
             default: "64Mi"

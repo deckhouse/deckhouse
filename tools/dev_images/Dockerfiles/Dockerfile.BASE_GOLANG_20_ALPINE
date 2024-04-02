@@ -1,0 +1,5 @@
+ARG DISTRO
+FROM $DISTRO
+RUN apk update &&\
+    apk add --no-cache autoconf automake bash bison build-base ca-certificates curl flex gcc git glib-static jq-dev libtool linux-headers make musl-dev oniguruma-dev patch rsync tzdata &&\
+    update-ca-certificates

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: projects
+    apiVersion: deckhouse.io/v1alpha2
+    kind: Project
+    queue: "projects"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "projectName": .metadata.name,
+        "projectTemplateName": .spec.projectTemplateName
+      }
+kubernetesValidating:
+- name: used-in-project.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["DELETE"]
+    resources:   ["projecttemplates"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+projectTemplateName=$(context::jq -r '.review.request.oldObject.metadata.name')
+                                                              
+if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.projectTemplateName == $templateName) | .projectName] | first' 2>&1)"; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"ProjectTemplate \"$projectTemplateName\" cannot be deleted. It is used in the Project \"$usedInProjectName\"" }
+EOF
+  return 0
+fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+
+}
+
+hook::run "$@"

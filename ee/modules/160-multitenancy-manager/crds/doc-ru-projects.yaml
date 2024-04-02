@@ -9,22 +9,46 @@ spec:
               description: ""
               properties:
                 description:
-                  description: Произвольное описание назначения окружения.
+                  description: |
+                    Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
                 projectTypeName:
                   description: |
-                    Имя custom resource [ProjectType](cr.html#projecttype), который будет использоваться
-                    как шаблон для создания ресурсов окружения.
+                    Имя ресурса [ProjectType](cr.html#projecttype), который определяет, какие ресурсы будут созданы в проекте.
                 template:
                   description: |
-                    Значения для [темплейтов ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) из шаблона окружения (custom resource [ProjectType](cr.html#projecttype))
-                    в формате helm values, которые соотносятся с
-                    OpenAPI-спецификацией (поле [openAPI](cr.html#projecttype-v1alpha1-spec-openapi) шаблона окружения).
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
             status:
               description: ""
               properties:
                 message:
-                  description: Сообщение о статусе.
+                  description: Сообщение, указывающее на причину появления текущего статуса.
                 state:
-                  description: Сводка статуса.
+                  description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
                 sync:
-                  description: Состояние Project синхронизировано с кластером.
+                  description: Указывает на то, что параметры проекта были успешно применены после создания или изменения.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                description:
+                  description: |
+                    Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
+                projectTemplateName:
+                  description: |
+                    Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
+                parameters:
+                  description: |
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
+
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
+            status:
+              properties:
+                message:
+                  description: Сообщение, указывающее на причину появления текущего статуса.
+                state:
+                  description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
+                sync:
+                  description: Указывает на то, что параметры проекта были успешно применены после создания или изменения.

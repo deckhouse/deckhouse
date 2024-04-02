@@ -186,6 +186,9 @@ features:
   experimental:
     en: This feature is actively developed. It might significantly change in the future.
     ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+  deprecated:
+    en: The current version of the module is deprecated.
+    ru: Текущая версия модуля устарела.
   temporaryDeprecated:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.

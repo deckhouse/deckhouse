@@ -86,7 +86,7 @@ while true; do
 
   bb-log-info "Setting node status to NotReady..."
 
-  url="https://127.0.0.1:6445/api/v1/nodes/$(hostname -s)"
+  url="https://127.0.0.1:6445/api/v1/nodes/${D8_NODE_HOSTNAME}"
   ready_condition_key=""
   if ! ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt \
        --cert /var/lib/kubelet/pki/kubelet-client-current.pem |

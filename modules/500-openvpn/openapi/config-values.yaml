@@ -161,7 +161,7 @@ properties:
           * `CertManager` — the OpenVPN admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           * `CustomCertificate` — the OpenVPN admin panel will use the certificate from the `d8-system` namespace for HTTPS.
           * `Disabled` — in this mode, the OpenVPN admin panel works over HTTP only.
-          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme.
+          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
         properties:

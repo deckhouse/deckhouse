@@ -190,6 +190,13 @@ function dynamic_memory_sizing {
     echo -n "${recommended_systemreserved_memory}Gi"
 }
 
+# CIS becnhmark purposes
+tls_params=""
+if [ -f /var/lib/kubelet/pki/kubelet-server-current.pem ]; then
+  tls_params="tlsCertFile: /var/lib/kubelet/pki/kubelet-server-current.pem
+tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet-server-current.pem"
+fi
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -254,6 +261,7 @@ tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
 # This flag affects logs from kubelet, for period of time between kubelet start and certificate request approve by Deckhouse hook.
 serverTLSBootstrap: true
+${tls_params}
 {{- end }}
 {{/*
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
@@ -263,10 +271,10 @@ featureGates:
 {{- if semverCompare "<1.27" .kubernetesVersion }}
   ExpandCSIVolumes: true
 {{- end }}
-  RotateKubeletServerCertificate: true
-{{- if semverCompare "<1.23" .kubernetesVersion }}
-  EphemeralContainers: true
+{{- if semverCompare ">=1.26" .kubernetesVersion }}
+  ValidatingAdmissionPolicy: true
 {{- end }}
+  RotateKubeletServerCertificate: true
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
@@ -300,9 +308,21 @@ systemReserved:
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
-  cpu: {{ dig "kubelet" "resourceReservation" "static" "cpu" 0 .nodeGroup }}
-  memory: {{ dig "kubelet" "resourceReservation" "static" "memory" 0 .nodeGroup }}
-  ephemeral-storage: {{ dig "kubelet" "resourceReservation" "static" "ephemeralStorage" 0 .nodeGroup }}
+  {{- if hasKey .nodeGroup "kubelet" }}
+    {{- if hasKey .nodeGroup.kubelet "resourceReservation" }}
+      {{- if hasKey .nodeGroup.kubelet.resourceReservation "static" }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "cpu" }}
+  cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
+        {{- end }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "memory" }}
+  memory: {{ .nodeGroup.kubelet.resourceReservation.static.memory | quote }}
+        {{- end }}
+        {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "ephemeralStorage" }}
+  ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1

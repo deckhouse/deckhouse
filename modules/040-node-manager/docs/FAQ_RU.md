@@ -132,7 +132,11 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 `StaticInstance`, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
 
-Чтобы удалить `StaticInstance` находящийся в любом состоянии отличном от `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), нужно удалить соответствующий ресурс [Instance](cr.html#instance), после чего `StaticInstance` удалится автоматически.
+Чтобы удалить `StaticInstance` находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
+1. Дождитесь, пока `StaticInstance` перейдет в статус `Pending`.
+1. Удалите `StaticInstance`.
+1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
 
 ### Как изменить IP-адрес StaticInstance?
 
@@ -161,7 +165,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить `NodeGroup`, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
-> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR, то предварительно выгоните ресурсы с узла и удалите узел из LINSTOR, следуя [инструкции](../041-linstor/faq.html#как-выгнать-ресурсы-с-узла).
+> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно выгоните ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла).
 
 1. Удалите узел из кластера Kubernetes:
 

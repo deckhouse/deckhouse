@@ -50,7 +50,7 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		converger := converge.NewConverger(&converge.Params{})
+		converger := converge.NewConverger(&converge.Params{AutoDismissDestructive: true, AutoApprove: true})
 		return converger.AutoConverge()
 	})
 	return cmd

@@ -16,17 +16,15 @@ docker:
   ENTRYPOINT: ["/bin/aws-ebs-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates make git
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - git clone --depth 1 --branch v1.3.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+  - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - cd /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - make linux/amd64
+  - make default
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -34,14 +32,7 @@ mount:
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                        util-linux \
-                        mount udev parted \
-                        e2fsprogs xfsprogs
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

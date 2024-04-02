@@ -46,7 +46,7 @@ cloud:
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "1.29"
 `
 		return secretManifest(data)
 	}
@@ -123,7 +123,7 @@ clusterType: Static
 podSubnetCIDR: 10.244.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 192.168.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "1.29"
 clusterDomain: cluster.local
 defaultCRI: Containerd
 

@@ -7,7 +7,7 @@ git:
 import:
 - artifact: terraform-provider-gcp
   add: /terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-gcp
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ---
 artifact: terraform-provider-gcp

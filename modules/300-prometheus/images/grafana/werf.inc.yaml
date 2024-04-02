@@ -4,7 +4,7 @@
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -14,14 +14,20 @@ git:
     install:
     - '**/*.patch'
 shell:
-  beforeInstall:
-  - apk add --no-cache git patch
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - find /patches -name '*.patch' -exec git apply {} \;
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
+  - rm -rf .yarn
+  - mv /grafana-deps/.yarn .
+  - mv /grafana-deps/package.json .
+  - mv /grafana-deps/yarn.lock .
   - git clone --depth 1 --branch v{{ $statusmapVersion }} {{ $.SOURCE_REPO }}/flant/grafana-statusmap.git /grafana-statusmap
+  - git clone --depth 1 --branch v{{ $statusmapVersion }} {{ $.SOURCE_REPO }}/flant/grafana-statusmap-deps.git /grafana-statusmap-deps
+  - mv /grafana-statusmap-deps/* /grafana-statusmap
+  - rm -rf /grafana-deps /grafana-statusmap-deps
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
 from: {{ $.Images.BASE_NODE_16_ALPINE }}
@@ -31,8 +37,6 @@ import:
   to: /usr/src/app
   before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - cd /usr/src/app
   - yarn install
@@ -47,8 +51,6 @@ import:
   to: /grafana-statusmap
   before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - cd /grafana-statusmap
   - yarn install
@@ -56,7 +58,7 @@ shell:
   - yarn build
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -66,9 +68,6 @@ import:
   to: /usr/src/app
   before: install
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get -y --no-install-recommends install git gcc musl musl-tools
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app
@@ -96,7 +95,7 @@ shell:
   - chmod 0700 /app/entrypoint
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_UBUNTU_DEV }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana-server
@@ -129,18 +128,13 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
-  to: /img/
+  to: /img
   stageDependencies:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get -y --no-install-recommends install libfontconfig curl ca-certificates openssl unzip git
-  - apt-get clean
-  - apt-get autoremove -y
-  - rm -rf /var/lib/apt/lists/*
   install:
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
@@ -168,7 +162,8 @@ shell:
     IFS="," && \
     BUNDLED_PLUGINS={{ $bundledPlugins }} && \
     for plugin in ${BUNDLED_PLUGINS}; do \
-      grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
+      plugin_path="$(find /grafana-plugins -type f -name "${plugin}*")"
+      grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" --pluginUrl ${plugin_path} plugins install ${plugin}; \
     done
   - chmod +r /etc/grafana/grafana.ini
   - export BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
@@ -179,45 +174,38 @@ shell:
   - chmod 0700 ./bin/grafana-server
   - chmod 0700 ./bin/grafana-cli
 ---
-{{ $binariesList := "/usr/lib64/* /usr/lib/*" }}
----
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
-shell:
-  beforeSetup:
-  - apt-get update
-  - apt-get install -y glibc
-  install:
-    - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
+from: {{ $.Images.BASE_ALT }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
+  add: /
   to: /
-  before: install
   includePaths:
-  - '**/*'
+  - usr/lib
+  - usr/lib64
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /usr/share/grafana/
-  to: /usr/share/grafana/
+  to: /usr/share/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /etc/grafana/
-  to: /etc/grafana/
+  to: /etc/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/lib/grafana/
-  to: /var/lib/grafana/
+  to: /var/lib/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/log/grafana/
-  to: /var/log/grafana/
+  to: /var/log/grafana
   before: install
 docker:
   ENV:

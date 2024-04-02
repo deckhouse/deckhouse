@@ -38,12 +38,12 @@ func DefineMirrorModulesCommand(parent *kingpin.Application) *kingpin.CmdClause 
 			}
 
 			return log.Process("mirror", "Push Modules to registry", func() error {
-				return operations.PushModulesToRegistry(app.MirrorModuleDirectory, app.MirrorRegistry, authProvider, app.MirrorInsecure)
+				return operations.PushModulesToRegistry(app.MirrorModuleDirectory, app.MirrorRegistry, authProvider, app.MirrorInsecure, app.MirrorTLSSkipVerify)
 			})
 		}
 
 		return log.Process("mirror", "Pull Modules to local filesystem", func() error {
-			return operations.PullExternalModulesToLocalFS(app.MirrorModuleSourcePath, app.MirrorModuleDirectory)
+			return operations.PullExternalModulesToLocalFS(app.MirrorModuleSourcePath, app.MirrorModuleDirectory, app.MirrorTLSSkipVerify)
 		})
 	})
 

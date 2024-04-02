@@ -8,13 +8,12 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --update --no-cache patch git
   - git clone {{ .SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
   - cd /src
   - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3

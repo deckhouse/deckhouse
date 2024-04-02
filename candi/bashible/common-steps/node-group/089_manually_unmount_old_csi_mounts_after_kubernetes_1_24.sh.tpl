@@ -32,13 +32,6 @@ function disable_systemd_units() {
 return 0
 }
 
-{{- if semverCompare "<1.24" .kubernetesVersion }}
-
-disable_systemd_units
-exit 0
-
-{{- else }}
-
 # not in pipeline to avoid capturing mount's non-zero exit code in the if expression
 mount_output="$(mount)"
 
@@ -108,5 +101,3 @@ systemctl restart old-csi-mount-cleaner
   {{- end }}
 systemctl enable old-csi-mount-cleaner.timer
 systemctl enable old-csi-mount-cleaner
-
-{{- end }}

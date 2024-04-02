@@ -1,0 +1,211 @@
+{{- define "pricing_resources" }}
+cpu: 80m
+memory: 100Mi
+{{- end }}
+{{- define "grafana_agent_resources" }}
+cpu: 25m
+memory: 60Mi
+{{- end }}
+
+{{- if .Values.flantIntegration.metrics }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pricing
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "pricing" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: pricing
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: pricing
+      minAllowed:
+        {{- include "pricing_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 160m
+        memory: 200Mi
+    - containerName: grafana-agent
+      minAllowed:
+        {{- include "grafana_agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 120Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: pricing
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "pricing")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: pricing
+  template:
+    metadata:
+      labels:
+        app: pricing
+      annotations:
+        checksum/config: {{ include "grafana_agent_config" . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: pricing
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      initContainers:
+      {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "agent-data") | nindent 6 }}
+      containers:
+      - name: pricing
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "flantPricing") }}
+        env:
+        - name: FP_RELEASE_CHANNEL
+          value: {{ .Values.flantIntegration.internal.releaseChannel | quote }}
+        - name: FP_BUNDLE
+          value: {{ .Values.flantIntegration.internal.bundle | quote }}
+        - name: FP_CLOUD_PROVIDER
+          value: {{ .Values.flantIntegration.internal.cloudProvider | quote }}
+        - name: FP_CLOUD_LAYOUT
+          value: {{ .Values.flantIntegration.internal.cloudLayout | quote }}
+        - name: FP_CONTROL_PLANE_VERSION
+          value: {{ .Values.flantIntegration.internal.controlPlaneVersion | quote }}
+        - name: FP_MINIMAL_KUBELET_VERSION
+          value: {{ .Values.flantIntegration.internal.nodeStats.minimalKubeletVersion | quote }}
+        - name: FP_CLUSTER_TYPE
+          value: {{ .Values.flantIntegration.internal.clusterType | quote }}
+        - name: FP_MASTERS_COUNT
+          value: {{ .Values.flantIntegration.internal.nodeStats.mastersCount | quote }}
+        - name: FP_MASTER_IS_DEDICATED
+          value: {{ .Values.flantIntegration.internal.nodeStats.masterIsDedicated | int | quote }}
+        - name: FP_MASTER_MIN_CPU
+          value: {{ .Values.flantIntegration.internal.nodeStats.masterMinCPU | quote }}
+        - name: FP_MASTER_MIN_MEMORY
+          value: {{ .Values.flantIntegration.internal.nodeStats.masterMinMemory | quote }}
+        - name: FP_PLAN_IS_BOUGHT_AS_BUNDLE
+          value: {{ .Values.flantIntegration.planIsBoughtAsBundle | int | quote }}
+        - name: FP_AUXILIARY_CLUSTER
+          value: {{ .Values.flantIntegration.auxiliaryCluster | int | quote }}
+        - name: FP_NODES_DISCOUNT
+          value: {{ .Values.flantIntegration.nodesDiscount | int | quote }}
+        - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
+          value: {{ .Values.flantIntegration.doNotChargeForRockSolid | quote | int | quote }}
+        - name: FP_CONTACTS
+          value: {{ .Values.flantIntegration.contacts | quote }}
+        - name: FP_DECKHOUSE_VERSION
+          value: {{ .Values.global.deckhouseVersion | quote }}
+        - name: FP_TERRAFORM_MANAGER_EBABLED
+          value: {{ .Values.flantIntegration.internal.terraformManagerEnabled | quote }}
+        - name: DEBUG_UNIX_SOCKET
+          value: /tmp/shell-operator-debug.socket
+        - name: FP_KUBEALL_HOST
+          value: {{ .Values.flantIntegration.kubeall.host | quote }}
+        - name: FP_KUBEALL_KUBECTL
+          value: {{ .Values.flantIntegration.kubeall.kubectl | quote }}
+        - name: FP_KUBEALL_KUBECONFIG
+          value: {{ .Values.flantIntegration.kubeall.kubeconfig | quote }}
+        - name: FP_KUBEALL_CONTEXT
+          value: {{ .Values.flantIntegration.kubeall.context | quote }}
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9115
+          periodSeconds: 60
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "pricing_resources" . | nindent 12 }}
+  {{- end }}
+      - name: grafana-agent
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "grafanaAgent") }}
+        args:
+          - -config.expand-env
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        volumeMounts:
+        - name: agent-data
+          mountPath: /data/agent
+        - name: agent-config
+          mountPath: /etc/agent-config
+        command:
+        - /bin/agent
+        - -config.file=/etc/agent-config/agent-scraping-service.yaml
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            scheme: HTTPS
+            port: 9100
+          periodSeconds: 30
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "grafana_agent_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9100"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 9100
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /-/healthy
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: pricing
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: agent-data
+        hostPath:
+          path: /var/lib/docker/volumes/flant-pricing-grafana-agent-data
+      - name: agent-config
+        secret:
+          secretName: grafana-agent-config
+      - name: tmp
+        emptyDir: {}
+{{- end }}

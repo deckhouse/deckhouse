@@ -160,6 +160,18 @@ $(document).ready(function(){
     })
 });
 
+$(document).ready(function(){
+  const tables = $('table');
+
+  if (tables.length === 0) {
+    return;
+  }
+
+  tables.each((_, table) => {
+    $(table).wrap("<div class='table-wrapper'></div>")
+  })
+});
+
 const openDiagram = function () {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')

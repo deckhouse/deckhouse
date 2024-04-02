@@ -635,7 +635,7 @@ The annotation below adds the preStop hook to istio-proxy container in applicati
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.19"]`).
   * Wait for the corresponding pod `istiod-v1x19-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x19`.
+    * Change `istio-injection: enabled` label to `istio.io/rev: v1x19`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
   * Reconfigure `globalVersion` to `1.19` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.

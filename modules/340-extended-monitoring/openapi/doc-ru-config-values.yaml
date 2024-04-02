@@ -6,12 +6,31 @@ properties:
       exporterEnabled:
         description: |
           Включен ли imageAvailabilityExporter.
-      skipRegistryCertVerification:
-        description: |
-          Пропускать ли валидацию TLS-сертификата для Docker Registry.
       ignoredImages:
         description: |
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
+      registry:
+        description: |
+          Настройки подключения к container registry.
+        properties:
+          scheme:
+            description: |
+              Протокол доступа к container registry.
+          tlsConfig:
+            description: |
+              Настройки подключения к container registry
+            properties:
+              insecureSkipVerify:
+                description: |
+                  Пропускать ли валидацию TLS-сертификата для container registry.
+              ca:
+                description: |
+                  Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      forceCheckDisabledControllers:
+        description: |
+          Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
+
+          Укажите `All`, для проверки всех типов контроллеров.
   events:
     description: |
       Настройки для мониторинга event'ов в кластере Kubernetes.

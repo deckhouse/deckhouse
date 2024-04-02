@@ -193,7 +193,7 @@ spec:
                   description: |
                     Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
                   x-doc-examples: ["network-hdd"]
-                  x-doc-default: "network-ssd"
+                  x-doc-default: "network-hdd"
                   type: string
                   enum:
                     - "network-ssd"

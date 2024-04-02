@@ -21,6 +21,7 @@ import (
 
 	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -33,22 +34,41 @@ import (
 )
 
 type ModuleConfigBackend struct {
-	mcKubeClient *versioned.Clientset
-	logger       logger.Logger
+	mcKubeClient     *versioned.Clientset
+	deckhouseConfigC chan<- utils.Values
+	moduleEventC     chan events.ModuleEvent
+	logger           logger.Logger
 }
 
 // New returns native(Deckhouse) implementation for addon-operator's KubeConfigManager which works directly with
 // deckhouse.io/ModuleConfig, avoiding moving configs to the ConfigMap
-func New(config *rest.Config, logger logger.Logger) *ModuleConfigBackend {
+func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger logger.Logger) *ModuleConfigBackend {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
 
 	return &ModuleConfigBackend{
-		mcClient,
-		logger,
+		mcKubeClient:     mcClient,
+		deckhouseConfigC: deckhouseConfigC,
+		logger:           logger,
 	}
+}
+
+func (mc ModuleConfigBackend) handleDeckhouseConfig(moduleName string, val utils.Values) {
+	if moduleName != "deckhouse" {
+		return
+	}
+
+	mc.deckhouseConfigC <- val
+}
+
+func (mc *ModuleConfigBackend) GetEventsChannel() chan events.ModuleEvent {
+	if mc.moduleEventC == nil {
+		mc.moduleEventC = make(chan events.ModuleEvent, 50)
+	}
+
+	return mc.moduleEventC
 }
 
 func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan config.Event) {
@@ -102,11 +122,18 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			ModuleConfig: *mcfg,
 			Checksum:     mcfg.Checksum(),
 		}
+		mc.handleDeckhouseConfig(obj.Name, values)
 	}
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
+	if mc.moduleEventC != nil {
+		mc.moduleEventC <- events.ModuleEvent{
+			ModuleName: obj.Name,
+			EventType:  events.ModuleConfigChanged,
+		}
+	}
 }
 
-func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfig, error) {
+func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
 	// List all ModuleConfig and get settings
 	cfg := config.NewConfig()
 
@@ -133,6 +160,7 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context) (*config.KubeConfi
 				ModuleConfig: *mcfg,
 				Checksum:     mcfg.Checksum(),
 			}
+			mc.handleDeckhouseConfig(item.Name, values)
 		}
 	}
 

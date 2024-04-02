@@ -75,7 +75,7 @@ func main() {
 	// Run werf config render to get config file from which  we calculate images names
 	cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE", "SOURCE_REPO=", "GOPROXY=", "CRATESPROXY=")
+	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE", "SOURCE_REPO=", "GOPROXY=")
 	cmd.Dir = path.Join("..")
 	out, err := cmd.CombinedOutput()
 	if err != nil {

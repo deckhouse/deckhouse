@@ -64,19 +64,18 @@ bb-rp-is-fetched?() {
   local AUTH_REALM=""
   local AUTH_SERVICE=""
 
-  if [[ -n ${REGISTRY_AUTH} ]]; then
-    AUTH="-u ${REGISTRY_AUTH}"
+  if [[ -n "${REGISTRY_AUTH}" ]]; then
+    AUTH="yes"
   fi
 
   AUTH_HEADER="$(bb-rp-curl -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
-  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
+  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
-  if [ -z ${AUTH_REALM} ]; then
+  if [ -z "${AUTH_REALM}" ]; then
     bb-exit 1 "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
   fi
-  # shellcheck disable=SC2086
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
-  bb-rp-curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
+  bb-rp-curl -fsSL ${AUTH:+-u "$REGISTRY_AUTH"} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
 # Fetch manifests from registry and save under $BB_RP_FETCHED_PACKAGES_STORE
@@ -160,11 +159,9 @@ bb-rp-fetch() {
   fi
 
   bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch manifests"' ERR
   bb-rp-fetch-manifests PACKAGES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch manifests"
-    return $BB_ERROR
-  fi
+  trap - ERR
 
   declare -A BLOB_FILES_MAP
   local PACKAGE_DIGEST
@@ -175,11 +172,9 @@ bb-rp-fetch() {
   done
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch packages"' ERR
   bb-rp-fetch-blobs BLOB_FILES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch packages"
-    return "${BB_ERROR}"
-  fi
+  trap - ERR
   bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
 }
 
@@ -207,25 +202,23 @@ bb-rp-install() {
     bb-log-info "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
+    trap '
+      rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+      bb-log-error "Failed to unpack package "${PACKAGE}", it may be corrupted. The package will be refetched on the next attempt"
+    ' ERR
     tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
-    if bb-error?
-    then
-        rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
-        bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
-        return $BB_ERROR
-    fi
+    trap - ERR
 
     bb-log-info "Installing package '${PACKAGE}'"
     # shellcheck disable=SC2164
     pushd "${TMP_DIR}" >/dev/null
+    trap '
+      popd >/dev/null
+      rm -rf "${TMP_DIR}"
+      bb-log-error "Failed to install package "${PACKAGE}""
+    ' ERR
     ./install
-    if bb-error?
-    then
-        popd >/dev/null
-        rm -rf "${TMP_DIR}"
-        bb-log-error "Failed to install package '${PACKAGE}'"
-        return $BB_ERROR
-    fi
+    trap - ERR
     popd >/dev/null
 
     # Write digest to hold file
@@ -240,6 +233,18 @@ bb-rp-install() {
     bb-event-fire "bb-package-installed" "${PACKAGE}"
     trap - ERR
   done
+}
+
+# Unpack package from module image and run install script
+# bb-rp-module-install package:digest registry_auth scheme registry_address registry_path
+bb-rp-module-install() {
+  local MODULE_PACKAGE=$1
+  local REGISTRY_AUTH=$2
+  local SCHEME=$3
+  local REGISTRY_ADDRESS=$4
+  local REGISTRY_PATH=$5
+
+  bb-rp-install $MODULE_PACKAGE
 }
 
 # run uninstall script from hold dir

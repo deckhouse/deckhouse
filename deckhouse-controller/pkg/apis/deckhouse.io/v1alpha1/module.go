@@ -39,16 +39,29 @@ type Module struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Properties ModuleProperties `json:"properties,omitempty"`
+
+	Status ModuleStatus `json:"status,omitempty"`
 }
 
 type ModuleProperties struct {
 	Weight      uint32 `json:"weight"`
 	State       string `json:"state,omitempty"`
 	Source      string `json:"source,omitempty"`
+	Stage       string `json:"stage,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
+type ModuleStatus struct {
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	HooksState string `json:"hooksState"`
+}
+
 type moduleKind struct{}
+
+func (in *ModuleStatus) GetObjectKind() schema.ObjectKind {
+	return &moduleKind{}
+}
 
 func (mk *moduleKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (mk *moduleKind) GroupVersionKind() schema.GroupVersionKind {

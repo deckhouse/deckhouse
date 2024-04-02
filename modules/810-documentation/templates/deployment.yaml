@@ -20,12 +20,12 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      serviceAccountName: documentation
       containers:
       - name: web
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "web") }}
         ports:
           - containerPort: 8080
@@ -41,6 +41,8 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
           - name: config
             mountPath: /app/config
@@ -49,6 +51,59 @@ spec:
             subPath: nginx.conf
           - name: tmp
             mountPath: /tmp
+          - mountPath: /app/modules/en
+            name: modules-docs-en
+          - mountPath: /app/modules/ru
+            name: modules-docs-ru
+      - name: builder
+        image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
+        {{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
+        command:
+          - "/app/server"
+        env:
+          - name: HUGO_ENVIRONMENT
+            value: production
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: CLUSTER_DOMAIN
+            value: {{ $.Values.global.discovery.clusterDomain | quote }}
+        ports:
+          - containerPort: 8081
+            name: http
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "builder_resources" . | nindent 12 }}
+  {{- end }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - mountPath: "/mount/public/en/modules"
+            name: modules-docs-en
+          - mountPath: "/mount/public/ru/modules"
+            name: modules-docs-ru
       volumes:
         - name: config
           configMap:
@@ -57,5 +112,9 @@ spec:
           configMap:
             name: documentation-nginx-config
         - name: tmp
+          emptyDir: {}
+        - name: modules-docs-en
+          emptyDir: {}
+        - name: modules-docs-ru
           emptyDir: {}
 {{- end }}

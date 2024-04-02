@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 
 const (
 	globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "linstor"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "sds-replicated-volume"]
   highAvailability: true
   modules:
     placement: {}

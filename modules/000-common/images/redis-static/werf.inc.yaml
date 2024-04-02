@@ -1,0 +1,28 @@
+---
+artifact: {{ .ModuleName }}/build-redis-static-artifact
+from: {{ .Images.BASE_ALPINE_DEV }}
+shell:
+  install:
+  - mkdir /build && cd /build
+  - git clone --branch 7.0.9 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git .
+
+  # disable Redis protected mode [1] as it is unnecessary in context of Docker
+  # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
+  # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+  - grep -E '^ *createBoolConfig[(]"protected-mode",.*, *1 *,.*[)],$' src/config.c
+  - sed -ri 's!^( *createBoolConfig[(]"protected-mode",.*, *)1( *,.*[)],)$!\10\2!' src/config.c
+  - grep -E '^ *createBoolConfig[(]"protected-mode",.*, *0 *,.*[)],$' src/config.c
+
+  - make CFLAGS="-static" LDFLAGS="-static"
+  - chown 64535:64535 /build/src/redis-server
+  - chmod 0700 /build/src/redis-server
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/build-redis-static-artifact
+  add: /build/src/redis-server
+  to: /redis-server
+  before: setup
+docker:
+  ENTRYPOINT: ["/redis-server"]

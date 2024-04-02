@@ -1,8 +1,8 @@
-{{ $levels :=  slice "info" "warning" "warn" "danger" }}
-{{ $level :=  "info" }}
-{{ $content := trim  .content " \n" | markdownify }}
-{{ if and .level (in $levels (lower .level) ) }}{{ $level = lower .level }}{{ end }}
-{{ if eq $level "warn" }}{{ $level = "warning" }}{{ end }}
+{{- $levels :=  slice "info" "warning" "warn" "danger" }}
+{{- $level :=  "info" }}
+{{- $content := trim  .content " \n" | markdownify }}
+{{- if and .level (in $levels (lower .level) ) }}{{ $level = lower .level }}{{ end }}
+{{- if eq $level "warn" }}{{ $level = "warning" }}{{ end }}
 
 <div class="{{ $level }} alert__wrap">
   <svg class="alert__icon icon--{{ $level }}">

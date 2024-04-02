@@ -11,11 +11,6 @@ properties:
         default: true
         description: |
           Enables imageAvailabilityExporter.
-      skipRegistryCertVerification:
-        type: boolean
-        default: false
-        description: |
-          Whether to skip the verification of the container registry certificate.
       ignoredImages:
         type: array
         x-examples:
@@ -24,6 +19,49 @@ properties:
           A list of images to ignore when checking the presence in the registry, e.g., `alpine:3.12` or `quay.io/test/test:v1.1`.
         items:
           type: string
+      registry:
+        type: object
+        description: |
+          Connection settings for container registry.
+        default: {}
+        properties:
+          scheme:
+            type: string
+            description: |
+              Container registry access scheme.
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+          tlsConfig:
+            type: object
+            description: |
+              Connection settings for container registry.
+            default: {}
+            properties:
+              insecureSkipVerify:
+                type: boolean
+                description: |
+                  Whether to skip the verification of the container registry certificate.
+                default: false
+              ca:
+                type: string
+                description: |
+                  Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
+      forceCheckDisabledControllers:
+        type: array
+        x-examples:
+          - ["Deployment", "StatefulSet"]
+        description: |
+          A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended.
+
+          Specify `All` to check all controller kinds.
+        items:
+          type: string
+          enum:
+            - Deployment
+            - StatefulSet
+            - DaemonSet
+            - CronJob
+            - All
   events:
     type: object
     default: {}

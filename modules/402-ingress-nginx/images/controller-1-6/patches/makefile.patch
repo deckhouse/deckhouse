@@ -1,9 +1,27 @@
 diff --git a/Makefile b/Makefile
-index 25855a224..42c93cc54 100644
+index cbda4dafb..8810a1876 100644
 --- a/Makefile
 +++ b/Makefile
+@@ -27,7 +27,7 @@ endif
+ SHELL=/bin/bash -o pipefail -o errexit
+ 
+ # Use the 0.0 tag for testing, it shouldn't clobber any release builds
+-TAG ?= $(shell cat TAG)
++TAG ?= $(shell git describe --tags HEAD | cut -d- -f2)
+ 
+ # e2e settings
+ # Allow limiting the scope of the e2e tests. By default run everything
+@@ -37,7 +37,7 @@ E2E_NODES ?= 7
+ # run e2e test suite with tests that check for memory leaks? (default is false)
+ E2E_CHECK_LEAKS ?=
+ 
+-REPO_INFO ?= $(shell git config --get remote.origin.url)
++REPO_INFO ?= "UNKNOWN"
+ COMMIT_SHA ?= git-$(shell git rev-parse --short HEAD)
+ BUILD_ID ?= "UNSET"
+ 
 @@ -107,6 +107,7 @@ clean-chroot-image: ## Removes local image
-
+ 
  .PHONY: build
  build:  ## Build ingress controller, debug tool and pre-stop hook.
 +ifeq ($(USE_DOCKER), true)
@@ -18,6 +36,6 @@ index 25855a224..42c93cc54 100644
 +else
 +	build/build.sh
 +endif
-
+ 
  .PHONY: clean
  clean: ## Remove .gocache directory.

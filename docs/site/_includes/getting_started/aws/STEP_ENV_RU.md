@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации](/documentation/v1/modules/030-cloud-provider-aws/environment.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли (выполняйте их на **персональном компьютере**).
+Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации](/documentation/v1/modules/030-cloud-provider-aws/environment.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли (выполняйте их на **персональном компьютере**).
 
 При помощи следующей команды сохраните JSON-спецификацию:
 

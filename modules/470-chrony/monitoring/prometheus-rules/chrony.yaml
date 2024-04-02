@@ -16,7 +16,7 @@
         1. check if Chrony pod is running on the node by executing the following command:
            * 'kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods'
         2. check the Chrony daemon's status by executing the following command:
-           * 'kubectl -n d8-chrony exec <POD_NAME> -- /usr/bin/chronyc sources'
+           * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
              - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/documentation/v1/modules/470-chrony/configuration.html);

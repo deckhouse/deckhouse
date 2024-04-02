@@ -38,13 +38,13 @@ usage() {
  Usage: %s [--channel <CHANNEL NAME>] [--key <DECKHOUSE EE LICENSE KEY>] [--os <linux|mac>]
 
     --channel <CHANNEL NAME>
-            Deckhouse release channel name.
+            Deckhouse Kubernetes Platform release channel name.
             Possible values: Alpha, Beta, EarlyAccess, Stable, RockSolid.
             Default: Stable.
 
     --key <DECKHOUSE EE LICENSE KEY>
-            Deckhouse Enterprise Edition license key.
-            If no license key specified, Deckhouse Community Edition will be installed.
+            Deckhouse Kubernetes Platform Enterprise Edition license key.
+            If no license key specified, Deckhouse Kubernetes Platform Community Edition will be installed.
 
     --os <linux|mac>
             Override the OS detection.
@@ -81,7 +81,7 @@ parse_args() {
     --key)
       case "$2" in
       "")
-        echo "License key is empty. Please specify the license key or don't use the --key parameter to install Deckhouse Community Edition."
+        echo "License key is empty. Please specify the license key or don't use the --key parameter to install Deckhouse Kubernetes Platform Community Edition."
         usage
         exit 1
         ;;
@@ -192,14 +192,14 @@ memory_check() {
   fi
 
   if [[ ("$MEMORY_TOTAL_BYTES" -gt "0") && ("$MEMORY_TOTAL_BYTES" -lt "$REQUIRE_MEMORY_MIN_BYTES") ]]; then
-    echo "Insufficient memory to install Deckhouse."
-    echo "Deckhouse requires at least 4 gigabytes of memory."
+    echo "Insufficient memory to install Deckhouse Kubernetes Platform."
+    echo "Deckhouse Kubernetes Platform requires at least 4 gigabytes of memory."
     exit 1
   fi
 
   if [[ ("$MEMORY_TOTAL_BYTES" -eq "0") || (-z "$MEMORY_TOTAL_BYTES") ]]; then
     echo "Can't get the total memory value."
-    echo "Note, that Deckhouse requires at least 4 gigabytes of memory."
+    echo "Note, that Deckhouse Kubernetes Platform requires at least 4 gigabytes of memory."
     echo "Press enter to continue..."
     read
   fi
@@ -377,7 +377,7 @@ nodes:
     protocol: TCP
 EOF
 
-  echo "Creating Deckhouse installation config file (${CONFIG_DIR}/config.yml)..."
+  echo "Creating Deckhouse Kubernetes Platform installation config file (${CONFIG_DIR}/config.yml)..."
   cat <<EOF >${CONFIG_DIR}/config.yml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -471,7 +471,7 @@ EOF
 EOF
   fi
 
-  echo "Creating Deckhouse resource file (${CONFIG_DIR}/resources.yml)..."
+  echo "Creating Deckhouse Kubernetes Platform resource file (${CONFIG_DIR}/resources.yml)..."
   cat <<EOF >${CONFIG_DIR}/resources.yml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -517,7 +517,7 @@ E.g., you can find programs that use these ports using the following command:
 }
 
 deckhouse_install() {
-  echo "Running Deckhouse installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
+  echo "Running Deckhouse Kubernetes Platform installation (the $D8_RELEASE_CHANNEL_NAME release channel)..."
 
   docker run --pull=always --rm --network kind -v "${CONFIG_DIR}/config.yml:/config.yml" -v "${CONFIG_DIR}/resources.yml:/resources.yml" \
     -v "${CONFIG_DIR}/kubeconfig:/kubeconfig" ${D8_REGISTRY_PATH}/install:$D8_RELEASE_CHANNEL_TAG \
@@ -525,7 +525,7 @@ deckhouse_install() {
              dhctl bootstrap-phase create-resources --kubeconfig=/kubeconfig --kubeconfig-context=kind-${KIND_CLUSTER_NAME} --resources=/resources.yml"
 
   if [ "$?" -ne "0" ]; then
-    echo "Error installing Deckhouse!"
+    echo "Error installing Deckhouse Kubernetes Platform!"
     cluster_deletion_info
     exit 1
   fi
@@ -565,7 +565,7 @@ ingress_check() {
       echo "Here is the output of the 'kubectl -n d8-ingress-nginx get all' command:"
       ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get all
       echo
-      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'\""
+      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'\""
       echo
       cluster_deletion_info
       exit 1
@@ -581,7 +581,7 @@ generate_ee_access_string() {
   D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 -w0)
 
   if [ "$?" -ne "0" ]; then
-    echo "Error generation container registry access string for Deckhouse Enterprise Edition"
+    echo "Error generation container registry access string for Deckhouse Kubernetes Platform Enterprise Edition"
     exit 1
   fi
 }
@@ -589,14 +589,14 @@ generate_ee_access_string() {
 install_show_credentials() {
 
   local prometheus_password
-  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
+  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'")
   if [ "$?" -ne "0" ] || [ -z "$prometheus_password" ]; then
     printf "
 Error getting Prometheus password.
 
 Try to run the following command to get Prometheus password:
 
-    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}"
   else
@@ -612,7 +612,7 @@ Provide following credentials to access Grafana at http://grafana.127.0.0.1.ssli
 
 installation_finish() {
   printf "
-You have installed Deckhouse Platform in kind!
+You have installed Deckhouse Kubernetes Platform in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-${KIND_CLUSTER_NAME}'.
 

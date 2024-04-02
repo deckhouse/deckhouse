@@ -51,25 +51,6 @@
       summary: eBPF map {{ $labels.map_name }} is more than 90% full in agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: We've reached resource limit of eBPF maps. Consult with vendor for possible remediation steps.
 
-  - alert: CiliumAgentMapOperationFailures
-    expr: sum by (namespace, pod, map_name, operation) (increase(cilium_bpf_map_ops_total{outcome="fail"}[5m])) > 0
-    for: 20m
-    labels:
-      d8_module: cni-cilium
-      d8_component: agent
-      severity_level: "9"
-      experimental: "true"
-      tier: cluster
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      summary: Errors occurred during {{ $labels.map_name }} eBPF map update by operation {{ $labels.operation }} in agent {{ $labels.namespace }}/{{ $labels.pod }}.
-      description: |
-        Cilium Agent is experiencing errors updating BPF maps on Agent Pod {{ $labels.pod }}.
-        Effects may vary depending on map type(s) being affected however this is likely to cause issues with Cilium.
-
   - alert: CiliumAgentPolicyImportErrors
     expr: sum by (namespace, pod) (rate(cilium_policy_import_errors_total[2m]) > 0)
     for: 5m

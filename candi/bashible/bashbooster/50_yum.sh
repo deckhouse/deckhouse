@@ -62,15 +62,7 @@ bb-yum-install() {
         bb-yum-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
 
-        for PACKAGE in ${PACKAGES_TO_INSTALL[@]}; do
-            # nfs-utils-1.3.0-0.68.el7.x86_64 -> nfs-utils
-            # nfs-utils -> nfs-utils
-            PACKAGE_NAME="${PACKAGE%-*-*}"
-            bb-yum-versionlock-delete $PACKAGE_NAME
-        done
-
         yum install $BB_YUM_INSTALL_EXTRA_ARGS -y ${PACKAGES_TO_INSTALL[@]}
-        bb-yum-versionlock-add ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_YUM_UNHANDLED_PACKAGES_STORE"
         NEED_FIRE=true
@@ -88,24 +80,6 @@ bb-yum-remove() {
             bb-log-info "Removing package '$PACKAGE'"
             yum remove -y "$PACKAGE"
             bb-exit-on-error "Failed to remove package '$PACKAGE'"
-        fi
-    done
-}
-
-bb-yum-versionlock-add() {
-    for PACKAGE in "$@"; do
-        bb-log-info "Locking package version of '$PACKAGE'"
-        yum versionlock add "$PACKAGE"
-        bb-exit-on-error "Failed to lock package version of '$PACKAGE'"
-    done
-}
-
-bb-yum-versionlock-delete() {
-    for PACKAGE in "$@"; do
-        if yum versionlock list | grep -q "$PACKAGE"; then
-            bb-log-info "Unlocking package version of '$PACKAGE'"
-            yum versionlock delete "$PACKAGE"
-            bb-exit-on-error "Failed to unlock package version of '$PACKAGE'"
         fi
     done
 }

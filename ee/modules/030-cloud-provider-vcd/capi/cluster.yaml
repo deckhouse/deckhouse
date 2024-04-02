@@ -1,0 +1,47 @@
+{{- $providerClusterConfiguration := .vcd | required "internal.providerClusterConfiguration is required" }}
+{{- $clusterName := .clusterName | required "clusterName is required" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+type: Opaque
+data:
+  username: {{ $providerClusterConfiguration.username | b64enc | quote }}
+  password: {{ $providerClusterConfiguration.password | b64enc | quote }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: VCDCluster
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+  namespace: d8-cloud-instance-manager
+  name: {{ $clusterName | quote }}
+spec:
+  site: {{ $providerClusterConfiguration.server | trimSuffix "/" | quote }} # VCD endpoint with the format https://VCD_HOST. No trailing '/'
+  org: {{ $providerClusterConfiguration.organization | quote }} # VCD organization name where the cluster should be deployed
+  ovdc: {{ $providerClusterConfiguration.virtualDataCenter | quote }}
+  ovdcNetwork: {{ $providerClusterConfiguration.mainNetwork | quote }}
+  useAsManagementCluster: false # intent to use the resultant CAPVCD cluster as a management cluster
+  userContext:
+    secretRef:
+      name: capi-user-credentials
+      namespace: d8-cloud-instance-manager
+{{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
+  proxyConfigSpec:
+    {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
+    httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
+    {{- end }}
+    {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpsProxy" }}
+    httpsProxy: {{ $.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
+    {{- end }}
+    {{- $noProxy := list "127.0.0.1" "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+    {{- if hasKey $.Values.global.clusterConfiguration.proxy "noProxy" }}
+      {{- $noProxy = concat $noProxy $.Values.global.clusterConfiguration.proxy.noProxy }}
+    {{- end }}
+    noProxy:
+    {{- $noProxy | toYaml | nindent 4 }}
+{{- end }}
+
+

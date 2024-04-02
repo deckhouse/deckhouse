@@ -16,7 +16,9 @@ properties:
             description: |
               Режим выдачи сертификатов для данного Ingress-ресурса.
 
-              В случае использования режима `SelfSigned` для Ingress-ресурса будет выпущен самоподписанный сертификат.
+              В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
+
+              Получить выпущенный сертификат можно следующей командой: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
           global:
@@ -29,6 +31,8 @@ properties:
                   Если вы используете в кластере сертификаты, выдаваемые c помощью модуля `cert-manager` и Let's Encrypt, следует в качестве значения установить пустую строку `""`.
 
                   В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике повредит ранее сгенерированные kubectl-конфиги.
+        addKubeconfigGeneratorEntry:
+          description: 'Если указать `false` будет удалена запись в kubeconfig-generator'
   kubeconfigGenerator:
     description: |
       Массив, в котором указываются дополнительные способы доступа к API-серверу.
@@ -95,7 +99,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — Dex/kubeconfig-generator будет работать по HTTPS, используя сертификат из namespace `d8-system`;
           - `Disabled` — Dex/kubeconfig-generator будет работать только по HTTP;
-          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:

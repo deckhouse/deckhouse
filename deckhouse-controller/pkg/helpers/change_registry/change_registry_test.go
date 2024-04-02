@@ -143,7 +143,7 @@ func TestNewImagePullSecretData(t *testing.T) {
 			newRepo:   "registry.example.com/deckhouse",
 			caContent: testCaContent,
 			want: map[string]string{
-				".dockerconfigjson": `{"auths":{"registry.example.com":{"auth":"dGVzdDp0ZXN0"}}}`,
+				".dockerconfigjson": `{"auths":{"registry.example.com":{"username":"test","password":"test","auth":"dGVzdDp0ZXN0"}}}`,
 				"address":           "registry.example.com",
 				"path":              "/deckhouse",
 				"scheme":            "https",

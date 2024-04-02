@@ -52,14 +52,13 @@ spec:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
       # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
       # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
       # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
       # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-    # [<en>] The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-    # [<ru>] Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-    storageClass: localpath-deckhouse-system
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html

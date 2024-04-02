@@ -1,7 +1,7 @@
-ARG BASE_GOLANG_19_ALPINE
+ARG BASE_GOLANG_19_ALPINE_DEV
 ARG BASE_DISTROLESS
 
-FROM $BASE_GOLANG_19_ALPINE as artifact
+FROM $BASE_GOLANG_19_ALPINE_DEV as artifact
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -14,8 +14,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src/
 COPY exporter/ /src/
-RUN apk add --no-cache git \
-    && go get -u golang.org/x/net@v0.17.0 \
+RUN go get golang.org/x/net@v0.17.0 \
     && go mod tidy \
     && go build -ldflags="-s -w" -o loop main.go && \
     chown -R 64535:64535 /src/ && \

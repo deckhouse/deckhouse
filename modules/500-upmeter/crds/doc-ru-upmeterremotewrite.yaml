@@ -21,6 +21,13 @@ spec:
                           description: Пароль для аутентификации.
                     bearerToken:
                       description: Токен для аутентификации.
+                    tlsConfig:
+                      description: Параметры TLS.
+                      properties:
+                        insecureSkipVerify:
+                          description: Отключить проверку сертификата.
+                        ca:
+                          description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
                 additionalLabels:
                   description: Дополнительные метки для добавления ко всем метрикам.
                 intervalSeconds:

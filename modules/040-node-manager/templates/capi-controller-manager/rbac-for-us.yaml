@@ -386,6 +386,18 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -401,6 +413,9 @@ subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
     namespace: d8-cloud-instance-manager
+  - kind: ServiceAccount
+    name: capi-cloud-cluster-controller-manager
+    namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -414,6 +429,9 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
+    namespace: d8-cloud-instance-manager
+  - kind: ServiceAccount
+    name: capi-cloud-cluster-controller-manager
     namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -431,4 +449,9 @@ subjects:
     namespace: d8-cloud-instance-manager
   - kind: User
     name: capi-controller-manager
+  - kind: ServiceAccount
+    name: capi-cloud-cluster-controller-manager
+    namespace: d8-cloud-instance-manager
+  - kind: User
+    name: capi-cloud-cluster-controller-manager
 {{- end }}

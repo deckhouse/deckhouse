@@ -12,7 +12,7 @@ properties:
 
           По умолчанию:
           - `Baseline` — при первичной установке Deckhouse версии v1.55 и выше;
-          - `Privilged` — при первичной установке Deckhouse версии ниже v1.55 (обновление Deckhouse в кластере на версию v1.55 и выше **не меняет** политику по умолчанию на `Baseline`).
+          - `Privileged` — при первичной установке Deckhouse версии ниже v1.55 (обновление Deckhouse в кластере на версию v1.55 и выше **не меняет** политику по умолчанию на `Baseline`).
       enforcementAction:
         description: |
           Действие, которое будет выполнено по результатам проверки ограничений:
@@ -34,6 +34,11 @@ properties:
 
       Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
+      storageClass:
+        description: |
+          Имя StorageClass для использования `trivy_provider`.
+
+          `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
       enabled:
         description: "Включить trivy-провайдер."
       registrySecrets:

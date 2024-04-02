@@ -1,6 +1,6 @@
-{{- $containerd_version := "1.6.24" }}
+{{- $containerd_version := "1.7.13" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.1.9" }}
+{{- $runc_version := "1.1.12" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -27,7 +27,7 @@ docker:
     runc: {{ $runc_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -38,9 +38,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get install -y patch libbtrfs-dev libseccomp-dev
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src

@@ -1,0 +1,37 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if eq $crd.spec.inlet "L2LoadBalancer" }}
+    {{ $addressPool := $crd.spec.l2LoadBalancer.addressPool }}
+    {{ $sourceRanges := $crd.spec.l2LoadBalancer.sourceRanges }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: L2LoadBalancer
+metadata:
+  name: {{ $crd.name }}
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | nindent 2 }}
+spec:
+  addressPool: {{ $addressPool }}
+  {{- if $crd.spec.nodeSelector }}
+  nodeSelector:
+    {{- $crd.spec.nodeSelector | toYaml | nindent 4 }}
+  {{- else }}
+  {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 2 }}
+  {{- end }}
+  service:
+    sourceRanges:
+    {{- $sourceRanges | toYaml | nindent 6 }}
+    labelSelector:
+      app: controller
+      name: {{ $crd.name }}
+    ports:
+      - name: http
+        port: 80
+        targetPort: 80
+        protocol: TCP
+      - name: https
+        port: 443
+        targetPort: 443
+        protocol: TCP
+  {{- end }}
+{{- end }}

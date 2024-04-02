@@ -1,29 +1,29 @@
-{{ $channelsInfo := .Site.Data.channels.info }}
-{{ $moduleTitle := "" }}
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $moduleTitle := "" }}
 
-{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
-{{ $currentModuleName := index $_pathElements 1 }}
-{{ $currentModuleChannel := index $_pathElements 2 }}
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
 
 
-{{ range sort $channelsInfo "stability" "desc" }}
-  {{ $code := .code }}
-  {{ if eq $code "rock-solid" }}{{ continue }}{{ end }}
-  {{ with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName $code  ) }}
-    {{ if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
-  {{ end}}
-{{ end}}
-{{ if not $moduleTitle }}{{ $moduleTitle = $currentModuleName }}{{ end }}
+{{- range sort $channelsInfo "stability" "desc" }}
+  {{- $code := .code }}
+  {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}
+  {{- with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName $code  ) }}
+    {{- if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+  {{- end}}
+{{- end}}
+{{- if not $moduleTitle }}{{ $moduleTitle = $currentModuleName }}{{ end }}
 
-  {{ if $moduleTitle }}
+  {{- if $moduleTitle }}
     <li class="breadcrumbs__item">{{ $moduleTitle }}</li>
-  {{ end }}
-  <li class="breadcrumbs__item">
+  {{- end }}
+    <li class="breadcrumbs__item">
   {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
     {{- T (printf "moduleLinkTitle%s" .File.TranslationBaseName) }}
   {{- else if .LinkTitle }}
     {{- .LinkTitle }}
   {{- else if .Title }}
     {{- .Title }}
-  {{- end }}
+  {{- end -}}
   </li>

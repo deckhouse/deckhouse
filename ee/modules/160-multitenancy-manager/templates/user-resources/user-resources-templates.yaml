@@ -9,6 +9,7 @@ metadata:
   {{- with $metadata }}
   {{- . | toYaml | nindent 2 }}
   {{- end }}
+
 {{- end }}
 
 {{- define "slugify" }}
@@ -44,14 +45,20 @@ metadata:
 
   {{- if $template }}
 
+  {{- $kindPrefix := "kind: Namespace" }}
   {{- $namePrefix := "  name: " }}
   {{- $namespacePrefix := "  namespace: "}}
   {{- $namespacePrefixithProject := printf "%s%s" $namespacePrefix $projectName }}
   {{- $lines := splitList "\n" $template }}
 
   {{- $resultLines := list }}
+  {{- $isNamespace := false }}
   {{- $hasNamespace := false }}
   {{- range $line := $lines }}
+    {{- if hasPrefix $kindPrefix $line }}
+      {{- $isNamespace = true }}
+    {{- end }}
+
     {{- if hasPrefix $namespacePrefix $line }}
       {{- $hasNamespace = true }}
     {{- end }}
@@ -59,7 +66,7 @@ metadata:
     {{- $resultLines = append $resultLines $line }}
   {{- end }}
 
-  {{- if not $hasNamespace }}
+  {{- if and (not $hasNamespace) (not $isNamespace) }}
     {{- $newResultLines := list }}
     {{- range $line := $resultLines }}
       {{- if hasPrefix $namePrefix $line }}
@@ -102,29 +109,45 @@ spec:
   accessLevel: {{ $values.role }}
   subjects:
   - kind: {{ $values.kind }}
-    name: {{ $values.name }}
+    name: {{ $values.name | quote }}
   {{- if $values.namespace }}
-    namespace: {{ $values.namespace }}
+    namespace: {{ $values.namespace | quote }}
   {{- end }}
 {{- end }}
 
 {{- define "authorization.rules" }}
   {{- $projectName := index . 0 }}
-  {{- $subjects := index . 1 }}
+  {{- $authorizationRules := index . 1 }}
   {{- $rootContext := index . 2 }}
-  {{- range $ruleValues := $subjects }}
+  {{- range $ruleValues := $authorizationRules }}
     {{- include "authorization.rule" (list $projectName $ruleValues $rootContext) }}
   {{- end }}
 {{- end }}
 
 {{- $projectValues := $.Values.project }}
-{{- $projectTypeValues := $.Values.projectType }}
-
 {{- $_ := set $projectValues "Template" $.Template }}
+{{- $projectTemplateValues := $.Values.projectTemplate }}
 
-{{- include "project.namespace" ( list $projectValues.projectName $projectTypeValues.namespaceMetadata ) }}
+{{- /* legacy namespace */}}
+{{- if $projectTemplateValues.namespaceMetadata }}
+  {{- include "project.namespace" ( list $projectValues.projectName $projectTemplateValues.namespaceMetadata ) }}
+{{- end }}
 
-{{- $templates := include "prepare.templates" ( list $projectTypeValues.resourcesTemplate $projectValues.projectName $) }}
+{{- $templates := include "prepare.templates" ( list $projectTemplateValues.resourcesTemplate $projectValues.projectName $) }}
 {{- tpl $templates $projectValues }}
 
-{{- include "authorization.rules" (list $projectValues.projectName $projectTypeValues.subjects $)}}
+{{- /* legacy subjects */}}
+{{- if $projectTemplateValues.subjects }}
+  {{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
+{{- end }}
+
+{{- /* boilerplate namespace, will be removed by PostRender if any other namespace definition exists */}}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $projectValues.projectName }}
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"

@@ -1,0 +1,30 @@
+{{- if .Values.l2LoadBalancer.internal }}
+{{- range $loadBalancer := .Values.l2LoadBalancer.internal.l2LoadBalancers | default list }}
+  {{- range $index, $node := $loadBalancer.nodes }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-l2-load-balancer-{{ $loadBalancer.name }}-{{ $index }}
+  namespace: {{ $loadBalancer.namespace }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "l2-load-balancer" "instance" $loadBalancer.name)) | nindent 2 }}
+  annotations:
+    metallb.universe.tf/preferredL2SpeakerNode: {{ $node.name }}
+    metallb.universe.tf/address-pool: {{ $loadBalancer.addressPool }}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  loadBalancerClass: l2-load-balancer.network.deckhouse.io
+  ports:
+    {{- range $port := $loadBalancer.ports }}
+    - name: {{ $port.name }}
+      port: {{ $port.port }}
+      targetPort: {{ $port.targetPort }}
+      protocol: {{ $port.protocol }}
+    {{- end }}
+  selector:
+  {{- $loadBalancer.selector | toYaml | nindent 4 }}
+  sessionAffinity: None
+  {{- end }}
+{{- end }}
+{{- end }}

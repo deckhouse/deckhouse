@@ -1,42 +1,52 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_SHELL_OPERATOR }}
-ansible:
-  beforeInstall:
-    - name: "Install yq"
-      get_url:
-        url: https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64
-        checksum: "sha256:a1cfa39a9538e27f11066aa5659b32f9beae1eea93369d395bf45bcfc8a181dc"
-        dest: /usr/local/bin/yq
-        mode: +x
-    - name: "Install promtool"
-      unarchive:
-        extra_opts:
-          # The promtool version should match prometheus version from the 300-prometheus module.
-         {{- $promVersion := "2.44.0" }}
-          - prometheus-{{ $promVersion }}.linux-amd64/promtool
-          - --strip-components=1
-        src: https://github.com/prometheus/prometheus/releases/download/v{{ $promVersion }}/prometheus-{{ $promVersion }}.linux-amd64.tar.gz
-        remote_src: yes
-        dest: /usr/local/bin
-    - name: "Install semver"
-      unarchive:
-        extra_opts:
-          - semver-tool-2.1.0/src
-          - --strip-components=2
-        src: https://github.com/fsaintjacques/semver-tool/archive/2.1.0.tar.gz
-        remote_src: yes
-        dest: /usr/local/bin
-    - name: "Install python"
-      apk:
-        name:
-          - python3
+fromImage: common/shell-operator
+import:
+  - artifact: yq4-artifact
+    add: /usr/local/bin/yq
+    to: /usr/local/bin/yq
+    before: install
+  - artifact: semver-artifact
+    add: /usr/local/bin/semver
+    to: /usr/local/bin/semver
+    before: setup
+  - image: prometheus/prometheus
+    add: /bin/promtool
+    to: /usr/local/bin/promtool
+    before: setup
+  - image: common/shell-operator
+    add: /shell-operator
+    to: /shell-operator
+    before: setup
+  - artifact: tini-artifact
+    add: /tini/tini-static
+    to: /sbin/tini
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: setup
+    includePaths:
+      - '**/*'
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3
+    to: /usr/lib/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3.9
+    to: /usr/lib64/python3.9
+    before: setup
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
   includePaths:
   - 'modules/*/webhooks/'
   - 'ee/modules/*/webhooks/'
-  # - 'ee/fe/modules/*/webhooks/'
+# - 'ee/fe/modules/*/webhooks/'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
   to: /entrypoint.sh
 - add: /{{ .ModulePath }}shell_lib/semver.sh
@@ -47,3 +57,11 @@ docker:
   ENV:
     PYTHONPATH: /frameworks/python
   ENTRYPOINT: ["/entrypoint.sh"]
+
+---
+{{- $pythonBinaries := "/usr/bin/python3" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $pythonBinaries }}" -o /relocate

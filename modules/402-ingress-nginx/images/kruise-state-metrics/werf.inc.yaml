@@ -1,24 +1,26 @@
-{{- $branch := "master" }}
 {{- $commit := "b081f2ae9e011fd92fd23f6efa209601f5a20a01" }}
 ---
 artifact: kruise-state-metrics
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}/modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   setup:
-    - export "CGO_ENABLED=0"
-    - export "GOOS=linux"
-    - export "GOARCH=amd64"
-    - git clone --depth 1 --branch {{ $branch }} {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - git clone {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
     - cd kruise-state-metrics
     - git checkout {{ $commit }}
-    - go mod edit -go 1.20
-    - go get -u golang.org/x/net@v0.17.0
-    - go get -u gopkg.in/yaml.v3@v3.0.1
-    - go get -u github.com/prometheus/client_golang@v1.17.0
-    - go get -u golang.org/x/crypto@v0.14.0
+    - find /patches -name '*.patch' -exec git apply {} \;
     - go mod tidy
     - go mod vendor
-    - GOPROXY={{ $.GOPROXY }} go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
+    - go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics
 ---

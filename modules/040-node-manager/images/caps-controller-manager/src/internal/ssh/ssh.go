@@ -55,14 +55,6 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 		fmt.Sprintf("-p %d", instanceScope.Credentials.Spec.SSHPort),
 	}
 
-	for _, arg := range strings.Split(instanceScope.Credentials.Spec.SSHExtraArgs, " ") {
-		if arg == "" {
-			continue
-		}
-
-		args = append(args, arg)
-	}
-
 	var stdin io.Reader
 
 	// If the sudo password is set, we need to pipe it to the ssh command.
@@ -71,7 +63,17 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 
 		command = fmt.Sprintf(`sudo -S sh -c "%s"`, command)
 	} else {
+		args = append(args, "-o", "PasswordAuthentication=no")
+
 		command = fmt.Sprintf(`sudo sh -c "%s"`, command)
+	}
+
+	for _, arg := range strings.Split(instanceScope.Credentials.Spec.SSHExtraArgs, " ") {
+		if arg == "" {
+			continue
+		}
+
+		args = append(args, arg)
 	}
 
 	args = append(args, []string{

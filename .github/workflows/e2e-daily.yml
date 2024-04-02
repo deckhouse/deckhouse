@@ -221,7 +221,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -370,6 +370,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -384,12 +387,9 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
             -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -437,6 +437,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -451,12 +454,9 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
             -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -645,7 +645,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -796,6 +796,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -812,12 +815,9 @@ jobs:
             -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
             -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -867,6 +867,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -883,12 +886,9 @@ jobs:
             -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
             -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1077,7 +1077,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1225,6 +1225,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1238,12 +1241,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1290,6 +1290,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1303,12 +1306,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1497,7 +1497,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1647,6 +1647,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1662,12 +1665,9 @@ jobs:
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1716,6 +1716,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1731,12 +1734,9 @@ jobs:
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1925,7 +1925,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2073,6 +2073,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2086,12 +2089,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2138,6 +2138,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2151,12 +2154,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2345,7 +2345,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2494,6 +2494,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2508,12 +2511,9 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2561,6 +2561,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2575,12 +2578,9 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2769,7 +2769,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2917,6 +2917,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2930,12 +2933,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2982,6 +2982,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2995,12 +2998,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup

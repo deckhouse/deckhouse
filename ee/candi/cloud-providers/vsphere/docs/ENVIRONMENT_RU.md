@@ -83,12 +83,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Если нужны более гранулярные права, обратитесь в техподдержку Deckhouse.
+Для получения детального списка привилегий, обратитесь [к документации](/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#список-привилегий-для-использования-модуля).
+При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
-Необходимо создать роль с указанными правами и прикрепить ее к `vCenter`, где нужно развернуть кластер Kubernetes.
-
-Создайте роль:
+Создайте роль с необходимыми правами:
 
 ```shell
 govc role.create deckhouse \
@@ -120,9 +119,9 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Deckhouse использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
 
-* cloud-init
-* open-vm-tools
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (для версий `cloud-init` старше 21.3)
+* `open-vm-tools`
+* `cloud-init`
+* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
 
 Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
 

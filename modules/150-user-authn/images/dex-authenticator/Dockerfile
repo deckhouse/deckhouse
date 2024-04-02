@@ -1,6 +1,6 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE
-FROM $BASE_GOLANG_20_ALPINE as artifact
+ARG BASE_GOLANG_20_ALPINE_DEV
+FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
 ARG GOPROXY
 ARG SOURCE_REPO
 
@@ -11,14 +11,13 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 WORKDIR /src
 
-# Download tools
-RUN apk add git patch
 RUN git clone --depth 1 --branch v7.5.1 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git .
 ADD patches/cookie-refresh.patch patches/remove-groups.patch /
 RUN patch -p1 < /cookie-refresh.patch && \
   patch -p1 < /remove-groups.patch && \
-  go get -u golang.org/x/net@v0.17.0 && \
-  go get -u google.golang.org/grpc@v1.56.3 && \
+  go get golang.org/x/net@v0.17.0 && \
+  go get google.golang.org/grpc@v1.56.3 && \
+  go mod tidy && \
   go build -ldflags '-s -w' -o oauth2-proxy github.com/oauth2-proxy/oauth2-proxy/v7
 
 RUN chown 64535:64535 oauth2-proxy

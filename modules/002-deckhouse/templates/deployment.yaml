@@ -56,13 +56,11 @@ metadata:
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 spec:
-  replicas: 1
+  {{- include "helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha" (list . (dict "strategy" "Recreate")) | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: deckhouse
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -77,6 +75,19 @@ spec:
               - matchExpressions:
                   - key: dhctl.deckhouse.io/node-for-converge
                     operator: DoesNotExist
+{{- if (include "helm_lib_ha_enabled" .) }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - deckhouse
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+{{- end }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
       nodeSelector:
@@ -129,6 +140,12 @@ spec:
               value: {{ .Values.deckhouse.logLevel }}
             - name: LOG_TYPE
               value: "json"
+            - name: DECKHOUSE_HA
+{{- if (include "helm_lib_ha_enabled" .) }}
+              value: "true"
+{{- else }}
+              value: "false"
+{{- end }}
             - name: DECKHOUSE_BUNDLE
               value: {{ .Values.deckhouse.bundle }}
             - name: DECKHOUSE_POD
@@ -226,7 +243,9 @@ spec:
           - "--livez-path=/livez"
           env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-            value: "0.0.0.0"
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               upstreams:

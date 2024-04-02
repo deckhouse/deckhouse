@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Сhange the way the `deckhouse` pod readiness is determined during the minor version update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7866
+

@@ -1,0 +1,20 @@
+{{- if .Values.prometheus.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "grafana-v10"
+  namespace: "d8-monitoring"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "grafana-v10" )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
+  {{- end }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  signOutURL: "/logout"
+  {{- with .Values.prometheus.auth.allowedUserGroups }}
+  allowedGroups:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+{{- end }}

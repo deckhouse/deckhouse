@@ -6,7 +6,7 @@
 {% endif %}
 
 <div markdown="1">
-Ниже сгенерированы рекомендованные настройки для установки Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
 - `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
 

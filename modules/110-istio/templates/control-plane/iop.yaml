@@ -1,3 +1,33 @@
+# TODO: remove after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+{{- define "module_pod_security_context_run_as_user_deckhouse" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - all
+  runAsNonRoot: true
+  runAsUser: 64535
+  runAsGroup: 64535
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+
+# TODO: remove after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+{{- define "module_init_container_check_linux_kernel"  }}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $semver_constraint := index . 1  -}} {{- /* Semver constraint */ -}}
+- name: check-linux-kernel
+  image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
+  {{- include "module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+  env:
+    - name: KERNEL_CONSTRAINT
+      value: {{ $semver_constraint | quote }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 6 }}
+{{- end }}
+
 {{ $supportedProviders := list "aws" "gcp" "azure" }}
 {{ $cloudPlatform := "none" }}
 {{ if hasKey .Values.global.clusterConfiguration "cloud" }}
@@ -23,7 +53,6 @@ metadata:
 spec:
 {{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
   {{- end }}
-
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -60,6 +89,7 @@ spec:
     - name: istio-egressgateway
       enabled: false
 
+    # We're deploying the istio-cni DS with module templates.
     cni:
       enabled: false
 
@@ -168,9 +198,17 @@ spec:
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
+    istio_cni:
+      enabled: {{ eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+
     pilot:
       autoscaleEnabled: false
+  {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
+      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.replicas }}
+  {{- end }}
+  # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
       configNamespace: d8-{{ $.Chart.Name }}
@@ -196,14 +234,31 @@ spec:
       injectedAnnotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
-      defaultTemplates: ["sidecar", "d8-check-kernel-version"]
+      defaultTemplates: ["sidecar", "d8-seccomp", "d8-check-kernel-version"]
+{{ else }}
+      defaultTemplates: ["sidecar", "d8-seccomp"]
 {{- end }}
       templates:
+        d8-seccomp: |
+          spec:
+            {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+            initContainers:
+            - name: istio-validation
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            {{- end }}
+            containers:
+            - name: istio-proxy
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
         d8-check-kernel-version: |
           spec:
             initContainers:
-            {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $ ">= 5.7") | nindent 12 }}
+            # TODO: change to helm_lib_module_init_container_check_linux_kernel after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+            {{- include "module_init_container_check_linux_kernel" (tuple $ ">= 5.7") | nindent 12 }}
 {{- end }}
         d8-hold-istio-proxy-termination-until-application-stops: |
           spec:

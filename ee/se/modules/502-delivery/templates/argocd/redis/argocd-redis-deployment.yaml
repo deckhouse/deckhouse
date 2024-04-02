@@ -1,0 +1,80 @@
+{{- define "resources_argocd-redis" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: argocd-redis
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "argocd-redis")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: argocd-redis
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: redis
+      minAllowed:
+        {{- include "resources_argocd-redis" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 200Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: argocd-redis
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-redis" "app" "argocd-redis")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "redis" "app.kubernetes.io/name" "argocd-redis" "app.kubernetes.io/part-of" "argocd" "app" "argocd-redis")) | nindent 2 }}
+  name: argocd-redis
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-redis
+        app: argocd-redis
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+        - args:
+            - --save
+            - ""
+            - --appendonly
+            - "no"
+          image: {{ include "helm_lib_module_common_image" (list . "redisStatic") }}
+          imagePullPolicy: IfNotPresent
+          name: redis
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+      serviceAccountName: argocd-redis

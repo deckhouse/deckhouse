@@ -186,13 +186,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.24"]
+                  x-doc-examples: ["1.27"]
                   enum:
-                    - "1.24"
                     - "1.25"
                     - "1.26"
                     - "1.27"
                     - "1.28"
+                    - "1.29"
                 cri:
                   type: object
                   description: |
@@ -321,6 +321,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -954,6 +955,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1318,9 +1320,7 @@ spec:
                 nodeTemplate:
                   labels:
                     tier: test
-              ```
-          - |
-              ```yaml
+              ---
               # NodeGroup for static nodes on bare metal servers (or VMs).
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
@@ -1744,6 +1744,7 @@ spec:
                             - AWSInstanceClass
                             - YandexInstanceClass
                             - AzureInstanceClass
+                            - VCDInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1991,6 +1992,7 @@ spec:
                           - required: [automatic]
                 kubelet:
                   type: object
+                  default: {}
                   description: |
                     Kubelet settings for nodes.
                   properties:
@@ -2018,6 +2020,7 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
                     resourceReservation:
+                      default: {}
                       type: object
                       oneOf:
                       - properties:
@@ -2046,7 +2049,7 @@ spec:
                             Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
                         static:
                           type: object
-                          oneOf:
+                          anyOf:
                           - required: ["cpu"]
                           - required: ["memory"]
                           - required: ["ephemeralStorage"]
@@ -2098,12 +2101,12 @@ spec:
                     nodeType:
                       enum:
                         - Static
+                        - CloudStatic
                     cloudInstances:
                       not: {}
                 - properties:
                     nodeType:
                       enum:
                         - CloudPermanent
-                        - CloudStatic
                     staticInstances:
                       not: {}

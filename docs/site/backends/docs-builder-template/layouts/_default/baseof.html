@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-  {{ partial "head" . }}
-  {{ "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
+  {{- partial "head" . }}
+  {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
   </head>
   <body>
     <div class="content">
-     {{ "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+     {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
 
-     {{ "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
      <div class="container">
 
        <div class="breadcrumbs-container">
@@ -19,62 +19,80 @@
          </div>
          <div class="breadcrumbs__right">
            <ol class="breadcrumbs">
-             {{ partial "breadcrumbs" . }}
+             {{- partial "breadcrumbs" . }}
            </ol>
          </div>
        </div>
 
        <div class="layout-sidebar">
          <div class="layout-sidebar__sidebar">
-           {{ partial "sidebar" . }}
+           {{- partial "sidebar" . }}
          </div>
          <div class="layout-sidebar__content">
-           {{ block "main" . }}
-           {{ end }}
+           {{- block "main" . }}
+           {{- end }}
          </div>
          <div class="layout-sidebar__sidebar_right">
-           {{ partial "toc" . }}
+           {{- partial "toc" . }}
          </div>
        </div>
      </div>
 
      </div>
-     {{ "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+     {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      let url;
+      let changes = false;
+
+      try {
+        url = new URL($('a.language-button').attr("href"));
+      } catch {
+        url = new URL(window.location);
+      }
+
+{{- if eq site.Params.mode "module" }}
+      if (window.location.pathname.match(/^\/ru\//)) {
+        url.pathname = window.location.pathname.replace(/^\/ru\//, '/en/');
+        changes = true;
+      } else if (window.location.pathname.match(/^\/en\//)) {
+        url.pathname = window.location.pathname.replace(/^\/en\//, '/ru/');
+        changes = true;
+      }
+{{- else }}
+      switch (window.location.host) {
+        case 'localhost':
+          url.host = 'ru.localhost';
+          url.protocol = 'http:';
+          changes = true;
+          break;
+        case 'ru.localhost':
+          url.host = 'localhost';
+          url.protocol = 'http:';
+          changes = true;
+          break;
+      }
+      if (window.location.host.match(/^deckhouse\.ru\..+\.flant.com$/)) {
+        url.host = window.location.host.replace('deckhouse.ru.', 'deckhouse.');
+        changes = true;
+      } else if (window.location.host.match(/^deckhouse\..+\.flant.com$/)) {
+        url.host = window.location.host.replace('deckhouse.', 'deckhouse.ru.');
+        changes = true;
+      }
+{{- end }}
+
+      if (url.pathname === '/') {
+        url.pathname = window.location.pathname;
+        changes = true;
+      }
+
+      if (changes) {
+        $('a.language-button').attr("href", url.href);
+      }
+
+    });
+
+  </script>
   </body>
-
-<script type="text/javascript">
-$(document).ready(function () {
-  let url = new URL($('a.language-button').attr("href"));
-  let changes = false;
-  switch (window.location.host) {
-    case 'localhost':
-      url.host = 'ru.localhost';
-      url.protocol = 'http:';
-      changes = true;
-      break;
-    case 'ru.localhost':
-      url.host = 'localhost';
-      url.protocol = 'http:';
-      changes = true;
-      break;
-  }
-  if (window.location.host.match(/^deckhouse\.ru\..+\.flant.com$/)) {
-      url.host = window.location.host.replace('deckhouse.ru.', 'deckhouse.');
-      changes = true;
-  } else if (window.location.host.match(/^deckhouse\..+\.flant.com$/)) {
-      url.host = window.location.host.replace('deckhouse.', 'deckhouse.ru.');
-      changes = true;
-  }
-
-  if (url.pathname === '/') {
-      url.pathname = window.location.pathname;
-      changes = true;
-  }
-
-  if (changes) {
-      $('a.language-button').attr("href", url.href);
-  }
-});
-
-</script>
 </html>

@@ -25,6 +25,20 @@ spec:
           type: object
           description: |
             Defines the update settings for a module's release.
+          x-doc-examples:
+          - apiVersion: deckhouse.io/v1alpha1
+            kind: ModuleUpdatePolicy
+            metadata:
+              name: example-update-policy
+            spec:
+              moduleReleaseSelector:
+                labelSelector:
+                  matchLabels:
+                    source: example
+                    module: module-1
+              releaseChannel: alpha
+              update:
+                mode: Manual
           required:
             - spec
           properties:
@@ -38,6 +52,7 @@ spec:
                   type: string
                   description: |
                     Desirable module release channel.
+
                     The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
                   default: Stable
                   enum:
@@ -64,6 +79,7 @@ spec:
                       enum:
                         - 'Auto'
                         - 'Manual'
+                        - 'Ignore'
                     windows:
                       type: array
                       description: |
@@ -157,7 +173,7 @@ spec:
                         matchLabels:
                           type: object
                           description: A number of equality-based label filters.
-                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          x-doc-examples: [{ "source": "deckhouse", "module": "deckhouse-admin" }]
                           additionalProperties:
                             type: string
       additionalPrinterColumns:

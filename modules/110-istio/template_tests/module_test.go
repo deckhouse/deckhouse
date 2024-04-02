@@ -90,6 +90,8 @@ const istioValues = `
         key: mykey
         root: myroot
         chain: mychain
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
       auth:
         password: qqq
     auth:
@@ -111,6 +113,8 @@ const istioValues = `
     tracing: {}
     proxyConfig: {}
     controlPlane:
+      replicasManagement:
+        mode: Standard
       resourcesManagement:
         mode: VPA
         vpa:

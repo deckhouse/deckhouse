@@ -58,8 +58,7 @@ function get_comment(){
   )"
   exit_code="$?"
 
-  echo "Getting response (code: $http_code):"
-  cat "$response_file"
+  echo "Getting response code: $http_code"
 
   if [[ "$exit_code" != 0 ]]; then
     echo "Incorrect response code $exit_code"
@@ -94,7 +93,7 @@ function update_comment(){
   local http_code
 
   http_code="$(curl \
-    -v --output "$response_file" \
+    --output "$response_file" \
     --write-out "%{http_code}" \
     -X PATCH \
     -H "Accept: application/vnd.github+json" \
@@ -104,8 +103,6 @@ function update_comment(){
   )"
   exit_code="$?"
 
-  echo "Response update output:"
-  cat "$response_file"
   rm -f "$response_file"
 
   if [ "$exit_code" == 0 ]; then
@@ -121,7 +118,7 @@ function update_comment(){
 
 function wait_master_host_connection_string() {
   local ip
-  if ! ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$log_file")"; then
+  if ! ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$log_file" | sed 's/"//g')"; then
     echo "Master ip not found"
     return 1
   fi
@@ -137,7 +134,7 @@ function wait_master_host_connection_string() {
   echo "IP found $master_ip"
 
   local user
-  if ! user="$(grep -Po '(?<=master_user_name_for_ssh = ).+$' "$log_file")"; then
+  if ! user="$(grep -Po '(?<=master_user_name_for_ssh = ).+$' "$log_file" | sed 's/"//g')"; then
     echo "User not found"
     return 1
   fi
@@ -156,7 +153,7 @@ function wait_master_host_connection_string() {
 
 function wait_bastion_host_connection_string() {
   local ip
-  if ! ip="$(grep -Po '(?<=bastion_ip_address_for_ssh = ).+$' "$log_file")"; then
+  if ! ip="$(grep -Po '(?<=bastion_ip_address_for_ssh = ).+$' "$log_file" | sed 's/"//g')"; then
     echo "Bastion ip not found"
     return 1
   fi
@@ -172,7 +169,7 @@ function wait_bastion_host_connection_string() {
   echo "IP found $bastion_ip"
 
   local user
-  if ! user="$(grep -Po '(?<=bastion_user_name_for_ssh = ).+$' "$log_file")"; then
+  if ! user="$(grep -Po '(?<=bastion_user_name_for_ssh = ).+$' "$log_file" | sed 's/"//g')"; then
     echo "Bastion user not found"
     return 1
   fi

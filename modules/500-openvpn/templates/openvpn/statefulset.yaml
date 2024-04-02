@@ -137,7 +137,7 @@ spec:
       - name: openvpn-tcp
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
-        command: [ '/entrypoint.sh', 'tcp' ]
+        command: [ '/entrypoint' ]
         ports:
         - name: ovpn-tcp
           containerPort: 1194
@@ -147,6 +147,11 @@ spec:
           hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
             {{- end }}
           {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: tcp
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
@@ -155,10 +160,6 @@ spec:
           - name: config
             mountPath: /etc/openvpn/openvpn.conf
             subPath: openvpn.conf
-            readOnly: true
-          - name: scripts
-            mountPath: /entrypoint.sh
-            subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
@@ -172,7 +173,7 @@ spec:
       - name: openvpn-udp
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
-        command: [ '/entrypoint.sh', 'udp' ]
+        command: [ '/entrypoint' ]
         ports:
         - name: ovpn-udp
           containerPort: 1194
@@ -182,6 +183,11 @@ spec:
           hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
             {{- end }}
           {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: udp
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
@@ -190,10 +196,6 @@ spec:
           - name: config
             mountPath: /etc/openvpn/openvpn.conf
             subPath: openvpn.conf
-            readOnly: true
-          - name: scripts
-            mountPath: /entrypoint.sh
-            subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
@@ -234,47 +236,63 @@ spec:
       - name: ovpn-admin
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "ovpnAdmin") }}
-        command:
-        - /bin/sh
-        - -c
-        - /app/ovpn-admin
-            --storage.backend="kubernetes.secrets"
-            --log.level="trace"
-            --listen.host="127.0.0.1"
-            --listen.port="8000"
-            --role="master"
-            --ovpn.network="{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
-            {{- if hasKey .Values.openvpn "inlet" }}
-              {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
-            --ovpn.server.behindLB
-                {{- if .Values.openvpn.udpEnabled }}
-                --ovpn.service="openvpn-external-udp"
-                {{- end }}
-                {{- if .Values.openvpn.tcpEnabled }}
-            --ovpn.service="openvpn-external"
-                {{- end }}
-              {{- end }}
-            {{- end }}
+        command: ["/app/ovpn-admin"]
+        args:
+        - --storage.backend
+        - kubernetes.secrets
+        - --log.level
+        - trace
+        - --listen.host
+        - 127.0.0.1
+        - --listen.port
+        - "8000"
+        - --role
+        - master
+        - --ovpn.network
+        - "{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
+        {{- if hasKey .Values.openvpn "inlet" }}
+          {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+        - --ovpn.server.behindLB
             {{- if .Values.openvpn.udpEnabled }}
-            --mgmt=udp="127.0.0.1:9090"
+        - --ovpn.service
+        - openvpn-external-udp
             {{- end }}
             {{- if .Values.openvpn.tcpEnabled }}
-            --mgmt=tcp="127.0.0.1:8989"
+        - --ovpn.service
+        - openvpn-external
             {{- end }}
-            --ccd --ccd.path="/mnt/ccd"
-            {{- $externalHost := "" }}
-            {{- if hasKey .Values.openvpn "inlet" }}
-              {{- if eq .Values.openvpn.inlet "ExternalIP" }}{{ $externalHost = .Values.openvpn.externalIP }}{{- end }}
-            {{- end }}
-            {{- if hasKey .Values.openvpn "externalHost" }}{{ $externalHost = .Values.openvpn.externalHost }}{{- end }}
-            {{- if ne $externalHost "" }}
-              {{- if .Values.openvpn.udpEnabled }}
-            --ovpn.server="{{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 | quote }}:udp"
-              {{- end }}
-              {{- if .Values.openvpn.tcpEnabled }}
-            --ovpn.server="{{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 | quote }}:tcp"
-              {{- end }}
-            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.openvpn.udpEnabled }}
+        - --mgmt
+        - udp=127.0.0.1:9090
+        {{- end }}
+        {{- if .Values.openvpn.tcpEnabled }}
+        - --mgmt
+        - tcp=127.0.0.1:8989
+        {{- end }}
+        - --ccd
+        - --ccd.path
+        - /mnt/ccd
+        {{- $externalHost := "" }}
+        {{- if hasKey .Values.openvpn "inlet" }}
+          {{- if eq .Values.openvpn.inlet "ExternalIP" }}
+            {{- $externalHost = .Values.openvpn.externalIP }}
+          {{- end }}
+        {{- end }}
+        {{- if hasKey .Values.openvpn "externalHost" }}
+          {{- $externalHost = .Values.openvpn.externalHost }}
+        {{- end }}
+        {{- if ne $externalHost "" }}
+          {{- if .Values.openvpn.udpEnabled }}
+        - --ovpn.server
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:udp
+          {{- end }}
+          {{- if .Values.openvpn.tcpEnabled }}
+        - --ovpn.server
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:tcp
+          {{- end }}
+        {{- end }}
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -311,7 +329,9 @@ spec:
           name: https
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
@@ -353,10 +373,6 @@ spec:
         configMap:
           name: openvpn
           defaultMode: 0644
-      - name: scripts
-        configMap:
-          name: openvpn
-          defaultMode: 0755
       - name: tmp
         emptyDir:
           medium: Memory

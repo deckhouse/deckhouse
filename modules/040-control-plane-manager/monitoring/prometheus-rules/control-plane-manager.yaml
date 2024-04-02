@@ -62,7 +62,7 @@
       plk_markup_format: "markdown"
       summary: Kubernetes version "{{ $labels.k8s_version }}" has reached End Of Life.
       description: |-
-        Current kubernetes version "{{ $labels.k8s_version }}" support will be removed in the next Deckhouse release (1.53).
+        Current kubernetes version "{{ $labels.k8s_version }}" support will be removed in the next Deckhouse release (1.58).
 
         Please migrate to the next kubernetes version (at least 1.24) as soon as possible.
 

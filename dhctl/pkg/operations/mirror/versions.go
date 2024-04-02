@@ -50,7 +50,14 @@ func VersionsToCopy(mirrorCtx *Context) ([]semver.Version, error) {
 		return nil, fmt.Errorf("get releases from github: %w", err)
 	}
 
-	versionsAboveMinimal := parseAndFilterVersionsAboveMinimal(&mirrorFromVersion, tags)
+	alphaChannelVersion := releaseChannelsVersions[0]
+	for i := range releaseChannelsToCopy {
+		if releaseChannelsToCopy[i] == "alpha" {
+			alphaChannelVersion = releaseChannelsVersions[i]
+			break
+		}
+	}
+	versionsAboveMinimal := parseAndFilterVersionsAboveMinimalAnbBelowAlpha(&mirrorFromVersion, tags, alphaChannelVersion)
 	versionsAboveMinimal = filterOnlyLatestPatches(versionsAboveMinimal)
 
 	return deduplicateVersions(append(releaseChannelsVersions, versionsAboveMinimal...)), nil
@@ -70,11 +77,15 @@ func getReleasedTagsFromRegistry(mirrorCtx *Context) ([]string, error) {
 	return tags, nil
 }
 
-func parseAndFilterVersionsAboveMinimal(minVersion *semver.Version, tags []string) []*semver.Version {
+func parseAndFilterVersionsAboveMinimalAnbBelowAlpha(
+	minVersion *semver.Version,
+	tags []string,
+	alphaChannelVersion *semver.Version,
+) []*semver.Version {
 	versionsAboveMinimal := make([]*semver.Version, 0)
 	for _, tag := range tags {
 		version, err := semver.NewVersion(tag)
-		if err != nil || minVersion.GreaterThan(version) {
+		if err != nil || minVersion.GreaterThan(version) || version.GreaterThan(alphaChannelVersion) {
 			continue
 		}
 		versionsAboveMinimal = append(versionsAboveMinimal, version)
@@ -100,17 +111,15 @@ func filterOnlyLatestPatches(versions []*semver.Version) []*semver.Version {
 }
 
 func getReleaseChannelVersionFromRegistry(mirrorCtx *Context, releaseChannel string) (*semver.Version, error) {
-	refOpts := []name.Option{name.StrictValidation}
-	if mirrorCtx.Insecure {
-		refOpts = append(refOpts, name.Insecure)
-	}
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
+	nameOpts = append(nameOpts, name.StrictValidation)
 
-	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:"+releaseChannel, refOpts...)
+	ref, err := name.ParseReference(mirrorCtx.DeckhouseRegistryRepo+"/release-channel:"+releaseChannel, nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parse rock solid release ref: %w", err)
 	}
 
-	rockSolidReleaseImage, err := remote.Image(ref, remote.WithAuth(mirrorCtx.RegistryAuth))
+	rockSolidReleaseImage, err := remote.Image(ref, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("get %s release channel data: %w", releaseChannel, err)
 	}
@@ -120,14 +129,19 @@ func getReleaseChannelVersionFromRegistry(mirrorCtx *Context, releaseChannel str
 		return nil, fmt.Errorf("cannot get %s release channel version: %w", releaseChannel, err)
 	}
 
-	tmp := &struct {
-		Version string `json:"version"`
+	releaseInfo := &struct {
+		Version   string `json:"version"`
+		Suspended bool   `json:"suspend"`
 	}{}
-	if err = json.Unmarshal(versionJSON.Bytes(), tmp); err != nil {
+	if err = json.Unmarshal(versionJSON.Bytes(), releaseInfo); err != nil {
 		return nil, fmt.Errorf("cannot find release channel version: %w", err)
 	}
 
-	ver, err := semver.NewVersion(tmp.Version)
+	if releaseInfo.Suspended {
+		return nil, fmt.Errorf("Cannot mirror Deckhouse: source registry contains suspended release channel %q, try again later", releaseChannel)
+	}
+
+	ver, err := semver.NewVersion(releaseInfo.Version)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find release channel version: %w", err)
 	}

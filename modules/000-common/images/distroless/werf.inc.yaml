@@ -1,0 +1,24 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /relocate
+    to: /
+    before: setup
+shell:
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALPINE_DEV }}
+shell:
+  install:
+  - mkdir -p /relocate/bin /relocate/sbin /relocate/etc /relocate/etc/ssl /relocate/usr/bin /relocate/usr/sbin /relocate/usr/share
+  - cp -pr /tmp /relocate
+  - cp -pr /etc/passwd /etc/group /etc/hostname /etc/hosts /etc/shadow /etc/protocols /etc/services /etc/nsswitch.conf /relocate/etc
+  - cp -pr /usr/share/ca-certificates /relocate/usr/share
+  - cp -pr /usr/share/zoneinfo /relocate/usr/share
+  - cp -pr etc/ssl/cert.pem /relocate/etc/ssl
+  - cp -pr /etc/ssl/certs /relocate/etc/ssl
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /relocate/etc/passwd
+  - echo "deckhouse:x:64535:" >> /relocate/etc/group
+  - echo "deckhouse:!::0:::::" >> /relocate/etc/shadow

@@ -36,10 +36,8 @@ markup:
       wrapStandAloneImageWithinParagraph: true
     renderer:
       hardWraps: false
-      unsafe: false
+      unsafe: true
       xhtml: false
-
-markup:
   highlight:
     anchorLineNos: false
     codeFences: true
@@ -55,7 +53,6 @@ markup:
     style: native
     tabWidth: 4
 
-
 # "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
 - "404"
@@ -66,23 +63,3 @@ disableKinds:
 - sitemap
 - taxonomy
 - term
-
-languages:
-  en:
-    disabled: false
-    languageDirection: ""
-    languageName: ""
-    title: Deckhouse modules
-    weight: 0
-    baseURL: https://deckhouse.io
-    params:
-      description: "Kubernetes is flexibly and rapidly expanded by Deckhouse modules."
-  ru:
-    disabled: false
-    languageDirection: ""
-    languageName: ""
-    weight: 1
-    title: Модули Deckhouse
-    baseURL: https://deckhouse.ru
-    params:
-      description: "Kubernetes гибко и быстро расширяется модулями Deckhouse."

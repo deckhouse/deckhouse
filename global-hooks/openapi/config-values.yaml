@@ -7,7 +7,7 @@ properties:
     default: null
     description: |
       The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-        * If not defined, components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
+        * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
   highAvailability:
@@ -42,6 +42,10 @@ properties:
           E.g., if the template is `%s.kube.company.my`, the prometheus module will create an Ingress resource for the `grafana.kube.company.my` hosts to  access Grafana.
 
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
+
+          **Pay attention to the following:**
+          - Domain must be different from [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
+          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
 
           If this parameter is omitted, no Ingress resources will be created.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
@@ -89,7 +93,7 @@ properties:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
               * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/));
-              * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
+              * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
             - Disabled

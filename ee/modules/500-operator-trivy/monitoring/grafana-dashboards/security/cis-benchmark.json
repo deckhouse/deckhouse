@@ -33,7 +33,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 4,
@@ -118,7 +118,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P99D6B799F5C439F2"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"})",
           "format": "time_series",
@@ -204,7 +204,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"}==0)",
           "format": "time_series",
@@ -283,7 +283,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"})",
           "format": "time_series",
@@ -364,7 +364,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P99D6B799F5C439F2"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"CRITICAL\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"CRITICAL\"})",
           "format": "time_series",
@@ -445,7 +445,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P99D6B799F5C439F2"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"HIGH\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"HIGH\"})",
           "format": "time_series",
@@ -526,7 +526,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P99D6B799F5C439F2"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"MEDIUM\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"MEDIUM\"})",
           "format": "time_series",
@@ -607,7 +607,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P99D6B799F5C439F2"
+            "uid": "$ds_prometheus"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"LOW\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"LOW\"})",
           "format": "time_series",
@@ -747,7 +747,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "deckhouse_trivy_cis_benchmark{job=\"deckhouse\"} != 0",
           "format": "table",

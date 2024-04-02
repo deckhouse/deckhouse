@@ -24,7 +24,7 @@ spec:
           description: |
             Shows basic information about the Deckhouse module.
 
-            > The Module resource cannot be changed. It is intended only for getting information about the module (read-only).
+            This resource is intended **only for getting information** about the module and cannot be changed (read-only).
           properties:
             properties:
               type: object
@@ -41,9 +41,31 @@ spec:
                 source:
                   type: string
                   description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                stage:
+                  type: string
+                  description: 'The current stage of the module life cycle.'
+                  enum:
+                    - Sandbox
+                    - Incubating
+                    - Graduated
+                    - Deprecated
                 description:
                   type: string
                   description: 'Module description.'
+            status:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: "Module state explanation, version warning or last error"
+                message:
+                  type: string
+                  description: "Additional information"
+                hooksState:
+                  type: string
+                  description: "Hooks status report"
+      subresources:
+        status: {}
       additionalPrinterColumns:
         - name: weight
           jsonPath: .properties.weight
@@ -57,3 +79,16 @@ spec:
           jsonPath: .properties.source
           type: string
           description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+        - name: stage
+          jsonPath: .properties.stage
+          type: string
+          description: 'The current stage of the module life cycle'
+        - name: Status
+          type: string
+          description: "Module state explanation or last error"
+          jsonPath: .status.status
+        - name: Message
+          type: string
+          description: "Additional information"
+          jsonPath: .status.message
+          priority: 1

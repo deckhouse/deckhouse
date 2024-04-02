@@ -1,12 +1,11 @@
 ---
-title: Deckhouse Platform editions comparison
+title: Deckhouse Kubernetes Platform editions comparison
 permalink: en/revision-comparison.html
 toc: false
 ---
 
-The Deckhouse Platform has two editions — [Community Edition]({% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/community/community_edition.html) (CE) and [Enterprise Edition]({% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/products/enterprise_edition.html) (EE). They are with different functions and support options. You can find a brief comparison of CE vs. EE editions listing its main features and functions [here](
-{% if site.mode == 'local' %}{{ site.urls[page.lang] }}{% endif %}/products/enterprise_edition.html#ce-vs-ee).
+The Deckhouse Kubernetes Platform has the following editions: _Community Edition (CE)_, _Basic Edition (BE)_, _Standard Edition (SE)_, _Enterprise Edition (EE)_ and _Certified Security Edition (CSE)_. They are with different functions and support options. You can find a brief comparison of editions listing its main features and functions [here]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/).
 
-The table below provides listing of the Deckhouse Platform modules available in each edition:
+The table below provides listing of the Deckhouse Kubernetes Platform modules available in each edition:
 
 {% include revision_comparison_detail_table.liquid %}

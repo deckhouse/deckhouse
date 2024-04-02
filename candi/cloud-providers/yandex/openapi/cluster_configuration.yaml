@@ -15,6 +15,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: YandexClusterConfiguration
@@ -79,6 +80,7 @@ apiVersions:
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
+            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A limited set of zones in which nodes can be created.
@@ -140,7 +142,7 @@ apiVersions:
 
                   If `externalSubnetID` is set, you must select specific unallocated IP addresses from the specified subnet.
 
-                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used, then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
+                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used (automatic public IP address reservation), then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
                 items:
                   type: string
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
@@ -290,6 +292,7 @@ apiVersions:
           This subnet will be split into **three** equal parts.
 
           They will serve as a basis for subnets in three Yandex Cloud zones.
+        x-unsafe: true
       existingZoneToSubnetIDMap:
         type: object
         description: |
@@ -372,6 +375,23 @@ apiVersions:
             description: |
               If specified, an additional network interface will be added to the node (the node will use it as a default route).
             type: string
+          natInstanceResources:
+            description: |
+              Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
+            type: object
+            default: {"cores": 2, "memory": 2048}
+            x-doc-default: {}
+            properties:
+              cores:
+                description: |
+                  Amount of CPU cores to provision on the NAT instance.
+                type: integer
+                default: 2
+              memory:
+                description: |
+                  Amount of primary memory in MB provision on the NAT instance.
+                type: integer
+                default: 2048
       provider:
         type: object
         description: |
@@ -382,10 +402,12 @@ apiVersions:
             description: |
               The cloud ID.
             type: string
+            x-unsafe: true
           folderID:
             description: |
               ID of the directory.
             type: string
+            x-unsafe: true
           serviceAccountJSON:
             description: |
               A key to the Service Account in the JSON format.

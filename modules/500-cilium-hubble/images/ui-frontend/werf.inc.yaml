@@ -1,0 +1,30 @@
+{{- $hubbleUIVersion := "0.12.1" }}
+---
+# Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/Dockerfile
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_NODE_18_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache git bash
+  install:
+  - export "TARGETOS=linux"
+  - export "TARGETARCH=amd64"
+  - mkdir -p /app
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
+  - cd /app
+  - npm --target_arch=${TARGETARCH} install
+  - export "NODE_ENV=production"
+  - npm run build
+  - chown -R 64535:64535 /app/server/public
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/nginx-static
+fromCacheVersion: 2
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /app/server/public
+  to: /app
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]

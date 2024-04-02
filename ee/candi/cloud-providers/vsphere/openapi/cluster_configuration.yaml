@@ -16,6 +16,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: VsphereClusterConfiguration
@@ -84,6 +85,7 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            x-unsafe-rules: [updateReplicas]
           zones:
             type: array
             items:
@@ -307,11 +309,13 @@ apiVersions:
         description: |
           The name of the tag category used to identify the region (vSphere Datacenter).
         default: "k8s-region"
+        x-unsafe: true
       zoneTagCategory:
         type: string
         description: |
           The name of the tag category used to identify the zone (vSphere Cluster).
         default: "k8s-zone"
+        x-unsafe: true
       disableTimesync:
         x-doc-default: true
         type: boolean
@@ -328,6 +332,7 @@ apiVersions:
         x-examples:
         - - MAIN-1
           - public
+        x-unsafe: true
       internalNetworkNames:
         type: array
         items:
@@ -337,6 +342,7 @@ apiVersions:
         x-examples:
         - - KUBE-3
           - devops-internal
+        x-unsafe: true
       internalNetworkCIDR:
         type: string
         description: |
@@ -346,16 +352,27 @@ apiVersions:
 
           The `internalNetworkCIDR` is used if `additionalNetworks` are defined in `masterInstanceClass`.
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        x-unsafe: true
       vmFolderPath:
         type: string
         description: |
           The path to the VirtualMachine Folder where the cloned VMs will be created.
         x-examples:
           - "dev/test"
+        x-unsafe: true
+      vmFolderExists:
+        type: boolean
+        default: false
+        description: |
+          Set the value to `true` if the path specified in `vmFolderPath` exists. Installing more than one cluster in a folder is not possible.
+        x-examples:
+          - "dev/test"
+        x-unsafe: true
       region:
         type: string
         description: |
           Is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
+        x-unsafe: true
       zones:
         type: array
         description: |
@@ -368,6 +385,7 @@ apiVersions:
         type: string
         description: |
           A path (relative to vSphere Cluster) to the existing parent `resourcePool` for all `resourcePool` created in each zone.
+        x-unsafe: true
       useNestedResourcePool:
         type: boolean
         description: |
@@ -379,6 +397,7 @@ apiVersions:
           The way resources are located in the cloud.
 
           Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+        x-unsafe: true
       provider:
         type: object
         additionalProperties: false

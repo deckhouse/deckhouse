@@ -243,3 +243,12 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 
 	return res, nil
 }
+
+func (d *EpisodeDao5m) DeleteUpTo(slot time.Time) error {
+	const query = `
+	DELETE FROM episodes_5m
+	WHERE timeslot <= ?
+	`
+	_, err := d.DbCtx.StmtRunner().Exec(query, slot.Unix())
+	return err
+}

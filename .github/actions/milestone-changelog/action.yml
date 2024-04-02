@@ -28,6 +28,7 @@ runs:
             ".",
             "modules",
             "ee/modules",
+            "ee/be/modules",
             "ee/fe/modules"
           ]
           const excludePatterns = [
@@ -90,7 +91,7 @@ runs:
         body: |
           ${{ steps.changelog.outputs.release_markdown }}
 
-          See [CHANGELOG ${{ steps.changelog.outputs.minor_version }}](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) for more details.
+          For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
         labels: changelog, auto
         token: ${{ inputs.token }}
         delete-branch: true

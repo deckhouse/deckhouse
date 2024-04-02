@@ -33,6 +33,11 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
+	err = metaConfig.LoadInstallerVersion()
+	if err != nil {
+		return err
+	}
+
 	installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err

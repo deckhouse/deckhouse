@@ -1,5 +1,12 @@
 type: object
 properties:
+  ebpfExporterEnabled:
+    type: boolean
+    default: true
+    x-examples:
+    - false
+    description: |
+      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
   highAvailability:
     type: boolean
     x-examples: [true, false]
@@ -46,7 +53,7 @@ properties:
   vpa:
     type: object
     description: |
-      VPA settings for kube-state-metrics deployment.
+      VPA settings for `kube-state-metrics` pods.
     default: {}
     x-examples:
       - { kubeStateMetricsMaxCPU: "130m", kubeStateMetricsMaxMemory: "115Mi" }
@@ -58,7 +65,7 @@ properties:
             pattern: "^[0-9]+m?$"
           - type: number
         description: |
-          CPU requests.
+          The maximum value that the VPA can set for the CPU requests.
       kubeStateMetricsMaxMemory:
         x-examples: ["3Mi"]
         oneOf:
@@ -66,4 +73,4 @@ properties:
             pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         description: |
-          Memory requests.
+          The maximum memory requests the VPA can set.

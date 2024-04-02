@@ -6,8 +6,11 @@ import:
   to: /
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib64/iptables
-  to: /lib64/iptables
+  add: /
+  to: /
+  includePaths:
+  - lib64/iptables
+  - lib64/libm*
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/lib64
@@ -22,10 +25,10 @@ import:
 docker:
   ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /sbin/etables*" }}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ .Images.BASE_ALT_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /relocate
@@ -33,9 +36,6 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y curl jq bash grep iproute2 iptables-nft python3 -y
   install:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |

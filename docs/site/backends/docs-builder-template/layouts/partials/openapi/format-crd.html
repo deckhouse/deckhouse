@@ -1,65 +1,65 @@
 {{/* Renders a CRD. */}}
 
-{{ $data := .data }}
-{{ $langData := .langData }}
-{{ $kind := .data.spec.names.kind }}
-{{ $kindDowncase := .data.spec.names.kind | lower }}
+{{- $data := .data }}
+{{- $langData := .langData }}
+{{- $kind := .data.spec.names.kind }}
+{{- $kindDowncase := .data.spec.names.kind | lower }}
 
 <h2>{{ $kind }}</h2>
 
-{{ $versions := slice }}
+{{- $versions := slice }}
 {{- range $data.spec.versions }}
-  {{ $versions = $versions | append (.name | lower) }}
-{{ end }}
+  {{- $versions = $versions | append (.name | lower) }}
+{{- end }}
 
-{{ $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
+{{- $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
 
-{{ if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
-  {{ if gt ( $data.spec.versions | len ) 1 }}
+{{- if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
+  {{- if gt ( $data.spec.versions | len ) 1 }}
     <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
     <div class="tabs">
-    {{ $status := " active" }}
+    {{- $status := " active" }}
     {{- range $versionsSorted }}
       <a href='javascript:void(0)' class='tabs__btn tabs__btn__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__btn__{{ $kindDowncase }}', 'tabs__content__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ . | lower }}')">{{ . | lower }}</a>
-      {{ $status = "" }}
-    {{ end }}
+      {{- $status = "" }}
+    {{- end }}
     </div>
-  {{ end }}
+  {{- end }}
 
-  {{ $status := " active" }}
+  {{- $status := " active" }}
   {{- range  $versionsSorted }}
-    {{ $versionName := . }}
-    {{ $versionSchema := ( index (where $data.spec.versions "name" .) 0 ).schema.openAPIV3Schema }}
+    {{- $versionName := . }}
+    {{- $versionSchema := ( index (where $data.spec.versions "name" .) 0 ).schema.openAPIV3Schema }}
 
-    {{ if eq ( $data.spec.versions | len ) 1 }}
+    {{- if eq ( $data.spec.versions | len ) 1 }}
       <p><font size="-1">Scope: {{ $data.spec.scope }}
       <br/>Version: {{ $versionName }}</font></p>
-    {{ end }}
+    {{- end }}
 
-    {{ if gt ( $data.spec.versions | len ) 1 }}
+    {{- if gt ( $data.spec.versions | len ) 1 }}
       <div id='{{ $kindDowncase }}_{{ $versionName | lower }}' class='tabs__content tabs__content__{{ $kindDowncase }}{{ $status }}'>
-      {{ $status = "" }}
-    {{ end }}
+      {{- $status = "" }}
+    {{- end }}
 
-    {{ $description :=  $versionSchema.description }}
-    {{ $langVersionData := dict }}
-    {{ if $langData.spec.versions }}
-      {{ $langVersionData =  index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
-      {{ if $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
+    {{- $description :=  $versionSchema.description }}
+    {{- $langVersionData := dict }}
+    {{- if $langData.spec.versions }}
+      {{- $langVersionData =  index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
+      {{- if $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
     {{- end }}
 
     <div class="resources__prop_description">{{ $description | markdownify }}</div>
     <ul class="resources">
-      {{ range $property, $propertyData := $versionSchema.properties }}
-        {{ if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
-        {{ $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
+      {{- range $property, $propertyData := $versionSchema.properties }}
+        {{- if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
+        {{- $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
 
-        {{ partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "parent" $versionSchema "apiVersion"  $versionName "resourceName" $kindDowncase) }}
+        {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "parent" $versionSchema "apiVersion"  $versionName "resourceName" $kindDowncase) }}
 
-      {{ end }}
+      {{- end }}
     </ul>
 
-    {{ if gt ( $data.spec.versions | len ) 1 }}</div>{{ end }}
+    {{- if gt ( $data.spec.versions | len ) 1 }}</div>{{ end }}
 
-  {{ end }}{{/* range $data.spec.versions */}}
-{{ end }}
+  {{- end }}{{/* range $data.spec.versions */}}
+{{- end }}

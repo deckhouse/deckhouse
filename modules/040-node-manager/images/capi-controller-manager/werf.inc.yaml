@@ -9,13 +9,11 @@ import:
   before: setup
 ---
 artifact: {{ $.ModuleName }}/capi-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache make git bash
   install:
   - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}

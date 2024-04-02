@@ -1,0 +1,39 @@
+{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - apt-get update
+    - apt-get install -y python3 python3-modules-sqlite3 pip dnsmasq
+    - /usr/bin/pip3 install pyroute2 six ipcalc
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+    to: /prepare-config.py
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3.9
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3/site-packages
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/local/lib/python3/site-packages
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf.d
+    before: install

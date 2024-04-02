@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"testing"
 	"text/template"
 
@@ -71,7 +72,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.24"
+kubernetesVersion: "1.29"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:

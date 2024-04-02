@@ -1,0 +1,126 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALT }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+    add: /src/reloader
+    to: /usr/bin/reloader
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /relocate
+    to: /
+    before: install
+docker:
+  ENV:
+    LD_LIBRARY_PATH: "/usr/local/lib"
+  ENTRYPOINT: ["/usr/bin/vector"]
+
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - source "$HOME/.cargo/env"
+  # Install librdkafka-dev >=2.0 because bundled version (1.9.2) has bugs with CA certificates location.
+  # https://github.com/confluentinc/librdkafka/commit/f8830a28652532009e3f16854cb9d5004d9de06b
+  - git clone --depth 1 --branch v2.0.2 {{ $.SOURCE_REPO }}/confluentinc/librdkafka.git /librdkafka
+  - cd /librdkafka
+  - ./configure
+  - make
+  - make install
+  - export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig/"
+  - cd /
+  - git clone --depth 1 --branch v0.31.0 {{ $.SOURCE_REPO }}/vectordotdev/vector.git
+  - cd /vector
+  - git clone --depth 1 --branch v0.31.0 {{ $.SOURCE_REPO }}/vectordotdev/vector-deps.git /vector/vendor
+  - find /patches -name '*.patch' -exec git apply {} \;
+  - |
+    cat <<EOF >> .cargo/config.toml
+    [source.crates-io]
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/Azure/azure-sdk-for-rust.git?rev=b4544d4920fa3064eb921340054cd9cc130b7664"]
+    git = "https://github.com/Azure/azure-sdk-for-rust.git"
+    rev = "b4544d4920fa3064eb921340054cd9cc130b7664"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/MSxDOS/ntapi.git?rev=24fc1e47677fc9f6e38e5f154e6011dc9b270da6"]
+    git = "https://github.com/MSxDOS/ntapi.git"
+    rev = "24fc1e47677fc9f6e38e5f154e6011dc9b270da6"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/tokio-rs/tracing?rev=e0642d949891546a3bb7e47080365ee7274f05cd"]
+    git = "https://github.com/tokio-rs/tracing"
+    rev = "e0642d949891546a3bb7e47080365ee7274f05cd"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/vectordotdev/aws-sdk-rust?rev=3d6aefb7fcfced5fc2a7e761a87e4ddbda1ee670"]
+    git = "https://github.com/vectordotdev/aws-sdk-rust"
+    rev = "3d6aefb7fcfced5fc2a7e761a87e4ddbda1ee670"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/vectordotdev/chrono.git?tag=v0.4.26-no-default-time-1"]
+    git = "https://github.com/vectordotdev/chrono.git"
+    tag = "v0.4.26-no-default-time-1"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/vectordotdev/heim.git?branch=update-nix"]
+    git = "https://github.com/vectordotdev/heim.git"
+    branch = "update-nix"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/vectordotdev/nix.git?branch=memfd/gnu/musl"]
+    git = "https://github.com/vectordotdev/nix.git"
+    branch = "memfd/gnu/musl"
+    replace-with = "vendored-sources"
+
+    [source."git+https://github.com/vectordotdev/tokio?branch=tokio-util-0.7.4-framed-read-continue-on-error"]
+    git = "https://github.com/vectordotdev/tokio"
+    branch = "tokio-util-0.7.4-framed-read-continue-on-error"
+    replace-with = "vendored-sources"
+
+    [source.vendored-sources]
+    directory = "vendor"
+    EOF
+  - |
+    cargo build \
+    --release \
+    -j $(($(nproc) /2)) \
+    --offline \
+    --no-default-features \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/dynamic-linking,rdkafka?/gssapi-vendored"
+  - strip target/release/vector
+  - cp target/release/vector /usr/bin/vector
+  - export LD_LIBRARY_PATH="/usr/local/lib"
+  - /binary_replace.sh -i /usr/bin/vector -o /relocate
+  - mkdir -p /relocate/etc
+  - cp -pr /etc/pki /relocate/etc
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - go build -ldflags="-s -w" -o reloader main.go

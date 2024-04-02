@@ -1,0 +1,127 @@
+{{- define "capcd_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $capcdImageName := join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $capcdImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: capcd-controller-manager
+  namespace:  d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: capcd-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "capcd-controller-manager"
+      minAllowed:
+        {{- include "capcd_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: capcd-controller-manager
+  namespace:  d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: capcd-controller-manager
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capcd-controller-manager
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: capcd-controller-manager
+      cluster.x-k8s.io/provider: infrastructure-static
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: capcd-controller-manager
+        cluster.x-k8s.io/provider: infrastructure-static
+        control-plane: controller-manager
+      annotations:
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registration.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capcd-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: capcd-controller-manager
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: capcd-controller-manager
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $capcdImage }}
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: CAPVCD_SKIP_RDE
+            value: "true"
+          - name: USE_K8S_ENV_AS_CONTROL_PLANE_IP
+            value: "true"
+        ports:
+        - containerPort: 9444
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: cert
+            readOnly: true
+        args:
+          - "--leader-elect"
+          - "--metrics-bind-address=127.0.0.1:9446"
+          - "--health-probe-bind-address=:9445"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9445
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9445
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "capcd_controller_manager_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: capcd-controller-manager-webhook-tls

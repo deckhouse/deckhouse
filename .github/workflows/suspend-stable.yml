@@ -303,7 +303,7 @@ jobs:
 
           # Variables
           #   1. Edition and channel.
-          # CE/EE/FE -> ce/ee/fe
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           RELEASE_CHANNEL=stable
 
@@ -381,7 +381,7 @@ jobs:
 
           # Variables
           #   1. Edition and channel.
-          # CE/EE/FE -> ce/ee/fe
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           RELEASE_CHANNEL=stable
 
@@ -459,7 +459,163 @@ jobs:
 
           # Variables
           #   1. Edition and channel.
-          # CE/EE/FE -> ce/ee/fe
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=stable
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+
+          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
+      - name: Publish release images for BE
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
+          WERF_ENV: BE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${SUSPEND_VERSION} ]] ; then
+            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend version '${SUSPEND_VERSION}' for BE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=stable
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+
+          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
+      - name: Publish release images for SE
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
+          WERF_ENV: SE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${SUSPEND_VERSION} ]] ; then
+            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend version '${SUSPEND_VERSION}' for SE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           RELEASE_CHANNEL=stable
 

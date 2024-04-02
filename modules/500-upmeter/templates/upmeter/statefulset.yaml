@@ -120,6 +120,8 @@ spec:
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"
+          - name: UPMETER_RETENTION_DAYS
+            value: "548"
           - name: UPMETER_LISTEN_HOST
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT
@@ -178,7 +180,9 @@ spec:
           name: https
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:

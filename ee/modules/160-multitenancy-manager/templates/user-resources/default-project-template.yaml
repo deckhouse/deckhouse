@@ -1,0 +1,226 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: default
+spec:
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      required:
+        - administrators
+        - resourceQuota
+      properties:
+        resourceQuota:
+          type: object
+          description: |
+            Resource quota for the project.
+            Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+          properties:
+            requests:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                storage:
+                  type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+            limits:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: "^[0-9]+m?$"
+                memory:
+                  oneOf:
+                    - type: number
+                      format: int
+                    - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+        administrators:
+          description: |
+            Users and groups that will have admin access to the project.
+            Administrators are eligible to manage roles and access to the project.
+          type: array
+          items:
+            type: object
+            required:
+              - subject
+              - name
+            properties:
+              subject:
+                description: |
+                  Kind of the target resource to apply access to the
+                  environment (`Group` or `User`).
+                enum:
+                  - User
+                  - Group
+                type: string
+              name:
+                description: |
+                  The name of the target resource to apply access
+                  to the environment.
+                minLength: 1
+                type: string
+        networkPolicy:
+          description: |
+            NotRestricted — Allow all traffic by default.
+            Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+          enum:
+            - Isolated
+            - NotRestricted
+          type: string
+          default: Isolated
+        podSecurityProfile:
+          description: |
+            Pod security profile name.
+
+            The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
+            - Privileged — Unrestricted policy. Provides the widest possible permission level;
+            - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
+            - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+          type: string
+          default: Baseline
+          enum:
+            - Baseline
+            - Restricted
+            - Privileged
+        extendedMonitoringEnabled:
+          description: |
+            Enable extended monitoring for the project.
+            When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
+             - Controller outages and restarts
+             - 5xx errors in ingress-nginx
+             - Low free space on the persistent volumes
+          type: boolean
+          default: true
+        clusterLogDestinationName:
+          description: |
+            If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
+            The names of the custom resource must be specified in the `clusterLogDestinationName` field.
+          type: string
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      {{ with .projectName }}name: {{ . }}{{ end }}
+      labels:
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+    {{- range $administrator := .parameters.administrators }}
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: AuthorizationRule
+    metadata:
+      name: {{ $administrator.name }}
+    spec:
+      accessLevel: Admin
+      subjects:
+      - kind: {{ $administrator.subject }}
+        name: {{ $administrator.name }}
+    {{- end }}
+    ---
+    # Max requests and limits for resource and storage consumption for all pods in a namespace.
+    # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: all-pods
+    spec:
+      hard:
+        {{ with .parameters.resourceQuota.requests.cpu }}requests.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.memory }}requests.memory: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.requests.storage }}requests.storage: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.cpu }}limits.cpu: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
+    {{- if eq .parameters.networkPolicy "Isolated" }}
+    ---
+    # Deny all network traffic by default except namespaced traffic and dns.
+    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    kind: NetworkPolicy
+    apiVersion: networking.k8s.io/v1
+    metadata:
+      name: isolated
+    spec:
+      podSelector:
+        matchLabels: {}
+      policyTypes:
+        - Ingress
+        - Egress
+      ingress:
+        - from:
+            # Traffic within the project is allowed.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+            # Metrics scraping from Prometheus.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-monitoring"
+                podSelector:
+                  matchLabels:
+                    app: prometheus
+            # Ingress nginx traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-ingress-nginx"
+                podSelector:
+                  matchLabels:
+                    app: controller
+      egress:
+        # Traffic within the project is allowed.
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "{{ .projectName }}"
+        # Allow DNS traffic (both kube-dns and nodelocaldns).
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-system
+          ports:
+            - protocol: UDP
+              port: 53
+    {{- end }}
+    {{- with .parameters.clusterLogDestinationName }}
+    ---
+    # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: PodLoggingConfig
+    metadata:
+      name: default
+    spec:
+      clusterDestinationRefs:
+        - {{ . }}
+    {{- end }}
+    ---
+    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      policies:
+        requiredResources:
+          requests:
+            - cpu
+            - memory
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: "{{ .projectName }}"

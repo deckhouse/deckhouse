@@ -17,5 +17,6 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f kubelet /opt/deckhouse/bin
 cp -f kubelet.service /lib/systemd/system
+chmod 600 /lib/systemd/system/kubelet.service
 systemctl daemon-reload
 systemctl enable kubelet.service

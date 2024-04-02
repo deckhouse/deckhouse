@@ -2,50 +2,66 @@
 title: "Модуль user-authn: FAQ"
 ---
 
+{% raw %}
+
 ## Как защитить мое приложение?
 
-Существует возможность спрятать ваше приложение за аутентификацией через Dex с помощью пользовательского ресурса `DexAuthenticator` (custom resource).
-По факту, создавая DexAuthenticator в кластере, пользователь создает экземпляр [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), который уже подключен к Dex.
+Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
+1. Создайте custom resource [DexAuthenticator](cr.html#dexauthenticator).
 
-### Пример custom resource `DexAuthenticator`
+   Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
-{% raw %}
+   Пример custom resource `DexAuthenticator`:
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: DexAuthenticator
-metadata:
-  name: my-cool-app # Поды аутентификатора будут иметь префикс my-cool-app.
-  namespace: my-cool-namespace # Namespace, в котором будет развернут dex-authenticator.
-spec:
-  applicationDomain: "my-app.kube.my-domain.com" # Домен, на котором висит ваше приложение.
-  sendAuthorizationHeader: false # Отправлять ли `Authorization: Bearer` header приложению, полезно в связке с auth_request в NGINX.
-  applicationIngressCertificateSecretName: "ingress-tls" # Имя Secret'а с TLS-сертификатом.
-  applicationIngressClassName: "nginx"
-  keepUsersLoggedInFor: "720h"
-  allowedGroups:
-  - everyone
-  - admins
-  whitelistSourceRanges:
-  - 1.1.1.1
-  - 192.168.0.0/24
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: DexAuthenticator
+   metadata:
+     # Префикс имени подов Dex authenticator.
+     # Например, если префикс имени `app-name`, то поды Dex authenticator будут вида `app-name-dex-authenticator-7f698684c8-c5cjg`.
+     name: app-name
+     # Namespace, в котором будет развернут Dex authenticator.
+     namespace: app-ns
+   spec:
+     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
+     applicationDomain: "app-name.kube.my-domain.com"
+     # Отправлять ли `Authorization: Bearer` header приложению. Полезно в связке с auth_request в NGINX.
+     sendAuthorizationHeader: false
+     # Имя Secret'а с SSL-сертификатом.
+     applicationIngressCertificateSecretName: "ingress-tls"
+     # Название Ingress-класса, которое будет использоваться в создаваемом для Dex authenticator Ingress-ресурсе.
+     applicationIngressClassName: "nginx"
+     # Время, на протяжении которого пользовательская сессия будет считаться активной.
+     keepUsersLoggedInFor: "720h"
+     # Список групп, пользователям которых разрешено проходить аутентификацию.
+     allowedGroups:
+     - everyone
+     - admins
+     # Список адресов и сетей, с которых разрешено проходить аутентификацию.
+     whitelistSourceRanges:
+     - 1.1.1.1/32
+     - 192.168.0.0/24
+   ```
 
-{% endraw %}
+2. Подключите приложение к Dex.
 
-После появления custom resource `DexAuthenticator` в кластере в указанном namespace'е появятся необходимые Deployment, Service, Ingress, Secret.
-Чтобы подключить свое приложение к Dex, достаточно будет добавить в Ingress-ресурс вашего приложения следующие аннотации:
+   Для этого добавьте в Ingress-ресурс приложения следующие аннотации:
 
-{% raw %}
+   - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
+   - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
+   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
+      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
+      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
-```yaml
-annotations:
-  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-  nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
-  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-```
+   Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
 
-{% endraw %}
+   ```yaml
+   annotations:
+     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+     nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+   ```
 
 ### Настройка ограничений на основе CIDR
 
@@ -54,16 +70,16 @@ annotations:
 * Если нужно ограничить доступ по IP и оставить прохождение аутентификации в Dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
 
   ```yaml
-  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
+  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
 
-* Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в Dex, а пользователи из остальных сетей были обязаны аутентифицироваться в Dex, добавьте следующую аннотацию:
+* Если необходимо, чтобы пользователи из указанных сетей освобождались от прохождения аутентификации в Dex, а пользователи из остальных сетей обязательно аутентифицировались в Dex, добавьте следующую аннотацию:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
 
-### Как работает аутентификация с помощью DexAuthenticator
+## Как работает аутентификация с помощью DexAuthenticator
 
 ![Как работает аутентификация с помощью DexAuthenticator](../../images/150-user-authn/dex_login.svg)
 
@@ -123,4 +139,6 @@ annotations:
 
 ## Как Dex защищен от подбора логина и пароля?
 
-Одному пользователю разрешено только 20 попыток входа. Если лимит был израсходован, еще одна попытка будет добавлена каждые 6 секунд.
+Одному пользователю разрешено только 20 попыток входа. Если указанный лимит израсходован, одна дополнительная попытка будет добавляться каждые 6 секунд.
+
+{% endraw %}

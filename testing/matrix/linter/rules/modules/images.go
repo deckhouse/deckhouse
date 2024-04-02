@@ -19,6 +19,7 @@ package modules
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,6 +52,65 @@ var regexPatterns = map[string]string{
 	`$BASE_SCRATCH`:          imageRegexp(`scratch:[\d.]+`),
 }
 
+var distrolessImagesPrefix = map[string][]string{
+	"werf": {
+		"{{ .Images.BASE_DISTROLESS",
+		"{{ $.Images.BASE_ALT",
+	},
+	"docker": {
+		"$BASE_DISTROLESS",
+		"$BASE_ALT",
+	},
+}
+
+func skipDistrolessImageCheckIfNeeded(image string) bool {
+	switch image {
+	case "base-cilium-dev/werf.inc.yaml",
+		"cilium-envoy/werf.inc.yaml",
+		"drbd-reactor/Dockerfile",
+		"linstor-affinity-controller/Dockerfile",
+		"linstor-csi/Dockerfile",
+		"linstor-drbd-wait/Dockerfile",
+		"linstor-pools-importer/Dockerfile",
+		"linstor-scheduler-admission/Dockerfile",
+		"linstor-scheduler-extender/Dockerfile",
+		"linstor-server/Dockerfile",
+		"piraeus-operator/Dockerfile",
+		"spaas/Dockerfile",
+		"snapshot-controller/Dockerfile",
+		"snapshot-validation-webhook/Dockerfile",
+		"api-proxy/Dockerfile",
+		"kiali/Dockerfile",
+		"metadata-discovery/Dockerfile",
+		"metadata-exporter/Dockerfile",
+		"operator-v1x12x6/Dockerfile",
+		"operator-v1x13x7/Dockerfile",
+		"operator-v1x16x2/Dockerfile",
+		"operator-v1x19x7/Dockerfile",
+		"pilot-v1x12x6/Dockerfile",
+		"pilot-v1x13x7/Dockerfile",
+		"pilot-v1x16x2/Dockerfile",
+		"pilot-v1x19x7/Dockerfile",
+		"proxyv2-v1x12x6/Dockerfile",
+		"proxyv2-v1x13x7/Dockerfile",
+		"proxyv2-v1x16x2/Dockerfile",
+		"proxyv2-v1x19x7/Dockerfile",
+		"cni-v1x12x6/Dockerfile",
+		"cni-v1x13x7/Dockerfile",
+		"cni-v1x16x2/Dockerfile",
+		"cni-v1x19x7/Dockerfile",
+		"ebpf-exporter/Dockerfile",
+		"controller-1-1/Dockerfile",
+		"easyrsa-migrator/Dockerfile",
+		"pmacct/Dockerfile",
+		"argocd/Dockerfile",
+		"argocd-image-updater/Dockerfile",
+		"werf-argocd-cmp-sidecar/Dockerfile":
+		return true
+	}
+	return false
+}
+
 func imageRegexp(s string) string {
 	return fmt.Sprintf("^(from:|FROM)(\\s+)(%s)", s)
 }
@@ -65,7 +125,10 @@ func isImageNameUnacceptable(imageName string) (bool, string) {
 	return false, ""
 }
 
-func checkImageNamesInDockerAndWerfFiles(lintRuleErrorsList *errors.LintRuleErrorsList, name, path string) {
+func checkImageNamesInDockerAndWerfFiles(
+	lintRuleErrorsList *errors.LintRuleErrorsList,
+	name, path string,
+) {
 	var filePaths []string
 	imagesPath := filepath.Join(path, imagesDir)
 
@@ -79,13 +142,11 @@ func checkImageNamesInDockerAndWerfFiles(lintRuleErrorsList *errors.LintRuleErro
 		}
 
 		switch filepath.Base(fullPath) {
-		case "werf.inc.yaml",
-			"Dockerfile":
+		case "werf.inc.yaml", "Dockerfile":
 			filePaths = append(filePaths, fullPath)
 		}
 		return nil
 	})
-
 	if err != nil {
 		lintRuleErrorsList.Add(errors.NewLintRuleError(
 			"MODULE001",
@@ -156,6 +217,11 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				fromTrimmed := strings.TrimPrefix(line, "from: ")
 				// "from:" right after "image:"
 				if linePos-lastWerfImagePos == 1 {
+					if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+						log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromTrimmed)
+						continue
+					}
+
 					result, message := isWerfInstructionUnacceptable(fromTrimmed)
 					if result {
 						return errors.NewLintRuleError(
@@ -176,7 +242,12 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 	}
 
 	for i, fromInstruction := range dockerfileFromInstructions {
-		lastInstruction := i == len(fromInstruction)-1
+		lastInstruction := i == len(dockerfileFromInstructions)-1
+		if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+			log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromInstruction)
+			continue
+		}
+
 		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
 		if result {
 			return errors.NewLintRuleError(
@@ -192,8 +263,8 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 }
 
 func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !strings.HasPrefix(from, `{{ .Images.BASE_`) && !strings.HasPrefix(from, `{{ $.Images.BASE_`) {
-		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
+	if !checkDistrolessPrefix(from, distrolessImagesPrefix["werf"]) {
+		return true, "`from:` parameter for `image:` should be one of our BASE_DISTROLESS images"
 	}
 	return false, ""
 }
@@ -204,8 +275,8 @@ func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string)
 	}
 
 	if final {
-		if !strings.HasPrefix(from, "$BASE_") {
-			return true, "Last `FROM` instruction should use one of our $BASE_ images"
+		if !checkDistrolessPrefix(from, distrolessImagesPrefix["docker"]) {
+			return true, "Last `FROM` instruction should use one of our $BASE_DISTROLESS images"
 		}
 	} else {
 		matched, _ := regexp.MatchString("@sha256:[A-Fa-f0-9]{64}", from)
@@ -214,4 +285,15 @@ func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string)
 		}
 	}
 	return false, ""
+}
+
+func checkDistrolessPrefix(str string, in []string) bool {
+	result := false
+	for _, pattern := range in {
+		if strings.HasPrefix(str, pattern) {
+			result = true
+			break
+		}
+	}
+	return result
 }

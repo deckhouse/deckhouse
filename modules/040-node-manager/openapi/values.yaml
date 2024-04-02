@@ -48,7 +48,6 @@ properties:
         type: boolean
       capsControllerManagerEnabled:
         type: boolean
-
       clusterMasterAddresses:
         type: array
         description: |
@@ -257,7 +256,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.24"
+                - "1.29"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -324,7 +323,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.24"
+              kubernetesVersion: "1.29"
               cri:
                 type: "Docker"
               cloudInstances:

@@ -9,6 +9,15 @@ properties:
     items:
       type: string
       pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
+  transportProtocolMode:
+    type: string
+    description: |
+      The mode of the transport protocol for communicating with the upstream DNS server:
+      - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1)), then it will be resent over TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). The request will not be resent over TCP if there are other UDP issues.
+      - `ForceTCP` — Always uses TCP, even if the original request is over UDP.
+      - `KeepOriginal` — Uses the same protocol (TCP or UDP) as the original request.
+    enum: [PreferUDP, ForceTCP, KeepOriginal]
+    default: PreferUDP
   hosts:
     description: |
       A static list of hosts similar to that of `/etc/hosts`.
@@ -29,6 +38,7 @@ properties:
       - zone: example.com
         upstreamNameservers: ['8.8.8.8']
         cacheTTLSeconds: 3600
+        transportProtocolMode: PreferUDP
     description: |
       A list of additional zones CoreDNS should be authoritative for.
     type: array
@@ -58,6 +68,15 @@ properties:
           maximum: 3600
           description: |
             Max TTL in seconds for NOERROR responses.
+        transportProtocolMode:
+          type: string
+          description: |
+            The mode of the transport protocol for communicating with the upstream DNS server:
+            - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1)), then it will be resent over TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). The request will not be resent over TCP if there are other UDP issues.
+            - `ForceTCP` — Always uses TCP, even if the original request is over UDP.
+            - `KeepOriginal` — Uses the same protocol (TCP or UDP) as the original request.
+          enum: [PreferUDP, ForceTCP, KeepOriginal]
+          default: PreferUDP
   enableLogs:
     description: |
       Enable CoreDNS logging.
@@ -66,6 +85,8 @@ properties:
   clusterDomainAliases:
     description: |
       A list of cluster domain aliases; these are resolved on par with `global.discovery.clusterDomain`.
+
+      **Please note:** the domain aliase must not match the domain used in the DNS name template in the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
     type: array
     items:
       type: string

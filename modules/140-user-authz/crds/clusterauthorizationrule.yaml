@@ -89,7 +89,7 @@ spec:
                   description: |
                     Users and/or groups to grant privileges.
 
-                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
@@ -214,6 +214,7 @@ spec:
                     If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
 
                     Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
+                  x-doc-d8Revision: ee
                   type: object
                   oneOf:
                     - required: ["labelSelector"]
@@ -228,6 +229,7 @@ spec:
                         Since `labelSelector` provides access to a limited number of the namespaces that match it, `matchAny` is needed in cases where access to all namespaces is to be granted.
                       type: boolean
                       enum: [true]
+                      x-doc-d8Revision: ee
                     labelSelector:
                       description: |
                         Defines the label selector-based filter of the namespaces.
@@ -238,10 +240,12 @@ spec:
                         If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
                       type: object
                       minProperties: 1
+                      x-doc-d8Revision: ee
                       properties:
                         matchExpressions:
                           type: array
                           description: An array of set-based expressions.
+                          x-doc-d8Revision: ee
                           x-doc-examples:
                             - - key: tier
                                 operator: In
@@ -268,9 +272,12 @@ spec:
                               key:
                                 description: A label name.
                                 type: string
+                                x-doc-d8Revision: ee
                               operator:
                                 description: A comparison operator.
                                 type: string
+                                enum: [In,NotIn,Exists,DoesNotExist]
+                                x-doc-d8Revision: ee
                                 enum:
                                   - In
                                   - NotIn
@@ -278,6 +285,7 @@ spec:
                                   - DoesNotExist
                               values:
                                 description: A label value.
+                                x-doc-d8Revision: ee
                                 type: array
                                 items:
                                   type: string
@@ -288,6 +296,7 @@ spec:
                           type: object
                           description: A set of labels a namespace must have to match.
                           x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          x-doc-d8Revision: ee
                           additionalProperties:
                             type: string
                             pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
@@ -316,7 +325,7 @@ spec:
                   description: |
                     Users and/or groups to grant privileges.
 
-                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
                     Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;

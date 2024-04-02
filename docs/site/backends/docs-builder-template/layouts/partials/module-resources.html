@@ -7,18 +7,18 @@ Context:
 .lang — language to use for rendering
 */}}
 
-{{ $moduleName := .name }}
-{{ $moduleData := .data }}
-{{ $lang := .lang }}
+{{- $moduleName := .name }}
+{{- $moduleData := .data }}
+{{- $lang := .lang }}
 
-{{ if and (eq .type "crds") $moduleData.crds }}
-  {{ range $crdName, $crdData := $moduleData.crds }}
-    {{ if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
-    {{ $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
-    {{ partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
-  {{ end }}
-{{ else if and (eq .type "configuration") $moduleData.openapi }}
-    {{ $cfgData := index $moduleData.openapi "config-values" }}
-    {{ $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
-    {{ partial "openapi/format-configuration" ( dict "data" $cfgData "langData" $langData ) }}
-{{ end }}
+{{- if and (eq .type "crds") $moduleData.crds }}
+  {{- range $crdName, $crdData := $moduleData.crds }}
+    {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
+    {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
+    {{- partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
+  {{- end }}
+{{- else if and (eq .type "configuration") $moduleData.openapi }}
+    {{- $cfgData := index $moduleData.openapi "config-values" }}
+    {{- $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
+    {{- partial "openapi/format-configuration" ( dict "data" $cfgData "langData" $langData ) }}
+{{- end }}

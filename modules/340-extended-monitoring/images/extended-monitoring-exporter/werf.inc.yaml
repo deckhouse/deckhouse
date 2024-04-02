@@ -1,0 +1,45 @@
+{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+    to: /requirements.txt
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - export SOURCE_REPO={{ .SOURCE_REPO }}
+    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+    - pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
+    to: /app/extended-monitoring.py
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3
+    to: /usr/lib/python3
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3.9
+    to: /usr/lib64/python3.9
+    before: install
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/local/lib/python3
+    to: /usr/local/lib/python3
+    before: install
+docker:
+  ENTRYPOINT: ["python3"]

@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
+Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
 {%- endif %}
@@ -184,10 +184,10 @@ kubectl -n d8-ingress-nginx get po
 
 Дождитесь перехода Pod'а Ingress-контроллера в статус `Ready`.
 
-Вы установили Deckhouse Platform в `kind`!
+Вы установили Deckhouse Kubernetes Platform в `kind`!
 {%- else %}
 
-Почти все готово для полноценной работы Deckhouse Platform!
+Почти все готово для полноценной работы Deckhouse Kubernetes Platform!
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

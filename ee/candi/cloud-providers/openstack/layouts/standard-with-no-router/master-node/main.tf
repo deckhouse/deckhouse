@@ -11,6 +11,7 @@ locals {
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
   etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  server_group = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
 }
 
 module "network_security_info" {
@@ -42,6 +43,7 @@ module "master" {
   zone = local.zone
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
+  server_group = local.server_group
 }
 
 module "kubernetes_data" {

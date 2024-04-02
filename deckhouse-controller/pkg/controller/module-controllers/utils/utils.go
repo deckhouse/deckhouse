@@ -15,8 +15,14 @@
 package utils
 
 import (
+	"time"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+)
+
+const (
+	SyncedPollPeriod = 100 * time.Millisecond
 )
 
 // GenerateRegistryOptions feteches settings from ModuleSource and generate registry options from them

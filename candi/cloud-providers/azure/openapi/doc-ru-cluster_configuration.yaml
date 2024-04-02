@@ -208,7 +208,9 @@ apiVersions:
               Идентификатор клиента.
           clientSecret:
             description: |
-              Secret клиента.
+              Секрет (secret) клиента.
+
+              Помните о сроке действия секрета. По умолчанию он действителен один год. Чтобы создать service account с большим сроком действия секрета обратитесь к [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
           tenantId:
             description: |
               Идентификатор tenant'а.

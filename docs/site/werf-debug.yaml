@@ -7,7 +7,7 @@ configVersion: 1
 {{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "local") }}
+    {{- if or (eq $.Env "development") (eq $.Env "module") }}
       {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}

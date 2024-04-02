@@ -23,12 +23,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"k8s.io/utils/pointer"
 )
 
 //go:generate go run ./build.go --edition all
@@ -38,6 +40,7 @@ const (
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	candiFileName              = "candi-%s.yaml"
+	modulesExcluded            = "modules-excluded-%s.yaml"
 )
 
 var workDir = cwd()
@@ -88,6 +91,35 @@ type writeSettings struct {
 	SaveTo            string
 	ExcludePaths      []string
 	StageDependencies map[string][]string
+	ExcludedModules   map[string]struct{}
+}
+
+func writeExcludedModules(settings writeSettings, modules map[string]string, ed edition) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+
+	if len(ed.ExcludeModules) == 0 {
+		if err := writeToFile(saveTo, nil); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	resultArr := make([]string, 0, len(ed.ExcludeModules))
+
+	for _, name := range ed.ExcludeModules {
+		modulePath, ok := modules[name]
+		if !ok {
+			log.Print(fmt.Sprintf("Not found module path for module %s\n", modulePath))
+			continue
+		}
+		resultArr = append(resultArr, fmt.Sprintf("- %s/**", modulePath))
+	}
+
+	result := []byte(strings.Join(resultArr, "\n"))
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func writeSections(settings writeSettings) {
@@ -132,6 +164,14 @@ func writeSections(settings writeSettings) {
 
 		if !info.IsDir() {
 			continue
+		}
+
+		if len(settings.ExcludedModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// skip excluded modules
+			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
 		}
 
 		buildFile := filepath.Join(file, ".build.yaml")
@@ -227,102 +267,166 @@ func cwd() string {
 	return dir
 }
 
-func main() {
-	var edition string
-	flag.StringVar(&edition, "edition", "", "Deckhouse edition")
+type buildIncludes struct {
+	SkipCandi   *bool `yaml:"skipCandi,omitempty"`
+	SkipModules *bool `yaml:"skipModules,omitempty"`
+}
 
-	flag.Parse()
+type edition struct {
+	Name           string         `yaml:"name,omitempty"`
+	ModulesDir     string         `yaml:"modulesDir,omitempty"`
+	BuildIncludes  *buildIncludes `yaml:"buildIncludes,omitempty"`
+	ExcludeModules []string       `yaml:"excludeModules,omitempty"`
+}
 
-	if edition == "all" {
-		executeEdition("CE")
-		executeEdition("EE")
-		executeEdition("FE")
-	} else {
-		executeEdition(edition)
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+type executor struct {
+	Editions []edition
+}
+
+func newExecutor() *executor {
+	content, err := os.ReadFile(workDir + "/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+	}
+
+	return &executor{
+		Editions: e.Editions,
 	}
 }
 
-func executeEdition(edition string) {
-	deleteRevisionFiles(edition)
+func main() {
+	var editionStr string
+	flag.StringVar(&editionStr, "edition", "", "Deckhouse edition")
 
-	switch edition {
-	case "FE":
-		writeSections(writeSettings{
-			Edition:           edition,
-			Prefix:            "ee/fe",
-			Dir:               "modules",
-			SaveTo:            modulesFileName,
-			StageDependencies: stageDependencies,
-		})
-		writeSections(writeSettings{
-			Edition:      edition,
-			Prefix:       "ee/fe",
-			Dir:          "modules",
-			SaveTo:       modulesWithExcludeFileName,
-			ExcludePaths: defaultModulesExcludes,
-		})
-		writeSections(writeSettings{
-			Edition:           edition,
-			Prefix:            "ee/fe",
-			Dir:               "modules",
-			SaveTo:            modulesWithDependencies,
-			StageDependencies: stageDependencies,
-			ExcludePaths:      nothingButGoHooksExcludes,
-		})
-		writeSections(writeSettings{
-			Edition: edition,
-			SaveTo:  candiFileName,
-		})
-		fallthrough
-	case "EE":
-		writeSections(writeSettings{
-			Edition:           edition,
-			Prefix:            "ee",
-			Dir:               "modules",
-			SaveTo:            modulesFileName,
-			StageDependencies: stageDependencies,
-		})
-		writeSections(writeSettings{
-			Edition:      edition,
-			Prefix:       "ee",
-			Dir:          "modules",
-			SaveTo:       modulesWithExcludeFileName,
-			ExcludePaths: defaultModulesExcludes,
-		})
-		writeSections(writeSettings{
-			Edition:           edition,
-			Prefix:            "ee",
-			Dir:               "modules",
-			SaveTo:            modulesWithDependencies,
-			StageDependencies: stageDependencies,
-			ExcludePaths:      nothingButGoHooksExcludes,
-		})
-		writeSections(writeSettings{
-			Edition: edition,
-			Prefix:  "ee",
-			Dir:     "candi",
-			SaveTo:  candiFileName,
-		})
-	case "CE":
-		writeSections(writeSettings{
-			Edition: edition,
-			SaveTo:  modulesFileName,
-		})
-		writeSections(writeSettings{
-			Edition: edition,
-			SaveTo:  modulesWithExcludeFileName,
-		})
-		writeSections(writeSettings{
-			Edition: edition,
-			SaveTo:  modulesWithDependencies,
-		})
-		writeSections(writeSettings{
-			Edition: edition,
-			SaveTo:  candiFileName,
-		})
-	default:
-		log.Fatalf("Unknown Deckhouse edition %q", edition)
+	flag.Parse()
+
+	e := newExecutor()
+
+	if editionStr == "all" {
+		for _, ed := range e.Editions {
+			e.executeEdition(ed.Name)
+		}
+	} else {
+		for _, ed := range e.Editions {
+			if ed.Name == editionStr {
+				e.executeEdition(editionStr)
+			}
+		}
+
+		log.Fatalf("Incorrect edition %q", editionStr)
 	}
+}
+
+func (e *executor) executeEdition(editionName string) {
+	deleteRevisionFiles(editionName)
+	modulesDict := make(map[string]string)
+
+	for _, ed := range e.Editions {
+		// get moduleName => path dict
+		searchDir := filepath.Join(workDir, ed.ModulesDir)
+		entries, err := os.ReadDir(searchDir)
+		if err != nil {
+			log.Fatalf("cannot read dir: %s", err)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			moduleName := e.Name()[4:]
+			modulesDict[moduleName] = path.Join(ed.ModulesDir, e.Name())
+		}
+
+		// convert excluded modules to dict
+		excludeModules := make(map[string]struct{})
+		for _, moduleName := range ed.ExcludeModules {
+			excludeModules[moduleName] = struct{}{}
+		}
+
+		bi := ed.BuildIncludes
+		if bi == nil {
+			bi = &buildIncludes{
+				SkipCandi:   pointer.Bool(false),
+				SkipModules: pointer.Bool(false),
+			}
+		}
+
+		prefix := strings.TrimPrefix(strings.TrimSuffix(ed.ModulesDir, "modules"), "/")
+
+		writeSettingCandi := writeSettings{
+			Edition: editionName,
+			SaveTo:  candiFileName,
+		}
+		if bi.SkipCandi == nil || !*bi.SkipCandi {
+			writeSettingCandi.Prefix = prefix
+			writeSettingCandi.Dir = "candi"
+		}
+
+		writeSettingsModules := writeSettings{
+			Edition:         editionName,
+			SaveTo:          modulesFileName,
+			ExcludedModules: excludeModules,
+		}
+
+		writeSettingsExcludeFileName := writeSettings{
+			Edition:         editionName,
+			SaveTo:          modulesWithExcludeFileName,
+			ExcludedModules: excludeModules,
+		}
+
+		writeSettingStageDeps := writeSettings{
+			Edition:         editionName,
+			SaveTo:          modulesWithDependencies,
+			ExcludedModules: excludeModules,
+		}
+
+		if bi.SkipModules == nil || !*bi.SkipModules {
+			writeSettingsModules.Prefix = prefix
+			writeSettingsModules.Dir = "modules"
+			writeSettingsModules.StageDependencies = stageDependencies
+
+			writeSettingsExcludeFileName.Prefix = prefix
+			writeSettingsExcludeFileName.Dir = "modules"
+			writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
+
+			writeSettingStageDeps.Prefix = prefix
+			writeSettingStageDeps.Dir = "modules"
+			writeSettingStageDeps.StageDependencies = stageDependencies
+			writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
+
+		}
+
+		writeSections(writeSettingsModules)
+		writeSections(writeSettingsExcludeFileName)
+		writeSections(writeSettingStageDeps)
+		writeSections(writeSettingCandi)
+
+		if ed.Name == editionName {
+			// only for one edition
+			writeExcludedModules(writeSettings{
+				SaveTo:  modulesExcluded,
+				Edition: editionName,
+			}, modulesDict, ed)
+			return
+		}
+	}
+
+	log.Fatalf("Unknown Deckhouse edition %q", editionName)
 }
 
 func writeToFile(path string, content []byte) error {

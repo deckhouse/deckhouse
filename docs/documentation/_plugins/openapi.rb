@@ -638,6 +638,10 @@ module Jekyll
                         activeStatus = ""
                     end
 
+                     if get_hash_value(item,'deprecated') then
+                         result.push(sprintf('<p><strong>%s</strong></p>',get_i18n_term('deprecated_resource')))
+                     end
+
                     description = ''
                     if get_hash_value(item,'schema','openAPIV3Schema','description') then
                        if    input['i18n'][@context.registers[:page]["lang"]] and
@@ -673,6 +677,14 @@ module Jekyll
                                           description,
                                           item['name'],
                                           searchKeywords)
+
+                    if item["schema"]["openAPIV3Schema"].has_key?('x-doc-examples') or item["schema"]["openAPIV3Schema"].has_key?('x-doc-example') or
+                       item["schema"]["openAPIV3Schema"].has_key?('example') or item["schema"]["openAPIV3Schema"].has_key?('x-examples')
+                    then
+                        result.push('<div markdown="0">')
+                        result.push(format_examples(nil, item["schema"]["openAPIV3Schema"]))
+                        result.push('</div>')
+                    end
 
                     if get_hash_value(item,'schema','openAPIV3Schema','properties')
                         header = '<ul class="resources">'
@@ -755,12 +767,17 @@ module Jekyll
             result.push('</font></p>')
         end
 
-        result.push('<div markdown="0">')
-        result.push(format_examples(nil, input))
-        result.push('</div>')
+        if input.has_key?('x-doc-examples') or input.has_key?('x-doc-example') or
+           input.has_key?('example') or input.has_key?('x-examples')
+        then
+            result.push('<div markdown="0">')
+            result.push(format_examples(nil, input))
+            result.push('</div>')
+        end
+
 
         if ( get_hash_value(input, "properties") )
-           then
+        then
             result.push('<ul class="resources">')
             input['properties'].sort.to_h.each do |key, value|
                 _primaryLanguage = nil

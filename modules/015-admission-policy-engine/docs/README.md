@@ -1,6 +1,6 @@
 ---
 title: "The admission-policy-engine module"
-description: Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.  
+description: Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.
 ---
 
 This module enforces the security policies in the cluster according to the Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) using the [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) solution.
@@ -9,7 +9,7 @@ The Pod Security Standards define three different policies to broadly cover the 
 
 {% alert level="info" %}
 The module does not apply policies to system namespaces.
-{% endalert %}    
+{% endalert %}
 
 List of policies available for use:
 - `Privileged` — Unrestricted policy. Provides the widest possible permission level;
@@ -22,7 +22,7 @@ The type of cluster policy to use by default is determined based on the followin
 - If a Deckhouse version **lower than v1.55** is being installed, the `Privileged` default policy is applied to all non-system namespaces;
 - If a Deckhouse version starting with **v1.55** is being installed, the `Baseline` default policy is applied to all non-system namespaces;
 
-**Note** that upgrading Deckhouse in a cluster to v1.55 does not automatically result in a default policy change. 
+**Note** that upgrading Deckhouse in a cluster to v1.55 does not automatically result in a default policy change.
 
 Default policy can be overridden either globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)) or on a per-namespace basis (using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label for the corresponding namespace).
 
@@ -93,7 +93,6 @@ The module allows defining security policies for making sure the workload runnin
 An example of a security policy:
 
 ```yaml
----
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy

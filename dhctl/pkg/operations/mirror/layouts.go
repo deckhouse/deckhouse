@@ -40,6 +40,9 @@ type ImageLayouts struct {
 	ReleaseChannel       layout.Path
 	ReleaseChannelImages map[string]struct{}
 
+	Security       layout.Path
+	SecurityImages map[string]struct{}
+
 	Modules map[string]ModuleImageLayout
 }
 
@@ -62,6 +65,7 @@ func CreateOCIImageLayoutsForDeckhouse(
 		&layouts.Deckhouse:      rootFolder,
 		&layouts.Install:        filepath.Join(rootFolder, "install"),
 		&layouts.ReleaseChannel: filepath.Join(rootFolder, "release-channel"),
+		&layouts.Security:       filepath.Join(rootFolder, "security", "trivy-db"),
 	}
 	for layoutPtr, fsPath := range fsPaths {
 		*layoutPtr, err = CreateEmptyImageLayoutAtPath(fsPath)
@@ -167,6 +171,10 @@ func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersi
 		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:rock-solid":   {},
 	}
 
+	layouts.SecurityImages = map[string]struct{}{
+		mirrorCtx.DeckhouseRegistryRepo + "/security/trivy-db:2": {},
+	}
+
 	for _, version := range deckhouseVersions {
 		layouts.DeckhouseImages[fmt.Sprintf("%s:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
 		layouts.InstallImages[fmt.Sprintf("%s/install:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
@@ -188,7 +196,12 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 			mirrorCtx.DeckhouseRegistryRepo + "/modules/" + moduleName + "/release:rock-solid":   {},
 		}
 
-		channelVersions, err := fetchVersionsFromModuleReleaseChannels(moduleData.ReleaseImages, mirrorCtx.RegistryAuth, mirrorCtx.Insecure)
+		channelVersions, err := fetchVersionsFromModuleReleaseChannels(
+			moduleData.ReleaseImages,
+			mirrorCtx.RegistryAuth,
+			mirrorCtx.Insecure,
+			mirrorCtx.SkipTLSVerification,
+		)
 		if err != nil {
 			return fmt.Errorf("fetch versions from %q release channels: %w", moduleName, err)
 		}
@@ -231,9 +244,9 @@ func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error
 func fetchVersionsFromModuleReleaseChannels(
 	releaseChannelImages map[string]struct{},
 	authProvider authn.Authenticator,
-	insecure bool,
+	insecure, skipVerifyTLS bool,
 ) (map[string]string, error) {
-	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure)
+	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 	channelVersions := map[string]string{}
 	for imageTag := range releaseChannelImages {
 

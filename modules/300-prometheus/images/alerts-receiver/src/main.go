@@ -18,12 +18,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/prometheus/alertmanager/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,27 +38,20 @@ func main() {
 
 	log.SetLevel(config.logLevel)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		sig := <-sigCh
-		log.Infof("got signal %v", sig)
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	server := newServer(config.listenHost, config.listenPort)
 	server.setHandlers(config, store)
 
+	log.Infof("starting listener: %s", server.Addr)
 	go func() {
 		err := server.ListenAndServe()
 		if err == nil || err == http.ErrServerClosed {
 			return
 		}
 		log.Error(err)
-		cancel()
+		stop()
 	}()
 
 	server.setReadiness(true)
@@ -91,38 +87,58 @@ func reconcile(ctx context.Context, s *storeStruct) {
 		return
 	}
 
-	// Add or update CRs
-	alertSet := make(map[string]struct{}, len(s.memStore.alerts))
-	for fingerprint, alert := range s.memStore.alerts {
-		if alert.Resolved() {
-			s.memStore.removeAlert(fingerprint)
-			continue
-		}
+	log.Info("remove resolved alerts")
+	s.memStore.removeResolvedAlerts()
 
-		alertSet[fingerprint.String()] = struct{}{}
+	// get deep copy
+	alerts := s.memStore.deepCopy()
 
+	if len(alerts) == s.memStore.capacity {
+		addClusterHasTooManyAlertsAlert(alerts, s.memStore.capacity)
+	}
+
+	if time.Now().After(s.memStore.lastDMSReceived.Add(2 * reconcileTime)) {
+		addMissingDeadMensSwitchAlert(alerts)
+	}
+
+	for fingerprint, alert := range alerts {
 		// is alerts CR does not exist in cluster, insert CR
-		if _, ok := crSet[fingerprint.String()]; !ok {
-			err := s.clusterStore.createCR(ctx, fingerprint.String(), alert)
+		if _, ok := crSet[fingerprint]; !ok {
+			err := s.clusterStore.createCR(ctx, fingerprint, alert)
 			if err != nil {
 				log.Error(err)
 			}
-		}
-
-		// Update CR status
-		err := s.clusterStore.updateCRStatus(ctx, fingerprint.String(), alert)
-		if err != nil {
-			log.Error(err)
+		} else {
+			// Update CR status
+			err := s.clusterStore.updateCRStatus(ctx, fingerprint, alert.StartsAt, alert.UpdatedAt)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 
 	// Remove CRs which do not have corresponding alerts
 	for k := range crSet {
-		if _, ok := alertSet[k]; !ok {
+		if _, ok := alerts[k]; !ok {
 			err := s.clusterStore.removeCR(ctx, k)
 			if err != nil {
 				log.Error(err)
 			}
 		}
 	}
+	log.Info("finishing reconcile")
+}
+
+// generate queue fullness alert
+func addClusterHasTooManyAlertsAlert(alerts map[string]*types.Alert, capacity int) {
+	log.Info("add queue fullness alert")
+	alert := generateAlert(ClusterHasTooManyAlertsAlertName, fmt.Sprintf("Cluster has more than %d active alerts.", capacity))
+	alerts[strings.ToLower(ClusterHasTooManyAlertsAlertName)] = alert
+}
+
+// generate alert about missing deadmansswitch
+func addMissingDeadMensSwitchAlert(alerts map[string]*types.Alert) {
+	log.Infof("add missed %s alert", DMSAlertName)
+	alert := generateAlert(MissingDMSAlertName, "Entire Alerting pipeline is not functional.")
+	alerts[strings.ToLower(MissingDMSAlertName)] = alert
 }

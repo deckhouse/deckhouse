@@ -64,7 +64,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum coll
                               "imageName": "ubuntu-18-04-cloud-amd64",
                               "mainNetwork": "dev2"
                           },
-                          "kubernetesVersion": "1.23",
+                          "kubernetesVersion": "1.29",
                           "manualRolloutID": "",
                           "name": "worker",
                           "nodeType": "CloudEphemeral",

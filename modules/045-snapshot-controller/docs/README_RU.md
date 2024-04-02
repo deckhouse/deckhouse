@@ -11,4 +11,4 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 - [cloud-provider-aws](../030-cloud-provider-aws/);
 - [cloud-provider-azure](../030-cloud-provider-azure/);
 - [cloud-provider-gcp](../030-cloud-provider-gcp/);
-- [linstor](../041-linstor/).
+- [sds-replicated-volume](https://deckhouse.ru/modules/sds-replicated-volume/stable/).

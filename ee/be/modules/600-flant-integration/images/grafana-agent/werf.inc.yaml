@@ -1,0 +1,33 @@
+---
+artifact: {{ .ModuleName }}/agent-artifact
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b v0.18.2 https://github.com/grafana/agent.git .
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd cmd/agent
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /agent
+    - chown 64535:64535 /agent
+    - chmod 0755 /agent
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/agent-artifact
+  add: /agent
+  to: /bin/agent
+  before: setup
+- artifact: {{ .ModuleName }}/agent-artifact
+  add: /src/cmd/agent/agent-local-config.yaml
+  to: /etc/agent/agent.yaml
+  before: setup
+docker:
+  ENTRYPOINT: ["/agent"]
+  CMD: ["--config.file=/etc/agent/agent.yaml", "--prometheus.wal-directory=/etc/agent/data"]

@@ -16,6 +16,7 @@
 
 source /shell_lib.sh
 
+# "e30=" is base64-encoded empty JSON ("{}"). It is used as default so that `fromjson` does not return an error.
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -52,6 +53,23 @@ kubernetes:
         "defaultCRI": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*defaultCRI:[ ]+(.*)\n").captures[0].string),
         "clusterPrefixLen": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*prefix:[ ]+(.*)\n").captures[0].string | length),
         "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string)
+      }
+  - name: provider_cluster_config
+    apiVersion: v1
+    kind: Secret
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-provider-cluster-configuration
+    jqFilter: |
+      {
+        "zones": (.data."cloud-provider-discovery-data.json" // "e30=" | @base64d | fromjson | .zones // [])
       }
   - name: deckhouse_config
     apiVersion: deckhouse.io/v1alpha1
@@ -102,6 +120,21 @@ EOF
 {"allowed":false, "message":"it is forbidden to set maxPerZone lower than minPerZone for NodeGroup"}
 EOF
     return 0
+  fi
+
+  # Check zones existence for CloudEphemeral nodes
+  allowedZones=$(context::jq -e -r 'if (.snapshots.provider_cluster_config | length) > 0 then .snapshots.provider_cluster_config[0].filterResult.zones else [] end | if . == [] then [] else .[] end')
+  ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
+
+  if [[ "$allowedZones" != "[]" ]]; then
+    for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
+      if ! printf '%s\n' "${allowedZones[@]}" | grep -qE "^$zone\$"; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"unknown zone \"${zone}\""}
+EOF
+        return 0
+      fi
+    done
   fi
 
   criType="$(context::jq -r '.review.request.object.spec.cri.type')"
@@ -185,6 +218,15 @@ EOF
         return 0
     fi
   fi
+
+  # Forbid more than one taint with the same key and effect
+  if context::jq -e -r '.review.request.object.spec.nodeTemplate.taints // [] | group_by(.key,.effect)[] | select(length > 1)' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.nodeTemplate.taints must contains only one taint with the same key and effect"}
+EOF
+    return 0
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}

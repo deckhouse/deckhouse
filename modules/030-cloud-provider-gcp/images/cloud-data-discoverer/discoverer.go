@@ -89,3 +89,8 @@ func key(name string, cpu, memory int64) string {
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	return nil, nil
 }
+
+// NotImplemented
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	return []v1alpha1.DiskMeta{}, nil
+}

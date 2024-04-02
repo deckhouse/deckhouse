@@ -1,0 +1,34 @@
+{{- $ciliumVersion := "1.14.5" }}
+---
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/hubble-relay/Dockerfile
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache make git bash
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64
+  - mkdir -p /go/src/github.com/cilium/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
+  - cd /go/src/github.com/cilium/cilium/hubble-relay
+  - make
+  - chown 64535:64535 /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
+  - chmod 0700 /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
+---
+# Distroless Main Image
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
+  to: /usr/local/bin/hubble-relay
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: ["/usr/local/bin/hubble-relay", "serve"]

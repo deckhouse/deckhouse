@@ -1,12 +1,10 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_18_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache git
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
@@ -14,7 +12,8 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+fromCacheVersion: 2024022701
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -30,39 +29,21 @@ git:
   - '**/*.patch'
   stageDependencies:
     install:
-    - '**/*.patch'
+    - '**/*'
 shell:
-  beforeInstall:
-  - apt-get update && apt-get install -y make bash git ca-certificates openssl openssh-client bzip2 curl gnupg apt-utils
-  - curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/nodesource.gpg
-  - export NODE_MAJOR=20
-  - echo "deb [signed-by=/etc/apt/trusted.gpg.d/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-  - apt-get update && apt-get install nodejs -y
-  - npm update -g npm
-  - npm install webpack -g
-  - npm config set registry http://registry.npmjs.org/
-  - apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg
-  - echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
-  - apt-get update && apt-get install -y yarn
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.44.0
+  - export NODE_MAJOR=20
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
+  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
   - cd /prometheus/prometheus/web/ui
-  - npm update webpack
-  - npm update nth-check
-  - npm update loader-utils
-  - npm update json5
-  - npm update @babel/traverse
-  - npm install
+  - mv /prometheus-deps/* .
   - npm run build
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
-  - go get -u golang.org/x/net@v0.17.0
-  - go get -u github.com/docker/distribution@v2.8.3
-  - go get -u google.golang.org/grpc@v1.58.3
   - go mod tidy
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /prometheus/prometheus
   - mkdir -p /consoles
@@ -82,16 +63,14 @@ shell:
 {{ $binariesList := "/usr/bin/curl /bin/sh /bin/df" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y curl
   install:
     - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2024022701
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /prometheus/prometheus/prometheus
@@ -103,19 +82,19 @@ import:
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /prometheus/prometheus/console_libraries/
-  to: /usr/share/prometheus/console_libraries/
+  to: /usr/share/prometheus/console_libraries
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /consoles/
-  to: /usr/share/prometheus/consoles/
+  to: /usr/share/prometheus/consoles
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /etc/
-  to: /etc/prometheus/
+  to: /etc/prometheus
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /empty/
-  to: /prometheus/
+  to: /prometheus
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate

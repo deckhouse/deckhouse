@@ -153,7 +153,11 @@ func (c *ConfigValidator) ConvertToLatest(cfg *v1alpha1.ModuleConfig) Validation
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
 func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult {
 	result := c.ConvertToLatest(cfg)
-	if result.HasError() || !hasVersionedSettings(cfg) {
+	if result.HasError() {
+		return result
+	}
+
+	if cfg.Spec.Enabled != nil && !(*cfg.Spec.Enabled) {
 		return result
 	}
 
@@ -171,12 +175,17 @@ func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult 
 
 // validateSettings uses ValuesValidator from ModuleManager instance to validate spec.settings.
 // cfgName arg is a kebab-cased name of the ModuleConfig resource.
-// cfgSettings is a content of spec.settings.
+// cfgSettings is a content of spec.settings and can be nil if settings field wasn't set.
 // (Note: cfgSettings map is a map with 'plain values', i.e. without camelCased module name as a root key).
 func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[string]interface{}) error {
 	// Ignore empty validator.
 	if c.valuesValidator == nil {
 		return nil
+	}
+
+	// init cfg settings if it equals nil
+	if cfgSettings == nil {
+		cfgSettings = make(map[string]interface{})
 	}
 
 	valuesKey := valuesKeyFromObjectName(cfgName)

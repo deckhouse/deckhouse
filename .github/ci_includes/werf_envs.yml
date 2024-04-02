@@ -15,6 +15,5 @@ GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
 SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
 GOPROXY: "${{secrets.GOPROXY}}"
-CRATESPROXY: "${{secrets.CRATESPROXY}}"
 # </template: git_source_envs>
 {!{- end -}!}

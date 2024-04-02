@@ -4,7 +4,7 @@ layout: sidebar
 <div class="docs">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
-        {%- if page.comparable and site.mode != 'local' %}
+        {%- if page.comparable and site.mode != 'module' %}
         <div class="btn-group compare">
             <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
                 Compare

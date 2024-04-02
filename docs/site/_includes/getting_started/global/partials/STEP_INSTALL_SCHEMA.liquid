@@ -92,6 +92,9 @@ Scheme of Deckhouse installation in a private environment:<br />
    - 8 CPU cores
    - 16 GB of RAM
    - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
@@ -100,6 +103,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - at least 8 GB of RAM
    - at least 40 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/documentation/v1/supported_versions.html)
+   - Linux kernel version >= `5.7`
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
@@ -110,7 +114,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - SSH key access from the **personal computer** (section 1)
    - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
-   - `cloud-utils` package should be installed on the node
+   - `cloud-utils` and `cloud-init` packages should be installed on the node
    {% endofftopic %}
 {%- endif %}
 </li>

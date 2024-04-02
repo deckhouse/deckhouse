@@ -621,7 +621,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(node_ntp_rtt_seconds{node=~\"$node\"}[$__interval_sx3])",
+          "expr": "max_over_time(node_ntp_rtt_seconds{node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
@@ -748,7 +748,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__interval_sx3]) > 0)\nor\n(min_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__interval_sx3]) < 0)",
+          "expr": "(max_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -880,7 +880,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(node_ntp_root_dispersion_seconds{node=~\"$node\"}[$__interval_sx3])",
+          "expr": "max_over_time(node_ntp_root_dispersion_seconds{node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
@@ -1007,7 +1007,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__interval_sx3]) > 0)\nor\n(min_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__interval_sx3]) < 0)",
+          "expr": "(max_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {

@@ -4,7 +4,6 @@ FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
 FORMATTING_END = \033[0m
 
-TESTS_TIMEOUT="15m"
 FOCUS=""
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
@@ -50,7 +49,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),"")
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -64,7 +63,15 @@ else
 	ifneq ($(FE_MODULES),)
 		FE_MODULES_RECURSE = ${FE_MODULES}/...
 	endif
-	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE}
+	BE_MODULES = $(shell find ./ee/be/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		BE_MODULES_RECURSE = ${BE_MODULES}/...
+	endif
+	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		SE_MODULES_RECURSE = ${SE_MODULES}/...
+	endif
+	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif
 
 # Set host arch & OS for golang-based programs, e.g. Prometheus
@@ -124,7 +131,7 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
+.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
@@ -135,6 +142,9 @@ tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered wit
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
+
+tests-controller: ## Run deckhouse-controller unit tests.
+	go test ./deckhouse-controller/... -v
 
 .PHONY: tests-doc-links
 tests-doc-links: ## Build documentation and run checker of html links.

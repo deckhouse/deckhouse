@@ -16,4 +16,7 @@
 if [ ! -f /etc/kubernetes/pki/ca.crt ] ; then
   cp /var/lib/bashible/ca.crt /etc/kubernetes/pki/
 fi
+if [ "$(stat -c %a /etc/kubernetes/pki/ca.crt)" != "600" ] ; then
+  chmod 0600 /etc/kubernetes/pki/ca.crt
+fi
 {{- end }}

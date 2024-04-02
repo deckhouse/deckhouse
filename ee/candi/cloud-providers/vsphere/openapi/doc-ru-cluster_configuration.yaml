@@ -176,6 +176,9 @@ apiVersions:
         vmFolderPath:
           description: |
             Путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+        vmFolderExists:
+          description: |
+            Установите значение в `true`, если путь заданный в `vmFolderPath` существует. Установка более одного кластера в папку невозможна.
         region:
           description: |
             Тег, прикрепленный к vSphere Datacenter, в котором будут происходить все операции: заказ виртуальных машин, размещение их дисков на datastore, подключение к network.

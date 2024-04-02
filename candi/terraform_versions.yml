@@ -1,34 +1,63 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
 
-version: 0.13.4
+version: 0.14.8
 
 aws:
   namespace: hashicorp
   type: aws
   version: 4.50.0
+  # artifact name with provider binary
+  artifact: terraform-provider-aws
+  # provider binary name with artifact and destination image
+  artifactBinary: terraform-provider-aws
+  # provider binary name with destination image
+  destinationBinary: terraform-provider-aws
 
 azure:
   namespace: hashicorp
   type: azurerm
   version: 2.36.0
+  artifact: terraform-provider-azure
+  artifactBinary: terraform-provider-azurerm
+  destinationBinary: terraform-provider-azurerm
 
 gcp:
   namespace: hashicorp
   type: google
   version: 3.48.0
+  artifact: terraform-provider-gcp
+  artifactBinary: terraform-provider-gcp
+  destinationBinary: terraform-provider-google
 
 openstack:
   namespace: terraform-provider-openstack
   type: openstack
   version: 1.32.0
+  artifact: terraform-provider-openstack
+  artifactBinary: terraform-provider-openstack
+  destinationBinary: terraform-provider-openstack
 
 vsphere:
   namespace: hashicorp
   type: vsphere
   version: 2.0.2
+  artifact: terraform-provider-vsphere
+  artifactBinary: terraform-provider-vsphere
+  destinationBinary: terraform-provider-vsphere
+
+vcd:
+  namespace: vmware
+  type: vcd
+  version: 3.10.0
+  artifact: terraform-provider-vcd-artifact
+  artifactBinary: terraform-provider-vcd
+  destinationBinary: terraform-provider-vcd
 
 yandex:
   namespace: yandex-cloud
   type: yandex
   version: 0.83.0
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex

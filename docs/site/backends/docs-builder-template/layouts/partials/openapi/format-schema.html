@@ -7,50 +7,51 @@
 {{ $ancestors := .ancestors }} {{/* A map, containing the parameter ancestors */}}
 {{ $apiVersion := .apiVersion }} {{/* A string. APIVersion of the resource of the parameter, to build the parameter HTML id (for links). Optional. */}}
 {{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
+{{ $required  := .required }} {{/* Array of the required parameters. */}}
 
-{{ $description :=  "" }}
+{{- $description :=  "" }}
 
-{{ if reflect.IsMap $data }}
-  {{ if $langData.description }}
-    {{ $description = $langData.description | markdownify }}
-  {{ else }}
-    {{ $description =  $data.description | markdownify }}
-  {{ end }}
-{{ end }}
+{{- if reflect.IsMap $data }}
+  {{- if $langData.description }}
+    {{- $description = $langData.description | markdownify }}
+  {{- else }}
+    {{- $description =  $data.description | markdownify }}
+  {{- end }}
+{{- end }}
 
-{{ $fullPath := $ancestors }}
-{{ $parameterTitle := $name }}
-{{ $ancestorsPathString := "" }}
-{{ $linkAnchor := "" }}
-{{ if $apiVersion }}
-  {{ $linkAnchor = printf "%s-%s" $resourceName $apiVersion }}
-{{ else }}
-  {{ $linkAnchor = $resourceName }}
-{{ end }}
+{{- $fullPath := $ancestors }}
+{{- $parameterTitle := $name }}
+{{- $ancestorsPathString := "" }}
+{{- $linkAnchor := "" }}
+{{- if $apiVersion }}
+  {{- $linkAnchor = printf "%s-%s" $resourceName $apiVersion }}
+{{- else }}
+  {{- $linkAnchor = $resourceName }}
+{{- end }}
 
-{{ if gt ($name | len ) 0 }}
-  {{ $fullPath = $fullPath | append $name }}
-{{ else }} {{/* empty parameter name is an array element */}}
-  {{ $fullPath = $fullPath | append "element" }}
-  {{ $parameterTitle = lang.Translate "element_of_array" | strings.FirstUpper }}
-{{ end }}
+{{- if gt ($name | len ) 0 }}
+  {{- $fullPath = $fullPath | append $name }}
+{{- else }} {{/* empty parameter name is an array element */}}
+  {{- $fullPath = $fullPath | append "element" }}
+  {{- $parameterTitle = lang.Translate "element_of_array" | strings.FirstUpper }}
+{{- end }}
 
-{{ if $ancestors }}
-  {{ $ancestorsPathString = printf "%s." (delimit $ancestors ".") }}
-{{ end }}
+{{- if $ancestors }}
+  {{- $ancestorsPathString = printf "%s." (delimit $ancestors ".") }}
+{{- end }}
 
-{{ if $fullPath }}
-  {{ $linkAnchor = printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower) }}
-{{ end }}
+{{- if $fullPath }}
+  {{- $linkAnchor = printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower) }}
+{{- end }}
 
-{{ if gt ($parameterTitle | len ) 0 }}
+{{- if gt ($parameterTitle | len ) 0 }}
   <li>
 
-  {{ if and (reflect.IsMap $data) (or (index $data "x-doc-deprecated") (index $data "deprecated")) }}
+  {{- if and (reflect.IsMap $data) (or (index $data "x-doc-deprecated") (index $data "deprecated")) }}
   <span id="{{ $linkAnchor }}" data-anchor-id="{{ $linkAnchor }}" class="resources__prop_title anchored"><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span><span data-tippy-content="{{ T "deprecated_parameter_hint" }}" class="resources__prop_is_deprecated">{{ T "deprecated_parameter" }}</span></span>
-  {{ else }}
+  {{- else }}
   <span id="{{ $linkAnchor }}" data-anchor-id="{{ $linkAnchor }}" class="resources__prop_name anchored"><span class="ancestors">{{ $ancestorsPathString }}</span><span>{{ $parameterTitle }}</span></span>
-  {{ end }}
+  {{- end }}
 
   {{ if reflect.IsMap $data }}
     {{ if $data.items.type }}
@@ -60,45 +61,48 @@
     {{ end }}
   {{ end }}
 {{ end }}
+{{- if or (in $required $name) ( index $data "x-doc-required" ) }}
+<p class="resources__attrs required"><span class="resources__attrs_name required">{{ T "required_value_sentence" }}</span></p>
+{{- end }}
 
-
-{{ if reflect.IsMap $data }}
-  {{ partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData "linkAnchor" $linkAnchor) }}
-{{ end }}
+{{- if reflect.IsMap $data }}
+  {{- partial "openapi/format-attributes" ( dict "name" $name "attributes" $data "parent" $parent "langData" $langData "linkAnchor" $linkAnchor) }}
+{{- end }}
 
 {{ if and (reflect.IsMap $data) $data.properties }}
+  {{- $requiredParameters := $data.required }}
   <ul>
-  {{ range $subParameterName, $subParameterAttributes := $data.properties }}
-    {{ $subParameterLangData := index $langData.properties $subParameterName }}
+  {{- range $subParameterName, $subParameterAttributes := $data.properties }}
+    {{- $subParameterLangData := index $langData.properties $subParameterName }}
 
-    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+    {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters ) }}
   {{ end }}
   </ul>
-{{ else if and (reflect.IsMap $data) $data.items }}
-  {{ if and (reflect.IsMap $data.items) $data.items.properties }}
+{{- else if and (reflect.IsMap $data) $data.items }}
+  {{- if and (reflect.IsMap $data.items) $data.items.properties }}
     {{/* Array of objects */}}
     <ul>
-    {{ range $subParameterName, $subParameterAttributes := $data.items.properties }}
-      {{ $subParameterLangData := index $langData.items.properties $subParameterName }}
-      {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
-    {{ end }}
+    {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
+      {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
+      {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+    {{- end }}
     </ul>
-  {{ else }}{{/* Array of non-objects (string, integer, etc.) */}}
-    {{ $keysToShow := slice "description" "example" "x-examples" "x-doc-example" "x-doc-examples" "enum" "default" "x-doc-default" "minimum" "maximum" "pattern" "minLength" "maxLength" }}
+  {{- else }}{{/* Array of non-objects (string, integer, etc.) */}}
+    {{- $keysToShow := slice "description" "example" "x-examples" "x-doc-example" "x-doc-examples" "enum" "default" "x-doc-default" "minimum" "maximum" "pattern" "minLength" "maxLength" }}
 
-    {{ $keysToShowIsExist := false }}
+    {{- $keysToShowIsExist := false }}
 
-    {{ range $key, $val := $data.items }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
+    {{- range $key, $val := $data.items }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
 
-    {{ if $keysToShowIsExist }}
+    {{- if $keysToShowIsExist }}
       <ul>
-      {{ partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
+      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName) }}
       </ul>
-    {{ end }}
+    {{- end }}
 
-  {{ end }}
-{{ end }}
+  {{- end }}
+{{- end }}
 
-{{ if gt ($parameterTitle | len ) 0 }}
+{{- if gt ($parameterTitle | len ) 0 }}
 </li>
-{{ end }}
+{{- end }}

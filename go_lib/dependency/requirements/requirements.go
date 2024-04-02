@@ -18,8 +18,13 @@ package requirements
 
 import (
 	"fmt"
+	"reflect"
+	"regexp"
+	"runtime"
 
 	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var (
@@ -43,18 +48,46 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
-// CheckRequirement run check function for `key` requirement. Returns true if check is passed, false otherwise
-func CheckRequirement(key, value string) (bool, error) {
+var mreg = regexp.MustCompile(`/modules/([0-9]+-)?(\S+)/requirements`)
+
+// CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
+// enabledModules is optional and will filter check-functions if module is disabled
+func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error) {
 	if defaultRegistry == nil {
 		return true, nil
 	}
 
-	f, err := defaultRegistry.GetCheckByKey(key)
+	fs, err := defaultRegistry.GetChecksByKey(key)
 	if err != nil {
 		return false, err
 	}
 
-	return f(value, memoryStorage)
+	for _, f := range fs {
+		if len(enabledModules) > 0 {
+			modulesSet := enabledModules[0]
+			pc := reflect.ValueOf(f).Pointer()
+			fn := runtime.FuncForPC(pc)
+			// return the caller of the function like: github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements.init.0.func1
+
+			match := mreg.FindStringSubmatch(fn.Name())
+			var moduleName string
+			if len(match) > 0 {
+				moduleName = match[2] // name of a module
+			}
+
+			if moduleName != "" && !modulesSet.Has(moduleName) {
+				// module is disabled, we don't have to run its checks
+				continue
+			}
+		}
+
+		passed, ferr := f(value, memoryStorage)
+		if ferr != nil || !passed {
+			return passed, ferr
+		}
+	}
+
+	return true, nil
 }
 
 // HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
@@ -99,33 +132,33 @@ type ValueGetter interface {
 
 type requirementsResolver interface {
 	RegisterCheck(key string, f CheckFunc)
-	GetCheckByKey(key string) (CheckFunc, error)
+	GetChecksByKey(key string) ([]CheckFunc, error)
 
 	RegisterDisruption(key string, f DisruptionFunc)
 	GetDisruptionByKey(key string) (DisruptionFunc, error)
 }
 
 type requirementsRegistry struct {
-	checkers    map[string]CheckFunc
+	checkers    map[string][]CheckFunc
 	disruptions map[string]DisruptionFunc
 }
 
 func newRegistry() *requirementsRegistry {
 	return &requirementsRegistry{
-		checkers:    make(map[string]CheckFunc),
+		checkers:    make(map[string][]CheckFunc),
 		disruptions: make(map[string]DisruptionFunc),
 	}
 }
 
 func (r *requirementsRegistry) RegisterCheck(key string, f CheckFunc) {
-	r.checkers[key] = f
+	r.checkers[key] = append(r.checkers[key], f)
 }
 
 func (r *requirementsRegistry) RegisterDisruption(key string, f DisruptionFunc) {
 	r.disruptions[key] = f
 }
 
-func (r *requirementsRegistry) GetCheckByKey(key string) (CheckFunc, error) {
+func (r *requirementsRegistry) GetChecksByKey(key string) ([]CheckFunc, error) {
 	f, ok := r.checkers[key]
 	if !ok {
 		return nil, errors.Wrap(ErrNotRegistered, fmt.Sprintf("requirement with a key: %s", key))

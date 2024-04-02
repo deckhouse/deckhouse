@@ -26,16 +26,11 @@ docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - |
-    apt-get update && apt-get install -y --no-install-recommends \
-      git ca-certificates && apt-get clean -y && \
-      rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -47,14 +42,7 @@ shell:
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeSetup:
-    - apt-get update
-    - |
-      apt-get install -y ca-certificates \
-                        util-linux \
-                        mount nvme udev parted \
-                        e2fsprogs xfsprogs btrfs-progs
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

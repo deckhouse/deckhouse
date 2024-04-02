@@ -1,0 +1,25 @@
+{{- $cniVersion := "1.4.0" }}
+---
+# #####################################################################
+# Build cni binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/download-cni.sh
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/cni-plugins-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - mkdir -p /go/src/github.com/containernetworking/plugins
+  - git clone --depth 1 --branch v{{ $cniVersion }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /go/src/github.com/containernetworking/plugins
+  - cd /go/src/github.com/containernetworking/plugins
+  - ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
+  - mkdir -p /out/linux/amd64/bin
+  - cp -f /go/src/github.com/containernetworking/plugins/bin/* /out/linux/amd64/bin
+  - strip /out/linux/amd64/bin/*
+---

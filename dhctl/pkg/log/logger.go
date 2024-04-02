@@ -22,10 +22,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/fatih/color"
-	"github.com/flant/logboek"
-	"github.com/sirupsen/logrus"
 	"k8s.io/klog"
+
+	"github.com/gookit/color"
+	"github.com/sirupsen/logrus"
+	"github.com/werf/logboek"
+	"github.com/werf/logboek/pkg/level"
+	"github.com/werf/logboek/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -118,56 +121,54 @@ var (
 )
 
 type styleEntry struct {
-	title   string
-	options logboek.LogProcessOptions
+	title         string
+	optionsSetter func(opts types.LogProcessOptionsInterface)
 }
 
 type PrettyLogger struct {
 	processTitles map[string]styleEntry
 	isDebug       bool
+	logboekLogger types.LoggerInterface
 }
 
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
-	err := logboek.Init()
-	if err != nil {
-		panic(fmt.Errorf("can't start logging system: %w", err))
-	}
-	logboek.SetLevel(logboek.Info)
-
-	if opts.Width != 0 {
-		logboek.SetWidth(opts.Width)
-	} else {
-		logboek.SetWidth(logboek.DefaultWidth)
-	}
-
-	// Adds fixed width ↵ , but breaks copy-pasta and tabs
-	if !opts.IsDebug {
-		logboek.EnableFitMode()
-	}
-
-	if opts.OutStream != nil {
-		logboek.Error.SetStream(opts.OutStream)
-		logboek.Warn.SetStream(opts.OutStream)
-		logboek.Default.SetStream(opts.OutStream)
-		logboek.Info.SetStream(opts.OutStream)
-		logboek.Debug.SetStream(opts.OutStream)
-	}
-
-	return &PrettyLogger{
+	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
-			"common":    {"🎈 ~ Common: %s", CommonOptions()},
-			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions()},
-			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions()},
-			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions()},
-			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions()},
-			"default":   {"%s", BoldOptions()},
+			"common":    {"🎈 ~ Common: %s", CommonOptions},
+			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions},
+			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
+			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
+			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
+			"default":   {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,
 	}
+
+	if opts.OutStream != nil {
+		res.logboekLogger = logboek.DefaultLogger().NewSubLogger(opts.OutStream, opts.OutStream)
+	} else {
+		res.logboekLogger = logboek.DefaultLogger()
+	}
+
+	res.logboekLogger.SetAcceptedLevel(level.Info)
+
+	if opts.Width != 0 {
+		res.logboekLogger.Streams().SetWidth(opts.Width)
+	} else {
+		res.logboekLogger.Streams().SetWidth(140)
+	}
+
+	if opts.IsDebug {
+		res.logboekLogger.Streams().DisableProxyStreamDataFormatting()
+	} else {
+		res.logboekLogger.Streams().EnableProxyStreamDataFormatting()
+	}
+
+	return res
 }
 
 func (d *PrettyLogger) ProcessLogger() ProcessLogger {
-	return newPrettyProcessLogger()
+	return newPrettyProcessLogger(d.logboekLogger)
 }
 
 func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
@@ -175,34 +176,34 @@ func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
 	if !ok {
 		format = d.processTitles["default"]
 	}
-	return logboek.LogProcess(fmt.Sprintf(format.title, t), format.options, run)
+	return d.logboekLogger.LogProcess(format.title, t).Options(format.optionsSetter).DoError(run)
 }
 
 func (d *PrettyLogger) LogInfoF(format string, a ...interface{}) {
-	logboek.LogInfoF(format, a...)
+	d.logboekLogger.Info().LogF(format, a...)
 }
 
 func (d *PrettyLogger) LogInfoLn(a ...interface{}) {
-	logboek.LogInfoLn(a...)
+	d.logboekLogger.Info().LogLn(a...)
 }
 
 func (d *PrettyLogger) LogErrorF(format string, a ...interface{}) {
-	logboek.LogErrorF(format, a...)
+	d.logboekLogger.Error().LogF(format, a...)
 }
 
 func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
-	logboek.LogErrorLn(a...)
+	d.logboekLogger.Error().LogLn(a...)
 }
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
 	if d.isDebug {
-		logboek.LogInfoF(format, a...)
+		d.logboekLogger.Info().LogF(format, a...)
 	}
 }
 
 func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
 	if d.isDebug {
-		logboek.LogInfoLn(a...)
+		d.logboekLogger.Info().LogLn(a...)
 	}
 }
 

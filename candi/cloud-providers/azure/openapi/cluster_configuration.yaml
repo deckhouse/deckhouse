@@ -15,6 +15,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: AzureClusterConfiguration
@@ -50,6 +51,7 @@ apiVersions:
           Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
+        x-unsafe: true
       standard:
         description: |
           Settings for the [`Standard`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
@@ -83,6 +85,7 @@ apiVersions:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.0.0.0/16
+        x-unsafe: true
       subnetCIDR:
         description: |
           A [subnet](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) from the `vNetCIDR` address space for cluster nodes.
@@ -91,6 +94,7 @@ apiVersions:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.1.2.0/24
+        x-unsafe: true
       peeredVNets:
         description: |
           An array of `VNets` to merge with the cluster network.
@@ -132,6 +136,7 @@ apiVersions:
               It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
+            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A list of zones where master nodes can be created.
@@ -348,10 +353,12 @@ apiVersions:
               az account list-locations -o table
               ```
             type: string
+            x-unsafe: true
           subscriptionId:
             description: |
               The ID of the subscription.
             type: string
+            x-unsafe: true
           clientId:
             description: |
               The client ID.
@@ -359,11 +366,14 @@ apiVersions:
           clientSecret:
             description: |
               The client's secret.
+
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
             type: string
           tenantId:
             description: |
               The ID of the tenant.
             type: string
+            x-unsafe: true
       zones:
         description: |
           The globally restricted set of zones that this Cloud Provider works with.

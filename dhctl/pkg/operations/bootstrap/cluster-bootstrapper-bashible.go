@@ -15,6 +15,8 @@
 package bootstrap
 
 import (
+	"fmt"
+	
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -37,10 +39,12 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 	if err != nil {
 		return err
 	}
-
-	sshClient, err = sshClient.Start()
-	if err != nil {
-		return err
+	sshClient.InitializeNewAgent = b.initializeNewAgent
+	if _, err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+	if b.initializeNewAgent {
+		defer sshClient.Stop()
 	}
 
 	err = terminal.AskBecomePassword()

@@ -10,9 +10,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name)) | nindent 2 }}
 data:
   accept-requests-from.conf: |
+  {{- if $crd.spec.acceptRequestsFrom }}
     {{- range $cidr := $crd.spec.acceptRequestsFrom }}
     allow {{ $cidr }};
     {{- end }}
     deny all;
+  {{- end }}
   {{- end }}
 {{- end }}

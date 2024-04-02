@@ -34,7 +34,7 @@ func init() {
 		}
 		currentVersionStr, exists := getter.Get(minK8sVersionRequirementKey)
 		if !exists {
-			return true, nil
+			return false, errors.New("\nminUsedControlPlaneKubernetesVersion\n is not set")
 		}
 		currentVersion, err := semver.NewVersion(currentVersionStr.(string))
 		if err != nil {

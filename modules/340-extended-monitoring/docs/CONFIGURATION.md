@@ -26,7 +26,7 @@ Below is the list of labels used in Prometheus Rules and their default values.
 
 **Note,** that all the labels start with the `threshold.extended-monitoring.deckhouse.io/` prefix. The value specified in a label is a number that sets the alert trigger threshold.
 
-For example, the label `threshold.extended-monitoring.deck house.io/5xx-warning: "5"` on the Ingress resource changes the alert threshold from 10% (default) to 5%.
+For example, the label `threshold.extended-monitoring.deckhouse.io/5xx-warning: "5"` on the Ingress resource changes the alert threshold from 10% (default) to 5%.
 
 #### Non-namespaced Kubernetes objects
 

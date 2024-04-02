@@ -1,43 +1,43 @@
 {{- $versions := . }}
 {{- $versionsSorted := slice }}
 
-{{ $t := slice }}
-{{ $unformatted := slice }}
+{{- $t := slice }}
+{{- $unformatted := slice }}
 {{- range $versions }}
-  {{ $stability := "unknown" }}
-  {{ $weight := 0 }}
-  {{ $r := index (findRESubmatch `v(\d+)((alpha|beta)(\d+)?)?` . 1 ) 0 }}
+  {{- $stability := "unknown" }}
+  {{- $weight := 0 }}
+  {{- $r := index (findRESubmatch `v(\d+)((alpha|beta)(\d+)?)?` . 1 ) 0 }}
   {{if $r }}
     {{if not (index $r 2) }}
-      {{ $stability = "stable" }}
-      {{ $weight = mul 10_000_000 (int (index $r 1) ) }}  {{/* for v5 it is 10_000_000 * 5 = 50_000_000 */}}
-    {{ else }}
-      {{ $stability = index $r 3 }}
-      {{ $_w := 99 }}
-      {{ if index $r 4 }}{{ $_w = index $r 4 }}{{ end }}
-      {{ if eq $stability "beta" }}
+      {{- $stability = "stable" }}
+      {{- $weight = mul 10_000_000 (int (index $r 1) ) }}  {{/* for v5 it is 10_000_000 * 5 = 50_000_000 */}}
+    {{- else }}
+      {{- $stability = index $r 3 }}
+      {{- $_w := 99 }}
+      {{- if index $r 4 }}{{ $_w = index $r 4 }}{{ end }}
+      {{- if eq $stability "beta" }}
         {{/* the weight for v4beta3 is 10_000 * 4 + 3 = 40003 */}}
         {{/* the weight for v4beta is 10_000 * 4 + 99 = 40099 */}}
-        {{ $weight = add (mul 10_000 (int (index $r 1) )) (int $_w) }}
-      {{ else if eq $stability "alpha" }}
+        {{- $weight = add (mul 10_000 (int (index $r 1) )) (int $_w) }}
+      {{- else if eq $stability "alpha" }}
         {{/* the weight for v4alpha3 is 100 * 4 + 3 = 403 */}}
         {{/* the weight for v4alpha is 100 * 4 + 99 = 499 */}}
-        {{ $weight = add (mul 100 (int (index $r 1) )) (int $_w) }}
-      {{ end }}
-    {{ end }}
-    {{ $t = $t | append (dict "version" . "weight" $weight ) }}
-  {{ else }}
-    {{ $unformatted = $unformatted | append . }}
-  {{ end }}
-{{ end }}
-{{ $weight := 0 }}
-{{ range (sort $unformatted "value" "desc") }}
+        {{- $weight = add (mul 100 (int (index $r 1) )) (int $_w) }}
+      {{- end }}
+    {{- end }}
+    {{- $t = $t | append (dict "version" . "weight" $weight ) }}
+  {{- else }}
+    {{- $unformatted = $unformatted | append . }}
+  {{- end }}
+{{- end }}
+{{- $weight := 0 }}
+{{- range (sort $unformatted "value" "desc") }}
 {{- $t = $t | append (dict "version" . "weight" $weight ) }}
 {{- $weight = add (int $weight) 1 }}
-{{ end }}
+{{- end }}
 
 {{- range ( sort $t "weight" "desc" ) }}
 {{- $versionsSorted = $versionsSorted | append .version }}
-{{ end }}
+{{- end }}
 
-{{ return (delimit $versionsSorted ",") }}
+{{- return (delimit $versionsSorted ",") }}

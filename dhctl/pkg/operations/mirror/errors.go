@@ -33,3 +33,12 @@ func isRepoNotFoundError(err error) bool {
 	errMsg := err.Error()
 	return strings.Contains(errMsg, "NAME_UNKNOWN")
 }
+
+func IsTrivyMediaTypeNotAllowedError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "MANIFEST_INVALID") && strings.Contains(errMsg, "vnd.aquasec.trivy")
+}

@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 )
 
-const validatingErrorStr = `failed calling webhook "validation.istio.io"`
+const validatingErrorStr = `failed calling webhook`
 
 type IstioOperatorCrdSnapshot struct {
 	Revision  string
@@ -46,9 +46,10 @@ type IstioOperatorCrdSnapshot struct {
 }
 
 type IstioOperatorPodSnapshot struct {
-	Name           string
-	Revision       string
-	AllowedToPunch bool
+	Name              string
+	Revision          string
+	CreationTimestamp time.Time
+	Phase             v1.PodPhase
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -112,11 +113,11 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	if pod.CreationTimestamp.After(time.Now().Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
-		result.AllowedToPunch = true
-	}
 	result.Name = pod.Name
 	result.Revision = pod.Labels["revision"]
+	result.CreationTimestamp = pod.CreationTimestamp.Time
+	result.Phase = pod.Status.Phase
+
 	return result, nil
 }
 
@@ -125,7 +126,7 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 
 	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
 		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
-		if operatorPod.AllowedToPunch {
+		if time.Now().After(operatorPod.CreationTimestamp.Add(time.Minute*5)) && operatorPod.Phase == v1.PodRunning {
 			operatorPodMap[operatorPod.Revision] = operatorPod.Name
 		}
 	}
@@ -133,8 +134,11 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	for _, iopRaw := range input.Snapshots["istio_operators"] {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
 		if iop.NeedPunch {
+			input.LogEntry.Infof("iop with rev %s needs to punch.", iop.Revision)
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
+				input.LogEntry.Infof("Pod %s is allowed to punch.", podName)
 				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
+				input.LogEntry.Infof("Pod %s deleted.", podName)
 			}
 		}
 	}

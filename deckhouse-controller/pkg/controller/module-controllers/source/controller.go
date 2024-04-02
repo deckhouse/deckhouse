@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -74,6 +75,8 @@ type Controller struct {
 
 	externalModulesDir string
 
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+
 	rwlock                sync.RWMutex
 	moduleSourcesChecksum sourceChecksum
 }
@@ -85,6 +88,7 @@ func NewController(
 	moduleReleaseInformer d8informers.ModuleReleaseInformer,
 	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 ) *Controller {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -107,8 +111,9 @@ func NewController(
 
 		logger: lg,
 
-		externalModulesDir:    os.Getenv("EXTERNAL_MODULES_DIR"),
-		moduleSourcesChecksum: make(sourceChecksum),
+		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
+		moduleSourcesChecksum:   make(sourceChecksum),
+		deckhouseEmbeddedPolicy: embeddedPolicy,
 	}
 
 	// Set up an event handler for when ModuleSource resources change
@@ -265,6 +270,8 @@ const (
 
 var (
 	ErrNoPolicyFound = errors.New("no matching update policy found")
+
+	checksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
 )
 
 func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1.ModuleSource) (ctrl.Result, error) {
@@ -303,6 +310,20 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 		return ctrl.Result{Requeue: true}, err
 	}
 
+	// check, by means of comparing registry settings to the checkSum annotation, if new registry settings should be propagated to deployed module release
+	updateNeeded, err := c.checkAndPropagateRegistrySettings(ms)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+	// new registry settings checksum should be applied to module source
+	if updateNeeded {
+		if _, err := c.kubeClient.DeckhouseV1alpha1().ModuleSources().Update(context.TODO(), ms, metav1.UpdateOptions{}); err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		// reque ms after modifying annotation
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	sort.Strings(moduleNames)
 
 	// form available modules structure
@@ -314,7 +335,7 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1
 
 	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, opts)
 
-	// get all policies regardless their labels
+	// get all policies regardless of their labels
 	policies, err := c.moduleUpdatePoliciesLister.List(labels.Everything())
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
@@ -380,7 +401,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 	}
 
 	// check if we have an update policy for the moduleName
-	policy, err := getReleasePolicy(ms.Name, moduleName, policies)
+	policy, err := c.getReleasePolicy(ms.Name, moduleName, policies)
 	if err != nil {
 		// if policy not found - drop all previous module's errors
 		if errors.Is(err, ErrNoPolicyFound) {
@@ -390,6 +411,10 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 		return "", av, err
 	}
 	av.Policy = policy.Name
+
+	if policy.Spec.Update.Mode == "Ignore" {
+		return "", av, nil
+	}
 
 	downloadResult, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, moduleChecksum)
 	if err != nil {
@@ -506,6 +531,7 @@ func (c *Controller) createModuleRelease(ctx context.Context, ms *v1alpha1.Modul
 			ModuleName: moduleName,
 			Version:    semver.MustParse(result.ModuleVersion),
 			Weight:     result.ModuleWeight,
+			Changelog:  v1alpha1.Changelog(result.Changelog),
 		},
 	}
 
@@ -549,19 +575,26 @@ func (c *Controller) updateModuleSourceStatus(msCopy *v1alpha1.ModuleSource) err
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
-// if many policies match the module release labels, conflict=true is returned
-func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
+// if several policies match the module release labels, conflict=true is returned
+func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
 	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
 	var found bool
+
 	for _, policy := range policies {
 		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
 			if err != nil {
 				return nil, err
 			}
+			selectorSourceName, sourceLabelExists := selector.RequiresExactMatch("source")
+			if sourceLabelExists && selectorSourceName != sourceName {
+				// 'source' label is set, but does not match the given ModuleSource
+				continue
+			}
 
 			if selector.Matches(releaseLabelsSet) {
+				// ModuleUpdatePolicy matches ModuleSource and specified Module
 				if found {
 					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
 				}
@@ -572,8 +605,60 @@ func getReleasePolicy(sourceName, moduleName string, policies []*v1alpha1.Module
 	}
 
 	if !found {
-		return nil, ErrNoPolicyFound
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
+		return &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
+			},
+			Spec: *c.deckhouseEmbeddedPolicy,
+		}, nil
 	}
 
 	return matchedPolicy, nil
+}
+
+// checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing checksumAnnotation annotation and current registry spec)
+// and update relevant module releases' openapi values files if it the case
+func (c *Controller) checkAndPropagateRegistrySettings(msCopy *v1alpha1.ModuleSource) ( /* update required */ bool, error) {
+	// get registry settings checksum
+	currentChecksum := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s/%s", msCopy.Spec.Registry.Repo, msCopy.Spec.Registry.DockerCFG))))
+	// if there is no annotations - only set the current checksum value
+	if msCopy.ObjectMeta.Annotations == nil {
+		msCopy.ObjectMeta.Annotations = make(map[string]string)
+		msCopy.ObjectMeta.Annotations[checksumAnnotation] = currentChecksum
+		return true, nil
+	}
+
+	// if the annotation matches current checksum - there is nothing to do here
+	if msCopy.ObjectMeta.Annotations[checksumAnnotation] == currentChecksum {
+		return false, nil
+	}
+
+	// get related releases
+	moduleReleasesFromSource, err := c.moduleReleasesLister.List(labels.SelectorFromSet(labels.Set{"source": msCopy.Name}))
+	if err != nil {
+		return false, fmt.Errorf("could list module releases to update registry settings: %w", err)
+	}
+
+	for _, release := range moduleReleasesFromSource {
+		if release.Status.Phase == v1alpha1.PhaseDeployed {
+			ownerReferences := release.GetOwnerReferences()
+			for _, ref := range ownerReferences {
+				if ref.UID == msCopy.UID && ref.Name == msCopy.Name && ref.Kind == "ModuleSource" {
+					err = downloader.InjectRegistryToModuleValues(filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version)), msCopy)
+					if err != nil {
+						return false, fmt.Errorf("couldn't update module release %v registry settings: %w", release.Name, err)
+					}
+					break
+				}
+			}
+		}
+	}
+	msCopy.ObjectMeta.Annotations[checksumAnnotation] = currentChecksum
+
+	return true, nil
 }

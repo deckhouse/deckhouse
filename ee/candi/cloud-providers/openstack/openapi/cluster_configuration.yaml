@@ -15,6 +15,7 @@ apiVersions:
       ```
     x-doc-search: |
       ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
       - apiVersion: deckhouse.io/v1
         kind: OpenStackClusterConfiguration
@@ -113,6 +114,7 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            x-unsafe-rules: [updateReplicas]
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
@@ -195,6 +197,41 @@ apiVersions:
             additionalProperties:
               type: string
               minLength: 1
+          serverGroup:
+            type: object
+            description: |
+              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+            required: [policy]
+            properties:
+              policy:
+                type: string
+                enum: [AntiAffinity, ManuallyManaged]
+                description: |
+                  The policy that determines how instances are distributed among hypervisors.
+
+                  - `AntiAffinity` — instances are placed on different hypervisors. This policy is managed by Deckhouse.
+                  - `ManuallyManaged` — instances are placed on different hypervisors. This policy is managed outside of Deckhouse.
+              manuallyManaged:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    description: |
+                      The id of the existing `ServerGroup` object managed outside of Deckhouse.
+            oneOf:
+              - properties:
+                  policy:
+                    enum:
+                      - AntiAffinity
+                  manuallyManaged:
+                    not: {}
+              - properties:
+                  policy:
+                    enum:
+                      - ManuallyManaged
+                required:
+                  - manuallyManaged
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
@@ -353,6 +390,7 @@ apiVersions:
 
           Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/layouts.html) about possible provider layouts.
         type: string
+        x-unsafe: true
       standard:
         description: |
           Settings for the [`Standard`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard) layout.
@@ -414,6 +452,7 @@ apiVersions:
               Routing for the internal cluster network.
             type: string
             pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+            x-unsafe: true
           internalNetworkDNSServers:
             description: |
               A list of addresses of the recursive DNSs of the internal cluster network.
@@ -431,6 +470,7 @@ apiVersions:
               The name of the network for external connections.
               Get a list of all available networks: `openstack network list`.
             type: string
+            x-unsafe: true
       standardWithNoRouter:
         description: |
           Settings for the [`StandardWithNoRouter`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter) layout.
@@ -547,6 +587,7 @@ apiVersions:
               The project id.
 
               Cannot be used together with `tenantName`.
+            x-unsafe: true
           username:
             type: string
             description: |
@@ -559,6 +600,7 @@ apiVersions:
             type: string
             description: |
               The OpenStack region where the cluster will be deployed.
+            x-unsafe: true
         oneOf:
         - required: [authURL, domainName, tenantName, username, password, region]
         - required: [authURL, domainName, tenantID, username, password, region]

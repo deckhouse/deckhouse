@@ -1,0 +1,32 @@
+{{- $hubbleUIVersion := "0.12.1" }}
+---
+# Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/backend/Dockerfile
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache git bash make
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export "GOARCH=amd64"
+  - mkdir -p /go/src/github.com/cilium/hubble-ui
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
+  - cd /go/src/github.com/cilium/hubble-ui/backend
+  - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
+  - chown 64535:64535 /go/src/github.com/cilium/hubble-ui/backend/backend
+  - chmod 0700 /go/src/github.com/cilium/hubble-ui/backend/backend
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /go/src/github.com/cilium/hubble-ui/backend/backend
+  to: /usr/local/bin/hubble-ui-backend
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: ["/usr/local/bin/hubble-ui-backend"]

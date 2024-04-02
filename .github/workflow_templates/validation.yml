@@ -84,6 +84,8 @@ jobs:
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
+      run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
+      label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: check_labels
@@ -126,6 +128,10 @@ jobs:
   copyright_validation:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
+
+  grafana_dashboard_validation:
+    name: Grafana Dashboard Validation
+{!{ tmpl.Exec "validation_template" (slice $ctx "grafana_dashboard") | strings.Indent 4 }!}
 
   markdown_linter:
     name: Markdown Linter

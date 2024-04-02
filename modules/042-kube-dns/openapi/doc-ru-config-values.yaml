@@ -4,6 +4,12 @@ properties:
       Список IP-адресов рекурсивных DNS-серверов, которые CoreDNS будет использовать для разрешения внешних доменов.
 
       По умолчанию используется список из `/etc/resolv.conf`.
+  transportProtocolMode:
+    description: |
+      Режим транспортного протокола взаимодействия с вышестоящим DNS-сервером:
+      - `PreferUDP` — Используется UDP, даже если первоначальный запрос пришел по TCP. Обратите внимание, что если DNS-ответ от вышестоящего DNS-сервера превысит 512 байт, был усечен и помечен битом TC ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1), то он будет повторно отправлен по TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). В случае каких-либо других проблем с UDP, запрос повторно по TCP отправлен не будет.
+      - `ForceTCP` — Всегда используется TCP, даже если исходный запрос пришел по UDP.
+      - `KeepOriginal` — Используется тот же протокол (TCP или UDP), что и в исходном запросе.
   hosts:
     description: |
       Статический список хостов в стиле `/etc/hosts`.
@@ -21,9 +27,17 @@ properties:
         cacheTTLSeconds:
           description: |
             Максимальный TTL в секундах для успешных запросов.
+        transportProtocolMode:
+          description: |
+            Режим транспортного протокола взаимодействия с вышестоящим DNS-сервером:
+            - `PreferUDP` — Используется UDP, даже если первоначальный запрос пришел по TCP. Обратите внимание, что если DNS-ответ от вышестоящего DNS-сервера превысит 512 байт, был усечен и помечен битом TC ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1), то он будет повторно отправлен по TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). В случае каких-либо других проблем с UDP, запрос повторно по TCP отправлен не будет.
+            - `ForceTCP` — Всегда используется TCP, даже если исходный запрос пришел по UDP.
+            - `KeepOriginal` — Используется тот же протокол (TCP или UDP), что и в исходном запросе.
   enableLogs:
     description: |
       Включение логирования в CoreDNS.
   clusterDomainAliases:
     description: |
       Список альтернативных доменов кластера, разрешаемых наравне с `global.discovery.clusterDomain`.
+
+      **Обратите внимание:** альтернативный домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).

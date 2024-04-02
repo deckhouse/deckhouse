@@ -113,7 +113,7 @@ properties:
               - `Disabled` — smoke-mini будут работать только по HTTP;
               - `CertManager` — smoke-mini будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
               - `CustomCertificate` — smoke-mini будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:
@@ -158,7 +158,7 @@ properties:
           - `Disabled` — webui/status будут работать только по HTTP;
           - `CertManager` — webui/status будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — webui/status будут работать по HTTPS, используя сертификат из namespace `d8-system`;
-          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
