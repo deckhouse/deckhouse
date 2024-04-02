@@ -16,7 +16,7 @@ spec:
       template: {{ .nodeGroup.instanceClass.template | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.vnicProfileId }}
-      vnicProfileID: {{ .nodeGroup.instanceClass.vnicProfileId | quote }}
+      vnicProfileID: {{ .nodeGroup.instanceClass.vnicProfileID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.numCPUs }}
       cpu:
@@ -30,6 +30,4 @@ spec:
       {{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
       rootDiskSizeGb: {{ .nodeGroup.instanceClass.rootDiskSizeGb }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.nicName }}
-      nicName: {{ .nodeGroup.instanceClass.nicName | quote }}
-      {{- end }}
+      nicName: "nic1"
