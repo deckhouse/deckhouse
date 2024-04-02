@@ -34,6 +34,137 @@ lang: ru
 
 <!-- Нужен сценарий-->
 
+## Режимы обновлений
+
+Существуют два возможных режима обновления:
+1. **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html) и **Автоматический + заданные окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
+2. **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
+
+### Автоматический режим обновления
+
+При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse будет каждую минуту проверять данные о релизе на канале обновлений.
+
+При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
+
+После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
+
+Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
+
+```shell
+kubectl get deckhousereleases
+```
+
+{% alert %}
+Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, то есть при появлении на канале обновления patch-релиза он всегда будет установлен.
+{% endalert %}
+
+**Настройка автоматического режима обновления**
+
+Если в автоматическом режиме окна обновлений не заданы, Deckhouse обновится сразу, как только новый релиз станет доступен.
+
+Patch-версии (например, обновления с `1.26.1` до `1.26.2`) устанавливаются без подтверждения и без учета окон обновлений.
+
+{% alert %}
+Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
+{% endalert %}
+
+**Отключение автоматического обновления**
+
+Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+
+В этом случае Deckhouse не проверяет обновления и даже обновление на patch-релизы не выполняется.
+
+{% alert level="danger" %}
+Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% endalert %}
+
+### Ручной режим обновления
+
+#### Ручное подтверждение обновлений
+
+При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Manual
+```
+
+В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse (без учета patch-версий).
+
+Пример подтверждения обновления на версию `v1.43.2`:
+
+```shell
+kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
+```
+
+#### Ручное подтверждение потенциально опасных (disruptive) обновлений
+
+При необходимости возможно включить ручное подтверждение потенциально опасных (disruptive) обновлений (которые меняют значения по умолчанию или поведение некоторых модулей). Сделать это можно следующим образом:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      disruptionApprovalMode: Manual
+```
+
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease).
+
+Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
+
+```shell
+kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
+```
+### Уточнение режима обновления кластера
+
+Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
+
+```shell
+kubectl get mc deckhouse -oyaml
+```
+
+Пример вывода:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  creationTimestamp: "2022-12-14T11:13:03Z"
+  generation: 1
+  name: deckhouse
+  resourceVersion: "3258626079"
+  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      windows:
+      - days:
+        - Mon
+        from: "19:00"
+        to: "20:00"
+  version: 1
+status:
+  state: Enabled
+  status: ""
+  type: Embedded
+  version: "1"
+```
+
 ## Каналы обновлений
 
 Существует несколько каналов обновления для кластера. Каждый из них имеет свои особенности и предназначен для определенной цели. Важно помнить, что использование неподходящего канала обновлений может привести к проблемам в работе кластера и нарушению его стабильности.
@@ -215,6 +346,72 @@ metadata:
     release.deckhouse.io/apply-now: "true"
 ...
 ```
+
+## Отправка уведломления об обновлении
+
+<!--(уточнить, что для этого нужно, это примерный сценарий).
+Состав уведомлений может варьироваться в зависимости от конкретной системы и приложения. Обычно они состоят из следующих элементов:
+* Заголовок уведомления - содержит информацию о типе уведомления и его источнике.
+* Текст уведомления - содержит описание обновления или изменения, которое было сделано.
+* Ссылка на обновление - если доступно, ссылка на страницу или приложение, где можно получить более подробную информацию об обновлении.
+* Действия пользователя - какие действия пользователь может предпринять в ответ на уведомление, например, обновить страницу или установить обновление.-->
+
+### Получение Changelog
+
+Changelog - подробный список изменений, который можно найти для каждого обновления Deckhouse в общем списке релизов. Также, если настроены автоматические оповещения, о которых говорили выше, то ссылка на Changelog передается в строке changelogLink.
+Важные изменения в кластере (обновление версии компонентов и их перезапуск, устаревшие компоненты/параметры и т.п.) внедряются в минорных версиях релиза и информацию об этих изменениях можно найти в описании нулевой patch-версии релиза. Например, в v1.49.0 для релиза v1.49 - здесь сообщается, что Docker CRI больше не поддерживается и для обновления необходимо перейти на containerd. Таким образом, перед обновлением необходимо ознакомиться с Changelog и внести соответствующие изменения в кластер, если это требуется.
+Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
+* `D8NodeHasDeprecatedOSVersion` - на нодах установлена устаревшая ОС;
+* `HelmReleasesHasResourcesWithDeprecatedVersions` - в helm-релизах используются устаревшие ресурсы;
+* `KubernetesVersionEndOfLife` - текущая версия Kubernetes больше не поддерживается.
+
+
+### Оповещение об обновлении Deckhouse Kubernetes Platform
+
+В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
+
+Пример настройки оповещения:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    update:
+      releaseChannel: Stable
+      mode: Auto
+      notification:
+        webhook: https://release-webhook.mydomain.com
+```
+
+После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
+
+Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    update:
+      releaseChannel: Stable
+      mode: Auto
+      notification:
+        webhook: https://release-webhook.mydomain.com
+        minimalNotificationTime: 8h
+```
+
+{% alert %}
+Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
+{% endalert %}
 
 ## Обновление в закрытом контуре
 
@@ -807,203 +1004,6 @@ proxy:
    ```
 
    > После применения манифеста модули готовы к использованию. Обратитесь к документации разработчика модулей для получения дальнейших инструкций по их настройке и использованию.
-
-## Отправка уведломления об обновлении
-
-<!--(уточнить, что для этого нужно, это примерный сценарий).
-Состав уведомлений может варьироваться в зависимости от конкретной системы и приложения. Обычно они состоят из следующих элементов:
-* Заголовок уведомления - содержит информацию о типе уведомления и его источнике.
-* Текст уведомления - содержит описание обновления или изменения, которое было сделано.
-* Ссылка на обновление - если доступно, ссылка на страницу или приложение, где можно получить более подробную информацию об обновлении.
-* Действия пользователя - какие действия пользователь может предпринять в ответ на уведомление, например, обновить страницу или установить обновление.-->
-
-### Получение Changelog
-
-Changelog - подробный список изменений, который можно найти для каждого обновления Deckhouse в общем списке релизов. Также, если настроены автоматические оповещения, о которых говорили выше, то ссылка на Changelog передается в строке changelogLink.
-Важные изменения в кластере (обновление версии компонентов и их перезапуск, устаревшие компоненты/параметры и т.п.) внедряются в минорных версиях релиза и информацию об этих изменениях можно найти в описании нулевой patch-версии релиза. Например, в v1.49.0 для релиза v1.49 - здесь сообщается, что Docker CRI больше не поддерживается и для обновления необходимо перейти на containerd. Таким образом, перед обновлением необходимо ознакомиться с Changelog и внести соответствующие изменения в кластер, если это требуется.
-Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
-* `D8NodeHasDeprecatedOSVersion` - на нодах установлена устаревшая ОС;
-* `HelmReleasesHasResourcesWithDeprecatedVersions` - в helm-релизах используются устаревшие ресурсы;
-* `KubernetesVersionEndOfLife` - текущая версия Kubernetes больше не поддерживается.
-
-
-### Оповещение об обновлении Deckhouse Kubernetes Platform
-
-В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
-
-Пример настройки оповещения:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-```
-
-После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
-
-Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
-
-Пример:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-        minimalNotificationTime: 8h
-```
-
-{% alert %}
-Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
-{% endalert %}
-
-## Режимы обновлений
-
-Существуют два возможных режима обновления:
-1. **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html) и **Автоматический + заданные окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
-2. **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
-
-### Автоматический режим обновления
-
-При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse будет каждую минуту проверять данные о релизе на канале обновлений.
-
-При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
-
-После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
-
-Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
-
-```shell
-kubectl get deckhousereleases
-```
-
-{% alert %}
-Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, то есть при появлении на канале обновления patch-релиза он всегда будет установлен.
-{% endalert %}
-
-**Настройка автоматического режима обновления**
-
-Если в автоматическом режиме окна обновлений не заданы, Deckhouse обновится сразу, как только новый релиз станет доступен.
-
-Patch-версии (например, обновления с `1.26.1` до `1.26.2`) устанавливаются без подтверждения и без учета окон обновлений.
-
-{% alert %}
-Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
-{% endalert %}
-
-**Отключение автоматического обновления**
-
-Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
-
-В этом случае Deckhouse не проверяет обновления и даже обновление на patch-релизы не выполняется.
-
-{% alert level="danger" %}
-Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
-{% endalert %}
-
-### Ручной режим обновления
-
-#### Ручное подтверждение обновлений
-
-При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Manual
-```
-
-В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse (без учета patch-версий).
-
-Пример подтверждения обновления на версию `v1.43.2`:
-
-```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-```
-
-#### Ручное подтверждение потенциально опасных (disruptive) обновлений
-
-При необходимости возможно включить ручное подтверждение потенциально опасных (disruptive) обновлений (которые меняют значения по умолчанию или поведение некоторых модулей). Сделать это можно следующим образом:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      disruptionApprovalMode: Manual
-```
-
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease).
-
-Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
-
-```shell
-kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
-```
-### Уточнение режима обновления кластера
-
-Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
-
-```shell
-kubectl get mc deckhouse -oyaml
-```
-
-Пример вывода:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  creationTimestamp: "2022-12-14T11:13:03Z"
-  generation: 1
-  name: deckhouse
-  resourceVersion: "3258626079"
-  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
-spec:
-  settings:
-    releaseChannel: Stable
-    update:
-      windows:
-      - days:
-        - Mon
-        from: "19:00"
-        to: "20:00"
-  version: 1
-status:
-  state: Enabled
-  status: ""
-  type: Embedded
-  version: "1"
-```
 
 ## Поддержка последних версий Kubernetes
 
