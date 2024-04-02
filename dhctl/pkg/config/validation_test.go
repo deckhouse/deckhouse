@@ -350,6 +350,22 @@ metadata:
 			},
 			errContains: `exactly one "VsphereClusterConfiguration" required`,
 		},
+		"bad provider": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+metadata:
+    name: badProvider`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "badProvider",
+				}),
+			},
+			errContains: `ValidationFailed: unknown cloud provider 'badProvider', check if 'ClusterConfiguration' is valid`,
+		},
 		"no config": {
 			config: `
 apiVersion: deckhouse.io/v1alpha1
