@@ -12,7 +12,7 @@ import:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
-  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  - add: /{{ .ModulePath }}modules/340-{{ .ModuleName }}/images/{{ .ImageName }}/src
     to: /src
     excludePaths:
       - "**/*.md"
