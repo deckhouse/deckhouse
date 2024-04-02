@@ -37,7 +37,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(k8sPostUpgrade))
 
 func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
+	kubeCl, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %v", err)
+	}
+
+	secret, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error get d8-cluster-configuration secret: %s", err.Error())
+	}
+	configBase64 := secret.Data["cluster-configuration.yaml"]
+	input.LogEntry.Println(configBase64)
+	defaultVersionBase64 := secret.Data["deckhouseDefaultKubernetesVersion"]
+	input.LogEntry.Println(defaultVersionBase64)
+
 	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
+
 	input.LogEntry.Printf("debug kubernetesVersion: %s (%v)", kubernetesVersion, semver.Compare("v1.29.0", kubernetesVersion))
 	input.LogEntry.Println("debug 1")
 	// if kubernetesVersion < v1.29.0
@@ -45,10 +60,6 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 	input.LogEntry.Println("debug 2")
-	kubeCl, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("cannot init Kubernetes client: %v", err)
-	}
 
 	input.LogEntry.Println("debug 3")
 
