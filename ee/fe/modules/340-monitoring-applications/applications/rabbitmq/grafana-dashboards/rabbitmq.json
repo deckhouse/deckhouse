@@ -183,7 +183,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(rabbitmq_global_messages_received_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})",
+          "expr": "sum(rate(rabbitmq_global_messages_received_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -606,7 +606,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_get_auto_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_get_manual_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})",
+          "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_get_auto_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\nsum(rate(rabbitmq_global_messages_delivered_get_manual_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -2231,7 +2231,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(rabbitmq_global_messages_received_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_received_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2317,7 +2317,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_confirmed_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_confirmed_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2403,7 +2403,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_routed_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_routed_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2493,7 +2493,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(rabbitmq_global_messages_received_confirm_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"} - \nrate(rabbitmq_global_messages_confirmed_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}\n) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_received_confirm_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"} - \nrate(rabbitmq_global_messages_confirmed_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}\n) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2583,7 +2583,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(rabbitmq_global_messages_unroutable_dropped_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_unroutable_dropped_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2673,7 +2673,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_unroutable_returned_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_unroutable_returned_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2781,7 +2781,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(\n  (rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\n  (rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})\n) by(rabbitmq_node)",
+              "expr": "sum(\n  (rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) +\n  (rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"})\n) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2867,7 +2867,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2957,7 +2957,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3043,7 +3043,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_auto_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3129,7 +3129,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_acknowledged_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_acknowledged_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3215,7 +3215,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_delivered_get_auto_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_delivered_get_auto_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3306,7 +3306,7 @@
           "pluginVersion": "8.3.4",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_get_empty_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_get_empty_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3392,7 +3392,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_global_messages_delivered_get_manual_ack_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_global_messages_delivered_get_manual_ack_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3588,7 +3588,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_queues_declared_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_queues_declared_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3676,7 +3676,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_queues_created_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_queues_created_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3764,7 +3764,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_queues_deleted_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_queues_deleted_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3963,7 +3963,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_channels_opened_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_channels_opened_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -4050,7 +4050,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_channels_closed_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_channels_closed_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -4244,7 +4244,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(rabbitmq_connections_opened_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_connections_opened_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "interval": "",
@@ -4331,7 +4331,7 @@
           "pluginVersion": "8.5.13",
           "targets": [
             {
-              "expr": "sum(rate(rabbitmq_connections_closed_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
+              "expr": "sum(rate(rabbitmq_connections_closed_total[$__interval_sx4]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{pod=~\"$pod\",job=\"rabbitmq\", namespace=\"$namespace\"}) by(rabbitmq_node)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
