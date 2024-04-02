@@ -94,8 +94,6 @@ spec:
     releaseChannel: Stable
 ```
 
-### Версия Deckhouse Kubernetes Platform на канале обновлений
-
 Информацию о том, какая версия Deckhouse находится на копределенном канале обновлений, можно получить на [сайте](https://flow.deckhouse.io).
 
 ### Cмена канала обновлений
@@ -710,10 +708,9 @@ spec:
 
 ## Режимы обновлений
 
-Существуют три возможных режима обновления:
-* **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html).
-* **Автоматический + заданные окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
-* **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
+Существуют два возможных режима обновления:
+1. **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html) и **Автоматический + заданные окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
+2. **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
 
 ### Автоматический режим обновления
 
@@ -803,6 +800,41 @@ spec:
 
 ```shell
 kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
+```
+### Уточнение режима обновления кластера
+
+Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
+
+```shell
+kubectl get mc deckhouse -oyaml
+```
+
+Пример вывода:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  creationTimestamp: "2022-12-14T11:13:03Z"
+  generation: 1
+  name: deckhouse
+  resourceVersion: "3258626079"
+  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      windows:
+      - days:
+        - Mon
+        from: "19:00"
+        to: "20:00"
+  version: 1
+status:
+  state: Enabled
+  status: ""
+  type: Embedded
+  version: "1"
 ```
 
 ## Поддержка последних версий Kubernetes
@@ -896,63 +928,3 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 - Соберите [отладочную информацию](modules/002-deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
 - Попросите помощи у [сообщества](https://deckhouse.ru/community/about.html).
 {% endalert %}
-					
-## Нерассортированны вопросы
-
-### Как понять, в каком режиме обновляется кластер?
-
-Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
-
-```shell
-kubectl get mc deckhouse -oyaml
-```
-
-Пример вывода:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  creationTimestamp: "2022-12-14T11:13:03Z"
-  generation: 1
-  name: deckhouse
-  resourceVersion: "3258626079"
-  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
-spec:
-  settings:
-    releaseChannel: Stable
-    update:
-      windows:
-      - days:
-        - Mon
-        from: "19:00"
-        to: "20:00"
-  version: 1
-status:
-  state: Enabled
-  status: ""
-  type: Embedded
-  version: "1"
-```
-
-### Как запускать Deckhouse Kubernetes Platform на произвольном узле?
-
-Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
-
-{% alert level="warning" %}
-Используйте для запуска Deckhouse только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска Deckhouse группы узлов (`NodeGroup`), содержащей только один узел.
-{% endalert %}
-
-Пример конфигурации модуля:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    nodeSelector:
-      node-role.deckhouse.io/deckhouse: ""
-```
