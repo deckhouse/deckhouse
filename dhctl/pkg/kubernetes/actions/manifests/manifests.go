@@ -238,22 +238,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 			},
-			Affinity: &apiv1.Affinity{
-				NodeAffinity: &apiv1.NodeAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
-						NodeSelectorTerms: []apiv1.NodeSelectorTerm{
-							{
-								MatchExpressions: []apiv1.NodeSelectorRequirement{
-									{
-										Key:      ConvergeLabel,
-										Operator: apiv1.NodeSelectorOpDoesNotExist,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 		},
 	}
 
