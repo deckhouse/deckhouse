@@ -349,6 +349,151 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
+### Закрытое окружение, работа через proxy и сторонние registry
+
+#### Установка Deckhouse Kubernetes Platform из стороннего registry
+
+{% alert level="warning" %}
+Доступно только в Enterprise Edition.
+{% endalert %}
+
+{% alert level="warning" %}
+Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
+
+Протестирована и гарантируется работа со следующими container registry:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}.
+{% endalert %}
+
+#### Переключение работающиго кластера Deckhouse на использование стороннего registry
+
+{% alert level="warning" %}
+Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
+{% endalert %}
+
+Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
+
+* Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами нового registry.
+  * Пример запуска:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry \
+      --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
+    ```
+
+  * Если registry использует самоподписные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде Deckhouse и добавьте к вызову опцию `--ca-file /tmp/ca.crt`, или вставьте содержимое CA в переменную, как в примере ниже:
+
+    ```shell
+    $ CA_CONTENT=$(cat <<EOF
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    CERTIFICATE
+    -----END CERTIFICATE-----
+    EOF
+    )
+    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    ```
+
+* Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
+* Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
+* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
+* Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
+
+  ```shell
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
+    | .metadata.namespace + "\t" + .metadata.name' -r
+  ```
+
+#### Создание кластера и запуск Deckhouse Kubernetes Platform без использования каналов обновлений
+
+Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
+
+* Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
+  * Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
+  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
+  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
+* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+
+#### Использование proxy-сервера
+
+{% alert level="warning" %}
+Доступно только в Enterprise Edition.
+{% endalert %}
+
+{% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
+* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
+* Установите Squid (здесь и далее примеры для Ubuntu):
+
+  ```shell
+  apt-get install squid
+  ```
+
+* Создайте файл конфигурации Squid:
+
+  ```shell
+  cat <<EOF > /etc/squid/squid.conf
+  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
+  auth_param basic realm proxy
+  acl authenticated proxy_auth REQUIRED
+  http_access allow authenticated
+
+  # Choose the port you want. Below we set it to default 3128.
+  http_port 3128
+  ```
+
+* Создайте пользователя и пароль для аутентификации на proxy-сервере:
+
+  Пример для пользователя `test` с паролем `test` (обязательно измените):
+
+  ```shell
+  echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
+  ```
+
+* Запустите Squid и включите его автоматический запуск при загрузке сервера:
+
+  ```shell
+  systemctl restart squid
+  systemctl enable squid
+  ```
+
+{% endofftopic %}
+
+Для настройки Deckhouse на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: OpenStack
+  prefix: main
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+cri: "Containerd"
+clusterDomain: "cluster.local"
+proxy:
+  httpProxy: "http://user:password@proxy.company.my:3128"
+  httpsProxy: "https://user:password@proxy.company.my:8443"
+```
+
+## Предоставление LTS обновлений на твёрдых носителях
+
+Этот сценарий используется при невозможности выдачи ограниченного доступа в закрытый контур для настройки проксирующего registry.
+
+Преимущества получения LTS обновлений на твёрдых носителях включают следующее:
+
+* Безопасность: Получение обновлений на физических носителях позволяет убедиться, что они не были изменены или повреждены при передаче через интернет.
+* Доступность: В некоторых регионах или организациях может отсутствовать стабильное интернет-соединение, поэтому получение обновлений на твёрдых носителях является единственным способом получить последние версии ПО.
+* Контроль: Физическое владение обновлением даёт возможность контролировать процесс его установки и тестирования перед внедрением в производственную среду.
+* Поддержка: Некоторые поставщики программного обеспечения предлагают дополнительную поддержку клиентам, которые получают LTS обновления на твёрдых носителях.
+
 ### Ручная загрузка образов в изолированный приватный registry
 
 Эта функция позволяет загружать образы в изолированный приватный registry, что может быть полезно для организаций с повышенными требованиями к безопасности и конфиденциальности данных, например, если организация хочет контролировать доступ к образам и предотвратить несанкционированный доступ к ним. Также это может быть полезно, если организация использует свои собственные образы, которые не могут быть найдены в публичных registry.
@@ -493,164 +638,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
    kubectl apply -f $HOME/module_source.yml
    ```
 
-   После применения манифеста модули готовы к использованию. Обратитесь к документации разработчика модулей для получения дальнейших инструкций по их настройке и использованию.
-
-### Закрытое окружение, работа через proxy и сторонние registry
-
-#### Установка Deckhouse Kubernetes Platform из стороннего registry
-
-{% alert level="warning" %}
-Доступно только в Enterprise Edition.
-{% endalert %}
-
-{% alert level="warning" %}
-Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
-
-Протестирована и гарантируется работа со следующими container registry:
-{%- for registry in site.data.supported_versions.registries %}
-[{{- registry[1].shortname }}]({{- registry[1].url }})
-{%- unless forloop.last %}, {% endunless %}
-{%- endfor %}.
-{% endalert %}
-
-#### Переключение работающиго кластера Deckhouse на использование стороннего registry
-
-{% alert level="warning" %}
-Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
-{% endalert %}
-
-Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
-
-* Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами нового registry.
-  * Пример запуска:
-
-    ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry \
-      --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
-    ```
-
-  * Если registry использует самоподписные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде Deckhouse и добавьте к вызову опцию `--ca-file /tmp/ca.crt`, или вставьте содержимое CA в переменную, как в примере ниже:
-
-    ```shell
-    $ CA_CONTENT=$(cat <<EOF
-    -----BEGIN CERTIFICATE-----
-    CERTIFICATE
-    -----END CERTIFICATE-----
-    -----BEGIN CERTIFICATE-----
-    CERTIFICATE
-    -----END CERTIFICATE-----
-    EOF
-    )
-    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
-    ```
-
-* Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
-* Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
-* Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
-
-  ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
-    | .metadata.namespace + "\t" + .metadata.name' -r
-  ```
-
-#### Создание кластера и запуск Deckhouse Kubernetes Platform без использования каналов обновлений
-
-Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
-
-* Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
-  * Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
-  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
-  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
-* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
-
-#### Использование proxy-сервера
-
-{% alert level="warning" %}
-Доступно только в Enterprise Edition.
-{% endalert %}
-
-{% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
-* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
-* Установите Squid (здесь и далее примеры для Ubuntu):
-
-  ```shell
-  apt-get install squid
-  ```
-
-* Создайте файл конфигурации Squid:
-
-  ```shell
-  cat <<EOF > /etc/squid/squid.conf
-  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
-  auth_param basic realm proxy
-  acl authenticated proxy_auth REQUIRED
-  http_access allow authenticated
-
-  # Choose the port you want. Below we set it to default 3128.
-  http_port 3128
-  ```
-
-* Создайте пользователя и пароль для аутентификации на proxy-сервере:
-
-  Пример для пользователя `test` с паролем `test` (обязательно измените):
-
-  ```shell
-  echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
-  ```
-
-* Запустите Squid и включите его автоматический запуск при загрузке сервера:
-
-  ```shell
-  systemctl restart squid
-  systemctl enable squid
-  ```
-
-{% endofftopic %}
-
-Для настройки Deckhouse на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
-
-Пример:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: OpenStack
-  prefix: main
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-cri: "Containerd"
-clusterDomain: "cluster.local"
-proxy:
-  httpProxy: "http://user:password@proxy.company.my:3128"
-  httpsProxy: "https://user:password@proxy.company.my:8443"
-```
-
-## Предоставление LTS обновлений на твёрдых носителях
-
-Этот сценарий используется при невозможности выдачи ограниченного доступа в закрытый контур для настройки проксирующего registry. Долгосрочная поддержка (LTS) — это период времени, в течение которого поставщик программного обеспечения предоставляет регулярные обновления безопасности и функциональности для операционной системы или приложения. Предоставление LTS обновлений на твёрдых носителях обычно означает физическую доставку обновлений на CD, DVD или USB-накопителе.
-
-Преимущества получения LTS обновлений на твёрдых носителях включают следующее:
-
-* Безопасность: Получение обновлений на физических носителях позволяет убедиться, что они не были изменены или повреждены при передаче через интернет.
-* Доступность: В некоторых регионах или организациях может отсутствовать стабильное интернет-соединение, поэтому получение обновлений на твёрдых носителях является единственным способом получить последние версии ПО.
-* Контроль: Физическое владение обновлением даёт возможность контролировать процесс его установки и тестирования перед внедрением в производственную среду.
-* Поддержка: Некоторые поставщики программного обеспечения предлагают дополнительную поддержку клиентам, которые получают LTS обновления на твёрдых носителях.
-
-Для предоставления LTS обновлений на твердых носителях администратору необходимо выполнить следующие шаги:
-1. Создайте образы с обновлениями:
-   * Получите список доступных обновлений с помощью команды `deckhouse-controller get-updates...` <!-- (https://deckhouse.ru/documentation/v1/deckhouse-faq.html)-->.
-   * Выберите нужные обновления и создаайте образы с ними <!--(уточнить, что для этого нужно, это примерный сценарий)-->.
-2. Запишите образы на твердые носители:
-   * Подготовьте носители для записи образов, например, USB-флешки или оптические диски.
-   * Запишите образы на носители с помощью команды:<!--(уточнить, что для этого нужно, это примерный сценарий)-->.
-3. Установите обновления на системы:
-   * Вставте носитель с обновлениями в целевую систему.
-   * Обновите систему.
-   * После установки обновлений, удалите носители из систем и храните их в безопасном месте для дальнейшего использования.
+   > После применения манифеста модули готовы к использованию. Обратитесь к документации разработчика модулей для получения дальнейших инструкций по их настройке и использованию.
 
 ## Отправка уведломления об обновлении
 
