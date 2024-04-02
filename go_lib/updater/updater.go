@@ -419,6 +419,13 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 // PredictNextRelease runs prediction of the next release to deploy.
 // it skips patch releases and save only the latest one
 func (du *Updater[R]) PredictNextRelease() {
+	for index, rl := range du.releases {
+		if rl.GetPhase() == PhaseDeployed {
+			du.currentDeployedReleaseIndex = index
+			break
+		}
+	}
+
 	for i, release := range du.releases {
 		switch release.GetPhase() {
 		case PhaseSuperseded, PhaseSuspended:
@@ -426,9 +433,6 @@ func (du *Updater[R]) PredictNextRelease() {
 
 		case PhasePending:
 			du.processPendingRelease(i, release)
-
-		case PhaseDeployed:
-			du.currentDeployedReleaseIndex = i
 		}
 
 		if release.GetForce() {
@@ -575,6 +579,15 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 		}
 		// it's a patch for predicted release, continue
 		du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
+	}
+
+	// if we have a deployed a release
+	if du.currentDeployedReleaseIndex >= 0 {
+		// if deployed version is greater than the pending one, this pending release should be superseded
+		if du.releases[du.currentDeployedReleaseIndex].GetVersion().GreaterThan(release.GetVersion()) {
+			du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, index)
+			return
+		}
 	}
 
 	// release is predicted to be Deployed
@@ -751,4 +764,8 @@ func (du *Updater[R]) checkAppliedNowConditions(appliedNowRelease *R) bool {
 
 func (du *Updater[R]) GetPredictedReleaseIndex() int {
 	return du.predictedReleaseIndex
+}
+
+func (du *Updater[R]) GetSkippedPatchesIndexes() []int {
+	return du.skippedPatchesIndexes
 }
