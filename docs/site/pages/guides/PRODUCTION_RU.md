@@ -34,6 +34,21 @@ lang: ru
 
 <!-- Нужен сценарий-->
 
+## Поддержка последних версий Kubernetes
+
+### Обновление версий Kubernetes
+
+Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
+1. Выполните команду:
+
+   ```shell
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+1. Измените параметр `kubernetesVersion`.
+1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
 ## Режимы обновлений
 
 Существуют два возможных режима обновления:
@@ -1084,32 +1099,9 @@ proxy:
 
    > После применения манифеста модули готовы к использованию. Обратитесь к документации разработчика модулей для получения дальнейших инструкций по их настройке и использованию.
 
-## Поддержка последних версий Kubernetes
+<!-- ## Поддержка более 2-ух последних версий Kubernetes (CE)
 
-Как только на установленном в кластере канале обновления появляется новая версия Deckhouse Kubernetes Platform:
-- Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
-- Появляется новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
-  - Установлен ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
-  - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/002-deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
-  - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
-  - Установлен параметр [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) и указанное в нем время еще не прошло.
-
-### Обновление версий Kubernetes
-
-Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
-1. Выполните команду:
-
-   ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
-   ```
-
-1. Измените параметр `kubernetesVersion`.
-1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
-
-## Поддержка более 2-ух последних версий Kubernetes (CE)
-
-В базовых редакциях поддерживается только две последних версии Kubernetes, в более продвинутых поддерживается 4 последние вышедшие версии Kubernetes.						
+В базовых редакциях поддерживается только две последних версии Kubernetes, в более продвинутых поддерживается 4 последние вышедшие версии Kubernetes.						 -->
 
 <!-- ## Поддержка LTS (EE)
 
