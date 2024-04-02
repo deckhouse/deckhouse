@@ -118,6 +118,27 @@ masterNodeGroup:
 			schema:      testSchemaStore(t),
 			errContains: `ChangesValidationFailed: "clusterType": unsafe field has been changed`,
 		},
+		"unsafe object changed": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: UnsafeKind
+someField: abcd
+unsafeObject:
+  fieldA: ab
+  fieldB: cd
+`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: UnsafeKind
+someField: efgh
+unsafeObject:
+  fieldA: ab
+  fieldB: dd
+`,
+			schema:      testSchemaStore(t),
+			errContains: `ChangesValidationFailed: "unsafeObject": unsafe field has been changed`,
+		},
 		"unsafe rule, ok: updateReplicas": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
@@ -377,9 +398,36 @@ apiVersions:
         enum: [YandexInstanceClass]
 `)
 
+	unsafeObjectSchema := []byte(`
+kind: UnsafeKind
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [YandexInstanceClass]
+      someField:
+        type: string
+      unsafeObject:
+        type: object
+        x-unsafe: true
+        properties:
+           fieldA:
+             type: string
+           fieldB:
+             type: string
+`)
+
 	require.NoError(t, schemaStore.upload(clusterConfigSchema))
 	require.NoError(t, schemaStore.upload(moduleConfigSchema))
 	require.NoError(t, schemaStore.upload(nodeGroupConfigSchema))
 	require.NoError(t, schemaStore.upload(instanceClassConfigSchema))
+	require.NoError(t, schemaStore.upload(unsafeObjectSchema))
 	return schemaStore
 }
