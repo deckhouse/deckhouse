@@ -1,6 +1,6 @@
 ---
-title: "Разработка и отладка"
-permalink: ru/module-development/troubleshooting/
+title: "Разработка и отладка модуля"
+permalink: ru/module-development/development/
 lang: ru
 ---
 
@@ -131,3 +131,133 @@ kubectl annotate mop <name> renew=""
     ```
 
 {% endraw %}
+
+## Артефакты модуля в container registry
+
+После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../cr.html#modulesource).
+
+Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
+
+```tree
+registry.example.io
+📁 modules-source
+├─ 📁 module-1
+│  ├─ 📦 v1.23.1
+│  ├─ 📦 d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
+│  ├─ 📦 e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
+│  ├─ 📦 v1.23.2
+│  └─ 📁 release
+│     ├─ 📝 v1.23.1
+│     ├─ 📝 v1.23.2
+│     ├─ 📝 alpha
+│     └─ 📝 beta
+└─ 📁 module-2
+   ├─ 📦 v0.30.147
+   ├─ 📦 d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
+   ├─ 📦 e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
+   ├─ 📦 v0.31.1
+   └─ 📁 release
+      ├─ 📝 v0.30.147
+      ├─ 📝 v0.31.1
+      ├─ 📝 alpha
+      └─ 📝 beta
+```
+
+{% alert level="warning" %}
+Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом в разделе [требования](module-development/#требования).  
+{% endalert %}
+
+Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
+
+### Вывод списка модулей в источнике модулей
+
+```shell
+crane ls <REGISTRY_URL>/<MODULE_SOURCE>
+```
+
+Пример:
+
+```shell
+$ crane ls registry.example.io/modules-source
+module-1
+module-2
+```
+
+### Вывод списка образов модуля
+
+```shell
+crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>
+```
+
+Пример:
+
+```shell
+$ crane ls registry.example.io/modules-source/module-1
+v1.23.1
+d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
+e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
+v1.23.2
+```
+
+В примере, в модуле `module-1` присутствуют два образа модуля и два образа контейнеров приложений.
+
+### Вывод файлов в образе модуля
+
+```shell
+crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -tf -
+```
+
+Пример:
+
+```shell
+crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
+```
+
+Ответ будет достаточно большим.
+
+### Вывод списка образов контейнеров приложений модуля  @TODO <-- переформулировать
+
+```shell
+crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json
+```
+
+Пример:
+
+```shell
+$ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf - images_digests.json
+{
+  "backend": "sha256:fcb04a7fed2c2f8def941e34c0094f4f6973ea6012ccfe2deadb9a1032c1e4fb",
+  "frontend": "sha256:f31f4b7da5faa5e320d3aad809563c6f5fcaa97b571fffa5c9cab103327cc0e8"
+}
+```
+
+### Просмотр списка релизов
+
+```shell
+crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
+```
+
+Пример:
+
+```shell
+$ crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
+v1.23.1
+v1.23.2
+alpha
+beta
+```
+
+В примере, в container registry два релиза и используются два канала обновлений: `alpha` и `beta`.
+
+### Вывод версии, используемой на канале обновлений `alpha`
+
+```shell
+crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar -Oxf - version.json
+```
+
+Пример:
+
+```shell
+$ crane export registry.example.io/modules-source/module-1/release:alpha - | tar -Oxf - version.json
+{"version":"v1.23.2"}
+```

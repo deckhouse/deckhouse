@@ -43,7 +43,7 @@ entries:
               url: /module-development/
             - title:
                 en: Module structure
-                ru: Структура модуля
+                ru: Структура
               url: /module-development/structure/
             - title:
                 en: Building and publication
@@ -58,13 +58,13 @@ entries:
                 ru: Версионирование
               url: /module-development/versioning/
             - title:
-                en: Debug
-                ru: Отладка
-              url: /module-development/troubleshooting/
-            - title:
-                en: Example
-                ru: Пример
+                en: Examples
+                ru: Примеры
               url: /module-development/example/
+            - title:
+                en: Development and debugging
+                ru: Разработка и отладка
+              url: /module-development/development/
         - title:
             en: Release channels
             ru: Каналы обновлений

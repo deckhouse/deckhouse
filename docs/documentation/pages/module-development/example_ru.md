@@ -1,377 +1,243 @@
 ---
-title: "Пример создания модуля с адаптацией существующего чарта"
+title: "Пример адаптации существующего чарта"
 permalink: ru/module-development/example/
 lang: ru
 ---
 
-<!-- DRAFT -->
+{% raw %}
 
-Команда Deckhouse Kubernetes Platform всегда готова проконсультировать. Вы можете обратиться к нам в канале #tech-deckhouse-modules внутреннего слака Flant.
+Пример создания модуля `hello-world-module` на основе [шаблона модуля](https://github.com/deckhouse/modules-template/) и адаптации Helm-чарта [hello-world](https://github.com/giantswarm/hello-world-app).
 
-В качестве примера можно посмотреть на [модули, разработанные компанией Flant](existing_modules/modules.md)
+## Подготовка исходного кода модуля и сборка
 
-## Установите утилиты
+1. Установите необходимые утилиты.
+   - [git](https://git-scm.com)
+   - [sed](https://github.com/mirror/sed)
+   - [yq](https://github.com/mikefarah/yq)
 
-Установите утилиты до выполнения инструкции:
+1. Сделайте форк или скопируйте [репозиторий шаблона модуля](https://github.com/deckhouse/modules-template/).
 
-* [git](https://git-scm.com) – система контроля версий;
-* [sed](https://github.com/mirror/sed) – редактор потоков;
-* [yq](https://github.com/mikefarah/yq) – командная строка для JSON и YAML.
-
-## Сделайте форк или скопируйте шаблон репозитория с модулем
-
-Команда Deckhouse Kubernetes Platform подготовила репозиторий для удобного создания модулей. Внутри репозитория представлен пример минимального модуля, который содержит все возможные функции. Предлагаем использовать этот репозиторий как основу.
-
-1. Сделайте форк шаблона для модуля в Gitlab [из репозитория](https://fox.flant.com/deckhouse/modules/template):
-
-   ![Fork](../../images/module-development/fork.png)
-
-1. Клонируйте его.
-
-   ```sh
-   git clone git@fox.flant.com:***/hello-world-module.git hello-world-module \
+   ```shell
+   git clone git@github.com:deckhouse/modules-template.git hello-world-module \
      && cd hello-world-module
    ```
 
-   > Подставьте свой адрес для команды `git clone`.
+1. Укажите имя модуля в файле `Chart.yaml`.
 
-## Адаптируйте шаблоны
+   В примере будет использоваться имя модуля `hello-world-module`, но вы можете выбрать свое.
 
-Выберите имя, которое будет соответствовать имени модуля в Deckhouse Kubernetes Platform. В некоторых местах оно может быть записано в формате kebab case или camel case. В инструкции следует использовать то же самое имя, которое было выбрано.
+   > Обратите внимание, что в некоторых местах в примере имя модуля может быть записано в разных форматах — *kebab-case* или *camelCase*. Если вы используете свое имя модуля, то учитывайте изменение формата имени модуля в приводимых командах.
 
-Откройте `Chart.yaml` и в параметре `name` впишите имя модуля `hello-world`.
+   Выполните следующую команду, чтобы указать имя модуля в файле `Chart.yaml`, либо отредактируйте его вручную:
 
-```sh
-sed -Ei '' 's/^name:(.*)/name: hello-world/g' Chart.yaml
-```
+   ```shell
+   sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
+   ```
 
-### Подготовьте шаблоны
+1. Склонируйте исходный код чарта [hello-world](https://github.com/giantswarm/hello-world-app) во временную папку.
 
-1. Клонируйте исходный код чарта для `hello-world`.
-
-   ```sh
+   ```shell
    git clone https://github.com/giantswarm/hello-world-app .tmp-chart
    ```
 
-2. Скопируйте шаблоны.
+1. Скопируйте шаблоны чарта в папку `templates` модуля, предварительно очистив ее.
 
-   ```sh
+   ```shell
    rm -rf templates/*
-   cp -fR .tmp-chart/helm/hello-world/templates/ templates/
+   cp -fR .tmp-chart/helm/hello-world/templates/* templates/
    ```
 
-3. Замените в шаблонах путь `.Values` на `.Values.helloWorld`.
+1. Замените в шаблонах чарта путь `.Values` на `.Values.helloWorld`.
 
-   ```sh
-   sed -i '' -e 's/.Values/.Values.helloWorld/g' $(find templates/ -type f)
+   > Это архитектурная особенность [addon-operator](https://github.com/flant/addon-operator), ей необходимо следовать для обращения к values модуля.
+
+   ```shell
+   sed -i -e 's/.Values/.Values.helloWorldModule/g' $(find templates/ -type f)
    ```
 
-### Добавьте схему для настроек
+1. Добавьте OpenAPI-схему настроек модуля.
 
-Чтобы пользователь настраивал модуль, необходимо добавить Open API схему для возможных опций. Это запретит пользователю вводить неверные настройки.
+   Параметры модуля указываются в OpenAPI-схеме, в папке [openapi](structure/#openapi). Выполните следующую команду, чтобы преобразовать JSON-схему параметров чарта в OpenAPI-схему модуля:
 
-> Команда Deckhouse Kubernetes Platform старается тщательно подходить к выбору параметров, которые могут настраивать пользователи. Мы стремимся помочь пользователям, предоставляя возможность настраивать только те параметры, которые важны для их работы.
+   ```shell
+   yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+   ```
 
-В Helm-чарте приложения `hello-world` уже имеется JSON-схема. Преобразуйте ее.
+1. Опишите правило сборки образа контейнера приложения.
 
-```sh
-yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
-```
+   Правила сборки образов контейнеров приложений должны находиться в подпапке папки [images](structure/#images) модуля. Выполните следующую команду, чтобы создать папку образа приложения и Dockerfile с правилами сборки образа.
 
-Если в вашем чарте нет схемы, необходимо написать ее самостоятельно. Посмотрите примеры схем в репозитории, который клонировали на первом шаге.
+   ```shell
+   rm -rf images/*
+   mkdir images/hello-world-module
+   echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world-module/Dockerfile
+   ```
 
-## Соберите образ контейнера
+1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Kubernetes Platform. Это позволит использовать актуальный content-based-тэг образа.
 
-Полезный подход — хранить образы для модулей в нашем registry. Очистите папку с образами `/images/*` и загрузите туда наш образ для приложения `hello-world`.
+   ```shell
+   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
+   ```
 
-```sh
-rm -rf images/*
-mkdir images/hello-world
-echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world/Dockerfile
-```
+1. Удалите хуки модуля, CRD и временные файлы.
 
-> Поддерживаются любые Docker файлы. Если необходимо собрать приложение из исходного кода, поместите его рядом с **Dockerfile** и включите его в образ с помощью команды `COPY`.
+   Пример не использует хуки и СustomResourceDefinition. Выполните следующие команды, чтобы очистить папки `hooks` и `crds`.
 
-Чтобы использовать наш образ в шаблонах, замените его в манифестах на хелпер из библиотеки Deckhouse Kubernetes Platform.
+   ```shell
+   rm -rf hooks/
+   rm -rf crds/
+   rm -rf .tmp-chart
+   ```
 
-```sh
-sed -Ei '' 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorld") }}/g' templates/deployment.yaml
-```
+1. Настройте CI/CD.
 
-Проверьте результат командой `cat` и убедитесь, что изменения применились.
+   В шаблоне проекта в папке `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](../../cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
 
-> Можно пользоваться вспомогательными функциями из [библиотеки Deckhouse Kubernetes Platform](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib).
+   Выполните следующие настройки в свойствах вашего проекта на GitHub, чтобы workflow модуля работал корректно:
+   - Откройте страницу *Settings -> Actions -> General*.
+   - Установите параметр *Read and write permissions* в разделе *Workflow permissions*.
 
-## Добавьте хуки
+1. Зафиксируйте изменения в репозитории (укажите адрес git-репозитория модуля).
 
-Прочитайте документацию операторов о концепции хуков, например, [что такое конфигурация хука и какие функции она предоставляет](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration).
+   ```shell
+   git add .
+   git commit -m "Initial Commit"
+   git push --set-upstream origin <GIT_REPO_URL>
+   ```
 
-Хуки используются модулем для динамического взаимодействия с API Kubernetes. Например, они могут быть использованы для обработки событий, связанных с созданием или удалением объектов в кластере.
+1. Убедитесь, что сборка модуля выполнилась успешно.
 
-> Для модулей Deckhouse Kubernetes Platform написание хуков поддерживается только на языке Python.
+   Перейдите в раздел *Actions* репозитория модуля и слева, в списке workflow, выберите *Build*. Workflow, запущенный после того, как вы выполнили команду `git push` на предыдущем шаге, должен выполниться успешно.
+     
+   Пример:
+     
+   ![Пример workflow сборки модуля](../../images/module-development/build.png)
 
-В репозитории, клонированном на первом шаге, содержатся примеры возможных хуков. Ваш модуль не требует использования хуков, поэтому существующие хуки в примере можно удалить.
+## Публикация модуля на канале обновлений
 
-<!-- TODO: Пример написания полезного хука -->
+Пример публикации версии `v0.0.1` модуля на канале обновлений *Alpha*:
 
-```sh
-rm -rf hooks/
-rm -rf crds/
-```
+1. Создайте новый релиз модуля `v0.0.1` в репозитории GitHub или установите тег `v0.0.1`.
 
-## Опубликуйте модуль
+1. Перейдите в раздел *Actions* репозитория модуля и слева, в списке workflow, выберите *Deploy*.
 
-В файле `.gitlab-ci.yml` укажите собственные переменные вместо тех, которые указаны в шаблоне.
+1. В правой части страницы нажмите на выпадающий список *Run workflow* и выберите `alpha`. Укажите тэг `v0.0.1` в поле ввода тэга. Нажмите кнопку *Run workflow*. 
 
-```yaml
-MODULES_MODULE_NAME: echoserver
-MODULES_REGISTRY: registry.flant.com
-MODULES_MODULE_SOURCE: registry.flant.com/deckhouse/modules/template
-MODULES_MODULE_TAG: ${CI_COMMIT_REF_NAME}
-```
+   ![Пример запуска workflow публикации модуля](../../images/module-development/deploy.png)
 
-В GitLab добавьте аутентификационные данные для доступа к container registry в разделе **Settings** → **CI/CD**.
+1. Убедитесь, что workflow публикации модуля выполнился успешно.
 
-Например:
+Модуль стал доступным для подключения в кластере Deckhouse Kubernetes Platform.
 
-```text
-MODULES_REGISTRY_LOGIN = username
-MODULES_REGISTRY_PASSWORD = password
-```
+## Подключение модуля в кластере
 
-> Если вы используете **fox**, то доступы указывать не нужно.
+Пример подключения модуля `hello-world-module` в кластере Deckhouse Kubernetes Platform.
 
-Внесите  изменения в git.
+1. Создайте токен доступа в репозитории GitHub с правами для работы с Github Packages
+2. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
 
-```sh
-rm -rf .tmp-chart
-git add .
-git commit -m "Initial Commit"
-git push --set-upstream origin example
-```
-<!-- TODO: Сквош коммитов? -->
+   ```shell
+   base64 -w0 <<EOF
+   {
+     "auths": {
+       "ghcr.io": {
+         "auth": "$(echo -n '<OWNER>:<TOKEN>' | base64 -w0)"
+       }
+     }
+   }
+   EOF
+   ```
 
-Убедитесь, что сборка прошла успешно.
+1. Создайте в кластере ресурс [ModuleSource](../../cr.html#modulesource) (укажите адрес container registry и строку аутентификации).
 
-![Pipeline](../../images/module-development/pipeline.png)
-
-Поместите тег v0.0.1. Теперь нажмите кнопку **Deploy to alpha**.
-
-![Deploy](../../images/module-development/deploy.png)
-
-Модуль станет доступным для подключения в кластерах Deckhouse Kubernetes Platform.
-
-## Разверните модуль в кластере
-
-### Подключение модуля
-
-1. Зайдите в существующий кластер и подключите репозиторий с модулями для CI/CD (указанный выше) при помощи создания объекта в Deckhouse.
-
-   ```yaml
+   ```shell
+   kubectl apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
    metadata:
-     name: hello-world
+     name: ghcr
    spec:
-     releaseChannel: alpha #deprecated field
      registry:
-       # Пример: dev-registry.deckhouse.io/deckhouse/modules-source
-       repo: <ваш регистри></путь/до/репозитория/с/модулями>
-       # Строка в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials)
-       #
-       # Пример: 
-       # base64 -w0 <<EOF
-       # {
-       #   "auths": {
-       #     "dev-registry.deckhouse.io": {
-       #       "auth": "$(echo -n 'username:password' | base64 -w0)"
-       #     }
-       #   }
-       # }
-       # EOF
-       dockerCfg: <base64 encoded credentials>
+       # Укажите имя пользователя (или организации) GitHub. Например: ghcr.io/octocat/modules
+       repo: ghcr.io/<!OWNER>/modules
+       # Строка аутентификации для доступа к GitHub Packages из предыдущего шага.
+       dockerCfg: <!REGISTRY_CREDENTIALS>
+   EOF
    ```
 
-   После успешного создания и синхронизации *ModuleSource*, посмотрите какие модули доступны для установки:
+   Синхронизация данных после создания ресурса занять несколько секунд.
 
-   ```sh
-   kubectl  get ms hello-world -o jsonpath='{.status.modules[*].name}'
+1. Посмотрите список доступных модулей:
+
+   ```shell
+   kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
    ```
 
-1. Для установки и последующего обновления, определите *ModuleUpdatePolicy* для *ModuleSource* (обратите внимание, что канал обновления теперь указывается в политике обновления в параметре `.spec.releaseChannel`), например:
+   В списке должен быть только модуль `hello-world-module`.
 
-   ```yaml
+1. Создайте ресурc [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
+
+   Выполните следующую команду, чтобы создать политику обновления для модуля `hello-world-module` с каналом обновления *Alpha* и режимом обновления *Auto*:
+
+   ```shell
+   kubectl apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleUpdatePolicy
    metadata:
-     name: hello-world
+     name: hello-world-module
    spec:
      moduleReleaseSelector:
-       labelSelector: # селектор на основе лейблов. Важно избегать ситуации, когда один модуль соответствует нескольким политикам обновления (см. ниже).
-         matchLabels: # гарантированно наличие лейблов module и source, по ним необходимо описать селектор
-           module: hello-world-server
-           source: hello-world
+       labelSelector:
+         matchLabels:
+           source: ghcr
      releaseChannel: Alpha
      update:
-       mode: Auto # <Auto|Manual>
-       windows:
-       - days:
-         - "Mon"
-         - "Tue"
-         - "Wed"
-         from: "13:30" # время UTC
-         to: "14:00"
+       mode: Auto
+   EOF
    ```
 
-    Важно:
-    * Если какой-либо модуль попадает под лейбл *labelSelector* нескольких политик обновления, новые релизы для этого модуля не будут создаваться до тех пор, пока не будет устранена неоднозначность в применяемых политиках. В *ModuleSource* указывается ошибка с пояснением, какой модуль затрагивается несколькими политиками и какими именно.
-    * Наличие политики обновления является обязательным условием для создания нового релиза модуля, так как через эту политику определяется канал обновления и режим обновления (полностью автоматический, обновляющийся по расписанию или ручной).
+1. Проверьте ресурс *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
-1. Проверьте *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
-
-   ```sh
-   kubectl get ms hello-world -o yaml
+   ```shell
+   kubectl get ms ghcr -o yaml
    ```
 
-1. Убедитесь, что были созданы новые ресурсы *ModuleRelease* для модулей, подпадающих под *ModuleUpdatePolicy*, и что они имеют статус Pending (если режим обновления ручной или автоматический с указанием окна обновления за пределами текущей даты/временного интервала) или Deployed (при условии, что обновление является автоматическим без указания окна обновления, или окно обновления совпадает с текущей датой/временным интервалом):
+1. Убедитесь, что были созданы новые ресурсы [ModuleRelease](../../cr.html#modulerelease) для модуля:
 
-   ```sh
+   ```shell
    kubectl get mr
    ```
 
-   Если в политике обновления выставлен ручной режим обновления, необходимо в ручную подтвердить установку новой версии модуля. Для этого добавьте аннотацию на указанный релиз:
+   Пример вывода:
 
-   ```sh
-   kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
+   ```console
+   $ kubectl get mr
+   NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
+   hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
    ```
-
-   Для автоматического режима обновления подтверждение не нужно.
 
 1. В случае успешной установки релизов, дождитесь перезапуска пода Deckhouse Kubernetes Platform.
 
-   ```sh
+   ```shell
    kubectl -n d8-system get pod -l app=deckhouse
    ```
 
-1. Включите модуль при помощи создания объекта в Deckhouse Kubernetes Platform.
+1. Включите модуль, выполним следующую команду:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: hello-world
-   spec:
-     enabled: true
-     settings: {}
-     version: 1
+   ```shell
+   kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
    ```
 
-Через некоторое время объекты модуля появятся в кластере.
+   Через некоторое время объекты модуля появятся в кластере. 
 
-* Команда для просмотра логов Deckhouse Kubernetes Platform в ожидании объектов модуля:
+   Если при запуске модуля возникли ошибки, посмотрите журнал DKP:
 
-     ```sh
-     kubectl -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
-     ```
-
-* Команда для получения объектов:
-
-     ```sh
-     kubectl get pods -A | grep hello
-     ```
-
-### Переключение модуля на другой ModuleSource
-
-1. Если необходимо развернуть определенный модуль из другого *ModuleSource*, определите, под какую политику обновлений подпадает этот модуль:
-
-   ```sh
-   kubectl get mr
+   ```shell
+   kubectl -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
 
-   Проверьте `UPDATE POLICY` для релизов модуля.
-
-2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или *labelSelector*, используемый политикой, больше не соответствует вашему модулю):
-
-   ```sh
-   kubectl delete mup <policy_name>
+   Или проверьте состояние очереди DKP:
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
    ```
-
-3. Установите новый *ModuleSource* (см. раздел ## Подключение модуля п.1).
-
-4. Создайте новую *ModuleUpdatePolicy* с указанием правильных меток (source) для нового *ModuleSource* (см. раздел ## Подключение модуля п.2).
-
-5. Проверьте, что новые *ModuleRelease* для модуля создаются из нового *ModuleSource* в соответствии с политикой обновления.
-
-   ```sh
-   kubectk get mr
-   ```
-
-### Примеры moduleReleaseSelector
-
-1. Примените политику ко всем модулям *ModuleSorce* `deckhouse`:
-
-   ```yaml
-   ...
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           source: deckhouse
-   ...
-   ```
-
-2. Примените политику к модулю `deckhouse-admin` независимо от *ModuleSource*:
-
-   ```yaml
-   ...
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           module: deckhouse-admin
-   ...
-   ```
-
-3. Примените политику к модулю `deckhouse-admin` из *ModuleSource* `deckhouse`:
-
-   ```yaml
-   ...
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           module: deckhouse-admin
-           source: deckhouse
-   
-   ...
-   ```
-
-4. Примените политику только к модулям `deckhouse-admin` и `secrets-store-integration` в *ModuleSource* `deckhouse`:
-
-   ```yaml
-   ...
-     moduleReleaseSelector:
-       labelSelector:
-         matchExpressions:
-         - key: module
-           operator: In
-           values:
-           - deckhouse-admin
-           - secrets-store-integration
-         matchLabels:
-           source: deckhouse
-   ...
-   ```
-
-5. Примените политику ко всем модулям *ModuleSource* `deckhouse`, кроме `deckhouse-admin`:
-
-   ```yaml
-   ...
-     moduleReleaseSelector:
-       labelSelector:
-         matchExpressions:
-         - key: module
-           operator: NotIn
-           values:
-           - deckhouse-admin
-         matchLabels:
-           source: deckhouse
-   ...
-   ```
+{% endraw %}

@@ -1,5 +1,5 @@
 ---
-title: "Development and troubleshooting"
-permalink: en/module-development/troubleshooting/
+title: "Mjdule development and debugging"
+permalink: en/module-development/development/
 ---
 
