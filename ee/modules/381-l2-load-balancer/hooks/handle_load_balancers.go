@@ -65,14 +65,20 @@ func applyLoadBalancerFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
+	externalTrafficPolicy := "Local"
+	if lb.Spec.Service.ExternalTrafficPolicy != "" {
+		externalTrafficPolicy = lb.Spec.Service.ExternalTrafficPolicy
+	}
+
 	return L2LoadBalancerInfo{
-		Name:         lb.Name,
-		Namespace:    lb.Namespace,
-		AddressPool:  lb.Spec.AddressPool,
-		NodeSelector: lb.Spec.NodeSelector,
-		Selector:     lb.Spec.Service.Selector,
-		Ports:        lb.Spec.Service.Ports,
-		SourceRanges: lb.Spec.Service.SourceRanges,
+		Name:                  lb.Name,
+		Namespace:             lb.Namespace,
+		AddressPool:           lb.Spec.AddressPool,
+		NodeSelector:          lb.Spec.NodeSelector,
+		Selector:              lb.Spec.Service.Selector,
+		ExternalTrafficPolicy: externalTrafficPolicy,
+		Ports:                 lb.Spec.Service.Ports,
+		SourceRanges:          lb.Spec.Service.SourceRanges,
 	}, nil
 }
 
