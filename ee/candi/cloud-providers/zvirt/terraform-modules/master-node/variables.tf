@@ -21,15 +21,15 @@ variable "cloudConfig" {
 
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
-  vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnicProfileId", [])
-  storage_domain_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageDomainId", [])
-  cluster_id = lookup(var.providerClusterConfiguration, "clusterId", [])
+  vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnicProfileID", [])
+  storage_domain_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageDomainID", [])
+  cluster_id = lookup(var.providerClusterConfiguration, "clusterID", [])
   template_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "template", [])
   master_node_name = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
   master_cpus = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "numCPUs", [])
   master_ram_mb = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "memory", [])
   master_vm_type = "high_performance"
-  master_nic_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "nicName", [])
+  master_nic_name = "nic1"
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
   master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 20)*1024*1024*1024
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 10)*1024*1024*1024
