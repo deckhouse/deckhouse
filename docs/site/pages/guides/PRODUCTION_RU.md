@@ -129,7 +129,9 @@ spec:
 ```shell
 kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```
-### Уточнение режима обновления кластера
+### Как узнать режим обновления кластера?
+
+Уточнение режима обновления кластера
 
 Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
 
