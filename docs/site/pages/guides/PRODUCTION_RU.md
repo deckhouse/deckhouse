@@ -384,7 +384,7 @@ metadata:
 ```
 ------------------
 
-## Получение уведломлений об обновлении
+## Получение уведломлений
 
 Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
 
