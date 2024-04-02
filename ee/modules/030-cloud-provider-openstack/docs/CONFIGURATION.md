@@ -19,36 +19,10 @@ To authenticate using the `user-authn` module, you need to create a new `Generic
 
 A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
 
-<table>
-  <thead>
-    <tr>
-      <th>Service</th>
-      <th>API Version</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>Identity (Keystone)</code></td>
-      <td><code>v3</code></td>
-    </tr>
-    <tr>
-      <td><code>Compute (Nova)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-    <tr>
-      <td><code>Network (Neutron)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-    <tr>
-      <td><code>Block Storage (Cinder)</code></td>
-      <td><code>v3</code></td>
-    </tr>
-    <tr>
-      <td colspan="2">If the Load Balancer ordering functionality will be used:</td>
-    </tr>
-    <tr>
-      <td><code>Load Balancing (Octavia)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-  </tbody>
-</table>
+| Service | API Version |
+| :------------- | :------------- |
+| Identity (Keystone) | v3 |
+| Compute (Nova) | v2 |
+| Network (Neutron) | v2 |
+| Block Storage (Cinder) | If the Load Balancer ordering functionality will be used: v3 |
+| Load Balancing (Octavia) | v2 |

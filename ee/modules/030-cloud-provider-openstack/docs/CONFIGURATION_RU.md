@@ -19,36 +19,10 @@ title: "Сloud provider — OpenStack: настройки"
 
 Список сервисов OpenStack, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
 
-<table>
-  <thead>
-    <tr>
-      <th>Сервис</th>
-      <th>Версия API</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>Identity (Keystone)</code></td>
-      <td><code>v3</code></td>
-    </tr>
-    <tr>
-      <td><code>Compute (Nova)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-    <tr>
-      <td><code>Network (Neutron)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-    <tr>
-      <td><code>Block Storage (Cinder)</code></td>
-      <td><code>v3</code></td>
-    </tr>
-    <tr>
-      <td colspan="2">Если будет использована функциональность заказа Load Balancer:</td>
-    </tr>
-    <tr>
-      <td><code>Load Balancing (Octavia)</code></td>
-      <td><code>v2</code></td>
-    </tr>
-  </tbody>
-</table>
+| Сервис | Версия API |
+| :------------- | :------------- |
+| Identity (Keystone) | v3 |
+| Compute (Nova) | v2 |
+| Network (Neutron) | v2 |
+| Block Storage (Cinder) | Если будет использована функциональность заказа Load Balancer: v3 |
+| Load Balancing (Octavia) | v2 |
