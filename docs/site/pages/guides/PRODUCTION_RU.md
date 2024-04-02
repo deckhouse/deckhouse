@@ -34,9 +34,15 @@ lang: ru
 
 <!-- Нужен сценарий-->
 
-## Поддержка последних версий Kubernetes
+## Поддержка версий Kubernetes
 
-### Обновление версий Kubernetes
+### Обновление кластеров Kubernetes
+
+Обзор - доклад Давида ТРАНСКРИБАТОР!
+
+![alt text](image.png)
+
+### Обновление Kubernetes в кластере DKP
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
 1. Выполните команду:
