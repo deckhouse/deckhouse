@@ -25,7 +25,7 @@
     expr: ((rabbitmq_node_mem_used{job="rabbitmq"} / rabbitmq_node_mem_limit{job="rabbitmq"}) or (rabbitmq_process_resident_memory_bytes{job="rabbitmq"} / rabbitmq_resident_memory_limit_bytes{job="rabbitmq"})) * 100 > 95
     for: 1m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -45,7 +45,7 @@
     expr: predict_linear(rabbitmq_disk_space_available_bytes{job="rabbitmq"}[15m], 1 * 60 * 60) < rabbitmq_node_disk_free_limit
     for: 5m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -60,7 +60,7 @@
     expr: (rabbitmq_process_open_fds{job="rabbitmq"} / rabbitmq_process_max_fds{job="rabbitmq"}) * 100 > 90
     for: 1m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -74,7 +74,7 @@
     expr: (rabbitmq_process_open_tcp_sockets{job="rabbitmq"} / rabbitmq_process_max_tcp_sockets{job="rabbitmq"}) * 100 > 90
     for: 1m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -88,7 +88,7 @@
     expr: kube_statefulset_status_replicas{statefulset=~"(rabbitmq|rmq).*"} - kube_statefulset_status_replicas_ready{statefulset=~"(rabbitmq|rmq).*"} >= 1
     for: 5m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
