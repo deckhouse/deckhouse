@@ -61,11 +61,11 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	var kubernetesVersion string
 
 	if config.KubernetesVersion != "Automatic" {
-		kubernetesVersion = config.KubernetesVersion
+		kubernetesVersion = fmt.Sprintf("v%s", config.KubernetesVersion)
 	}
 
 	if kubernetesVersion == "" {
-		kubernetesVersion = string(secret.Data["deckhouseDefaultKubernetesVersion"])
+		kubernetesVersion = fmt.Sprintf("v%s", string(secret.Data["deckhouseDefaultKubernetesVersion"]))
 	}
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
