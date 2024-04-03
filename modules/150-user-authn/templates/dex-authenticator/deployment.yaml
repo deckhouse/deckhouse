@@ -1,3 +1,21 @@
+{{- define "duration_to_seconds" -}}
+{{-   $durationStr := . -}}
+{{-   $matches := regexFindAll "[0-9]+\\w" $durationStr -1 -}}
+{{-   $seconds := 0 -}}
+{{-   range $match := $matches -}}
+{{-     if hasSuffix "d" $match -}}
+{{-       $seconds = add $seconds (mul (atoi (trimSuffix "d" $match)) 86400) -}}
+{{-     else if hasSuffix "h" $match -}}
+{{-       $seconds = add $seconds (mul (atoi (trimSuffix "h" $match)) 3600) -}}
+{{-     else if hasSuffix "m" $match -}}
+{{-       $seconds = add $seconds (mul (atoi (trimSuffix "m" $match)) 60) -}}
+{{-     else if hasSuffix "s" $match -}}
+{{-       $seconds = add $seconds (atoi (trimSuffix "s" $match)) -}}
+{{-     end -}}
+{{-   end -}}
+{{    $seconds }}
+{{- end -}}
+
 {{- define "dex_authenticator_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -153,10 +171,10 @@ spec:
     {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
     {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
         - --cookie-refresh={{ $idTokenTTL }}
-    {{- if ge (int (include "helm_lib_duration_to_seconds" $keepUsersLoggedInFor)) (int (include "helm_lib_duration_to_seconds" $idTokenTTL)) }}
+    {{- if ge (int (include "duration_to_seconds" $keepUsersLoggedInFor)) (int (include "duration_to_seconds" $idTokenTTL)) }}
         - --cookie-expire={{ $keepUsersLoggedInFor }}
     {{- else }}
-        - --cookie-expire={{ duration (add (int (include "helm_lib_duration_to_seconds" $idTokenTTL)) 1) }}
+        - --cookie-expire={{ duration (add (int (include "duration_to_seconds" $idTokenTTL)) 1) }}
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         env:
