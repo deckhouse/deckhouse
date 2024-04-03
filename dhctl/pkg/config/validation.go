@@ -185,7 +185,8 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 // ValidateClusterConfiguration parses and validates cluster ClusterConfiguration.
 // It requires one doc with ClusterConfiguration kind.
-// Returns data that needs to validate ProviderSpecificClusterConfiguration.
+// Returns ClusterConfig that needs to validate ProviderSpecificClusterConfiguration.
+// ClusterConfig may not be empty even is error is returned.
 func ValidateClusterConfiguration(
 	clusterConfigData string,
 	schemaStore *SchemaStore,
@@ -263,7 +264,7 @@ func ValidateClusterConfiguration(
 	}
 
 	if err := errs.ErrorOrNil(); err != nil {
-		return ClusterConfig{}, err
+		return clusterConfig, err
 	}
 
 	return clusterConfig, nil
@@ -338,11 +339,13 @@ func ValidateProviderSpecificClusterConfiguration(
 			errMessages = append(errMessages, err.Error())
 		}
 
-		switch index.Kind {
-		case providerKind:
-			clusterConfigDocsCount++
-		default:
-			errMessages = append(errMessages, fmt.Errorf("unknown kind, expected %q", providerKind).Error())
+		if providerKind != "" {
+			switch index.Kind {
+			case providerKind:
+				clusterConfigDocsCount++
+			default:
+				errMessages = append(errMessages, fmt.Errorf("unknown kind, expected %q", providerKind).Error())
+			}
 		}
 
 		if len(errMessages) != 0 {
@@ -357,7 +360,7 @@ func ValidateProviderSpecificClusterConfiguration(
 		}
 	}
 
-	if clusterConfigDocsCount != 1 {
+	if providerKind != "" && clusterConfigDocsCount != 1 {
 		errs.Append(ErrKindValidationFailed, Error{
 			Messages: []string{fmt.Errorf("exactly one %q required", providerKind).Error()},
 		})
@@ -511,12 +514,18 @@ func compareWith(oldDoc, newDoc json.RawMessage, schema spec.Schema) error {
 	for field, fieldSchema := range schema.Properties {
 		err = validateXUnsafeExtensions(oldProperties[field], newProperties[field], fieldSchema)
 		if err != nil {
-			return fmt.Errorf("%q: %w", field, err)
+			if errors.Is(err, ErrUnsafeFieldChanged) {
+				return fmt.Errorf("%w: %s", err, "."+field)
+			}
+			return err
 		}
 
 		err = compareWith(oldProperties[field], newProperties[field], fieldSchema)
 		if err != nil {
-			return fmt.Errorf("%q: %w", field, err)
+			if errors.Is(err, ErrUnsafeFieldChanged) {
+				return fmt.Errorf("%w: %s", err, "."+field)
+			}
+			return err
 		}
 	}
 
