@@ -145,7 +145,7 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 	}
 
 	du.changeNotifiedFlag(true)
-	if applyTimeChanged {
+	if applyTimeChanged && !predictedRelease.AnnotationFlags.ApplyNow {
 		patch := map[string]interface{}{
 			"spec": map[string]interface{}{
 				"applyAfter": releaseApplyTime,
