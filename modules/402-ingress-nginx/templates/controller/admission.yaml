@@ -34,7 +34,7 @@ webhooks:
         scope: Namespaced
     failurePolicy: Fail
     sideEffects: None
-    timeoutSeconds: 30
+    timeoutSeconds: 28
     admissionReviewVersions:
     - v1
     clientConfig:
