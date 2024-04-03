@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 	"gopkg.in/yaml.v3"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"golang.org/x/mod/semver"
 	rbac "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -45,6 +45,16 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
+	}
+
+	_, err = kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
+	// if kubeadm:cluster-admins ClusterRoleBinding exists
+	if err == nil {
+		return nil
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error: %v", err)
 	}
 
 	secret, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
@@ -75,13 +85,6 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	_, err = kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
-	if err == nil {
-		return nil
-	}
-	if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("error: %v", err)
-	}
 	clusterRoleBinding := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
