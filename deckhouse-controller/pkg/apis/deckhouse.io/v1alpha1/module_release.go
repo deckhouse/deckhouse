@@ -76,6 +76,16 @@ func (mr *ModuleRelease) GetModuleSource() string {
 	return mr.Labels["source"]
 }
 
+// GetModuleName returns the module's name of the release
+func (mr *ModuleRelease) GetModuleName() string {
+	return mr.Spec.ModuleName
+}
+
+// GetReleaseVersion returns the version of the release in the form of "vx.y.z"
+func (mr *ModuleRelease) GetReleaseVersion() string {
+	return "v" + mr.Spec.Version.String()
+}
+
 type Changelog map[string]any
 
 func (c Changelog) DeepCopy() Changelog {
