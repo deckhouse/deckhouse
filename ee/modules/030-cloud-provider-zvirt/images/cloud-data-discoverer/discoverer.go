@@ -27,6 +27,7 @@ const (
 	envZvirtUsername = "ZVIRT_USERNAME"
 	envZvirtPassword = "ZVIRT_PASSWORD"
 	envZvirtInsecure = "ZVIRT_INSECURE"
+	envZvirtCaBundle = "ZVIRT_CA_BUNDLE"
 )
 
 type Discoverer struct {
@@ -39,6 +40,7 @@ type CloudConfig struct {
 	Username string `json:"user"`
 	Password string `json:"password"`
 	Insecure bool   `json:"insecure"`
+	CaBundle string `json:"caBundle"`
 }
 
 func newCloudConfig() (*CloudConfig, error) {
@@ -70,6 +72,7 @@ func newCloudConfig() (*CloudConfig, error) {
 		}
 		cloudConfig.Insecure = v
 	}
+	cloudConfig.CaBundle = os.Getenv(envZvirtCaBundle)
 
 	return cloudConfig, nil
 }
@@ -82,6 +85,8 @@ func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
 
 	if c.Insecure {
 		tls.Insecure()
+	} else if c.CaBundle != "" {
+		tls.CACertsFromMemory([]byte(c.CaBundle))
 	} else {
 		tls.CACertsFromSystem()
 	}
