@@ -15,7 +15,7 @@ Deckhouse CLI — это интерфейс командной строки дл
     Например, команда `d8 virtualziation console` подключает к консоли виртуальной машины.
 
     <div markdown="0">
-    <details><summary>Больше команд</summary>
+    <details><summary>Больше команд для виртуализации</summary>
     <ul>
     <li><code>d8 v console</code> подключает к консоли виртуальной машины.</li>
     <li><code>d8 v port-forward</code> перенаправляет локальные порты на виртуальную машину.</li>
