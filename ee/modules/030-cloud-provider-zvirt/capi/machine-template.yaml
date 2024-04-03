@@ -15,7 +15,7 @@ spec:
       {{- if .nodeGroup.instanceClass.template }}
       template: {{ .nodeGroup.instanceClass.template | quote }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.vnicProfileId }}
+      {{- if .nodeGroup.instanceClass.vnicProfileID }}
       vnicProfileID: {{ .nodeGroup.instanceClass.vnicProfileID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.numCPUs }}
