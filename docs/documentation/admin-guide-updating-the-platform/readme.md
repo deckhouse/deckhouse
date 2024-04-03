@@ -14,3 +14,11 @@ Deckhouse Kubernetes Platform обеспечивает стабильность 
   - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/002-deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
   - Установлен параметр [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) и указанное в нем время еще не прошло.
+
+В базовых редакциях поддерживается только две последних версии Kubernetes, в более продвинутых поддерживается 4 последние вышедшие версии Kubernetes.						 -->
+
+Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
+
+Сводную информацию о важных изменениях, об обновлении версий компонентов, а также о том, какие компоненты в кластере буду перезапущены в процессе обновления, можно найти в описании нулевой patch-версии релиза. Например, [v1.46.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.46.0) для релиза v1.46 Deckhouse.
+
+Подробный список изменений можно найти в Changelog, ссылка на который есть в каждом [релизе](https://github.com/deckhouse/deckhouse/releases).
