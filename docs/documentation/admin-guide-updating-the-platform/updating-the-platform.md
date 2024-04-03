@@ -61,6 +61,24 @@ lang: ru
 
 ![alt text](image.png)
 
+### Обновление control plane
+
+Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.23.3` на `1.23.5`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
+
+Обновлением **минорной-версии** компонентов control plane (например, с `1.23.*` на `1.25.*`) можно управлять с помощью параметра [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](../../supported_versions.html#kubernetes).
+
+Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
+
+Если указанная для обновления версия (параметр [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
+- Общие замечания:
+  - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
+- При upgrade:
+  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.22 -> 1.23, 1.23 -> 1.24, 1.24 -> 1.25.
+  - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.  
+- При downgrade:
+  - Успешный downgrade гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
+  - Сначала происходит downgrade kubelet'a на узлах кластера, затем — downgrade компонентов control plane.
+
 ### Обновление Kubernetes в кластере DKP
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
