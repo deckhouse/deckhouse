@@ -97,6 +97,8 @@ spec:
             value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.password | quote }}
           - name: ZVIRT_INSECURE
             value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.insecure | quote }}
+          - name: ZVIRT_CA_BUNDLE
+            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle | b64dec | quote }}
           ports:
           - name: https
             containerPort: 10471

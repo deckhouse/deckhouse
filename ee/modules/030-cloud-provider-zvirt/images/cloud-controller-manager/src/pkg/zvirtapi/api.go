@@ -19,13 +19,15 @@ type ZvirtCloudAPI struct {
 	ComputeSvc *ComputeService
 }
 
-func NewZvirtCloudAPI(apiURL, username, password string, insecure bool) (*ZvirtCloudAPI, error) {
+func NewZvirtCloudAPI(apiURL, username, password string, insecure bool, caBundle string) (*ZvirtCloudAPI, error) {
 	logger := ovirtclientlog.NewGoLogger(log.Default())
 
 	tls := ovirtclient.TLS()
 
 	if insecure {
 		tls.Insecure()
+	} else if caBundle != "" {
+		tls.CACertsFromMemory([]byte(caBundle))
 	} else {
 		tls.CACertsFromSystem()
 	}

@@ -28,6 +28,7 @@ const (
 	envZvirtUsername = "ZVIRT_USERNAME"
 	envZvirtPassword = "ZVIRT_PASSWORD"
 	envZvirtInsecure = "ZVIRT_INSECURE"
+	envZvirtCaBundle = "ZVIRT_CA_BUNDLE"
 )
 
 type CloudConfig struct {
@@ -35,6 +36,7 @@ type CloudConfig struct {
 	Username string
 	Password string
 	Insecure bool
+	CaBundle string
 }
 
 type Cloud struct {
@@ -56,6 +58,7 @@ func init() {
 				config.Username,
 				config.Password,
 				config.Insecure,
+				config.CaBundle,
 			)
 			if err != nil {
 				return nil, err
@@ -104,6 +107,7 @@ func NewCloudConfig() (*CloudConfig, error) {
 		}
 		cloudConfig.Insecure = v
 	}
+	cloudConfig.CaBundle = os.Getenv(envZvirtCaBundle)
 
 	return cloudConfig, nil
 }
