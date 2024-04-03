@@ -19,11 +19,11 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"golang.org/x/mod/semver"
+	"gopkg.in/yaml.v3"
 	rbac "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
