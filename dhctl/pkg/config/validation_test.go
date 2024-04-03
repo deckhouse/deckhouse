@@ -265,7 +265,9 @@ apiVersion: deckhouse.io/v1
 kind: SomeKind
 clusterType: Static
 `,
-			expected:    ClusterConfig{},
+			expected: ClusterConfig{
+				ClusterType: "Static",
+			},
 			errContains: `ValidationFailed: [1] deckhouse.io/v1, Kind=SomeKind: schema not found: no schema for index SomeKind, deckhouse.io/v1; unknown kind, expected "ClusterConfiguration"`,
 		},
 	}
@@ -275,12 +277,11 @@ clusterType: Static
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			clusterConfig, err := ValidateClusterConfiguration(tt.config, newStore, validateOpts...)
+			require.Equal(t, tt.expected, clusterConfig)
 			if tt.errContains == "" {
 				require.NoError(t, err)
-				require.Equal(t, tt.expected, clusterConfig)
 			} else {
 				require.ErrorContains(t, err, tt.errContains)
-				require.Empty(t, clusterConfig)
 			}
 		})
 	}
@@ -354,6 +355,7 @@ metadata:
 			config: `
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
+layout: Standard
 metadata:
     name: badProvider`,
 			clusterConfig: ClusterConfig{
@@ -364,7 +366,30 @@ metadata:
 					Provider: "badProvider",
 				}),
 			},
-			errContains: `ValidationFailed: unknown cloud provider 'badProvider', check if 'ClusterConfiguration' is valid`,
+			errContains: `ValidationFailed: unknown cloud provider 'badProvider', check if 'ClusterConfiguration' is valid
+[0] deckhouse.io/v1, Kind=YandexClusterConfiguration "badProvider": "YandexClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+	* .metadata is a forbidden property
+	* .masterNodeGroup is required
+	* .nodeNetworkCIDR is required
+	* .sshPublicKey is required
+	* .provider is required`,
+		},
+		"empty provider": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: SuperOpenStackClusterConfiguration
+metadata:
+    name: emptyProvider`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "",
+				}),
+			},
+			errContains: `ValidationFailed: unknown cloud provider '', check if 'ClusterConfiguration' is valid
+[0] deckhouse.io/v1, Kind=SuperOpenStackClusterConfiguration "emptyProvider": schema not found: no schema for index SuperOpenStackClusterConfiguration, deckhouse.io/v1`,
 		},
 		"no config": {
 			config: `
