@@ -17,7 +17,6 @@ import (
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -182,45 +181,9 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	return diskMeta, nil
 }
 
+// NotImplemented
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
-	zvirtClient, err := d.config.client()
-	if err != nil {
-		return nil, err
-	}
-	vms, err := zvirtClient.WithContext(ctx).ListVMs()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(vms) == 0 {
-		return []v1alpha1.InstanceType{}, nil
-	}
-
-	instanceTypes := make([]v1alpha1.InstanceType, 0, len(vms))
-
-	for _, vm := range vms {
-		name := vm.Name()
-		cpu := vm.CPU()
-		if cpu == nil {
-			logrus.Warnf("VM %s, Cannot get CPU count", name)
-			continue
-		}
-		cpuTopo := cpu.Topo()
-		if cpuTopo == nil {
-			logrus.Warnf("VM %s, Cannot get CPU count", name)
-			continue
-		}
-		var cpuCount, memory int64
-		memory = vm.Memory()
-		cpuCount = int64(cpuTopo.Cores())
-		instanceTypes = append(instanceTypes, v1alpha1.InstanceType{
-			Name:     name,
-			CPU:      resource.MustParse(strconv.FormatInt(cpuCount, 10)),
-			Memory:   resource.MustParse(strconv.FormatInt(memory, 10) + "Mi"),
-			RootDisk: resource.MustParse("0Gi"),
-		})
-	}
-	return instanceTypes, nil
+	return nil, nil
 }
 
 func mergeStorageDomains(
