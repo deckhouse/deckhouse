@@ -25,16 +25,10 @@
   {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
 {{- end }}
 
-{{- $nicName := .nil }}
-{{- if .nodeGroup.instanceClass.nicName }}
-  {{- $nicName = .nodeGroup.instanceClass.nicName }}
-{{- end }}
-
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
 {{- $_ := set $options "vnicProfileID" .nodeGroup.instanceClass.vnicProfileID -}}
 {{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
 {{- $_ := set $options "rootDiskSizeGb" .nodeGroup.instanceClass.rootDiskSizeGb -}}
-{{- $_ := set $options "nicName" .nodeGroup.instanceClass.nicName -}}
 
 {{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

@@ -116,13 +116,13 @@ properties:
                   vnicProfileID:
                     type: string
                     description: |
-                      vNIC profile id.
+                      Virtual NIC profile ID on the basis of which the virtual NIC will be created.
                     pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                   storageDomainID:
                     type: string
                     description: |
-                      Storage domain id.
+                      Storage domain id which contains the shared resources that must be available to all datacentre hosts.
                     pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           nodeGroups:
