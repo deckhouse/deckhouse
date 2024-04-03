@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"gopkg.in/yaml.v3"
 
@@ -53,20 +52,10 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("error get d8-cluster-configuration secret: %s", err.Error())
 	}
 
-	configYAML, err := base64.StdEncoding.DecodeString(string(secret.Data["cluster-configuration.yaml"]))
-	if err != nil {
-		return fmt.Errorf("error base64 decode cluster-configuration.yaml: %s", err.Error())
-	}
-
 	var config clusterConfig
-	err = yaml.Unmarshal([]byte(configYAML), &config)
+	err = yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &config)
 	if err != nil {
 		fmt.Printf("error unmarshal yaml: %v", err)
-	}
-
-	defaultVersion, err := base64.StdEncoding.DecodeString(string(secret.Data["deckhouseDefaultKubernetesVersion"]))
-	if err != nil {
-		return fmt.Errorf("error base64 decode cluster-configuration.yaml: %s", err.Error())
 	}
 
 	var kubernetesVersion string
@@ -76,7 +65,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	if kubernetesVersion == "" {
-		kubernetesVersion = string(defaultVersion)
+		kubernetesVersion = string(secret.Data["deckhouseDefaultKubernetesVersion"])
 	}
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
