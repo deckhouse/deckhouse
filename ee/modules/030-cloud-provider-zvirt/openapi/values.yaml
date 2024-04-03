@@ -44,7 +44,6 @@ properties:
                   memory: 8192
                   template: debian-bookworm
                   vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-                  storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
             provider:
               server: '<SERVER>'
               username: '<USERNAME>'
@@ -188,7 +187,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [numCPUs, memory, template, vnicProfileID, storageDomainID]
+                  required: [numCPUs, memory, template, vnicProfileID]
                   description: |
                     Partial contents of the fields of the.
                   properties:
