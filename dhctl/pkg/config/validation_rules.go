@@ -61,12 +61,12 @@ func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 	}
 
 	if newValue == 0 {
-		return fmt.Errorf("%w: got unacceptable masterNodeGroup.replicas zero value", ErrValidationRuleFailed)
+		return fmt.Errorf("%w: got unacceptable .masterNodeGroup.replicas zero value", ErrValidationRuleFailed)
 	}
 
 	if newValue < oldValue && newValue < 2 {
 		return fmt.Errorf(
-			"%w: the new masterNodeGroup.replicas value (%d) cannot be less that than 2 (%d)",
+			"%w: the new .masterNodeGroup.replicas value (%d) cannot be less that than 2 (%d)",
 			ErrValidationRuleFailed, newValue, oldValue,
 		)
 	}
@@ -104,7 +104,7 @@ func DeleteZonesRule(oldRaw, newRaw json.RawMessage) error {
 	}
 
 	return fmt.Errorf(
-		"%w: can't delete zone if masterNodeGroup.replicas < 3 (%d)",
+		"%w: can't delete zone if .masterNodeGroup.replicas < 3 (%d)",
 		ErrValidationRuleFailed,
 		newConfig.MasterNodeGroup.Replicas,
 	)
@@ -154,7 +154,7 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 	} {
 		if images.new != "" && images.old != images.new {
 			return fmt.Errorf(
-				"%w: can't update masterNodeGroup.%s if masterNodeGroup.replicas == 1",
+				"%w: can't update .masterNodeGroup.%s if .masterNodeGroup.replicas == 1",
 				ErrValidationRuleFailed,
 				images.field,
 			)
