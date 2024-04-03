@@ -18,7 +18,9 @@ package hooks
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"gopkg.in/yaml.v3"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -36,6 +38,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 15},
 }, dependency.WithExternalDependencies(k8sPostUpgrade))
 
+type clusterConfig struct {
+	KubernetesVersion string `yaml:"kubernetesVersion"`
+}
+
 func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
@@ -46,12 +52,34 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return fmt.Errorf("error get d8-cluster-configuration secret: %s", err.Error())
 	}
-	configBase64 := secret.Data["cluster-configuration.yaml"]
-	input.LogEntry.Println(configBase64)
-	defaultVersionBase64 := secret.Data["deckhouseDefaultKubernetesVersion"]
-	input.LogEntry.Println(defaultVersionBase64)
 
-	kubernetesVersion := fmt.Sprintf("v%s", input.Values.Get("global.discovery.kubernetesVersion"))
+	configYAML, err := base64.StdEncoding.DecodeString(string(secret.Data["cluster-configuration.yaml"]))
+	if err != nil {
+		return fmt.Errorf("error base64 decode cluster-configuration.yaml: %s", err.Error())
+	}
+
+	var config clusterConfig
+	err = yaml.Unmarshal([]byte(configYAML), &config)
+	if err != nil {
+		fmt.Printf("error unmarshal yaml: %v", err)
+	}
+
+	defaultVersion, err := base64.StdEncoding.DecodeString(string(secret.Data["deckhouseDefaultKubernetesVersion"]))
+	if err != nil {
+		return fmt.Errorf("error base64 decode cluster-configuration.yaml: %s", err.Error())
+	}
+
+	var kubernetesVersion string
+
+	if config.KubernetesVersion != "Automatic" {
+		kubernetesVersion = config.KubernetesVersion
+	}
+
+	if kubernetesVersion == "" {
+		kubernetesVersion = string(defaultVersion)
+	}
+
+	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
 
 	input.LogEntry.Printf("debug kubernetesVersion: %s (%v)", kubernetesVersion, semver.Compare("v1.29.0", kubernetesVersion))
 	input.LogEntry.Println("debug 1")
