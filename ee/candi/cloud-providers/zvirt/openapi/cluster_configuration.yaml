@@ -211,6 +211,9 @@ apiVersions:
           password:
             type: string
             description: The user's password.
+          caBundle:
+            type: string
+            description: CA certificate in base64.
           insecure:
             type: boolean
             description:  Set to `true` if Zvirt has a self-signed certificate.
