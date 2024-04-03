@@ -123,6 +123,8 @@ apiVersions:
             description: Логин.
           password:
             description: Пароль.
+          caBundle:
+            description: CA сертификат закодированный base64.
           insecure:
             type: boolean
             description:  Установите значение `true`, если Zvirt имеет самоподписанный сертификат.
