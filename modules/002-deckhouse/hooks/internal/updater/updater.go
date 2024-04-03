@@ -60,7 +60,6 @@ type DeckhouseUpdater struct {
 	skippedPatchesIndexes       []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
-	appliedNowReleaseIndex      int
 	predictedReleaseIsPatch     *bool
 
 	deckhousePodIsReady      bool
@@ -86,7 +85,6 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
-		appliedNowReleaseIndex:      -1,
 		skippedPatchesIndexes:       make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
 		deckhouseIsBootstrapping:    isBootstrapping,
@@ -99,7 +97,7 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 // - Canary settings
 func (du *DeckhouseUpdater) checkPatchReleaseConditions(predictedRelease *DeckhouseRelease) bool {
 	// check: canary settings
-	if predictedRelease.ApplyAfter != nil {
+	if predictedRelease.ApplyAfter != nil && !predictedRelease.AnnotationFlags.ApplyNow {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
 			du.input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
 			du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
@@ -198,44 +196,47 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 		}
 	}
 
-	// check: release cooldown
-	if predictedRelease.CooldownUntil != nil {
-		if du.now.Before(*predictedRelease.CooldownUntil) {
-			du.input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
-			du.updateStatus(predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
-			return false
-		}
-	}
-
-	// check: canary settings
-	if predictedRelease.ApplyAfter != nil && !du.inManualMode {
-		if du.now.Before(*predictedRelease.ApplyAfter) {
-			du.input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
-			du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
-			return false
-		}
-	}
-
-	if du.inManualMode {
-		// check: release is approved in Manual mode
-		if !predictedRelease.Status.Approved {
-			du.input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
-			du.input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
-			du.updateStatus(predictedRelease, waitingManualApprovalMsg, v1alpha1.PhasePending)
-			return false
-		}
-	} else {
-		// check: update windows in Auto mode
-		if len(updateWindows) > 0 {
-			updatePermitted := updateWindows.IsAllowed(du.now)
-			if !updatePermitted {
-				applyTime := updateWindows.NextAllowedTime(du.now)
-				du.input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-				du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
+	// call tine checks, only if release does not have the `release.deckhouse.io/apply-now="true"` annotation
+	if !predictedRelease.AnnotationFlags.ApplyNow {
+		// check: release cooldown
+		if predictedRelease.CooldownUntil != nil {
+			if du.now.Before(*predictedRelease.CooldownUntil) {
+				du.input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
+				du.updateStatus(predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
 				return false
 			}
 		}
-	}
+
+		// check: canary settings
+		if predictedRelease.ApplyAfter != nil && !du.inManualMode {
+			if du.now.Before(*predictedRelease.ApplyAfter) {
+				du.input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
+				du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
+				return false
+			}
+		}
+
+		if du.inManualMode {
+			// check: release is approved in Manual mode
+			if !predictedRelease.Status.Approved {
+				du.input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
+				du.input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
+				du.updateStatus(predictedRelease, waitingManualApprovalMsg, v1alpha1.PhasePending)
+				return false
+			}
+		} else {
+			// check: update windows in Auto mode
+			if len(updateWindows) > 0 {
+				updatePermitted := updateWindows.IsAllowed(du.now)
+				if !updatePermitted {
+					applyTime := updateWindows.NextAllowedTime(du.now)
+					du.input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
+					du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
+					return false
+				}
+			}
+		}
+	} // end of `release.deckhouse.io/apply-now="true"` block
 
 	// check: Deckhouse pod is ready
 	if !du.deckhousePodIsReady {
@@ -368,6 +369,19 @@ func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 
 	du.updateStatus(predictedRelease, "", v1alpha1.PhaseDeployed)
 
+	// remove annotation if exists
+	if predictedRelease.AnnotationFlags.ApplyNow {
+		annotationsPatch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					"release.deckhouse.io/apply-now": nil,
+				},
+			},
+		}
+		// remove annotation
+		du.input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name)
+	}
+
 	if currentRelease != nil {
 		// skip last deployed release
 		du.updateStatus(currentRelease, "", v1alpha1.PhaseSuperseded)
@@ -399,10 +413,6 @@ func (du *DeckhouseUpdater) PredictNextRelease() {
 
 		if release.AnnotationFlags.Force {
 			du.forcedReleaseIndex = i
-		}
-
-		if release.AnnotationFlags.ApplyNow {
-			du.appliedNowReleaseIndex = i
 		}
 	}
 }
@@ -446,45 +456,6 @@ func (du *DeckhouseUpdater) ApplyForcedRelease() {
 
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
-			du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
-		}
-	}
-}
-
-func (du *DeckhouseUpdater) HasAppliedNowRelease() bool {
-	return du.appliedNowReleaseIndex != -1
-}
-
-func (du *DeckhouseUpdater) ApplyAppliedNowRelease() {
-	appliedNowRelease := &(du.releases[du.appliedNowReleaseIndex])
-	var currentRelease *DeckhouseRelease
-
-	if !du.checkAppliedNowConditions(appliedNowRelease) {
-		return
-	}
-
-	if du.currentDeployedReleaseIndex != -1 {
-		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
-	}
-
-	du.input.LogEntry.Warnf("Applying release %s", appliedNowRelease.Name)
-
-	// all checks are passed, deploy release
-	du.runReleaseDeploy(appliedNowRelease, currentRelease)
-
-	annotationsPatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"release.deckhouse.io/apply-now": nil,
-			},
-		},
-	}
-	// remove annotation
-	du.input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", appliedNowRelease.Name)
-
-	// Outdate all previous releases
-	for i, release := range du.releases {
-		if i < du.appliedNowReleaseIndex {
 			du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
 		}
 	}

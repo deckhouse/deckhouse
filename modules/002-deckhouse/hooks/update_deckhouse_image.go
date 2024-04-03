@@ -188,11 +188,6 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	if deckhouseUpdater.HasAppliedNowRelease() {
-		deckhouseUpdater.ApplyAppliedNowRelease()
-		return nil
-	}
-
 	if deckhouseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
 		deckhouseUpdater.ApplyPredictedRelease(nil)
