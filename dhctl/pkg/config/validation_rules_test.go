@@ -116,7 +116,7 @@ clusterType: Cloud
 masterNodeGroup:
   replicas: 1`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: "clusterType": unsafe field has been changed`,
+			errContains: `ChangesValidationFailed: unsafe field has been changed: .clusterType`,
 		},
 		"unsafe object changed": {
 			phase: phases.FinalizationPhase,
@@ -137,7 +137,7 @@ unsafeObject:
   fieldB: dd
 `,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: "unsafeObject": unsafe field has been changed`,
+			errContains: `ChangesValidationFailed: unsafe field has been changed: .unsafeObject`,
 		},
 		"unsafe rule, ok: updateReplicas": {
 			phase: phases.FinalizationPhase,
@@ -170,7 +170,7 @@ clusterType: Static
 masterNodeGroup:
   replicas: 1`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: "masterNodeGroup": "replicas": validation rule failed: the new masterNodeGroup.replicas value (1) cannot be less that than 2 (3)`,
+			errContains: `ChangesValidationFailed: validation rule failed: the new .masterNodeGroup.replicas value (1) cannot be less that than 2 (3)`,
 		},
 		"unsafe rule, ok: deleteZones": {
 			phase: phases.FinalizationPhase,
@@ -207,7 +207,7 @@ zones: [ru-central1]
 masterNodeGroup:
   replicas: 1`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't delete zone if masterNodeGroup.replicas < 3 (1)`,
+			errContains: `ChangesValidationFailed: validation rule failed: can't delete zone if .masterNodeGroup.replicas < 3 (1)`,
 		},
 		"unsafe rule, ok: updateMasterImage": {
 			phase: phases.FinalizationPhase,
@@ -248,7 +248,7 @@ masterNodeGroup:
   instanceClass:
     imageID: bar`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: "masterNodeGroup": validation rule failed: can't update masterNodeGroup.imageID if masterNodeGroup.replicas == 1`,
+			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.imageID if .masterNodeGroup.replicas == 1`,
 		},
 		"change number of docs": {
 			phase: phases.FinalizationPhase,
