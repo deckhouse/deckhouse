@@ -30,7 +30,7 @@
   mountPath: /etc/cloud
   readOnly: true
 - name: csi-controller-ca-volume
-  mountPath: /etc/cloud
+  mountPath: /etc/cloud/ca
   readOnly: true
 - name: zvirt-credentials-volume
   mountPath: /etc/kubernetes/zvirt/basic-auth
