@@ -4,7 +4,7 @@ permalink: ru/deckhouse-cli/
 lang: ru
 ---
 
-Deckhouse CLI — это интерфейс командной строки для работы с кластерами Deckhouse Kubernetes Platform (DKP), который устанавливается вместе с платформой. Утилиту можно установить и [вручную](#manual).
+Deckhouse CLI — это интерфейс командной строки для работы с кластерами Deckhouse Kubernetes Platform (DKP), который автоматически устанавливается вместе с платформой. Утилиту можно дополнительно [установить](#как-установить-deckhouse-cli) на любую машину.
 
 Утилита называется `d8`. 
 
@@ -27,7 +27,29 @@ Deckhouse CLI — это интерфейс командной строки дл
     </details>
     </div>
 
-Качай Deckhouse CLI:
-- [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-linux-amd64.tar.gz)
-- [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-amd64.tar.gz)
-- [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-arm64.tar.gz)
+## Как установить Deckhouse CLI?
+
+1. Скачайте архив с подходящей версией ОС:
+    * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-linux-amd64.tar.gz)
+    * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-amd64.tar.gz)
+    * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-arm64)
+
+1. Распакуйте архив командой:
+
+   ```bash
+   tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
+   ```
+
+1. Переместите файл `d8` в каталог, которве включен в переменную `PATH` вашей системы:
+
+   ```bash
+   sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
+   ```
+
+1. Проверьте, что утилита работает:
+
+   ```bash
+   d8 help
+   ```
+
+Готово, вы установили Deckhouse CLI.
