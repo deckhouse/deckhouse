@@ -30,7 +30,6 @@ locals {
   node_group_name = local.ng.name
 
   vnic_profile_id = lookup(local.instance_class, "vnicProfileID", [])
-  storage_domain_id = lookup(local.instance_class, "storageDomainID", [])
   cluster_id = lookup(var.providerClusterConfiguration, "clusterID", [])
   template_name = lookup(local.instance_class, "template", [])
   node_name = join("-", [local.resource_name_prefix, local.node_group_name, var.nodeIndex])

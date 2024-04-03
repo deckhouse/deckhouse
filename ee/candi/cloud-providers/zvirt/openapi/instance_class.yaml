@@ -28,7 +28,7 @@ spec:
                 - numCPUs
                 - memory
                 - template
-                - vnicProfileId
+                - vnicProfileID
                 - storageDomainId
               properties:
                 numCPUs:
@@ -54,12 +54,12 @@ spec:
                     Template name to be cloned.
                   x-doc-examples: ['debian-bookworm']
                   type: string
-                vnicProfileId:
+                vnicProfileID:
                   description: |
                     vNIC profile id.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
                   type: string
-                storageDomainId:
+                storageDomainID:
                   description: |
                     Storage domain id.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']

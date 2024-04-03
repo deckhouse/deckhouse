@@ -5,9 +5,9 @@
   {{- $template = .nodeGroup.instanceClass.template }}
 {{- end }}
 
-{{- $vnicProfileId := .nil }}
-{{- if .nodeGroup.instanceClass.vnicProfileId }}
-  {{- $vnicProfileId = .nodeGroup.instanceClass.vnicProfileId }}
+{{- $vnicProfileID := .nil }}
+{{- if .nodeGroup.instanceClass.vnicProfileID }}
+  {{- $vnicProfileID = .nodeGroup.instanceClass.vnicProfileID }}
 {{- end }}
 
 {{- $numCPUs := .nil }}
@@ -31,7 +31,7 @@
 {{- end }}
 
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
-{{- $_ := set $options "vnicProfileId" .nodeGroup.instanceClass.vnicProfileId -}}
+{{- $_ := set $options "vnicProfileID" .nodeGroup.instanceClass.vnicProfileID -}}
 {{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
 {{- $_ := set $options "rootDiskSizeGb" .nodeGroup.instanceClass.rootDiskSizeGb -}}

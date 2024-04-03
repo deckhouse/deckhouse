@@ -54,13 +54,13 @@ apiVersions:
               vmType:
                 description: |
                   Нагрузочный профиль.
-              vnicProfileId:
+              vnicProfileID:
                 description: |
                   ID профиля vNIC.
               nicName:
                 description: |
                   vNIC имя.
-              storageDomainId:
+              storageDomainID:
                 type: string
                 description: |
                   ID домена хранения.
