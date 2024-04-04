@@ -29,6 +29,11 @@ func main() {
 }
 
 func test() {
+	var (
+		test       = 5
+		definition string
+		test2      = test
+	)
 	requirements.RegisterCheck(someValue, func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		return false, nil
 	})

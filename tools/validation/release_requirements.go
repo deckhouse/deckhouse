@@ -197,6 +197,11 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 
 	// node is either an assignment or a definition
 	ast.Inspect(file, func(n ast.Node) bool {
+		parentFunction := findParentFunction(stack)
+		if decls[parentFunction] == nil {
+			decls[parentFunction] = make(map[string]string)
+		}
+
 		switch ntype := n.(type) {
 		case *ast.AssignStmt:
 			if ntype.Tok == token.ASSIGN || ntype.Tok == token.DEFINE {
@@ -213,9 +218,9 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 
 					case *ast.Ident:
 						var ok bool
-						value, ok = decls[findParentFunction(stack)][v.Name]
+						value, ok = decls[parentFunction][v.Name]
 						if !ok {
-							value, ok = decls[generalDecls][v.Name]
+							value, _ = decls[generalDecls][v.Name]
 						}
 
 					default:
@@ -223,11 +228,7 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 					}
 
 					if len(key) != 0 && len(value) != 0 {
-						parentNode := findParentFunction(stack)
-						if decls[parentNode] == nil {
-							decls[parentNode] = make(map[string]string)
-						}
-						decls[parentNode][key] = strings.Trim(value, "\"")
+						decls[parentFunction][key] = strings.Trim(value, "\"")
 					}
 				}
 			}
@@ -237,14 +238,21 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 				for _, cDecl := range ntype.Specs {
 					if vSpec, ok := cDecl.(*ast.ValueSpec); ok {
 						for i := 0; i < len(vSpec.Names); i++ {
-							switch v := vSpec.Values[i].(type) {
-							case *ast.BasicLit:
-								parentNode := findParentFunction(stack)
-								if decls[parentNode] == nil {
-									decls[parentNode] = make(map[string]string)
+							var value string
+							if len(vSpec.Values) >= i+1 {
+								switch v := vSpec.Values[i].(type) {
+								case *ast.BasicLit:
+									value = strings.Trim(v.Value, "\"")
+
+								case *ast.Ident:
+									var ok bool
+									value, ok = decls[parentFunction][v.Name]
+									if !ok {
+										value, _ = decls[generalDecls][v.Name]
+									}
 								}
-								decls[parentNode][vSpec.Names[i].Name] = strings.Trim(v.Value, "\"")
 							}
+							decls[parentFunction][vSpec.Names[i].Name] = value
 						}
 					}
 				}
@@ -268,7 +276,7 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 
 					// the function's argument is a variable
 					case *ast.Ident:
-						val, ok := decls[findParentFunction(stack)][x.Name]
+						val, ok := decls[parentFunction][x.Name]
 						if !ok {
 							val, ok = decls[generalDecls][x.Name]
 						}
@@ -362,13 +370,13 @@ func getAllChecks(roots []string) ([]string, error) {
 			}
 
 			if filepath.Base(filepath.Dir(path)) == "requirements" && !strings.HasSuffix(info.Name(), "_test.go") {
+				fmt.Println("Collecting checks from ", path)
 				_, checks, err := checksAndRequirements(map[string]struct{}{}, path, requirementsPackage)
 				if err != nil {
 					return err
 				}
 
 				if len(checks) > 0 {
-					fmt.Println("Collecting checks from ", path)
 					allChecks = append(allChecks, checks...)
 				}
 			}
