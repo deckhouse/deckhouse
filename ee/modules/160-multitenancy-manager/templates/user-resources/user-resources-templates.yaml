@@ -1,9 +1,9 @@
 {{- define "stringifyNodeSelector" }}
-  {{- $context := . }}
+  {{ $context := . }}
   {{ $result := "" }}
   {{- range $k, $v := $context }}
     {{ $result = printf "%s,%s=%s" $result $k $v }}
-  {{ end }}
+  {{- end }}
   {{ trimPrefix "," $result }}
 
   {{- print $result }}

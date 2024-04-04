@@ -101,6 +101,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 	}
 
 	for name, template := range templates {
+		name = "templates/" + name
 		data, ok := template.([]byte)
 		if !ok {
 			return fmt.Errorf("invalid template. Template name: %v", name)
