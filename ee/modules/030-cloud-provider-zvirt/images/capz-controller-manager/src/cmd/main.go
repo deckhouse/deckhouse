@@ -125,9 +125,13 @@ func main() {
 
 	zvirtCredentials := credentials.LoadZvirtCredentialsFromEnv()
 
-	tlsProvider := ovsdk.TLS().Insecure()
-	if !zvirtCredentials.Insecure {
-		tlsProvider = ovsdk.TLS().CACertsFromSystem()
+	tlsProvider := ovsdk.TLS()
+	if zvirtCredentials.Insecure {
+		tlsProvider.Insecure()
+	} else if zvirtCredentials.CaBundle != "" {
+		tlsProvider.CACertsFromMemory([]byte(zvirtCredentials.CaBundle))
+	} else {
+		tlsProvider.CACertsFromSystem()
 	}
 
 	zvirtClient, err := ovsdk.New(

@@ -15,6 +15,7 @@ type ZvirtCredentials struct {
 	User     string
 	Password string
 	Insecure bool
+	CaBundle string
 }
 
 func LoadZvirtCredentialsFromEnv() *ZvirtCredentials {
@@ -23,5 +24,6 @@ func LoadZvirtCredentialsFromEnv() *ZvirtCredentials {
 		User:     os.Getenv("ZVIRT_USER"),
 		Password: os.Getenv("ZVIRT_PASSWORD"),
 		Insecure: strings.ToLower(os.Getenv("ZVIRT_CONNECT_INSECURE")) == "true",
+		CaBundle: os.Getenv("ZVIRT_CA_BUNDLE"),
 	}
 }
