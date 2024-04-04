@@ -49,7 +49,7 @@ type ZvirtMachineSpec struct {
 	// +kubebuilder:default=8192
 	Memory int32 `json:"memory,omitempty"`
 	// RootDiskSize size of the bootable disk in GiB.
-	// +kubebuilder:default=20
+	// +kubebuilder:default=30
 	RootDiskSize int64 `json:"rootDiskSizeGb"`
 	// NicName is a name that will be assigned to the vNIC attached to the VM.
 	// +kubebuilder:default=nic1
@@ -60,11 +60,11 @@ type ZvirtMachineSpec struct {
 // Most of the time you should only set Sockets to the number of cores you want VM to have and set Cores and Threads to 1.
 type CPU struct {
 	// Sockets is the number of sockets for a VM.
-	// +kubebuilder:default=4
+	// +kubebuilder:default=1
 	Sockets int32 `json:"sockets"`
 
 	// Cores is the number of cores per socket.
-	// +kubebuilder:default=1
+	// +kubebuilder:default=4
 	Cores int32 `json:"cores"`
 
 	// Threads is the number of thread per core.

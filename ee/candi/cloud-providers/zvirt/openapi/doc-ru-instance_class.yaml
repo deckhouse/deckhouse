@@ -30,13 +30,13 @@ spec:
                 vmType:
                   description: |
                     Нагрузочный профиль.
-                vnicProfileId:
+                vnicProfileID:
                   description: |
                     vNIC профиль id.
                 nicName:
                   description: |
                     vNIC имя.
-                storageDomainId:
+                storageDomainID:
                   description: |
                     ID домена хранения.
     - name: v1

@@ -31,6 +31,6 @@ data:
   {{- $_ := set $zvirtValues "username" $providerClusterConfiguration.provider.username }}
   {{- $_ := set $zvirtValues "password" $providerClusterConfiguration.provider.password }}
   {{- $_ := set $zvirtValues "insecure" $providerClusterConfiguration.provider.insecure }}
-  {{- $_ := set $zvirtValues "clusterId" $providerClusterConfiguration.clusterId }}
+  {{- $_ := set $zvirtValues "clusterID" $providerClusterConfiguration.clusterID }}
 
   zvirt: {{ $zvirtValues | toJson | b64enc | quote }}

@@ -6,6 +6,6 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
 spec:
-  {{- if $providerClusterConfiguration.clusterId }}
-  id: {{ $providerClusterConfiguration.clusterId | quote }}
+  {{- if $providerClusterConfiguration.clusterID }}
+  id: {{ $providerClusterConfiguration.clusterID | quote }}
   {{- end }}

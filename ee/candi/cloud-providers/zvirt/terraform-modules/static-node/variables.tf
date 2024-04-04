@@ -29,15 +29,14 @@ locals {
   instance_class = local.ng["instanceClass"]
   node_group_name = local.ng.name
 
-  vnic_profile_id = lookup(local.instance_class, "vnicProfileId", [])
-  storage_domain_id = lookup(local.instance_class, "storageDomainId", [])
-  cluster_id = lookup(var.providerClusterConfiguration, "clusterId", [])
+  vnic_profile_id = lookup(local.instance_class, "vnicProfileID", [])
+  cluster_id = lookup(var.providerClusterConfiguration, "clusterID", [])
   template_name = lookup(local.instance_class, "template", [])
   node_name = join("-", [local.resource_name_prefix, local.node_group_name, var.nodeIndex])
   cpus = lookup(local.instance_class, "numCPUs", [])
   ram_mb = lookup(local.instance_class, "memory", [])
   vm_type = "high_performance"
-  nic_name = lookup(local.instance_class, "nicName", [])
+  nic_name = "nic1"
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
   root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 20)*1024*1024*1024
 

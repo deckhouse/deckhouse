@@ -21,16 +21,15 @@ apiVersions:
       - apiVersion: deckhouse.io/v1
         kind: ZvirtClusterConfiguration
         layout: Standard
-        clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
+        clusterID: "b46372e7-0d52-40c7-9bbf-fda31e187088"
         masterNodeGroup:
           replicas: 1
           instanceClass:
             numCPUs: 4
             memory: 8192
             template: debian-bookworm
-            vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-            nicName: "nic1"
-            storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
+            vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+            storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
         nodeGroups:
           - name: worker
             replicas: 1
@@ -38,12 +37,13 @@ apiVersions:
               numCPUs: 4
               memory: 8192
               template: debian-bookworm
+              vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
         provider:
           server: '<SERVER>'
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-    required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
+    required: [apiVersion, kind, sshPublicKey, clusterID, masterNodeGroup, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -54,10 +54,11 @@ apiVersions:
       sshPublicKey:
         type: string
         description: a public key for accessing nodes.
-      clusterId:
+      clusterID:
         type: string
         description: |
-          Cluster id.
+          Cluster ID with shared storage domains and CPUs of the same type to create virtual machines.
+        pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
         example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
       masterNodeGroup:
         type: object
@@ -77,7 +78,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, template]
+            required: [numCPUs, memory, template, vnicProfileID, storageDomainID]
             description: |
               Partial contents of the fields of the [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties
@@ -85,21 +86,23 @@ apiVersions:
                 type: integer
                 description: |
                   Number of vCPUs to allocate to the VM.
+                minimum: 1
                 example: 2
               memory:
                 type: integer
                 description: |
                   Memory in MiB to allocate to the VM.
+                minimum: 1
                 example: 8192
               rootDiskSizeGb:
                 description: |
                   Root disk size in GiB to use in zVirt VirtualMachines.
-                example: 20
-                default: 20
+                example: 30
+                default: 30
                 type: integer
               etcdDiskSizeGb:
                 description: |
-                  Etcd disk size in gigabytes.
+                  Etcd disk size in GiB.
                 example: 10
                 default: 10
                 type: integer
@@ -108,20 +111,17 @@ apiVersions:
                 description: |
                   Template name to be cloned.
                 example: debian-bookworm
-              vnicProfileId:
+              vnicProfileID:
                 type: string
                 description: |
-                  vNIC profile id.
+                  Virtual NIC profile ID on the basis of which the virtual NIC will be created.
+                pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-              nicName:
+              storageDomainID:
                 type: string
                 description: |
-                  vNIC name.
-                example: "nic1"
-              storageDomainId:
-                type: string
-                description: |
-                  Storage domain id.
+                  Storage domain id which contains the shared resources that must be available to all datacentre hosts.
+                pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
       nodeGroups:
         type: array
@@ -185,7 +185,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, template]
+              required: [numCPUs, memory, template, vnicProfileID]
               description: |
                 Partial contents of the fields of the.
               properties:
@@ -204,13 +204,16 @@ apiVersions:
         properties:
           server:
             type: string
-            description: The host or the IP address of the zvirt server.
+            description: The URL to the Zvirt API endpoint.
           username:
             type: string
             description: The login ID.
           password:
             type: string
             description: The user's password.
+          caBundle:
+            type: string
+            description: CA certificate in base64.
           insecure:
             type: boolean
             description:  Set to `true` if Zvirt has a self-signed certificate.

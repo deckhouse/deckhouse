@@ -12,12 +12,11 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strconv"
+	"strings"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -28,6 +27,7 @@ const (
 	envZvirtUsername = "ZVIRT_USERNAME"
 	envZvirtPassword = "ZVIRT_PASSWORD"
 	envZvirtInsecure = "ZVIRT_INSECURE"
+	envZvirtCaBundle = "ZVIRT_CA_BUNDLE"
 )
 
 type Discoverer struct {
@@ -40,6 +40,7 @@ type CloudConfig struct {
 	Username string `json:"user"`
 	Password string `json:"password"`
 	Insecure bool   `json:"insecure"`
+	CaBundle string `json:"caBundle"`
 }
 
 func newCloudConfig() (*CloudConfig, error) {
@@ -62,15 +63,8 @@ func newCloudConfig() (*CloudConfig, error) {
 	}
 	cloudConfig.Password = password
 
-	insecure := os.Getenv(envZvirtInsecure)
-	cloudConfig.Insecure = false
-	if insecure != "" {
-		v, err := strconv.ParseBool(insecure)
-		if err != nil {
-			return nil, err
-		}
-		cloudConfig.Insecure = v
-	}
+	cloudConfig.Insecure = strings.ToLower(os.Getenv(envZvirtInsecure)) == "true"
+	cloudConfig.CaBundle = os.Getenv(envZvirtCaBundle)
 
 	return cloudConfig, nil
 }
@@ -83,6 +77,8 @@ func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
 
 	if c.Insecure {
 		tls.Insecure()
+	} else if c.CaBundle != "" {
+		tls.CACertsFromMemory([]byte(c.CaBundle))
 	} else {
 		tls.CACertsFromSystem()
 	}
@@ -182,45 +178,9 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	return diskMeta, nil
 }
 
+// NotImplemented
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
-	zvirtClient, err := d.config.client()
-	if err != nil {
-		return nil, err
-	}
-	vms, err := zvirtClient.WithContext(ctx).ListVMs()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(vms) == 0 {
-		return []v1alpha1.InstanceType{}, nil
-	}
-
-	instanceTypes := make([]v1alpha1.InstanceType, 0, len(vms))
-
-	for _, vm := range vms {
-		name := vm.Name()
-		cpu := vm.CPU()
-		if cpu == nil {
-			logrus.Warnf("VM %s, Cannot get CPU count", name)
-			continue
-		}
-		cpuTopo := cpu.Topo()
-		if cpuTopo == nil {
-			logrus.Warnf("VM %s, Cannot get CPU count", name)
-			continue
-		}
-		var cpuCount, memory int64
-		memory = vm.Memory()
-		cpuCount = int64(cpuTopo.Cores())
-		instanceTypes = append(instanceTypes, v1alpha1.InstanceType{
-			Name:     name,
-			CPU:      resource.MustParse(strconv.FormatInt(cpuCount, 10)),
-			Memory:   resource.MustParse(strconv.FormatInt(memory, 10) + "Mi"),
-			RootDisk: resource.MustParse("0Gi"),
-		})
-	}
-	return instanceTypes, nil
+	return nil, nil
 }
 
 func mergeStorageDomains(

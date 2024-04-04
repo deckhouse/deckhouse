@@ -100,6 +100,11 @@ spec:
                 secretKeyRef:
                   name: capi-zvirt-credentials
                   key: insecure
+            - name: ZVIRT_CA_BUNDLE
+              valueFrom:
+                secretKeyRef:
+                  name: capi-zvirt-credentials
+                  key: caBundle
             - name: ZVIRT_VM_TAGS
               value: {{ join "-" (list "cluster" .Values.global.discovery.clusterUUID) | quote }}
           livenessProbe:

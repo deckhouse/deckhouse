@@ -25,16 +25,11 @@ spec:
             spec:
               type: object
               required:
-                - clusterId
                 - numCPUs
                 - memory
                 - template
+                - vnicProfileID
               properties:
-                clusterId:
-                  description: |
-                    cluster id.
-                  x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
-                  type: string
                 numCPUs:
                   description: |
                     Count of vCPUs to allocate to zVirt VirtualMachines.
@@ -50,33 +45,19 @@ spec:
                     Root disk size in GiB to use in zVirt VirtualMachines.
 
                     The disk will be automatically resized if its size in the template differs from specified.
-                  x-doc-examples: [20]
-                  x-doc-default: 20
+                  x-doc-examples: [30]
+                  x-doc-default: 30
                   type: integer
                 template:
                   description: |
                     Template name to be cloned.
                   x-doc-examples: ['debian-bookworm']
                   type: string
-                vmType:
+                vnicProfileID:
                   description: |
-                    Load profile.
-                  x-doc-examples: ['high_performance']
-                  type: string
-                vnicProfileId:
-                  description: |
-                    vNIC profile id.
+                    Virtual NIC profile ID on the basis of which the virtual NIC will be created.
                   x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
-                  type: string
-                nicName:
-                  description: |
-                    vNIC name.
-                  x-doc-examples: ['nic1']
-                  type: string
-                storageDomainId:
-                  description: |
-                    Storage domain id.
-                  x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
+                  pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
                   type: string
             status:
               type: object

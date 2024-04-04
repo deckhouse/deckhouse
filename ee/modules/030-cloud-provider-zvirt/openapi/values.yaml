@@ -34,9 +34,8 @@ properties:
                 numCPUs: 4
                 memory: 8192
                 template: debian-bookworm
-                vnicProfileId: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-                nicName: "nic1"
-                storageDomainId: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
+                vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
             nodeGroups:
               - name: worker
                 replicas: 1
@@ -44,12 +43,13 @@ properties:
                   numCPUs: 4
                   memory: 8192
                   template: debian-bookworm
+                  vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
             provider:
               server: '<SERVER>'
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [apiVersion, kind, clusterId, masterNodeGroup, layout, provider]
+        required: [apiVersion, kind, sshPublicKey, clusterID, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
@@ -60,10 +60,11 @@ properties:
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
-          clusterId:
+          clusterID:
             type: string
             description: |
               cluster id.
+            pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
             example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           masterNodeGroup:
             type: object
@@ -83,7 +84,7 @@ properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [numCPUs, memory, template]
+                required: [numCPUs, memory, template, vnicProfileID, storageDomainID]
                 description: |
                   Partial contents of the fields of the
                 properties: &instanceClassProperties
@@ -104,7 +105,7 @@ properties:
                     type: integer
                   etcdDiskSizeGb:
                     description: |
-                      Etcd disk size in gigabytes.
+                      Etcd disk size in GiB.
                     example: 10
                     type: integer
                   template:
@@ -112,20 +113,17 @@ properties:
                     description: |
                       Template name to be cloned.
                     example: debian-bookworm
-                  vnicProfileId:
+                  vnicProfileID:
                     type: string
                     description: |
-                      vNIC profile id.
+                      Virtual NIC profile ID on the basis of which the virtual NIC will be created.
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
-                  nicName:
+                  storageDomainID:
                     type: string
                     description: |
-                      vNIC name.
-                    example: "nic1"
-                  storageDomainId:
-                    type: string
-                    description: |
-                      Storage domain id.
+                      Storage domain id which contains the shared resources that must be available to all datacentre hosts.
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           nodeGroups:
             type: array
@@ -189,7 +187,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [numCPUs, memory, template]
+                  required: [numCPUs, memory, template, vnicProfileID]
                   description: |
                     Partial contents of the fields of the.
                   properties:
@@ -208,16 +206,21 @@ properties:
             properties:
               server:
                 type: string
-                description: The host or the IP address of the vCenter server.
+                description: The URL to the Zvirt API endpoint.
               username:
                 type: string
                 description: The login ID.
               password:
                 type: string
                 description: The user's password.
+              caBundle:
+                type: string
+                description: CA certificate in base64.
+                default: ""
               insecure:
                 type: boolean
                 description:  Set to `true` if vCenter has a self-signed certificate.
+                default: false
                 x-doc-default: false
             required:
             - server

@@ -20,6 +20,10 @@ apiVersions:
       sshPublicKey:
         type: string
         description: Публичный ключ для доступа на узлы.
+      clusterID:
+        type: string
+        description: |
+          ID кластера с общими доменами хранения и ЦП одного типа для создания виртуальны машин
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -33,9 +37,6 @@ apiVersions:
             description: |
               Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties_ru
-              clusterId:
-                description: |
-                  ID кластера.
               numCPUs:
                 description: |
                   Количество vCPU, выделяемых виртуальным машинам.
@@ -48,19 +49,10 @@ apiVersions:
               template:
                 description: |
                   Имя шаблона, который будет использован при заказе виртуальных машин.
-              os:
-                description: |
-                  Тип ОС.
-              vmType:
-                description: |
-                  Нагрузочный профиль.
-              vnicProfileId:
+              vnicProfileID:
                 description: |
                   ID профиля vNIC.
-              nicName:
-                description: |
-                  vNIC имя.
-              storageDomainId:
+              storageDomainID:
                 type: string
                 description: |
                   ID домена хранения.
@@ -131,6 +123,8 @@ apiVersions:
             description: Логин.
           password:
             description: Пароль.
+          caBundle:
+            description: CA сертификат закодированный base64.
           insecure:
             type: boolean
             description:  Установите значение `true`, если Zvirt имеет самоподписанный сертификат.
