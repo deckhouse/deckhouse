@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -106,11 +105,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 }
 
 func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
-	fmt.Println("size 1: ", size)
-
 	return c.db.Update(func(tx *bolt.Tx) error {
-		fmt.Println("size 2: ", size)
-
 		err := c.applyRetentionPolicy(tx, uint64(size))
 		if err != nil {
 			return errors.Wrap(err, "failed to apply retention policy")
@@ -181,8 +176,6 @@ func (c *Cache) applyRetentionPolicy(tx *bolt.Tx, size uint64) error {
 
 	newSize := binary.BigEndian.Uint64(newSizeBytes) + size
 
-	fmt.Println("newSize 1: ", newSize)
-
 	cursor := tx.Bucket(retentionBucketName).Cursor()
 
 	minTimestamp := timeToTimestampBytes(time.Time{})
@@ -218,8 +211,6 @@ func (c *Cache) applyRetentionPolicy(tx *bolt.Tx, size uint64) error {
 			return errors.Wrap(err, "failed to update cache size")
 		}
 	}
-
-	fmt.Println("newSize 2: ", newSize)
 
 	return nil
 }

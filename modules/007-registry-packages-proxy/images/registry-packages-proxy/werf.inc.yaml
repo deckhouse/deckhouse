@@ -5,9 +5,6 @@ import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /registry-packages-proxy
     before: setup
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /cache
-    before: setup
 docker:
   ENTRYPOINT: ["/registry-packages-proxy"]
 ---
@@ -23,9 +20,6 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
     - chown 64535:64535 /registry-packages-proxy
     - chmod 0755 /registry-packages-proxy
-    - mkdir /cache
-    - chown 64535:64535 /cache
-    - chmod 0755 /cache
 git:
 - add: /{{ .ModulePath }}modules/007-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
