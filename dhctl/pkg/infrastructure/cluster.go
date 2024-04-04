@@ -39,7 +39,7 @@ type ClusterInfra struct {
 	cache            state.Cache
 	terraformContext *terraform.TerraformContext
 
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 func NewClusterInfra(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext) *ClusterInfra {
@@ -47,7 +47,7 @@ func NewClusterInfra(terraState StateLoader, cache state.Cache, terraformContext
 }
 
 type ClusterInfraOptions struct {
-	PhasedExecutionContext *phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext, opts ClusterInfraOptions) *ClusterInfra {
@@ -93,7 +93,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -105,7 +105,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CompletePhase(r.cache)
+		return r.PhasedExecutionContext.CompletePhase(r.cache, nil)
 	} else {
 		return nil
 	}
