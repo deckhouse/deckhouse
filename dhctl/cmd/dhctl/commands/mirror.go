@@ -201,7 +201,7 @@ func computeGOSTDigest(mirrorCtx *mirror.Context) error {
 		if err != nil {
 			return fmt.Errorf("open bundle chunk for reading: %w", err)
 		}
-		defer chunkStream.Close() // nolint // defer in a loop is valid here as we need those streams to survive until everything is unpacked at the end of this function
+		defer chunkStream.Close() // nolint // defer in a loop is valid here as we need those streams to survive until everything is calculated at the end of this function
 		streams = append(streams, chunkStream)
 	}
 
