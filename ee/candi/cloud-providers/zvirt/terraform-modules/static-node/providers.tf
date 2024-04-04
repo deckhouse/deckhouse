@@ -5,5 +5,6 @@ provider "ovirt" {
   url = var.providerClusterConfiguration.provider.server
   username = var.providerClusterConfiguration.provider.username
   password = var.providerClusterConfiguration.provider.password
-  tls_insecure = var.providerClusterConfiguration.provider.insecure
+  tls_insecure = lookup(var.providerClusterConfiguration.provider, "insecure", false)
+  tls_ca_bundle = base64decode(lookup(var.providerClusterConfiguration.provider, "caBundle", ""))
 }
