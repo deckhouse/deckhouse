@@ -23,6 +23,8 @@ import (
 	"maps"
 	"time"
 
+	"helm.sh/helm/v3/pkg/chartutil"
+
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/postrender"
@@ -117,6 +119,8 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		fmt.Println("#! NAME", name)
 		fmt.Println("#! TPL", string(data))
 	}
+	chartutil.SaveDir(ch, "/tmp")
+
 	hashsum := getMD5Hash(templates, values)
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
