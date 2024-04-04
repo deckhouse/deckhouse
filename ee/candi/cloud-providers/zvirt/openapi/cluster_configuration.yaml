@@ -214,9 +214,11 @@ apiVersions:
           caBundle:
             type: string
             description: CA certificate in base64.
+            default: ""
           insecure:
             type: boolean
             description:  Set to `true` if Zvirt has a self-signed certificate.
+            default: false
             x-doc-default: false
         required:
         - server
