@@ -7,17 +7,20 @@ package hooks
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/fatih/structs"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/kube-client/manifest/releaseutil"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks/apis/deckhouse.io/v1alpha1"
@@ -27,9 +30,18 @@ import (
 )
 
 const (
-	userResourcesTemplatesPath            = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/"
-	alternativeUserResourcesTemplatesPath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/"
+	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
+	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	// Alternative path is needed to run tests in ci\cd pipeline
+	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
+	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
+	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
+	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
 )
+
+var onceCreateDefaultTemplates sync.Once
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.ModuleQueue(internal.ProjectsQueue),
@@ -48,7 +60,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 	var projectTypeValuesSnap = internal.GetProjectTypeSnapshots(input)
 	var projectTemplateValuesSnap = internal.GetProjectTemplateSnapshots(input)
 
-	//createDefaultProjectTemplate(input)
+	createDefaultProjectTemplate(input)
 
 	// map ProjectType to ProjectTemplate
 	for key, val := range projectTypeValuesSnap {
@@ -77,6 +89,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
+	// TODO read template once
 	resourcesTemplate, err := readUserResourcesTemplate()
 	if err != nil {
 		return err
@@ -120,89 +133,79 @@ func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnaps
 	}
 }
 
-var userTemplates = make(map[string]interface{})
-
 func readUserResourcesTemplate() (map[string]interface{}, error) {
-	if len(userTemplates) > 0 {
-		return userTemplates, nil
-	}
-
-	dirPath := userResourcesTemplatesPath
-
-	files, err := os.ReadDir(userResourcesTemplatesPath)
+	templateData, err := os.ReadFile(userResourcesTemplatePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			dirPath = alternativeUserResourcesTemplatesPath
-			files, err = os.ReadDir(alternativeUserResourcesTemplatesPath)
+		if errors.Is(err, os.ErrNotExist) {
+			templateData, err = os.ReadFile(alternativeUserResourcesTemplatePath)
 			if err != nil {
 				return nil, err
 			}
-		}
-		return nil, err
-	}
-
-	fmt.Println("FIles", files)
-
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		fmt.Println("READING FILE", file.Name())
-		templateData, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
-		if err != nil {
+		} else {
 			return nil, err
 		}
-
-		userTemplates[file.Name()] = templateData
 	}
 
-	//templateData, err := os.ReadFile(userResourcesTemplatePath)
-	//if err != nil {
-	//	if errors.Is(err, os.ErrNotExist) {
-	//		templateData, err = os.ReadFile(alternativeUserResourcesTemplatePath)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	} else {
-	//		return nil, err
-	//	}
-	//}
+	templates := map[string]interface{}{
+		filepath.Base(userResourcesTemplatePath): templateData,
+		"_helpers.tpl": []byte(`{{- define "stringifyNodeSelector" }}
+{{ $context := . }}
+{{ $result := "" }}
+{{- range $k, $v := $context }}
+  {{ $result = printf "%s,%s=%s" $result $k $v }}
+{{- end }}
+{{ trimPrefix "," $result }}
 
-	//templates := map[string]interface{}{
-	//	filepath.Base(userResourcesTemplatePath): templateData,
-	//}
+{{- print $result }}
+{{- end }}`),
+	}
 
-	return userTemplates, nil
+	return templates, nil
 }
 
-//
-//func createDefaultProjectTemplate(input *go_hook.HookInput) {
-//	onceBody := func() {
-//		defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
-//		if err != nil {
-//			klog.Errorf("error reading default ProjectTemplate: %v", err)
-//			return
-//		}
-//
-//		secureProjectTemplateRaw, err := readDefaultProjectTemplate(secureProjectTemplatePath, alternativeSecureProjectTemplatePath)
-//		if err != nil {
-//			klog.Errorf("error reading default ProjectTemplate: %v", err)
-//			return
-//		}
-//
-//		dedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(dedicatedNodesTemplatePath, alternativeDedicatedNodesTemplatePath)
-//		if err != nil {
-//			klog.Errorf("error reading default ProjectTemplate: %v", err)
-//			return
-//		}
-//
-//		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
-//		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
-//		input.PatchCollector.Create(dedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
-//	}
-//
-//	onceCreateDefaultTemplates.Do(onceBody)
-//}
+func createDefaultProjectTemplate(input *go_hook.HookInput) {
+	onceBody := func() {
+		defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		secureProjectTemplateRaw, err := readDefaultProjectTemplate(secureProjectTemplatePath, alternativeSecureProjectTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		dedicatedNodesProjectTemplateRaw, err := readDefaultProjectTemplate(dedicatedNodesTemplatePath, alternativeDedicatedNodesTemplatePath)
+		if err != nil {
+			klog.Errorf("error reading default ProjectTemplate: %v", err)
+			return
+		}
+
+		input.PatchCollector.Create(defaultProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(secureProjectTemplateRaw, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(dedicatedNodesProjectTemplateRaw, object_patch.UpdateIfExists())
+	}
+
+	onceCreateDefaultTemplates.Do(onceBody)
+}
+
+func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, error) {
+	projectTemplate, err := os.ReadFile(defaultPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			projectTemplate, err = os.ReadFile(alternativePath)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return projectTemplate, nil
+}
 
 type projectTemplateHelmRenderer struct {
 	projectName string

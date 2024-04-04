@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"maps"
-	"strings"
 	"time"
 
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -104,10 +103,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 	}
 
 	for name, template := range templates {
-		if !strings.HasPrefix(name, "templates/") {
-			name = "templates/" + name
-		}
-
+		name = "templates/" + name
 		data, ok := template.([]byte)
 		if !ok {
 			return fmt.Errorf("invalid template. Template name: %v", name)

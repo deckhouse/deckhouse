@@ -7,8 +7,6 @@ package hooks
 
 import (
 	"bytes"
-	"errors"
-	"os"
 	"testing"
 
 	"github.com/flant/addon-operator/sdk"
@@ -26,16 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
-)
-
-const (
-	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/project-templates/default-project-template.yaml"
-	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/project-templates/secure-project-template.yaml"
-	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/project-templates/secure-with-dedicated-nodes-project-template.yaml"
-
-	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/project-templates/default-project-template.yaml"
-	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/project-templates/secure-project-template.yaml"
-	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/project-templates/secure-with-dedicated-nodes-project-template.yaml"
 )
 
 var _ = Describe("Multitenancy Manager hooks :: handle Projects ::", func() {
@@ -107,22 +95,6 @@ func validateProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProje
 
 	err = internal.ValidateProjectTemplate(projectTemplateSnapshot)
 	Expect(err).ToNot(HaveOccurred())
-}
-
-func readDefaultProjectTemplate(defaultPath, alternativePath string) ([]byte, error) {
-	projectTemplate, err := os.ReadFile(defaultPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			projectTemplate, err = os.ReadFile(alternativePath)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-
-	return projectTemplate, nil
 }
 
 var (
