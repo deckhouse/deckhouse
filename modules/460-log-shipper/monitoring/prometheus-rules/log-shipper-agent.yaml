@@ -46,8 +46,16 @@
       description: |
         A number of log-shipper-agents are not scheduled.
 
-        Consider checking state of the d8-log-shipper/log-shipper-agent DaemonSet.
-        `kubectl -n d8-log-shipper get daemonset,pod --selector=app=log-shipper-agent`
+        Consider checking state of the d8-log-shipper/log-shipper-agent DaemonSet:
+        `kubectl -n d8-log-shipper get daemonsets --selector=app=log-shipper`
+
+        Consider checking state of the d8-log-shipper/log-shipper-agent Pods:
+        `kubectl -n d8-log-shipper get pods --selector=app=log-shipper-agent`
+
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place:
+        ```
+        kubectl -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
 
   - alert: D8LogShipperDestinationErrors
     for: 10m
