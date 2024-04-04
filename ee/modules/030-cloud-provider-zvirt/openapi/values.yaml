@@ -49,7 +49,7 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [apiVersion, kind, clusterID, masterNodeGroup, layout, provider]
+        required: [apiVersion, kind, sshPublicKey, clusterID, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
@@ -105,7 +105,7 @@ properties:
                     type: integer
                   etcdDiskSizeGb:
                     description: |
-                      Etcd disk size in gigabytes.
+                      Etcd disk size in GiB.
                     example: 10
                     type: integer
                   template:
@@ -117,13 +117,13 @@ properties:
                     type: string
                     description: |
                       Virtual NIC profile ID on the basis of which the virtual NIC will be created.
-                    pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                   storageDomainID:
                     type: string
                     description: |
                       Storage domain id which contains the shared resources that must be available to all datacentre hosts.
-                    pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
           nodeGroups:
             type: array
@@ -206,7 +206,7 @@ properties:
             properties:
               server:
                 type: string
-                description: The host or the IP address of the vCenter server.
+                description: The URL to the Zvirt API endpoint.
               username:
                 type: string
                 description: The login ID.
