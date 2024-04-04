@@ -144,7 +144,7 @@ spec:
 {{- define "stringifyNodeSelector" }}
   {{- $context := . }}
   {{ $result := "" }}
-  {{- range $k, $v := .Values.nodeSelector }}
+  {{- range $k, $v := $context }}
     {{ $result = printf "%s,%s-%s" $result $k $v }}
   {{ end }}
   {{ trimPrefix "," $result }}
