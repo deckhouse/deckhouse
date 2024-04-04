@@ -22,11 +22,13 @@ import (
 const (
 	LogLevel        = "LOG_LEVEL"
 	RequeueInterval = "REQUEUE_INTERVAL"
+	ProbePort       = "PROBE_PORT"
 )
 
 type Options struct {
 	Loglevel        logger.Verbosity
 	RequeueInterval time.Duration
+	ProbePort       string
 }
 
 func NewConfig() *Options {
@@ -37,6 +39,13 @@ func NewConfig() *Options {
 		opts.Loglevel = logger.DebugLevel
 	} else {
 		opts.Loglevel = logger.Verbosity(loglevel)
+	}
+
+	probePort := os.Getenv(ProbePort)
+	if probePort == "" {
+		opts.ProbePort = ":0"
+	} else {
+		opts.ProbePort = probePort
 	}
 
 	opts.RequeueInterval = 10
