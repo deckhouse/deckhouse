@@ -4,4 +4,22 @@ entries:
     - title:
         en: Update
         ru: Обновление
-      url: ru/update/
+      url: /update/
+      folders:
+        - title:
+            en: Режимы обновлений
+            ru: Режимы обновлений
+          url: /update/update-mode/
+          folders:
+            - title:
+                en: Автоматический режим обновлений
+                ru: Автоматический режим обновлений
+              url: /installing/
+            - title:
+                en: Ручной режим обновлений
+                ru: Ручной режим обновлений
+              url: /installing/configuration.html
+            - title:
+                en: Как узнать режим обновлений кластера?
+                ru: Как узнать режим обновлений кластера?
+              url: /installing/configuration.html

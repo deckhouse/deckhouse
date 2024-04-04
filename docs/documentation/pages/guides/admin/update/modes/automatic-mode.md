@@ -1,4 +1,8 @@
-### Автоматический режим обновления
+---
+title: Автоматический режим обновлений
+permalink: ru/update/automatic-mode/
+lang: ru
+---
 
 При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse Kubernetes Platform будет каждую минуту проверять данные о релизе на канале обновлений.
 

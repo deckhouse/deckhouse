@@ -1,4 +1,8 @@
-### Как узнать режим обновления кластера?
+---
+title: Как узнать режим обновлений кластера?
+permalink: ru/update/how-to-find-out-the-cluster-update-mode/
+lang: ru
+---
 
 Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
 
