@@ -8,6 +8,7 @@ package hooks
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,12 +34,12 @@ const (
 	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
 	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	userResourcesTemplatesPath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/templates/"
 	// Alternative path is needed to run tests in ci\cd pipeline
 	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
 	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	alternativeUserResourcesTemplatesPath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/templates/"
 )
 
 var onceCreateDefaultTemplates sync.Once
@@ -89,7 +90,6 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	// TODO read template once
 	resourcesTemplate, err := readUserResourcesTemplate()
 	if err != nil {
 		return err
@@ -133,11 +133,19 @@ func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnaps
 	}
 }
 
+var userTemplates = make(map[string]interface{})
+
 func readUserResourcesTemplate() (map[string]interface{}, error) {
-	templateData, err := os.ReadFile(userResourcesTemplatePath)
+	if len(userTemplates) > 0 {
+		return userTemplates, nil
+	}
+
+	dirPath := userResourcesTemplatesPath
+	files, err := os.ReadDir(userResourcesTemplatesPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			templateData, err = os.ReadFile(alternativeUserResourcesTemplatePath)
+		if os.IsNotExist(err) {
+			dirPath = alternativeUserResourcesTemplatesPath
+			files, err = os.ReadDir(alternativeUserResourcesTemplatesPath)
 			if err != nil {
 				return nil, err
 			}
@@ -146,21 +154,21 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 		}
 	}
 
-	templates := map[string]interface{}{
-		filepath.Base(userResourcesTemplatePath): templateData,
-		"_helpers.tpl": []byte(`{{- define "stringifyNodeSelector" }}
-{{ $context := . }}
-{{ $result := "" }}
-{{- range $k, $v := $context }}
-  {{ $result = printf "%s,%s=%s" $result $k $v }}
-{{- end }}
-{{ trimPrefix "," $result }}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		fmt.Println("READING FILE", file.Name())
 
-{{- print $result }}
-{{- end }}`),
+		templateData, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		userTemplates[file.Name()] = templateData
 	}
 
-	return templates, nil
+	return userTemplates, nil
 }
 
 func createDefaultProjectTemplate(input *go_hook.HookInput) {
