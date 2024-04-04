@@ -86,6 +86,11 @@ func (mr *ModuleRelease) GetReleaseVersion() string {
 	return "v" + mr.Spec.Version.String()
 }
 
+// GetWeight returns the weight of the related module
+func (mr *ModuleRelease) GetWeight() uint32 {
+	return mr.Spec.Weight
+}
+
 type Changelog map[string]any
 
 func (c Changelog) DeepCopy() Changelog {

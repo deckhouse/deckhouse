@@ -17,11 +17,18 @@ limitations under the License.
 package docs
 
 import (
+	"archive/tar"
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,15 +45,15 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 )
 
 type moduleReleaseGetter interface {
 	GetModuleName() string
 	GetReleaseVersion() string
 	GetModuleSource() string
+	GetWeight() uint32
 }
 
 type Updater struct {
@@ -140,6 +147,9 @@ func (d *Updater) RunPreflightCheck(ctx context.Context) error {
 }
 
 func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) error {
+	moduleName := m.GetModuleName()
+	moduleVersion := m.GetReleaseVersion()
+	d.logger.Infof("Updating documentation for %s module", moduleName)
 	addrs, err := d.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return fmt.Errorf("get docs builder addresses: %w", err)
@@ -156,13 +166,95 @@ func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) 
 
 	md := downloader.NewModuleDownloader(d.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
-		err := d.buildDocumentation(addr, md, m.GetModuleName(), m.GetReleaseVersion())
+		// Trying to get the documentation from the module's dir
+		d.logger.Infof("Getting the %s module's documentation locally", moduleName)
+		docsArchive, err := d.getDocumentationFromModuleDir(m)
+		if err != nil {
+			d.logger.Infof("Failed to get %s module documentation from local directory with error: %w", moduleName, err)
+
+			// Trying to get the documentation from the registry
+			docsArchive, err = md.GetDocumentationArchive(moduleName, moduleVersion)
+			if err != nil {
+				return fmt.Errorf("get documentation archive: %w", err)
+			}
+		}
+		defer docsArchive.Close()
+
+		err = d.buildDocumentation(docsArchive, addr, moduleName, moduleVersion)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (d *Updater) getDocumentationFromModuleDir(m moduleReleaseGetter) (io.ReadCloser, error) {
+	var moduleDir string
+	moduleName := m.GetModuleName()
+	weight := m.GetWeight()
+	if weight > 0 {
+		// module release
+		moduleDir = path.Join(d.externalModulesDir, "/modules/", fmt.Sprintf("%d-%s", weight, moduleName)) + "/"
+	} else {
+		// module pull override (doesn't contain the module's weight)
+		moduleDir = path.Join(d.externalModulesDir, moduleName, "/dev") + "/"
+	}
+
+	dir, err := os.Stat(moduleDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dir.IsDir() {
+		return nil, fmt.Errorf("%s of the %s module isn't a directory", moduleDir, moduleName)
+	}
+
+	pr, pw := io.Pipe()
+
+	go func() {
+		tw := tar.NewWriter(pw)
+		defer tw.Close()
+
+		pw.CloseWithError(filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !module.IsDocsPath(strings.TrimPrefix(file, moduleDir)) {
+				return nil
+			}
+
+			header, err := tar.FileInfoHeader(info, info.Name())
+			if err != nil {
+				return err
+			}
+
+			header.Name = strings.TrimPrefix(file, moduleDir)
+
+			if err := tw.WriteHeader(header); err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			f, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			if _, err := io.Copy(tw, f); err != nil {
+				return err
+			}
+
+			return nil
+		}))
+	}()
+
+	return pr, nil
 }
 
 func (d *Updater) getDocsBuilderAddresses(_ context.Context) (addresses []string, err error) {
@@ -182,14 +274,8 @@ func (d *Updater) getDocsBuilderAddresses(_ context.Context) (addresses []string
 	return
 }
 
-func (d *Updater) buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
-	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
-	if err != nil {
-		return fmt.Errorf("get documentation archive: %w", err)
-	}
-	defer docsArchive.Close()
-
-	err = d.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
+func (d *Updater) buildDocumentation(docsArchive io.ReadCloser, baseAddr, moduleName, moduleVersion string) error {
+	err := d.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
 	if err != nil {
 		return fmt.Errorf("send documentation: %w", err)
 	}
@@ -260,6 +346,7 @@ func (d *Updater) processNextLease(ctx context.Context) bool {
 }
 
 func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	d.logger.Infof("Rebuilding documentation for all deployed modules")
 	releases, err := d.moduleReleasesLister.List(labels.Everything())
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModuleReleases failed: %w", err)
@@ -292,7 +379,7 @@ func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctr
 	}
 
 	for _, mpo := range mpos {
-		d.SendDocumentation(ctx, mpo)
+		err := d.SendDocumentation(ctx, mpo)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}

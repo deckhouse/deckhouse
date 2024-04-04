@@ -102,3 +102,8 @@ func (mo *ModulePullOverride) GetModuleName() string {
 func (mo *ModulePullOverride) GetReleaseVersion() string {
 	return mo.Spec.ImageTag
 }
+
+// GetWeight returns the weight of the related module
+func (mo *ModulePullOverride) GetWeight() uint32 {
+	return 0
+}
