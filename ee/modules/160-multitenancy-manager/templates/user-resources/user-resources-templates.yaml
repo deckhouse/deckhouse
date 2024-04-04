@@ -45,17 +45,6 @@ metadata:
 
   {{- if $template }}
 
-  {{- define "stringifyNodeSelector" }}
-    {{ $context := . }}
-    {{ $result := "" }}
-    {{- range $k, $v := $context }}
-      {{ $result = printf "%s,%s=%s" $result $k $v }}
-    {{- end }}
-    {{ trimPrefix "," $result }}
-
-    {{- print $result }}
-  {{- end }}
-
   {{- $kindPrefix := "kind: Namespace" }}
   {{- $namePrefix := "  name: " }}
   {{- $namespacePrefix := "  namespace: "}}

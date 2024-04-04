@@ -148,6 +148,16 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 
 	templates := map[string]interface{}{
 		filepath.Base(userResourcesTemplatePath): templateData,
+		"_helpers.tpl": []byte(`{{- define "stringifyNodeSelector" }}
+{{ $context := . }}
+{{ $result := "" }}
+{{- range $k, $v := $context }}
+  {{ $result = printf "%s,%s=%s" $result $k $v }}
+{{- end }}
+{{ trimPrefix "," $result }}
+
+{{- print $result }}
+{{- end }}`),
 	}
 
 	return templates, nil
