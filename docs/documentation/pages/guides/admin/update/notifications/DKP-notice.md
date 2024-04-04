@@ -1,6 +1,8 @@
-тут конфиг
-
-### Оповещение об обновлении Deckhouse Kubernetes Platform
+---
+title: Оповещение об обновлении Deckhouse Kubernetes Platform
+permalink: ru/notifications/dkp-notice/
+lang: ru
+---
 
 В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
 

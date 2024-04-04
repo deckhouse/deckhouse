@@ -1,4 +1,8 @@
-## Окна обновлений
+---
+title: Окна обновлений
+permalink: ru/windows/
+lang: ru
+--- 
 
 Управление [окнами обновлений](/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) позволяет планово обновлять релизы Deckhouse в автоматическом режиме в периоды «затишья», когда нагрузка на кластер далека от пиковой.
 

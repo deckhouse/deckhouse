@@ -1,4 +1,8 @@
-тут конфиг
+---
+title: Виды уведомлений
+permalink: ru/notifications/intro/
+lang: ru
+---
 
 
 Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.

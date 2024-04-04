@@ -9,8 +9,11 @@ entries:
         - title:
             en: Режимы обновлений
             ru: Режимы обновлений
-          url: /update/update-mode/
           folders:
+            - title:
+                en: Виды обновлений
+                ru: Виды обновлений
+              url: /update/update-mode/
             - title:
                 en: Автоматический режим обновлений
                 ru: Автоматический режим обновлений
@@ -23,3 +26,51 @@ entries:
                 en: Как узнать режим обновлений кластера?
                 ru: Как узнать режим обновлений кластера?
               url: /update/how-to-find-out-the-cluster-update-mode/
+        - title:
+            en: Каналы обновлений
+            ru: Каналы обновлений
+          url: /channels/
+        - title:
+            en: Окна обновлений
+            ru: Окна обновлений
+          url: /windows/
+        - title:
+            en: Получение уведомлений
+            ru: Получение уведомлений
+          folders:
+            - title:
+                en: Виды уведомлений
+                ru: Виды уведомлений
+              url: /notifications/intro/
+            - title:
+                en: Получение Changelog
+                ru: Получение Changelog
+              url: /notifications/changelog/
+            - title:
+                en: Оповещение об обновлении платформы
+                ru: Оповещение об обновлении платформы
+              url: /notifications/dkp-notice/
+            - title:
+                en: Где посмотреть статус установки минорных обновлений?
+                ru: Где посмотреть статус установки минорных обновлений?
+              url: ru/notifications/procedure/
+        - title:
+            en: Обновление в закрытом контуре
+            ru: Обновление в закрытом контуре
+          folders:
+            - title:
+                en: Гарантия стабильности и безопасности
+                ru: Гарантия стабильности и безопасности
+              url: /security/closed-and-secure-environment/
+            - title:
+                en: Получение Changelog
+                ru: Получение Changelog
+              url: /security/changelog/
+            - title:
+                en: Оповещение об обновлении платформы
+                ru: Оповещение об обновлении платформы
+              url: /security/dkp-notice/
+            - title:
+                en: Где посмотреть статус установки минорных обновлений?
+                ru: Где посмотреть статус установки минорных обновлений?
+              url: ru/security/procedure/
