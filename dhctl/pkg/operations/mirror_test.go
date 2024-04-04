@@ -267,7 +267,7 @@ func createDeckhouseReleaseChannelImageInRegistry(t *testing.T, repo, tag, versi
 
 func validateDeckhouseReleasesManifests(t *testing.T, pullCtx *mirror.Context, versions []semver.Version) {
 	t.Helper()
-	deckhouseReleasesManifestsFilepath := filepath.Join(filepath.Dir(pullCtx.TarBundlePath), "deckhousereleases.yaml")
+	deckhouseReleasesManifestsFilepath := filepath.Join(filepath.Dir(pullCtx.BundlePath), "deckhousereleases.yaml")
 	actualManifests, err := os.ReadFile(deckhouseReleasesManifestsFilepath)
 	require.NoError(t, err)
 

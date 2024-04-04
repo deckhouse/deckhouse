@@ -31,7 +31,8 @@ type Context struct {
 
 	DeckhouseRegistryRepo string // --source
 
-	TarBundlePath      string // --images
+	BundlePath         string // --images-bundle-path
+	BundleChunkSize    int64  // Plain bytes
 	UnpackedImagesPath string
 	ValidationMode     ValidationMode  // --validation, hidden flag
 	MinVersion         *semver.Version // --min-version
