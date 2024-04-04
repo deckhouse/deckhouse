@@ -1,4 +1,8 @@
-тут конфиг
+---
+title: Обновление
+permalink: ru/guides/admin/update/getting-a-changelog
+lang: ru
+---
 
 ### Получение Changelog
 
