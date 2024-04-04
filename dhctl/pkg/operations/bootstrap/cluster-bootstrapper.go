@@ -75,7 +75,7 @@ type Params struct {
 	InitialState               phases.DhctlState
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
-	OnPhaseFunc                phases.OnPhaseFunc
+	OnPhaseFunc                phases.DefaultOnPhaseFunc
 	CommanderMode              bool
 	TerraformContext           *terraform.TerraformContext
 
@@ -92,9 +92,9 @@ type Params struct {
 
 type ClusterBootstrapper struct {
 	*Params
-	*phases.PhasedExecutionContext
-	initializeNewAgent bool
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
+	initializeNewAgent bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
 }
@@ -102,7 +102,7 @@ type ClusterBootstrapper struct {
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	return &ClusterBootstrapper{
 		Params:                 params,
-		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
 		lastState:              params.InitialState,
 	}
 }
@@ -337,7 +337,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		resourcesToCreate = parsedResources
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -365,7 +365,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	defer tun.Stop()
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -375,7 +375,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallDeckhousePhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallDeckhousePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -390,7 +390,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache); err != nil {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -411,7 +411,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.CreateResourcesPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -422,7 +422,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecPostBootstrapPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecPostBootstrapPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -437,7 +437,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -474,7 +474,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache)
+	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, nil)
 }
 
 // TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
