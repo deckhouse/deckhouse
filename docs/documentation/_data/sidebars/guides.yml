@@ -14,12 +14,12 @@ entries:
             - title:
                 en: Автоматический режим обновлений
                 ru: Автоматический режим обновлений
-              url: /installing/
+              url: /update/automatic-mode/
             - title:
                 en: Ручной режим обновлений
                 ru: Ручной режим обновлений
-              url: /installing/configuration.html
+              url: /update/manual-mode/
             - title:
                 en: Как узнать режим обновлений кластера?
                 ru: Как узнать режим обновлений кластера?
-              url: /installing/configuration.html
+              url: /update/how-to-find-out-the-cluster-update-mode/
