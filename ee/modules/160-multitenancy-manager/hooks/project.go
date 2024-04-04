@@ -136,6 +136,7 @@ func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnaps
 var userTemplates = make(map[string]interface{})
 
 func readUserResourcesTemplate() (map[string]interface{}, error) {
+	// read templates for projects
 	if len(userTemplates) > 0 {
 		return userTemplates, nil
 	}
@@ -171,6 +172,8 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 	return userTemplates, nil
 }
 
+// we have to install Default projects from hook, otherwise deckhouse will try to render it
+// also matrix tests will fail
 func createDefaultProjectTemplate(input *go_hook.HookInput) {
 	onceBody := func() {
 		defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)
