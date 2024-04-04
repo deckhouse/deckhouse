@@ -41,8 +41,8 @@ type Destroyer interface {
 type Params struct {
 	SSHClient              *ssh.Client
 	StateCache             dhctlstate.Cache
-	OnPhaseFunc            phases.OnPhaseFunc
-	PhasedExecutionContext *phases.PhasedExecutionContext
+	OnPhaseFunc            phases.DefaultOnPhaseFunc
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	SkipResources bool
 
@@ -64,17 +64,17 @@ type ClusterDestroyer struct {
 
 	staticDestroyer *StaticMastersDestroyer
 
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
-	var pec *phases.PhasedExecutionContext
+	var pec phases.DefaultPhasedExecutionContext
 	if params.PhasedExecutionContext != nil {
 		pec = params.PhasedExecutionContext
 	} else {
-		pec = phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
 	}
 
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
@@ -144,7 +144,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
 			return err
 		}
-		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache); err != nil {
+		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
 			return err
 		}
 	}

@@ -62,8 +62,8 @@ var (
 )
 
 type Runner struct {
-	*phases.PhasedExecutionContext
-	terraformContext *terraform.TerraformContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	terraformContext       *terraform.TerraformContext
 
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
@@ -102,7 +102,7 @@ func (r *Runner) WithCommanderMode(commanderMode bool) *Runner {
 	return r
 }
 
-func (r *Runner) WithPhasedExecutionContext(pec *phases.PhasedExecutionContext) *Runner {
+func (r *Runner) WithPhasedExecutionContext(pec phases.DefaultPhasedExecutionContext) *Runner {
 	r.PhasedExecutionContext = pec
 	return r
 }
@@ -182,7 +182,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
@@ -263,7 +263,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
@@ -293,7 +293,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
