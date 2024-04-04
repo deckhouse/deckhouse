@@ -34,7 +34,7 @@ import (
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
 	SSHClient              *ssh.Client
-	OnPhaseFunc            phases.OnPhaseFunc
+	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	AutoDismissDestructive bool
 	AutoApprove            bool
 
@@ -51,7 +51,7 @@ type Params struct {
 
 type Converger struct {
 	*Params
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
@@ -60,7 +60,7 @@ type Converger struct {
 func NewConverger(params *Params) *Converger {
 	return &Converger{
 		Params:                 params,
-		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
 	}
 }
 
