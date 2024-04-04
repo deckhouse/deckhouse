@@ -21,9 +21,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
-
-	"helm.sh/helm/v3/pkg/chartutil"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -103,7 +102,9 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 	}
 
 	for name, template := range templates {
-		name = "templates/" + name
+		if !strings.HasPrefix(name, "templates/") {
+			name = "templates/" + name
+		}
 		data, ok := template.([]byte)
 		if !ok {
 			return fmt.Errorf("invalid template. Template name: %v", name)
@@ -115,11 +116,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 
 		ch.Templates = append(ch.Templates, &chartFile)
-		fmt.Println("#! TEMPLATES", ch.Templates)
-		fmt.Println("#! NAME", name)
-		fmt.Println("#! TPL", string(data))
 	}
-	chartutil.SaveDir(ch, "/tmp")
 
 	hashsum := getMD5Hash(templates, values)
 

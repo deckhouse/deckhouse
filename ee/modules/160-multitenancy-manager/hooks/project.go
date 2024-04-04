@@ -8,7 +8,6 @@ package hooks
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -159,7 +158,6 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 		if file.IsDir() {
 			continue
 		}
-		fmt.Println("READING FILE", file.Name())
 
 		templateData, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
 		if err != nil {
