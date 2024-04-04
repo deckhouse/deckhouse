@@ -1,0 +1,76 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+import "google/protobuf/duration.proto";
+import "common.proto";
+
+
+message BootstrapRequest {
+  oneof message {
+    BootstrapStart start = 1;
+    BootstrapStop stop = 2;
+    BootstrapContinue continue = 3;
+  }
+}
+
+message BootstrapResponse {
+  oneof message {
+    BootstrapResult result = 1;
+    BootstrapPhaseEnd phase_end = 2;
+    Logs logs = 3;
+  }
+}
+
+message BootstrapStart {
+  string connection_config = 1;
+  string init_config = 2;
+  string cluster_config = 3;
+  string provider_specific_cluster_config = 4;
+  string init_resources = 5;
+  string resources = 6;
+  string state = 7;
+  string post_bootstrap_script = 8;
+  BootstrapStartOptions options = 9;
+}
+
+message BootstrapStop {}
+
+message BootstrapPhaseEnd {
+  string completed_phase = 1;
+  map<string, bytes> completed_phase_state = 2;
+  string next_phase = 3;
+  bool next_phase_critical = 4;
+}
+
+message BootstrapContinue {
+  string error = 1;
+}
+
+message BootstrapStartOptions {
+  bool commander_mode = 1;
+  bool sanity_check = 2;
+  int32 log_width = 3;
+  google.protobuf.Duration resources_timeout = 4;
+  google.protobuf.Duration deckhouse_timeout = 5;
+}
+
+message BootstrapResult {
+  string state = 1;
+}
