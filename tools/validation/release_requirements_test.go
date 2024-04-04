@@ -24,17 +24,17 @@ import (
 var testRequirementsPackage = "test"
 
 func Test_areNewRequirementsChecked(t *testing.T) {
-	_, _, err := checksAndRequirements(map[string]struct{}{}, "test_data/release_requirements/correct/example.go", testRequirementsPackage)
+	_, _, err := checksAndRequirements(map[string]struct{}{}, "testdata/release_requirements/correct/example.go", testRequirementsPackage)
 	if err != nil {
 		t.Errorf("Should parse correct/example.go file successfully: %s", err)
 	}
 
-	_, _, err = checksAndRequirements(map[string]struct{}{}, "test_data/release_requirements/faulty/function-assignment.go", testRequirementsPackage)
+	_, _, err = checksAndRequirements(map[string]struct{}{}, "testdata/release_requirements/faulty/function-assignment.go", testRequirementsPackage)
 	if err == nil {
 		t.Errorf("Should fail to parse faulty/function-assignment.go file: %s", err)
 	}
 
-	prematureChecks, _, err := checksAndRequirements(map[string]struct{}{"testVer": struct{}{}}, "test_data/release_requirements/faulty/example.go", testRequirementsPackage)
+	prematureChecks, _, err := checksAndRequirements(map[string]struct{}{"testVer": struct{}{}}, "testdata/release_requirements/faulty/example.go", testRequirementsPackage)
 	if err != nil {
 		t.Errorf("Should parse faulty/example.go file successfully")
 	}
@@ -43,7 +43,7 @@ func Test_areNewRequirementsChecked(t *testing.T) {
 		t.Errorf("List of premature checks shouldn't be of 0 length")
 	}
 
-	prematureChecks, eligibleChecks, err := checksAndRequirements(map[string]struct{}{"testVer": struct{}{}}, "test_data/release_requirements/faulty/extra-check.go", testRequirementsPackage)
+	prematureChecks, eligibleChecks, err := checksAndRequirements(map[string]struct{}{"testVer": struct{}{}}, "testdata/release_requirements/faulty/extra-check.go", testRequirementsPackage)
 	if err != nil {
 		t.Errorf("Should parse faulty/extra-check.go file successfully")
 	}
@@ -63,7 +63,7 @@ func Test_getRequirements(t *testing.T) {
 	}
 	expect := map[string]struct{}{"testVer": struct{}{}}
 
-	_, requirements, err := getRequirements(lines, "test_data/release_requirements/release.yaml")
+	_, requirements, err := getRequirements(lines, "testdata/release_requirements/release.yaml")
 	if err != nil {
 		t.Errorf("Should get requirements without an error: %s", err)
 	}
@@ -78,7 +78,7 @@ func Test_getRequirements(t *testing.T) {
 	}
 	expect = map[string]struct{}{"testVer": struct{}{}, "istioVer": struct{}{}}
 
-	_, requirements, err = getRequirements(lines, "test_data/release_requirements/release.yaml")
+	_, requirements, err = getRequirements(lines, "testdata/release_requirements/release.yaml")
 	if err != nil {
 		t.Errorf("Should get requirements without an error: %s", err)
 	}
@@ -90,7 +90,7 @@ func Test_getRequirements(t *testing.T) {
 	lines = []string{}
 	expect = map[string]struct{}{}
 
-	_, requirements, err = getRequirements(lines, "test_data/release_requirements/release.yaml")
+	_, requirements, err = getRequirements(lines, "testdata/release_requirements/release.yaml")
 	if err != nil {
 		t.Errorf("Should get requirements without an error: %s", err)
 	}
