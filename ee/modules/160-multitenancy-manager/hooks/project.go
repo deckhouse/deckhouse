@@ -81,7 +81,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 		}
 	}
-	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
+	var projectsSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
@@ -95,7 +95,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	for projectName, projectValues := range projectValuesSnap {
+	for projectName, projectValues := range projectsSnap {
 		postRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)

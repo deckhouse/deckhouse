@@ -1,3 +1,14 @@
+{{- define "stringifyNodeSelector" }}
+  {{- $context := . }}
+  {{ $result := "" }}
+  {{- range $k, $v := $context }}
+    {{ $result = printf "%s,%s=%s" $result $k $v }}
+  {{ end }}
+  {{ trimPrefix "," $result }}
+
+  {{- print $result }}
+{{- end }}
+
 {{- define "project.namespace" }}
 {{ $name := index . 0 }}
 {{ $metadata := index . 1 }}
@@ -141,16 +152,7 @@ spec:
   {{- include "authorization.rules" (list $projectValues.projectName $projectTemplateValues.subjects $)}}
 {{- end }}
 
-{{- define "stringifyNodeSelector" }}
-  {{- $context := . }}
-  {{ $result := "" }}
-  {{- range $k, $v := $context }}
-    {{ $result = printf "%s,%s=%s" $result $k $v }}
-  {{ end }}
-  {{ trimPrefix "," $result }}
 
-  {{- print $result }}
-{{- end }}
 
 {{- /* boilerplate namespace, will be removed by PostRender if any other namespace definition exists */}}
 ---
