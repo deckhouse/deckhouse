@@ -17,9 +17,11 @@
 - name: csi-controller-config-volume
   secret:
     secretName: csi-controller-manager
+  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
+  {{- end }}
 - name: zvirt-credentials-volume
   secret:
     secretName: zvirt-credentials
@@ -29,9 +31,11 @@
 - name: csi-controller-config-volume
   mountPath: /etc/cloud
   readOnly: true
+  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
+  {{- end }}
 - name: zvirt-credentials-volume
   mountPath: /etc/kubernetes/zvirt/basic-auth
   readOnly: true
@@ -56,9 +60,11 @@
 - name: csi-node-config-volume
   secret:
     secretName: csi-controller-manager
+  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
 - name: csi-controller-ca-volume
   secret:
     secretName: csi-controller-manager-ca
+  {{- end }}
 - name: zvirt-credentials-volume
   secret:
     secretName: zvirt-credentials
@@ -68,9 +74,11 @@
 - mountPath: /etc/cloud
   name: csi-node-config-volume
   readOnly: true
+  {{- if not (eq .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle "") }}
 - name: csi-controller-ca-volume
   mountPath: /etc/cloud/ca
   readOnly: true
+  {{- end }}
 - name: zvirt-credentials-volume
   mountPath: /etc/kubernetes/zvirt/basic-auth
   readOnly: true
