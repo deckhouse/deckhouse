@@ -384,6 +384,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	// we need clusterDomain to generate proper certificate for packages proxy
 	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)

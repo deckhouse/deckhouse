@@ -78,6 +78,8 @@ spec:
         - "--cache-directory=/cache"
         - "--cache-retention-size=1Gi"
         - "--cache-retention-period=720h" # 30 days
+        env:
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz
