@@ -466,7 +466,7 @@ This feature is available in Enterprise Edition only.
    Starting from version 1.59, `dhctl mirror` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
    To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag or set the `$MIRROR_IMAGES_BUNDLE_CHUNK_SIZE` environment variable when pulling the bundle.
    This will create a series of smaller `.chunk` files instead of a single tar bundle.
-   To upload such chunked bundle into your private registry, use `dhctl mirror` as specified below, passing the `--images-bundle-path` as if you were pushing from a single-file bundle.
+   To upload such a chunked bundle into your private registry, use `dhctl mirror` as specified below, passing the `--images-bundle-path` flag as if you were pushing from a single-file bundle.
    That is, point it to the `.tar` that would not exist in the bundle directory, not any of the chunk files. `dhctl mirror` will then detect the chunked bundle automatically.
 
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
