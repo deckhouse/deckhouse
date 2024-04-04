@@ -56,7 +56,6 @@ type Updater[R Release] struct {
 	skippedPatchesIndexes       []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
-	appliedNowReleaseIndex      int
 	predictedReleaseIsPatch     *bool
 
 	deckhousePodIsReady      bool
@@ -85,7 +84,6 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
-		appliedNowReleaseIndex:      -1,
 		skippedPatchesIndexes:       make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
 		deckhouseIsBootstrapping:    isBootstrapping,
@@ -103,7 +101,7 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 // - Canary settings
 func (du *Updater[R]) checkPatchReleaseConditions(predictedRelease *R) bool {
 	// check: canary settings
-	if (*predictedRelease).GetApplyAfter() != nil {
+	if (*predictedRelease).GetApplyAfter() != nil && !(*predictedRelease).GetApplyNow() {
 		if du.now.Before(*(*predictedRelease).GetApplyAfter()) {
 			du.logger.Infof("Release %s is postponed by canary process. Waiting", (*predictedRelease).GetName())
 			err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", (*predictedRelease).GetApplyAfter().Format(time.RFC822)), PhasePending)
@@ -158,7 +156,7 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 		return false
 	}
 
-	if applyTimeChanged {
+	if applyTimeChanged && !(*predictedRelease).GetApplyNow() {
 		err = du.kubeAPI.PatchReleaseApplyAfter((*predictedRelease).GetName(), releaseApplyTime)
 		if err != nil {
 			du.logger.Errorf("patch apply after: %s", err.Error())
@@ -202,56 +200,59 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 		}
 	}
 
-	// check: release cooldown
-	if (*predictedRelease).GetCooldownUntil() != nil {
-		if du.now.Before(*(*predictedRelease).GetCooldownUntil()) {
-			du.logger.Infof("Release %s in cooldown", (*predictedRelease).GetName())
-			err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", (*predictedRelease).GetCooldownUntil().Format(time.RFC822)), PhasePending)
-			if err != nil {
-				du.logger.Error(err)
-			}
-			return false
-		}
-	}
-
-	// check: canary settings
-	if (*predictedRelease).GetApplyAfter() != nil && !du.inManualMode {
-		if du.now.Before(*(*predictedRelease).GetApplyAfter()) {
-			du.logger.Infof("Release %s is postponed by canary process. Waiting", (*predictedRelease).GetName())
-			err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", (*predictedRelease).GetApplyAfter().Format(time.RFC822)), PhasePending)
-			if err != nil {
-				du.logger.Error(err)
-			}
-			return false
-		}
-	}
-
-	if du.inManualMode {
-		// check: release is approved in Manual mode
-		if !(*predictedRelease).GetApprovedStatus() {
-			du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
-			du.metricsUpdater.WaitingManual((*predictedRelease).GetName(), float64(du.totalPendingManualReleases))
-			err := du.updateStatus(predictedRelease, waitingManualApprovalMsg, PhasePending)
-			if err != nil {
-				du.logger.Error(err)
-			}
-			return false
-		}
-	} else {
-		// check: update windows in Auto mode
-		if len(updateWindows) > 0 {
-			updatePermitted := updateWindows.IsAllowed(du.now)
-			if !updatePermitted {
-				applyTime := updateWindows.NextAllowedTime(du.now)
-				du.logger.Info("Deckhouse update does not get into update windows. Skipping")
-				err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), PhasePending)
+	// call tine checks, only if release does not have the `release.deckhouse.io/apply-now="true"` annotation
+	if !(*predictedRelease).GetApplyNow() {
+		// check: release cooldown
+		if (*predictedRelease).GetCooldownUntil() != nil {
+			if du.now.Before(*(*predictedRelease).GetCooldownUntil()) {
+				du.logger.Infof("Release %s in cooldown", (*predictedRelease).GetName())
+				err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", (*predictedRelease).GetCooldownUntil().Format(time.RFC822)), PhasePending)
 				if err != nil {
 					du.logger.Error(err)
 				}
 				return false
 			}
 		}
-	}
+
+		// check: canary settings
+		if (*predictedRelease).GetApplyAfter() != nil && !du.inManualMode {
+			if du.now.Before(*(*predictedRelease).GetApplyAfter()) {
+				du.logger.Infof("Release %s is postponed by canary process. Waiting", (*predictedRelease).GetName())
+				err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", (*predictedRelease).GetApplyAfter().Format(time.RFC822)), PhasePending)
+				if err != nil {
+					du.logger.Error(err)
+				}
+				return false
+			}
+		}
+
+		if du.inManualMode {
+			// check: release is approved in Manual mode
+			if !(*predictedRelease).GetApprovedStatus() {
+				du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
+				du.metricsUpdater.WaitingManual((*predictedRelease).GetName(), float64(du.totalPendingManualReleases))
+				err := du.updateStatus(predictedRelease, waitingManualApprovalMsg, PhasePending)
+				if err != nil {
+					du.logger.Error(err)
+				}
+				return false
+			}
+		} else {
+			// check: update windows in Auto mode
+			if len(updateWindows) > 0 {
+				updatePermitted := updateWindows.IsAllowed(du.now)
+				if !updatePermitted {
+					applyTime := updateWindows.NextAllowedTime(du.now)
+					du.logger.Info("Deckhouse update does not get into update windows. Skipping")
+					err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), PhasePending)
+					if err != nil {
+						du.logger.Error(err)
+					}
+					return false
+				}
+			}
+		}
+	} // end of `release.deckhouse.io/apply-now="true"` block
 
 	// check: Deckhouse pod is ready
 	if !du.deckhousePodIsReady {
@@ -392,6 +393,18 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 		return false
 	}
 
+	// remove annotation if exists
+	if (*predictedRelease).GetApplyNow() {
+		err = du.kubeAPI.PatchReleaseAnnotations(
+			(*predictedRelease).GetName(),
+			map[string]interface{}{
+				"release.deckhouse.io/apply-now": nil,
+			})
+		if err != nil {
+			du.logger.Error("remove apply-now annotation: ", err)
+		}
+	}
+
 	if currentRelease != nil {
 		// skip last deployed release
 		err = du.updateStatus(currentRelease, "", PhaseSuperseded)
@@ -438,10 +451,6 @@ func (du *Updater[R]) PredictNextRelease() {
 		if release.GetForce() {
 			du.forcedReleaseIndex = i
 		}
-
-		if release.GetApplyNow() {
-			du.appliedNowReleaseIndex = i
-		}
 	}
 }
 
@@ -485,46 +494,6 @@ func (du *Updater[R]) ApplyForcedRelease() {
 	// Outdate all previous releases
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
-			err := du.updateStatus(&release, "", PhaseSuperseded)
-			if err != nil {
-				du.logger.Error(err)
-			}
-		}
-	}
-}
-
-func (du *Updater[R]) HasAppliedNowRelease() bool {
-	return du.appliedNowReleaseIndex != -1
-}
-
-func (du *Updater[R]) ApplyAppliedNowRelease() {
-	appliedNowRelease := &(du.releases[du.appliedNowReleaseIndex])
-	var currentRelease *R
-
-	if !du.checkAppliedNowConditions(appliedNowRelease) {
-		return
-	}
-
-	if du.currentDeployedReleaseIndex != -1 {
-		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
-	}
-
-	du.logger.Warnf("Applying release %s", (*appliedNowRelease).GetName())
-
-	// all checks are passed, deploy release
-	du.runReleaseDeploy(appliedNowRelease, currentRelease)
-
-	// remove annotation
-	err := du.kubeAPI.PatchReleaseAnnotations((*appliedNowRelease).GetName(), map[string]interface{}{
-		"release.deckhouse.io/apply-now": nil,
-	})
-	if err != nil {
-		du.logger.Errorf("patch apply now annotation: %s", err.Error())
-	}
-
-	// Outdate all previous releases
-	for i, release := range du.releases {
-		if i < du.appliedNowReleaseIndex {
 			err := du.updateStatus(&release, "", PhaseSuperseded)
 			if err != nil {
 				du.logger.Error(err)
@@ -726,40 +695,6 @@ func (du *Updater[R]) saveReleaseData() error {
 	}
 
 	return du.kubeAPI.SaveReleaseData(releaseName, du.releaseData)
-}
-
-// for applied now we check less conditions, then for minor release
-// - Release requirements
-// - Disruptions
-// - Deckhouse pod is ready
-func (du *Updater[R]) checkAppliedNowConditions(appliedNowRelease *R) bool {
-	// check: release requirements (hard lock)
-	passed := du.checkReleaseRequirements(appliedNowRelease)
-	if !passed {
-		du.metricsUpdater.ReleaseBlocked((*appliedNowRelease).GetName(), "requirement")
-		du.logger.Warnf("Release %s requirements are not met", (*appliedNowRelease).GetName())
-		return false
-	}
-
-	// check: release disruptions (hard lock)
-	passed = du.checkReleaseDisruptions(appliedNowRelease)
-	if !passed {
-		du.metricsUpdater.ReleaseBlocked((*appliedNowRelease).GetName(), "disruption")
-		du.logger.Warnf("Release %s disruption approval required", (*appliedNowRelease).GetName())
-		return false
-	}
-
-	// check: Deckhouse pod is ready
-	if !du.deckhousePodIsReady {
-		du.logger.Info("Deckhouse is not ready. Skipping upgrade")
-		err := du.updateStatus(appliedNowRelease, "Waiting for Deckhouse pod to be ready", PhasePending)
-		if err != nil {
-			du.logger.Error(err)
-		}
-		return false
-	}
-
-	return true
 }
 
 func (du *Updater[R]) GetPredictedReleaseIndex() int {
