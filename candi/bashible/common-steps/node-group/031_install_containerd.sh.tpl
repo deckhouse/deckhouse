@@ -16,11 +16,15 @@
 
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
-  systemctl daemon-reload
-  systemctl enable containerd-deckhouse.service
-{{ if ne .runType "ImageBuilding" -}}
-  bb-flag-set containerd-need-restart
-{{- end }}
+  local PACKAGE="$1"
+
+  if [[ "${PACKAGE}" == "containerd" ]]; then
+    systemctl daemon-reload
+    systemctl enable containerd-deckhouse.service
+    {{- if ne .runType "ImageBuilding" }}
+    bb-flag-set containerd-need-restart
+    {{- end }}
+  fi
 }
 
 bb-rp-install "containerd:{{- index $.images.registrypackages "containerd1713" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
