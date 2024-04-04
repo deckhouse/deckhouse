@@ -203,7 +203,7 @@ spec:
       {{- with .parameters.dedicatedNodes }}
       annotations:
         {{ with .defaultTolerations }}scheduler.alpha.kubernetes.io/defaultTolerations: '{{ . | toJson }}'{{ end }}
-        {{ with .nodeSelector }}scheduler.alpha.kubernetes.io/node-selector: '{{ . | toJson }}'{{ end }}
+        {{ with .nodeSelector }}scheduler.alpha.kubernetes.io/node-selector: '{{ include "stringifyNodeSelector" . }}'{{ end }}
       {{- end }}
     {{- range $administrator := .parameters.administrators }}
     ---
