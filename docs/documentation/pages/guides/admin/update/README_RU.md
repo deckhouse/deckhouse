@@ -1,6 +1,6 @@
 ---
 title: Обновление
-permalink: ru/update/
+permalink: ru/admin/update/readme.html
 lang: ru
 ---
 
