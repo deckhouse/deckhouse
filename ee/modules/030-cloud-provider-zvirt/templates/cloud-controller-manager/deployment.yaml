@@ -90,15 +90,30 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
           - name: ZVIRT_API_URL
-            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.server | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: ccm-zvirt-credentials
+                  key: server
           - name: ZVIRT_USERNAME
-            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.username | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: ccm-zvirt-credentials
+                  key: username
           - name: ZVIRT_PASSWORD
-            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: ccm-zvirt-credentials
+                  key: password
           - name: ZVIRT_INSECURE
-            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.insecure | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: ccm-zvirt-credentials
+                  key: insecure
           - name: ZVIRT_CA_BUNDLE
-            value: {{ .Values.cloudProviderZvirt.internal.providerClusterConfiguration.provider.caBundle | b64dec | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: ccm-zvirt-credentials
+                  key: caBundle
           ports:
           - name: https
             containerPort: 10471
