@@ -26,7 +26,7 @@ index 958397dd5..8b6de93c5 100755
          end
          {{ end }}
  
-@@ -127,11 +130,9 @@ http {
+@@ -127,11 +130,16 @@ http {
      init_worker_by_lua_block {
          lua_ingress.init_worker()
          balancer.init_worker()
@@ -38,16 +38,14 @@ index 958397dd5..8b6de93c5 100755
 +        pbmetrics.init_worker()
      }
  
-     {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
-@@ -739,7 +757,7 @@ stream {
-     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;";
- 
-     lua_shared_dict tcp_udp_configuration_data 5M;
--    
++    map $server_name $total_upstream_response_time {
++        default 0.0;
++    }
++    map $server_name $upstream_retries {
++        default 0;
++    }
 +
-     {{ buildResolvers $cfg.Resolver $cfg.DisableIpv6DNS }}
- 
-     init_by_lua_block {
+     {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
 @@ -910,9 +928,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
@@ -59,13 +57,11 @@ index 958397dd5..8b6de93c5 100755
              }
          }
          {{ end }}
-@@ -1203,6 +1219,10 @@ stream {
+@@ -1203,6 +1219,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
 +            set $content_kind "";
-+            set $total_upstream_response_time "0";
-+            set $upstream_retries "0";
 +
              {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
  
