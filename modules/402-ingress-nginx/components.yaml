@@ -1,0 +1,47 @@
+components:
+- name: ingress-controller
+  description: The ingress-nginx controller that terminates user HTTP requests.
+  namespace: d8-ingress-nginx
+  labelSelector:
+    app: controller
+  network:
+    listenPorts:
+    - number: 80
+      description: HTTP.
+      name: http
+    - number: 443
+      description: HTTPS.
+      name: https
+    - number: 10354
+      description: Metrics.
+      name: https-metrics
+    output:
+    - type: APIServer
+    - type: ClusterTCP
+    input:
+    - type: World
+      ports: [http, https]
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [metrics]
+- name: kruise-controller-manager
+  description: TODO
+  namespace: d8-ingress-nginx
+  labelSelector:
+    app: kruise
+    control-plane: controller-manager
+  network:
+    listenPorts:
+    - number: 10354
+      description: Metrics
+      name: https-metrics
+    - number: 9876
+      description: Webhook.
+      name: webhook-server
+    output:
+    - type: APIServer
+    input:
+    - type: APIServer
+      ports: [https-metrics]

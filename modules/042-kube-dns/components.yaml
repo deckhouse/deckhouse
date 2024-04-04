@@ -1,0 +1,33 @@
+components:
+- name: kube-dns
+  namespace: kube-system
+  description: The main DNS resolver in cluster (coredns).
+  labelSelector:
+    app: kube-dns
+  network:
+    listenPorts:
+    - number: 5353
+      protocol: TCP
+      description: DNS server (TCP)
+      name: dns-tcp
+    - number: 5353
+      protocol: UDP
+      description: DNS server (UDP)
+      name: dns-udp
+    - number: 9154
+      description: metrics
+      name: https-metrics
+    output:
+    - type: APIServer
+    - type: WorldPorts
+      worldPorts:
+        tcp: [53]
+        udp: [53]
+    input:
+    - type: Cluster
+      ports: [dns-tcp, dns-udp]
+    - type: D8ModuleComponent
+      d8ModuleComponent:
+        module: prometheus
+        component: prometheus
+      ports: [https-metrics]
