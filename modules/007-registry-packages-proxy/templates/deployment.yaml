@@ -69,7 +69,7 @@ spec:
       serviceAccountName: registry-packages-proxy
       containers:
       - name: registry-packages-proxy
-        {{- helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
         imagePullPolicy: IfNotPresent
         args:
