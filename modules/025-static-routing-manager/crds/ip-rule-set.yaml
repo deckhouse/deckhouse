@@ -33,6 +33,8 @@ spec:
               properties:
                 rules:
                   type: array
+                  description: |
+                    ip rules declaration
                   items:
                     type: object
                     required:
@@ -44,14 +46,22 @@ spec:
                         type: integer
                         minimum: 0
                         maximum: 32767
+                        description: |
+                          priority of rule
                       from:
                         type: string
                         format: cidr
+                        description: |
+                          Match packets from
                       to:
                         type: string
                         format: cidr
+                        description: |
+                          Match packets to
                       lookup:
                         type: object
+                        description: |
+                          In which table find route
                         oneOf:
                         - required: [ipRouteTableID]
                         - required: [routeTableName]
@@ -60,10 +70,16 @@ spec:
                             type: integer
                             minimum: 0
                             maximum: 4294967295
+                            description: |
+                              ID of route table on node
                           routeTableName:
                             type: string
+                            description: |
+                              Name of CR routeTable
                 nodeSelector:
                   type: object
+                  description: |
+                    nodeSelector of node on which inject iprule
                   additionalProperties:
                     type: string
             status:

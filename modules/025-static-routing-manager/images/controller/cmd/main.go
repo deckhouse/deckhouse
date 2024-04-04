@@ -62,7 +62,7 @@ func main() {
 	log.Info("[main] CfgParams has been successfully created")
 	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevel, cfgParams.Loglevel))
 	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueInterval, cfgParams.RequeueInterval))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbePort, cfgParams.ProbePort))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPort, cfgParams.ProbeAddressPort))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {
@@ -83,7 +83,7 @@ func main() {
 	managerOpts := manager.Options{
 		Scheme: scheme,
 		//MetricsBindAddress: cfgParams.MetricsPort,
-		HealthProbeBindAddress: cfgParams.ProbePort,
+		HealthProbeBindAddress: cfgParams.ProbeAddressPort,
 		Logger:                 log.GetLogger(),
 	}
 

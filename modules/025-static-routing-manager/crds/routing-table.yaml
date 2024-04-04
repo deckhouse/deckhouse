@@ -30,15 +30,25 @@ spec:
             required:
             - routes
             - nodeSelector
+            x-kubernetes-validations:
+            - message: ipRouteTableID is required once set
+              rule: '!has(oldSelf.ipRouteTableID) || has(self.ipRouteTableID)'
             properties:
               ipRouteTableID:
                 type: integer
+                x-kubernetes-validations:
+                - message: ipRouteTableID is immutable field
+                  rule: self == oldSelf
                 minimum: 0
                 maximum: 4294967295
+                description: |
+                  ID of route table on node
               routes:
                 type: array
                 items:
                   type: object
+                  description: |
+                    Routes
                   required:
                   - destination
                   - gateway
@@ -46,11 +56,17 @@ spec:
                     destination:
                       type: string
                       format: cidr
+                      description: |
+                        description network
                     gateway:
                       type: string
                       format: ipv4
+                      description: |
+                        nexthop
               nodeSelector:
                 type: object
+                description: |
+                  nodeSelector of node on which config iprouting
                 additionalProperties:
                   type: string
           status:
@@ -58,6 +74,6 @@ spec:
             properties:
               ipRouteTableID:
                 type: integer
-                minimum: 10000
+                minimum: 0
                 maximum: 4294967295
 

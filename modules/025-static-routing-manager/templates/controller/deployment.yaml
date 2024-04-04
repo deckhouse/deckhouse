@@ -1,4 +1,4 @@
-{{- define "static_routing_manager_controller_resources" }}
+{{- define "controller_resources" }}
 cpu: 10m
 memory: 25Mi
 {{- end }}
@@ -8,21 +8,21 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: static-routing-manager-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "static-routing-manager-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: static-routing-manager-controller
+    name: controller
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: "static-routing-manager-controller"
+    - containerName: "controller"
       minAllowed:
-        {{- include "static_routing_manager_controller_resources" . | nindent 8 }}
+        {{- include "controller_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 200m
         memory: 100Mi
@@ -31,9 +31,9 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: static-routing-manager-controller
+  name: controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "static-routing-manager-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -44,11 +44,11 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: static-routing-manager-controller
+      app: controller
   template:
     metadata:
       labels:
-        app: static-routing-manager-controller
+        app: controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -62,17 +62,17 @@ spec:
       serviceAccount: controller
       serviceAccountName: controller
       containers:
-        - name: static-routing-manager-controller
+        - name: controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "controller") }}
           imagePullPolicy: IfNotPresent
           command:
-            - controller
+            - /controller
           env:
             - name: LOG_LEVEL
               value: "2"
-            - name: PROBE_PORT
-              value: "9234"
+            - name: PROBE_ADDRESS_PORT
+              value: ":9234"
             - name: CONTROLLER_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -89,5 +89,5 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-              {{- include "static_routing_manager_controller_resources" . | nindent 14 }}
+              {{- include "controller_resources" . | nindent 14 }}
 {{- end }}

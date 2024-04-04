@@ -1,0 +1,37 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            iprulesets crd
+          properties:
+            spec:
+              properties:
+                rules:
+                  description: |
+                    ip rules declaration
+                  items:
+                    properties:
+                      priority:
+                        description: |
+                          priority of rule
+                      from:
+                        description: |
+                          Match packets from
+                      to:
+                        description: |
+                          Match packets to
+                      lookup:
+                        description: |
+                          In which table find route
+                        properties:
+                          ipRouteTableID:
+                            description: |
+                              ID of route table on node
+                          routeTableName:
+                            description: |
+                              Name of CR routeTable
+                nodeSelector:
+                  description: |
+                    nodeSelector of node on which inject iprule

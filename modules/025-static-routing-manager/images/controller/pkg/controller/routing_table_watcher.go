@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"reflect"
 	"static-routing-manager-controller/api/v1alpha1"
 	"static-routing-manager-controller/pkg/config"
 	"static-routing-manager-controller/pkg/logger"
@@ -39,10 +38,10 @@ import (
 const (
 	RoutingTableCtrlName = "static-routing-manager-controller"
 
-	RouteTableIDMin int = 0
+	RouteTableIDMin int = 10000
 	RouteTableIDMax int = 4294967295
 
-	EmptyRouteTableIDReconcile reconcileType = "EmptyRouteTableID"
+	StatusRouteTableIDReconcile reconcileType = "StatusRouteTableID"
 )
 
 type (
@@ -103,15 +102,15 @@ func RunRoutingTableWatcherController(
 }
 
 func runEventReconcile(ctx context.Context, cl client.Client, log logger.Logger, rt *v1alpha1.RoutingTable) (bool, error) {
-	recType, err := identifyReconcileFunc(rt)
+	recType, err := identifyReconcileFunc(rt, log)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("[runEventReconcile] unable to identify reconcile func for the RoutingTable %s", rt.Name))
 		return true, err
 	}
 	log.Debug(fmt.Sprintf("[runEventReconcile] reconcile operation: %s", recType))
 	switch recType {
-	case EmptyRouteTableIDReconcile:
-		log.Debug(fmt.Sprintf("[runEventReconcile] EmptyRouteTableIDReconcile starts reconciliataion for the RoutingTable, name: %s", rt.Name))
+	case StatusRouteTableIDReconcile:
+		log.Debug(fmt.Sprintf("[runEventReconcile] StatusRouteTableIDReconcile starts reconciliataion for the RoutingTable, name: %s", rt.Name))
 		return reconcileRTGenerateIDFunc(ctx, cl, log, rt)
 	default:
 		log.Debug(fmt.Sprintf("[runEventReconcile] the RoutingTable %s should not be reconciled", rt.Name))
@@ -120,24 +119,45 @@ func runEventReconcile(ctx context.Context, cl client.Client, log logger.Logger,
 	return false, nil
 }
 
-func identifyReconcileFunc(rt *v1alpha1.RoutingTable) (reconcileType, error) {
-	should := shouldReconcileByEmptyRouteTableIDFunc(rt)
+func identifyReconcileFunc(rt *v1alpha1.RoutingTable, log logger.Logger) (reconcileType, error) {
+	should := shouldReconcileByEmptyStatusRouteTableIDFunc(rt, log)
 	if should {
-		return EmptyRouteTableIDReconcile, nil
+		return StatusRouteTableIDReconcile, nil
 	}
 	return "none", nil
 }
 
-func shouldReconcileByEmptyRouteTableIDFunc(rt *v1alpha1.RoutingTable) bool {
+func shouldReconcileByEmptyStatusRouteTableIDFunc(rt *v1alpha1.RoutingTable, log logger.Logger) bool {
 	if rt.DeletionTimestamp != nil {
-		return false
-	}
-	reflect.ValueOf(rt.Spec.IpRouteTableID).IsNil()
-
-	if &rt.Spec.IpRouteTableID != nil || &rt.Status.IpRouteTableID != nil {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s DurationTimestamp(%v) is exist", rt.Name, rt.DeletionTimestamp.String()))
 		return false
 	}
 
+	if rt.Status == nil {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status is not exist", rt.Name))
+		return true
+	}
+
+	if rt.Status != nil && &rt.Status.IpRouteTableID == nil {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID is not exist", rt.Name))
+		return true
+	}
+
+	if rt.Status != nil &&
+		&rt.Status.IpRouteTableID != nil &&
+		rt.Status.IpRouteTableID == 0 {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID is set to 0", rt.Name))
+		return true
+	}
+
+	if &rt.Spec.IpRouteTableID != nil &&
+		rt.Spec.IpRouteTableID != 0 &&
+		rt.Status.IpRouteTableID == rt.Spec.IpRouteTableID {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID(%v) and Spec.IpRouteTableID(%v) are both present, they have the same value, and it is not equil to 0", rt.Name, rt.Status.IpRouteTableID, rt.Spec.IpRouteTableID))
+		return false
+	}
+
+	log.Debug(fmt.Sprintf("[shouldReconcileBy] Reconcile by default"))
 	return true
 }
 
@@ -152,9 +172,12 @@ func reconcileRTGenerateIDFunc(
 	var newRTId int
 	var err error
 
-	if &rt.Spec.IpRouteTableID != nil {
+	if &rt.Spec.IpRouteTableID != nil &&
+		rt.Spec.IpRouteTableID != 0 {
 		newRTId = rt.Spec.IpRouteTableID
+		log.Error(err, fmt.Sprintf("[reconcileRTGenerateIDFunc] Spec.IpRouteTableID(%v) is exist, use it", rt.Spec.IpRouteTableID))
 	} else {
+		log.Error(err, fmt.Sprintf("[reconcileRTGenerateIDFunc] Spec.IpRouteTableID is not exist, generate new"))
 		newRTId, err = generateFreeRoutingTableID(ctx, cl, log)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("[reconcileRTGenerateIDFunc] unable to generate free RoutingTableID"))
@@ -202,6 +225,10 @@ func updateRoutingTableIDInStatus(
 	rt *v1alpha1.RoutingTable,
 	newRTId int,
 ) error {
+	if rt.Status == nil {
+		rt.Status = new(v1alpha1.RoutingTableStatus)
+	}
+
 	rt.Status.IpRouteTableID = newRTId
 
 	// TODO: add retry logic
