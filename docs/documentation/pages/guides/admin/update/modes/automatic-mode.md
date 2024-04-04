@@ -1,6 +1,6 @@
 ---
 title: Автоматический режим обновлений
-permalink: ru/update/automatic-mode/
+permalink: ru/update/modes/automatic-mode/
 lang: ru
 ---
 

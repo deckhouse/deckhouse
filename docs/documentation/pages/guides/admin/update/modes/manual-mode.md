@@ -1,6 +1,6 @@
 ---
 title: Ручной режим обновлений
-permalink: ru/update/manual-mode/
+permalink: ru/update/modes/manual-mode/
 lang: ru
 ---
 

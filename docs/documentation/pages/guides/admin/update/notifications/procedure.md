@@ -1,6 +1,6 @@
 ---
 title: Где посмотреть статус установки минорных обновлений?
-permalink: ru/notifications/procedure/
+permalink: ru/update/notifications/procedure/
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Получение Changelog
-permalink: ru/notifications/dkp-notice/
+permalink: ru/update/notifications/changelog/
 lang: ru
 ---
 

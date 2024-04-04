@@ -1,6 +1,6 @@
 ---
 title: Окна обновлений
-permalink: ru/windows/
+permalink: ru/update/windows/
 lang: ru
 --- 
 

@@ -1,4 +1,8 @@
-## Обновление кластеров Kubernetes в Deckhouse Kubernetes Platform
+---
+title: Обновление кластеров Kubernetes в Deckhouse Kubernetes Platform
+permalink: ru/update/kubernetes/update-kubernetes/
+lang: ru
+---
 
 Чтобы обновить версию Kubernetes в кластере измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration), выполнив следующие шаги:
 

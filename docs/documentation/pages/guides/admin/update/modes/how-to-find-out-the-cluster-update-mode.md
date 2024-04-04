@@ -1,6 +1,6 @@
 ---
 title: Как узнать режим обновлений кластера?
-permalink: ru/update/how-to-find-out-the-cluster-update-mode/
+permalink: ru/update/modes/how-to-find-out-the-cluster-update-mode/
 lang: ru
 ---
 

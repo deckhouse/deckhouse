@@ -1,6 +1,6 @@
 ---
 title: Гарантия стабильности и безопасности
-permalink: ru/security/closed-and-secure-environment/
+permalink: ru/update/security/closed-and-secure-environment/
 lang: ru
 ---
 

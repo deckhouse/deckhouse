@@ -1,6 +1,6 @@
 ---
 title: Каналы обновлений
-permalink: ru/channels/
+permalink: ru/update/channels/
 lang: ru
 ---
 

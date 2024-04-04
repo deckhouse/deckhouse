@@ -1,6 +1,6 @@
 ---
 title: Виды уведомлений
-permalink: ru/notifications/intro/
+permalink: ru/update/notifications/intro/
 lang: ru
 ---
 

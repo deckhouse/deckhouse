@@ -1,6 +1,6 @@
 ---
 title: Оповещение об обновлении Deckhouse Kubernetes Platform
-permalink: ru/notifications/dkp-notice/
+permalink: ru/update/notifications/dkp-notice/
 lang: ru
 ---
 

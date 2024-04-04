@@ -1,4 +1,8 @@
-### Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+---
+title: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+permalink: ru/update/security/proxying-registry/
+lang: ru
+---
 
 При установке Deckhouse можно настроить на работу с проксирующим registry внутри закрытого контура. 
 Для этого:

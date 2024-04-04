@@ -7,33 +7,37 @@ entries:
       url: /update/
       folders:
         - title:
+            en: Обновление кластеров Kubernetes
+            ru: Обновление кластеров Kubernetes
+          url: /update/kubernetes/update-kubernetes/
+        - title:
             en: Режимы обновлений
             ru: Режимы обновлений
           folders:
             - title:
                 en: Виды обновлений
                 ru: Виды обновлений
-              url: /update/update-mode/
+              url: /update/modes/update-mode/
             - title:
                 en: Автоматический режим обновлений
                 ru: Автоматический режим обновлений
-              url: /update/automatic-mode/
+              url: /update/modes/automatic-mode/
             - title:
                 en: Ручной режим обновлений
                 ru: Ручной режим обновлений
-              url: /update/manual-mode/
+              url: /update/modes/manual-mode/
             - title:
                 en: Как узнать режим обновлений кластера?
                 ru: Как узнать режим обновлений кластера?
-              url: /update/how-to-find-out-the-cluster-update-mode/
+              url: /update/modes/how-to-find-out-the-cluster-update-mode/
         - title:
             en: Каналы обновлений
             ru: Каналы обновлений
-          url: /channels/
+          url: /update/channels/
         - title:
             en: Окна обновлений
             ru: Окна обновлений
-          url: /windows/
+          url: /update/windows/
         - title:
             en: Получение уведомлений
             ru: Получение уведомлений
@@ -41,19 +45,19 @@ entries:
             - title:
                 en: Виды уведомлений
                 ru: Виды уведомлений
-              url: /notifications/intro/
+              url: /update/notifications/intro/
             - title:
                 en: Получение Changelog
                 ru: Получение Changelog
-              url: /notifications/changelog/
+              url: /update/notifications/changelog/
             - title:
                 en: Оповещение об обновлении платформы
                 ru: Оповещение об обновлении платформы
-              url: /notifications/dkp-notice/
+              url: /update/notifications/dkp-notice/
             - title:
                 en: Где посмотреть статус установки минорных обновлений?
                 ru: Где посмотреть статус установки минорных обновлений?
-              url: ru/notifications/procedure/
+              url: /update/notifications/procedure/
         - title:
             en: Обновление в закрытом контуре
             ru: Обновление в закрытом контуре
@@ -61,16 +65,16 @@ entries:
             - title:
                 en: Гарантия стабильности и безопасности
                 ru: Гарантия стабильности и безопасности
-              url: /security/closed-and-secure-environment/
+              url: /update/security/closed-and-secure-environment/
             - title:
-                en: Получение Changelog
-                ru: Получение Changelog
-              url: /security/changelog/
+                en: Выгрузка образов модулей DKP из репозитория вендора
+                ru: Выгрузка образов модулей DKP из репозитория вендора
+              url: /update/security/vendor-images/
             - title:
-                en: Оповещение об обновлении платформы
-                ru: Оповещение об обновлении платформы
-              url: /security/dkp-notice/
+                en: Загрузка образов модулей DKP в закрытый репозиторий
+                ru: Загрузка образов модулей DKP в закрытый репозиторий
+              url: /update/security/private-repository/
             - title:
-                en: Где посмотреть статус установки минорных обновлений?
-                ru: Где посмотреть статус установки минорных обновлений?
-              url: ru/security/procedure/
+                en: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+                ru: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+              url: /update/security/proxying-registry/
