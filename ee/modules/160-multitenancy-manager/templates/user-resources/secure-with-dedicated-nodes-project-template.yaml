@@ -249,8 +249,8 @@ spec:
         {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
       {{- with .parameters.dedicatedNodes }}
       annotations:
-        {{ with .parameters.defaultTolerations }}scheduler.alpha.kubernetes.io/defaultTolerations: '{{ . | toJson }}'{{ end }}
-        {{ with .parameters.nodeSelector }}scheduler.alpha.kubernetes.io/node-selector: '{{ . | toJson }}'{{ end }}
+        {{ with .defaultTolerations }}scheduler.alpha.kubernetes.io/defaultTolerations: '{{ . | toJson }}'{{ end }}
+        {{ with .labelSelector }}scheduler.alpha.kubernetes.io/node-selector: '{{ . | toJson }}'{{ end }}
       {{- end }}
     {{- range $administrator := .parameters.administrators }}
     ---
@@ -386,8 +386,9 @@ spec:
           priority: Critical
           tags:
             - container_drift
-    {{ end }}
-    {{ end }}
+    {{- end }}
+    {{- end }}
+    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
     # Refer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
@@ -417,3 +418,4 @@ spec:
           labelSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .projectName }}
+    {{- end }}
