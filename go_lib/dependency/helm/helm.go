@@ -113,6 +113,8 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 
 		ch.Templates = append(ch.Templates, &chartFile)
 		fmt.Println("#! TEMPLATES", ch.Templates)
+		fmt.Println("#! NAME", name)
+		fmt.Println("#! TPL", data)
 	}
 	hashsum := getMD5Hash(templates, values)
 
