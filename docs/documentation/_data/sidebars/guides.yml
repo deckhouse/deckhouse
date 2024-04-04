@@ -2,6 +2,6 @@
 entries:
   folders:
     - title:
-        en: Overview
-        ru: Введение
-      url: ru/update/readme.html
+        en: Update
+        ru: Обновление
+      url: ru/update/
