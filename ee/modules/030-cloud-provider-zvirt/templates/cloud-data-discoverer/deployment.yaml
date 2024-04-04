@@ -80,30 +80,30 @@ spec:
         - --listen-address=127.0.0.1:8081
         env:
           - name: ZVIRT_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: cdd-zvirt-credentials
-                  key: server
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: server
           - name: ZVIRT_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: cdd-zvirt-credentials
-                  key: username
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: username
           - name: ZVIRT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: cdd-zvirt-credentials
-                  key: password
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: password
           - name: ZVIRT_INSECURE
-              valueFrom:
-                secretKeyRef:
-                  name: cdd-zvirt-credentials
-                  key: insecure
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: insecure
           - name: ZVIRT_CA_BUNDLE
-              valueFrom:
-                secretKeyRef:
-                  name: cdd-zvirt-credentials
-                  key: caBundle
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: caBundle
         livenessProbe:
           httpGet:
             path: /healthz
