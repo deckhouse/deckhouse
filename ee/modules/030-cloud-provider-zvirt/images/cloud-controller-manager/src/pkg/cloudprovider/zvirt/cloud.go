@@ -10,13 +10,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/zvirt-cloud-controller-manager/pkg/zvirtapi"
 	"k8s.io/client-go/informers"
 	cloudprovider "k8s.io/cloud-provider"
-	"k8s.io/klog/v2"
 
 	"k8s.io/client-go/tools/cache"
 )
@@ -97,16 +96,7 @@ func NewCloudConfig() (*CloudConfig, error) {
 	}
 	cloudConfig.Password = password
 
-	insecure := os.Getenv(envZvirtInsecure)
-	cloudConfig.Insecure = false
-	klog.V(4).Infof("init CloudConfig: %s=%s", envZvirtInsecure, insecure)
-	if insecure != "" {
-		v, err := strconv.ParseBool(insecure)
-		if err != nil {
-			return nil, err
-		}
-		cloudConfig.Insecure = v
-	}
+	cloudConfig.Insecure = strings.ToLower(os.Getenv(envZvirtInsecure)) == "true"
 	cloudConfig.CaBundle = os.Getenv(envZvirtCaBundle)
 
 	return cloudConfig, nil

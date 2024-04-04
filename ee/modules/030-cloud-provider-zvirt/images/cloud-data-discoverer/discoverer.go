@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strconv"
+	"strings"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
@@ -63,15 +63,7 @@ func newCloudConfig() (*CloudConfig, error) {
 	}
 	cloudConfig.Password = password
 
-	insecure := os.Getenv(envZvirtInsecure)
-	cloudConfig.Insecure = false
-	if insecure != "" {
-		v, err := strconv.ParseBool(insecure)
-		if err != nil {
-			return nil, err
-		}
-		cloudConfig.Insecure = v
-	}
+	cloudConfig.Insecure = strings.ToLower(os.Getenv(envZvirtInsecure)) == "true"
 	cloudConfig.CaBundle = os.Getenv(envZvirtCaBundle)
 
 	return cloudConfig, nil
