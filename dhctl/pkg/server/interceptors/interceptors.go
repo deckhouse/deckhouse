@@ -133,4 +133,6 @@ func rollbackAppVars() {
 	app.UseTfCache = "ask"
 	app.ResourcesTimeout = 15 * time.Minute
 	app.DeckhouseTimeout = 15 * time.Minute
+	app.PreflightSkipDeckhouseVersionCheck = false
+	app.PreflightSkipAll = false
 }

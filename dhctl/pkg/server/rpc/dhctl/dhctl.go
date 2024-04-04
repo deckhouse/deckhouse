@@ -31,8 +31,9 @@ import (
 
 func New(podName, cacheDir string, log *slog.Logger) *Service {
 	return &Service{
-		podName: podName,
-		log:     log,
+		podName:  podName,
+		cacheDir: cacheDir,
+		log:      log,
 	}
 }
 
@@ -88,6 +89,15 @@ func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
 		AvailableHosts: sshHosts,
 	})
 
+	app.SSHPrivateKeys = keysPaths
+	app.SSHBastionHost = config.SSHConfig.SSHBastionHost
+	app.SSHBastionPort = portToString(config.SSHConfig.SSHBastionPort)
+	app.SSHBastionUser = config.SSHConfig.SSHBastionUser
+	app.SSHUser = config.SSHConfig.SSHUser
+	app.SSHHosts = sshHosts
+	app.SSHPort = portToString(config.SSHConfig.SSHPort)
+	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
+
 	sshClient, err := ssh.NewClient(sess, keys).Start()
 	if err != nil {
 		return nil, err
@@ -115,21 +125,4 @@ func portToString(p *int32) string {
 		return ""
 	}
 	return strconv.Itoa(int(*p))
-}
-
-func combineYAMLs(yamls ...string) string {
-	var res string
-	for _, yaml := range yamls {
-		if yaml == "" {
-			continue
-		}
-
-		if res != "" {
-			res += "---\n"
-		}
-
-		res = res + strings.TrimSpace(yaml) + "\n"
-	}
-
-	return res
 }
