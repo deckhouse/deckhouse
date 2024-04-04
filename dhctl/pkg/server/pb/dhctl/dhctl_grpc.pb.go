@@ -16,7 +16,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v4.25.2
-// source: pkg/server/api/dhctl/dhctl.proto
+// source: dhctl.proto
 
 package dhctl
 
@@ -33,7 +33,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	DHCTL_Check_FullMethodName = "/dhctl.DHCTL/Check"
+	DHCTL_Check_FullMethodName     = "/dhctl.DHCTL/Check"
+	DHCTL_Bootstrap_FullMethodName = "/dhctl.DHCTL/Bootstrap"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -41,6 +42,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DHCTLClient interface {
 	Check(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CheckClient, error)
+	Bootstrap(ctx context.Context, opts ...grpc.CallOption) (DHCTL_BootstrapClient, error)
 }
 
 type dHCTLClient struct {
@@ -82,11 +84,43 @@ func (x *dHCTLCheckClient) Recv() (*CheckResponse, error) {
 	return m, nil
 }
 
+func (c *dHCTLClient) Bootstrap(ctx context.Context, opts ...grpc.CallOption) (DHCTL_BootstrapClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[1], DHCTL_Bootstrap_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dHCTLBootstrapClient{stream}
+	return x, nil
+}
+
+type DHCTL_BootstrapClient interface {
+	Send(*BootstrapRequest) error
+	Recv() (*BootstrapResponse, error)
+	grpc.ClientStream
+}
+
+type dHCTLBootstrapClient struct {
+	grpc.ClientStream
+}
+
+func (x *dHCTLBootstrapClient) Send(m *BootstrapRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dHCTLBootstrapClient) Recv() (*BootstrapResponse, error) {
+	m := new(BootstrapResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTLServer is the server API for DHCTL service.
 // All implementations must embed UnimplementedDHCTLServer
 // for forward compatibility
 type DHCTLServer interface {
 	Check(DHCTL_CheckServer) error
+	Bootstrap(DHCTL_BootstrapServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -96,6 +130,9 @@ type UnimplementedDHCTLServer struct {
 
 func (UnimplementedDHCTLServer) Check(DHCTL_CheckServer) error {
 	return status.Errorf(codes.Unimplemented, "method Check not implemented")
+}
+func (UnimplementedDHCTLServer) Bootstrap(DHCTL_BootstrapServer) error {
+	return status.Errorf(codes.Unimplemented, "method Bootstrap not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -136,6 +173,32 @@ func (x *dHCTLCheckServer) Recv() (*CheckRequest, error) {
 	return m, nil
 }
 
+func _DHCTL_Bootstrap_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).Bootstrap(&dHCTLBootstrapServer{stream})
+}
+
+type DHCTL_BootstrapServer interface {
+	Send(*BootstrapResponse) error
+	Recv() (*BootstrapRequest, error)
+	grpc.ServerStream
+}
+
+type dHCTLBootstrapServer struct {
+	grpc.ServerStream
+}
+
+func (x *dHCTLBootstrapServer) Send(m *BootstrapResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dHCTLBootstrapServer) Recv() (*BootstrapRequest, error) {
+	m := new(BootstrapRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTL_ServiceDesc is the grpc.ServiceDesc for DHCTL service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -150,6 +213,12 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "Bootstrap",
+			Handler:       _DHCTL_Bootstrap_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
 	},
-	Metadata: "pkg/server/api/dhctl/dhctl.proto",
+	Metadata: "dhctl.proto",
 }

@@ -12,38 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package input
+syntax = "proto3";
 
-import (
-	"regexp"
-	"strings"
-)
+option go_package = "pb/dhctl";
 
-var YAMLSplitRegexp = regexp.MustCompile(`(?:^|\s*\n)---\s*`)
+package dhctl;
 
-func CombineYAMLs(yamls ...string) string {
-	var res string
-	for _, yaml := range yamls {
-		if yaml == "" {
-			continue
-		}
-
-		docs := YAMLSplitRegexp.Split(strings.TrimSpace(yaml), -1)
-
-		for _, doc := range docs {
-			trimmedDoc := strings.TrimSpace(doc)
-
-			if trimmedDoc == "" || trimmedDoc == "---" {
-				continue
-			}
-
-			if res != "" {
-				res += "---\n"
-			}
-
-			res = res + trimmedDoc + "\n"
-		}
-	}
-
-	return res
+message Logs {
+  bytes logs = 1;
 }

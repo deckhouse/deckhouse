@@ -90,7 +90,11 @@ bin/protoc:
 
 .PHONY: protoc
 protoc:
-	bin/protoc pkg/server/api/dhctl/dhctl.proto --go_out=pkg/server --go-grpc_out=pkg/server
+	bin/protoc -I pkg/server/api/dhctl --go_out=pkg/server --go-grpc_out=pkg/server \
+	pkg/server/api/dhctl/dhctl.proto \
+	pkg/server/api/dhctl/common.proto \
+	pkg/server/api/dhctl/check.proto \
+	pkg/server/api/dhctl/bootstrap.proto
 
 generate: protoc
 	go generate ./...
