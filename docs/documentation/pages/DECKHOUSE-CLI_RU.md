@@ -12,7 +12,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](../../modules/virtualization/stable/).  
-    Например, команда `d8 virtualization console` устанавливает соединение с консолью виртуальной машины.
+    Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
     <div markdown="0">
     <details><summary>Больше команд для виртуализации...</summary>
@@ -20,8 +20,8 @@ Deckhouse CLI — это интерфейс командной строки дл
     <li><code>d8 v console</code> устанавливает соединение с консолью виртуальной машины.</li>
     <li><code>d8 v port-forward</code> перенаправляет локальные порты на виртуальную машину.</li>
     <li><code>d8 v scp</code> использует клиент SCP для работы с файлами на виртуальной машине.</li>
-    <li><code>d8 v ssh</code> устанавливает SSH-соединение с виртуальной машиной.</li>
-    <li><code>d8 v vnc</code> устанавливает VNC-соединение с виртуальной машиной.</li>
+    <li><code>d8 v ssh</code> подключает к консоли виртуальной машины по SSH.</li>
+    <li><code>d8 v vnc</code> устанавливает к консоли виртуальной машины по VNC.</li>
     </ul>
     </details>
     </div>
