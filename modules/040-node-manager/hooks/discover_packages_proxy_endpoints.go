@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-cloud-instance-manager"},
+					MatchNames: []string{"d8-registry-packages-proxy"},
 				},
 			},
 			FilterFunc: packagesProxyPodFilter,
