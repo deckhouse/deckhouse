@@ -1,3 +1,7 @@
+candi:
+  fixes:
+    - summary: Change containerd restart flow to avoid unwanted restarts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7991
 multitenancy-manager:
   fixes:
     - summary: Fix the default `security-with-dedicated-nodes` project template.
