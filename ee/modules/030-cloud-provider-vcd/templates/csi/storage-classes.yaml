@@ -8,7 +8,7 @@ metadata:
   name: {{ $storageClass.name | quote }}
 provisioner: named-disk.csi.cloud-director.vmware.com
 reclaimPolicy: Delete
-allowVolumeExpansion: false
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   storageProfile: {{ $storageClass.storageProfile | quote }}
