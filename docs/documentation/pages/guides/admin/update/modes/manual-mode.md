@@ -4,28 +4,26 @@ permalink: ru/update/modes/manual-mode/
 lang: ru
 ---
 
-При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
+1. Включите ручное подтверждение обновлений, как показано на примере ниже:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Manual
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     settings:
+       releaseChannel: Stable
+       update:
+         mode: Manual
+   ```
 
-В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse Kubernetes Platform (без учета patch-версий).
+2. В этом режиме подтвердите каждое минорное обновление Deckhouse Kubernetes Platform (без учета patch-версий), как показано на примере подтверждения обновления на версию `v1.43.2`:
 
-Пример подтверждения обновления на версию `v1.43.2`:
-
-```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-```
+   ```shell
+   kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
+   ```
 
 **Срочное ручное обновление**
 
@@ -33,7 +31,7 @@ kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 
 > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями. Поэтому используйте только в случае действительной необходимости.
 
-Установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`, как показано напримерах ниже:
+Установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`, как показано на примерах ниже:
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 
