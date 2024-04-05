@@ -1,0 +1,34 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /zvirt-cloud-controller-manager
+    to: /zvirt-cloud-controller-manager
+    before: setup
+docker:
+  ENTRYPOINT: ["/zvirt-cloud-controller-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apt update && apt install ca-certificates
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
+    - chown 64535:64535 /zvirt-cloud-controller-manager
+    - chmod 0755 /zvirt-cloud-controller-manager

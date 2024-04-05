@@ -1,0 +1,87 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: zvirtinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-zvirt
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of zVirt VirtualMachines used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - numCPUs
+                - memory
+                - template
+                - vnicProfileID
+              properties:
+                numCPUs:
+                  description: |
+                    Count of vCPUs to allocate to zVirt VirtualMachines.
+                  x-doc-examples: [2]
+                  type: integer
+                memory:
+                  description: |
+                    Memory in MiB to allocate to zVirt VirtualMachines.
+                  x-doc-examples: [8192]
+                  type: integer
+                rootDiskSizeGb:
+                  description: |
+                    Root disk size in GiB to use in zVirt VirtualMachines.
+
+                    The disk will be automatically resized if its size in the template differs from specified.
+                  x-doc-examples: [30]
+                  x-doc-default: 30
+                  type: integer
+                template:
+                  description: |
+                    Template name to be cloned.
+                  x-doc-examples: ['debian-bookworm']
+                  type: string
+                vnicProfileID:
+                  description: |
+                    Virtual NIC profile ID on the basis of which the virtual NIC will be created.
+                  x-doc-examples: ['49bb4594-0cd4-4eb7-8288-8594eafd5a86']
+                  pattern: ^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
+                  type: string
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: zvirtinstanceclasses
+    singular: zvirtinstanceclass
+    kind: ZvirtInstanceClass
+    categories:
+      - cloudinstanceclasses
