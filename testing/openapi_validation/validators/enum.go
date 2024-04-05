@@ -139,10 +139,7 @@ var (
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
-		},
-		"ee/modules/030-cloud-provider-zvirt/openapi/values.yaml": {
-			// ignore internal values
-			"properties.internal.properties.providerDiscoveryData.properties.apiVersion.enum",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
 		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
