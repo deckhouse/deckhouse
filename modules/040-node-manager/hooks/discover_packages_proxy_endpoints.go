@@ -29,7 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-const packagesProxyPort = 5443
+const (
+	packagesProxyPort      = 5443
+	packagesProxyNamespace = "d8-registry-packages-proxy"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
@@ -45,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-registry-packages-proxy"},
+					MatchNames: []string{packagesProxyNamespace},
 				},
 			},
 			FilterFunc: packagesProxyPodFilter,

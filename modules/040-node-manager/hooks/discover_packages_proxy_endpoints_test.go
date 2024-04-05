@@ -31,7 +31,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-0
-  namespace: d8-cloud-instance-manager
+  namespace: ` + packagesProxyNamespace + `
   labels:
     app: "registry-packages-proxy"
 status:
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-1
-  namespace: d8-cloud-instance-manager
+  namespace: ` + packagesProxyNamespace + `
   labels:
     app: "registry-packages-proxy"
 status:
@@ -61,7 +61,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-2
-  namespace: d8-cloud-instance-manager
+  namespace: ` + packagesProxyNamespace + `
   labels:
     app: "registry-packages-proxy"
 status:
