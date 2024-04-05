@@ -21,12 +21,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "capz-controller-manager"
-        minAllowed:
+    - containerName: "capz-controller-manager"
+      minAllowed:
         {{- include "zvirt_controller_manager_resources" . | nindent 8 }}
-        maxAllowed:
-          cpu: 50m
-          memory: 50Mi
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
 {{- end }}
 
 ---
@@ -74,54 +74,55 @@ spec:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 10
       containers:
-        - name: capz-controller-manager
-          image: {{ include "helm_lib_module_image" (list . "capzControllerManager") }}
-          imagePullPolicy: IfNotPresent
-          args:
-            - "--leader-elect"
-          env:
-            - name: ZVIRT_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: capi-zvirt-credentials
-                  key: server
-            - name: ZVIRT_USER
-              valueFrom:
-                secretKeyRef:
-                  name: capi-zvirt-credentials
-                  key: username
-            - name: ZVIRT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: capi-zvirt-credentials
-                  key: password
-            - name: ZVIRT_CONNECT_INSECURE
-              valueFrom:
-                secretKeyRef:
-                  name: capi-zvirt-credentials
-                  key: insecure
-            - name: ZVIRT_CA_BUNDLE
-              valueFrom:
-                secretKeyRef:
-                  name: capi-zvirt-credentials
-                  key: caBundle
-            - name: ZVIRT_VM_TAGS
-              value: {{ join "-" (list "cluster" .Values.global.discovery.clusterUUID) | quote }}
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8081
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8081
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            requests:
+      - name: capz-controller-manager
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+        image: {{ include "helm_lib_module_image" (list . "capzControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--leader-elect"
+        env:
+          - name: ZVIRT_API_URL
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: server
+          - name: ZVIRT_USER
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: username
+          - name: ZVIRT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: password
+          - name: ZVIRT_CONNECT_INSECURE
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: insecure
+          - name: ZVIRT_CA_BUNDLE
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: caBundle
+          - name: ZVIRT_VM_TAGS
+            value: {{ join "-" (list "cluster" .Values.global.discovery.clusterUUID) | quote }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "zvirt_controller_manager_resources" . | nindent 12 }}
-  {{- end }}
+{{- end }}

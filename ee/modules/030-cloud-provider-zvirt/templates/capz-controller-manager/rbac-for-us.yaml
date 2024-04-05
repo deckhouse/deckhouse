@@ -146,7 +146,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: d8:cloud-provider-zvirt:capz-controller-manager-leader-election-role
+  name: capz-controller-manager-leader-election-role
   namespace: d8-cloud-provider-zvirt
   {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
 rules:
@@ -185,13 +185,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: d8:node-manager:capz-controller-manager-leader-election-role
+  name:capz-controller-manager-leader-election-role
   namespace: d8-cloud-provider-zvirt
   {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: d8:cloud-provider-zvirt:capz-controller-manager-leader-election-role
+  name: capz-controller-manager-leader-election-role
 subjects:
 - kind: ServiceAccount
   name: capz-controller-manager
