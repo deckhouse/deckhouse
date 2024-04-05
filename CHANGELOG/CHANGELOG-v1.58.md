@@ -30,6 +30,7 @@
 
 
  - **[admission-policy-engine]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
+ - **[candi]** Change containerd restart flow to avoid unwanted restarts. [#7991](https://github.com/deckhouse/deckhouse/pull/7991)
  - **[candi]** Fix regex validation pattern of the `additionalRolePolicies` field. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
  - **[candi]** Add the `tzdata` package to the bootstrap script on AltLinux `10.0`. [#7403](https://github.com/deckhouse/deckhouse/pull/7403)
  - **[candi]** Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
