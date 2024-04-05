@@ -11,6 +11,14 @@ metadata:
   name: d8-service-accounts
   {{- include "helm_lib_module_labels" (list . (dict "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "extended-monitoring.deckhouse.io/enabled" "" "prometheus.deckhouse.io/rules-watcher-enabled" "true")) | nindent 2 }}
+---
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
+---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "d8-system") }}
 ---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "d8-monitoring") }}
