@@ -19,33 +19,35 @@ lang: ru
          mode: Manual
   ```
 
-В этом режиме можно подтвердить каждое минорное потенциально опасное обновление Deckhouse Kubernetes Platform (DKP) на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
+В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse Kubernetes Platform (без учета patch-версий).
 
-Пример подтверждения минорного обновления DKP на версию `v1.43.2`:
+Пример подтверждения обновления на версию `v1.43.2`:
 
-   ```shell
-   kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-   ```
+```shell
+kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
+```
 
-1. При необходимости, выполните обновление модуля без определенного времени.
+**Срочное обновление**???
 
-   > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
+Обновление без окна обновлений позволяет выполнить обновление модуля вне определенного для этого времени. Это необходимо в случае срочного ручного обновления. 
 
-1. Установите в соответствующем ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+> Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями. Поэтому используйте только в случае действительной необходимости.
 
-   Пример команды пропуска окон обновлений для версии `v1.56.2`:
+Установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`, как показано напримерах ниже:
 
-   ```shell
-   kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
-   ```
+Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 
-   Пример ресурса с установленной аннотацией пропуска окон обновлений:
+```shell
+kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+```
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: DeckhouseRelease
-   metadata:
-     annotations:
-       release.deckhouse.io/apply-now: "true"
-   ...
-   ```
+Пример ресурса с установленной аннотацией пропуска окон обновлений:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
+...
+```
