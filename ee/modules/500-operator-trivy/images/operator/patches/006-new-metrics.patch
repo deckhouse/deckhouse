@@ -40,7 +40,6 @@ index 117c27c1..3b4d80cf 100644
  						vulnLabelValues[20] = strconv.FormatFloat(*vuln.Score, 'f', -1, 64)
  					}
 +					if strings.Contains(vuln.VulnerabilityID, "BDU") {
-+						vulnLabelValues[19] = vuln.VulnerabilityID
 +						if strings.Contains(vuln.VulnerabilityID, "BDU-") {
 +							splits := strings.Split(vuln.VulnerabilityID, "BDU-")
 +							if len(splits) == 2 {
@@ -48,6 +47,7 @@ index 117c27c1..3b4d80cf 100644
 +							}
 +						}
 +						if strings.Contains(vuln.VulnerabilityID, "BDU:") {
++						  vulnLabelValues[19] = vuln.VulnerabilityID
 +							splits := strings.Split(vuln.VulnerabilityID, "BDU:")
 +							if len(splits) == 2 {
 +								vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + splits[1]
