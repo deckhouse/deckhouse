@@ -7,8 +7,8 @@ entries:
       url: /update/
       folders:
         - title:
-            en: Обновление кластеров Kubernetes
-            ru: Обновление кластеров Kubernetes
+            en: Обновление Kubernetes
+            ru: Обновление Kubernetes
           url: /update/kubernetes/update-kubernetes/
         - title:
             en: Режимы обновлений
