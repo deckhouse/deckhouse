@@ -1,4 +1,4 @@
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,18 @@
 {{- if eq .cri "Containerd" }}
 
 bb-event-on 'bb-package-installed' 'post-install'
+
+# This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
+# from bb-rp-install() function (defined in 50_deckhouse_registrypackages.sh).
+# All arguments (except the event name, i.e. 'bb-package-installed')
+# passed to the bb-event-fire() function are passed to the post-install() function.
+# This means that the post-install() function is called with an argument
+# containing the name of the installed package, which is used in the logic below.
+#
+# For example:
+# - 'post-install containerd'
+# - 'post-install crictl'
+
 post-install() {
   local PACKAGE="$1"
 
