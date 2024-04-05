@@ -1,0 +1,369 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      apiServerIp:
+        type: string
+      cniSecretData:
+        type: string
+      providerClusterConfiguration:
+        type: object
+        additionalProperties: false
+        description: |
+          Describes the configuration of a cloud cluster in VCD.
+
+          Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+          Run the following command to change the configuration in a running cluster:
+
+          ```shell
+          kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          ```
+        x-examples:
+          - apiVersion: deckhouse.io/v1
+            kind: VCDClusterConfiguration
+            sshPublicKey: "<SSH_PUBLIC_KEY>"
+            organization: My_Org
+            virtualDataCenter: My_Org
+            virtualApplicationName: Cloud
+            layout: Standard
+            internalNetworkCIDR: 172.16.2.0/24
+            mainNetwork: internal
+            masterNodeGroup:
+              replicas: 1
+              instanceClass:
+                template: Templates/ubuntu-focal-20.04
+                sizingPolicy: 4cpu8ram
+                rootDiskSizeGb: 20
+                etcdDiskSizeGb: 20
+                storageProfile: nvme
+            nodeGroups:
+              - name: worker
+                replicas: 1
+                instanceClass:
+                  template: Templates/ubuntu-focal-20.04
+                  sizingPolicy: 16cpu32ram
+                  storageProfile: ssd
+            provider:
+              server: '<SERVER>'
+              username: '<USERNAME>'
+              password: '<PASSWORD>'
+              insecure: true
+        required: [ apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork ]
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ VCDClusterConfiguration ]
+          masterNodeGroup:
+            type: object
+            additionalProperties: false
+            required: [ replicas, instanceClass ]
+            description: |
+              The definition of the master's NodeGroup.
+
+              > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+            properties:
+              replicas:
+                type: integer
+                minimum: 1
+                description: |
+                  The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              instanceClass:
+                type: object
+                additionalProperties: false
+                required: [ template, storageProfile, sizingPolicy ]
+                description: |
+                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                properties:
+                  rootDiskSizeGb:
+                    description: |
+                      root disk size in gigabytes.
+                    example: 20
+                    default: 20
+                    type: integer
+                  etcdDiskSizeGb:
+                    description: |
+                      Etcd disk size in gigabytes.
+                    example: 10
+                    default: 10
+                    type: integer
+                  placementPolicy:
+                    description: |
+                      PlacementPolicy is the placement policy to be used on this machine.
+                      If no placement policy is specified, default placement policy will be used to create the nodes.
+                    type: string
+                    example: Hypervisor1
+                  sizingPolicy:
+                    description: |
+                      SizingPolicy is the sizing policy to be used on this machine.
+                      If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                    type: string
+                    example: 4Cpu8Memory
+                  storageProfile:
+                    description: |
+                      StorageProfile is the storage profile to be used on this machine.
+                    type: string
+                    example: ssd
+                  template:
+                    description: |
+                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                    type: string
+                    example: Linux/ubuntu2204-cloud-ova
+                  mainNetworkIPAddresses:
+                    type: array
+                    description: |
+                      A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                      By default, the DHCP client is enabled.
+                    x-examples:
+                      - [ "10.1.14.20", "10.1.4.21" ]
+                    items:
+                      type: string
+                      description: An IP address with a CIDR prefix.
+                      pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+          nodeGroups:
+            type: array
+            description: |
+              An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+            items:
+              type: object
+              required: [ name, replicas, instanceClass ]
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the NodeGroup to use for generating node names.
+                replicas:
+                  type: integer
+                  description: |
+                    The number of nodes to create.
+                nodeTemplate:
+                  description: |
+                    Parameters of Node objects in Kubernetes to add after registering the node.
+                  properties:
+                    labels:
+                      type: object
+                      description: |
+                        A list of labels to attach to cluster resources.
+
+                        The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                        - environment: production
+                          app: warp-drive-ai
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |
+                        The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                        - ai.fleet.com/discombobulate: "true"
+                      additionalProperties:
+                        type: string
+                    taints:
+                      type: array
+                      description: |
+                        The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                        > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                      x-examples:
+                        - - effect: NoExecute
+                            key: ship-class
+                            value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum: [ NoSchedule, PreferNoSchedule, NoExecute ]
+                          key:
+                            type: string
+                          value:
+                            type: string
+                instanceClass:
+                  type: object
+                  additionalProperties: false
+                  required: [ template, storageProfile, sizingPolicy ]
+                  description: |
+                    Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                  properties:
+                    rootDiskSizeGb:
+                      description: |
+                        root disk size in gigabytes.
+                      example: 20
+                      default: 20
+                      type: integer
+                    placementPolicy:
+                      description: |
+                        PlacementPolicy is the placement policy to be used on this machine.
+                        If no placement policy is specified, default placement policy will be used to create the nodes.
+                      type: string
+                      example: Hypervisor1
+                    sizingPolicy:
+                      description: |
+                        SizingPolicy is the sizing policy to be used on this machine.
+                        If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                      type: string
+                      example: 4Cpu8Memory
+                    storageProfile:
+                      description: |
+                        StorageProfile is the storage profile to be used on this machine.
+                      type: string
+                      example: ssd
+                    template:
+                      description: |
+                        Path of the template OVA that is to be used. Consists of catalog and template path.
+                      type: string
+                      example: Linux/ubuntu2204-cloud-ova
+                    mainNetworkIPAddresses:
+                      type: array
+                      description: |
+                        A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                        By default, the DHCP client is enabled.
+                      x-examples:
+                        - [ "10.1.14.20", "10.1.4.21" ]
+                      items:
+                        type: string
+                        description: An IP address with a CIDR prefix.
+                        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+          sshPublicKey:
+            type: string
+            description: |
+              A public key for accessing nodes.
+          organization:
+            type: string
+            description: |
+              Vcloud Director Organization name.
+          virtualDataCenter:
+            type: string
+            description: |
+              Vcloud Director Virtual Data Center name (belongs to Organization).
+          virtualApplicationName:
+            type: string
+            description: |
+              Vcloud Director Virtual Application name (belongs to Virtual Data Center).
+          mainNetwork:
+            description: |
+              Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+            example: internal
+            type: string
+          internalNetworkCIDR:
+            type: string
+            description: |
+              Subnet for master nodes in the internal network.
+
+              Addresses are allocated starting with the tenth address. E.g., if you have the `192.168.199.0/24` subnet, addresses will be allocated starting with `192.168.199.10`.
+
+              The `internalNetworkCIDR` is used if `additionalNetworks` are defined in `masterInstanceClass`.
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+          layout:
+            type: string
+            description: |
+              The way resources are located in the cloud.
+
+              Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+          provider:
+            type: object
+            additionalProperties: false
+            description: Parameters for connecting to the VCD.
+            properties:
+              server:
+                type: string
+                description: The host or the IP address of the VCD server.
+              username:
+                type: string
+                description: The login ID.
+              password:
+                type: string
+                description: The user's password.
+              insecure:
+                type: boolean
+                description: Set to `true` if VCD has a self-signed certificate.
+                x-doc-default: false
+            required:
+              - server
+              - username
+              - password
+      capcdControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+      providerDiscoveryData:
+        type: object
+        additionalProperties: false
+        required: [ apiVersion, kind ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: VCDCloudProviderDiscoveryData
+          zones: ["default"]
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ VCDCloudProviderDiscoveryData ]
+          sizingPolicies:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of flavors.
+            uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
+          internalNetworks:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of internal networks.
+            uniqueItems: true
+          storageProfiles:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                isEnabled:
+                  type: boolean
+                isDefaultStorageProfile:
+                  type: boolean
+            description: List of storage classes.
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            storageProfile:
+              type: string
+            name:
+              type: string
+      defaultStorageClass:
+        type: string
