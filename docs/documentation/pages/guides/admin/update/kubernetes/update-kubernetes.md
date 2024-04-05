@@ -8,7 +8,7 @@ lang: ru
 
 <!--Обновление идет:
 Вначале обновляются  узлы кластера, затем компоненты управляющего слоя: ноды, IP сервер, контро плэй менеджер, скедулер. Нужны команды, которые позволят это всё отследить.-->
-Обновление patch-версии компонентов управляющего слоя (cotrol plane) в рамках минорной версии происходит автоматически вместе с обновлением версии Deckhouse Kubernetes Platform (DKP). Нельзя управлять обновлением patch-версий. Если `kubelet` на всех узлах версии 1.27 и все компоненты управляющего слоя версии 1.27, то обновление произойдет на следующую версию 1.28 — и так далее, пока версия не будет той, что указана в конфигурации.
+Обновление patch-версии компонентов управляющего слоя (cotrol plane) в рамках минорной версии происходит автоматически вместе с обновлением версии Deckhouse Kubernetes Platform (DKP). Нельзя управлять обновлением patch-версий. Если `kubelet` на всех узлах версии 1.30 и все компоненты управляющего слоя версии 1.30, то обновление произойдет на следующую версию 1.31 — и так далее, пока версия не будет той, что указана в конфигурации.
 
 Каждый узел в кластере принадлежит к одной из групп узлов. Как только `node-manager` определяет, что версия управляющего слоя на всех узлах обновилась, то он приступает к обновлению версии `kubelet`. Если обновление узла не приводит к простою, оно считается безопасным и выполняется в автоматическом режиме. В данном случае обновление `kubelet` больше не приводит к перезапуску контейнеров.
 
@@ -31,59 +31,57 @@ lang: ru
 1. Отслеживайте ход обновления с помощью команды `kubectl get no`. Когда в выводе команды у каждого узла кластера в колонке `VERSION` появится нужная версия, обновление можно считать завершенны.
 
 
-> Обновление управляющего слоя не влияет на работу приложений и может происходить без выделения окна для регламентных работ. оно выполняется безопасно и для кластера с одним мастером, и для мультимастерных кластеров.
+   > Обновление управляющего слоя не влияет на работу приложений и может происходить без выделения окна для регламентных работ. оно выполняется безопасно и для кластера с одним мастером, и для мультимастерных кластеров.
 
-Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
+1. Посмотрите режим обновления кластера в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
 
-```shell
-kubectl get mc deckhouse -oyaml
-```
+   ```shell
+   kubectl get mc deckhouse -oyaml
+   ```
 
-Пример вывода:
+   Пример вывода:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  creationTimestamp: "2022-12-14T11:13:03Z"
-  generation: 1
-  name: deckhouse
-  resourceVersion: "3258626079"
-  uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
-spec:
-  settings:
-    releaseChannel: Stable
-    update:
-      windows:
-      - days:
-        - Mon
-        from: "19:00"
-        to: "20:00"
-  version: 1
-status:
-  state: Enabled
-  status: ""
-  type: Embedded
-  version: "1"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     creationTimestamp: "2022-12-14T11:13:03Z"
+     generation: 1
+     name: deckhouse
+     resourceVersion: "3258626079"
+     uid: c64a2532-af0d-496b-b4b7-eafb5d9a56ee
+   spec:
+     settings:
+       releaseChannel: Stable
+       update:
+         windows:
+         - days:
+           - Mon
+           from: "19:00"
+           to: "20:00"
+     version: 1
+   status:
+     state: Enabled
+     status: ""
+     type: Embedded
+     version: "1"
+   ```
 
-**Обновился ли кластер?**
+1. Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) необходимый канал обновлений.
+1. Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse Kubernetes Platform.
 
-* Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) необходимый канал обновлений.
-* Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse Kubernetes Platform.
+1. Получите и сравните IP-адреса хранилища образов Deckhouse Kubernetes Platform (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse Kubernetes Platform. Они должны совпадать.
 
-  Получите и сравните IP-адреса хранилища образов Deckhouse Kubernetes Platform (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse Kubernetes Platform. Они должны совпадать.
+Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform на узле:
 
-  Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform на узле:
+   ```shell
+   $ getent ahosts registry.deckhouse.ru
+   185.193.90.38    STREAM registry.deckhouse.ru
+   185.193.90.38    DGRAM
+   185.193.90.38    RAW
+   ```
 
-  ```shell
-  $ getent ahosts registry.deckhouse.ru
-  185.193.90.38    STREAM registry.deckhouse.ru
-  185.193.90.38    DGRAM
-  185.193.90.38    RAW
-  ```
-
-  Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform в поде Deckhouse Kubernetes Platform:
+Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform в поде Deckhouse Kubernetes Platform:
   
   ```shell
   $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.ru
@@ -91,4 +89,4 @@ status:
   185.193.90.38    DGRAM  registry.deckhouse.ru
   ```
   
-  Если полученные IP-адреса не совпадают, проверьте настройки [DNS на узле](ссылка).
+Если полученные IP-адреса не совпадают, проверьте настройки [DNS на узле](ссылка).
