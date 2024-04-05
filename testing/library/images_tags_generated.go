@@ -103,6 +103,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
+	"cloudProviderZvirt": map[string]interface{}{
+		"capzControllerManager":  "imageHash-cloudProviderZvirt-capzControllerManager",
+		"cloudControllerManager": "imageHash-cloudProviderZvirt-cloudControllerManager",
+		"cloudDataDiscoverer":    "imageHash-cloudProviderZvirt-cloudDataDiscoverer",
+		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
+	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
 		"baseCiliumDev":      "imageHash-cniCilium-baseCiliumDev",
@@ -409,6 +415,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerVcd":       "imageHash-terraformManager-terraformManagerVcd",
 		"terraformManagerVsphere":   "imageHash-terraformManager-terraformManagerVsphere",
 		"terraformManagerYandex":    "imageHash-terraformManager-terraformManagerYandex",
+		"terraformManagerZvirt":     "imageHash-terraformManager-terraformManagerZvirt",
 	},
 	"upmeter": map[string]interface{}{
 		"smokeMini": "imageHash-upmeter-smokeMini",

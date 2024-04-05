@@ -1,0 +1,36 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderZvirt.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- $providerDiscoveryData := .Values.cloudProviderZvirt.internal.providerDiscoveryData | required "internal.providerDiscoveryData is required" }}
+{{- $zones :=  $providerDiscoveryData.zones }}
+{{- $region := "default" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  type: {{ b64enc "zvirt" | quote }}
+  # oVirt/zVirt lacks regions and zones, so we mock a single region and zone
+  region: {{ b64enc $region | quote }}
+  zones: {{ $zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "ZvirtInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "" | quote }}
+  capiClusterKind: {{ b64enc "ZvirtCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
+  capiClusterName: {{ b64enc "zvirt" | quote }}
+  capiMachineTemplateKind: {{ b64enc "ZvirtMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
+  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+
+  {{- $zvirtValues := dict }}
+
+  {{- $_ := set $zvirtValues "sshPublicKey" $providerClusterConfiguration.sshPublicKey }}
+  {{- $_ := set $zvirtValues "server" $providerClusterConfiguration.provider.server }}
+  {{- $_ := set $zvirtValues "username" $providerClusterConfiguration.provider.username }}
+  {{- $_ := set $zvirtValues "password" $providerClusterConfiguration.provider.password }}
+  {{- $_ := set $zvirtValues "insecure" $providerClusterConfiguration.provider.insecure }}
+  {{- $_ := set $zvirtValues "clusterID" $providerClusterConfiguration.clusterID }}
+
+  zvirt: {{ $zvirtValues | toJson | b64enc | quote }}
