@@ -33,6 +33,7 @@ bb-flag-set() {
         bb-log-debug "Creating flag directory at '$BB_FLAG_DIR'"
         mkdir "$BB_FLAG_DIR"
     fi
+    bb-log-info "Creating flag '$FLAG' at '$BB_FLAG_DIR'"
     touch "$BB_FLAG_DIR/$FLAG"
 }
 
