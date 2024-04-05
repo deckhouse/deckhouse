@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: access-to-registry-packages-proxy
-  namespace: d8-cloud-instance-manager
+  namespace: d8-registry-packages-proxy
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
@@ -15,7 +15,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: access-to-registry-packages-proxy
-  namespace: d8-cloud-instance-manager
+  namespace: d8-registry-packages-proxy
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -32,7 +32,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: access-to-registry-packages-proxy-from-http
-  namespace: d8-cloud-instance-manager
+  namespace: d8-registry-packages-proxy
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 rules:
   - apiGroups: ["apps"]
@@ -45,7 +45,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: access-to-registry-packages-proxy-from-http
-  namespace: d8-cloud-instance-manager
+  namespace: d8-registry-packages-proxy
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
