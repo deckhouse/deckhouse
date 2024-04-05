@@ -4,7 +4,7 @@ permalink: ru/update/notifications/dkp-notice/
 lang: ru
 ---
 
-В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
+В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов вебхука для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
 
 Пример настройки оповещения:
 
@@ -23,11 +23,11 @@ spec:
         webhook: https://release-webhook.mydomain.com
 ```
 
-После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
+После появления новой минорной версии Deckhouse Kubernetes Platform на используемом канале обновлений, на адрес вебхука будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
 
-Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
+Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
 
-Пример:
+Пример настройки параметра `minimalNotificationTime`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -46,5 +46,5 @@ spec:
 ```
 
 {% alert %}
-Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
+Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии будет отложено на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии ,eltn cxbnfnmcz - появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
 {% endalert %}
