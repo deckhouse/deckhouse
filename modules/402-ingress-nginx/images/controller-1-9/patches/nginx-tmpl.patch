@@ -26,7 +26,7 @@ index 94dc12412..93b7d2efc 100644
          end
          {{ end }}
  
-@@ -127,11 +130,16 @@ http {
+@@ -127,11 +130,9 @@ http {
      init_worker_by_lua_block {
          lua_ingress.init_worker()
          balancer.init_worker()
@@ -38,13 +38,6 @@ index 94dc12412..93b7d2efc 100644
 +        pbmetrics.init_worker()
      }
  
-+    map $server_name $total_upstream_response_time {
-+        default 0.0;
-+    }
-+    map $server_name $upstream_retries {
-+        default 0;
-+    }
-+
      {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
 @@ -166,6 +167,16 @@ http {
  
@@ -63,6 +56,19 @@ index 94dc12412..93b7d2efc 100644
      {{ if $cfg.UseGeoIP2 }}
      # https://github.com/leev/ngx_http_geoip2_module#example-usage
  
+@@ -387,6 +387,12 @@ http {
+         {{ $reqUri }} 0;{{ end }}
+         default 1;
+     }
++    map $server_name $total_upstream_response_time {
++        default 0;
++    }
++    map $server_name $upstream_retries {
++        default 0;
++    }
+ 
+     {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
+     access_log off;
 @@ -928,9 +939,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
