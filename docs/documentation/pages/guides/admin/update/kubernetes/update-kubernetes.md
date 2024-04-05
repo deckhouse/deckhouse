@@ -67,26 +67,4 @@ lang: ru
      version: "1"
    ```
 
-1. Проверьте, что [настроен](#как-установить-желаемый-канал-обновлений) необходимый канал обновлений.
-1. Проверьте корректность разрешения DNS-имени хранилища образов Deckhouse Kubernetes Platform.
-
-1. Получите и сравните IP-адреса хранилища образов Deckhouse Kubernetes Platform (`registry.deckhouse.ru`) на одном из узлов и в поде Deckhouse Kubernetes Platform. Они должны совпадать.
-
-Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform на узле:
-
-   ```shell
-   $ getent ahosts registry.deckhouse.ru
-   185.193.90.38    STREAM registry.deckhouse.ru
-   185.193.90.38    DGRAM
-   185.193.90.38    RAW
-   ```
-
-Пример получения IP-адреса хранилища образов Deckhouse Kubernetes Platform в поде Deckhouse Kubernetes Platform:
-  
-  ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.ru
-  185.193.90.38    STREAM registry.deckhouse.ru
-  185.193.90.38    DGRAM  registry.deckhouse.ru
-  ```
-  
-Если полученные IP-адреса не совпадают, проверьте настройки [DNS на узле](ссылка).
+Если параметр `spec.update.mode` не установлен, значит применяется режим по умолчанию — автоматический.
