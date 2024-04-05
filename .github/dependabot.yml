@@ -286,6 +286,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
   labels:
   - "type/dependencies"
@@ -332,15 +341,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/early-oom/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/041-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
