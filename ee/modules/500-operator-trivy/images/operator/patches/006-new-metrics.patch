@@ -1,8 +1,16 @@
 diff --git a/pkg/metrics/collector.go b/pkg/metrics/collector.go
-index 117c27c1..5a16d61d 100644
+index 117c27c1..3b4d80cf 100644
 --- a/pkg/metrics/collector.go
 +++ b/pkg/metrics/collector.go
-@@ -39,6 +39,7 @@ const (
+@@ -3,6 +3,7 @@ package metrics
+ import (
+ 	"context"
+ 	"strconv"
++	"strings"
+
+ 	"github.com/aquasecurity/trivy-operator/pkg/kube"
+ 	"github.com/aquasecurity/trivy-operator/pkg/trivyoperator"
+@@ -39,6 +40,7 @@ const (
  	severity           = "severity"
  	vuln_id            = "vuln_id"
  	vuln_title         = "vuln_title"
@@ -10,7 +18,7 @@ index 117c27c1..5a16d61d 100644
  	vuln_score         = "vuln_score"
  	//compliance
  	title       = "title"
-@@ -264,6 +265,7 @@ func buildMetricDescriptors(config trivyoperator.ConfigData) metricDescriptors {
+@@ -264,6 +266,7 @@ func buildMetricDescriptors(config trivyoperator.ConfigData) metricDescriptors {
  		vuln_id,
  		vuln_title,
  		vuln_score,
@@ -18,7 +26,7 @@ index 117c27c1..5a16d61d 100644
  	}
  	vulnIdLabels = append(vulnIdLabels, dynamicLabels...)
  	exposedSecretLabels := []string{
-@@ -567,7 +569,7 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
+@@ -567,7 +570,7 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
  				vulnLabelValues[7] = r.Report.Artifact.Tag
  				vulnLabelValues[8] = r.Report.Artifact.Digest
  				for i, label := range c.GetReportResourceLabels() {
@@ -27,11 +35,27 @@ index 117c27c1..5a16d61d 100644
  				}
  				var vulnList = make(map[string]bool)
  				for _, vuln := range r.Report.Vulnerabilities {
-@@ -590,6 +592,7 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
+@@ -590,6 +593,23 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
  					if vuln.Score != nil {
  						vulnLabelValues[20] = strconv.FormatFloat(*vuln.Score, 'f', -1, 64)
  					}
-+					vulnLabelValues[21] = vuln.PrimaryLink
++					if strings.Contains(vuln.VulnerabilityID, "BDU") {
++						vulnLabelValues[19] = vuln.VulnerabilityID
++						if strings.Contains(vuln.VulnerabilityID, "BDU-") {
++							splits := strings.Split(vuln.VulnerabilityID, "BDU-")
++							if len(splits) == 2 {
++								vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + splits[1]
++							}
++						}
++						if strings.Contains(vuln.VulnerabilityID, "BDU:") {
++							splits := strings.Split(vuln.VulnerabilityID, "BDU:")
++							if len(splits) == 2 {
++								vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + splits[1]
++							}
++						}
++					} else {
++						vulnLabelValues[21] = vuln.PrimaryLink
++					}
  					metrics <- prometheus.MustNewConstMetric(c.vulnIdDesc, prometheus.GaugeValue, float64(1), vulnLabelValues...)
  				}
  			}
