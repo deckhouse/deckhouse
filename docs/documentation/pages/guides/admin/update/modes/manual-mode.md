@@ -4,22 +4,22 @@ permalink: ru/update/modes/manual-mode/
 lang: ru
 ---
 
-Включите ручное подтверждение обновлений в ресурсе *ModuleConfig/deckhouse* с помощью параметра `update.mode`:
+1. Включите ручное подтверждение обновлений в ресурсе *ModuleConfig/deckhouse* с помощью параметра `update.mode`:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: deckhouse
-  spec:
-    version: 1
-    settings:
-      releaseChannel: Stable
-      update:
-        mode: Manual
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     settings:
+       releaseChannel: Stable
+       update:
+         mode: Manual
   ```
 
-В этом режиме вы подтверждаете каждое минорное потенциально опасное обновление Deckhouse Kubernetes Platform (DKP) на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
+В этом режиме можно подтвердить каждое минорное потенциально опасное обновление Deckhouse Kubernetes Platform (DKP) на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
 
 Пример подтверждения минорного обновления DKP на версию `v1.43.2`:
 
@@ -27,25 +27,25 @@ lang: ru
    kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
    ```
 
-Вы можете выполнить обновление модуля вне определенного для этого времени.
+1. При необходимости, выполните обновление модуля без определенного времени.
 
-> Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
+   > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
 
-Установите в соответствующем ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+1. Установите в соответствующем ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
-Пример команды пропуска окон обновлений для версии `v1.56.2`:
+   Пример команды пропуска окон обновлений для версии `v1.56.2`:
 
-```shell
-kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
-```
+   ```shell
+   kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+   ```
 
-Пример ресурса с установленной аннотацией пропуска окон обновлений:
+   Пример ресурса с установленной аннотацией пропуска окон обновлений:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/apply-now: "true"
-...
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: DeckhouseRelease
+   metadata:
+     annotations:
+       release.deckhouse.io/apply-now: "true"
+   ...
+   ```
