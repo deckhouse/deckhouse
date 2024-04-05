@@ -6,7 +6,6 @@
 010-snapshot-controller-crd
 010-user-authn-crd
 010-vertical-pod-autoscaler-crd
-200-operator-prometheus
 340-monitoring-applications
 340-prometheus-madison-integration
 500-basic-auth
