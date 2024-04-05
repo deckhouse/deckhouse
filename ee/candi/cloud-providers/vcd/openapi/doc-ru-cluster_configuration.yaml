@@ -1,0 +1,149 @@
+kind: VCDClusterConfiguration
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      description: |
+        Describes the configuration of a cloud cluster in VCD.
+
+        Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+        Run the following command to change the configuration in a running cluster:
+
+        ```shell
+        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        ```
+      properties:
+        masterNodeGroup:
+          description: |
+            The definition of the master's NodeGroup.
+
+            > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          properties:
+            replicas:
+              description: |
+                The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            instanceClass:
+              description: |
+                Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    root disk size in gigabytes.
+                etcdDiskSizeGb:
+                  description: |
+                    Etcd disk size in gigabytes.
+                placementPolicy:
+                  description: |
+                    PlacementPolicy is the placement policy to be used on this machine.
+                    If no placement policy is specified, default placement policy will be used to create the nodes.
+                sizingPolicy:
+                  description: |
+                    SizingPolicy is the sizing policy to be used on this machine.
+                    If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                storageProfile:
+                  description: |
+                    StorageProfile is the storage profile to be used on this machine.
+                template:
+                  description: |
+                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                mainNetworkIPAddresses:
+                  description: |
+                    A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                    By default, the DHCP client is enabled.
+                  items:
+                    description: An IP address with a CIDR prefix.
+        nodeGroups:
+          description: |
+            An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+          items:
+            properties:
+              name:
+                description: |
+                  The name of the NodeGroup to use for generating node names.
+              replicas:
+                description: |
+                  The number of nodes to create.
+              nodeTemplate:
+                description: |
+                  Parameters of Node objects in Kubernetes to add after registering the node.
+                properties:
+                  labels:
+                    description: |
+                      A list of labels to attach to cluster resources.
+
+                      The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  annotations:
+                    description: |
+                      The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  taints:
+                    description: |
+                      The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                      > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+              instanceClass:
+                description: |
+                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                properties:
+                  rootDiskSizeGb:
+                    description: |
+                      root disk size in gigabytes.
+                  placementPolicy:
+                    description: |
+                      PlacementPolicy is the placement policy to be used on this machine.
+                      If no placement policy is specified, default placement policy will be used to create the nodes.
+                  sizingPolicy:
+                    description: |
+                      SizingPolicy is the sizing policy to be used on this machine.
+                      If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                  storageProfile:
+                    description: |
+                      StorageProfile is the storage profile to be used on this machine.
+                  template:
+                    description: |
+                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                  mainNetworkIPAddresses:
+                    description: |
+                      A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                      By default, the DHCP client is enabled.
+                    items:
+                      description: An IP address with a CIDR prefix.
+        sshPublicKey:
+          description: |
+            A public key for accessing nodes.
+        organization:
+          description: |
+            Vcloud Director Organization name.
+        virtualDataCenter:
+          description: |
+            Vcloud Director Virtual Data Center name (belongs to Organization).
+        virtualApplicationName:
+          # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
+          # base on this answer https://stackoverflow.com/a/67387967
+          description: |
+            Vcloud Director Virtual Application name (belongs to Virtual Data Center).
+        mainNetwork:
+          description: |
+            Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+        internalNetworkCIDR:
+          description: |
+            Subnet for master nodes in the internal network.
+
+            Addresses are allocated starting with the tenth address. E.g., if you have the `192.168.199.0/24` subnet, addresses will be allocated starting with `192.168.199.10`.
+        layout:
+          description: |
+            The way resources are located in the cloud.
+
+            Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+        provider:
+          description: Parameters for connecting to the VCD.
+          properties:
+            server:
+              description: The host or the IP address of the VCD server.
+            username:
+              description: The login ID.
+            password:
+              description: The user's password.
+            insecure:
+              description:  Set to `true` if VCD has a self-signed certificate.

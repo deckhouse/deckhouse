@@ -1,0 +1,11 @@
+kind: VCDCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    properties:
+      sizingPolicies:
+        description: Список шаблонов (flavor).
+      internalNetworks:
+        description: Список внутренних сетей.
+      storageProfiles:
+        description: Список хранилищ данных.
