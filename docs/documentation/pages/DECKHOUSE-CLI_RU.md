@@ -8,7 +8,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 В командной строке к утилите можно обратиться как `d8`. Она состоит из трех компонентов:
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
-    Например, в кластере DKP можно выполнить `kubectl get pods` как `d8 k get pods`.
+    Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
 * `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](../../modules/virtualization/stable/).  
