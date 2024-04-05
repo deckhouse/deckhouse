@@ -4,15 +4,13 @@ permalink: ru/update/modes/automatic-mode/
 lang: ru
 ---
 
-{% alert level="danger" %}
-Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
-{% endalert %}
+При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse Kubernetes Platform будет каждую минуту проверять данные о релизе на канале обновлений.
 
-При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse Kubernetes Platform каждую минуту будет проверять данные о релизе на канале обновлений.
+При автоматическом режиме обновления:
 
-1. При появлении нового релиза Deckhouse Kubernetes Platform скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
+1. При появлении нового релиза DKP скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
 
-2. После появления кастомного ресурса *DeckhouseRelease* в кластере Deckhouse Kubernetes Platform выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
+2. После появления кастомного ресурса *DeckhouseRelease* в кластере DKP выполняет обновление на соответствующую версию согласно установленным [параметрам обновлений](modules/002-deckhouse/configuration.html#parameters-update). По умолчанию — автоматически, в любое время.
 
 Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
 
@@ -20,36 +18,16 @@ lang: ru
 kubectl get deckhousereleases
 ```
 
-> Если в автоматическом режиме окна обновлений не заданы, Deckhouse Kubernetes Platform обновится сразу, как только новый релиз станет доступен. Patch-версии, например, обновления с `1.29.1` до `1.29.2` устанавливаются без подтверждения и без учета окон обновлений.
+{% alert %}
+Patch-релизы, например, обновление на версию `1.30.2` при установленной версии `1.30.1`, устанавливаются без учета режима и окон обновления, то есть при появлении на канале обновления patch-релиза он всегда будет установлен.
+{% endalert %}
 
-### Подтверждение потенциально опасных (disruptive) обновлений
+**Настройка автоматического режима обновления**
 
-При необходимости возможно включить подтверждение потенциально опасных (disruptive) обновлений (которые меняют значения по умолчанию или поведение некоторых модулей). Сделать это можно в в кастомном ресурсе [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`), следующим образом:
+Если в автоматическом режиме окна обновлений не заданы, Deckhouse Kubernetes Platform обновится сразу, как только новый релиз станет доступен.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      disruptionApprovalMode: Manual
-```
+Patch-версии, например, обновления с `1.29.1` до `1.29.2` устанавливаются без подтверждения и без учета окон обновлений.
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease).
-
-Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
-
-```shell
-kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
-```
-
-<!--Тут должен быть ещё один сценарий вот этого - это из Ченджлога перенесено, оно к этому не относится
-
-Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
-* `D8NodeHasDeprecatedOSVersion` - на нодах установлена устаревшая операционная система;
-* `HelmReleasesHasResourcesWithDeprecatedVersions` - в helm-релизах используются устаревшие ресурсы;
-* `KubernetesVersionEndOfLife` - текущая версия Kubernetes больше не поддерживается.-->
+{% alert %}
+Также можно настраивать окна disruption-обновлений узлов в custom resource [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
+{% endalert %}
