@@ -1,0 +1,5 @@
+multitenancy-manager:
+  fixes:
+    - summary: Fix default `security-with-dedicated-nodes` project template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7996
+
