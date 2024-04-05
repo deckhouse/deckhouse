@@ -46,3 +46,10 @@ spec:
 ```shell
 kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```
+
+<!--Тут должен быть ещё один сценарий вот этого - это из Ченджлога перенесено, оно к этому не относится
+
+Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
+* `D8NodeHasDeprecatedOSVersion` - на нодах установлена устаревшая операционная система;
+* `HelmReleasesHasResourcesWithDeprecatedVersions` - в helm-релизах используются устаревшие ресурсы;
+* `KubernetesVersionEndOfLife` - текущая версия Kubernetes больше не поддерживается.-->

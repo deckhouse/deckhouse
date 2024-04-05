@@ -4,7 +4,7 @@ permalink: ru/update/notifications/dkp-notice/
 lang: ru
 ---
 
-В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов вебхука для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
+В [автоматическом режиме](ссылка на раздел) обновлений можно [настроить](configuration.html#parameters-update-notification) вызов вебхука для получения оповещения о предстоящем обновлении минорной версии Deckhouse Kubernetes Platform.
 
 Пример настройки оповещения:
 
@@ -22,8 +22,6 @@ spec:
       notification:
         webhook: https://release-webhook.mydomain.com
 ```
-
-После появления новой минорной версии Deckhouse Kubernetes Platform на используемом канале обновлений, на адрес вебхука будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
 
 Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
 
