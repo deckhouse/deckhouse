@@ -17,7 +17,7 @@ description: "Подготовка окружения VMware Cloud Director дл
 
 ### Добавление сети
 
-Create internal network and connect it to Edge Gateway.
+Создайте внутреннюю сеть и подключите ее к шлюзу Edge Gateway.
 
 ![Добавление сети, шаг 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
 ![Добавление сети, шаг 2](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
