@@ -21,7 +21,7 @@ shell:
     - chown 64535:64535 /registry-packages-proxy
     - chmod 0755 /registry-packages-proxy
 git:
-- add: /{{ .ModulePath }}modules/007-{{ .ModuleName }}/images/{{ .ImageName }}/src
+- add: /{{ .ModulePath }}modules/039-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
   includePaths:
     - '**/*.go'
