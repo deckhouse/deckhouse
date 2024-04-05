@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -101,6 +102,9 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 	}
 
 	for name, template := range templates {
+		if !strings.HasPrefix(name, "templates/") {
+			name = "templates/" + name
+		}
 		data, ok := template.([]byte)
 		if !ok {
 			return fmt.Errorf("invalid template. Template name: %v", name)
@@ -113,6 +117,7 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
+
 	hashsum := getMD5Hash(templates, values)
 
 	upgradeObject := action.NewUpgrade(client.actionConfig)
