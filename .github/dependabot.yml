@@ -187,15 +187,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/007-registry-packages-proxy/images/registry-packages-proxy/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/007-registrypackages/images/toml-merge/src"
   labels:
   - "type/dependencies"
@@ -341,6 +332,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/early-oom/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/041-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
