@@ -1,5 +1,11 @@
 # Changelog v1.58
 
+## [MALFORMED]
+
+
+ - #7459 unknown section "metallb"
+ - #7521 unknown section "metallb"
+
 ## Know before update
 
 
@@ -20,7 +26,6 @@
  - **[flant-integration]** flant-pricing based on ALT Linux image, grafana-agent and madison-proxy images based on a distroless image. [#6957](https://github.com/deckhouse/deckhouse/pull/6957)
  - **[ingress-nginx]** The controller image is now based on ALT Linux. [#7002](https://github.com/deckhouse/deckhouse/pull/7002)
  - **[kube-dns]** Added a parameter that allows you to change the upstream transport protocol (tcp/udp). [#7541](https://github.com/deckhouse/deckhouse/pull/7541)
- - **[metallb]** MetalLB dashboard for Grafana [#7459](https://github.com/deckhouse/deckhouse/pull/7459)
  - **[multitenancy-manager]** Prevent manual modification of Project resources. [#7480](https://github.com/deckhouse/deckhouse/pull/7480)
  - **[multitenancy-manager]** Remove all namespace from the `Project`, except the project one. [#7443](https://github.com/deckhouse/deckhouse/pull/7443)
  - **[openvpn]** Images are based on a distroless image. [#6245](https://github.com/deckhouse/deckhouse/pull/6245)
@@ -94,12 +99,12 @@
  - **[local-path-provisioner]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[log-shipper]** Add missing ca-certs to prevent errors with HTTPS connections. [#7686](https://github.com/deckhouse/deckhouse/pull/7686)
  - **[loki]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
- - **[metallb]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-custom]** Add the `reserved_domain_nodes` metrics. [#7361](https://github.com/deckhouse/deckhouse/pull/7361)
  - **[monitoring-kubernetes]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
  - **[monitoring-kubernetes]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-kubernetes-control-plane]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[multitenancy-manager]** Fix default `security-with-dedicated-nodes` project template. [#7996](https://github.com/deckhouse/deckhouse/pull/7996)
  - **[multitenancy-manager]** Fix Project rendering in some cases for embedded templates. [#7876](https://github.com/deckhouse/deckhouse/pull/7876)
  - **[multitenancy-manager]** All Pods of a project for which the value "dedicatedNodeName" is defined must run only on the Node with the corresponding taint key. [#6864](https://github.com/deckhouse/deckhouse/pull/6864)
  - **[multitenancy-manager]** Add default project templates:
