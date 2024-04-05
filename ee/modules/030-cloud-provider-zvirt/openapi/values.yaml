@@ -27,7 +27,8 @@ properties:
           - apiVersion: deckhouse.io/v1
             kind: ZvirtClusterConfiguration
             layout: Standard
-            clusterId: "b46372e7-0d52-40c7-9bbf-fda31e187088"
+            sshPublicKey: "<ssh public key>"
+            clusterID: "b46372e7-0d52-40c7-9bbf-fda31e187088"
             masterNodeGroup:
               replicas: 1
               instanceClass:
