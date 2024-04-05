@@ -70,9 +70,8 @@ func (p *Proxy) Serve() error {
 			return
 		}
 
-		p.logger.Infof("%s digest request received", digest)
-
 		repository := r.URL.Query().Get("repository")
+		p.logger.Infof("%s digest from repository %s request received", digest, repository)
 
 		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
 		if err != nil {
