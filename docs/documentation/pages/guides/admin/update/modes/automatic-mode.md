@@ -40,6 +40,12 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
+<!-- Вот этот сценарий тоже отдельный. Как его установить? Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
+
+D8NodeHasDeprecatedOSVersion - на нодах установлена устаревшая операционная система;
+HelmReleasesHasResourcesWithDeprecatedVersions - в helm-релизах используются устаревшие ресурсы;
+KubernetesVersionEndOfLife - текущая версия Kubernetes больше не поддерживается.-->
+
 В В этом режиме можно подтвердить каждое минорное потенциально опасное обновление Deckhouse Kubernetes Platform (DKP) на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
 
 Пример подтверждения минорного обновления DKP на версию `v1.43.2`:
