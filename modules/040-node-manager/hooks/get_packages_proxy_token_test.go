@@ -36,7 +36,7 @@ metadata:
 type: kubernetes.io/service-account-token
 `
 
-var _ = FDescribe("Modules :: node-group :: hooks :: get_packages_proxy_token ::", func() {
+var _ = Describe("Modules :: node-group :: hooks :: get_packages_proxy_token ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 
 	Context("Cluster is empty", func() {
