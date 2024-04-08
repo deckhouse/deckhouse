@@ -1,4 +1,4 @@
-# Copyright 2022 Flant JSC
+# Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # This is a config for node_metrics.py hook.
@@ -6,7 +6,7 @@ configVersion: v1
 kubernetes:
   - name: nodes
     group: main
-    queue: /node_metrics
+    queue: /node_group_resources_metrics
     keepFullObjectsInMemory: false
     waitForSynchronization: false
     apiVersion: v1
@@ -17,55 +17,18 @@ kubernetes:
           operator: Exists
     jqFilter: |
       {
-          "node_group":           .metadata.labels."node.deckhouse.io/group",
-          "pricing_node_type":  (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
-          "virtualization":     (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown"),
-          "is_legacy_counted": (
-              .metadata.labels."node.deckhouse.io/group" != "master"
-              or
-              (
-                  .spec.taints == null
-                  or
-                  (
-                      [
-                          .spec.taints[]
-                          | select(
-                              .key == "node-role.kubernetes.io/control-plane" or
-                              .key == "node-role.kubernetes.io/master"
-                          )
-                      ]
-                      | length == 0
-                  )
-              )
-          ),
-          "is_managed":      (.metadata.labels."node.deckhouse.io/group" != null),
-          "is_controlplane": (.metadata.labels."node.deckhouse.io/group" == "master"),
-          "is_controlplane_tainted": (
-              .metadata.labels."node.deckhouse.io/group" == "master"
-              and
-              .spec.taints != null
-              and
-              (
-                  [
-                      .spec.taints[]
-                      | select(
-                          .key == "node-role.kubernetes.io/control-plane" or
-                          .key == "node-role.kubernetes.io/master"
-                      )
-                  ]
-                  | length > 0
-              )
-          )
+          "node_group": .metadata.labels."node.deckhouse.io/group",
+          "capacity":   (.status.capacity // {})
       }
   - name: ngs
     group: main
-    queue: /node_metrics
+    queue: /node_group_resources_metrics
     keepFullObjectsInMemory: false
     waitForSynchronization: false
     apiVersion: deckhouse.io/v1
     kind: NodeGroup
     jqFilter: |
       {
-          "name": .metadata.name,
-          "node_type": .spec.nodeType
+          "name":         .metadata.name,
+          "nodeTemplate": .spec.nodeTemplate
       }
