@@ -23,7 +23,20 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: node-group :: hooks :: order_packages_proxy_token ::", func() {
+const tokenSecret = `
+apiVersion: v1
+data:
+  token: QUFBQUFBQUFBQUE= # AAAAAAAAAAA
+kind: Secret
+metadata:
+  annotations:
+    kubernetes.io/service-account.name: registry-packages-proxy-reader
+  name: registry-packages-proxy-reader-token
+  namespace: d8-cloud-instance-manager
+type: kubernetes.io/service-account-token
+`
+
+var _ = FDescribe("Modules :: node-group :: hooks :: get_packages_proxy_token ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 
 	Context("Cluster is empty", func() {
@@ -33,9 +46,23 @@ var _ = FDescribe("Modules :: node-group :: hooks :: order_packages_proxy_token 
 			f.RunHook()
 		})
 
-		It("Hook must not fail, new token must have been generated", func() {
+		It("Hook must not fail, token should be empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.packagesProxyToken").String()).To(Equal("{}"))
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxyToken").String()).To(Equal(""))
 		})
 	})
+
+	Context("Cluster has token", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(tokenSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook must not fail, token should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxyToken").String()).To(Equal("AAAAAAAAAAA"))
+		})
+	})
+
 })

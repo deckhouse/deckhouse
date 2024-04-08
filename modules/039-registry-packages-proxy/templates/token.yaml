@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: registry-packages-proxy-reader
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-packages-proxy-reader-token
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "log-shipper")) | nindent 2 }}
+  annotations:
+    kubernetes.io/service-account.name: registry-packages-proxy-reader
+type: kubernetes.io/service-account-token
