@@ -26,18 +26,43 @@ import (
 )
 
 func UnpackBundle(mirrorCtx *Context) error {
-	tarFile, err := os.Open(mirrorCtx.TarBundlePath)
+	bundleDir := filepath.Dir(mirrorCtx.BundlePath)
+	catalog, err := os.ReadDir(bundleDir)
 	if err != nil {
-		return fmt.Errorf("read tar bundle: %w", err)
+		return fmt.Errorf("read tar bundle directory: %w", err)
+	}
+	streams := make([]io.Reader, 0)
+	for _, entry := range catalog {
+		fileName := entry.Name()
+		if !entry.Type().IsRegular() || filepath.Ext(fileName) != ".chunk" {
+			continue
+		}
+		chunkStream, err := os.Open(filepath.Join(bundleDir, fileName))
+		if err != nil {
+			return fmt.Errorf("open bundle chunk for reading: %w", err)
+		}
+		defer chunkStream.Close() // nolint // defer in a loop is valid here as we need those streams to survive until everything is unpacked at the end of this function
+		streams = append(streams, chunkStream)
 	}
 
-	tarReader := tar.NewReader(bufio.NewReaderSize(tarFile, 128*1024)) // 128 KiB
+	bundleStream := io.NopCloser(io.MultiReader(streams...))
+	if len(streams) == 0 {
+		bundleStream, err = os.Open(mirrorCtx.BundlePath)
+		if err != nil {
+			return fmt.Errorf("read tar bundle: %w", err)
+		}
+	}
+
+	tarReader := tar.NewReader(bundleStream)
 	for {
 		tarHdr, err := tarReader.Next()
 		if errors.Is(err, io.EOF) {
 			break
 		}
-		writePath := filepath.Join(mirrorCtx.UnpackedImagesPath, filepath.Clean(tarHdr.Name))
+		writePath := filepath.Join(
+			mirrorCtx.UnpackedImagesPath,
+			filepath.Clean(tarHdr.Name),
+		)
 		if err = os.MkdirAll(filepath.Dir(writePath), 0755); err != nil {
 			return fmt.Errorf("setup dir tree: %w", err)
 		}
@@ -60,19 +85,28 @@ func UnpackBundle(mirrorCtx *Context) error {
 }
 
 func PackBundle(mirrorCtx *Context) error {
-	tarFile, err := os.Create(mirrorCtx.TarBundlePath)
-	if err != nil {
-		return fmt.Errorf("read tar bundle: %w", err)
+	var tarStream io.WriteCloser
+	if mirrorCtx.BundleChunkSize != 0 {
+		chunkWriter := newChunkWriter(mirrorCtx.BundleChunkSize, filepath.Dir(mirrorCtx.BundlePath), filepath.Base(mirrorCtx.BundlePath))
+		tarStream = chunkWriter
+	} else {
+		tarFile, err := os.Create(mirrorCtx.BundlePath)
+		if err != nil {
+			return fmt.Errorf("read tar bundle: %w", err)
+		}
+		tarStream = tarFile
 	}
-	defer tarFile.Close()
 
-	tarWriter := tar.NewWriter(tarFile)
-	if err = filepath.Walk(mirrorCtx.UnpackedImagesPath, packFunc(mirrorCtx, tarWriter)); err != nil {
+	tarWriter := tar.NewWriter(tarStream)
+	if err := filepath.Walk(mirrorCtx.UnpackedImagesPath, packFunc(mirrorCtx, tarWriter)); err != nil {
 		return fmt.Errorf("pack mirrored images into tar: %w", err)
 	}
 
-	if err = tarFile.Sync(); err != nil {
-		return fmt.Errorf("write tar archive: %w", err)
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("write tar trailer: %w", err)
+	}
+	if err := tarStream.Close(); err != nil {
+		return fmt.Errorf("close tar: %w", err)
 	}
 
 	return nil
@@ -84,7 +118,7 @@ func packFunc(mirrorCtx *Context, out *tar.Writer) filepath.WalkFunc {
 		if err != nil {
 			return err
 		}
-		if path == mirrorCtx.TarBundlePath || info.IsDir() {
+		if path == mirrorCtx.BundlePath || info.IsDir() {
 			return nil
 		}
 
@@ -107,7 +141,7 @@ func packFunc(mirrorCtx *Context, out *tar.Writer) filepath.WalkFunc {
 			return fmt.Errorf("write tar header: %w", err)
 		}
 
-		if _, err = io.Copy(out, bufio.NewReaderSize(blobFile, 512*1024)); err != nil {
+		if _, err = bufio.NewReaderSize(blobFile, 512*1024).WriteTo(out); err != nil {
 			return fmt.Errorf("write file to tar: %w", err)
 		}
 
