@@ -210,9 +210,9 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		KubernetesVersion: ng.KubernetesVersion(),
 		Bundle:            bundle,
 		Normal: map[string]interface{}{
-			"apiserverEndpoints":          bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
-			"packagesProxyEndpoints":      bundleNgContext.tplContextCommon.Normal.PackagesProxyAddresses,
-			"packagesProxyEndpointsToken": bundleNgContext.tplContextCommon.Normal.PackagesProxyToken,
+			"apiserverEndpoints":     bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
+			"packagesProxyAddresses": bundleNgContext.tplContextCommon.Normal.PackagesProxyAddresses,
+			"packagesProxyToken":     bundleNgContext.tplContextCommon.Normal.PackagesProxyToken,
 		},
 		NodeGroup: ng,
 		RunType:   "Normal",

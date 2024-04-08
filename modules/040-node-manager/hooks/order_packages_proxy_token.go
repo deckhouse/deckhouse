@@ -103,11 +103,13 @@ func handleToken(input *go_hook.HookInput, dc dependency.Container) error {
 	if len(snap) == 1 {
 		token := snap[0].(packagesProxyTokenSecret)
 		if token.ValidFor > time.Hour*24*14 {
+			input.LogEntry.Info("Token is valid, regeneration isn't needed")
 			input.Values.Set("nodeManager.internal.packagesProxyToken", token.PackagesProxyToken)
 			return nil
 		}
 	}
 
+	input.LogEntry.Info("Token is absent or expired, regenerate it")
 	PackagesProxyToken, err := generateNewToken(dc)
 	if err != nil {
 		return err
