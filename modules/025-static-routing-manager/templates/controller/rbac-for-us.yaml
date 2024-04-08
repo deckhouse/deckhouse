@@ -15,7 +15,9 @@ rules:
   - network.deckhouse.io
   resources:
   - iprulesets
+  - iprulesets/status
   - routingtables
+  - routingtables/status
   verbs:
   - get
   - list

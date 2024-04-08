@@ -21,8 +21,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type RoutingTable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              RoutingTableSpec    `json:"spec"`
-	Status            *RoutingTableStatus `json:"status,omitempty"`
+	Spec              RoutingTableSpec   `json:"spec"`
+	Status            RoutingTableStatus `json:"status,omitempty"`
 }
 
 type RoutingTableList struct {

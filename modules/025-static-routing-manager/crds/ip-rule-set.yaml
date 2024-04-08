@@ -14,80 +14,82 @@ spec:
     kind: IPRuleSet
   preserveUnknownFields: false
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
-      schema: &schema
-        openAPIV3Schema:
-          type: object
-          description: |
-            iprulesets crd
-          required:
-          - spec
-          properties:
-            spec:
-              type: object
-              required:
-              - rules
-              - nodeSelector
-              properties:
-                rules:
-                  type: array
-                  description: |
-                    ip rules declaration
-                  items:
-                    type: object
-                    required:
-                      - from
-                      - to
-                      - lookup
-                    properties:
-                      priority:
-                        type: integer
-                        minimum: 0
-                        maximum: 32767
-                        description: |
-                          priority of rule
-                      from:
-                        type: string
-                        format: cidr
-                        description: |
-                          Match packets from
-                      to:
-                        type: string
-                        format: cidr
-                        description: |
-                          Match packets to
-                      lookup:
-                        type: object
-                        description: |
-                          In which table find route
-                        oneOf:
-                        - required: [ipRouteTableID]
-                        - required: [routeTableName]
-                        properties:
-                          ipRouteTableID:
-                            type: integer
-                            minimum: 0
-                            maximum: 4294967295
-                            description: |
-                              ID of route table on node
-                          routeTableName:
-                            type: string
-                            description: |
-                              Name of CR routeTable
-                nodeSelector:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        description: |
+          iprulesets crd
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            required:
+            - rules
+            - nodeSelector
+            properties:
+              rules:
+                type: array
+                description: |
+                  ip rules declaration
+                items:
                   type: object
-                  description: |
-                    nodeSelector of node on which inject iprule
-                  additionalProperties:
-                    type: string
-            status:
-              type: object
-              properties:
-                ipRouteTableID:
-                  type: integer
-                  minimum: 0
-                  maximum: 4294967295
-                routeTableName:
+                  required:
+                    - from
+                    - to
+                    - lookup
+                  properties:
+                    priority:
+                      type: integer
+                      minimum: 0
+                      maximum: 32767
+                      description: |
+                        priority of rule
+                    from:
+                      type: string
+                      format: cidr
+                      description: |
+                        Match packets from
+                    to:
+                      type: string
+                      format: cidr
+                      description: |
+                        Match packets to
+                    lookup:
+                      type: object
+                      description: |
+                        In which table find route
+                      oneOf:
+                      - required: [ipRouteTableID]
+                      - required: [routeTableName]
+                      properties:
+                        ipRouteTableID:
+                          type: integer
+                          minimum: 0
+                          maximum: 4294967295
+                          description: |
+                            ID of route table on node
+                        routeTableName:
+                          type: string
+                          description: |
+                            Name of CR routeTable
+              nodeSelector:
+                type: object
+                description: |
+                  nodeSelector of node on which inject iprule
+                additionalProperties:
                   type: string
+          status:
+            type: object
+            properties:
+              ipRouteTableID:
+                type: integer
+                minimum: 0
+                maximum: 4294967295
+              routeTableName:
+                type: string
