@@ -1,5 +1,5 @@
 ---
-title: Получение уведомлений
+title: Оповещение об обновлении Deckhouse Kubernetes Platform
 permalink: ru/update/notifications/dkp-notice/
 lang: ru
 ---

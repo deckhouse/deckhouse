@@ -6,21 +6,9 @@ entries:
         ru: Обновление Kubernetes
       url: /update/kubernetes/update-kubernetes/
     - title:
-        en: Режимы обновлений
-        ru: Режимы обновлений
-      folders:
-        - title:
-            en: Виды обновлений
-            ru: Виды обновлений
-          url: /update/modes/update-mode/
-        - title:
-            en: Автоматический режим обновлений
-            ru: Автоматический режим обновлений
-          url: /update/modes/automatic-mode/
-        - title:
-            en: Ручной режим обновлений
-            ru: Ручной режим обновлений
-          url: /update/modes/manual-mode/
+        en: Режимы обновлений платформы
+        ru: Режимы обновлений платформы
+      url: /update/modes/update-mode/
     - title:
         en: Каналы и окна обновлений
         ru: Каналы и окна обновлений
