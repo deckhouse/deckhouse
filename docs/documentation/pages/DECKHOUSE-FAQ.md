@@ -463,7 +463,7 @@ This feature is available in Enterprise Edition only.
    `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
-   Starting from version 1.59.1, `dhctl mirror` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
+   Starting from version 1.59.0, `dhctl mirror` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
    To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag or set the `$DHCTL_CLI_MIRROR_IMAGES_BUNDLE_CHUNK_SIZE` environment variable when pulling the bundle.
    This will create a series of smaller `.chunk` files instead of a single tar bundle.
    To upload such a chunked bundle into your private registry, use `dhctl mirror` as specified below, passing the `--images-bundle-path` flag as if you were pushing from a single-file bundle.
