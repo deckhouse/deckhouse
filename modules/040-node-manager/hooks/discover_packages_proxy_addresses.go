@@ -30,8 +30,7 @@ import (
 )
 
 const (
-	packagesProxyPort      = 5443
-	packagesProxyNamespace = "d8-registry-packages-proxy"
+	packagesProxyPort = 5443
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -48,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{packagesProxyNamespace},
+					MatchNames: []string{"d8-cloud-instance-manager"},
 				},
 			},
 			FilterFunc: packagesProxyPodFilter,

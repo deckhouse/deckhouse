@@ -9,7 +9,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: registry-packages-proxy
-  namespace: d8-registry-packages-proxy
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
@@ -33,7 +33,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: registry-packages-proxy
-  namespace: d8-registry-packages-proxy
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 spec:
   maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
@@ -45,7 +45,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: registry-packages-proxy
-  namespace: d8-registry-packages-proxy
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
@@ -129,7 +129,7 @@ spec:
                 path: /metrics
                 authorization:
                   resourceAttributes:
-                    namespace: d8-registry-packages-proxy
+                    namespace: d8-cloud-instance-manager
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
@@ -139,7 +139,7 @@ spec:
                 path: /package
                 authorization:
                   resourceAttributes:
-                    namespace: d8-registry-packages-proxy
+                    namespace: d8-cloud-instance-manager
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
