@@ -52,6 +52,6 @@ roleRef:
   kind: Role
   name: access-to-registry-packages-proxy-from-http
 subjects:
-  - kind: Group
-    name: system:bootstrappers:d8-node-manager
-    apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: registry-packages-proxy-reader
+  namespace: d8-cloud-instance-manager
