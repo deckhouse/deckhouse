@@ -26,10 +26,6 @@ entries:
                 en: Ручной режим обновлений
                 ru: Ручной режим обновлений
               url: /update/modes/manual-mode/
-            - title:
-                en: Как узнать режим обновлений кластера?
-                ru: Как узнать режим обновлений кластера?
-              url: /update/modes/how-to-find-out-the-cluster-update-mode/
         - title:
             en: Каналы и окна обновлений
             ru: Каналы и окна обновлений
