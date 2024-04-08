@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: discover_packages_proxy_endpoints ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: discover_packages_proxy_addresses ::", func() {
 	const (
 		stateDeckhousePackageProxyPod = `
 ---
@@ -91,9 +91,9 @@ status:
 			f.RunHook()
 		})
 
-		It("`nodeManager.internal.clusterPackagesProxyAddresses` must be ['192.168.199.233:5443']", func() {
+		It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.clusterPackagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443"]`))
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443"]`))
 		})
 
 		Context("Add second registry proxy pod", func() {
@@ -102,9 +102,9 @@ status:
 				f.RunHook()
 			})
 
-			It("`nodeManager.internal.clusterPackagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443']", func() {
+			It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.clusterPackagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
+				Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
 			})
 
 			Context("Add third registry proxy pod", func() {
@@ -113,9 +113,9 @@ status:
 					f.RunHook()
 				})
 
-				It("`nodeManager.internal.clusterPackagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443'], third pod is not ready", func() {
+				It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443'], third pod is not ready", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.clusterPackagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
+					Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
 				})
 			})
 		})

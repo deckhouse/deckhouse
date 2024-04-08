@@ -167,7 +167,8 @@ function main() {
   export SCHEME="{{ .registry.scheme }}"
   export REGISTRY_PATH="{{ .registry.path }}"
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
-  export REGISTRY_PACKAGES_PROXY_ENDPOINTS="{{ .registry.packagesProxyEndpoints | join "," }}"
+  export PACKAGES_PROXY_ADDRESSES="{{ .normal.packagesProxyAddresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ .normal.packagesProxyToken }}"
 {{- end }}
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}

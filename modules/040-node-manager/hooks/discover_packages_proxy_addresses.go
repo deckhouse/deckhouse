@@ -85,7 +85,7 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.Values.Set("nodeManager.internal.clusterPackagesProxyAddresses", endpointsList)
+	input.Values.Set("nodeManager.internal.packagesProxyAddresses", endpointsList)
 
 	return nil
 }

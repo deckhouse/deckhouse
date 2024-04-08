@@ -72,12 +72,11 @@ socket.setdefaulttimeout(30)
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-endpoints = "${REGISTRY_PACKAGES_PROXY_ENDPOINTS}".split(",")
+endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+token = "${PACKAGES_PROXY_TOKEN}"
 
 # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 endpoint = random.choice(endpoints)
-
-token = open("/var/lib/bashible/bootstrap-token", "r").read()
 
 opener = build_opener()
 opener.addheaders = [('Authorization', f'Bearer {token}')]

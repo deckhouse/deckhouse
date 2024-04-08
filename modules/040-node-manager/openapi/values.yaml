@@ -58,7 +58,7 @@ properties:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
 
-      clusterPackagesProxyAddresses:
+      packagesProxyAddresses:
         type: array
         description: |
           Array of package proxy servers addresses.
@@ -67,6 +67,12 @@ properties:
         items:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+
+      packagesProxyToken:
+        type: string
+        description: |
+          packages proxy token.
+        x-examples: mytoken
 
       kubernetesCA:
         type: string
