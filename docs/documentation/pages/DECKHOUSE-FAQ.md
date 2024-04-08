@@ -463,6 +463,12 @@ This feature is available in Enterprise Edition only.
    `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
+   Starting from version 1.59.0, `dhctl mirror` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
+   To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag or set the `$DHCTL_CLI_MIRROR_IMAGES_BUNDLE_CHUNK_SIZE` environment variable when pulling the bundle.
+   This will create a series of smaller `.chunk` files instead of a single tar bundle.
+   To upload such a chunked bundle into your private registry, use `dhctl mirror` as specified below, passing the `--images-bundle-path` flag as if you were pushing from a single-file bundle.
+   That is, point it to the `.tar` file as if it were in the bundle directory rather than any of the chunk files. `dhctl mirror` will then detect the chunked bundle automatically.
+
 1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
 
    ```shell
@@ -501,10 +507,10 @@ This feature is available in Enterprise Edition only.
 
 The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
-1. Run Deckhouse installer version 1.56.0 or higher:
+1. Run Deckhouse installer version 1.58.6 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.4 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.6 bash
    ```
 
    Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
