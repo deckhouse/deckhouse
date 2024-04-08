@@ -1,0 +1,51 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+  {{- if $value.ccm.aws }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - kubelet
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    ecr-credential-provider: {{ printf "%s.%s" $version $patch }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - export CGO_ENABLED=0
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth=1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git
+    - cd cloud-provider-aws
+    - export VERSION={{ $value.ccm.aws }}
+    - make ecr-credential-provider
+    - chown 64535:64535 ecr-credential-provider
+    - chmod 0755 ecr-credential-provider
+    - mv ecr-credential-provider /ecr-credential-provider
+  {{- end }}
+{{- end }}
