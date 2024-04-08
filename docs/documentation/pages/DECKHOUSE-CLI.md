@@ -3,51 +3,51 @@ title: Deckhouse CLI
 permalink: en/deckhouse-cli/
 ---
 
-Deckhouse CLI — это интерфейс командной строки для работы с кластерами от Deckhouse Kubernetes Platform (DKP). Начиная с релиза 1.59, интерфейс автоматически устанавливается на все узлы кластера. Утилиту можно также [установить](#как-установить-deckhouse-cli) на любую машину и использовать для работы с кластерами без DKP.
+Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the DH CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
 
-В командной строке к утилите можно обратиться как `d8`. Все команды сгруппированы по функциям:
-* `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
-    Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
-* `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
-    Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
-* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
-    Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
+On the command line, the utility can be invoked using the `d8` alias. All the commands are grouped by their function:
+* `d8 k` — the `kubectl` command family.  
+    For example, `d8 k get pods` is the same as `kubectl get pods`.
+* `d8 d` — the range of delivery-related commands (see the `werf` tool).  
+    For example, you can run `d8 d plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
+* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
+    For example, the `d8 virtualization console` command execs you into the VM console.
 
     <div markdown="0">
-    <details><summary>Больше команд для виртуализации...</summary>
+    <details><summary>More virtualization commands...</summary>
     <ul>
-    <li><code>d8 v console</code> подключает к консоли виртуальной машины.</li>
-    <li><code>d8 v port-forward</code> перенаправляет локальные порты на виртуальную машину.</li>
-    <li><code>d8 v scp</code> использует клиент SCP для работы с файлами на виртуальной машине.</li>
-    <li><code>d8 v ssh</code> подключает к виртуальной машине по SSH.</li>
-    <li><code>d8 v vnc</code> подключает к виртуальной машине по VNC.</li>
+    <li><code>d8 v console</code> execs you into the VM console.</li>
+    <li><code>d8 v port-forward</code> forwards local ports to the virtual machine.</li>
+    <li><code>d8 v scp</code> uses the SCP client to work with files on the virtual machine.</li>
+    <li><code>d8 v ssh</code> connects you to the virtual machine over SSH.</li>
+    <li><code>d8 v vnc</code> connects you to the virtual machine over VNC.</li>
     </ul>
     </details>
     </div>
 
-## Как установить Deckhouse CLI?
+## How do I install Deckhouse CLI?
 
-1. Скачайте архив с подходящей версией ОС:
+1. Download the archive for your OS/architecture:
    * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-linux-amd64.tar.gz)
    * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-amd64.tar.gz)
    * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v0.0.3/d8-v0.0.3-darwin-arm64)
 
-1. Распакуйте архив:
+1. Extract the archive:
 
    ```bash
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
 
-1. Переместите файл `d8` в каталог в переменной `PATH` вашей системы:
+1. Copy the `d8` file to a directory at the `PATH` variable on your system:
 
    ```bash
    sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
    ```
 
-1. Проверьте, что утилита работает:
+1. Check that the CLI is working:
 
    ```bash
    d8 help
    ```
 
-Готово, вы установили Deckhouse CLI.
+Congrats, you have successfully installed Deckhouse CLI!
