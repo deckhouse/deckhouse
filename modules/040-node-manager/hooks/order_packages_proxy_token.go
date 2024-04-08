@@ -148,7 +148,7 @@ func generateNewToken(dc dependency.Container) (string, error) {
 	}
 
 	// set token parameters
-	expiration := int64(time.Hour * 24 * 365)
+	expiration := int64(60 * 24 * 365)
 	tokenRequest := &authv1.TokenRequest{
 		Spec: authv1.TokenRequestSpec{
 			Audiences:         []string{"api"},
@@ -181,7 +181,7 @@ func generateNewToken(dc dependency.Container) (string, error) {
 		},
 		Data: map[string][]byte{
 			"token":               []byte(token),
-			"expirationTimestamp": []byte((response.Status.ExpirationTimestamp.String())),
+			"expirationTimestamp": []byte((response.Status.ExpirationTimestamp.Format(time.RFC3339))),
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
