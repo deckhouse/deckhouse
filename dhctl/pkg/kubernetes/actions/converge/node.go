@@ -58,7 +58,9 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showD
 					case <-ctx.Done():
 						return
 					default:
-						_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+						_, _ = deckhouse.NewLogPrinter(kubeCl).
+							WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+							Print(ctx)
 					}
 				}
 			}()

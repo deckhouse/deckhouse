@@ -14,16 +14,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+
+function check_python() {
+    for pybin in python3 python2 python; do
+      if command -v "$pybin" >/dev/null 2>&1; then
+        python_binary="$pybin"
+        return 0
+      fi
+    done
+    echo "Python not found, exiting..."
+    return 1
+}
+
 function try_connect() {
-   python3 << EOF
-import urllib.request
-req = urllib.request.Request('http://127.0.0.1:$1')
-try: urllib.request.urlopen(req, timeout=1)
-except urllib.error.URLError as e:
+    cat - <<EOF | $python_binary
+try:
+    from urllib.request import urlopen, Request
+    from urllib.error import URLError
+except ImportError as e:
+    from urllib2 import urlopen, Request, URLError
+
+req = Request('http://127.0.0.1:$1')
+try: urlopen(req, timeout=1)
+except URLError as e:
     exit(1)
 except TimeoutError as e:
     exit(0)
 exit(0)
+EOF
+}
+
+function start_http_server() {
+  cat - <<EOF | $python_binary
+import sys
+
+try:
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+except ImportError:
+    from http.server import SimpleHTTPRequestHandler
+
+try:
+    from SocketServer import TCPServer as HTTPServer
+except ImportError:
+    from http.server import HTTPServer
+
+http_server = HTTPServer(("", $1), SimpleHTTPRequestHandler)
+http_server.serve_forever()
 EOF
 }
 
@@ -34,7 +70,7 @@ function check_port() {
         echo -n "it is already open "; return 1
     fi
 
-    python3 -m http.server $1 > /dev/null 2>&1 &
+    start_http_server $1 > /dev/null 2>&1 &
     local PID=$!
     sleep 0.1
 
@@ -43,7 +79,7 @@ function check_port() {
 
     if ps -p $PID > /dev/null
     then
-        kill -9 $PID
+        pkill -P $PID
         wait $PID 2>/dev/null
     fi
 
@@ -51,6 +87,8 @@ function check_port() {
 }
 
 has_error=false
+
+check_python
 
 echo -n "Checking if kubernetes API port is open (6443) "
 check_port 6443

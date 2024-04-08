@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Параметры группы Zvirt servers, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/documentation/v1/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                clusterId:
+                  description: |
+                    ID кластера.
+                numCPUs:
+                  description: |
+                    Количество vCPU, выделяемых виртуальным машинам zVirt.
+                memory:
+                  description: |
+                    Память в MiB для выделения виртуальным машинам zVirt VirtualMachines.
+                rootDiskSizeGb:
+                  description: |
+                    Размер корневого диска в GiB для использования в виртуальных машинах zVirt.
+                template:
+                  description: |
+                    Имя шаблона, из которого будут клонированы ВМ.
+                vmType:
+                  description: |
+                    Нагрузочный профиль.
+                vnicProfileID:
+                  description: |
+                    vNIC профиль id.
+                nicName:
+                  description: |
+                    vNIC имя.
+                storageDomainID:
+                  description: |
+                    ID домена хранения.
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+

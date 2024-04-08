@@ -30,6 +30,7 @@
 
 
  - **[admission-policy-engine]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
+ - **[candi]** Change containerd restart flow to avoid unwanted restarts. [#7991](https://github.com/deckhouse/deckhouse/pull/7991)
  - **[candi]** Fix regex validation pattern of the `additionalRolePolicies` field. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
  - **[candi]** Add the `tzdata` package to the bootstrap script on AltLinux `10.0`. [#7403](https://github.com/deckhouse/deckhouse/pull/7403)
  - **[candi]** Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
@@ -100,6 +101,7 @@
  - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
  - **[monitoring-kubernetes]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-kubernetes-control-plane]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[multitenancy-manager]** Fix the default `security-with-dedicated-nodes` project template. [#7996](https://github.com/deckhouse/deckhouse/pull/7996)
  - **[multitenancy-manager]** Fix Project rendering in some cases for embedded templates. [#7876](https://github.com/deckhouse/deckhouse/pull/7876)
  - **[multitenancy-manager]** All Pods of a project for which the value "dedicatedNodeName" is defined must run only on the Node with the corresponding taint key. [#6864](https://github.com/deckhouse/deckhouse/pull/6864)
  - **[multitenancy-manager]** Add default project templates:

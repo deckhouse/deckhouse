@@ -317,6 +317,8 @@ jobs:
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
       run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
       label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
     steps:
 
       # <template: checkout_step>
@@ -498,4 +500,33 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
         run: |
           make lint-markdown
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_release_requirements == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
 

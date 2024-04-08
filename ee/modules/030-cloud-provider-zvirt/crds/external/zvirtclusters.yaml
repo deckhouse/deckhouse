@@ -1,0 +1,79 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-zvirt
+    cluster.x-k8s.io/provider: zvirt
+    cluster.x-k8s.io/v1beta1: v1
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: zvirtclusters.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: ZvirtCluster
+    listKind: ZvirtClusterList
+    plural: zvirtclusters
+    singular: zvirtcluster
+  scope: Namespaced
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: ZvirtCluster is the Schema for the zvirtclusters API
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ZvirtClusterSpec defines the desired state of ZvirtCluster
+              properties:
+                controlPlaneEndpoint:
+                  description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                  properties:
+                    host:
+                      description: The hostname on which the API server is serving.
+                      type: string
+                    port:
+                      description: The port on which the API server is serving.
+                      format: int32
+                      type: integer
+                  required:
+                    - host
+                    - port
+                  type: object
+                id:
+                  description: ID holds zVirt cluster identifier of this ZvirtCluster.
+                  type: string
+              type: object
+            status:
+              description: ZvirtClusterStatus defines the observed state of ZvirtCluster
+              properties:
+                failureMessage:
+                  type: string
+                failureReason:
+                  type: string
+                ready:
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
