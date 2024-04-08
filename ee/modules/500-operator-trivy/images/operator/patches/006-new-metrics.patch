@@ -1,5 +1,5 @@
 diff --git a/pkg/metrics/collector.go b/pkg/metrics/collector.go
-index 117c27c1..3b4d80cf 100644
+index 117c27c1..e181b40f 100644
 --- a/pkg/metrics/collector.go
 +++ b/pkg/metrics/collector.go
 @@ -3,6 +3,7 @@ package metrics
@@ -35,23 +35,14 @@ index 117c27c1..3b4d80cf 100644
  				}
  				var vulnList = make(map[string]bool)
  				for _, vuln := range r.Report.Vulnerabilities {
-@@ -590,6 +593,23 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
+@@ -590,6 +593,14 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
  					if vuln.Score != nil {
  						vulnLabelValues[20] = strconv.FormatFloat(*vuln.Score, 'f', -1, 64)
  					}
-+					if strings.Contains(vuln.VulnerabilityID, "BDU") {
-+						if strings.Contains(vuln.VulnerabilityID, "BDU-") {
-+							splits := strings.Split(vuln.VulnerabilityID, "BDU-")
-+							if len(splits) == 2 {
-+								vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + splits[1]
-+							}
-+						}
++					if strings.Contains(vuln.VulnerabilityID, "BDU") && len(vuln.VulnerabilityID) > 4 {
++						vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + vuln.VulnerabilityID[4:]
 +						if strings.Contains(vuln.VulnerabilityID, "BDU:") {
-+						  vulnLabelValues[19] = vuln.VulnerabilityID
-+							splits := strings.Split(vuln.VulnerabilityID, "BDU:")
-+							if len(splits) == 2 {
-+								vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + splits[1]
-+							}
++							vulnLabelValues[19] = vuln.VulnerabilityID
 +						}
 +					} else {
 +						vulnLabelValues[21] = vuln.PrimaryLink

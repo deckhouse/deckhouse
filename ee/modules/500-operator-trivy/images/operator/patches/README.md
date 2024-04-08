@@ -33,4 +33,4 @@ The first check begins instantly when the operator starts.
 
 ### 006-new-metrics.patch
 
-This patch adds new prometheus metrics for reports.
+This patch adds primaryLink metric for reports.
