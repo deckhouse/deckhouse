@@ -641,8 +641,7 @@ spec:
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
     curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
     curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt-get update
-    apt-get install -y nvidia-container-toolkit nvidia-driver-525-server
+    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
   nodeGroups:
   - gpu
   weight: 30
@@ -675,7 +674,7 @@ spec:
 
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
     curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    yum install -y nvidia-container-toolkit nvidia-driver
+    bb-yum-install nvidia-container-toolkit nvidia-driver
   nodeGroups:
   - gpu
   weight: 30
