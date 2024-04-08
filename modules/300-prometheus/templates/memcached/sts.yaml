@@ -29,6 +29,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "memcached")) | nindent 2 }}
 spec:
   serviceName: memcached
+  imagePullSecrets:
+  - name: deckhouse-registry
   selector:
     matchLabels:
       app: memcached
