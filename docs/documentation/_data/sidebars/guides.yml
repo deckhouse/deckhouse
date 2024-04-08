@@ -31,13 +31,9 @@ entries:
                 ru: Как узнать режим обновлений кластера?
               url: /update/modes/how-to-find-out-the-cluster-update-mode/
         - title:
-            en: Каналы обновлений
-            ru: Каналы обновлений
-          url: /update/channels/
-        - title:
-            en: Окна обновлений
-            ru: Окна обновлений
-          url: /update/windows/
+            en: Каналы и окна обновлений
+            ru: Каналы и окна обновлений
+          url: /update/channels-and-windows/
         - title:
             en: Получение уведомлений
             ru: Получение уведомлений
