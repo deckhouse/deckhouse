@@ -1,5 +1,5 @@
 ---
-title: Создание каталога
+title: Обновление в закрытом контуре
 permalink: ru/update/security/closed-and-secure-environment/
 lang: ru
 ---
