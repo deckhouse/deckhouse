@@ -4,9 +4,40 @@ permalink: ru/update/notifications/dkp-notice/
 lang: ru
 ---
 
-В [автоматическом режиме](ссылка на раздел) обновлений можно [настроить](configuration.html#parameters-update-notification) вызов вебхука для получения оповещения о предстоящем обновлении минорной версии Deckhouse Kubernetes Platform.
+Чтобы получать оповещения об обновлении Deckhouse Kubernetes Platform в автоматическом режиме, выполните следующие шаги:
 
-ИНФА, которую получает вебхук!
+1. Пропишите URL-адрес вебхука.
+
+Вызов вебхука произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
+
+2. Используйте параметр `minimalNotificationTime`, чтобы установить минимальное время, которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse Kubernetes Platform на используемом канале обновлений.
+
+   На адрес вебхука выполится POST-запрос с `Content-Type: application/json`. Пример содержания запроса с параметрами вебхука:
+
+   ```
+   {
+     "version": "1.36",
+     "requirements":  {"k8s": "1.20.0"},
+     "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+     "applyTime": "2023-01-01T14:30:00Z00:00",
+     "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
+   }
+   ```
+
+   Где параметры вебхука:
+
+   * `version` — строка, номер минорной версии;
+   * `requirements` — объект, требования к версии;
+   * `changelogLink` — строка, ссылка на список изменений (changelog) минорной версии;
+   * `applyTime` — строка, дата и время запланированного обновления (с учетом установленных окон обновлений) в формате RFC3339;
+   * `message` — строка, текстовое сообщение о доступности новой минорной версии и запланированном времени обновления.
+
+Шаблон:
+
+```
+^https?://[^\s/$.?#].[^\s]*$
+```
+Пример вебхука: https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa
 
 Пример настройки оповещения:
 
@@ -25,25 +56,25 @@ spec:
         webhook: https://release-webhook.mydomain.com
 ```
 
-Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
+3. Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
 
-Пример настройки параметра `minimalNotificationTime`:
+   Пример настройки параметра `minimalNotificationTime`:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-        minimalNotificationTime: 8h
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     settings:
+       update:
+         releaseChannel: Stable
+         mode: Auto
+         notification:
+           webhook: https://release-webhook.mydomain.com
+           minimalNotificationTime: 8h
+   ```
 
 {% alert %}
 Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии будет отложено на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии ,eltn cxbnfnmcz - появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
