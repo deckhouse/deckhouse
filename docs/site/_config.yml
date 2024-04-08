@@ -86,7 +86,7 @@ defaults:
       path: "pages/guides"
       type: "pages"
     values:
-      toc_in_sidebar: true
+      sidebar: guides
       toc: false
   - scope:
       path: "pages/guides/admin"

@@ -1,23 +1,23 @@
 ---
 title: Ручной режим обновлений
-permalink: ru/update/manual-mode/
+permalink: ru/update/modes/manual-mode/
 lang: ru
 ---
 
-При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
+1. Включите ручное подтверждение обновлений в ресурсе *ModuleConfig/deckhouse* с помощью параметра `update.mode`:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Manual
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     settings:
+       releaseChannel: Stable
+       update:
+         mode: Manual
+  ```
 
 В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse Kubernetes Platform (без учета patch-версий).
 
@@ -27,9 +27,9 @@ spec:
 kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 ```
 
-**Срочное ручное обновление**
+**Срочное обновление**???
 
-Обновление без окна обновлений позволяет выполнить обновление модуля вне определенного для этого времени. Это необходимо в случае срочного обновления. 
+Обновление без окна обновлений позволяет выполнить обновление модуля вне определенного для этого времени. Это необходимо в случае срочного ручного обновления. 
 
 > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями. Поэтому используйте только в случае действительной необходимости.
 
