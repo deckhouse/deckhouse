@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 	rbac "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,8 +80,16 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
 
+	c, err := semver.NewConstraint("< 1.29")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	v, err := semver.NewVersion(kubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
 	// if kubernetesVersion < v1.29.0
-	if semver.Compare("v1.29.0", kubernetesVersion) == 1 {
+	if c.Check(v) {
 		return nil
 	}
 
