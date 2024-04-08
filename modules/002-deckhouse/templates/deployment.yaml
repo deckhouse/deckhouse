@@ -68,14 +68,8 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: dhctl.deckhouse.io/node-for-converge
-                    operator: DoesNotExist
 {{- if (include "helm_lib_ha_enabled" .) }}
+      affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - podAffinityTerm:

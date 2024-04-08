@@ -105,8 +105,7 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 		"pmacct/Dockerfile",
 		"argocd/Dockerfile",
 		"argocd-image-updater/Dockerfile",
-		"werf-argocd-cmp-sidecar/Dockerfile",
-		"memcached/werf.inc.yaml":
+		"werf-argocd-cmp-sidecar/Dockerfile":
 		return true
 	}
 	return false

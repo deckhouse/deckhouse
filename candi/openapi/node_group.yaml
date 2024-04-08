@@ -322,6 +322,7 @@ spec:
                             - YandexInstanceClass
                             - AzureInstanceClass
                             - VCDInstanceClass
+                            - ZvirtInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -956,6 +957,7 @@ spec:
                             - YandexInstanceClass
                             - AzureInstanceClass
                             - VCDInstanceClass
+                            - ZvirtInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1745,6 +1747,7 @@ spec:
                             - YandexInstanceClass
                             - AzureInstanceClass
                             - VCDInstanceClass
+                            - ZvirtInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).

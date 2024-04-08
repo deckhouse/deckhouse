@@ -26,6 +26,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -33,11 +34,12 @@ import (
 )
 
 var (
-	ErrListPods          = errors.New("No Deckhouse pod found.")
-	ErrMultiplePodsFound = errors.New("Multiple Deckhouse pods found.")
-	ErrTimedOut          = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed     = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode     = errors.New("Deckhouse on wrong node")
+	ErrListPods      = errors.New("No Deckhouse pod found.")
+	ErrReadLease     = errors.New("No Deckhouse leader election lease found.")
+	ErrBadLease      = errors.New("Deckhouse leader election lease is malformed.")
+	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
+	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
+	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
 )
 
 type logLine struct {
@@ -228,8 +230,9 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 type LogPrinter struct {
 	kubeCl *client.KubernetesClient
 
-	deckhousePod       *corev1.Pod
-	waitPodBecomeReady bool
+	deckhousePod            *corev1.Pod
+	waitPodBecomeReady      bool
+	leaderElectionLeaseName types.NamespacedName
 
 	lastErrorTime time.Time
 
@@ -252,8 +255,13 @@ func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
 	return d
 }
 
+func (d *LogPrinter) WithLeaderElectionAwarenessMode(leaderElectionLease types.NamespacedName) *LogPrinter {
+	d.leaderElectionLeaseName = leaderElectionLease
+	return d
+}
+
 func (d *LogPrinter) GetPod() error {
-	pod, err := GetPod(d.kubeCl)
+	pod, err := GetPod(d.kubeCl, d.leaderElectionLeaseName)
 	if err != nil {
 		return err
 	}

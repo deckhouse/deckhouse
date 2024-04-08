@@ -18,8 +18,13 @@ package requirements
 
 import (
 	"fmt"
+	"reflect"
+	"regexp"
+	"runtime"
 
 	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var (
@@ -43,8 +48,11 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
+var mreg = regexp.MustCompile(`/modules/([0-9]+-)?(\S+)/requirements`)
+
 // CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
-func CheckRequirement(key, value string) (bool, error) {
+// enabledModules is optional and will filter check-functions if module is disabled
+func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error) {
 	if defaultRegistry == nil {
 		return true, nil
 	}
@@ -55,6 +63,24 @@ func CheckRequirement(key, value string) (bool, error) {
 	}
 
 	for _, f := range fs {
+		if len(enabledModules) > 0 {
+			modulesSet := enabledModules[0]
+			pc := reflect.ValueOf(f).Pointer()
+			fn := runtime.FuncForPC(pc)
+			// return the caller of the function like: github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements.init.0.func1
+
+			match := mreg.FindStringSubmatch(fn.Name())
+			var moduleName string
+			if len(match) > 0 {
+				moduleName = match[2] // name of a module
+			}
+
+			if moduleName != "" && !modulesSet.Has(moduleName) {
+				// module is disabled, we don't have to run its checks
+				continue
+			}
+		}
+
 		passed, ferr := f(value, memoryStorage)
 		if ferr != nil || !passed {
 			return passed, ferr

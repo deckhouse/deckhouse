@@ -43,10 +43,14 @@ spec:
                     The way traffic from the external network is routed to the cluster. Once you have set the method, you cannot change it later.
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
-                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
-                    * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
+                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`;
 
-                      **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                      Settings are required in [spec.HostPort](#ingressnginxcontroller-v1-spec-hostport).
+                    * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client;
+
+                      Settings are required in [spec.HostPortWithProxyProtocol](#ingressnginxcontroller-v1-spec-hostportwithproxyprotocol).
+
+                      **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter can help you with defining trusted sources.
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
 
                       **Caution!** There can be only one controller with this inlet type on a host.

@@ -727,6 +727,9 @@ entries:
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
+                - title: FAQ
+                  url: /modules/460-log-shipper/faq.html
+
             - title:
                 en: Short-term storage
                 ru: Кратковременное хранение
@@ -1232,6 +1235,21 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/380-metallb/configuration.html
+        - title: l2-load-balancer
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/381-l2-load-balancer/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/381-l2-load-balancer/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/381-l2-load-balancer/configuration.html
         - title: network-gateway
           d8Revision: ee
           folders:

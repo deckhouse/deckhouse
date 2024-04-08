@@ -86,6 +86,8 @@ jobs:
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
       run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
       label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: check_labels
@@ -135,7 +137,11 @@ jobs:
 
   markdown_linter:
     name: Markdown Linter
-{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 }!}
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 -}!}
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}

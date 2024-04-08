@@ -1,0 +1,132 @@
+kind: ZvirtClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    description: |
+      Описывает конфигурацию облачного кластера в Zvirt.
+
+      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      sshPublicKey:
+        type: string
+        description: Публичный ключ для доступа на узлы.
+      clusterID:
+        type: string
+        description: |
+          ID кластера с общими доменами хранения и ЦП одного типа для создания виртуальны машин
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+          instanceClass:
+            description: |
+              Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+            properties: &instanceClassProperties_ru
+              numCPUs:
+                description: |
+                  Количество vCPU, выделяемых виртуальным машинам.
+              memory:
+                description: |
+                  Память в MiB для выделения виртуальным машинам.
+              rootDiskSize:
+                description: |
+                  Размер корневого диска в GiB для использования в виртуальных машинах.
+              template:
+                description: |
+                  Имя шаблона, который будет использован при заказе виртуальных машин.
+              vnicProfileID:
+                description: |
+                  ID профиля vNIC.
+              storageDomainID:
+                type: string
+                description: |
+                  ID домена хранения.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+            instanceClass:
+              description: |
+                Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-zvirt/layouts.html)  о возможных схемах размещения провайдера.
+      provider:
+        description: Параметры для подключения к Zvirt.
+        properties:
+          server:
+            description: Хост или IP-адрес zvirt сервера.
+          username:
+            description: Логин.
+          password:
+            description: Пароль.
+          caBundle:
+            description: CA сертификат закодированный base64.
+          insecure:
+            type: boolean
+            description:  Установите значение `true`, если Zvirt имеет самоподписанный сертификат.
+            x-doc-default: false
+

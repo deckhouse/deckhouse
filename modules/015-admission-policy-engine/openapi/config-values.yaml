@@ -60,6 +60,13 @@ properties:
     description: |
       Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
     properties:
+      storageClass:
+        type: string
+        x-examples: ["ceph-ssd", "false"]
+        description: |
+          The name of the StorageClass to use for `trivy-provider`.
+
+          `false` — forces the `emptyDir` usage. Manually delete the old PVC and restart Pod, after setting the parameter.
       enabled:
         type: boolean
         default: false

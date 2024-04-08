@@ -13,6 +13,7 @@
  - **[candi]** Add Kubernetes 1.29 support. [#7247](https://github.com/deckhouse/deckhouse/pull/7247)
     All control plane components will restart.
  - **[candi]** Add support for the new cloud provider — VMware Cloud Director. [#6527](https://github.com/deckhouse/deckhouse/pull/6527)
+ - **[control-plane-manager]** Option to change service account tokens issuer. [#7892](https://github.com/deckhouse/deckhouse/pull/7892)
  - **[dhctl]** Generate `DeckhouseRelease` manifests for mirrored releases. [#7697](https://github.com/deckhouse/deckhouse/pull/7697)
  - **[documentation]** Module documentation is available in the cluster. [#6449](https://github.com/deckhouse/deckhouse/pull/6449)
  - **[extended-monitoring]** Support custom container registry CA, registry credentials and insecure (HTTP) registries in the image-availability-exporter. Change ModuleConfig settings. [#7354](https://github.com/deckhouse/deckhouse/pull/7354)
@@ -29,6 +30,7 @@
 
 
  - **[admission-policy-engine]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
+ - **[candi]** Change containerd restart flow to avoid unwanted restarts. [#7991](https://github.com/deckhouse/deckhouse/pull/7991)
  - **[candi]** Fix regex validation pattern of the `additionalRolePolicies` field. [#7696](https://github.com/deckhouse/deckhouse/pull/7696)
  - **[candi]** Add the `tzdata` package to the bootstrap script on AltLinux `10.0`. [#7403](https://github.com/deckhouse/deckhouse/pull/7403)
  - **[candi]** Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
@@ -57,6 +59,7 @@
  - **[control-plane-manager]** Fix serviceaccounts generation in `basicAuditPolicy`. [#7342](https://github.com/deckhouse/deckhouse/pull/7342)
  - **[control-plane-manager]** Remove `/healthz` HTTP endpoint from the `kubernetes-api-proxy-reloader`. [#7311](https://github.com/deckhouse/deckhouse/pull/7311)
  - **[dashboard]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[deckhouse]** Run `DeckhouseRelease` requirements checks only for enabled modules. [#7925](https://github.com/deckhouse/deckhouse/pull/7925)
  - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7867](https://github.com/deckhouse/deckhouse/pull/7867)
  - **[deckhouse]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[deckhouse]** Fix release apply on the cluster bootstrap. [#7303](https://github.com/deckhouse/deckhouse/pull/7303)
@@ -74,6 +77,8 @@
  - **[flow-schema]** Change apiVersion for `FlowSchema` and `PriorityLevelConfiguration` to the minimum available. [#7750](https://github.com/deckhouse/deckhouse/pull/7750)
  - **[helm_lib]** Running check-kernel-version init-container as deckhouse user [#7518](https://github.com/deckhouse/deckhouse/pull/7518)
     All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ - **[ingress-nginx]** Fix MaxMind DB download for controller `1.9`. [#7944](https://github.com/deckhouse/deckhouse/pull/7944)
+    Ingress-nginx 1.9 controller will restart.
  - **[ingress-nginx]** Add missed libraries to the Ingress controller v1.6 image. [#7764](https://github.com/deckhouse/deckhouse/pull/7764)
     Ingress controller v1.6 will restart.
  - **[ingress-nginx]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
@@ -96,6 +101,7 @@
  - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
  - **[monitoring-kubernetes]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-kubernetes-control-plane]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
+ - **[multitenancy-manager]** Fix the default `security-with-dedicated-nodes` project template. [#7996](https://github.com/deckhouse/deckhouse/pull/7996)
  - **[multitenancy-manager]** Fix Project rendering in some cases for embedded templates. [#7876](https://github.com/deckhouse/deckhouse/pull/7876)
  - **[multitenancy-manager]** All Pods of a project for which the value "dedicatedNodeName" is defined must run only on the Node with the corresponding taint key. [#6864](https://github.com/deckhouse/deckhouse/pull/6864)
  - **[multitenancy-manager]** Add default project templates:

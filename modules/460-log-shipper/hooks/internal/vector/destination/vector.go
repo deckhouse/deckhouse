@@ -28,7 +28,7 @@ type Vector struct {
 
 	Address string `json:"address"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Keepalive VectorKeepalive `json:"keepalive,omitempty"`
 }

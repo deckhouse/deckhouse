@@ -1,0 +1,14 @@
+control-plane-manager:
+  features:
+    - summary: Option to change service account tokens issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7892
+deckhouse:
+  fixes:
+    - summary: Run `DeckhouseRelease` requirements checks only for enabled modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7925
+ingress-nginx:
+  fixes:
+    - summary: Fix MaxMind DB download for controller `1.9`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7944
+      impact: Ingress-nginx 1.9 controller will restart.
+

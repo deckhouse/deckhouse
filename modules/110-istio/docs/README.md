@@ -4,11 +4,17 @@ webIfaces:
 - name: istio
 ---
 
-Currently supported Istio versions:
-* 1.12 (deprecated)
-* 1.13 (deprecated)
-* 1.16 (deprecated)
-* 1.19
+## Compatibility table for supported versions
+
+| Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
+|:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
+|     1.12      |                                 1.19 &#8432;, 1.20 &#8432;, 1.21 &#8432;, 1.22 &#8432;                                        | Deprecated and will be deleted |
+|     1.13      |                                    1.20 &#8432;, 1.21 &#8432;, 1.22 &#8432;, 1.23 &#8432;                                     | Deprecated and will be deleted |
+|     1.16      |                                1.22 &#8432;, 1.23 &#8432;, 1.24 &#8432;, 1.25 &#8432; &#8432;                                 |           Deprecated           |
+|     1.19      |                    1.25 &#8432; &#8432;, 1.26 &#8432; &#8432;, 1.27 &#8432; &#8432;, 1.28 &#8432; &#8432;                     |           Supported            |
+
+- &#8432; — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release. 
+- &#8432; &#8432; — the Kubernetes version **is supported** in the current Deckhouse Kubernetes Platform release.
 
 ## What issues does Istio help to resolve?
 
