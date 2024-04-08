@@ -1,7 +1,6 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := $key | toString }}
-  {{- $patch := $value.patch | toString }}
-  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+  {{- $image_version := $version | replace "." "-" }}
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -19,7 +18,7 @@ docker:
   LABEL:
     distro: all
     version: all
-    ecr-credential-provider: {{ printf "%s.%s" $version $patch }}
+    ecr-credential-provider: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
