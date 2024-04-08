@@ -29,11 +29,11 @@ Deckhouse Kubernetes Platform использует актуальные верс
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.6 bash
    ```
 
-   Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse и сгенерированы манифесты [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease).
+   Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse Kubernetes Platform и сгенерированы манифесты [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease).
 
 1. Скачайте образы Deckhouse в выделенную директорию, используя команду `dhctl mirror`.
 
-   `dhctl mirror` скачивает только последнюю доступную патч-версию минорного релиза Deckhouse. Например, для Deckhouse 1.52 будет скачана только одна версия `1.52.10`, т. к. этого достаточно для обновления Deckhouse с версии 1.51.
+   `dhctl mirror` скачивает только последнюю доступную патч-версию минорного релиза Deckhouse Kubernetes Platform. Например, для Deckhouse 1.58 будет скачана только одна версия `1.58.10`, т. к. этого достаточно для обновления Deckhouse Kubernetes Platform с версии 1.57.
 
    Следующая команда скачает образы Deckhouse тех версий, которые находятся на каналах обновлений (о текущем статусе версий на каналах обновлений можно узнать на [flow.deckhouse.io](https://flow.deckhouse.io)):
 
@@ -52,7 +52,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
    > Обратите внимание, параметр `--min-version` будет проигнорирован если вы укажете версию выше находящейся в канале обновлений rock-solid.
 
-   Чтобы загрузить образы Deckhouse из определенного репозитория registry, вы можете указать этот репозиторий с помощью флага `--source`.
+   Чтобы загрузить образы Deckhouse Kubernetes Platform из определенного репозитория registry, вы можете указать этот репозиторий с помощью флага `--source`.
    Существуют также дополнительные флаги `--source-login` и `--source-password`, используемые для аутентификации в предоставленном registry.
    Если они не указаны, `dhctl mirror` будет обращаться к registry анонимно.
 
@@ -85,14 +85,14 @@ Deckhouse Kubernetes Platform использует актуальные верс
    DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
    ```
 
-   > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse/ee).
+   > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - `/deckhouse/ee`).
    > Перед запуском команды убедитесь, что этот путь существует и у используемой учетной записи есть права на запись.
 
-   Если ваш registry не требует авторизации, флаги `--registry-login`/`--registry-password` или переменные `$DHCTL_CLI_MIRROR_USER`/`$DHCTL_CLI_MIRROR_PASS` указывать не нужно.
+   Если registry не требует авторизации, флаги `--registry-login`/`--registry-password` или переменные `$DHCTL_CLI_MIRROR_USER`/`$DHCTL_CLI_MIRROR_PASS` указывать не нужно.
 
 1. После загрузки образов в изолированный registry можно переходить к установке Deckhouse Kubernetes Platform. Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
 
-   При запуске установщика используйте его образ из registry, в который ранее были загружены образы Deckhouse, а не из публичного registry. Например, используйте адрес вида `your.private.registry.com:5000/deckhouse/ee/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+   При запуске установщика используйте его образ из registry, в который ранее были загружены образы Deckhouse Kubernetes Platform, а не из публичного registry. Например, используйте адрес вида `your.private.registry.com:5000/deckhouse/ee/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
    В ресурсе `InitConfiguration` при установке также используйте адрес вашего registry и данные авторизации (параметры [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3](/gs/bm-private/step3.html) руководства по быстрому старту).
 
@@ -104,9 +104,9 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 ### Ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry
 
-Ниже описаны шаги, необходимые для ручной загрузки образов модулей, подключаемых из источника модулей (ресурс [ModuleSource](cr.html#modulesource)):
+Ниже описаны шаги, необходимые для ручной загрузки образов модулей, подключаемых из источника модулей (ресурса [*ModuleSource*](cr.html#modulesource)):
 
-1. Запустите установщик Deckhouse версии 1.56.0 или выше.
+1. Запустите установщик Deckhouse версии 1.58.0 или выше.
 
    ```shell
    docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.58.4 bash
@@ -141,10 +141,10 @@ Deckhouse Kubernetes Platform использует актуальные верс
    DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
    ```
 
-   > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - /deckhouse-modules).
+   > Обратите внимание, образы будут выгружены в registry по пути, указанному в параметре `--registry` (в примере - `/deckhouse-modules`).
    > Перед запуском команды убедитесь, что этот путь существует и у используемой учетной записи есть права на запись.
 
-   Если ваш registry не требует авторизации, флаги `--registry-login`/`--registry-password` указывать не нужно.
+   Если registry не требует авторизации, флаги `--registry-login`/`--registry-password` указывать не нужно.
 
 1. После загрузки образов в изолированный registry, отредактируйте YAML-манифест `ModuleSource`:
 
@@ -158,7 +158,6 @@ Deckhouse Kubernetes Platform использует актуальные верс
    ```
 
    После применения манифеста модули готовы к использованию. Обратитесь к документации разработчика модулей для получения дальнейших инструкций по их настройке и использованию.
-
 
 
 
@@ -268,27 +267,4 @@ Deckhouse Kubernetes Platform можно настроить на работу с
       ```
 
 
-Образы всех компонентов Deckhouse Kubernetes Platform, включая `control plane`, хранятся в высокодоступном и геораспределенном container registry.
-
-Для обновления в закрытом контуре выполните следующие шаги:
-
-1. В текущем каталоге создайте новый каталог `d8-modules`.
-
-2. Выполните аутентификацию в репозитории вендора, используя в качестве имени пользователя `license-token`, а в качестве пароля ваш лицензионный ключ:
-
-   ```bash
-   docker login registry.deckhouse.ru
-   ```
-
-3. Запустите установочный контейнер командой:
-
-   ```bash
-   docker run -ti --pull=always -v $(pwd)/d8-modules:/tmp/d8-modules registry.deckhouse.ru/deckhouse/ee/install:stable bash
-   ```
-
-4. Скопируйте утилиту `dhctl` из контейнера в каталог `d8-modules`:
-
-   ```bash
-   cp /usr/bin/dhctl /tmp/d8-modules/dhctl
-   ```
 
