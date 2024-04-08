@@ -2,71 +2,58 @@
 entries:
   folders:
     - title:
-        en: Update
-        ru: Обновление
-      url: /update/
+        en: Обновление Kubernetes
+        ru: Обновление Kubernetes
+      url: /update/kubernetes/update-kubernetes/
+    - title:
+        en: Режимы обновлений
+        ru: Режимы обновлений
       folders:
         - title:
-            en: Обновление Kubernetes
-            ru: Обновление Kubernetes
-          url: /update/kubernetes/update-kubernetes/
+            en: Виды обновлений
+            ru: Виды обновлений
+          url: /update/modes/update-mode/
         - title:
-            en: Режимы обновлений
-            ru: Режимы обновлений
-          folders:
-            - title:
-                en: Виды обновлений
-                ru: Виды обновлений
-              url: /update/modes/update-mode/
-            - title:
-                en: Автоматический режим обновлений
-                ru: Автоматический режим обновлений
-              url: /update/modes/automatic-mode/
-            - title:
-                en: Ручной режим обновлений
-                ru: Ручной режим обновлений
-              url: /update/modes/manual-mode/
+            en: Автоматический режим обновлений
+            ru: Автоматический режим обновлений
+          url: /update/modes/automatic-mode/
         - title:
-            en: Каналы и окна обновлений
-            ru: Каналы и окна обновлений
-          url: /update/channels-and-windows/
+            en: Ручной режим обновлений
+            ru: Ручной режим обновлений
+          url: /update/modes/manual-mode/
+    - title:
+        en: Каналы и окна обновлений
+        ru: Каналы и окна обновлений
+      url: /update/channels-and-windows/
+    - title:
+        en: Получение уведомлений
+        ru: Получение уведомлений
+      folders:
         - title:
-            en: Получение уведомлений
-            ru: Получение уведомлений
-          folders:
-            - title:
-                en: Виды уведомлений
-                ru: Виды уведомлений
-              url: /update/notifications/intro/
-            - title:
-                en: Получение Changelog
-                ru: Получение Changelog
-              url: /update/notifications/changelog/
-            - title:
-                en: Оповещение об обновлении платформы
-                ru: Оповещение об обновлении платформы
-              url: /update/notifications/dkp-notice/
-            - title:
-                en: Где посмотреть статус установки минорных обновлений?
-                ru: Где посмотреть статус установки минорных обновлений?
-              url: /update/notifications/procedure/
+            en: Оповещение об обновлении платформы
+            ru: Оповещение об обновлении платформы
+          url: /update/notifications/dkp-notice/
         - title:
-            en: Обновление в закрытом контуре
-            ru: Обновление в закрытом контуре
-          folders:
-            - title:
-                en: Гарантия стабильности и безопасности
-                ru: Гарантия стабильности и безопасности
-              url: /update/security/closed-and-secure-environment/
-            - title:
-                en: Выгрузка образов модулей DKP из репозитория вендора
-                ru: Выгрузка образов модулей DKP из репозитория вендора
-              url: /update/security/vendor-images/
-            - title:
-                en: Загрузка образов модулей DKP в закрытый репозиторий
-                ru: Загрузка образов модулей DKP в закрытый репозиторий
-              url: /update/security/private-repository/
-            - title:
-                en: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
-                ru: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
-              url: /update/security/proxying-registry/
+            en: Алерты и статусы обновлений компонентов
+            ru: Алерты и статусы обновлений компонентов
+          url: /update/notifications/procedure/
+    - title:
+        en: Обновление в закрытом контуре
+        ru: Обновление в закрытом контуре
+      folders:
+        - title:
+            en: Создание каталога
+            ru: Создание каталога
+          url: /update/security/closed-and-secure-environment/
+        - title:
+            en: Выгрузка образов модулей DKP из репозитория вендора
+            ru: Выгрузка образов модулей DKP из репозитория вендора
+          url: /update/security/vendor-images/
+        - title:
+            en: Загрузка образов модулей DKP в закрытый репозиторий
+            ru: Загрузка образов модулей DKP в закрытый репозиторий
+          url: /update/security/private-repository/
+        - title:
+            en: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+            ru: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
+          url: /update/security/proxying-registry/

@@ -1,5 +1,5 @@
 ---
-title: Режимы обновлений
+title: Виды обновлений
 permalink: ru/update/modes/update-mode/
 lang: ru
 ---

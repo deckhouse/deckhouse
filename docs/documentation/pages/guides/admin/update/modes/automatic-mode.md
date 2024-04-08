@@ -48,6 +48,8 @@ KubernetesVersionEndOfLife - текущая версия Kubernetes больше
 
 В В этом режиме можно подтвердить каждое минорное потенциально опасное обновление Deckhouse Kubernetes Platform (DKP) на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
 
+ДЛЯ КЛАСТЕРА И ДЛЯ УЗЛОВ!
+
 Пример подтверждения минорного обновления DKP на версию `v1.43.2`:
 
    ```shell
