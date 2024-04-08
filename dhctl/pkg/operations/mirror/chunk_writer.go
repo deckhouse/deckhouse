@@ -86,24 +86,13 @@ func (c *chunkedFileWriter) Write(p []byte) (int, error) {
 }
 
 func (c *chunkedFileWriter) Close() error {
-	if c.activeChunk != nil {
-		if err := c.activeChunk.Sync(); err != nil {
-			return fmt.Errorf("Flush chunk: %w", err)
-		}
-		if err := c.activeChunk.Close(); err != nil {
-			return fmt.Errorf("Close chunk: %w", err)
-		}
-	}
-	return nil
+	return c.closeActiveChunk()
 }
 
 func (c *chunkedFileWriter) swapActiveChunk() error {
 	if c.activeChunk != nil {
-		if err := c.activeChunk.Sync(); err != nil {
-			return fmt.Errorf("Flush chunk: %w", err)
-		}
-		if err := c.activeChunk.Close(); err != nil {
-			return fmt.Errorf("Close previous chunk: %w", err)
+		if err := c.closeActiveChunk(); err != nil {
+			return fmt.Errorf("Close active chunk file: %w", err)
 		}
 		c.chunkIndex += 1
 	}
@@ -114,5 +103,17 @@ func (c *chunkedFileWriter) swapActiveChunk() error {
 	}
 
 	c.activeChunk = newChunk
+	return nil
+}
+
+func (c *chunkedFileWriter) closeActiveChunk() error {
+	if c.activeChunk != nil {
+		if err := c.activeChunk.Sync(); err != nil {
+			return fmt.Errorf("Flush chunk: %w", err)
+		}
+		if err := c.activeChunk.Close(); err != nil {
+			return fmt.Errorf("Close chunk: %w", err)
+		}
+	}
 	return nil
 }
