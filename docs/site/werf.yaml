@@ -221,19 +221,8 @@ docker:
     PIP_ROOT_USER_ACTION: ignore
 shell:
   beforeInstall:
-    #- apt -y update && apt -y upgrade
-    #- apt install -y locales
-    #- sed -i -e 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
-    #- ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
     - apk add hunspell
     - pip3 install pyyaml
-  #install:
-  #  - apt -y install hunspell html2text python3.11 python3-pip tree
-  #  - pip3 install beautifulsoup4
-  #setup:
-  #  - rm /usr/share/hunspell/*
-  #  - cp /temp/dictionaries/* /usr/share/hunspell/
-  #  - cp /temp/internal/* /spelling
 ---
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") (dict "ctx" . "mode" "default") }}
 ---

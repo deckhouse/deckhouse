@@ -68,3 +68,8 @@ werf compose up --config werf-debug.yaml --follow --docker-compose-command-optio
 ```
 
 Connect to localhost:2345
+
+
+## Working with spellcheck
+
+To add a new …
