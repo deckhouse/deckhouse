@@ -246,7 +246,7 @@
             {
               "targetBlank": true,
               "title": "More details",
-              "url": "${__data.fields.vuln_id_url}"
+              "url": "${__data.fields.vuln_url}"
             }
           ],
           "mappings": [
@@ -305,37 +305,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "vuln_id_url"
+              "options": "vuln_url"
             },
             "properties": [
               {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "pattern": "BDU-(.+)",
-                      "result": {
-                        "index": 0,
-                        "text": "https://bdu.fstec.ru/vul/$1"
-                      }
-                    },
-                    "type": "regex"
-                  },
-                  {
-                    "options": {
-                      "pattern": "(CVE.+)",
-                      "result": {
-                        "index": 1,
-                        "text": "https://nvd.nist.gov/vuln/detail/$1"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ]
-              },
-              {
-                "id": "custom.width",
-                "value": 1
+                "id": "custom.hidden",
+                "value": true
               }
             ]
           },
@@ -387,7 +362,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource, resource_name,vuln_title)",
+          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource, resource_name,vuln_title,vuln_url)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -397,20 +372,6 @@
       ],
       "title": "Vulnerability by Vulnerability Id",
       "transformations": [
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "vuln_id_url",
-            "mode": "reduceRow",
-            "reduce": {
-              "include": [
-                "vuln_id"
-              ],
-              "reducer": "last"
-            },
-            "replaceFields": false
-          }
-        },
         {
           "id": "organize",
           "options": {

@@ -1,0 +1,51 @@
+diff --git a/pkg/metrics/collector.go b/pkg/metrics/collector.go
+index 117c27c1..6c8396f6 100644
+--- a/pkg/metrics/collector.go
++++ b/pkg/metrics/collector.go
+@@ -3,6 +3,7 @@ package metrics
+ import (
+ 	"context"
+ 	"strconv"
++	"strings"
+
+ 	"github.com/aquasecurity/trivy-operator/pkg/kube"
+ 	"github.com/aquasecurity/trivy-operator/pkg/trivyoperator"
+@@ -39,6 +40,7 @@ const (
+ 	severity           = "severity"
+ 	vuln_id            = "vuln_id"
+ 	vuln_title         = "vuln_title"
++	vuln_url           = "vuln_url"
+ 	vuln_score         = "vuln_score"
+ 	//compliance
+ 	title       = "title"
+@@ -264,6 +266,7 @@ func buildMetricDescriptors(config trivyoperator.ConfigData) metricDescriptors {
+ 		vuln_id,
+ 		vuln_title,
+ 		vuln_score,
++		vuln_url,
+ 	}
+ 	vulnIdLabels = append(vulnIdLabels, dynamicLabels...)
+ 	exposedSecretLabels := []string{
+@@ -567,7 +570,7 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
+ 				vulnLabelValues[7] = r.Report.Artifact.Tag
+ 				vulnLabelValues[8] = r.Report.Artifact.Digest
+ 				for i, label := range c.GetReportResourceLabels() {
+-					vulnLabelValues[i+21] = r.Labels[label]
++					vulnLabelValues[i+22] = r.Labels[label]
+ 				}
+ 				var vulnList = make(map[string]bool)
+ 				for _, vuln := range r.Report.Vulnerabilities {
+@@ -590,6 +593,12 @@ func (c ResourcesMetricsCollector) collectVulnerabilityIdReports(ctx context.Con
+ 					if vuln.Score != nil {
+ 						vulnLabelValues[20] = strconv.FormatFloat(*vuln.Score, 'f', -1, 64)
+ 					}
++					if strings.HasPrefix(vuln.VulnerabilityID, "BDU") && len(vuln.VulnerabilityID) > 4 {
++						vulnLabelValues[21] = "https://bdu.fstec.ru/vul/" + vuln.VulnerabilityID[4:]
++						vulnLabelValues[19] = vuln.VulnerabilityID
++					} else {
++						vulnLabelValues[21] = vuln.PrimaryLink
++					}
+ 					metrics <- prometheus.MustNewConstMetric(c.vulnIdDesc, prometheus.GaugeValue, float64(1), vulnLabelValues...)
+ 				}
+ 			}
+
