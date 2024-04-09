@@ -23,6 +23,7 @@ This module helps bypass these limitations. It provides a new _L2LoadBalancer_ i
 
 <div data-presentation="../../presentations/381-l2-load-balancer/basics_l2loadbalancer_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1rVQ2RZ645HKAcMFU2hI_MPJZu_zA70IZ2OYWI1wSW34/ --->
+
 Thus:
 * The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding _Service_ will be created automatically, you just need to add them to the list of A-records for the application domain.
 * If one of the balancer nodes fails, only a part of the connections will be prone to failover to the healthy node.
