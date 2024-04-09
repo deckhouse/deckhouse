@@ -10,7 +10,7 @@ import:
   add: /
   to: /
   includePaths:
-  - kubelet
+  - ecr-credential-provider
   - install
   - uninstall
   before: setup
