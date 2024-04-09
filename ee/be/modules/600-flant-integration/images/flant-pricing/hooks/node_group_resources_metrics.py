@@ -39,6 +39,7 @@ def main(ctx: hook.Context):
         labels = {}
         if ng["name"] in ngs_capacity:
             if "nodeTemplate" in ng:
+                print(ng)
                 if ng["nodeTemplate"] != {}:
                     if "labels" in ng["nodeTemplate"]:
                         labels.update(ng["nodeTemplate"]["labels"])
