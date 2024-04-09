@@ -4,6 +4,8 @@ permalink: ru/update/notifications/
 lang: ru
 ---
 
+## Оповещение об уведомлении
+
 Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
 
 Сводную информацию о важных изменениях, об обновлении версий компонентов, а также о том, какие компоненты в кластере буду перезапущены в процессе обновления, можно найти в описании нулевой patch-версии релиза. Например, [v1.58.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.58.0) для релиза v1.58 Deckhouse Kubernetes Platform.
@@ -16,7 +18,7 @@ lang: ru
 
 1. Пропишите URL-адрес вебхука.
 
-Вызов вебхука произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
+   Вызов вебхука произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
 
 2. Используйте параметр `minimalNotificationTime`, чтобы установить минимальное время, которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse Kubernetes Platform на используемом канале обновлений.
 
@@ -32,7 +34,7 @@ lang: ru
    }
    ```
 
-   Где параметры вебхука:
+   Где параметры вебхука - это:
 
    * `version` — строка, номер минорной версии;
    * `requirements` — объект, требования к версии;
@@ -40,29 +42,29 @@ lang: ru
    * `applyTime` — строка, дата и время запланированного обновления (с учетом установленных окон обновлений) в формате RFC3339;
    * `message` — строка, текстовое сообщение о доступности новой минорной версии и запланированном времени обновления.
 
-Шаблон:
+   Шаблон:
 
-```
-^https?://[^\s/$.?#].[^\s]*$
-```
-Пример вебхука: https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa
+   ```
+   ^https?://[^\s/$.?#].[^\s]*$
+   ```
+   Пример вебхука: `https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa`
 
-Пример настройки оповещения:
+   Пример настройки оповещения:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     settings:
+       update:
+         releaseChannel: Stable
+         mode: Auto
+         notification:
+           webhook: https://release-webhook.mydomain.com
+   ```
 
 3. Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
 
@@ -88,6 +90,8 @@ spec:
 Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии будет отложено на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии ,eltn cxbnfnmcz - появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
 {% endalert %}
 
+## Алерты и статусы обновлений
+
 Во время обновления Deckhouse Kubernetes Platform отображаются алерты и статусы обновлений компонентов:
 
 - алерт `DeckhouseUpdating`;
@@ -99,17 +103,17 @@ spec:
    $ kubectl get deckhouserelease
    ```
 
-Если алерт `DeckhouseUpdating` не отображается, значит обновление завершено.
+   Если алерт `DeckhouseUpdating` не отображается, значит обновление завершено.
 
-Вывод команды позволяет прверить состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse Kubernetes Platform:
+   Вывод команды позволяет прверить состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse Kubernetes Platform:
 
-```console
-NAME       PHASE        TRANSITIONTIME   MESSAGE
-v1.46.8    Superseded   13d              
-v1.46.9    Superseded   11d              
-v1.47.0    Superseded   4h12m            
-v1.47.1    Deployed     4h12m            
-```
+   ```console
+   NAME       PHASE        TRANSITIONTIME   MESSAGE
+   v1.46.8    Superseded   13d              
+   v1.46.9    Superseded   11d              
+   v1.47.0    Superseded   4h12m            
+   v1.47.1    Deployed     4h12m            
+   ```
 
 2. Чтобы посмотреть статус пода, используйте команду:
 
@@ -117,19 +121,19 @@ v1.47.1    Deployed     4h12m
    $ kubectl -n d8-system get pods -l app=deckhouse
    ```
 
-Статус `Deployed` у соответствующей версии говорит о том, что переключение на соответствующую версию было выполнено (но это не значит, что оно закончилось успешно).
+   Статус `Deployed` у соответствующей версии говорит о том, что переключение на соответствующую версию было выполнено (но это не значит, что оно закончилось успешно).
 
-Вывод команды позволит проверить состояние пода Deckhouse Kubernetes Platform:
+   Вывод команды позволит проверить состояние пода Deckhouse Kubernetes Platform:
 
-```shell
+   ```shell
 
-NAME                   READY  STATUS   RESTARTS  AGE
-deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
-```
+   NAME                   READY  STATUS   RESTARTS  AGE
+   deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
+   ```
 
-* Если статус пода `Running` и в колонке `READY` указано `1/1` — обновление закончилось успешно.
-* Если статус пода `Running` и в колонке `READY` указано `0/1` — обновление еще не закончилось. Если это продолжается более 20–30 минут, это может говорить о наличии проблем в работе Deckhouse Kubernetes Platform. Необходима диагностика.
-* Если статус пода не `Running`, это может говорить о наличии проблем в работе Deckhouse Kubernetes Platform. Необходима диагностика.
+   * Если статус пода `Running` и в колонке `READY` указано `1/1` — обновление закончилось успешно.
+   * Если статус пода `Running` и в колонке `READY` указано `0/1` — обновление еще не закончилось. Если это продолжается более 20–30 минут, это может говорить о наличии проблем в работе Deckhouse Kubernetes Platform. Необходима диагностика.
+   * Если статус пода не `Running`, это может говорить о наличии проблем в работе Deckhouse Kubernetes Platform. Необходима диагностика.
 
 {% alert level="info" %}
 Если выявились проблемы, выполните следующие шаги:
