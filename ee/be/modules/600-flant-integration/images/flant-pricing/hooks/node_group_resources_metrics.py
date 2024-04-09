@@ -59,3 +59,7 @@ def main(ctx: hook.Context):
 
             ctx.metrics.expire(metric_group)
             ctx.metrics.collect(metric)
+
+
+if __name__ == "__main__":
+    hook.run(main, configpath="node_group_resources_metrics.yaml")
