@@ -20,20 +20,4 @@ entries:
     - title:
         en: Обновление в закрытом контуре
         ru: Обновление в закрытом контуре
-      folders:
-        - title:
-            en: Создание каталога
-            ru: Создание каталога
-          url: /update/security/closed-and-secure-environment/
-        - title:
-            en: Выгрузка образов модулей DKP из репозитория вендора
-            ru: Выгрузка образов модулей DKP из репозитория вендора
-          url: /update/security/vendor-images/
-        - title:
-            en: Загрузка образов модулей DKP в закрытый репозиторий
-            ru: Загрузка образов модулей DKP в закрытый репозиторий
-          url: /update/security/private-repository/
-        - title:
-            en: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
-            ru: Доступ из изолированных контуров container registry с фиксированным набором IP-адресов
-          url: /update/security/proxying-registry/
+      url: /update/security/
