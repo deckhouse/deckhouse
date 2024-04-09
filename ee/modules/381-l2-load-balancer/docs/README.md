@@ -10,10 +10,16 @@ Based on [MetalLB](https://metallb.universe.tf/) solution.
 
 [[MetalLB in L2 mode]](../../modules/380-metallb/#layer-2-mode) allows to order _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
 
+<div data-presentation="../../presentations/381-l2-load-balancer/basics_metallb_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
+
 * The node selected as the leader for the "public" IP becomes a "bottleneck" with no possibility of horizontal scaling.
 * If the balancer node fails, all current connections will be dropped for switching to a new balancing node that will be selected as the leader.
 
 This module helps bypass these limitations. It provides a new _L2LoadBalancer_ interface that:
+
+<div data-presentation="../../presentations/381-l2-load-balancer/basics_l2loadbalancer_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1rVQ2RZ645HKAcMFU2hI_MPJZu_zA70IZ2OYWI1wSW34/ --->
 
 * Allows to automatically order multiple _Service_ with type `LoadBalancer` according to the number of balancer nodes.
 * Provides an even distribution of L2 leadership among the balancer nodes.
