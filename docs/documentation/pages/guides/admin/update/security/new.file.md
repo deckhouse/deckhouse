@@ -33,86 +33,84 @@ lang: ru
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.3 bash
    ```
 
-Подробнее об использовании `dhctl mirror` для выгрузки образов читайте в [документации на сайте](https://deckhouse.ru/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry).
+   Подробнее об использовании `dhctl mirror` для выгрузки образов читайте в [разделе Обновление в закрытом контуре](ссылка на раздел).
 
-## Подготовительные шаги
+## Подготовка к установке обновлений в закрытый контур
 
 1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel`. Чтобы проверить, выполните команду ниже:
 
-```bash
-kubectl get mc deckhouse -o yaml | grep releaseChannel
-```
+   ```bash
+   kubectl get mc deckhouse -o yaml | grep releaseChannel
+   ```
 
-В случае, если канал обновлений указан, его необходимо удалить, отредактировав конфигурацию модуля Deckhouse:
+1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse:
 
-```bash
-kubectl edit mc deckhouse -o yaml
-```
+   ```bash
+   kubectl edit mc deckhouse -o yaml
+   ```
 
-После внесения изменений дождитесь завершения обработки очереди Deckhouse. Проверить очередь можно командой:
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что измеени внесены, командой:
 
-```bash
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-```
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
 
-2. Переведите установку обновлений платформы в ручной режим. Для этого отредактируйте конфигурацию модуля Deckhouse командой:
+1. Переведите установку обновлений платформы в ручной режим. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
-```bash
-kubectl edit mc deckhouse -o yaml
-```
+   ```bash
+   kubectl edit mc deckhouse -o yaml
+   ```
 
-Пример корректной конфигурации модуля Deckhouse после шагов 1 и 2:
+   Пример корректной конфигурации модуля Deckhouse после шагов 1 и 2:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
-  creationTimestamp: "2024-03-11T10:28:47Z"
-  generation: 3
-  name: deckhouse
-  resourceVersion: "538605"
-  uid: 39114274-a091-4bf0-8506-3a224917a725
-spec:
-  settings:
-    bundle: Default
-    logLevel: Info
-    update:
-      mode: Manual
-  version: 1
-status:
-  state: Enabled
-  status: Ready
-  type: ""
-  version: "1"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     annotations:
+       kubectl.kubernetes.io/last-applied-configuration: |
+         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
+     creationTimestamp: "2024-03-11T10:28:47Z"
+     generation: 3
+     name: deckhouse
+     resourceVersion: "538605"
+     uid: 39114274-a091-4bf0-8506-3a224917a725
+   spec:
+     settings:
+       bundle: Default
+       logLevel: Info
+       update:
+         mode: Manual
+     version: 1
+   status:
+     state: Enabled
+     status: Ready
+     type: ""
+     version: "1"
+   ```
 
-После внесения изменений дождитесь завершения обработки очереди Deckhouse. Проверить очередь можно командой:
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
 
-```bash
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-```
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
 
-3. Загрузите все образы поставки DKP в реестр образов контейнеров, находящийся в закрытом окружении.
+1. Загрузите все образы поставки DKP в реестр образов контейнеров, находящийся в закрытом окружении. Для этого перейдите в каталог с содержимым поставки и выполните команду:
 
-Для этого перейдите в каталог с содержимым поставки и выполните команду:
+   ```bash
+   ./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM:5000/path/to/deckhouse/ee" -u "ПОЛЬЗОВАТЕЛЬ" -p "ПАРОЛЬ"
+   ```
 
-```bash
-./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM:5000/path/to/deckhouse/ee" -u "ПОЛЬЗОВАТЕЛЬ" -p "ПАРОЛЬ"
-```
+1. В случае использования самоподписанных сертификатов для реестра образов контейнеров используйте переменные окружения `SSL_CERT_FILE` и `SSL_CERT_DIR`, чтобы задать пути к СА сертификату и сертификатам реестра образов контейнеров, как представлено на примере:
 
-В случае использования самоподписанных сертификатов для реестра образов контейнеров используйте переменные окружения `SSL_CERT_FILE` и `SSL_CERT_DIR`, чтобы задать пути к СА сертификату и сертификатам реестра образов контейнеров. Пример:
+   ```bash
+   export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
+   export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
+   ```
 
-```bash
-export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
-export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
-```
+Подробнее об использовании `dhctl mirror` для загрузки образов в закрытый реестр образов контейнеров читайте в [разделе Обновление в закрытом контуре](ссылка на раздел).
 
-Подробнее об использовании `dhctl mirror` для загрузки образов в закрытый реестр образов контейнеров читайте в [документации на сайте](https://deckhouse.ru/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry).
-
-4. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse командой:
+1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
 ```bash
 kubectl edit mc deckhouse -o yaml
