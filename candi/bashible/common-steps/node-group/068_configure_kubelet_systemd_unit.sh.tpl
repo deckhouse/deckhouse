@@ -42,6 +42,14 @@ fi
 cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
 {{- end }}
 
+credential_provider_flags=""
+{{- if semverCompare ">1.26" .kubernetesVersion }}
+    if bb-flag? kubelet-enable-credential-provider; then
+      credential_provider_flags="--image-credential-provider-config=/var/lib/kubelet/credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
+      bb-flag-unset kubelet-enable-credential-provider
+    fi
+{{- end }}
+
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
 function _enable_kubelet_service() {
 {{- if ne .runType "ImageBuilding" }}
@@ -83,6 +91,7 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if semverCompare "<1.27" .kubernetesVersion }}
     ${cri_config} \\
 {{- end }}
+    "$credential_provider_flags" \\
     --v=2
 EOF
 

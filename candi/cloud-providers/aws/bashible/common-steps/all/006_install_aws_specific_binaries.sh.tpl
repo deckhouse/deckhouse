@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-mkdir -p /opt/deckhouse/bin
-cp -f ecr-credential-provider /opt/deckhouse/bin
+bb-rp-fetch "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
+bb-rp-install "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
