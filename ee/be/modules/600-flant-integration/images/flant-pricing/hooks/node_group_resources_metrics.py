@@ -38,17 +38,19 @@ def main(ctx: hook.Context):
 
         labels = {"na/me": ng["name"]}
         if ng["name"] in ngs_capacity:
-            # if "nodeTemplate" in ng:
-            #     if "labels" in ng["nodeTemplate"]:
-            #         labels.update(ng["nodeTemplate"]["labels"])
-            #     if "taints" in ng["nodeTemplate"]:
-            #         for taint in ng["nodeTemplate"]["taints"]:
-            #             taint_labels = {}
-            #             if "value" in taint:
-            #                 taint_labels.update({'taint-' + taint["key"]: taint["value"]})
-            #             else:
-            #                 taint_labels.update({'taint-' + taint["key"]: ""})
-            #             labels.update(taint_labels)
+            if "nodeTemplate" in ng:
+                if "labels" in ng["nodeTemplate"]:
+                    for k, v in ng["nodeTemplate"]["labels"].items():
+                        labels.update({k.replace(".", "_").replace("/", "__"): v})
+                if "taints" in ng["nodeTemplate"]:
+                    for taint in ng["nodeTemplate"]["taints"]:
+                        taint_labels = {}
+                        key = 'taint_' + taint["key"].replace(".", "_").replace("/", "__")
+                        if "value" in taint:
+                            taint_labels.update({key: taint["value"]})
+                        else:
+                            taint_labels.update({key: ""})
+                        labels.update(taint_labels)
             print(labels)
             ctx.metrics.expire(metric_group)
             ctx.metrics.collect({
