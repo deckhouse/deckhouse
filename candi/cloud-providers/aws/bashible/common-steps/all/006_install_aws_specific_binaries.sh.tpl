@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+{{- if semverCompare ">1.26" .kubernetesVersion }}
 bb-rp-fetch "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
 bb-rp-install "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
+{{- end }}
