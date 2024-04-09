@@ -41,11 +41,11 @@ def main(ctx: hook.Context):
             if "nodeTemplate" in ng:
                 if "labels" in ng["nodeTemplate"]:
                     for k, v in ng["nodeTemplate"]["labels"].items():
-                        labels.update({k.replace(".", "_").replace("/", "__"): v})
+                        labels.update({k.replace("-", "_").replace(".", "__").replace("/", "___"): v})
                 if "taints" in ng["nodeTemplate"]:
                     for taint in ng["nodeTemplate"]["taints"]:
                         taint_labels = {}
-                        key = 'taint_' + taint["key"].replace(".", "_").replace("/", "__")
+                        key = 'taint_' + taint["key"].replace("-", "_").replace(".", "__").replace("/", "___")
                         if "value" in taint:
                             taint_labels.update({key: taint["value"]})
                         else:
