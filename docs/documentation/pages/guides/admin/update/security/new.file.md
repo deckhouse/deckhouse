@@ -112,86 +112,86 @@ lang: ru
 
 1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
-```bash
-kubectl edit mc deckhouse -o yaml
-```
+   ```bash
+   kubectl edit mc deckhouse -o yaml
+   ```
 
-Добавьте `releaseChannel: Stable` в блок `settings`.
+1. Добавьте `releaseChannel: Stable` в блок `settings`.
 
-Пример корректной конфигурации модуля Deckhouse после шага 5:
+   Пример корректной конфигурации модуля Deckhouse Kubernetes Platform:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
-  creationTimestamp: "2024-03-11T10:28:47Z"
-  generation: 3
-  name: deckhouse
-  resourceVersion: "538605"
-  uid: 39114274-a091-4bf0-8506-3a224917a725
-spec:
-  settings:
-    bundle: Default
-    logLevel: Info
-    releaseChannel: Stable
-    update:
-      mode: Manual
-  version: 1
-status:
-  state: Enabled
-  status: Ready
-  type: ""
-  version: "1"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     annotations:
+       kubectl.kubernetes.io/last-applied-configuration: |
+         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
+     creationTimestamp: "2024-03-11T10:28:47Z"
+     generation: 3
+     name: deckhouse
+     resourceVersion: "538605"
+     uid: 39114274-a091-4bf0-8506-3a224917a725
+   spec:
+     settings:
+       bundle: Default
+       logLevel: Info
+       releaseChannel: Stable
+       update:
+         mode: Manual
+     version: 1
+   status:
+     state: Enabled
+     status: Ready
+     type: ""
+     version: "1"
+   ```
 
-После внесения изменений дождитесь завершения обработки очереди Deckhouse. Проверить очередь можно командой:
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
 
-```bash
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-```
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
 
-5. Загрузите манифесты `DeckhouseReleases` из файла `deckhousereleases.yaml` командой:
+1. Загрузите манифесты `DeckhouseReleases` из файла `deckhousereleases.yaml` командой:
 
-```bash
-kubectl apply -f deckhousereleases.yaml
-```
+   ```bash
+   kubectl apply -f deckhousereleases.yaml
+   ```
 
-6. Проверьте наличие релизов Deckhouse командой:
+1. Проверьте наличие релизов Deckhouse Kubernetes Platform командой:
 
-```bash
-kubectl get deckhousereleases.deckhouse.io
-```
+   ```bash
+   kubectl get deckhousereleases.deckhouse.io
+   ```
 
-Пример вывода команды:
+   Пример вывода команды:
 
-```text
-$ kubectl get deckhousereleases.deckhouse.io 
-NAME       PHASE     TRANSITIONTIME   MESSAGE
-v1-57-5    Pending   48s              "k8s" requirement for DeckhouseRelease "1.57.5" not met: current kubernetes version is lower then required
-v1.45.11   Pending   4s               Waiting for manual approval
-v1.46.12   Pending   34s              
-v1.47.5    Pending   34s              
-v1.48.9    Pending   34s              
-v1.49.6    Pending   34s              
-v1.50.6    Pending   34s              
-v1.51.10   Pending   34s              
-v1.52.10   Pending   34s              
-v1.53.3    Pending   34s              
-v1.54.7    Pending   34s              
-v1.55.7    Pending   34s              
-v1.56.9    Pending   34s              
-v1.57.5    Pending   34s              
-v1.58.3    Pending   34s
-```
+   ```text
+   $ kubectl get deckhousereleases.deckhouse.io 
+   NAME       PHASE     TRANSITIONTIME   MESSAGE
+   v1-57-5    Pending   48s              "k8s" requirement for DeckhouseRelease "1.57.5" not met: current kubernetes version is lower then required
+   v1.45.11   Pending   4s               Waiting for manual approval
+   v1.46.12   Pending   34s              
+   v1.47.5    Pending   34s              
+   v1.48.9    Pending   34s              
+   v1.49.6    Pending   34s              
+   v1.50.6    Pending   34s              
+   v1.51.10   Pending   34s              
+   v1.52.10   Pending   34s              
+   v1.53.3    Pending   34s              
+   v1.54.7    Pending   34s              
+   v1.55.7    Pending   34s              
+   v1.56.9    Pending   34s              
+   v1.57.5    Pending   34s              
+   v1.58.3    Pending   34s
+   ```
 
-**Важно:** в случае обнаружения в списке релиза с нестандартным названием без точек (из примера выше: `v1-57-5`) удалите его командой:
+1. В случае обнаружения в списке релиза с нестандартным названием без точек (из примера выше: `v1-57-5`) удалите его командой:
 
-```bash
-kubectl delete deckhousereleases v1-57-5
-```
+   ```bash
+   kubectl delete deckhousereleases v1-57-5
+   ```
 
 ## Установка обновлений
 
