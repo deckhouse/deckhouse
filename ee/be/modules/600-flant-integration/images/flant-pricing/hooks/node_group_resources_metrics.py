@@ -2,14 +2,12 @@
 #
 # Copyright 2024 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
-# This hook is responsible for generating metrics for node count of each type.
+# This hook is responsible for generating metrics for node group resources.
 #
 
-from dataclasses import dataclass
-from typing import List
+from kubernetes import utils
 
 from shell_operator import hook
-from kubernetes import utils
 
 
 def main(ctx: hook.Context):
