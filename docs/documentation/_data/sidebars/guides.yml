@@ -16,15 +16,7 @@ entries:
     - title:
         en: Получение уведомлений
         ru: Получение уведомлений
-      folders:
-        - title:
-            en: Оповещение об обновлении платформы
-            ru: Оповещение об обновлении платформы
-          url: /update/notifications/dkp-notice/
-        - title:
-            en: Алерты и статусы обновлений компонентов
-            ru: Алерты и статусы обновлений компонентов
-          url: /update/notifications/procedure/
+      url: /update/notifications/
     - title:
         en: Обновление в закрытом контуре
         ru: Обновление в закрытом контуре

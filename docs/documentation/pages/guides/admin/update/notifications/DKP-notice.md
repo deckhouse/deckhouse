@@ -1,6 +1,6 @@
 ---
 title: Получение уведомлений
-permalink: ru/update/notifications/dkp-notice/
+permalink: ru/update/notifications/
 lang: ru
 ---
 
