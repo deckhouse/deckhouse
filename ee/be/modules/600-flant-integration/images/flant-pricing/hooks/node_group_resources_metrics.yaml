@@ -30,5 +30,5 @@ kubernetes:
     jqFilter: |
       {
           "name":         .metadata.name,
-          "nodeTemplate": .spec.nodeTemplate
+          "nodeTemplate": (.spec.nodeTemplate // {})
       }
