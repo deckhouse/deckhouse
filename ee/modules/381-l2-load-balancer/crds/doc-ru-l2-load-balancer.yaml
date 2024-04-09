@@ -23,7 +23,7 @@ spec:
                   externalTrafficPolicy:
                     description: |
                       Описывает каким образом LoadBalancer отправляет трафик к конечным подам:
-                      * Local (по умолчанию) — трафик направляется к подам, расположенным на той же ноде, что и L2 LoadBalancer speaker
+                      * Local (по умолчанию) — трафик направляется к подам, расположенным на той же ноде, что и L2 LoadBalancer speaker.
                       * Cluster — трафик может быть направлени на любой под в кластере.
                   selector:
                     description: |
