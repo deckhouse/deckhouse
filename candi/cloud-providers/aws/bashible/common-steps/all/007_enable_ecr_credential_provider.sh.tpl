@@ -20,7 +20,7 @@ bb-flag-set kubelet-enable-credential-provider
 
 # matchImages should contain globs, not regexp, but in k8s code we found next patter
 # ^(\d{12})\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.(amazonaws\.com(\.cn)?|sc2s\.sgov\.gov|c2s\.ic\.gov)$
-bb-sync-file /var/lib/kubelet/credential-provider-config.yaml - << "EOF"
+bb-sync-file /var/lib/bashible/kubelet-credential-provider-config.yaml - << "EOF"
 {
     "providers": [
         {

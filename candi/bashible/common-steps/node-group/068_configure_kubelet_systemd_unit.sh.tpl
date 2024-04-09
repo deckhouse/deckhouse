@@ -45,7 +45,7 @@ cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_s
 credential_provider_flags=""
 {{- if semverCompare ">1.26" .kubernetesVersion }}
     if bb-flag? kubelet-enable-credential-provider; then
-      credential_provider_flags="--image-credential-provider-config=/var/lib/kubelet/credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
+      credential_provider_flags="--image-credential-provider-config=/var/lib/bashible/kubelet-credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
       bb-flag-unset kubelet-enable-credential-provider
     fi
 {{- end }}
