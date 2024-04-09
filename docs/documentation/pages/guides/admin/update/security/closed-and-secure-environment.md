@@ -345,7 +345,7 @@ v1.46.12   Pending    10s              Waiting for manual approval
 v1.47.5    Pending    5m55s            
 v1.48.9    Pending    5m...
 ```
-### Ручная загрузка образов в изолированный приватный registry
+## Загрузка образов в изолированный приватный registry
 
 {% alert level="warning" %}
 Доступно только в Enterprise Edition.
@@ -436,7 +436,7 @@ v1.48.9    Pending    5m...
    kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
    ```
 
-### Ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry
+## Загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry
 
 Ниже описаны шаги, необходимые для ручной загрузки образов модулей, подключаемых из источника модулей (ресурса [*ModuleSource*](cr.html#modulesource)):
 
