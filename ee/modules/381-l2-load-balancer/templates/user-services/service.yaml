@@ -13,7 +13,7 @@ metadata:
     metallb.universe.tf/address-pool: {{ $loadBalancer.addressPool }}
 spec:
   type: LoadBalancer
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: {{ $loadBalancer.externalTrafficPolicy | quote}}
   loadBalancerClass: l2-load-balancer.network.deckhouse.io
   ports:
     {{- range $port := $loadBalancer.ports }}

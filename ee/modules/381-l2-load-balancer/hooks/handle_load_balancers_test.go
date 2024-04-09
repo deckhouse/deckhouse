@@ -42,6 +42,7 @@ spec:
   service:
     sourceRanges:
     - 10.0.0.0/24
+    externalTrafficPolicy: Local
     selector:
       app: test
     ports:
@@ -61,6 +62,7 @@ spec:
 "name": "test",
 "namespace": "test",
 "addressPool": "mypool",
+"externalTrafficPolicy": "Local",
 "sourceRanges": ["10.0.0.0/24"],
 "nodeSelector": {
 	"role": "worker"
@@ -131,6 +133,7 @@ spec:
   service:
     selector:
       app: test
+    externalTrafficPolicy: Local
     ports:
     - name: http
       protocol: TCP
@@ -150,6 +153,7 @@ spec:
 "name": "test",
 "namespace": "test",
 "addressPool": "mypool",
+"externalTrafficPolicy": "Local",
 "nodeSelector": {
 	"node-role.kubernetes.io/frontend": ""
 },
