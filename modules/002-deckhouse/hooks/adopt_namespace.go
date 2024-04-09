@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -56,6 +58,10 @@ func adoptNS(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	if len(snap) > 1 {
+		return fmt.Errorf("found more than one d8-cloud-instance-manager ns resource in the cluster")
+	}
+	
 	if snap[0] == nil {
 		return nil
 	}

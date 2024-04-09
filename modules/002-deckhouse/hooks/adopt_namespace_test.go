@@ -23,8 +23,20 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: deckhouse :: hooks :: adopt_namespace ::", func() {
+var _ = Describe("Modules :: deckhouse :: hooks :: adopt_namespace ::", func() {
 	f := HookExecutionConfigInit(`{"deckhouse": { "internal":{}}}`, `{}`)
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
 
 	Context("Cluster has ns in the d8-system helm release", func() {
 		BeforeEach(func() {
