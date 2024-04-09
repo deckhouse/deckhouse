@@ -36,22 +36,20 @@ def main(ctx: hook.Context):
     for snapshot in ctx.snapshots["ngs"]:
         ng = snapshot["filterResult"]
 
-        labels = {}
+        labels = {"name": ng["name"]}
         if ng["name"] in ngs_capacity:
             if "nodeTemplate" in ng:
-                print(ng)
-                if ng["nodeTemplate"] != {}:
-                    if "labels" in ng["nodeTemplate"]:
-                        labels.update(ng["nodeTemplate"]["labels"])
-                    if "taints" in ng["nodeTemplate"]:
-                        for taint in ng["nodeTemplate"]["taints"]:
-                            taint_labels = {}
-                            if "value" in taint:
-                                taint_labels.update({'taint-' + taint["key"]: taint["value"]})
-                            else:
-                                taint_labels.update({'taint-' + taint["key"]: ""})
-                            labels.update(taint_labels)
-
+                if "labels" in ng["nodeTemplate"]:
+                    labels.update(ng["nodeTemplate"]["labels"])
+                if "taints" in ng["nodeTemplate"]:
+                    for taint in ng["nodeTemplate"]["taints"]:
+                        taint_labels = {}
+                        if "value" in taint:
+                            taint_labels.update({'taint-' + taint["key"]: taint["value"]})
+                        else:
+                            taint_labels.update({'taint-' + taint["key"]: ""})
+                        labels.update(taint_labels)
+            print(labels)
             ctx.metrics.expire(metric_group)
             ctx.metrics.collect({
                 "name": "flant_pricing_node_group_cpu_cores",
