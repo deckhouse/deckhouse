@@ -20,23 +20,27 @@ lang: ru
 
 ## Автоматический режим
 
-При автоматическом режиме обновления происходит следующее:
+При автоматическом режиме обновлений:
 
-1. При появлении нового релиза DKP скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
+1. После появления нового релиза на выбранном канале обновлений DKP скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
 
-2. После появления кастомного ресурса *DeckhouseRelease* DKP обновляет кластер на соответствующую версию согласно установленным [параметрам обновлений](modules/002-deckhouse/configuration.html#parameters-update). По умолчанию — автоматически, сразу после появления обновления.
+2. После появления кастомного ресурса *DeckhouseRelease* DKP обновляет кластер на новую версию согласно установленным [параметрам обновлений](modules/002-deckhouse/configuration.html#parameters-update). По умолчанию — автоматически, сразу после появления обновления.
 
-Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
+Чтобы посмотреть список и состояние всех релизов, выполните:
 
 ```shell
 kubectl get deckhousereleases
 ```
 
-<!-- Если в автоматическом режиме окна обновлений не заданы, Deckhouse Kubernetes Platform обновится сразу, как только новый релиз станет доступен. -->
-
 ## Подтверждение потенциально опасных обновлений
 
-Чтобы включить подтверждение потенциально опасных (disruptive) обновлений, добавьте параметр `disruptionApprovalMode: Manual` в *ModuleConfig*:
+В DKP можно включить ручное подтверждение потенциально опасных (disruptive) обновлений в автоматическом режиме для кластера или отдельно для группы узлов. Тогда DKP будет проверять каждое обновление и просить ручное подтверждение для потенциально опасных.
+
+### Для кластера
+
+DKP будет запрашивать подтверждение обновления, если оно меняет значения по умолчанию или поведение модулей.
+
+Чтобы включить подтверждение, добавьте параметр `disruptionApprovalMode: Manual` в *ModuleConfig*:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -51,22 +55,37 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-<!-- Вот этот сценарий тоже отдельный. Как его установить? Для критических изменений, из-за которых обновление невозможно, настроены алерты. Например:
+Подтвердите минорное обновления DKP, например, до версии `v1.58.8`:
 
-D8NodeHasDeprecatedOSVersion - на нодах установлена устаревшая операционная система;
-HelmReleasesHasResourcesWithDeprecatedVersions - в helm-релизах используются устаревшие ресурсы;
-KubernetesVersionEndOfLife - текущая версия Kubernetes больше не поддерживается.-->
+```shell
+kubectl patch DeckhouseRelease v1.58.8 --type=merge -p='{"approved": true}'
+```
 
-В этом режиме можно подтвердить каждое минорное потенциально опасное обновление DKP на соответствующем ресурсе [*DeckhouseRelease*](cr.html#deckhouserelease).
+### Для узлов
 
-ДЛЯ КЛАСТЕРА И ДЛЯ УЗЛОВ!
+DKP будет запрашивать подтверждение обновления, если оно требует прерывание работы узла.
 
-Пример подтверждения минорного обновления DKP на версию `v1.43.2`:
+Чтобы включить подтверждение, добавьте параметр `approvalMode: Manual` в *NodeGroup*:
 
-   ```shell
-   kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-   ```
+```yaml
+# NodeGroup for cloud nodes in AWS.
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+...
+  disruptions:
+    approvalMode: Manual
+```
 
+Подтвердите обновление узла, установив аннотацию `update.node.deckhouse.io/disruption-approved: ""` на узел:
+
+```shell
+kubectl annotate node <имя узла> update.node.deckhouse.io/disruption-approved=
+```
+
+<!-- 
 1. При необходимости, выполните обновление модуля без определенного времени.
 
    > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
@@ -88,34 +107,34 @@ KubernetesVersionEndOfLife - текущая версия Kubernetes больше
      annotations:
        release.deckhouse.io/apply-now: "true"
    ...
-   ```
+   ``` -->
 
 ## Ручной режим
 
-1. Включите ручное подтверждение обновлений в ресурсе *ModuleConfig/deckhouse* с помощью параметра `update.mode`:
+В ручном режиме нужно подтверждать каждое минорное обновление DKP.
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: deckhouse
-   spec:
-     version: 1
-     settings:
-       releaseChannel: Stable
-       update:
-         mode: Manual
-  ```
+Чтобы включить ручной режим, в ресурсе *ModuleConfig* с именем `deckhouse` установите параметр `spec.update.mode: Manual`:
 
-В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse Kubernetes Platform (без учета patch-версий).
-
-Пример подтверждения обновления на версию `v1.43.2`:
-
-```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+    name: deckhouse
+spec:
+    version: 1
+    settings:
+    releaseChannel: Stable
+    update:
+        mode: Manual
 ```
 
-**Срочное обновление**???
+Подтвердите минорное обновления DKP, например, до версии `v1.58.8`:
+
+```shell
+kubectl patch DeckhouseRelease v1.58.8 --type=merge -p='{"approved": true}'
+```
+
+<!-- **Срочное обновление**???
 
 Обновление без окна обновлений позволяет выполнить обновление модуля вне определенного для этого времени. Это необходимо в случае срочного ручного обновления. 
 
@@ -138,7 +157,7 @@ metadata:
   annotations:
     release.deckhouse.io/apply-now: "true"
 ...
-```
+``` -->
 
 ## Отключение механизма обновлений
 
