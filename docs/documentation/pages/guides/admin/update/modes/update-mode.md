@@ -24,7 +24,7 @@ lang: ru
 
 ## Автоматический режим
 
-1. После появления нового релиза на выбранном [канале обновлений](/channels-and-windows/) DKP скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
+1. После появления нового релиза на выбранном [канале обновлений](../channels-and-windows/) DKP скачает его в кластер и создаст кастомный ресурс [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease).
 
 2. После появления кастомного ресурса *DeckhouseRelease* DKP обновляет кластер на новую версию согласно установленным [параметрам обновлений](modules/002-deckhouse/configuration.html#parameters-update). По умолчанию — автоматически, сразу после появления обновления.
 
