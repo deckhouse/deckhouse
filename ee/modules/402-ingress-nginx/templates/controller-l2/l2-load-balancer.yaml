@@ -19,6 +19,7 @@ spec:
   {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 2 }}
   {{- end }}
   service:
+    externalTrafficPolicy: Local
     sourceRanges:
     {{- $sourceRanges | toYaml | nindent 6 }}
     labelSelector:
