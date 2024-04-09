@@ -88,6 +88,18 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 
 	for _, panel := range dashboardPanels {
 		panelTitle := panel.Get("title").String()
+		panelType := panel.Get("type").String()
+		replaceWith, isDeprecated := evaluateDeprecatedPanelType(panelType)
+		if isDeprecated {
+			msgs.Add(
+				NewError(
+					fileName,
+					"deprecated panel type",
+					fmt.Sprintf("Panel %s is of deprecated type: '%s', consider using '%s'",
+						panelTitle, panelType, replaceWith),
+				),
+			)
+		}
 		intervals := evaluateDeprecatedIntervals(panel)
 		for _, interval := range intervals {
 			msgs.Add(
@@ -111,8 +123,18 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				),
 			)
 		}
-		datasourceUIDs := evaluateHardcodedDatasourceUIDs(panel)
-		for _, datasourceUID := range datasourceUIDs {
+		legacyDatasourceUIDs, hardcodedDatasourceUIDs := evaluateDeprecatedDatasourceUIDs(panel)
+		for _, datasourceUID := range legacyDatasourceUIDs {
+			msgs.Add(
+				NewError(
+					fileName,
+					"legacy datasource uid",
+					fmt.Sprintf("Panel %s contains legacy datasource uid: '%s', consider resaving dashboard using newer version of Grafana",
+						panelTitle, datasourceUID),
+				),
+			)
+		}
+		for _, datasourceUID := range hardcodedDatasourceUIDs {
 			msgs.Add(
 				NewError(
 					fileName,
@@ -126,19 +148,28 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 	return msgs
 }
 
-func evaluateHardcodedDatasourceUIDs(panel gjson.Result) []string {
+func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (legacyUIDs, hardcodedUIDs []string) {
 	targets := panel.Get("targets").Array()
-	datasourceUIDs := make([]string, 0)
+	legacyUIDs = make([]string, 0)
+	hardcodedUIDs = make([]string, 0)
 	for _, target := range targets {
 		datasource := target.Get("datasource")
 		if datasource.Exists() {
-			uid := datasource.Get("uid").String()
-			if !strings.HasPrefix(uid, "$") {
-				datasourceUIDs = append(datasourceUIDs, uid)
+			var uidStr string
+			uid := datasource.Get("uid")
+			if uid.Exists() {
+				uidStr = uid.String()
+			} else {
+				// some old dashboards (before Grafana 8.3) may implicitly contain uid as a string, not as parameter
+				uidStr = datasource.String()
+				legacyUIDs = append(legacyUIDs, uidStr)
+			}
+			if !strings.HasPrefix(uidStr, "$") {
+				hardcodedUIDs = append(hardcodedUIDs, uidStr)
 			}
 		}
 	}
-	return datasourceUIDs
+	return hardcodedUIDs, legacyUIDs
 }
 
 var (
@@ -168,4 +199,16 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+var (
+	deprecatedPanelTypes = map[string]string{
+		"graph":                 "timeseries",
+		"flant-statusmap-panel": "status-history",
+	}
+)
+
+func evaluateDeprecatedPanelType(panelType string) (replaceWith string, isDeprecated bool) {
+	replaceWith, isDeprecated = deprecatedPanelTypes[panelType]
+	return replaceWith, isDeprecated
 }
