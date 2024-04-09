@@ -91,7 +91,7 @@ kubectl annotate node <имя узла> update.node.deckhouse.io/disruption-appr
 
 В ручном режиме каждое минорное обновление DKP требует подтверждения администратора.
 
-Чтобы включить ручной режим, в ресурсе *ModuleConfig* с именем `deckhouse` установите параметр `spec.update.mode: Manual`:
+Чтобы включить ручной режим, в ресурсе *ModuleConfig* с именем `deckhouse` установите параметр `update.mode: Manual`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
