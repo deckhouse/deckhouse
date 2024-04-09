@@ -74,3 +74,24 @@ spec:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
     storageClass: localpath-all
   version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-kubernetes
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  enabled: true
