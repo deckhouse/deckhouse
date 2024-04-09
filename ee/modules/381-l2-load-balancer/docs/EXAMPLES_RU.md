@@ -59,7 +59,7 @@ title: "The l2-load-balancer module: примеры"
   d8-l2-load-balancer-nginx-2   LoadBalancer   10.222.186.57   192.168.199.105   8000:30272/TCP   1s
   ```
   
-  Назначенные IP адреса можно также увидеть в разделе Status объекта L2LoadBalacner:
+  Назначенные IP-адреса можно также увидеть в поле `status` ресурса `L2LoadBalancer`:
   
 * ```bash
   kubectl describe l2loadbalancers.deckhouse.io nginx

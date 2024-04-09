@@ -67,6 +67,8 @@ spec:
                     enum: ["Local", "Cluster"]
                     description: |
                       Denotes if this L2 LoadBalancer desires to route external traffic to node-local or cluster-wide endpoints. There are two available options: Local (default) and Cluster.
+                      * `Local` (by default) — traffic is routed to pods located on the same node as L2 LoadBalancer speaker.
+                      * `Cluster` — traffic can be routed to any pod in the cluster.
                   selector:
                     type: object
                     x-doc-d8Revision: ee
