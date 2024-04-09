@@ -50,15 +50,20 @@ def main(ctx: hook.Context):
                             else:
                                 taint_labels.update({'taint-' + taint["key"]: ""})
                             labels.update(taint_labels)
-            metric = {
-                "name": "flant_pricing_node_group_cpu_cores",
-                "group": metric_group,
-                "set": ng["name"]["cpu"],
-                "labels": labels,
-            }
 
             ctx.metrics.expire(metric_group)
-            ctx.metrics.collect(metric)
+            ctx.metrics.collect({
+                "name": "flant_pricing_node_group_cpu_cores",
+                "group": metric_group,
+                "set": ngs_capacity[ng["name"]]["cpu"],
+                "labels": labels,
+            })
+            ctx.metrics.collect({
+                "name": "flant_pricing_node_group_memory",
+                "group": metric_group,
+                "set": ngs_capacity[ng["name"]]["memory"],
+                "labels": labels,
+            })
 
 
 if __name__ == "__main__":

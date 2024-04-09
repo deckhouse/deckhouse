@@ -1,7 +1,7 @@
 # Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
-# This is a config for node_metrics.py hook.
+# This is a config for node_group_resources_metrics.py hook.
 configVersion: v1
 kubernetes:
   - name: nodes
