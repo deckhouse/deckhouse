@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package migrate
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -30,7 +28,7 @@ import (
 //   it could be deleted after 1.60 release
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/deckhouse/adopt_namespace",
+	Queue:        "/modules/deckhouse/adopt_node_manager_resources",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -40,42 +38,55 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-cloud-instance-manager"}},
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   filterNS,
+			FilterFunc:                   filterResource,
+		},
+		{
+			Name:       "cm",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-rbac-proxy-ca.crt"}},
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			FilterFunc:                   filterResource,
 		},
 	},
-}, adoptNS)
+}, adoptResources)
 
-func filterNS(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	if unstructured.GetAnnotations()["meta.helm.sh/release-namespace"] == "d8-system" {
+func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if unstructured.GetAnnotations()["meta.helm.sh/release-name"] == "deckhouse" {
 		return nil, nil
 	}
 	return unstructured.GetName(), nil
 }
 
-func adoptNS(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ns"]
-	if len(snap) == 0 {
-		return nil
-	}
-
-	if len(snap) > 1 {
-		return fmt.Errorf("found more than one d8-cloud-instance-manager ns resource in the cluster")
-	}
-	
-	if snap[0] == nil {
-		return nil
-	}
-
-	name := snap[0].(string)
+func adoptResources(input *go_hook.HookInput) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]string{
-				"meta.helm.sh/release-name":      "node-manager",
-				"meta.helm.sh/release-namespace": "d8-system",
+				"meta.helm.sh/release-name": "deckhouse",
 			},
 		},
 	}
-	input.PatchCollector.MergePatch(patch, "v1", "Namespace", "", name)
 
+	snap := input.Snapshots["ns"]
+	if len(snap) == 1 {
+		if snap[0] != nil {
+			name := snap[0].(string)
+			input.PatchCollector.MergePatch(patch, "v1", "Namespace", "", name)
+		}
+	}
+
+	snap = input.Snapshots["cm"]
+	if len(snap) == 1 {
+		if snap[0] != nil {
+			name := snap[0].(string)
+			input.PatchCollector.MergePatch(patch, "v1", "ConfigMap", "d8-cloud-instance-manager", name)
+		}
+	}
 	return nil
 }

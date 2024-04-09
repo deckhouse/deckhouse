@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-0
-  namespace: ` + packagesProxyNamespace + `
+  namespace: d8-cloud-instance-manager
   labels:
     app: "registry-packages-proxy"
 status:
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-1
-  namespace: ` + packagesProxyNamespace + `
+  namespace: d8-cloud-instance-manager
   labels:
     app: "registry-packages-proxy"
 status:
@@ -61,7 +61,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: packages-proxy-2
-  namespace: ` + packagesProxyNamespace + `
+  namespace: d8-cloud-instance-manager
   labels:
     app: "registry-packages-proxy"
 status:

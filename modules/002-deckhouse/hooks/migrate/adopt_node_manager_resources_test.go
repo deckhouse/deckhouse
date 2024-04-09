@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package migrate
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: deckhouse :: hooks :: adopt_namespace ::", func() {
+var _ = Describe("Modules :: deckhouse :: hooks :: adopt_node_manager_resources ::", func() {
 	f := HookExecutionConfigInit(`{"deckhouse": { "internal":{}}}`, `{}`)
 
 	Context("Empty cluster", func() {
@@ -38,7 +38,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: adopt_namespace ::", func() {
 		})
 	})
 
-	Context("Cluster has ns in the d8-system helm release", func() {
+	Context("Cluster has ns in the deckhouse helm release", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(`
 ---
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    meta.helm.sh/release-name: node-manager
+    meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:
     app.kubernetes.io/managed-by: Helm
@@ -69,7 +69,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    meta.helm.sh/release-name: node-manager
+    meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:
     app.kubernetes.io/managed-by: Helm
@@ -83,7 +83,7 @@ metadata:
 		})
 	})
 
-	Context("Cluster has ns in the d8-cloud-instance-manager helm release", func() {
+	Context("Cluster has ns in the node-manager helm release", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(`
 ---
@@ -92,7 +92,7 @@ kind: Namespace
 metadata:
   annotations:
     meta.helm.sh/release-name: node-manager
-    meta.helm.sh/release-namespace: d8-cloud-instance-manager
+    meta.helm.sh/release-namespace: d8-system
   labels:
     app.kubernetes.io/managed-by: Helm
     extended-monitoring.deckhouse.io/enabled: ""
@@ -114,7 +114,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    meta.helm.sh/release-name: node-manager
+    meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:
     app.kubernetes.io/managed-by: Helm
@@ -124,6 +124,72 @@ metadata:
     module: node-manager
     prometheus.deckhouse.io/rules-watcher-enabled: "true"
   name: d8-cloud-instance-manager
+`))
+		})
+	})
+
+	Context("Cluster has cm in the deckhouse helm release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
+  name: kube-rbac-proxy-ca.crt
+  namespace: d8-cloud-instance-manager
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "kube-rbac-proxy-ca.crt").ToYaml()).To(MatchYAML(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
+  name: kube-rbac-proxy-ca.crt
+  namespace: d8-cloud-instance-manager
+`))
+		})
+	})
+
+	Context("Cluster has ns in the node-manager helm release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: node-manager
+    meta.helm.sh/release-namespace: d8-system
+  name: kube-rbac-proxy-ca.crt
+  namespace: d8-cloud-instance-manager
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "kube-rbac-proxy-ca.crt").ToYaml()).To(MatchYAML(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
+  name: kube-rbac-proxy-ca.crt
+  namespace: d8-cloud-instance-manager
 `))
 		})
 	})
