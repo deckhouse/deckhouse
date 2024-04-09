@@ -12,9 +12,9 @@ from shell_operator import hook
 
 def main(ctx: hook.Context):
     metric_group = "group_node_group_resources_metrics"
+    ctx.metrics.expire(metric_group)
 
     ngs_capacity = {}
-
     for snapshot in ctx.snapshots["nodes"]:
         node = snapshot["filterResult"]
         ng_name = node["node_group"]
@@ -52,7 +52,6 @@ def main(ctx: hook.Context):
                             taint_labels.update({key: ""})
                         labels.update(taint_labels)
             print(labels)
-            ctx.metrics.expire(metric_group)
             ctx.metrics.collect({
                 "name": "flant_pricing_node_group_cpu_cores",
                 "group": metric_group,
