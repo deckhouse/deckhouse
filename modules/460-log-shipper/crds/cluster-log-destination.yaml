@@ -660,6 +660,9 @@ spec:
                       app_info: '{{ app }}'
                       array_member: '{{ array[0] }}'
                       symbol_escating_value: '{{ pay\.day }}'
+                  x-kubernetes-validations:
+                    - message: parsed_data cannot be used as a key in extraLabels, it's reserved
+                      rule: '!(''parsed_data'' in self)'
                   additionalProperties:
                     type: string
                     anyOf:
