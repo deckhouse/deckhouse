@@ -48,6 +48,7 @@ var _ = Describe("Module :: l2-load-balancer :: helm template ::", func() {
 			f.ValuesSetFromYaml("l2LoadBalancer.internal.l2LoadBalancers", `
 - name: test
   namespace: test
+  externalTrafficPolicy: Cluster
   selector:
     app: test
   nodes:
@@ -107,7 +108,7 @@ ports:
     targetPort: 8080
 selector:
   app: test
-externalTrafficPolicy: Local
+externalTrafficPolicy: Cluster
 sessionAffinity: None
 type: LoadBalancer
 loadBalancerClass: l2-load-balancer.network.deckhouse.io
