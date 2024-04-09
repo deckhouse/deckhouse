@@ -53,50 +53,6 @@ ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-# install required packages to build
-RUN apt-get update && apt-get install -y \
-  gcc \
-  clang \
-  glibc-devel \
-  make \
-  automake \
-  openssl-devel \
-  pcre-devel \
-  zlib-devel \
-  kernel-headers-common \
-  libxslt-devel \
-  libgd3-devel \
-  perl-devel \
-  libedit-devel \
-  mercurial \
-  findutils \
-  curl \
-  ca-certificates \
-  patch \
-  libaio-devel \
-  openssl \
-  cmake \
-  util-linux \
-  wget \
-  curl-devel \
-  libprotobuf \
-  liblmdb-devel \
-  git gcc-c++ flex bison doxygen libyajl-devel libtool autoconf libxml2 libxml2-devel \
-  python3 \
-  bc \
-  libmaxminddb-devel \
-  unzip \
-  dos2unix \
-  libyaml-cpp0 \
-  coreutils \
-  libstdc++-devel \
-  pkg-config \
-  libstdc++-devel-static \
-  libGeoIP-devel \
-  lua-devel \
-  libbrotli-devel \
-  patch
-
 COPY --from=artifact /src/images/nginx/rootfs/ /
 COPY patches/nginx-build.patch /
 
