@@ -36,7 +36,7 @@ def main(ctx: hook.Context):
     for snapshot in ctx.snapshots["ngs"]:
         ng = snapshot["filterResult"]
 
-        labels = {"name": ng["name"]}
+        labels = {"na/me": ng["name"]}
         if ng["name"] in ngs_capacity:
             # if "nodeTemplate" in ng:
             #     if "labels" in ng["nodeTemplate"]:
