@@ -1,4 +1,3 @@
-
 ---
 title: Обновление в закрытом контуре
 permalink: ru/update/security/
@@ -30,13 +29,13 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. Выполните аутентификацию на `registry.deckhouse.ru`:
 
-   ```bash
+```bash
    docker login -u license-token registry.deckhouse.ru
    ```
 
 2. Запустите образ установщика версии 1.58.3, указав подходящий каталог рабочей станции для проброса в контейнер:
    
-   ```bash
+```bash
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.3 bash
    ```
 
@@ -46,25 +45,25 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel` с помощью команды:
 
-   ```bash
+```bash
    kubectl get mc deckhouse -o yaml | grep releaseChannel
    ```
 
 1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse Kubernetes Platform:
 
-   ```bash
+```bash
    kubectl edit mc deckhouse -o yaml
    ```
 
 1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform и проверьте, что изменения внесены, командой:
 
-   ```bash
+```bash
    kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
    ```
 
 1. Переведите установку обновлений платформы в ручной режим. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
-   ```bash
+```bash
    kubectl edit mc deckhouse -o yaml
    ```
 
@@ -98,26 +97,26 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
 
-   ```bash
+```bash
    kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
    ```
 
 1. Загрузите все образы поставки DKP в реестр образов контейнеров, находящийся в закрытом окружении. Для этого перейдите в каталог с содержимым поставки и выполните команду:
 
-   ```bash
+```bash
    ./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM:5000/path/to/deckhouse/ee" -u "ПОЛЬЗОВАТЕЛЬ" -p "ПАРОЛЬ"
    ```
 
 1. В случае использования самоподписанных сертификатов для реестра образов контейнеров используйте переменные окружения `SSL_CERT_FILE` и `SSL_CERT_DIR`, чтобы задать пути к СА сертификату и сертификатам реестра образов контейнеров, как представлено на примере:
 
-   ```bash
+```bash
    export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
    export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
    ```
 
 1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
-   ```bash
+```bash
    kubectl edit mc deckhouse -o yaml
    ```
 
@@ -154,19 +153,19 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
 
-   ```bash
+```bash
    kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
    ```
 
 1. Загрузите манифесты `DeckhouseReleases` из файла `deckhousereleases.yaml` командой:
 
-   ```bash
+```bash
    kubectl apply -f deckhousereleases.yaml
    ```
 
 1. Проверьте наличие релизов Deckhouse Kubernetes Platform командой:
 
-   ```bash
+```bash
    kubectl get deckhousereleases.deckhouse.io
    ```
 
@@ -194,7 +193,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. В случае обнаружения в списке релиза с нестандартным названием без точек (из примера выше: `v1-57-5`) удалите его командой:
 
-   ```bash
+```bash
    kubectl delete deckhousereleases v1-57-5
    ```
 
@@ -206,7 +205,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 1. Получите список доступных релизов Deckhouse командой:
 
-   ```bash
+```bash
    kubectl get deckhousereleases.deckhouse.io
    ```
 
@@ -235,7 +234,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 3. Проверьте, что ваш кластер соответствует требованиям для выполнения обновлений. Для этого выполните команду ниже и ознакомьтесь с секцией `Requirements`:
 
-   ```bash
+```bash
    kubectl describe deckhouserelease ВЕРСИЯ_РЕЛИЗА
    ```
 
@@ -322,7 +321,7 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 4. Если все требования соблюдены, одобрите установку обновлений, выполнив команду:
 
-   ```bash
+```bash
    kubectl patch DeckhouseRelease ВЕРСИЯ_РЕЛИЗА --type=merge -p='{"approved": true}'
    ```
 
@@ -351,13 +350,13 @@ v1.48.9    Pending    5m...
 
 1. При необходимости авторизуйтесь в container registry `registry.deckhouse.ru` или `registry.deckhouse.io` с помощью вашего лицензионного ключа.
 
-   ```shell
+```shell
    docker login -u license-token registry.deckhouse.ru
    ```
 
 1. Запустите установщик Deckhouse Kubernetes Platform версии 1.58.6 или выше.
 
-   ```shell
+```shell
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.6 bash
    ```
 
