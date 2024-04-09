@@ -22,24 +22,20 @@ bb-flag-set kubelet-enable-credential-provider
 # matchImages should contain globs, not regexp, but in k8s code we found next patter
 # ^(\d{12})\.dkr\.ecr(\-fips)?\.([a-zA-Z0-9][a-zA-Z0-9-_]*)\.(amazonaws\.com(\.cn)?|sc2s\.sgov\.gov|c2s\.ic\.gov)$
 bb-sync-file /var/lib/bashible/kubelet-credential-provider-config.yaml - << "EOF"
-{
-    "providers": [
-        {
-            "name": "ecr-credential-provider",
-            "matchImages" : [
-                "*.dkr.ecr.*.amazonaws.com",
-                "*.dkr.ecr.*.amazonaws.com.cn",
-                "*.dkr.ecr.*.sc2s.sgov.gov",
-                "*.dkr.ecr.*.c2s.ic.gov",
-                "*.dkr.ecr-fips.*.amazonaws.com",
-                "*.dkr.ecr-fips.*.amazonaws.com.cn",
-                "*.dkr.ecr-fips.*.sc2s.sgov.gov",
-                "*.dkr.ecr-fips.*.c2s.ic.gov",
-            ],
-            "apiVersion": "credentialprovider.kubelet.k8s.io/v1",
-            "defaultCacheDuration": "0"
-        }
-    ]
-}
+apiVersion: kubelet.config.k8s.io/v1
+kind: CredentialProviderConfig
+providers:
+  - name: ecr-credential-provider
+    matchImages:
+      - "*.dkr.ecr.*.amazonaws.com"
+      - "*.dkr.ecr.*.amazonaws.com.cn"
+      - "*.dkr.ecr.*.sc2s.sgov.gov"
+      - "*.dkr.ecr.*.c2s.ic.gov"
+      - "*.dkr.ecr-fips.*.amazonaws.com"
+      - "*.dkr.ecr-fips.*.amazonaws.com.cn"
+      - "*.dkr.ecr-fips.*.sc2s.sgov.gov"
+      - "*.dkr.ecr-fips.*.c2s.ic.gov"
+    defaultCacheDuration: "0"
+    apiVersion: credentialprovider.kubelet.k8s.io/v1
 EOF
 {{- end }}

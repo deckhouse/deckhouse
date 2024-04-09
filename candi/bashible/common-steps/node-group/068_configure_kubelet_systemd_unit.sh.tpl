@@ -91,7 +91,7 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if semverCompare "<1.27" .kubernetesVersion }}
     ${cri_config} \\
 {{- end }}
-    "$credential_provider_flags" \\
+    ${credential_provider_flags} \\
     --v=2
 EOF
 
