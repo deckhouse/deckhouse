@@ -1,7 +1,7 @@
 
 ---
 title: Обновление в закрытом контуре
-permalink: ru/update/security/closed-and-secure-environment/
+permalink: ru/update/security/
 lang: ru
 ---
 
