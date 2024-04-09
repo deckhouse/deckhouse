@@ -14,17 +14,19 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 ## Доставка образов поставки в закрытое окружение
 
-Для установки обновлений DKP в закрытом окружении необходимо наличие образов последних патч-версий для каждой минорной версии платформы.
+Для установки обновлений Deckhouse Kubernetes Platform в закрытом окружении необходимы образы последних патч-версий для каждой минорной версии платформы.
 
-Доставка образов платформы в закрытое окружение осуществляется в виде готовой поставки платформы на USB-носителе или с помощью утилиты `dhctl mirror` (требуется доступ в Интернет).
+Доставка образов платформы в закрытое окружение осуществляется в виде готовой поставки платформы на USB-носителе или с помощью утилиты `dhctl mirror` -- для этого варианта требуется доступ в интернет.
 
-Поставка на USB-носителе включает в себя все необходимые данные для установки обновлений в закрытых окружениях. В состав поставки входят:
+Поставка на USB-носителе включает в себя все необходимые данные для установки обновлений в закрытых окружениях. Состав поставки содержит следующие артефакты:
 
-- архив с образами контейнеров платформы `d8.tar`, содержащий все необходимые промежуточные версии, начиная от заданной минимальной версии и заканчивая последней доступной;
-- манифесты релизов DKP, соответствующие версиям образов поставки, в файле `deckhousereleases.yaml`;
+- архив с образами контейнеров платформы `d8.tar` со всеми необходимыми промежуточными версиями: от заданной минимальной версии до последней доступной;
+- манифесты релизов Deckhouse Kubernetes Platform, соответствующие версиям образов поставки в файле `deckhousereleases.yaml`;
 - исполняемый файл `dhctl`.
 
 При использовании `dhctl mirror`, указанные выше артефакты будут созданы в процессе работы утилиты.
+
+Чтобы доставить образы поставки в закрытое окружение:
 
 1. Выполните аутентификацию на `registry.deckhouse.ru`:
 
@@ -38,23 +40,23 @@ Deckhouse Kubernetes Platform использует актуальные верс
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.3 bash
    ```
 
-   Подробнее об использовании `dhctl mirror` для выгрузки образов читайте в [разделе Обновление в закрытом контуре](ссылка на раздел).
-
 ## Подготовка к установке обновлений в закрытый контур
 
-1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel`. Чтобы проверить, выполните команду ниже:
+Чтобы подготовить установку обновлений в закрытый контур:
+
+1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel` с помощью команды:
 
    ```bash
    kubectl get mc deckhouse -o yaml | grep releaseChannel
    ```
 
-1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse:
+1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse Kubernetes Platform:
 
    ```bash
    kubectl edit mc deckhouse -o yaml
    ```
 
-1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что измеени внесены, командой:
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform и проверьте, что изменения внесены, командой:
 
    ```bash
    kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
@@ -112,8 +114,6 @@ Deckhouse Kubernetes Platform использует актуальные верс
    export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
    export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
    ```
-
-Подробнее об использовании `dhctl mirror` для загрузки образов в закрытый реестр образов контейнеров читайте в [разделе Обновление в закрытом контуре](ссылка на раздел).
 
 1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
 
@@ -200,9 +200,9 @@ Deckhouse Kubernetes Platform использует актуальные верс
 
 ## Установка обновлений
 
-Так как установка обновлений осуществляется в основном в ручном режиме, необходимо вручную одобрять каждый устанавливаемый релиз.
+Так как установка обновлений осуществляется в ручном режиме, необходимо вручную одобрять каждый устанавливаемый релиз.
 
-В среднем установка каждого релиза занимает около 30 минут для кластера с 3 мастер-узлами и 2 воркер-узлами.
+Приблизительно установка каждого релиза занимает около 30 минут для кластера с тремя мастер-узлами и двумя воркер-узлами.
 
 1. Получите список доступных релизов Deckhouse командой:
 
@@ -498,44 +498,44 @@ v1.48.9    Pending    5m...
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
-* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
-* Установите Squid (здесь и далее примеры для Ubuntu):
+1. Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
+1. Установите Squid (здесь и далее примеры для Ubuntu):
 
-  ```shell
-  apt-get install squid
-  ```
+   ```shell
+   apt-get install squid
+   ```
 
-* Создайте файл конфигурации Squid:
+1. Создайте файл конфигурации Squid:
 
-  ```shell
-  cat <<EOF > /etc/squid/squid.conf
-  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
-  auth_param basic realm proxy
-  acl authenticated proxy_auth REQUIRED
-  http_access allow authenticated
+   ```shell
+   cat <<EOF > /etc/squid/squid.conf
+   auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
+   auth_param basic realm proxy
+   acl authenticated proxy_auth REQUIRED
+   http_access allow authenticated
+   
+   # Choose the port you want. Below we set it to default 3128.
+   http_port 3128
+   ```
 
-  # Choose the port you want. Below we set it to default 3128.
-  http_port 3128
-  ```
+1. Создайте пользователя и пароль для аутентификации на proxy-сервере:
 
-* Создайте пользователя и пароль для аутентификации на proxy-сервере:
+   Пример для пользователя `test` с паролем `test` (обязательно измените):
 
-  Пример для пользователя `test` с паролем `test` (обязательно измените):
+   ```shell
+   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
+   ```
 
-  ```shell
-  echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
-  ```
+1. Запустите Squid и включите его автоматический запуск при загрузке сервера:
 
-* Запустите Squid и включите его автоматический запуск при загрузке сервера:
-
-  ```shell
-  systemctl restart squid
-  systemctl enable squid
-  ```
+   ```shell
+   systemctl restart squid
+   systemctl enable squid
+   ```
 
 {% endofftopic %}
 
-Для настройки Deckhouse на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
+Для настройки Deckhouse Kubernetes Platform на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
 
 Пример:
 
@@ -556,42 +556,5 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
-Deckhouse Kubernetes Platform можно настроить на работу с проксирующим registry внутри закрытого контура, для этого выполните следующие шаги: 
-
-1. Установите следующие параметры в ресурсе `InitConfiguration`:
-
-   * `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа Deckhouse EE в стороннем registry. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
-   * `registryDockerCfg: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
-
-2. При разрешенном анонимном доступе к образам Deckhouse Kubernetes Platform в стороннем registry, удостоверьтесь, что `registryDockerCfg` выглядит следующим образом:
-
-   ```json
-   {"auths": { "<PROXY_REGISTRY>": {}}}
-   ```
-
-   > Приведенное значение должно быть закодировано в Base64.
-
-3. Если для доступа к образам Deckhouse Kubernetes Platform в стороннем registry необходима аутентификация, удостоверьтесь, что `registryDockerCfg` выглядит следующим образом:
-
-   ```json
-   {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
-   ```
-
-   где:
-
-   * `<PROXY_USERNAME>` — имя пользователя для аутентификации на `<PROXY_REGISTRY>`;
-   * `<PROXY_PASSWORD>` — пароль пользователя для аутентификации на `<PROXY_REGISTRY>`;
-   * `<PROXY_REGISTRY>` — адрес стороннего registry в виде `<HOSTNAME>[:PORT]`;
-   * `<AUTH_BASE64>` — строка вида `<PROXY_USERNAME>:<PROXY_PASSWORD>`, закодированная в Base64.
-
-   > Итоговое значение для `registryDockerCfg` должно быть также закодировано в Base64.
-
-3. Чтобы настроить нестандартные конфигурации сторонних registry в ресурсе `InitConfiguration`, используйте еще два параметра:
-
-   * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
-   * `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию — `HTTPS`.
-   
-      <div markdown="0" style="height: 0;" id="особенности-настройки-сторонних-registry"></div>
-      ```
 
 
