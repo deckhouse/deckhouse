@@ -355,7 +355,7 @@ v1.48.9    Pending    5m...
    docker login -u license-token registry.deckhouse.ru
    ```
 
-1. Запустите установщик Deckhouse версии 1.58.6 или выше.
+1. Запустите установщик Deckhouse Kubernetes Platform версии 1.58.6 или выше.
 
    ```shell
    docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.6 bash
@@ -422,13 +422,13 @@ v1.48.9    Pending    5m...
 
    Если registry не требует авторизации, флаги `--registry-login`/`--registry-password` или переменные `$DHCTL_CLI_MIRROR_USER`/`$DHCTL_CLI_MIRROR_PASS` указывать не нужно.
 
-1. После загрузки образов в изолированный registry можно переходить к установке Deckhouse Kubernetes Platform. Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
+1. После загрузки образов в изолированный registry переходите к установке Deckhouse Kubernetes Platform. Воспользуйтесь [руководством по быстрому старту](/gs/bm-private/step2.html).
 
    При запуске установщика используйте его образ из registry, в который ранее были загружены образы Deckhouse Kubernetes Platform, а не из публичного registry. Например, используйте адрес вида `your.private.registry.com:5000/deckhouse/ee/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   В ресурсе `InitConfiguration` при установке также используйте адрес вашего registry и данные авторизации (параметры [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3](/gs/bm-private/step3.html) руководства по быстрому старту).
+   При установке в ресурсе `InitConfiguration` также используйте адрес вашего registry и данные авторизации с параметрами [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или с [параметрами доступа к хранилищу образов контейнеров (или проксирующему registry)](/gs/bm-private/step3.html).
 
-   После завершения установки примените сгенерированные во время загрузки манифесты DeckhouseReleases к вашему кластеру используя `kubectl`:
+   После завершения установки примените сгенерированные во время загрузки манифесты DeckhouseReleases к вашему кластеру, используя `kubectl`:
 
    ```shell
    kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
@@ -456,7 +456,7 @@ v1.48.9    Pending    5m...
    dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
    ```
 
-1. Опционально: Скопируйте утилиту `dhctl` из контейнера в директорию со скачанными образами Deckhouse Kubernetes Platform.
+1. Опционально: скопируйте утилиту `dhctl` из контейнера в директорию со скачанными образами Deckhouse Kubernetes Platform.
 
    ```shell
    cp /usr/bin/dhctl /tmp/d8-modules/dhctl
