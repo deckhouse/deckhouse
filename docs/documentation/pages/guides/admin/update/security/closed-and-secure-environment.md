@@ -1,4 +1,3 @@
-
 ---
 title: Обновление в закрытом контуре
 permalink: ru/update/security/
