@@ -53,5 +53,5 @@ roleRef:
   name: access-to-registry-packages-proxy-from-http
 subjects:
 - kind: ServiceAccount
-  name: registry-packages-proxy-reader
+  name: registry-packages-proxy
   namespace: d8-cloud-instance-manager

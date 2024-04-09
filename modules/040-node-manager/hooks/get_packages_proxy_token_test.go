@@ -31,7 +31,7 @@ kind: Secret
 metadata:
   annotations:
     kubernetes.io/service-account.name: registry-packages-proxy-reader
-  name: registry-packages-proxy-reader-token
+  name: registry-packages-proxy-token
   namespace: d8-cloud-instance-manager
 type: kubernetes.io/service-account-token
 `

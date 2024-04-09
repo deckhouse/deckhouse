@@ -72,7 +72,8 @@ properties:
         type: string
         description: |
           packages proxy token.
-        x-examples: mytoken
+        x-examples:
+        - "mytoken"
 
       kubernetesCA:
         type: string

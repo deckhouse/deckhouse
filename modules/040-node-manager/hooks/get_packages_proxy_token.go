@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				}},
 			},
 			NameSelector: &types.NameSelector{MatchNames: []string{
-				"registry-packages-proxy-reader-token",
+				"registry-packages-proxy-token",
 			}},
 			FilterFunc: filterTokenSecret,
 		},
