@@ -244,10 +244,10 @@ func waitPodIsReady(componentName string, checksum string) error {
 
 		if tries > maxRetries {
 			log.Warnf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
-			err := triggerKubeletRestart(componentName)
+			err := triggerKubeletRereadManifest(componentName)
 			// https://github.com/kubernetes/kubernetes/issues/109596
 			if err != nil {
-				return fmt.Errorf("fail to trigger restart kubelet for %s: %s", componentName, err)
+				return fmt.Errorf("fail to trigger re-read manifest for %s: %s", componentName, err)
 			}
 			return fmt.Errorf("trying to trigger kubelet to re-read manifest")
 		}
@@ -275,7 +275,7 @@ func waitPodIsReady(componentName string, checksum string) error {
 	}
 }
 
-func triggerKubeletRestart(componentName string) error {
+func triggerKubeletRereadManifest(componentName string) error {
 
 	srcPath := filepath.Join(manifestsPath, componentName+".yaml")
 	dstPath := filepath.Join(config.TmpPath, srcPath)
