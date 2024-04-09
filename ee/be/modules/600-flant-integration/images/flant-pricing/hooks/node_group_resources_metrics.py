@@ -56,13 +56,13 @@ def main(ctx: hook.Context):
             ctx.metrics.collect({
                 "name": "flant_pricing_node_group_cpu_cores",
                 "group": metric_group,
-                "set": ngs_capacity[ng["name"]]["cpu"],
+                "set": float(ngs_capacity[ng["name"]]["cpu"]),
                 "labels": labels,
             })
             ctx.metrics.collect({
                 "name": "flant_pricing_node_group_memory",
                 "group": metric_group,
-                "set": ngs_capacity[ng["name"]]["memory"],
+                "set": float(ngs_capacity[ng["name"]]["memory"]),
                 "labels": labels,
             })
 
