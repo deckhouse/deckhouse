@@ -85,30 +85,6 @@ spec:
 kubectl annotate node <имя узла> update.node.deckhouse.io/disruption-approved=
 ```
 
-<!-- 
-1. При необходимости, выполните обновление модуля без определенного времени.
-
-   > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
-
-1. Установите в соответствующем ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
-
-   Пример команды пропуска окон обновлений для версии `v1.56.2`:
-
-   ```shell
-   kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
-   ```
-
-   Пример ресурса с установленной аннотацией пропуска окон обновлений:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: DeckhouseRelease
-   metadata:
-     annotations:
-       release.deckhouse.io/apply-now: "true"
-   ...
-   ``` -->
-
 ## Ручной режим
 
 В ручном режиме нужно подтверждать каждое минорное обновление DKP.
