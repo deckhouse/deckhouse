@@ -70,8 +70,6 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make && \
     make install && \
     cd / && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.tar.gz && tar zxf cmake-3.29.1-linux-x86_64.tar.gz && \
-    ln -sf /cmake-3.29.1-linux-x86_64/bin/cmake /usr/bin/cmake && \
     patch build.sh < nginx-build.patch && \
     /build.sh
 

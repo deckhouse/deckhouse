@@ -48,7 +48,7 @@ RUN apk update && apk add git gcc g++ bash make
 RUN git clone --branch v1.2.5 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && make
 
 #nginx for controller
-FROM $BASE_ALT as nginx_artifact
+FROM $BASE_ALT_DEV as nginx_artifact
 ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
@@ -107,8 +107,6 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make && \
     make install && \
     cd / && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.tar.gz && tar zxf cmake-3.29.1-linux-x86_64.tar.gz && \
-    ln -sf /cmake-3.29.1-linux-x86_64/bin/cmake /usr/bin/cmake && \
     patch build.sh < nginx-build.patch && \
     /build.sh
 
