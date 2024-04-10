@@ -13,7 +13,7 @@ spec:
       app: registry-packages-proxy
   namespaceSelector:
     matchNames:
-    - d8-{{ $.Chart.Name }}
+    - d8-cloud-instance-manager
   podMetricsEndpoints:
   - port: https
     scheme: https
