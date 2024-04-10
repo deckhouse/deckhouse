@@ -11,6 +11,8 @@
 
 
  - **[admission-policy-engine]** Add new columns to Grafana representing policy name and policy type. [#7926](https://github.com/deckhouse/deckhouse/pull/7926)
+ - **[admission-policy-engine]** Add the ability to specify restrictions on applying cluster roles to users. [#7660](https://github.com/deckhouse/deckhouse/pull/7660)
+ - **[admission-policy-engine]** Add a security policy to control the mounting of service account tokens in pods. This rule will prohibit running pods with `automountServiceAccountToken` for existing _SecurityPolicy_. To restore the old behavior, add `automountServiceAccountToken: true` to the policy. [#7571](https://github.com/deckhouse/deckhouse/pull/7571)
  - **[candi]** Add Deckhouse Kubernetes Platform Standart Edition (SE). [#7828](https://github.com/deckhouse/deckhouse/pull/7828)
  - **[candi]** Add support for Debian 12, remove support for Debian 9. [#7631](https://github.com/deckhouse/deckhouse/pull/7631)
  - **[candi]** Add OpenStack server group support for master nodes. [#7312](https://github.com/deckhouse/deckhouse/pull/7312)
@@ -64,8 +66,6 @@
 
  - **[admission-policy-engine]** Fix storageClass fake alert. [#7912](https://github.com/deckhouse/deckhouse/pull/7912)
  - **[admission-policy-engine]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
- - **[admission-policy-engine]** Added the ability to specify restrictions on applying cluster roles to users. [#7660](https://github.com/deckhouse/deckhouse/pull/7660)
- - **[admission-policy-engine]** Add a security policy to control the mounting of service account tokens in pods. This rule will prohibit running pods with `automountServiceAccountToken` for existing _SecurityPolicy_. To restore the old behavior, add `automountServiceAccountToken: true` to the policy. [#7571](https://github.com/deckhouse/deckhouse/pull/7571)
  - **[candi]** Disable updating tfadm for bootstraping. [#7930](https://github.com/deckhouse/deckhouse/pull/7930)
  - **[candi]** Fix bootstrap by replace bb-error checks with trap. [#7647](https://github.com/deckhouse/deckhouse/pull/7647)
  - **[candi]** Remove `yum versionlock` and `apt-mark hold`. [#7280](https://github.com/deckhouse/deckhouse/pull/7280)
@@ -77,7 +77,7 @@
  - **[cloud-provider-yandex]** Fix a long node name. [#6718](https://github.com/deckhouse/deckhouse/pull/6718)
  - **[dashboard]** Add `kube-rbac-proxy-ca.crt` configMap to `d8-dashboard` namespace. [#7766](https://github.com/deckhouse/deckhouse/pull/7766)
  - **[deckhouse]** Use the same logic as minor/patch for `apply-now` release, except the time settings. [#7988](https://github.com/deckhouse/deckhouse/pull/7988)
- - **[deckhouse]** Сhange the way the deckhouse pod readiness is determined during the minor version update. [#7770](https://github.com/deckhouse/deckhouse/pull/7770)
+ - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7770](https://github.com/deckhouse/deckhouse/pull/7770)
  - **[deckhouse]** Validation configs of disabled modules is disabled. [#7744](https://github.com/deckhouse/deckhouse/pull/7744)
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
