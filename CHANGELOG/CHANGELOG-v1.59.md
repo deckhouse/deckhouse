@@ -99,6 +99,8 @@
  - **[node-manager]** Add the ability to disable StaticInstance bootstrapping by adding the `"node.deckhouse.io/allow-bootstrap": "false"` label. [#7244](https://github.com/deckhouse/deckhouse/pull/7244)
  - **[node-manager]** Add the alert about an impossible node drain. [#6190](https://github.com/deckhouse/deckhouse/pull/6190)
  - **[operator-prometheus]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
+ - **[prometheus]** Fix aggregation with longterm Prometheus. [#8056](https://github.com/deckhouse/deckhouse/pull/8056)
+ - **[prometheus]** Migrate from `statusmap` and `status-history` to `state-timeline` plugin. [#8040](https://github.com/deckhouse/deckhouse/pull/8040)
  - **[prometheus]** Increase `sampleLimit` threshold to 100000. [#7858](https://github.com/deckhouse/deckhouse/pull/7858)
 
 ## Chore
@@ -106,7 +108,7 @@
 
  - **[candi]** Bump patch versions of Kubernetes images: `v1.26.15`, `v1.27.12`, `v1.28.8`, `v1.29.3` [#7834](https://github.com/deckhouse/deckhouse/pull/7834)
     Kubernetes control-plane components will restart, kubelet will restart.
- - **[candi]** Change the terraform version to 0.14.8. [#7513](https://github.com/deckhouse/deckhouse/pull/7513)
+ - **[candi]** Change the terraform version to `0.14.8`. [#7513](https://github.com/deckhouse/deckhouse/pull/7513)
     All cloud envirinment(clusters in AWS,GCP,Azure,Yandex-Cloud,OpenStack,VSphere)
  - **[cni-cilium]** Improvement of the cilium-agent version update process. [#7658](https://github.com/deckhouse/deckhouse/pull/7658)
     `cilium-agent` pods can restart.
@@ -117,8 +119,6 @@
  - **[deckhouse-controller]** Remove linstor module [#7091](https://github.com/deckhouse/deckhouse/pull/7091)
     Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - **[dhctl]** Support Deckhouse controller high availability mode during bootstrap. [#7919](https://github.com/deckhouse/deckhouse/pull/7919)
- - **[prometheus]** Add imagePullSecrets for memcached template. [#8015](https://github.com/deckhouse/deckhouse/pull/8015)
-    low
  - **[prometheus]** Move memcached to distroless. [#7945](https://github.com/deckhouse/deckhouse/pull/7945)
     Memcached (Prometheus) will restart.
  - **[prometheus]** Update metrics rotation value. [#7560](https://github.com/deckhouse/deckhouse/pull/7560)

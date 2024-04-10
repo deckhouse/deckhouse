@@ -272,6 +272,10 @@ prometheus:
     - summary: Add separate transition deployment for Grafana v10.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7018
   fixes:
+    - summary: Fix aggregation with longterm Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8056
+    - summary: Migrate from `statusmap` and `status-history` to `state-timeline` plugin.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8040
     - summary: Increase `sampleLimit` threshold to 100000.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7858
 registrypackages:
