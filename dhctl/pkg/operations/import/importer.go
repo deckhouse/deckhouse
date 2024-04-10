@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -56,79 +58,38 @@ func NewImporter(params *Params) *Importer {
 func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	kubeCl, err := operations.ConnectToKubernetesAPI(i.Params.SSHClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create k8s client: %w", err)
 	}
-
-	res := &ImportResult{}
 
 	metaConfig, err := config.ParseConfigInCluster(kubeCl)
 	if err != nil {
-		return res, err
-	}
-
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
-	if err != nil {
-		return res, err
+		return nil, fmt.Errorf("unable to parse cluster config: %w", err)
 	}
 
 	cachePath := metaConfig.CachePath()
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
-		return res, err
+		return nil, err
 	}
 	stateCache := cache.Global()
 
-	if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
-		return res, err
-	}
-
-	if err := stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
+	if err = i.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return nil, err
-	}
-
-	if err := i.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return res, err
 	}
 	defer i.PhasedExecutionContext.Finalize(stateCache)
 
 	if shouldStop, err := i.PhasedExecutionContext.StartPhase(ScanPhase, false, stateCache); err != nil {
-		return res, err
+		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return res, nil
+		return nil, nil
 	}
 
-	nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+	res := &ImportResult{}
+
+	res.ScanResult, err = i.scan(ctx, kubeCl, metaConfig)
 	if err != nil {
-		return res, err
+		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
-
-	if err := stateCache.SaveStruct("nodes-state", nodesState); err != nil {
-		return res, err
-	}
-
-	clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
-	if err != nil {
-		return res, err
-	}
-
-	if err := stateCache.Save("cluster-state", clusterState); err != nil {
-		return nil, err
-	}
-
-	clusterConfiguration, err := metaConfig.ClusterConfigYAML()
-	if err != nil {
-		return res, err
-	}
-
-	providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return res, err
-	}
-
 	res.Status = ImportStatusScanned
-	res.ScanResult = &ScanResult{
-		ClusterConfiguration:                 string(clusterConfiguration),
-		ProviderSpecificClusterConfiguration: string(providerConfiguration),
-	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
 		CapturePhase,
@@ -138,12 +99,15 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 			ScanResult: res.ScanResult,
 		},
 	); err != nil {
-		return res, err
+		return nil, err
 	} else if shouldStop {
 		return res, nil
 	}
 
-	// todo: capture
+	err = i.capture(ctx, kubeCl, metaConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to capture cluster: %w", err)
+	}
 	res.Status = ImportStatusImported
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
@@ -154,41 +118,124 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 			ScanResult: res.ScanResult,
 		},
 	); err != nil {
-		return res, err
+		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
 		return res, nil
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     i.Params.SSHClient,
-		StateCache:    stateCache,
-		CommanderMode: i.Params.CommanderMode,
-		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(res.ScanResult.ClusterConfiguration),
-			[]byte(res.ScanResult.ProviderSpecificClusterConfiguration),
-		),
-		TerraformContext: i.Params.TerraformContext,
-	})
-
-	checkRes, err := checker.Check(ctx)
+	res.CheckResult, err = i.check(ctx, res.ScanResult)
 	if err != nil {
-		return res, fmt.Errorf("check failed: %w", err)
-	}
-
-	if i.Params.OnCheckResult != nil {
-		if err := i.Params.OnCheckResult(checkRes); err != nil {
-			return res, err
-		}
+		// check is optional
+		log.WarnF("Can't check imported cluster: %s\n", err)
 	}
 
 	if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
 		ScanResult:  res.ScanResult,
 		CheckResult: res.CheckResult,
 	}); err != nil {
-		return res, err
+		return nil, fmt.Errorf("unable to complete phase: %w", err)
 	}
 
-	res.CheckResult = checkRes
+	return res, nil
+}
+
+func (i *Importer) scan(
+	_ context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+) (*ScanResult, error) {
+	var err error
+	stateCache := cache.Global()
+
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get cluster uuid: %w", err)
+	}
+
+	if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
+		return nil, fmt.Errorf("unable to save cluster uuid to cache: %w", err)
+	}
+
+	if err = stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
+		return nil, fmt.Errorf("unable to save cluster config to cache: %w", err)
+	}
+
+	nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get nodes tf state: %w", err)
+	}
+
+	if err = stateCache.SaveStruct("nodes-state", nodesState); err != nil {
+		return nil, fmt.Errorf("unable to save nodes tf state to cache: %w", err)
+	}
+
+	clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
+	if err != nil {
+		return nil, fmt.Errorf("unable get cluster tf state: %w", err)
+	}
+
+	if err = stateCache.Save("cluster-state", clusterState); err != nil {
+		return nil, fmt.Errorf("unable to save cluster tf state to cache: %w", err)
+	}
+
+	clusterConfiguration, err := metaConfig.ClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare cluster config yaml: %w", err)
+	}
+
+	providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
+	}
+
+	return &ScanResult{
+		ClusterConfiguration:                 string(clusterConfiguration),
+		ProviderSpecificClusterConfiguration: string(providerConfiguration),
+	}, nil
+}
+
+func (i *Importer) capture(
+	_ context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+) error {
+	// todo: capture
+	var err error
+	stateCache := cache.Global()
+
+	_ = err
+	_ = stateCache
+
+	return nil
+}
+
+func (i *Importer) check(
+	ctx context.Context,
+	scanResult *ScanResult,
+) (*check.CheckResult, error) {
+	var err error
+
+	checker := check.NewChecker(&check.Params{
+		SSHClient:     i.Params.SSHClient,
+		StateCache:    cache.Global(),
+		CommanderMode: i.Params.CommanderMode,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(scanResult.ClusterConfiguration),
+			[]byte(scanResult.ProviderSpecificClusterConfiguration),
+		),
+		TerraformContext: i.Params.TerraformContext,
+	})
+
+	res, err := checker.Check(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to check cluster state: %w", err)
+	}
+
+	if i.Params.OnCheckResult != nil {
+		if err = i.Params.OnCheckResult(res); err != nil {
+			return nil, fmt.Errorf("OnCheckResult error: %w", err)
+		}
+	}
 
 	return res, nil
 }
