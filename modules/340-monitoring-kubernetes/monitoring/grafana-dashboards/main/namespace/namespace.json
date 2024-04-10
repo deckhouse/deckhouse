@@ -901,11 +901,12 @@
       "id": 223,
       "links": [],
       "options": {
-        "colWidth": 1,
+	"alignValue": "left",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
         },
+	"mergeValues": false,
         "rowHeight": 0.9,
         "showValue": "never",
         "tooltip": {
@@ -952,7 +953,7 @@
           }
         }
       ],
-      "type": "status-history"
+      "type": "state-timeline"
     },
     {
       "datasource": {

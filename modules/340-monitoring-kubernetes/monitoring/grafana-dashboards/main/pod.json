@@ -964,13 +964,14 @@
       "id": 47,
       "links": [],
       "options": {
-        "colWidth": 0.9,
+	"alignValue": "left",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
         },
+	"mergeValues": false,
         "rowHeight": 0.9,
-        "showValue": "auto",
+        "showValue": "never",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -991,7 +992,7 @@
         }
       ],
       "title": "Status",
-      "type": "status-history"
+      "type": "state-timeline"
     },
     {
       "datasource": {
