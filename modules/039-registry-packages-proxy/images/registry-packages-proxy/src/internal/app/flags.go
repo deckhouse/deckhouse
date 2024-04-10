@@ -16,20 +16,18 @@ package app
 
 import (
 	"flag"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 type Config struct {
-	KubeConfig           string
-	ListenAddress        string
-	DisableCache         bool
-	CacheDirectory       string
-	CacheRetentionSize   resource.Quantity
-	CacheRetentionPeriod time.Duration
-	LogLevel             logrus.Level
+	KubeConfig         string
+	ListenAddress      string
+	DisableCache       bool
+	CacheDirectory     string
+	CacheRetentionSize resource.Quantity
+	LogLevel           logrus.Level
 }
 
 func InitFlags() (*Config, error) {
@@ -41,18 +39,12 @@ func InitFlags() (*Config, error) {
 	flag.StringVar(&config.CacheDirectory, "cache-directory", "/cache", "Path to cache directory")
 
 	crs := flag.String("cache-retention-size", "1Gi", "Cache retention size")
-	crp := flag.String("cache-retention-period", "24h", "Cache retention period")
 	v := flag.Int("v", 4, "Log verbosity")
 
 	flag.Parse()
 
 	var err error
 	config.CacheRetentionSize, err = resource.ParseQuantity(*crs)
-	if err != nil {
-		return nil, err
-	}
-
-	config.CacheRetentionPeriod, err = time.ParseDuration(*crp)
 	if err != nil {
 		return nil, err
 	}

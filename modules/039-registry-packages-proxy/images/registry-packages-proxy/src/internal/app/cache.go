@@ -28,7 +28,7 @@ func NewCache(ctx context.Context, config *Config, metrics *cache.Metrics) (*cac
 		return nil, nil
 	}
 
-	cache, err := cache.New(config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), config.CacheRetentionPeriod, metrics)
+	cache, err := cache.New(config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cache")
 	}

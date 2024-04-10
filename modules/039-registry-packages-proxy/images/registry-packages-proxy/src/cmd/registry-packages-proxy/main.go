@@ -43,6 +43,7 @@ func main() {
 		log.Error(err)
 		os.Exit(1)
 	}
+	defer listener.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -61,14 +62,13 @@ func main() {
 	if cache == nil {
 		logger.Info("Cache is disabled")
 	}
-	defer cache.Close()
 
 	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
 
 	go watcher.Watch(ctx)
 
 	server := app.BuildServer()
-	registryProxy, err := proxy.NewProxy(server, listener, watcher, proxy.Options{
+	rp, err := proxy.NewProxy(server, listener, watcher, proxy.Options{
 		Cache:  cache,
 		Logger: logger,
 	})
@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	go registryProxy.Serve()
+	go rp.Serve()
 	<-ctx.Done()
-	registryProxy.StopServe()
+	rp.Stop()
 }

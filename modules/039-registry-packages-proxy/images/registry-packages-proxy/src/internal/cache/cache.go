@@ -15,39 +15,29 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
-	"encoding/gob"
 	"io"
 	"os"
 	"time"
 
 	"github.com/pkg/errors"
-	bolt "go.etcd.io/bbolt"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 )
 
 type Cache struct {
-	root            string
-	retentionSize   uint64
-	retentionPeriod time.Duration
+	root          string
+	retentionSize uint64
 
 	metrics *Metrics
 }
 
-func New(root string, retentionSize uint64, retentionPeriod time.Duration, metrics *Metrics) (*Cache, error) {
+func New(root string, retentionSize uint64, metrics *Metrics) (*Cache, error) {
 	return &Cache{
-		root:            root,
-		retentionSize:   retentionSize,
-		retentionPeriod: retentionPeriod,
-		metrics:         metrics,
+		root:          root,
+		retentionSize: retentionSize,
+		metrics:       metrics,
 	}, nil
-}
-
-func (c *Cache) Close() error {
-	return nil
 }
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
@@ -80,9 +70,10 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 }
 
 func (c *Cache) Run(ctx context.Context) error {
+
 	err := c.ApplyRetentionPolicy()
 	if err != nil {
-		return errors.Wrap(err, "failed to apply retention policy")
+		return err
 	}
 
 	ticker := time.NewTicker(time.Minute)
@@ -103,70 +94,4 @@ func (c *Cache) Run(ctx context.Context) error {
 
 func (c *Cache) ApplyRetentionPolicy() error {
 	return nil
-}
-
-func (c *Cache) applyRetentionPolicy(tx *bolt.Tx, size uint64) error {
-	sizeBucket := tx.Bucket(sizeBucketName)
-
-	newSizeBytes := sizeBucket.Get(sizeBucketName)
-
-	newSize := binary.BigEndian.Uint64(newSizeBytes) + size
-
-	cursor := tx.Bucket(retentionBucketName).Cursor()
-
-	minTimestamp := timeToTimestampBytes(time.Time{})
-
-	for timestamp, value := cursor.Seek(minTimestamp); timestamp != nil && c.retentionCondition(timestamp, newSize); timestamp, value = cursor.Next() {
-		metadata := &retentionBucketValue{}
-
-		err := gob.NewDecoder(bytes.NewReader(value)).Decode(metadata)
-		if err != nil {
-			return errors.Wrap(err, "failed to decode retention bucket value")
-		}
-
-		newSize -= uint64(metadata.Size)
-
-		path := c.digestToPath(metadata.Digest)
-
-		err = os.Remove(path)
-		if err != nil && !os.IsNotExist(err) {
-			return errors.Wrap(err, "failed to remove package")
-		}
-
-		c.metrics.CacheSize.Sub(float64(metadata.Size))
-
-		err = cursor.Delete()
-		if err != nil {
-			return errors.Wrap(err, "failed to delete retention bucket value")
-		}
-	}
-
-	if size > 0 && newSize != size {
-		err := sizeBucket.Put(sizeBucketName, binary.BigEndian.AppendUint64(nil, newSize))
-		if err != nil {
-			return errors.Wrap(err, "failed to update cache size")
-		}
-	}
-
-	return nil
-}
-
-func (c *Cache) retentionCondition(timestampBytes []byte, size uint64) bool {
-	timestamp := time.Unix(int64(binary.BigEndian.Uint64(timestampBytes)), 0)
-
-	return timestamp.Add(c.retentionPeriod).Before(time.Now()) || size > c.retentionSize
-}
-
-var (
-	sizeBucketName      = []byte("size")
-	retentionBucketName = []byte("retention")
-)
-
-func timeToTimestampBytes(t time.Time) []byte {
-	return binary.BigEndian.AppendUint64(nil, uint64(t.Unix()))
-}
-
-type retentionBucketValue struct {
-	Digest string
-	Size   int64
 }
