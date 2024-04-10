@@ -207,11 +207,19 @@ spec:
                   items:
                     type: string
             status:
+              type: object
               properties:
                 conditions:
+                  type: array
                   description: Conditions defines add NodeUser
                   items:
                     description: Condition defines.
+                    type: object
+                    required:
+                      - lastTransitionTime
+                      - status
+                      - type
+                      - node
                     properties:
                       lastTransitionTime:
                         description: Last time the condition transitioned from one status
@@ -237,12 +245,4 @@ spec:
                       node:
                         description: Name of the node to which the NodeUser is added
                         type: string
-                    required:
-                      - lastTransitionTime
-                      - status
-                      - type
-                      - node
-                    type: object
-                  type: array
-                type: object
       additionalPrinterColumns: *additionalPrinterColumns
