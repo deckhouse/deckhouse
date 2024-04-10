@@ -138,7 +138,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-	go test ./testing/matrix/ -v
+	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
