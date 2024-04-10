@@ -112,7 +112,7 @@ func (mr *ModuleRelease) GetForce() bool {
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
-	return false
+	return mr.Annotations["release.deckhouse.io/apply-now"] == "true"
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
