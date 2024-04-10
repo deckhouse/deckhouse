@@ -1251,7 +1251,7 @@ entries:
                     ru: Настройки
                   url: /modules/381-l2-load-balancer/configuration.html
                 - title: Custom Resources
-                  url: /modules/450-keepalived/cr.html
+                  url: /modules/381-l2-load-balancer/cr.html
             - title:
                 en: Examples
                 ru: Примеры
