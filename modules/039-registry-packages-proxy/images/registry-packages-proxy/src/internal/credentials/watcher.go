@@ -35,18 +35,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
-const (
-	// defaultRepository is the repository address from deckhouse-registry secret.
-	defaultRepository = ""
-)
-
 type Watcher struct {
 	k8sClient                     *kubernetes.Clientset
 	k8sDynamicClient              dynamic.Interface
 	registrySecretDiscoveryPeriod time.Duration
-	registryClientConfigsMutex    sync.RWMutex
-	registryClientConfigs         map[string]*registry.ClientConfig
-	logger                        *log.Entry
+	sync.RWMutex
+	registryClientConfigs map[string]*registry.ClientConfig
+	logger                *log.Entry
 }
 
 func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interface, registrySecretDiscoveryPeriod time.Duration, logger *log.Entry) *Watcher {
@@ -60,8 +55,8 @@ func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interf
 }
 
 func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
-	w.registryClientConfigsMutex.RLock()
-	defer w.registryClientConfigsMutex.RUnlock()
+	w.RLock()
+	defer w.RUnlock()
 
 	clientConfig, ok := w.registryClientConfigs[repository]
 	if !ok {
@@ -134,9 +129,9 @@ func (w *Watcher) fetchSecret(ctx context.Context) error {
 		return errors.Wrap(err, "failed to convert secret data to registry config")
 	}
 
-	w.registryClientConfigsMutex.Lock()
-	w.registryClientConfigs[defaultRepository] = registryConfig
-	w.registryClientConfigsMutex.Unlock()
+	w.Lock()
+	w.registryClientConfigs[registry.DefaultRepository] = registryConfig
+	w.Unlock()
 
 	return nil
 }
@@ -202,9 +197,9 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 			Auth:       auth,
 		}
 
-		w.registryClientConfigsMutex.Lock()
+		w.Lock()
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
-		w.registryClientConfigsMutex.Unlock()
+		w.Unlock()
 	case watch.Deleted:
 		var moduleSource ModuleSource
 
@@ -213,9 +208,9 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 			return errors.Wrap(err, "failed to convert unstructured object to module source")
 		}
 
-		w.registryClientConfigsMutex.Lock()
+		w.Lock()
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
-		w.registryClientConfigsMutex.Unlock()
+		w.Unlock()
 	}
 
 	return nil

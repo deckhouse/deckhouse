@@ -21,6 +21,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// defaultRepository is the repository address from deckhouse-registry secret.
+	DefaultRepository = ""
+)
+
 var ErrPackageNotFound = errors.New("package not found")
 
 type Client interface {

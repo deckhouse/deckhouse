@@ -71,7 +71,7 @@ func (p *Proxy) Serve() {
 		}
 
 		repository := r.URL.Query().Get("repository")
-		if repository == "" {
+		if repository == registry.DefaultRepository {
 			p.logger.Infof("%s digest from main repository request received", digest)
 		} else {
 			p.logger.Infof("%s digest from repository %s request received", digest, repository)
