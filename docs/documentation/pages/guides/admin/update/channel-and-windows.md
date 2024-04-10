@@ -104,27 +104,27 @@ spec:
             - Sat
 ```
 
-## Срочное обновление модуля без определения времени
+## Срочное обновление модуля
 
-При необходимости, выполните обновление модуля без определенного времени.
+При необходимости, можно выполнить обновление модуля вне окон обновлений.
 
-   > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
+{% alert level="warning" %}
+Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
+{% endalert %}
 
-1. Подтвердите обновление узла в ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease), установив аннотацию `release.deckhouse.io/apply-now: "true"`.
+Для срочного обновления платформы в ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease), например, до версии v1.56.2, установив аннотацию `release.deckhouse.io/apply-now: "true"`:
 
-   Пример команды пропуска окон обновлений для версии `v1.56.2`:
+```shell
+kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+```
 
-   ```shell
-   kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
-   ```
+Пример ресурса с установленной аннотацией пропуска окон обновлений:
 
-   Пример ресурса с установленной аннотацией пропуска окон обновлений:
-
-   ```yaml
+```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: DeckhouseRelease
    metadata:
      annotations:
        release.deckhouse.io/apply-now: "true"
    ...
-   ```
+```
