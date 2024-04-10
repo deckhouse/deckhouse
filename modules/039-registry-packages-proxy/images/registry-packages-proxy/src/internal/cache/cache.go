@@ -21,23 +21,26 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 )
 
 type Cache struct {
+	logger        *log.Entry
 	root          string
 	retentionSize uint64
 
 	metrics *Metrics
 }
 
-func New(root string, retentionSize uint64, metrics *Metrics) (*Cache, error) {
+func New(logger *log.Entry, root string, retentionSize uint64, metrics *Metrics) *Cache {
 	return &Cache{
+		logger:        logger,
 		root:          root,
 		retentionSize: retentionSize,
 		metrics:       metrics,
-	}, nil
+	}
 }
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
@@ -49,12 +52,12 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 			return 0, nil, cache.ErrEntryNotFound
 		}
 
-		return 0, nil, errors.Wrap(err, "failed to open package file")
+		return 0, nil, err
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		return 0, nil, errors.Wrap(err, "failed to get stat of package file")
+		return 0, nil, err
 	}
 
 	return stat.Size(), file, nil
@@ -69,11 +72,13 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	return nil
 }
 
-func (c *Cache) Run(ctx context.Context) error {
+func (c *Cache) Run(ctx context.Context) {
+	c.logger.Info("starting cache reconcile loop")
 
 	err := c.ApplyRetentionPolicy()
 	if err != nil {
-		return err
+		c.logger.Error(err)
+		return
 	}
 
 	ticker := time.NewTicker(time.Minute)
@@ -82,11 +87,12 @@ func (c *Cache) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case <-ticker.C:
 			err := c.ApplyRetentionPolicy()
 			if err != nil {
-				return errors.Wrap(err, "failed to apply retention policy")
+				c.logger.Error(err)
+				return
 			}
 		}
 	}

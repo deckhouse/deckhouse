@@ -16,13 +16,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 
@@ -34,14 +33,15 @@ func main() {
 
 	config, err := app.InitFlags()
 	if err != nil {
-		log.Error(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	logger := app.InitLogger(config)
+
 	listener, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		logger.Fatal(err)
 	}
 	defer listener.Close()
 
@@ -50,21 +50,16 @@ func main() {
 
 	cacheMetrics := app.RegisterMetrics()
 
-	logger := app.InitLogger(config)
 	client := app.InitClient(config, logger)
 	dynamicClient := app.InitDynamicClient(config, logger)
 
-	cache, err := app.NewCache(ctx, config, cacheMetrics)
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
+	cache := app.NewCache(ctx, logger, config, cacheMetrics)
 	if cache == nil {
 		logger.Info("Cache is disabled")
 	}
+	go cache.Run(ctx)
 
 	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
-
 	go watcher.Watch(ctx)
 
 	server := app.BuildServer()
@@ -74,11 +69,12 @@ func main() {
 	})
 
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		logger.Fatal(err)
 	}
 
 	go rp.Serve()
+
 	<-ctx.Done()
+
 	rp.Stop()
 }

@@ -17,28 +17,15 @@ package app
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"registry-packages-proxy/internal/cache"
 )
 
-func NewCache(ctx context.Context, config *Config, metrics *cache.Metrics) (*cache.Cache, error) {
+func NewCache(ctx context.Context, logger *log.Entry, config *Config, metrics *cache.Metrics) *cache.Cache {
 	if config.DisableCache {
-		return nil, nil
+		return nil
 	}
-
-	cache, err := cache.New(config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create cache")
-	}
-
-	go func() {
-		err := cache.Run(ctx)
-		if err != nil {
-			log.Errorf("Run cache: %v", err)
-		}
-	}()
-
-	return cache, nil
+	cache := cache.New(logger, config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
+	return cache
 }

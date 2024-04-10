@@ -251,6 +251,10 @@ func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) 
 	log.DebugF(format, args...)
 }
 
+func (r registryPackagesProxyLogger) Error(args ...interface{}) {
+	log.ErrorLn(args...)
+}
+
 func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	now := time.Now()
 
