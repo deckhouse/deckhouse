@@ -80,12 +80,12 @@
       "links": [],
       "maxDataPoints": 150,
       "options": {
-	"alignValue": "left",
+        "alignValue": "left",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
         },
-	"mergeValues": false,
+        "mergeValues": false,
         "rowHeight": 0.9,
         "showValue": "never",
         "tooltip": {
