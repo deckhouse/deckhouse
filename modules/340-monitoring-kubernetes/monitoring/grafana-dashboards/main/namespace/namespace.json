@@ -855,8 +855,8 @@
             "mode": "thresholds"
           },
           "custom": {
-            "fillOpacity": 100,
-            "lineWidth": 1
+            "fillOpacity": 70,
+            "lineWidth": 0
           },
           "decimals": 0,
           "displayName": "availability",

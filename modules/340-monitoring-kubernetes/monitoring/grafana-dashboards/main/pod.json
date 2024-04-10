@@ -879,7 +879,7 @@
           },
           "custom": {
             "fillOpacity": 70,
-            "lineWidth": 1
+            "lineWidth": 0
           },
           "mappings": [
             {

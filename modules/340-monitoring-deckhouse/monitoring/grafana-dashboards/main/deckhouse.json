@@ -37,8 +37,8 @@
             "mode": "thresholds"
           },
           "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 1
+            "fillOpacity": 70,
+            "lineWidth": 0
           },
           "mappings": [
             {
