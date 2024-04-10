@@ -124,5 +124,124 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the linux users to create on all nodes.
+
+            The user's home directory is created in the `/home/deckhouse/` directory.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              oneOf:
+              - required:
+                - uid
+                - sshPublicKey
+                - passwordHash
+              - required:
+                - uid
+                - sshPublicKeys
+                - passwordHash
+              properties:
+                uid:
+                  type: number
+                  description: |
+                    Node user ID.
+
+                    We recommend using the values `>= 1100` to avoid conflicts with manually created users.
+
+                    This parameter does not change during the entire resource life.
+                  x-doc-examples: [1100]
+                  minimum: 1001
+                  x-doc-required: true
+                sshPublicKey:
+                  type: string
+                  x-doc-deprecated: true
+                  description: |
+                    Node user SSH public key.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
+                  x-doc-examples: ['ssh-rsa AAABBB']
+                sshPublicKeys:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    Node user SSH public keys.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
+                  x-doc-examples:
+                  - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
+                passwordHash:
+                  type: string
+                  x-doc-required: true
+                  description: |
+                    Hashed user password.
+
+                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
+                  x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
+                isSudoer:
+                  type: boolean
+                  description: 'Persistence of node user in sudo group.'
+                  x-doc-examples: ['true']
+                  default: false
+                extraGroups:
+                  type: array
+                  description: 'Node user additional system groups.'
+                  items:
+                    type: string
+                  x-doc-examples:
+                  - [ 'docker' ]
+                  - [ 'docker', 'ftp' ]
+                nodeGroups:
+                  type: array
+                  default: [ '*' ]
+                  description: List of NodeGroups to apply the user for.
+                  x-doc-examples:
+                  - [ 'master', 'worker' ]
+                  - [ 'worker' ]
+                  - [ '*' ]
+                  items:
+                    type: string
+            status:
+              properties:
+                conditions:
+                  description: Conditions defines add NodeUser
+                  items:
+                    description: Condition defines.
+                    properties:
+                      lastTransitionTime:
+                        description: Last time the condition transitioned from one status
+                          to another. This should be when the underlying condition changed.
+                          If that is not known, then using the time when the API field
+                          changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: A human readable message indicating details about
+                          the transition. This field may be empty.
+                        type: string
+                      status:
+                        description: Status of the condition, one of True, False, Unknown.
+                        type: string
+                      type:
+                        description: Type of condition in CamelCase or in foo.example.com/CamelCase.
+                          Many .condition.type values are consistent across resources
+                          like Available, but because arbitrary conditions can be useful
+                          (see .node.status.conditions), the ability to deconflict is
+                          important.
+                        type: string
+                      node:
+                        description: Name of the node to which the NodeUser is added
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - status
+                      - type
+                      - node
+                    type: object
+                  type: array
       additionalPrinterColumns: *additionalPrinterColumns
