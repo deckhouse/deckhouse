@@ -108,6 +108,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		SkipModulesPull:       app.MirrorWithoutModules,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -119,8 +120,9 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 			"mirror_pull",
 			fmt.Sprintf("%x", md5.Sum([]byte(app.MirrorSourceRegistryRepo))),
 		),
-		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:     app.MirrorMinVersion,
+		ValidationMode:  mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:      app.MirrorMinVersion,
+		SpecificVersion: app.MirrorSpecificVersion,
 	}
 
 	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
@@ -141,6 +143,12 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	var versionsToMirror []semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
+		if mirrorCtx.SpecificVersion != nil {
+			versionsToMirror = append(versionsToMirror, *mirrorCtx.SpecificVersion)
+			log.InfoF("Skipped releases lookup as release %v is specifically requested with --release\n", mirrorCtx.SpecificVersion)
+			return nil
+		}
+
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)
 		if err != nil {
 			return fmt.Errorf("Find versions to mirror: %w", err)
