@@ -27,6 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 )
 
+const CacheHighUsagePercent = 80
+
 type CacheEntry struct {
 	lastAccessTime time.Time
 	size           int64
@@ -99,12 +101,6 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 
 func (c *Cache) Reconcile(ctx context.Context) {
 	c.logger.Info("starting cache reconcile loop")
-
-	err := c.ApplyRetentionPolicy()
-	if err != nil {
-		c.logger.Error(err)
-		return
-	}
 
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
