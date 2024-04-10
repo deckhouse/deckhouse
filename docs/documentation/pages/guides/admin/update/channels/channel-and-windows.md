@@ -110,7 +110,7 @@ spec:
 
    > Применение обновлений без соблюдения определенного для этого времени может вызвать проблемы стабильности системы или конфликты с работающими приложениями.
 
-1. Установите в соответствующем ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+1. Подтвердите обновление узла в ресурсе [*DeckhouseRelease*](modules/002-deckhouse/cr.html#deckhouserelease), установив аннотацию `release.deckhouse.io/apply-now: "true"`.
 
    Пример команды пропуска окон обновлений для версии `v1.56.2`:
 
