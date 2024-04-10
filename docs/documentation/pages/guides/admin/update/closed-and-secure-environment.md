@@ -6,6 +6,15 @@ lang: ru
 
 Обновления Deckhouse Kubernetes Platform могут включать исправления уязвимостей, улучшение производительности и добавление новых функций. Deckhouse Kubernetes Platform отвечает за то, чтобы кластер одинаково работал на любой поддерживаемой инфраструктуре.
 
+## Требования
+
+- ОС Linux / Unix / MacOS Х;
+- установленный Docker или Docker Desktop;
+- наличие установленных пакетов jq, readlink;
+- не менее 100 Гб свободного пространства;
+- сетевой доступ к репозиторию образов контейнеров (container registry) в закрытом контуре, который используется для размещения образов DKP.
+
+
 ## Доставка образов поставки в закрытое окружение
 
 Доставка образов платформы в закрытое окружение осуществляется в виде готовой поставки платформы на USB-носителе или с помощью утилиты `dhctl mirror` -- для этого варианта требуется доступ в интернет.
@@ -18,32 +27,371 @@ lang: ru
 
 При использовании `dhctl mirror`, указанные выше артефакты будут созданы в процессе работы утилиты.
 
-Чтобы доставить образы поставки в закрытое окружение:
+### Загрузка образов DKP
 
-1. Выполните аутентификацию на `registry.deckhouse.ru`: машина с доступом в интернет - обязательно докер+линукс или мак.
+1. Создайте каталог на рабочей машине и перейдите в него.
+
+2. Создайте каталог `d8-images`.
+
+3. Выполните аутентификацию в репозитории образов контейнеров DKP на `registry.deckhouse.ru`, используя в качестве пароля ваш лицензионный ключ:
+
+```bash
+docker login -u license-token registry.deckhouse.ru
+```
+
+4. Выполните команду ниже для запуска в интерактивном режиме контейнера установщика DKP? указав подходящий каталог рабочей станции для проброса в контейнер:
+
+```bash
+docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:stable bash
+```
+
+5. Из запущенного контейнера выполните команду ниже, предварительно заменив `YOUR_LICENSE_KEY` на ваш лицензионный ключ:
+
+```bash
+dhctl mirror -l "YOUR_LICENSE_KEY" -i /tmp/d8-images/d8.tar --source="registry.deckhouse.ru/deckhouse/ee" --gost-digest
+```
+
+6. После завершения загрузки образов в каталог `d8-images` скопируйте утилиту `dhctl` в каталог `d8-images`:
+
+```bash
+cp /usr/bin/dhctl /tmp/d8-images/dhctl
+```
+
+7. Выйдите из контейнера.
+
+8. Перенесите содержимое каталога `d8-images` в закрытое окружение, где доступен приватный репозиторий образов контейнеров (container registry).
+
+### Выгрузка образов DKP
+
+1. Перейдите в каталог `d8-images`, размещенный в закрытом окружении.
+
+2. Задайте следующие переменные окружения, указав пути до сертификатов от закрытого репозитория образов контейнеров (container registry), а также путь до каталога с CA сертификатами:
+
+```bash
+export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
+export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
+```
+
+3. Выполните команду для выгрузки образов Deckhouse в ваш репозиторий образов контейнеров, предварительно задав корректный путь и данные доступа YOUR_USERNAME и YOUR_PASSWORD:
+
+```bash
+./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM/deckhouse/ee" -u "YOUR_USERNAME" -p "YOUR_PASSWORD"
+```
+
+4. Дождитесь завершения процесса.
+
+5. Убедитесь, что образы появились в вашем репозитории образов контейнеров.
+
+## Подготовка к установке обновлений в закрытый контур
+
+Чтобы подготовить установку обновлений в закрытый контур:
+
+1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel` с помощью команды:
 
    ```bash
-   docker login -u license-token registry.deckhouse.ru
+   kubectl get mc deckhouse -o yaml | grep releaseChannel
    ```
 
-2. Запустите образ установщика версии 1.58.3, указав подходящий каталог рабочей станции для проброса в контейнер: - как это сделать?
-   
+1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse Kubernetes Platform:
+
    ```bash
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.3 bash
+   kubectl edit mc deckhouse -o yaml
    ```
-{% alert level="info" %}
-   А дальше?
-{% endalert %}
+
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform и проверьте, что изменения внесены, командой:
+
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Переведите установку обновлений платформы в ручной режим. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
+
+   ```bash
+   kubectl edit mc deckhouse -o yaml
+   ```
+
+   Пример корректной конфигурации модуля Deckhouse Kubernetes Platform:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     annotations:
+       kubectl.kubernetes.io/last-applied-configuration: |
+         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
+     creationTimestamp: "2024-03-11T10:28:47Z"
+     generation: 3
+     name: deckhouse
+     resourceVersion: "538605"
+     uid: 39114274-a091-4bf0-8506-3a224917a725
+   spec:
+     settings:
+       bundle: Default
+       logLevel: Info
+       update:
+         mode: Manual
+     version: 1
+   status:
+     state: Enabled
+     status: Ready
+     type: ""
+     version: "1"
+   ```
+
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
+
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Загрузите все образы поставки DKP в реестр образов контейнеров, находящийся в закрытом окружении. Для этого перейдите в каталог с содержимым поставки и выполните команду:
+
+   ```bash
+   ./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM:5000/path/to/deckhouse/ee" -u "ПОЛЬЗОВАТЕЛЬ" -p "ПАРОЛЬ"
+   ```
+
+1. В случае использования самоподписанных сертификатов для registry образов контейнеров? используйте переменные окружения `SSL_CERT_FILE` и `SSL_CERT_DIR`, чтобы задать пути к СА сертификату и сертификатам registry образов контейнеров, как представлено на примере:
+
+   ```bash
+   export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
+   export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
+   ```
+
+1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
+
+   ```bash
+   kubectl edit mc deckhouse -o yaml
+   ```
+
+1. Добавьте `releaseChannel: Stable` в блок `settings`.
+
+   Пример корректной конфигурации модуля Deckhouse Kubernetes Platform:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     annotations:
+       kubectl.kubernetes.io/last-applied-configuration: |
+         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
+     creationTimestamp: "2024-03-11T10:28:47Z"
+     generation: 3
+     name: deckhouse
+     resourceVersion: "538605"
+     uid: 39114274-a091-4bf0-8506-3a224917a725
+   spec:
+     settings:
+       bundle: Default
+       logLevel: Info
+       releaseChannel: Stable
+       update:
+         mode: Manual
+     version: 1
+   status:
+     state: Enabled
+     status: Ready
+     type: ""
+     version: "1"
+   ```
+
+1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
+
+   ```bash
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Загрузите манифесты `DeckhouseReleases` из файла `deckhousereleases.yaml` командой:
+
+   ```bash
+   kubectl apply -f deckhousereleases.yaml
+   ```
+
+1. Проверьте наличие релизов Deckhouse Kubernetes Platform командой:
+
+   ```bash
+   kubectl get deckhousereleases.deckhouse.ru
+   ```
+
+   Пример вывода команды:
+
+   ```text
+   $ kubectl get deckhousereleases.deckhouse.ru 
+   NAME       PHASE     TRANSITIONTIME   MESSAGE           
+   v1.57.5    Pending   34s              
+   v1.58.3    Pending   34s
+   ```
+
+1. В случае обнаружения в списке релиза с нестандартным названием без точек (из примера выше: `v1-57-5`) удалите его командой:
+
+   ```bash
+   kubectl delete deckhousereleases v1-57-5
+   ```
+
+## Установка обновлений
+
+Дэкхаус релизес применят отдельно. Если релиза нет - обновиться на него не получится, даже при наличии образов. В этом файле отпилить придется - нюанс.
+
+доступ по SSH - ТАЧКА КОНСОЛЬНЫЙ ДОСТУП.
+На хос попадают и перевходят на мастер-узел и попадают в кластер (терминальный доступ) +веб-мордами.
+Ремоут десктоп не работает в некоторых случаях.
+
+если миррором поставку - архив может быть любого размера.
+
+нюанс: архив перед тем как залить в реджистри - распаковать.
+миррор может бить на части - архив. файлами по 2 гига, а внутрии собирать и в погружать в реджистри.
+
+ГОСТ САМ - чексумма. описать. Когла сумки собираются- нужно отвалидировать.
 
 
-Это после доставки образов
+Никаких дэкхаус io, ru - только для вариантов в РФ - в реджистри.
+ФСТЭК своя редакция и свой сценарий.
 
-2. Загрузка образов в изолированный registry (репозитрий образов контейнеров)
+### Установка в закрытый контур в ручном режиме
+
+Так как установка обновлений осуществляется в ручном режиме, необходимо вручную одобрять каждый устанавливаемый релиз.
+
+1. Получите список доступных релизов Deckhouse командой:
+
+   ```bash
+   kubectl get deckhousereleases.deckhouse.ru
+   ```
+
+   Пример вывода команды:
+
+   ```text
+   $ kubectl get deckhousereleases.deckhouse.ru 
+   NAME       PHASE     TRANSITIONTIME   MESSAGE          
+   v1.57.5    Pending   34s              
+   v1.58.3    Pending   34s
+   ```
+
+2. Найдите в списке релиз с сообщением `Waiting for manual approval` или зайдите в раздел **Alerts** сервиса Prometheus и найдите алерт `DeckhouseReleaselsWaitingManualApproval`. Разверните этот алерт, чтобы узнать ожидаемый релиз для одобрения.
+
+3. Проверьте, что ваш кластер соответствует требованиям для выполнения обновлений. Для этого выполните команду ниже и ознакомьтесь с секцией `Requirements`:
+
+   ```bash
+   kubectl describe deckhouserelease ВЕРСИЯ_РЕЛИЗА
+   ```
+
+   Пример вывода команды выше для релиза `v1.45.11`:
+
+   ```yaml
+   Name:         v1.45.11
+   Namespace:    
+   Labels:       <none>
+   Annotations:  <none>
+   API Version:  deckhouse.io/v1alpha1
+   Approved:     false
+   Kind:         DeckhouseRelease
+   Metadata:
+     Creation Timestamp:  2024-03-11T13:07:04Z
+     Generation:          1
+     Managed Fields:
+       API Version:  deckhouse.io/v1alpha1
+       Fields Type:  FieldsV1
+       fieldsV1:
+         f:approved:
+         f:metadata:
+           f:annotations:
+             .:
+             f:kubectl.kubernetes.io/last-applied-configuration:
+         f:spec:
+           .:
+           f:changelog:
+             .:
+             f:helm:
+               .:
+               f:fixes:
+             f:ingress-nginx:
+               .:
+                f:fixes:
+           f:changelogLink:
+           f:requirements:
+             .:
+             f:ingressNginx:
+             f:k8s:
+             f:nodesMinimalOSVersionUbuntu:
+           f:version:
+       Manager:      kubectl-client-side-apply
+       Operation:    Update
+       Time:         2024-03-11T13:07:04Z
+       API Version:  deckhouse.io/v1alpha1
+       Fields Type:  FieldsV1
+       fieldsV1:
+         f:status:
+           .:
+           f:approved:
+           f:message:
+           f:phase:
+           f:transitionTime:
+       Manager:         deckhouse-controller
+       Operation:       Update
+       Subresource:     status
+       Time:            2024-03-11T13:07:15Z
+     Resource Version:  124704
+     UID:               bdde9d57-6d94-47e3-8316-c038081b01ed
+   Spec:
+     Changelog:
+       Helm:
+         Fixes:
+           pull_request:  https://github.com/deckhouse/deckhouse/pull/4751
+           Summary:       Fix deprecated k8s resources metrics.
+       Ingress - Nginx:
+         Fixes:
+           pull_request:  https://github.com/deckhouse/deckhouse/pull/4734
+           Summary:       Add protection for ingress-nginx-controller daemonset migration.
+     Changelog Link:      https://github.com/deckhouse/deckhouse/releases/tag/v1.45.11
+     Requirements:
+       Ingress Nginx:                    1.1
+       k8s:                              1.22.0
+       Nodes Minimal OS Version Ubuntu:  18.04
+     Version:                            v1.45.11
+   Status:
+     Approved:         false
+     Message:          Waiting for manual approval
+     Phase:            Pending
+     Transition Time:  2024-03-11T13:10:00.117064727Z
+   Events:             <none>
+   ```
+
+4. Если все требования соблюдены, одобрите установку обновлений, выполнив команду:
+
+   ```bash
+   kubectl patch DeckhouseRelease ВЕРСИЯ_РЕЛИЗА --type=merge -p='{"approved": true}'
+   ```
+
+5. Дождитесь завершения установки релиза. Определить успешность операции можно по следующим признакам:
+
+- в разделе **Alerts** сервиса Prometheus погас алерт `DeckhouseUpdating`;
+- в Grafana отображается желаемая версия Deckhouse Kubernetes Platform;
+- в очереди Deckhouse Kubernetes Platform нет задач для обработки;
+- релиз перешел из статуса `Pending` в статус `Deployed`.
+
+Пример вывода для установленного релиза `v1.45.11`:
+
+```text
+$ kubectl get deckhousereleases
+NAME       PHASE      TRANSITIONTIME   MESSAGE         
+v1.46.12   Pending    10s              Waiting for manual approval
+v1.47.5    Pending    5m55s            
+v1.48.9    Pending    5m...
+```
+
+Как аппрувить ревайрментс - 
+
+как резолвить. Кернел узла может быть слишком старым.
+От ОС - кернел в доках.
+По Куберу - поправить версию в конфигах.
+Есть блок по манифестам - если в кластере задпелоен софты, которые триггерят обновления в кубере - эти обновления перестанут работать. Как их резолвить. Для сисадминов - нужно написать - новый сценарий.
+
+
+### Загрузка образов в изолированный репозитрий образов контейнеров
+
 {% alert level="warning" %}
 Доступно только в Enterprise Edition.
 {% endalert %}
 
-1. При необходимости авторизуйтесь в container registry `registry.deckhouse.ru` или `registry.deckhouse.io` с помощью вашего лицензионного ключа.
+1. При необходимости авторизуйтесь в container registry `registry.deckhouse.ru` с помощью вашего лицензионного ключа.
 
    ```shell
    docker login -u license-token registry.deckhouse.ru
@@ -171,7 +519,7 @@ lang: ru
 
 Сетапы: кластеры мульти - от 30 секунд до 1 минуты прерывания  и одноголовый - прерывание сервиса.
 
-Мы обновилмись, у нас поменялись конфиги - у них они не отображены - кластер засетапил, манифесты положил - может не получится, отправлять в доку (версия в 1.54 был случай. проблема с перемеными).
+Мы обновились, у нас поменялись конфиги - у них они не отображены - кластер засетапил, манифесты положил - может не получиться, надо отправлять в доку (версия в 1.54 был случай. проблема с переменными).
 
 
 
@@ -179,6 +527,11 @@ lang: ru
 
 Прежде, чем пушить в реджистри:
 Если реджистри в норме, скачат образы, затащить в реджистри. Нюанс: в дхтл миррор нет возможности выкачать  релиз. Можно задать минимальную версию. И он докачает до максимальной версии. Клиент может не одобрить. И дхтл миррор не поможет, так как руками вытаскивать образы релизов. Лучшне обновиться до того, как загрузить в реджистри. Есть опасность по версиям - надо обнавляться на последнюю рпатч-версию минорной версии.
+
+
+
+
+Ручная загрузка модулей после реджистри
 
 Ниже описаны шаги, необходимые для ручной загрузки образов модулей, подключаемых из источника модулей (ресурса [*ModuleSource*](cr.html#modulesource)):
 
@@ -235,329 +588,6 @@ lang: ru
 
    После применения манифеста модули готовы к использованию.
 
-## Подготовка к установке обновлений в закрытый контур
-
-Чтобы подготовить установку обновлений в закрытый контур:
-
-1. Убедитесь, что все обновляемые кластеры не имеют заданного канала обновлений `ReleaseChannel` с помощью команды
-{% alert level="info" %}
-что это даст?
-{% endalert %}
-
-   ```bash
-   kubectl get mc deckhouse -o yaml | grep releaseChannel
-   ```
-
-1. В случае, если канал обновлений указан, удалите его, отредактировав конфигурацию модуля Deckhouse Kubernetes Platform:
-
-{% alert level="info" %}
-почему нужно именно это сделать?
-{% endalert %}
-
-   ```bash
-   kubectl edit mc deckhouse -o yaml
-   ```
-{% alert level="info" %}
-Как проверить внесение изменений?
-{% endalert %}
-
-1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform и проверьте, что изменения внесены, командой:
-
-   ```bash
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-   ```
-
-1. Переведите установку обновлений платформы в ручной режим. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
-
-{% alert level="info" %}
-Почему именно в ручной?
-{% endalert %}
-
-   ```bash
-   kubectl edit mc deckhouse -o yaml
-   ```
-
-   Пример корректной конфигурации модуля Deckhouse Kubernetes Platform после шагов 1 и 2:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     annotations:
-       kubectl.kubernetes.io/last-applied-configuration: |
-         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
-     creationTimestamp: "2024-03-11T10:28:47Z"
-     generation: 3
-     name: deckhouse
-     resourceVersion: "538605"
-     uid: 39114274-a091-4bf0-8506-3a224917a725
-   spec:
-     settings:
-       bundle: Default
-       logLevel: Info
-       update:
-         mode: Manual
-     version: 1
-   status:
-     state: Enabled
-     status: Ready
-     type: ""
-     version: "1"
-   ```
-
-1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
-
-{% alert level="info" %}
-что за очередь?
-{% endalert %}
-
-   ```bash
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-   ```
-
-1. Загрузите все образы поставки DKP в реестр образов контейнеров, находящийся в закрытом окружении. Для этого перейдите в каталог с содержимым поставки и выполните команду:
-
-   ```bash
-   ./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM:5000/path/to/deckhouse/ee" -u "ПОЛЬЗОВАТЕЛЬ" -p "ПАРОЛЬ"
-   ```
-
-1. В случае использования самоподписанных сертификатов для registry образов контейнеров? используйте переменные окружения `SSL_CERT_FILE` и `SSL_CERT_DIR`, чтобы задать пути к СА сертификату и сертификатам registry образов контейнеров, как представлено на примере:
-
-   ```bash
-   export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
-   export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
-   ```
-
-1. Установите канал обновлений, например, `Stable`. Для этого отредактируйте конфигурацию модуля Deckhouse Kubernetes Platform командой:
-
-   ```bash
-   kubectl edit mc deckhouse -o yaml
-   ```
-
-1. Добавьте `releaseChannel: Stable` в блок `settings`.
-
-   Пример корректной конфигурации модуля Deckhouse Kubernetes Platform:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     annotations:
-       kubectl.kubernetes.io/last-applied-configuration: |
-         {"apiVersion":"deckhouse.io/v1alpha1","kind":"ModuleConfig","metadata":{"annotations":{},"name":"deckhouse"},"spec":{"settings":{"update":{"mode":"Manual"}},"version":1}}
-     creationTimestamp: "2024-03-11T10:28:47Z"
-     generation: 3
-     name: deckhouse
-     resourceVersion: "538605"
-     uid: 39114274-a091-4bf0-8506-3a224917a725
-   spec:
-     settings:
-       bundle: Default
-       logLevel: Info
-       releaseChannel: Stable
-       update:
-         mode: Manual
-     version: 1
-   status:
-     state: Enabled
-     status: Ready
-     type: ""
-     version: "1"
-   ```
-
-1. После внесения изменений, дождитесь завершения обработки очереди Deckhouse Kubernetes Platform, проверьте, что обработка очереди произошла, командой:
-
-   ```bash
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller queue list
-   ```
-
-1. Загрузите манифесты `DeckhouseReleases` из файла `deckhousereleases.yaml` командой:
-
-   ```bash
-   kubectl apply -f deckhousereleases.yaml
-   ```
-
-1. Проверьте наличие релизов Deckhouse Kubernetes Platform командой:
-
-   ```bash
-   kubectl get deckhousereleases.deckhouse.io
-   ```
-
-   Пример вывода команды:
-
-   ```text
-   $ kubectl get deckhousereleases.deckhouse.io 
-   NAME       PHASE     TRANSITIONTIME   MESSAGE           
-   v1.57.5    Pending   34s              
-   v1.58.3    Pending   34s
-   ```
-
-1. В случае обнаружения в списке релиза с нестандартным названием без точек (из примера выше: `v1-57-5`) удалите его командой:
-
-   ```bash
-   kubectl delete deckhousereleases v1-57-5
-   ```
-
-## Установка обновлений
-
-Дэкхаус релизес применят отдельно. Если релиза нет - обновиться на него не получится, даже при наличии образов. В этом файле отпилить придется - нюанс.
-
-доступ по SSH - ТАЧКА КОНСОЛЬНЫЙ ДОСТУП.
-На хос попадают и перевходят на мастер-узел и попадают в кластер (терминальный доступ) +веб-мордами.
-Ремоут десктоп не работает в некоторых случаях.
-
-если миррором поставку - архив может быть любого размера.
-
-нюанс: архив перед тем как залить в реджистри - распаковать.
-миррор может бить на части - архив. файлами по 2 гига, а внутрии собирать и в погружать в реджистри.
-
-ГОСТ САМ - чексумма. описать. Когла сумки собираются- нужно отвалидировать.
-
-
-Никаких дэкхаус io, ru - только для вариантов в РФ - в реджистри.
-ФСТЭК редакция.
-
-
-
-
-Так как установка обновлений осуществляется в ручном режиме, необходимо вручную одобрять каждый устанавливаемый релиз.
-
-Приблизительно установка каждого релиза занимает около 30 минут для кластера с тремя мастер-узлами и двумя воркер-узлами.
-
-1. Получите список доступных релизов Deckhouse командой:
-
-   ```bash
-   kubectl get deckhousereleases.deckhouse.io
-   ```
-
-   Пример вывода команды:
-
-   ```text
-   $ kubectl get deckhousereleases.deckhouse.io 
-   NAME       PHASE     TRANSITIONTIME   MESSAGE          
-   v1.57.5    Pending   34s              
-   v1.58.3    Pending   34s
-   ```
-
-2. Найдите в списке релиз с сообщением `Waiting for manual approval` или зайдите в раздел **Alerts** сервиса Prometheus и найдите алерт `DeckhouseReleaselsWaitingManualApproval`. Разверните этот алерт, чтобы узнать ожидаемый релиз для одобрения.
-
-3. Проверьте, что ваш кластер соответствует требованиям для выполнения обновлений. Для этого выполните команду ниже и ознакомьтесь с секцией `Requirements`:
-
-   ```bash
-   kubectl describe deckhouserelease ВЕРСИЯ_РЕЛИЗА
-   ```
-
-   Пример вывода команды выше для релиза `v1.45.11`:
-
-   ```yaml
-   Name:         v1.45.11
-   Namespace:    
-   Labels:       <none>
-   Annotations:  <none>
-   API Version:  deckhouse.io/v1alpha1
-   Approved:     false
-   Kind:         DeckhouseRelease
-   Metadata:
-     Creation Timestamp:  2024-03-11T13:07:04Z
-     Generation:          1
-     Managed Fields:
-       API Version:  deckhouse.io/v1alpha1
-       Fields Type:  FieldsV1
-       fieldsV1:
-         f:approved:
-         f:metadata:
-           f:annotations:
-             .:
-             f:kubectl.kubernetes.io/last-applied-configuration:
-         f:spec:
-           .:
-           f:changelog:
-             .:
-             f:helm:
-               .:
-               f:fixes:
-             f:ingress-nginx:
-               .:
-                f:fixes:
-           f:changelogLink:
-           f:requirements:
-             .:
-             f:ingressNginx:
-             f:k8s:
-             f:nodesMinimalOSVersionUbuntu:
-           f:version:
-       Manager:      kubectl-client-side-apply
-       Operation:    Update
-       Time:         2024-03-11T13:07:04Z
-       API Version:  deckhouse.io/v1alpha1
-       Fields Type:  FieldsV1
-       fieldsV1:
-         f:status:
-           .:
-           f:approved:
-           f:message:
-           f:phase:
-           f:transitionTime:
-       Manager:         deckhouse-controller
-       Operation:       Update
-       Subresource:     status
-       Time:            2024-03-11T13:07:15Z
-     Resource Version:  124704
-     UID:               bdde9d57-6d94-47e3-8316-c038081b01ed
-   Spec:
-     Changelog:
-       Helm:
-         Fixes:
-           pull_request:  https://github.com/deckhouse/deckhouse/pull/4751
-           Summary:       Fix deprecated k8s resources metrics.
-       Ingress - Nginx:
-         Fixes:
-           pull_request:  https://github.com/deckhouse/deckhouse/pull/4734
-           Summary:       Add protection for ingress-nginx-controller daemonset migration.
-     Changelog Link:      https://github.com/deckhouse/deckhouse/releases/tag/v1.45.11
-     Requirements:
-       Ingress Nginx:                    1.1
-       k8s:                              1.22.0
-       Nodes Minimal OS Version Ubuntu:  18.04
-     Version:                            v1.45.11
-   Status:
-     Approved:         false
-     Message:          Waiting for manual approval
-     Phase:            Pending
-     Transition Time:  2024-03-11T13:10:00.117064727Z
-   Events:             <none>
-   ```
-
-4. Если все требования соблюдены, одобрите установку обновлений, выполнив команду:
-
-   ```bash
-   kubectl patch DeckhouseRelease ВЕРСИЯ_РЕЛИЗА --type=merge -p='{"approved": true}'
-   ```
-
-5. Дождитесь завершения установки релиза. Определить успешность операции можно по следующим признакам:
-
-- в разделе **Alerts** сервиса Prometheus погас алерт `DeckhouseUpdating`;
-- в Grafana отображается желаемая версия Deckhouse Kubernetes Platform;
-- в очереди Deckhouse Kubernetes Platform нет задач для обработки;
-- релиз перешел из статуса `Pending` в статус `Deployed`.
-
-Пример вывода для установленного релиза `v1.45.11`:
-
-```text
-$ kubectl get deckhousereleases
-NAME       PHASE      TRANSITIONTIME   MESSAGE
-v1.45.11   Deployed   55s              
-v1.46.12   Pending    10s              Waiting for manual approval
-v1.47.5    Pending    5m55s            
-v1.48.9    Pending    5m...
-```
-
-Как аппрувить ревайрментс - 
-
-как резолвить. Кернел узла может быть слишком старым.
-От ОС - кернел в доках.
-По Куберу - поправить версию в конфигах.
-Ест блок по манифестам - если в кластере заделоин софт, которые триггерят обновления в кубере-эти обновления перестанут работать. Как их резолвить. Для простых - нужно написать.
 
 
 
