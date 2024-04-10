@@ -15,8 +15,6 @@
 package cache
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -47,15 +45,7 @@ func (c *Cache) copyPackage(digest string, reader io.Reader) error {
 }
 
 func (c *Cache) digestToPath(digest string) string {
-	hash := hash(digest)
-
-	partition := filepath.Join(c.root, "packages", hash[:2])
-
-	return filepath.Join(partition, hash)
-}
-
-func hash(digest string) string {
-	hash := sha256.Sum256([]byte(digest))
-
-	return hex.EncodeToString(hash[:])
+	// digest format is sha256:1234567...
+	hash := digest[7:]
+	return filepath.Join(c.root, "packages", hash[:2], hash)
 }

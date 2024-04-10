@@ -110,15 +110,15 @@ func (p *Proxy) Serve() {
 
 	p.logger.Infof("starting listener: %s", p.listener.Addr())
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
-		p.logger.Errorf("http server error: %v", err)
+		p.logger.Error(err)
 	}
 }
 
 func (p *Proxy) Stop() {
-	p.logger.Infof("stopping listener: %s", p.listener.Addr())
+	p.logger.Infof("graceful shutdown listener: %s", p.listener.Addr())
 	err := p.server.Shutdown(context.Background())
 	if err != nil && err != http.ErrServerClosed {
-		p.logger.Errorf("http server graceful shutdown error: %v", err)
+		p.logger.Error(err)
 		os.Exit(1)
 	}
 }

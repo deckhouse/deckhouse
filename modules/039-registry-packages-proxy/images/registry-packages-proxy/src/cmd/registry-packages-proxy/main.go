@@ -61,7 +61,9 @@ func main() {
 	}
 
 	cache := app.NewCache(logger, config, cacheMetrics)
-	go cache.Run(ctx)
+	if cache != nil {
+		go cache.Reconcile(ctx)
+	}
 
 	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
 	go watcher.Watch(ctx)

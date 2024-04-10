@@ -16,6 +16,7 @@ package credentials
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -64,7 +65,7 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 
 	clientConfig, ok := w.registryClientConfigs[repository]
 	if !ok {
-		return nil, errors.Errorf("registry client config for repository '%s' not found", repository)
+		return nil, fmt.Errorf("registry client config for repository '%s' not found", repository)
 	}
 
 	return clientConfig, nil

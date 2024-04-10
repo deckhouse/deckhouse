@@ -97,7 +97,7 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	return nil
 }
 
-func (c *Cache) Run(ctx context.Context) {
+func (c *Cache) Reconcile(ctx context.Context) {
 	c.logger.Info("starting cache reconcile loop")
 
 	err := c.ApplyRetentionPolicy()
