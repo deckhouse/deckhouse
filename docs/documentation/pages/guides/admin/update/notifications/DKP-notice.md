@@ -107,7 +107,7 @@ lang: ru
 
    Если алерт `DeckhouseUpdating` не отображается, значит обновление завершено.
 
-   Вывод команды позволяет прверить состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse Kubernetes Platform:
+   Вывод команды проверяет состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse Kubernetes Platform:
 
    ```console
    NAME       PHASE        TRANSITIONTIME   MESSAGE
