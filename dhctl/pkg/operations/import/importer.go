@@ -29,6 +29,7 @@ import (
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"k8s.io/utils/pointer"
 )
 
 type Params struct {
@@ -37,6 +38,7 @@ type Params struct {
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
+	ScanOnly         *bool
 }
 
 type Importer struct {
@@ -90,6 +92,15 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
 	res.Status = ImportStatusScanned
+
+	if pointer.BoolDeref(i.Params.ScanOnly, true) {
+		if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
+			ScanResult: res.ScanResult,
+		}); err != nil {
+			return nil, fmt.Errorf("unable to complete phase: %w", err)
+		}
+		return res, nil
+	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
 		CapturePhase,
