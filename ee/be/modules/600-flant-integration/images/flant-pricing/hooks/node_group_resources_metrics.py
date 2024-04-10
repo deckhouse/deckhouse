@@ -5,6 +5,7 @@
 # This hook is responsible for generating metrics for node group resources.
 #
 
+from collections import defaultdict
 from kubernetes import utils
 
 from shell_operator import hook
@@ -14,21 +15,15 @@ def main(ctx: hook.Context):
     metric_group = "group_node_group_resources_metrics"
     ctx.metrics.expire(metric_group)
 
-    ngs_capacity = {}
+    ngs_capacity = defaultdict(lambda: defaultdict(int))
+
     for snapshot in ctx.snapshots["nodes"]:
         node = snapshot["filterResult"]
         ng_name = node["node_group"]
-        cpu = utils.parse_quantity(node["capacity"]["cpu"])
-        ram_in_bytes = utils.parse_quantity(node["capacity"]["memory"])
-
-        if ng_name not in ngs_capacity:
-            ngs_capacity[ng_name] = {}
-
-        if "cpu" not in ngs_capacity[node["node_group"]]:
-            ngs_capacity[ng_name]["cpu"] = 0
-
-        if "memory" not in ngs_capacity[node["node_group"]]:
-            ngs_capacity[ng_name]["memory"] = 0
+        capacity_cpu = node.get("capacity").get("cpu") if node.get("capacity").get("cpu") else 0
+        capacity_mem = node.get("capacity").get("memory") if node.get("capacity").get("memory") else 0
+        cpu = utils.parse_quantity(capacity_cpu)
+        ram_in_bytes = utils.parse_quantity(capacity_mem)
 
         ngs_capacity[ng_name]["cpu"] += cpu
         ngs_capacity[ng_name]["memory"] += ram_in_bytes
@@ -36,34 +31,47 @@ def main(ctx: hook.Context):
     for snapshot in ctx.snapshots["ngs"]:
         ng = snapshot["filterResult"]
 
-        labels = {"name": ng["name"]}
-        if ng["name"] in ngs_capacity:
-            if "nodeTemplate" in ng:
-                if "labels" in ng["nodeTemplate"]:
-                    for k, v in ng["nodeTemplate"]["labels"].items():
-                        value = v if v != "" else "empty"
-                        labels.update({k.replace("-", "_").replace(".", "__").replace("/", "___"): value})
-                if "taints" in ng["nodeTemplate"]:
-                    for taint in ng["nodeTemplate"]["taints"]:
-                        taint_labels = {}
-                        key = 'taint_' + taint["key"].replace("-", "_").replace(".", "__").replace("/", "___")
-                        if "value" in taint:
-                            taint_labels.update({key: taint["value"]})
-                        else:
-                            taint_labels.update({key: "empty"})
-                        labels.update(taint_labels)
-            ctx.metrics.collect({
-                "name": "flant_pricing_node_group_cpu_cores",
-                "group": metric_group,
-                "set": float(ngs_capacity[ng["name"]]["cpu"]),
-                "labels": labels,
-            })
-            ctx.metrics.collect({
-                "name": "flant_pricing_node_group_memory",
-                "group": metric_group,
-                "set": float(ngs_capacity[ng["name"]]["memory"]),
-                "labels": labels,
-            })
+        is_master = "false"
+        is_system = "false"
+        is_monitoring = "false"
+        is_frontend = "false"
+        is_worker = "false"
+
+        taints = ng.get("nodeTemplate").get("taints")
+        if taints:
+            for taint in taints:
+                if taint.get("key") == "node-role.kubernetes.io/control-plane":
+                    is_master = "true"
+                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "system":
+                    is_system = "true"
+                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "monitoring":
+                    is_system = "true"
+                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "frontend":
+                    is_system = "true"
+        else:
+            is_worker = "true"
+
+        labels = {
+            "is_master": is_master,
+            "is_system": is_system,
+            "is_monitoring": is_monitoring,
+            "is_frontend": is_frontend,
+            "is_worker": is_worker,
+        }
+
+        ctx.metrics.collect({
+            "name": "flant_pricing_node_group_cpu_cores",
+            "group": metric_group,
+            "set": float(ngs_capacity[ng["name"]]["cpu"]),
+            "labels": labels,
+        })
+
+        ctx.metrics.collect({
+            "name": "flant_pricing_node_group_memory",
+            "group": metric_group,
+            "set": float(ngs_capacity[ng["name"]]["memory"]),
+            "labels": labels,
+        })
 
 
 if __name__ == "__main__":
