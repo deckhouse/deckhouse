@@ -4,11 +4,11 @@ entries:
     - title:
         en: Обновление Kubernetes
         ru: Обновление Kubernetes
-      url: /update/kubernetes/update-kubernetes/
+      url: /update/update-kubernetes/
     - title:
         en: Режимы обновлений платформы
         ru: Режимы обновлений платформы
-      url: /update/modes/update-mode/
+      url: /update/update-mode/
     - title:
         en: Каналы и окна обновлений
         ru: Каналы и окна обновлений

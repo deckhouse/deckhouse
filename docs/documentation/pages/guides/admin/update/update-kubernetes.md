@@ -1,6 +1,6 @@
 ---
 title: Изменение версии Kubernetes в Deckhouse Kubernetes Platform
-permalink: ru/update/kubernetes/update-kubernetes/
+permalink: ru/update/update-kubernetes/
 lang: ru
 ---
 
