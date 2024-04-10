@@ -244,4 +244,5 @@ spec:
                       - node
                     type: object
                   type: array
+                type: object
       additionalPrinterColumns: *additionalPrinterColumns
