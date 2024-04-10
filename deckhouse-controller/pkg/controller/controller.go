@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -44,13 +45,16 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
 const (
-	epochLabelKey = "deckhouse.io/epoch"
+	epochLabelKey  = "deckhouse.io/epoch"
+	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
+	namespace      = "d8-system"
 )
 
 var (
@@ -78,6 +82,9 @@ type DeckhouseController struct {
 	moduleSourceController       *source.Controller
 	moduleReleaseController      *release.Controller
 	modulePullOverrideController *release.ModulePullOverrideController
+
+	// documentation
+	documentationUpdater *docs.Updater
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -97,6 +104,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
 	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
 
+	leaseInformer := informers.NewSharedInformerFactoryWithOptions(
+		cs,
+		15*time.Minute,
+		informers.WithNamespace(namespace),
+		informers.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = docsLeaseLabel
+		}),
+	).Coordination().V1().Leases()
+
 	httpClient := d8http.NewClient()
 	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
@@ -104,6 +120,8 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		},
 		ReleaseChannel: "Stable",
 	}
+
+	documentationUpdater := docs.NewUpdater(leaseInformer, moduleReleaseInformer, moduleSourceInformer, modulePullOverrideInformer, httpClient)
 
 	return &DeckhouseController{
 		ctx:        ctx,
@@ -119,8 +137,9 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		informerFactory: informerFactory,
 
 		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, embeddedDeckhousePolicy),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, httpClient, metricStorage, embeddedDeckhousePolicy),
-		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm),
+		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, metricStorage, embeddedDeckhousePolicy, documentationUpdater),
+		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm, documentationUpdater),
+		documentationUpdater:         documentationUpdater,
 	}, nil
 }
 
@@ -128,8 +147,14 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 // it doesn't start controllers for ModuleSource/ModuleRelease objects
 func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	dml.informerFactory.Start(dml.ctx.Done())
+	dml.documentationUpdater.RunLeaseInformer(dml.ctx.Done())
 
 	err := dml.moduleReleaseController.RunPreflightCheck(dml.ctx)
+	if err != nil {
+		return err
+	}
+
+	err = dml.documentationUpdater.RunPreflightCheck(dml.ctx)
 	if err != nil {
 		return err
 	}
@@ -166,6 +191,7 @@ func (dml *DeckhouseController) RunControllers() {
 	go dml.moduleSourceController.Run(dml.ctx, 3)
 	go dml.moduleReleaseController.Run(dml.ctx, 3)
 	go dml.modulePullOverrideController.Run(dml.ctx, 1)
+	go dml.documentationUpdater.Run(dml.ctx)
 }
 
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {

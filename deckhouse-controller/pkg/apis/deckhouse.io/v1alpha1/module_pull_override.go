@@ -87,3 +87,23 @@ func (f *ModulePullOverrideKind) SetGroupVersionKind(_ schema.GroupVersionKind) 
 func (f *ModulePullOverrideKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModulePullOverrideGVK
 }
+
+// GetModuleSource returns the module source of the related module
+func (mo *ModulePullOverride) GetModuleSource() string {
+	return mo.Spec.Source
+}
+
+// GetModuleName returns the module's name of the module pull override
+func (mo *ModulePullOverride) GetModuleName() string {
+	return mo.Name
+}
+
+// GetReleaseVersion returns the version of the related module
+func (mo *ModulePullOverride) GetReleaseVersion() string {
+	return mo.Spec.ImageTag
+}
+
+// GetWeight always returns 0
+func (mo *ModulePullOverride) GetWeight() uint32 {
+	return 0
+}
