@@ -617,6 +617,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1075,6 +1086,17 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1535,6 +1557,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1994,6 +2027,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2452,6 +2496,17 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
