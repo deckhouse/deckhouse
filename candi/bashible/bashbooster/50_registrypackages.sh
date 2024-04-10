@@ -68,7 +68,7 @@ try:
 except ImportError as e:
     from urllib2 import urlretrieve, build_opener, install_opener
 
-socket.setdefaulttimeout(180)
+socket.setdefaulttimeout(300)
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
