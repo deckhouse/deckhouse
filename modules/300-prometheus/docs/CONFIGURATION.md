@@ -36,5 +36,5 @@ kubectl -n d8-monitoring delete secret/basic-auth
     * `10 GiB` — if there is no PVC and if the StorageClass supports resizing;
     * `25 GiB` — if there is no PVC and if the StorageClass does not support resizing;
   * If the `local-storage` is used, and you have to change the `retentionSize`, then you need to manually change the size of the PV and PVC. **Caution!** Note that the value from `.status.capacity.storage` PVC is used for the calculation since it reflects the actual size of the PV in the case of manual resizing.
-* `40 GiB` —  size of PersistentVolumeClaim created by default.
+* `40 GiB` — size of PersistentVolumeClaim created by default.
 * You can change the size of Prometheus disks in the standard Kubernetes way (if the StorageClass permits this) by editing the `.spec.resources.requests.storage` field of the PersistentVolumeClaim resource.
