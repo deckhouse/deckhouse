@@ -19,22 +19,16 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"registry-packages-proxy/internal/cache"
 )
 
-func NewCache(ctx context.Context) (*cache.Cache, error) {
-	if DisableCache {
+func NewCache(ctx context.Context, config *Config, metrics *cache.Metrics) (*cache.Cache, error) {
+	if config.DisableCache {
 		return nil, nil
 	}
 
-	quantity, err := resource.ParseQuantity(CacheRetentionSize)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse cache retention size")
-	}
-
-	cache, err := cache.New(CacheDirectory, uint64(quantity.Value()), CacheRetentionPeriod, cacheMetrics)
+	cache, err := cache.New(config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), config.CacheRetentionPeriod, metrics)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cache")
 	}

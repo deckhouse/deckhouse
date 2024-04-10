@@ -16,12 +16,11 @@ package app
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+
 	"registry-packages-proxy/internal/cache"
 )
 
-var cacheMetrics cache.Metrics
-
-func RegisterMetrics() {
+func RegisterMetrics() *cache.Metrics {
 	cacheSize := prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "registry_packages_proxy",
 		Subsystem: "cache",
@@ -30,7 +29,8 @@ func RegisterMetrics() {
 	})
 	prometheus.MustRegister(cacheSize)
 
-	cacheMetrics = cache.Metrics{
+	cacheMetrics := &cache.Metrics{
 		CacheSize: cacheSize,
 	}
+	return cacheMetrics
 }

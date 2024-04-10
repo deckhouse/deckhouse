@@ -21,7 +21,6 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -35,53 +34,20 @@ type Cache struct {
 	retentionSize   uint64
 	retentionPeriod time.Duration
 
-	db *bolt.DB
-
-	metrics Metrics
+	metrics *Metrics
 }
 
-func New(root string, retentionSize uint64, retentionPeriod time.Duration, metrics Metrics) (*Cache, error) {
-	db, err := bolt.Open(filepath.Join(root, "retention.db"), 0600, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open retention database")
-	}
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		sizeBucket, err := tx.CreateBucketIfNotExists(sizeBucketName)
-		if err != nil {
-			return errors.Wrap(err, "failed to create size bucket")
-		}
-
-		newSizeBytes := sizeBucket.Get(sizeBucketName)
-		if newSizeBytes == nil {
-			err := sizeBucket.Put(sizeBucketName, binary.BigEndian.AppendUint64(nil, 0))
-			if err != nil {
-				return errors.Wrap(err, "failed to initialize size bucket")
-			}
-		}
-
-		_, err = tx.CreateBucketIfNotExists(retentionBucketName)
-		if err != nil {
-			return errors.Wrap(err, "failed to create retention bucket")
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize retention database")
-	}
-
+func New(root string, retentionSize uint64, retentionPeriod time.Duration, metrics *Metrics) (*Cache, error) {
 	return &Cache{
 		root:            root,
 		retentionSize:   retentionSize,
 		retentionPeriod: retentionPeriod,
-		db:              db,
 		metrics:         metrics,
 	}, nil
 }
 
 func (c *Cache) Close() error {
-	return c.db.Close()
+	return nil
 }
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
@@ -105,40 +71,12 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 }
 
 func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
-	return c.db.Update(func(tx *bolt.Tx) error {
-		err := c.applyRetentionPolicy(tx, uint64(size))
-		if err != nil {
-			return errors.Wrap(err, "failed to apply retention policy")
-		}
-
-		retentionBucket := tx.Bucket(retentionBucketName)
-
-		value := &retentionBucketValue{
-			Digest: digest,
-			Size:   size,
-		}
-
-		valueBuffer := &bytes.Buffer{}
-
-		err = gob.NewEncoder(valueBuffer).Encode(value)
-		if err != nil {
-			return errors.Wrap(err, "failed to encode retention bucket value")
-		}
-
-		err = retentionBucket.Put(timeToTimestampBytes(time.Now()), valueBuffer.Bytes())
-		if err != nil {
-			return errors.Wrap(err, "failed to put retention bucket value")
-		}
-
-		err = c.copyPackage(digest, reader)
-		if err != nil {
-			return errors.Wrap(err, "failed to copy package")
-		}
-
-		c.metrics.CacheSize.Add(float64(size))
-
-		return nil
-	})
+	err := c.copyPackage(digest, reader)
+	if err != nil {
+		return err
+	}
+	c.metrics.CacheSize.Add(float64(size))
+	return nil
 }
 
 func (c *Cache) Run(ctx context.Context) error {
@@ -164,9 +102,7 @@ func (c *Cache) Run(ctx context.Context) error {
 }
 
 func (c *Cache) ApplyRetentionPolicy() error {
-	return c.db.Update(func(tx *bolt.Tx) error {
-		return c.applyRetentionPolicy(tx, 0)
-	})
+	return nil
 }
 
 func (c *Cache) applyRetentionPolicy(tx *bolt.Tx, size uint64) error {

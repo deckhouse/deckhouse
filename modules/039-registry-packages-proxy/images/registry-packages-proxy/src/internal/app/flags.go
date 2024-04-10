@@ -15,68 +15,49 @@
 package app
 
 import (
-	"strconv"
+	"flag"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-var (
-	RegistrySecretDiscoveryPeriod = time.Hour
-	KubeConfig                    = ""
-	ListenAddress                 = ":5080"
-	DisableCache                  = false
-	CacheDirectory                = "/var/lib/registry-packages-proxy"
-	CacheRetentionSize            = "1Gi"
-	// CacheRetentionPeriod by default is 30 days
-	CacheRetentionPeriod = 30 * 24 * time.Hour
-	LoggerType           = loggerJSON
-	LoggerLevel          = int(logrus.InfoLevel)
-)
+type Config struct {
+	KubeConfig           string
+	ListenAddress        string
+	DisableCache         bool
+	CacheDirectory       string
+	CacheRetentionSize   resource.Quantity
+	CacheRetentionPeriod time.Duration
+	LogLevel             logrus.Level
+}
 
-func InitFlags(cmd *kingpin.Application) {
-	cmd.Flag("registry-secret-discovery-period", "Period for registry secret discovery").
-		Envar("REGISTRY_SECRET_DISCOVERY_PERIOD").
-		Default(RegistrySecretDiscoveryPeriod.String()).
-		DurationVar(&RegistrySecretDiscoveryPeriod)
+func InitFlags() (*Config, error) {
+	config := &Config{}
 
-	cmd.Flag("listen-address", "Listen address for HTTP").
-		Envar("LISTEN_ADDRESS").
-		Default(ListenAddress).
-		StringVar(&ListenAddress)
+	flag.StringVar(&config.ListenAddress, "listen-address", ":5080", "Listen address for HTTP")
+	flag.StringVar(&config.KubeConfig, "kubeconfig", "", "Path to kubeconfig")
+	flag.BoolVar(&config.DisableCache, "disable-cache", false, "Disable cache")
+	flag.StringVar(&config.CacheDirectory, "cache-directory", "/cache", "Path to cache directory")
 
-	cmd.Flag("kubeconfig", "Path to kubeconfig").
-		Envar("KUBECONFIG").
-		Default(KubeConfig).
-		StringVar(&KubeConfig)
+	crs := flag.String("cache-retention-size", "1Gi", "Cache retention size")
+	crp := flag.String("cache-retention-period", "24h", "Cache retention period")
+	v := flag.Int("v", 4, "Log verbosity")
 
-	cmd.Flag("disable-cache", "Disable cache").
-		Envar("DISABLE_CACHE").
-		BoolVar(&DisableCache)
+	flag.Parse()
 
-	cmd.Flag("cache-directory", "Path to cache directory").
-		Envar("CACHE_DIRECTORY").
-		Default(CacheDirectory).
-		StringVar(&CacheDirectory)
+	var err error
+	config.CacheRetentionSize, err = resource.ParseQuantity(*crs)
+	if err != nil {
+		return nil, err
+	}
 
-	cmd.Flag("cache-retention-size", "Cache retention size").
-		Envar("CACHE_RETENTION_SIZE").
-		Default(CacheRetentionSize).
-		StringVar(&CacheRetentionSize)
+	config.CacheRetentionPeriod, err = time.ParseDuration(*crp)
+	if err != nil {
+		return nil, err
+	}
 
-	cmd.Flag("cache-retention-period", "Cache retention period").
-		Envar("CACHE_RETENTION_PERIOD").
-		Default(CacheRetentionPeriod.String()).
-		DurationVar(&CacheRetentionPeriod)
+	config.LogLevel = logrus.Level(uint32(*v))
 
-	cmd.Flag("log-type", "Format logs output of a proxy in different ways.").
-		Envar("LOG_TYPE").
-		Default(LoggerType).
-		EnumVar(&LoggerType, loggerJSON, loggerSimple)
-
-	cmd.Flag("v", "Log verbosity").
-		Envar("LOG_LEVEL").
-		Default(strconv.Itoa(int(LoggerLevel))).
-		IntVar(&LoggerLevel)
+	return config, nil
 }

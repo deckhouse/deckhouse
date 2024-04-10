@@ -17,8 +17,8 @@ package proxy
 import (
 	"context"
 	"io"
-	"net"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -29,17 +29,14 @@ import (
 )
 
 type Proxy struct {
-	listener       net.Listener
-	router         *http.ServeMux
+	server         *http.Server
 	getter         registry.ClientConfigGetter
 	registryClient registry.Client
 	cache          cache.Cache
 	logger         log.Logger
 }
 
-func NewProxy(
-	listener net.Listener,
-	router *http.ServeMux,
+func NewProxy(server *http.Server,
 	clientConfigGetter registry.ClientConfigGetter,
 	options Options) (*Proxy, error) {
 	if options.RegistryClient == nil {
@@ -47,8 +44,7 @@ func NewProxy(
 	}
 
 	return &Proxy{
-		listener:       listener,
-		router:         router,
+		server:         server,
 		getter:         clientConfigGetter,
 		registryClient: options.RegistryClient,
 		cache:          options.Cache,
@@ -56,8 +52,8 @@ func NewProxy(
 	}, nil
 }
 
-func (p *Proxy) Serve() error {
-	p.router.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) Serve() {
+	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "HEAD" && r.Method != "GET" {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -99,17 +95,23 @@ func (p *Proxy) Serve() error {
 
 		_, err = io.Copy(w, packageReader)
 		if err != nil {
-			p.logger.Errorf("Send package: %v", err)
+			p.logger.Errorf("send package: %v", err)
 			return
 		}
 	})
 
-	err := http.Serve(p.listener, p.router)
-	if err != nil {
-		return err
+	p.logger.Infof("starting listener: %s", p.server.Addr)
+	if err := p.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		p.logger.Errorf("http server error: %v", err)
 	}
+}
 
-	return nil
+func (p *Proxy) StopServe() {
+	err := p.server.Shutdown(context.Background())
+	if err != nil && err != http.ErrServerClosed {
+		p.logger.Errorf("http server graceful shutdown error: %v", err)
+		os.Exit(1)
+	}
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {

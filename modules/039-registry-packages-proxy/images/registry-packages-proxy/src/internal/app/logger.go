@@ -18,23 +18,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	loggerSimple = "simple"
-	loggerJSON   = "json"
-)
-
-func InitLogger() *log.Entry {
+func InitLogger(config *Config) *log.Entry {
 	var formatter log.Formatter = &log.TextFormatter{
 		DisableColors:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 		FullTimestamp:   true,
 	}
-	if LoggerType == loggerJSON {
-		formatter = &log.JSONFormatter{}
-	}
+	formatter = &log.JSONFormatter{}
 
 	l := log.New()
-	l.SetLevel(log.Level(LoggerLevel))
+	l.SetLevel(log.Level(config.LogLevel))
 	l.SetFormatter(formatter)
 
 	return log.NewEntry(l)

@@ -16,14 +16,12 @@ package main
 
 import (
 	"context"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 
@@ -32,63 +30,48 @@ import (
 )
 
 func main() {
-	kpApp := kingpin.New("registry packages proxy", "A proxy for registry packages")
-	kpApp.HelpFlag.Short('h')
 
-	app.InitFlags(kpApp)
-
-	kpApp.Action(func(_ *kingpin.ParseContext) error {
-		ctx := context.Background()
-
-		ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-		defer stop()
-
-		app.RegisterMetrics()
-
-		logger := app.InitLogger()
-		client := app.InitClient(logger)
-		dynamicClient := app.InitDynamicClient(logger)
-
-		listener, err := net.Listen("tcp", app.ListenAddress)
-		if err != nil {
-			return errors.Wrap(err, "failed to listen")
-		}
-
-		watcher := credentials.NewWatcher(client, dynamicClient, app.RegistrySecretDiscoveryPeriod, logger)
-
-		go watcher.Watch(ctx)
-
-		cache, err := app.NewCache(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to create cache")
-		}
-		defer cache.Close()
-
-		if cache == nil {
-			logger.Info("Cache is disabled")
-		}
-
-		proxy, err := proxy.NewProxy(listener, app.BuildRouter(), watcher, proxy.Options{
-			Cache:  cache,
-			Logger: logger,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create proxy")
-		}
-
-		logger.Infof("Listening on %s", listener.Addr().String())
-
-		err = proxy.Serve()
-		if err != nil {
-			return errors.Wrap(err, "failed to serve")
-		}
-
-		return nil
-	})
-
-	_, err := kpApp.Parse(os.Args[1:])
+	config, err := app.InitFlags()
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	cacheMetrics := app.RegisterMetrics()
+
+	logger := app.InitLogger(config)
+	client := app.InitClient(config, logger)
+	dynamicClient := app.InitDynamicClient(config, logger)
+
+	cache, err := app.NewCache(ctx, config, cacheMetrics)
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+	if cache == nil {
+		logger.Info("Cache is disabled")
+	}
+	defer cache.Close()
+
+	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
+
+	go watcher.Watch(ctx)
+
+	server := app.BuildServer(config)
+	registryProxy, err := proxy.NewProxy(server, watcher, proxy.Options{
+		Cache:  cache,
+		Logger: logger,
+	})
+
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+
+	go registryProxy.Serve()
+	<-ctx.Done()
+	registryProxy.StopServe()
 }

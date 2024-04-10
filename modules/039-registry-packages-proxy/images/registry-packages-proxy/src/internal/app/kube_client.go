@@ -24,13 +24,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func InitClient(logger *log.Entry) *kubernetes.Clientset {
-	config, err := clientcmd.BuildConfigFromFlags("", KubeConfig)
+func InitClient(config *Config, logger *log.Entry) *kubernetes.Clientset {
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
 	if err != nil {
 		logger.Fatal(fmt.Errorf("building kube client config: %v", err.Error()))
 	}
 
-	client, err := kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		logger.Fatal(fmt.Errorf("creating dynamic client: %v", err.Error()))
 	}
@@ -38,13 +38,13 @@ func InitClient(logger *log.Entry) *kubernetes.Clientset {
 	return client
 }
 
-func InitDynamicClient(logger *log.Entry) dynamic.Interface {
-	config, err := clientcmd.BuildConfigFromFlags("", KubeConfig)
+func InitDynamicClient(config *Config, logger *log.Entry) dynamic.Interface {
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
 	if err != nil {
 		logger.Fatal(fmt.Errorf("building kube client config: %v", err.Error()))
 	}
 
-	dynamicClient, err := dynamic.NewForConfig(config)
+	dynamicClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
 		logger.Fatal(fmt.Errorf("creating dynamic client: %v", err.Error()))
 	}
