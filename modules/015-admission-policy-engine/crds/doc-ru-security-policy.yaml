@@ -171,6 +171,8 @@ spec:
                             description: Значения для SELinux type-меток.
                           user:
                             description: Значения для SELinux user-меток.
+                    allowedClusterRoles:
+                      description: "Список разрешенных ролей кластера для связывания с пользователями."
                     allowedVolumes:
                       description: Список разрешенных volume-плагинов.
                 match:
