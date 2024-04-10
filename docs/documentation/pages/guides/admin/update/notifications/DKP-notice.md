@@ -89,7 +89,7 @@ lang: ru
    ```
 
 {% alert level="info" %}
-Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии будет отложено на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии ,eltn cxbnfnmcz - появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease), имя которого соответствует новой версии.
+Если не указать адрес в параметре [`update.notification.webhook`](configuration.html#parameters-update-notification-webhook), но указать время в параметре [`update.notification.minimalNotificationTime`](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии будет отложено на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии будет считаться - появление в кластере ресурса [`DeckhouseRelease`](cr.html#deckhouserelease), имя которого соответствует новой версии.
 {% endalert %}
 
 ## Алерты и статусы обновлений
