@@ -6,7 +6,7 @@ lang: ru
 
 ## Оповещение об уведомлении
 
-Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse.
+Информацию о всех версиях Deckhouse Kubernetes Platform можно найти в [списке релизов](https://github.com/deckhouse/deckhouse/releases) Deckhouse Kubernetes Platform.
 
 Сводную информацию о важных изменениях, об обновлении версий компонентов, а также о том, какие компоненты в кластере буду перезапущены в процессе обновления, можно найти в описании нулевой patch-версии релиза. Например, [v1.58.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.58.0) для релиза v1.58 Deckhouse Kubernetes Platform.
 
