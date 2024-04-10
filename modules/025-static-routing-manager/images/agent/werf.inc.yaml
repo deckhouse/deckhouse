@@ -1,0 +1,40 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "**/*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - go mod download
+  setup:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/cmd
+  - go build -ldflags="-s -w" -o agent .
+  - chown 64535:64535 /src/cmd/agent
+  - chmod 0700 /src/cmd/agent
+---
+image: {{ $.ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /src/cmd/agent
+  to: /agent
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: ["/agent"]

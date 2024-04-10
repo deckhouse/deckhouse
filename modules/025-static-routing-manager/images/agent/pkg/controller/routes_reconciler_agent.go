@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"static-routing-manager-controller/api/v1alpha1"
-	"static-routing-manager-controller/pkg/config"
-	"static-routing-manager-controller/pkg/logger"
-	"static-routing-manager-controller/pkg/monitoring"
+	"static-routing-manager-agent/api/v1alpha1"
+	"static-routing-manager-agent/pkg/config"
+	"static-routing-manager-agent/pkg/logger"
+	"static-routing-manager-agent/pkg/monitoring"
 	"time"
 
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	RoutingTableCtrlName = "static-routing-manager-controller"
+	RoutingTableCtrlName = "static-routing-manager-agent"
 
 	RouteTableIDMin int = 10000
 	RouteTableIDMax int = 11000
@@ -48,7 +48,7 @@ type (
 	reconcileType string
 )
 
-func RunRoutingTableWatcherController(
+func RunRoutesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
 	log logger.Logger,
@@ -88,13 +88,13 @@ func RunRoutingTableWatcherController(
 		}),
 	})
 	if err != nil {
-		log.Error(err, "[RunRoutingTableWatcherController] unable to create controller")
+		log.Error(err, "[RunRoutesReconcilerAgentController] unable to create controller")
 		return nil, err
 	}
 
 	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.RoutingTable{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
-		log.Error(err, "[RunRoutingTableWatcherController] unable to watch the events")
+		log.Error(err, "[RunRoutesReconcilerAgentController] unable to watch the events")
 		return nil, err
 	}
 

@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"os"
 	goruntime "runtime"
-	"static-routing-manager-controller/api/v1alpha1"
-	"static-routing-manager-controller/pkg/config"
-	"static-routing-manager-controller/pkg/controller"
-	"static-routing-manager-controller/pkg/kubutils"
-	"static-routing-manager-controller/pkg/logger"
-	"static-routing-manager-controller/pkg/monitoring"
+	"static-routing-manager-agent/api/v1alpha1"
+	"static-routing-manager-agent/pkg/config"
+	"static-routing-manager-agent/pkg/controller"
+	"static-routing-manager-agent/pkg/kubutils"
+	"static-routing-manager-agent/pkg/logger"
+	"static-routing-manager-agent/pkg/monitoring"
 
 	v1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -60,10 +60,9 @@ func main() {
 	log.Info(fmt.Sprintf("[main] OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
 
 	log.Info("[main] CfgParams has been successfully created")
-	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
-	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ControllerNamespaceEnv, cfgParams.ControllerNamespace))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevel, cfgParams.Loglevel))
+	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueInterval, cfgParams.RequeueInterval))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPort, cfgParams.ProbeAddressPort))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {
@@ -84,11 +83,8 @@ func main() {
 	managerOpts := manager.Options{
 		Scheme: scheme,
 		//MetricsBindAddress: cfgParams.MetricsPort,
-		HealthProbeBindAddress:  cfgParams.ProbeAddressPort,
-		Logger:                  log.GetLogger(),
-		LeaderElection:          true,
-		LeaderElectionNamespace: cfgParams.ControllerNamespace,
-		LeaderElectionID:        config.ControllerName,
+		HealthProbeBindAddress: cfgParams.ProbeAddressPort,
+		Logger:                 log.GetLogger(),
 	}
 
 	mgr, err := manager.New(kConfig, managerOpts)
@@ -100,8 +96,8 @@ func main() {
 
 	metrics := monitoring.GetMetrics("")
 
-	if _, err = controller.RunRoutingTableWatcherController(mgr, *cfgParams, *log, metrics); err != nil {
-		log.Error(err, "[main] unable to controller.RunRoutingTableWatcherController")
+	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, *log, metrics); err != nil {
+		log.Error(err, "[main] unable to controller.RunRoutesReconcilerAgentController")
 		os.Exit(1)
 	}
 
