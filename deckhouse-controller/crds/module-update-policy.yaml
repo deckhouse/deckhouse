@@ -79,9 +79,7 @@ spec:
                         - `Auto` — all updates are applied automatically.
 
                           Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
-                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
-
-                          To confirm the update, edit relevant modulereleases.deckhouse.io object, corresponding to the version, by setting the `approved' field to 'true'.
+                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
                         - `Ignore` — updates are ignored.
                       enum:
