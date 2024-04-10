@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "http://${__data.fields.docs_url}/modules/${__data.fields.module_name}"
+              "url": "${__data.fields.docs_url}en/modules/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
@@ -989,7 +989,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(\nmax by (module, module_name, docs_url) (\n(\n    label_replace(deckhouse_web_interfaces{job=\"deckhouse\", name=\"docs\"}, \"docs_url\", \"$1/en\", \"url\", \"(.*)\")\n)\n    + on (job) group_right(docs_url)\n(\n    label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\")\n)\n)\nand on() (deckhouse_web_interfaces{job=\"deckhouse\", name=\"docs\"} >0)\n)\nor on()\n(max by (module, module_name, docs_url) (\nlabel_replace(label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\"), \"docs_url\", \"deckhouse.io/documentation/v1\", \"\", \"\")\n))\n",
+          "expr": "(\nmax by (module, module_name, docs_url) (\n(\n    label_replace(deckhouse_web_interfaces{job=\"deckhouse\", name=\"documentation\"}, \"docs_url\", \"$1\", \"url\", \"(.*)\")\n)\n    + on (job) group_right(docs_url)\n(\n    label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\")\n)\n)\nand on() (deckhouse_web_interfaces{job=\"deckhouse\", name=\"docs\"} >0)\n)\nor on()\n(max by (module, module_name, docs_url) (\nlabel_replace(label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\"), \"docs_url\", \"deckhouse.io/documentation/v1\", \"\", \"\")\n))\n",
           "format": "table",
           "instant": true,
           "interval": "",
