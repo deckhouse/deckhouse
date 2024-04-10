@@ -28,3 +28,7 @@ shell:
     - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
+    - chown -R 64535:64535  /etcd
+    - chown -R 64535:64535 /etcdctl
+docker:
+  USER: 64535
