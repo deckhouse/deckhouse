@@ -14,6 +14,7 @@ import:
     - etcdctl
     before: setup
 docker:
+  USER: 64535
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -30,5 +31,3 @@ shell:
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - chown -R 64535:64535  /etcd
     - chown -R 64535:64535 /etcdctl
-docker:
-  USER: 64535
