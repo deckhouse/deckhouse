@@ -344,6 +344,11 @@ spec:
                     automountServiceAccountToken:
                       type: boolean
                       description: Allows pods to run with `automountServiceAccountToken` enabled.
+                    allowedClusterRoles:
+                      type: array
+                      description: "A list of allowed cluster roles to bind to users."
+                      items:
+                        type: string
                     seccompProfiles:
                       type: object
                       description: Specifies the list of allowed profiles that can be set for the Pod or container's seccomp annotations.

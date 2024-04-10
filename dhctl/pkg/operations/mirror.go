@@ -90,7 +90,7 @@ func MirrorDeckhouseToLocalFS(
 	}
 
 	log.InfoF("Generating DeckhouseRelease manifests...\t")
-	deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.TarBundlePath), "deckhousereleases.yaml")
+	deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.BundlePath), "deckhousereleases.yaml")
 	if err := mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
 		return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
 	}

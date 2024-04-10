@@ -15,20 +15,11 @@
 package controlplane
 
 import (
-	"context"
 	"fmt"
-	"time"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type Hook struct {
@@ -87,107 +78,12 @@ func (h *Hook) WithConfirm(confirm func(msg string) bool) *Hook {
 	return h
 }
 
-func (h *Hook) convergeLabelToNode(shouldExist bool) error {
-	node, err := h.kubeCl.CoreV1().Nodes().Get(context.TODO(), h.nodeToConverge, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	labels := node.GetLabels()
-
-	if shouldExist {
-		if _, ok := labels[manifests.ConvergeLabel]; ok {
-			return nil
-		}
-
-		labels[manifests.ConvergeLabel] = ""
-	} else {
-		if _, ok := labels[manifests.ConvergeLabel]; !ok {
-			return nil
-		}
-
-		delete(labels, manifests.ConvergeLabel)
-	}
-
-	node.SetLabels(labels)
-
-	_, err = h.kubeCl.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
-
-	return err
-}
-
 func (h *Hook) BeforeAction() (bool, error) {
-	err := log.Process(h.sourceCommandName, "Check deckhouse pod is not on converged node", func() error {
-		var pod *v1.Pod
-		err := retry.NewSilentLoop("Get deckhouse pod", 10, 3*time.Second).Run(func() error {
-			var err error
-			pod, err = deckhouse.GetRunningPod(h.kubeCl)
-
-			return err
-		})
-
-		if err != nil {
-			return fmt.Errorf("Deckhouse pod did not get: %s", err)
-		}
-
-		if pod.Spec.NodeName != h.nodeToConverge {
-			h.runAfterAction = false
-			return nil
-		}
-
-		if !h.runConfirm("Deckhouse pod is located on node to converge. Do you want to move pod to another node?") {
-			log.WarnLn("Skip moving deckhouse pod")
-			h.runAfterAction = false
-			return nil
-		}
-
-		title := fmt.Sprintf("Set label '%s' on converged node", manifests.ConvergeLabel)
-		err = retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
-			return h.convergeLabelToNode(true)
-		})
-
-		if err != nil {
-			return fmt.Errorf("Cannot set label '%s' to node: %v", manifests.ConvergeLabel, err)
-		}
-
-		err = retry.NewLoop("Evict deckhouse pod from node", 10, 3*time.Second).Run(func() error {
-			return deckhouse.DeletePod(h.kubeCl)
-		})
-
-		if err != nil {
-			return err
-		}
-
-		h.runAfterAction = true
-
-		return nil
-	})
-
-	if err != nil {
-		return false, err
-	}
-
-	return h.runAfterAction, err
+	return false, nil
 }
 
 func (h *Hook) AfterAction() error {
-	if !h.runAfterAction {
-		return nil
-	}
-
-	title := fmt.Sprintf("Delete label '%s' from converged node", manifests.ConvergeLabel)
-	return retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
-		err := h.convergeLabelToNode(false)
-		if err != nil && errors.IsNotFound(err) {
-			log.InfoLn("Converged node was not found. Skip remove label.")
-			// node object was removed while converge
-			// we do not need to remove label, because label added to removed object
-			// and new object will create without label
-			return nil
-		}
-
-		return err
-	})
+	return nil
 }
 
 func (h *Hook) runConfirm(msg string) bool {
@@ -229,17 +125,5 @@ func (h *Hook) isAllNodesReady() error {
 }
 
 func (h *Hook) IsReady() error {
-	excludeNode := h.nodeToConverge
-	if !h.runAfterAction {
-		excludeNode = ""
-	}
-
-	if h.runConfirm("Wait until Deckhouse controller is ready?") {
-		err := deckhouse.WaitForReadinessNotOnNode(h.kubeCl, excludeNode)
-		if err != nil {
-			return err
-		}
-	}
-
 	return h.isAllNodesReady()
 }

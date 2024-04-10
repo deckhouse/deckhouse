@@ -58,6 +58,18 @@ title: "The l2-load-balancer module: примеры"
   d8-l2-load-balancer-nginx-1   LoadBalancer   10.222.91.98    192.168.199.104   8000:30806/TCP   1s
   d8-l2-load-balancer-nginx-2   LoadBalancer   10.222.186.57   192.168.199.105   8000:30272/TCP   1s
   ```
+  
+  Назначенные IP-адреса можно также увидеть в поле `status` ресурса `L2LoadBalancer`:
+  
+* ```bash
+  kubectl describe l2loadbalancers.deckhouse.io nginx
+  ...
+  Status:
+    Public Addresses:
+      192.168.199.103
+      192.168.199.104
+      192.168.199.105
+  ```
 
   Полученные EXTERNAL-IP можно прописывать в качестве A-записей для прикладного домена.
 

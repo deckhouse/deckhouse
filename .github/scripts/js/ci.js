@@ -488,7 +488,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels }) => {
   }
   if (cri.length === 0) {
     const defaultCRI = e2eDefaults.criName.toLowerCase();
-    core.info(`No 'e2e/use/cri' labels found. Will run e2e with default cri=${defaultCRI}.`);
+    core.info(`Will run e2e with default cri=${defaultCRI}.`);
     cri = [defaultCRI];
   }
   core.endGroup();
@@ -639,8 +639,6 @@ const parseCommandArgumentAsRef = (cmdArg) => {
  *   /build release-1.30
  *   /e2e/run/aws v1.31.0-alpha.0
  *   /e2e/use/k8s/1.22
- *   /e2e/use/cri/docker
- *   /e2e/use/cri/containerd
  *   /deploy/web/stage v1.3.2
  *   /deploy/alpha - to deploy all editions
  *   /deploy/alpha/ce,ee,fe
@@ -1186,8 +1184,6 @@ You can trigger release related actions by commenting on this issue:
   - \`provider\` is one of \`${availableProviders}\`
   - \`git_ref_1\` is a release-* or main branch
   - \`git_ref_2\` is a release-* or main branch
-- \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
-  - \`cri_name\` is one of \`${availableCRI}\`
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
   - \`version\` is one of \`${availableKubernetesVersions}\`
 - \`/build git_ref\` will run build for release related refs.
@@ -1200,19 +1196,16 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 
 \`\`\`
 /e2e/run/aws main
-/e2e/use/cri/docker
-/e2e/use/cri/containerd
-/e2e/use/k8s/1.20
-/e2e/use/k8s/1.23
+/e2e/use/k8s/1.27
+/e2e/use/k8s/1.29
 
-This comment will run 4 e2e jobs on AWS with Docker and containerd
+This comment will run 2 e2e jobs on AWS with containerd
 and with Kubernetes version 1.20 and 1.23 using image built from main branch.
 \`\`\`
 
 \`\`\`
 /e2e/run/aws release-1.35 release-1.36
-/e2e/use/cri/containerd
-/e2e/use/k8s/1.23
+/e2e/use/k8s/1.27
 
 This comment will create cluster in AWS using Deckhouse built from release-1.35 branch
 and then switch to images built from release-1.36 branch.

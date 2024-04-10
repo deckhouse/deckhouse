@@ -41,6 +41,7 @@ import (
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
@@ -65,6 +66,8 @@ type ModulePullOverrideController struct {
 	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
+
+	documentationUpdater *docs.Updater
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -73,6 +76,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	modulesValidator moduleValidator,
+	documentationUpdater *docs.Updater,
 ) *ModulePullOverrideController {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -96,6 +100,8 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+
+		documentationUpdater: documentationUpdater,
 	}
 
 	_, err := modulePullOverridesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -305,10 +311,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 		return ctrl.Result{Requeue: true}, err
 	}
+
 	// disable target module hooks so as not to invoke them before restart
 	if c.modulesValidator.GetModule(mo.Name) != nil {
 		c.modulesValidator.DisableModuleHooks(mo.Name)
 	}
+
 	defer func() {
 		c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
 		err := syscall.Kill(1, syscall.SIGUSR2)
@@ -316,6 +324,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 			c.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
 		}
 	}()
+
+	// update module's documentation
+	err = c.documentationUpdater.SendDocumentation(ctx, mo)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
+	}
 
 	mo.Status.Message = ""
 	mo.Status.ImageDigest = newChecksum

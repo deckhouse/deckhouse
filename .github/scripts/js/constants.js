@@ -25,6 +25,7 @@ const labels = {
   'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
+  'skip/release-requirements': { type: 'skip-validation', validation_name: 'release_requirements' },
 
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },
@@ -35,10 +36,6 @@ const labels = {
   'e2e/run/vsphere': { type: 'e2e-run', provider: 'vsphere' },
   'e2e/run/yandex-cloud': { type: 'e2e-run', provider: 'yandex-cloud' },
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
-
-  // E2E: use CRI
-  'e2e/use/cri/docker': { type: 'e2e-use', cri: 'Docker' },
-  'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'Containerd' },
 
   // E2E: use Kubernetes version
   'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },

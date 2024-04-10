@@ -24,6 +24,7 @@ properties:
           - selector
           - nodes
           - ports
+          - externalTrafficPolicy
           properties:
             name:
               type: string
@@ -55,6 +56,11 @@ properties:
                 type: string
               description: |
                 The same as in the Service `spec.selector` parameter in Kubernetes.
+            externalTrafficPolicy:
+              type: string
+              default: "Local"
+              description: |
+                Denotes if this L2 LoadBalancer desires to route external traffic to node-local or cluster-wide endpoints.
             nodes:
               type: array
               description: |
