@@ -66,7 +66,7 @@ lang: ru
            webhook: https://release-webhook.mydomain.com
    ```
 
-3. Чтобы постоянно иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
+3. Чтобы иметь время для реакции на оповещение об обновлении Deckhouse Kubernetes Platform, настройте параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), как показано на примере ниже. В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
 
    Пример настройки параметра `minimalNotificationTime`:
 
