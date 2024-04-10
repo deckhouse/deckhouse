@@ -52,7 +52,6 @@ def main(ctx: hook.Context):
                         else:
                             taint_labels.update({key: "empty"})
                         labels.update(taint_labels)
-            print(labels)
             ctx.metrics.collect({
                 "name": "flant_pricing_node_group_cpu_cores",
                 "group": metric_group,
