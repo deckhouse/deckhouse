@@ -20,7 +20,7 @@ type Params struct {
 	SSHClient        *ssh.Client
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
-	OnPhaseFunc      phases.OnPhaseFunc[PhaseData]
+	OnPhaseFunc      OnPhaseFunc
 }
 
 type Importer struct {

@@ -10,6 +10,7 @@ type (
 		ScanResult  *ScanResult
 		CheckResult *check.CheckResult
 	}
+	OnPhaseFunc = phases.OnPhaseFunc[PhaseData]
 )
 
 const (
