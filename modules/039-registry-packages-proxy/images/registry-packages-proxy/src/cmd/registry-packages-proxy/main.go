@@ -50,13 +50,17 @@ func main() {
 
 	cacheMetrics := app.RegisterMetrics()
 
-	client := app.InitClient(config, logger)
-	dynamicClient := app.InitDynamicClient(config, logger)
-
-	cache := app.NewCache(ctx, logger, config, cacheMetrics)
-	if cache == nil {
-		logger.Info("Cache is disabled")
+	client, err := app.InitClient(config, logger)
+	if err != nil {
+		logger.Fatal(err)
 	}
+
+	dynamicClient, err := app.InitDynamicClient(config, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	cache := app.NewCache(logger, config, cacheMetrics)
 	go cache.Run(ctx)
 
 	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)

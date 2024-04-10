@@ -15,17 +15,15 @@
 package app
 
 import (
-	"context"
-
 	log "github.com/sirupsen/logrus"
 
 	"registry-packages-proxy/internal/cache"
 )
 
-func NewCache(ctx context.Context, logger *log.Entry, config *Config, metrics *cache.Metrics) *cache.Cache {
+func NewCache(logger *log.Entry, config *Config, metrics *cache.Metrics) *cache.Cache {
 	if config.DisableCache {
+		logger.Info("Cache is disabled")
 		return nil
 	}
-	cache := cache.New(logger, config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
-	return cache
+	return cache.New(logger, config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
 }

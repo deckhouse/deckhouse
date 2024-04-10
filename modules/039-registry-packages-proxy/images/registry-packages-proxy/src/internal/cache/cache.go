@@ -56,6 +56,8 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	}
 
 	stat, err := file.Stat()
+	c.logger.Infof("found file %s with size %d", stat.Name(), stat.Size())
+
 	if err != nil {
 		return 0, nil, err
 	}

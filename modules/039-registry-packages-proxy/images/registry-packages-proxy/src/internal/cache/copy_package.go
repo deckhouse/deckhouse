@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 
 	"github.com/google/renameio"
-	"github.com/pkg/errors"
 )
 
 func (c *Cache) copyPackage(digest string, reader io.Reader) error {
@@ -30,26 +29,21 @@ func (c *Cache) copyPackage(digest string, reader io.Reader) error {
 
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil && !os.IsExist(err) {
-		return errors.Wrap(err, "failed to create cache partition directory")
+		return err
 	}
 
 	file, err := renameio.TempFile("", path)
 	if err != nil {
-		return errors.Wrap(err, "failed to create temporary file")
+		return err
 	}
 	defer file.Cleanup()
 
 	_, err = io.Copy(file, reader)
 	if err != nil {
-		return errors.Wrap(err, "failed to copy package to cache directory")
+		return err
 	}
 
-	err = file.CloseAtomicallyReplace()
-	if err != nil {
-		return errors.Wrap(err, "failed to close the temporary file and atomically replace the destination file with it")
-	}
-
-	return nil
+	return file.CloseAtomicallyReplace()
 }
 
 func (c *Cache) digestToPath(digest string) string {
