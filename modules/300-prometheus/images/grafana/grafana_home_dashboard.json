@@ -1583,7 +1583,7 @@
           "text": "default",
           "value": "default"
         },
-        "hide": 0,
+        "hide": 1,
         "includeAll": false,
         "label": "Prometheus",
         "multi": false,
