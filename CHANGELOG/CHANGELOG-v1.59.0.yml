@@ -2,12 +2,7 @@ admission-policy-engine:
   features:
     - summary: Add new columns to Grafana representing policy name and policy type.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7926
-  fixes:
-    - summary: Fix storageClass fake alert.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/7912
-    - summary: Prevent rendering of unavailable components.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
-    - summary: Added the ability to specify restrictions on applying cluster roles to users.
+    - summary: Add the ability to specify restrictions on applying cluster roles to users.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7660
     - summary: >-
         Add a security policy to control the mounting of service account tokens in pods. This rule
@@ -15,6 +10,11 @@ admission-policy-engine:
         _SecurityPolicy_. To restore the old behavior, add `automountServiceAccountToken: true` to
         the policy.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7571
+  fixes:
+    - summary: Fix storageClass fake alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7912
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
 candi:
   features:
     - summary: Add Deckhouse Kubernetes Platform Standart Edition (SE).
@@ -98,7 +98,7 @@ deckhouse:
   fixes:
     - summary: Use the same logic as minor/patch for `apply-now` release, except the time settings.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7988
-    - summary: Сhange the way the deckhouse pod readiness is determined during the minor version update.
+    - summary: Сhange the way the `deckhouse` pod readiness is determined during the minor version update.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7770
     - summary: Validation configs of disabled modules is disabled.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7744
