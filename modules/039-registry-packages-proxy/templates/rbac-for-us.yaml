@@ -9,7 +9,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: registry-packages-proxy:registry-packages-proxy
+  name: registry-packages-proxy
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 rules:
@@ -25,13 +25,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: d8:registry-packages-proxy:registry-packages-proxy
-  namespace: kube-system
+  name: registry-packages-proxy
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: registry-packages-proxy:registry-packages-proxy
+  name: registry-packages-proxy
 subjects:
   - kind: ServiceAccount
     name: registry-packages-proxy
