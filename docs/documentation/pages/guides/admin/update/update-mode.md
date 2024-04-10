@@ -1,6 +1,6 @@
 ---
 title: Режимы обновлений Deckhouse Kubernetes Platform
-permalink: ru/update/modes/update-mode/
+permalink: ru/update/update-mode/
 lang: ru
 ---
 
