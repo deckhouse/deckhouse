@@ -209,40 +209,8 @@ spec:
             status:
               type: object
               properties:
-                conditions:
-                  type: array
-                  description: Conditions defines add NodeUser
-                  items:
-                    description: Condition defines.
-                    type: object
-                    required:
-                      - lastTransitionTime
-                      - status
-                      - type
-                      - node
-                    properties:
-                      lastTransitionTime:
-                        description: Last time the condition transitioned from one status
-                          to another. This should be when the underlying condition changed.
-                          If that is not known, then using the time when the API field
-                          changed is acceptable.
-                        format: date-time
-                        type: string
-                      message:
-                        description: A human readable message indicating details about
-                          the transition. This field may be empty.
-                        type: string
-                      status:
-                        description: Status of the condition, one of True, False, Unknown.
-                        type: string
-                      type:
-                        description: Type of condition in CamelCase or in foo.example.com/CamelCase.
-                          Many .condition.type values are consistent across resources
-                          like Available, but because arbitrary conditions can be useful
-                          (see .node.status.conditions), the ability to deconflict is
-                          important.
-                        type: string
-                      node:
-                        description: Name of the node to which the NodeUser is added
-                        type: string
+                errors:
+                  type: object
+                  additionalProperties:
+                    type: string
       additionalPrinterColumns: *additionalPrinterColumns
