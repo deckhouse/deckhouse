@@ -16,9 +16,11 @@ package _import
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -28,9 +30,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"k8s.io/utils/pointer"
 )
+
+//go:embed resources.go.tmpl
+var resourcesToCreate string
 
 type Params struct {
 	CommanderMode    bool
@@ -38,6 +44,7 @@ type Params struct {
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
+	CommanderURL     string
 	ScanOnly         *bool
 }
 
@@ -110,7 +117,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
 	}
 
-	err = i.capture(ctx, kubeCl, metaConfig)
+	err = i.capture(ctx, kubeCl)
 	if err != nil {
 		return nil, fmt.Errorf("unable to capture cluster: %w", err)
 	}
@@ -150,69 +157,80 @@ func (i *Importer) scan(
 	kubeCl *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 ) (*ScanResult, error) {
-	var err error
-	stateCache := cache.Global()
+	var res *ScanResult
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get cluster uuid: %w", err)
-	}
+	err := log.Process("import", "Scan cluster", func() error {
+		var err error
+		stateCache := cache.Global()
 
-	if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
-		return nil, fmt.Errorf("unable to save cluster uuid to cache: %w", err)
-	}
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+		if err != nil {
+			return fmt.Errorf("unable to get cluster uuid: %w", err)
+		}
 
-	if err = stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
-		return nil, fmt.Errorf("unable to save cluster config to cache: %w", err)
-	}
+		if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
+			return fmt.Errorf("unable to save cluster uuid to cache: %w", err)
+		}
 
-	nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get nodes tf state: %w", err)
-	}
+		if err = stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
+			return fmt.Errorf("unable to save cluster config to cache: %w", err)
+		}
 
-	if err = stateCache.SaveStruct("nodes-state", nodesState); err != nil {
-		return nil, fmt.Errorf("unable to save nodes tf state to cache: %w", err)
-	}
+		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+		if err != nil {
+			return fmt.Errorf("unable to get nodes tf state: %w", err)
+		}
 
-	clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
-	if err != nil {
-		return nil, fmt.Errorf("unable get cluster tf state: %w", err)
-	}
+		if err = stateCache.SaveStruct("nodes-state", nodesState); err != nil {
+			return fmt.Errorf("unable to save nodes tf state to cache: %w", err)
+		}
 
-	if err = stateCache.Save("cluster-state", clusterState); err != nil {
-		return nil, fmt.Errorf("unable to save cluster tf state to cache: %w", err)
-	}
+		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
+		if err != nil {
+			return fmt.Errorf("unable get cluster tf state: %w", err)
+		}
 
-	clusterConfiguration, err := metaConfig.ClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("unable to prepare cluster config yaml: %w", err)
-	}
+		if err = stateCache.Save("cluster-state", clusterState); err != nil {
+			return fmt.Errorf("unable to save cluster tf state to cache: %w", err)
+		}
 
-	providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
-	}
+		clusterConfiguration, err := metaConfig.ClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to prepare cluster config yaml: %w", err)
+		}
 
-	return &ScanResult{
-		ClusterConfiguration:                 string(clusterConfiguration),
-		ProviderSpecificClusterConfiguration: string(providerConfiguration),
-	}, nil
+		providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
+		}
+
+		res = &ScanResult{
+			ClusterConfiguration:                 string(clusterConfiguration),
+			ProviderSpecificClusterConfiguration: string(providerConfiguration),
+		}
+
+		return nil
+	})
+
+	return res, err
 }
 
 func (i *Importer) capture(
 	_ context.Context,
 	kubeCl *client.KubernetesClient,
-	metaConfig *config.MetaConfig,
 ) error {
-	// todo: capture
-	var err error
-	stateCache := cache.Global()
+	return log.Process("import", "Capture cluster", func() error {
+		res, err := template.ParseResourcesContent(resourcesToCreate, map[string]any{
+			"commanderURL": i.Params.CommanderURL,
+		})
 
-	_ = err
-	_ = stateCache
+		checkers, err := resources.GetCheckers(kubeCl, res, nil)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		return resources.CreateResourcesLoop(kubeCl, res, checkers)
+	})
 }
 
 func (i *Importer) check(

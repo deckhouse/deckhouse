@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: terraform-manager
+  labels:
+    heritage: deckhouse-commander
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse-commander-agent
+  labels:
+    heritage: deckhouse-commander
+spec:
+  enabled: true
+  version: 1
+  settings:
+    commanderUrl: {{ .commanderURL }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse-admin
+spec:
+  enabled: true
+  version: 1
+  settings:
+    allowAnyoneToRuleTheCluster: true
