@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,6 +33,12 @@ import (
 func main() {
 
 	config, err := app.InitFlags()
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+
+	listener, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -60,8 +67,8 @@ func main() {
 
 	go watcher.Watch(ctx)
 
-	server := app.BuildServer(config)
-	registryProxy, err := proxy.NewProxy(server, watcher, proxy.Options{
+	server := app.BuildServer()
+	registryProxy, err := proxy.NewProxy(server, listener, watcher, proxy.Options{
 		Cache:  cache,
 		Logger: logger,
 	})

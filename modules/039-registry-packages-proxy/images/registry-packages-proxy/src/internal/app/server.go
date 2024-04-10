@@ -20,10 +20,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func BuildServer(config *Config) *http.Server {
-	server := &http.Server{
-		Addr: config.ListenAddress,
-	}
+func BuildServer() *http.Server {
+	server := &http.Server{}
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })

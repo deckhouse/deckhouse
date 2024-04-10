@@ -17,6 +17,7 @@ package proxy
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -30,6 +31,7 @@ import (
 
 type Proxy struct {
 	server         *http.Server
+	listener       net.Listener
 	getter         registry.ClientConfigGetter
 	registryClient registry.Client
 	cache          cache.Cache
@@ -37,6 +39,7 @@ type Proxy struct {
 }
 
 func NewProxy(server *http.Server,
+	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
 	options Options) (*Proxy, error) {
 	if options.RegistryClient == nil {
@@ -45,6 +48,7 @@ func NewProxy(server *http.Server,
 
 	return &Proxy{
 		server:         server,
+		listener:       listener,
 		getter:         clientConfigGetter,
 		registryClient: options.RegistryClient,
 		cache:          options.Cache,
@@ -101,7 +105,7 @@ func (p *Proxy) Serve() {
 	})
 
 	p.logger.Infof("starting listener: %s", p.server.Addr)
-	if err := p.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Errorf("http server error: %v", err)
 	}
 }
