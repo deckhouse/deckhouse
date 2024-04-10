@@ -82,72 +82,67 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	if shouldStop, err := i.PhasedExecutionContext.StartPhase(ScanPhase, false, stateCache); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return nil, nil
+		return &ImportResult{}, nil
 	}
 
-	res := &ImportResult{}
-
-	res.ScanResult, err = i.scan(ctx, kubeCl, metaConfig)
+	scanResult, err := i.scan(ctx, kubeCl, metaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
-	res.Status = ImportStatusScanned
 
 	if pointer.BoolDeref(i.Params.ScanOnly, true) {
 		if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
-			ScanResult: res.ScanResult,
+			ScanResult: scanResult,
 		}); err != nil {
 			return nil, fmt.Errorf("unable to complete phase: %w", err)
 		}
-		return res, nil
+		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
 		CapturePhase,
 		false,
 		stateCache,
-		PhaseData{
-			ScanResult: res.ScanResult,
-		},
+		PhaseData{ScanResult: scanResult},
 	); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return res, nil
+		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
 	}
 
 	err = i.capture(ctx, kubeCl, metaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to capture cluster: %w", err)
 	}
-	res.Status = ImportStatusImported
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
 		CheckPhase,
 		false,
 		stateCache,
-		PhaseData{
-			ScanResult: res.ScanResult,
-		},
+		PhaseData{},
 	); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return res, nil
+		return &ImportResult{Status: ImportStatusImported}, nil
 	}
 
-	res.CheckResult, err = i.check(ctx, res.ScanResult)
+	checkResult, err := i.check(ctx, scanResult)
 	if err != nil {
 		// check is optional
 		log.WarnF("Can't check imported cluster: %s\n", err)
 	}
 
 	if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
-		ScanResult:  res.ScanResult,
-		CheckResult: res.CheckResult,
+		CheckResult: checkResult,
 	}); err != nil {
 		return nil, fmt.Errorf("unable to complete phase: %w", err)
 	}
 
-	return res, nil
+	return &ImportResult{
+		Status:      ImportStatusImported,
+		ScanResult:  scanResult,
+		CheckResult: checkResult,
+	}, nil
 }
 
 func (i *Importer) scan(
