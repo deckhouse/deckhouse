@@ -44,7 +44,6 @@ spec:
     releaseChannel: Stable
 ```
 
-Чтобы узнать информацию о том, какая версия Deckhouse Kubernetes Platform находится на определенном канале обновлений, перейдите на [сайт](https://flow.deckhouse.io).
 
 **Изменение канала обновлений**
 
