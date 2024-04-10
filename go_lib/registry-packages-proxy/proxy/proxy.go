@@ -71,7 +71,11 @@ func (p *Proxy) Serve() {
 		}
 
 		repository := r.URL.Query().Get("repository")
-		p.logger.Infof("%s digest from repository %s request received", digest, repository)
+		if repository == "" {
+			p.logger.Infof("%s digest from main repository request received", digest)
+		} else {
+			p.logger.Infof("%s digest from repository %s request received", digest, repository)
+		}
 
 		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
 		if err != nil {
@@ -120,56 +124,65 @@ func (p *Proxy) Stop() {
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
+
+	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
 		registryConfig, err := p.getter.Get(repository)
 		if err != nil {
-			return 0, nil, errors.Wrap(err, "failed to get registry config")
+			return 0, nil, err
 		}
 
-		return p.registryClient.GetPackage(ctx, registryConfig, digest)
+		size, packageReader, err := p.registryClient.GetPackage(ctx, registryConfig, digest)
+		if err != nil {
+			return 0, nil, err
+		}
+		return size, packageReader, nil
 	}
 
+	// otherwise try to find digest in the cache
 	size, packageReader, cacheErr := p.cache.Get(digest)
-	if cacheErr != nil {
-		if !errors.Is(cacheErr, cache.ErrEntryNotFound) {
-			p.logger.Errorf("Get package from cache: %v", cacheErr)
-		}
-
-		registryConfig, err := p.getter.Get(repository)
-		if err != nil {
-			return 0, nil, errors.Wrap(err, "failed to get registry config")
-		}
-
-		size, packageReader, err = p.registryClient.GetPackage(ctx, registryConfig, digest)
-		if err != nil {
-			return 0, nil, errors.Wrap(err, "failed to get package")
-		}
-
-		if errors.Is(cacheErr, cache.ErrEntryNotFound) {
-			pipeReader, pipeWriter := io.Pipe()
-
-			reader := io.TeeReader(packageReader, pipeWriter)
-
-			go func() {
-				defer packageReader.Close()
-
-				err := p.cache.Set(digest, size, reader)
-				if err != nil {
-					defer pipeWriter.Close()
-
-					p.logger.Errorf("Add package to cache: %v", err)
-
-					// Copy remaining data to pipe
-					_, err := io.Copy(pipeWriter, packageReader)
-					if err != nil {
-						p.logger.Errorf("Copy remaining data to pipe: %v", err)
-					}
-				}
-			}()
-
-			return size, pipeReader, nil
-		}
+	if cacheErr == nil {
+		return size, packageReader, nil
 	}
 
-	return size, packageReader, nil
+	registryConfig, err := p.getter.Get(repository)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	size, packageReader, err = p.registryClient.GetPackage(ctx, registryConfig, digest)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// if any error other than item in the cache not found, get digest directly from the registry
+	if !errors.Is(cacheErr, cache.ErrEntryNotFound) {
+		p.logger.Errorf("Get package from cache: %v", cacheErr)
+		return size, packageReader, nil
+	}
+
+	// Otherwise, get the digest from registry and put them to cache
+	pipeReader, pipeWriter := io.Pipe()
+
+	reader := io.TeeReader(packageReader, pipeWriter)
+
+	go func() {
+		defer packageReader.Close()
+
+		err := p.cache.Set(digest, size, reader)
+		if err != nil {
+			defer pipeWriter.Close()
+
+			p.logger.Errorf("Add package to cache: %v", err)
+
+			// Copy remaining data to pipe
+			_, err := io.Copy(pipeWriter, packageReader)
+			if err != nil {
+				p.logger.Errorf("Copy remaining data to pipe: %v", err)
+			}
+		}
+	}()
+
+	return size, pipeReader, nil
+
 }

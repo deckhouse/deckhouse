@@ -36,7 +36,7 @@ type DefaultClient struct {
 func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
 	repository, err := name.NewRepository(config.Repository)
 	if err != nil {
-		return 0, nil, errors.Wrap(err, "failed to parse repository name")
+		return 0, nil, err
 	}
 
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
@@ -78,22 +78,22 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 			return 0, nil, ErrPackageNotFound
 		}
 
-		return 0, nil, errors.Wrap(err, "failed to get image")
+		return 0, nil, err
 	}
 
 	layers, err := image.Layers()
 	if err != nil {
-		return 0, nil, errors.Wrap(err, "failed to get layers")
+		return 0, nil, err
 	}
 
 	size, err := layers[len(layers)-1].Size()
 	if err != nil {
-		return 0, nil, errors.Wrap(err, "failed to get top layer size")
+		return 0, nil, err
 	}
 
 	reader, err := layers[len(layers)-1].Compressed()
 	if err != nil {
-		return 0, nil, errors.Wrap(err, "failed to create top layer reader")
+		return 0, nil, err
 	}
 
 	return size, reader, nil
