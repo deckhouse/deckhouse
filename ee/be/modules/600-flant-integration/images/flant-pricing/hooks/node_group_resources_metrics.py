@@ -20,8 +20,8 @@ def main(ctx: hook.Context):
     for snapshot in ctx.snapshots["nodes"]:
         node = snapshot["filterResult"]
         ng_name = node["node_group"]
-        capacity_cpu = node.get("capacity").get("cpu") if node.get("capacity").get("cpu") else 0
-        capacity_mem = node.get("capacity").get("memory") if node.get("capacity").get("memory") else 0
+        capacity_cpu = node.get("capacity", {}).get("cpu", 0)
+        capacity_mem = node.get("capacity", {}).get("memory", 0)
         cpu = utils.parse_quantity(capacity_cpu)
         ram_in_bytes = utils.parse_quantity(capacity_mem)
 
@@ -35,28 +35,26 @@ def main(ctx: hook.Context):
         is_system = "false"
         is_monitoring = "false"
         is_frontend = "false"
-        is_worker = "false"
 
-        taints = ng.get("nodeTemplate").get("taints")
+        taints = ng.get("nodeTemplate", {}).get("taints", [])
         if taints:
             for taint in taints:
                 if taint.get("key") == "node-role.kubernetes.io/control-plane":
                     is_master = "true"
+                if taint.get("key") == "node-role.kubernetes.io/master":
+                    is_master = "true"
                 if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "system":
                     is_system = "true"
                 if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "monitoring":
-                    is_system = "true"
+                    is_monitoring = "true"
                 if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "frontend":
-                    is_system = "true"
-        else:
-            is_worker = "true"
+                    is_frontend = "true"
 
         labels = {
             "is_master": is_master,
             "is_system": is_system,
             "is_monitoring": is_monitoring,
             "is_frontend": is_frontend,
-            "is_worker": is_worker,
         }
 
         ctx.metrics.collect({
