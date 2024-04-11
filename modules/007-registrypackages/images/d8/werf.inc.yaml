@@ -1,4 +1,4 @@
-{{- $version := "0.0.3" }}
+{{- $version := "0.0.5" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -19,7 +19,7 @@ docker:
     d8: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -31,6 +31,6 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
-  - go-task build:dist:linux:amd64
+  - task build:dist:linux:amd64
   - mv ./dist/v{{ $version }}/linux-amd64/d8 /d8
   - chmod +x /d8 /install /uninstall
