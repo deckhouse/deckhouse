@@ -600,7 +600,6 @@ v1.48.9    Pending    5m...
 
    После применения манифеста модули готовы к использованию.
 
-
 ## Использование proxy-сервера в закрытом контуре
 
 прокси для кластера  это одно. для реджистри - другая.
@@ -672,5 +671,75 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
-Вернуть обратно инфу про Нексус ии Харбор
+СЛЕДУЮЩИЕ СЦЕНАРИИ НУЖНЫ?
+
+### Особенности настройки Nexus
+
+При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
+
+* Включен `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*).
+* Создан **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*):
+  * Параметр `Allow anonymous docker pull` для репозитория должен быть включен. Данный параметр включает поддержку авторизации с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * Параметр `Maximum metadata age` для репозитория должен быть установлен в `0`.
+* Должен быть настроен контроль доступа:
+  * Создана роль **Nexus** (*Administration* -> *Security* -> *Roles*) со следующими полномочиями:
+    * `nx-repository-view-docker-<репозиторий>-browse`
+    * `nx-repository-view-docker-<репозиторий>-read`
+  * Создан пользователь (*Administration* -> *Security* -> *Users*) с ролью, созданной выше.
+
+**Настройка**:
+
+* Включите `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
+  ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
+
+* Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
+  ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
+
+* Заполните поля страницы создания репозитория следующим образом:
+  * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
+  * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
+  * `Allow anonymous docker pull` должно быть включено, чтобы работала авторизация с помощью Bearer-токенов. При этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
+  * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
+  * `Maximum Metadata Age` должно быть равно `0`.
+  * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+    * `Authentication Type` должно иметь значение `Username`.
+    * `Username` должно иметь значение `license-token`.
+    * `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
+
+  ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
+  ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
+  ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
+
+* Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
+  * Создайте роль **Nexus** (*Administration* -> *Security* -> *Roles*) с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+
+    ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
+
+  * Создайте пользователя (*Administration* -> *Security* -> *Users*) с ролью, созданной выше.
+
+    ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
+
+### Особенности настройки Harbor
+
+Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor), как Proxy Cache.
+
+* Настройте Registry:
+  * `Administration -> Registries -> New Endpoint`.
+  * `Provider`: `Docker Registry`.
+  * `Name` — укажите любое, на ваше усмотрение.
+  * `Endpoint URL`: `https://registry.deckhouse.ru`.
+  * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
+
+  ![Настройка Registry](images/registry/harbor/harbor1.png)
+
+* Создайте новый проект:
+  * `Projects -> New Project`.
+  * `Project Name` будет частью URL. Используйте любой, например, `d8s`.
+  * `Access Level`: `Public`.
+  * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
+
+  ![Создание нового проекта](images/registry/harbor/harbor2.png)
+
+В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
