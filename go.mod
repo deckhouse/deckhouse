@@ -97,6 +97,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-00010101000000-000000000000 // indirect
+	github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib v0.0.0-00010101000000-000000000000 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/cli v24.0.6+incompatible // indirect
 	github.com/docker/docker v24.0.9+incompatible // indirect
@@ -240,6 +241,8 @@ require (
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib => ./modules/021-cni-cilium/go_lib
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1

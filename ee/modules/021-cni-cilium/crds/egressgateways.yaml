@@ -1,0 +1,175 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: egressgateways.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cni-cilium
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: EgressGateway
+    listKind: EgressGatewayList
+    plural: egressgateways
+    singular: egressgateway
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |-
+            Interface for configuring a fault-tolerant egress gateway based on a group of nodes. The configured egress gateways can be used in EgressGatewayPolicy interface to configure egress gateway for application Pods.
+          x-doc-d8Revision: ee
+          properties:
+            spec:
+              type: object
+              properties:
+                nodeSelector:
+                  x-doc-d8Revision: ee
+                  description: |-
+                    The selector for a group of nodes that will transfer network requests to external services. Among these nodes, eligible nodes will be detected and one of them will be assigned as the active one. Signs of an eligible node:
+                    * The node is in Ready state.
+                    * Node is not cordoned.
+                    * The cilium-agent on the node is in the Ready state.
+
+                    Different EgressGateways can use common nodes for operation, and active nodes will be selected independently for each EgressGateway, thus distributing the load between them.
+                  additionalProperties:
+                    type: string
+                  type: object
+                sourceIP:
+                  type: object
+                  properties:
+                    mode:
+                      x-doc-d8Revision: ee
+                      description: |-
+                        A method for determining the source IP address to be assigned to requests through this gateway. Options:
+                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the source IP address. Particularities:
+                          * When the active node goes down and a new node is assigned, the outgoing IP address will change.
+                          * The network subsystem on all egress nodes must be configured in advance:
+                            * the "public" interfaces must have the same name (eth1, for example),
+                            * all necessary routes for access to all external public services must be configured.
+                        * `VirtualIPAddress` — explicitly specify the outgoing IP address. Particularities:
+                          * If the active node goes down, the outgoing IP address will not change.
+                          * The network subsystem on all egress nodes must be configured in advance:
+                            * all necessary routes for access to all external public services must be configured,
+                            * the "public" interface must be prepared to automatically configure a "virtual" IP as a secondary IP address (if an egress node is designated as active, the address will not appear in the IP list on the "public" interface, but the node will emulate it with ARP-responses)
+                      enum:
+                        - VirtualIPAddress
+                        - PrimaryIPFromEgressGatewayNodeInterface
+                      type: string
+                    virtualIPAddress:
+                      properties:
+                        ip:
+                          x-doc-d8Revision: ee
+                          description: The "virtual" source IP address to be assigned to outgoing requests through the egress gateway.
+                          type: string
+                      type: object
+                    primaryIPFromEgressGatewayNodeInterface:
+                      properties:
+                        interfaceName:
+                          x-doc-d8Revision: ee
+                          description: The interface name on the egress nodes through which external requests are processed.
+                          type: string
+                      type: object
+                  oneOf:
+                    - required: [virtualIPAddress]
+                      properties:
+                        mode:
+                          enum: ['VirtualIPAddress']
+                        virtualIPAddress:
+                          required: [ip]
+                    - required: [primaryIPFromEgressGatewayNodeInterface]
+                      properties:
+                        mode:
+                          enum: ['PrimaryIPFromEgressGatewayNodeInterface']
+                        primaryIPFromEgressGatewayNodeInterface:
+                          required: [interfaceName]
+                  required:
+                    - mode
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  format: int64
+                  type: integer
+                readyNodes:
+                  description: Number of nodes ready to perform egress gateway functions.
+                  format: int64
+                  type: integer
+                activeNodeName:
+                  description: The name of the current active node.
+                  type: string
+                conditions:
+                  items:
+                    properties:
+                      lastHeartbeatTime:
+                        format: date-time
+                        type: string
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          type of condition in CamelCase or in foo.example.com/CamelCase.
+                          ---
+                          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                          useful (see .node.status.conditions), the ability to deconflict is important.
+                          The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+      additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=="Ready")].status
+          name: Ready
+          type: string
+        - jsonPath: .spec.sourceIP.mode
+          name: Mode
+          type: string

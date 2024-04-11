@@ -429,6 +429,12 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/021-cni-cilium/configuration.html
+                - title: Custom Resources
+                  url: /modules/021-cni-cilium/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/021-cni-cilium/examples.html
             - title: cilium-hubble
               folders:
                 - title:

@@ -1,0 +1,23 @@
+{{- range $egName, $egConf := $.Values.cniCilium.internal.egressGatewaysMap }}
+  {{- if eq $egConf.sourceIP.mode "VirtualIPAddress" }}
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: EgressGatewayInstance
+metadata:
+  {{ include "helm_lib_module_labels" (list $ (dict "egress-gateway.network.deckhouse.io/node-name" $egConf.desiredNode)) | nindent 2 }}
+  finalizers:
+    - egress-gateway.network.deckhouse.io
+  name: {{ $egConf.instanceName }}
+  ownerReferences:
+    - apiVersion: network.deckhouse.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EgressGateway
+      name: {{ $egName }}
+      uid: {{ $egConf.uid }}
+spec:
+  nodeName: {{ $egConf.desiredNode }}
+  sourceIP:
+    {{ $egConf.sourceIP | toYaml | nindent 4}}
+  {{- end }}
+{{- end }}

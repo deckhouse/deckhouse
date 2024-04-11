@@ -21,3 +21,5 @@ import (
 )
 
 var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/021-cni-cilium/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/021-cni-cilium/crds/cilium/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/021-cni-cilium/crds/internal/*.yaml")

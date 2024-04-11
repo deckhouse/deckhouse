@@ -1,0 +1,24 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            Интерфейс для настройки политик перенаправления прикладного трафика на определённые egress-шлюзы, описанные через интерфейс EgressGateway.
+          properties:
+            spec:
+              properties:
+                destinationCIDRs:
+                  description: |-
+                    Сетевые запросы в сторону данных подсетей будут смаршрутизированы через egress-шлюз.
+                excludedCIDRs:
+                  description: |-
+                    Сетевые диапазоны, которые требуется исключить из диапазонов, описанных в `destinationCIDRs`.
+                    Обратите внимание, что исключать служебные диапазоны кластера (`podSubnetCIDR` и `serviceSubnetCIDR`) не требуется.
+                egressGatewayName:
+                  description: |-
+                    Имя ресурса EgressGateway, в котором описан egress-шлюз для обработки трафика.
+                selectors:
+                  description: |-
+                    Селекторы прикладных подов. Их трафик будет смаршрутизирован через соответствующий egress-шлюз.
+                    Для обозначения namespace используйте псевдо-лейбл `io.kubernetes.pod.namespace`.
