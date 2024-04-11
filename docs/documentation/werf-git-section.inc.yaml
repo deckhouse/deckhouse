@@ -308,3 +308,9 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /modules/007-registrypackages/images/d8/werf.inc.yaml
+  to: /src/registrypackages/werf.inc.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
