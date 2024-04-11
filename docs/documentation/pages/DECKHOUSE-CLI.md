@@ -10,6 +10,11 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
     For example, `d8 k get pods` is the same as `kubectl get pods`.
 * `d8 d` — the range of delivery-related commands (see the `werf` tool).  
     For example, you can run `d8 d plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
+
+    {% alert level="warning" %}
+    The `d8 d` command group is not available for Community Edition (CE).
+    {% endalert %}
+
 * `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
     For example, the `d8 virtualization console` command execs you into the VM console.
 
