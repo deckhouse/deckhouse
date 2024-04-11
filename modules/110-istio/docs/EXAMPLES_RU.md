@@ -625,9 +625,10 @@ spec:
 
 Аннотация ниже добавляет описанный выше preStop-хук в контейнер istio-proxy прикладного пода:
 
+```yaml
+annotations:
+  inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops
 ```
-inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops
-```.
 
 ## Обновление Istio
 

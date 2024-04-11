@@ -622,9 +622,10 @@ By default, during termination, all containers in a Pod, including istio-proxy o
 
 The annotation below adds the preStop hook to istio-proxy container in application's Pod:
 
+```yaml
+annotations:
+  inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
-inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops
-```.
 
 ## Upgrading Istio
 
