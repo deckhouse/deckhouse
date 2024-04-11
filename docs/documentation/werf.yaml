@@ -153,6 +153,14 @@ ansible:
         warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/_data/
+    - name: "Get Deckhouse CLI version"
+      shell: |
+        grep -E '^\{\{- \$version' /src/registrypackages/werf.inc.yaml | sed -E 's/.+\"(.+)\".+/version: "\1"/' >> deckhouse-cli.yaml
+        echo "Deckhouse CLI version: $(cat deckhouse-cli.yaml)"
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
         {{- if eq $.Env "development" }}
