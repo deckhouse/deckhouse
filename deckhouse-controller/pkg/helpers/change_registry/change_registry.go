@@ -53,7 +53,7 @@ const (
 	caKey      = "ca"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure, dryRun bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool) error {
 	ctx := context.Background()
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
 
@@ -64,7 +64,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	nameOpts := newNameOptions(insecure)
+	nameOpts := newNameOptions()
 	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	caTransport := cr.GetHTTPTransport(caContent)
 
-	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
+	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport, scheme); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent)
+	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent, scheme)
 	if err != nil {
 		return err
 	}
@@ -150,11 +150,8 @@ func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig auth
 	}, nil
 }
 
-func newNameOptions(insecure bool) []name.Option {
+func newNameOptions() []name.Option {
 	opts := []name.Option{name.StrictValidation}
-	if insecure {
-		opts = append(opts, name.Insecure)
-	}
 	return opts
 }
 
@@ -196,7 +193,7 @@ func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient
 	return nil
 }
 
-func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent string) (map[string]string, error) {
+func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent, specScheme string) (map[string]string, error) {
 	authConfBytes, err := json.Marshal(
 		map[string]map[string]*dockerCfgAuthEntry{
 			"auths": {
@@ -208,11 +205,16 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 		return nil, err
 	}
 
+	scheme := specScheme
+	if scheme != "http" && scheme != "https" {
+		scheme = newRepo.Scheme()
+	}
+
 	newSecretData := map[string]string{
 		".dockerconfigjson": string(authConfBytes),
 		"address":           newRepo.RegistryStr(),
 		"path":              path.Join("/", newRepo.RepositoryStr()),
-		"scheme":            newRepo.Scheme(),
+		"scheme":            scheme,
 	}
 
 	if caContent != "" {
@@ -332,14 +334,14 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
+func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper, specScheme string) error {
 	client := &http.Client{Transport: roundTripper}
 
 	// This first attempts to use "https" for every request, falling back to http
 	// if the registry matches our localhost heuristic or if it is intentionally
 	// set to insecure via name.NewInsecureRegistry.
 	schemes := []string{"https"}
-	if reg.Scheme() == "http" {
+	if reg.Scheme() == "http" || specScheme == "http" {
 		schemes = append(schemes, "http")
 	}
 
