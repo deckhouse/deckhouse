@@ -23,6 +23,68 @@ if bb-flag? disruption && bb-flag? reboot; then
   exit 0
 fi
 
+# $1 - username $2 - request data
+function nodeuser_patch() {
+  local username="$1"
+  local data="$2"
+
+  local patch_pending=true
+  # Skip this step after multiple failures.
+  # This step puts information "how to get bootstrap logs" into Instance resource.
+  # It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
+  local failure_count=0
+  local failure_limit=3
+  while [ "$patch_pending" = true ] ; do
+    for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+      local server_addr=$(echo $server | cut -f1 -d":")
+      until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+        echo "The network is not ready for connecting to apiserver yet, waiting..."
+        sleep 1
+      done
+
+      if curl -sS --fail -x "" \
+        --max-time 10 \
+        -XPATCH \
+        -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+        -H "Accept: application/json" \
+        -H "Content-Type: application/json-patch+json" \
+        --cacert "$BOOTSTRAP_DIR/ca.crt" \
+        --data "${data}" \
+        "https://$server/apis/deckhouse.io/v1/nodeusers/${username}" ; then
+
+        echo "Successfully patched NodeUser."
+        patch_pending=false
+
+        break
+      else
+        failure_count=$((failure_count + 1))
+
+        if [[ $failure_count -eq $failure_limit ]]; then
+          >&2 echo "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
+          patch_pending=false
+          break
+        fi
+
+        >&2 echo "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
+        sleep 10
+        continue
+      fi
+    done
+  done
+}
+
+# $1 - username $2 - error message
+function nodeuser_add_error() {
+  local username="$1"
+  local message="$2"
+  local machine_name="${D8_NODE_HOSTNAME}"
+  if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
+    local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
+  fi
+
+  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\", \"value\": \"${message}\" }]"
+}
+
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
 function modify_user() {
   local user_name="$1"
@@ -82,6 +144,8 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
   ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
   extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
+
+  nodeuser_add_error "${user_name}" "Test message"
 
   # check for uid > 1000
   if [ $uid -le 1000 ]; then
