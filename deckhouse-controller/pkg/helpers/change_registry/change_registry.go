@@ -64,7 +64,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	nameOpts := newNameOptions()
+	nameOpts := newNameOptions(scheme)
 	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	caTransport := cr.GetHTTPTransport(caContent)
 
-	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport, scheme); err != nil {
+	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
 	}
 
@@ -150,8 +150,11 @@ func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig auth
 	}, nil
 }
 
-func newNameOptions() []name.Option {
+func newNameOptions(scheme string) []name.Option {
 	opts := []name.Option{name.StrictValidation}
+	if scheme == "http" {
+		opts = append(opts, name.Insecure)
+	}
 	return opts
 }
 
@@ -334,14 +337,14 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper, specScheme string) error {
+func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
 	client := &http.Client{Transport: roundTripper}
 
 	// This first attempts to use "https" for every request, falling back to http
 	// if the registry matches our localhost heuristic or if it is intentionally
 	// set to insecure via name.NewInsecureRegistry.
 	schemes := []string{"https"}
-	if reg.Scheme() == "http" || specScheme == "http" {
+	if reg.Scheme() == "http" {
 		schemes = append(schemes, "http")
 	}
 

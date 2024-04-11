@@ -331,7 +331,6 @@ func Test_checkBearerSupport(t *testing.T) {
 		{
 			name:         "check non existed registry",
 			registryHost: "registry.example.com",
-			scheme:       "http",
 			args: args{
 				ctx: context.Background(),
 			},
@@ -345,7 +344,7 @@ func Test_checkBearerSupport(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport, tt.scheme); (err != nil) != tt.wantErr {
+			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
 				t.Errorf("checkBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
