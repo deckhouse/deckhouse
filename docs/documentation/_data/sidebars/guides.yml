@@ -2,10 +2,6 @@
 entries:
   folders:
     - title:
-        en: Обновление Kubernetes
-        ru: Обновление Kubernetes
-      url: /update/update-kubernetes/
-    - title:
         en: Режимы обновлений платформы
         ru: Режимы обновлений платформы
       url: /update/update-mode/
@@ -21,3 +17,11 @@ entries:
         en: Обновление в закрытом контуре
         ru: Обновление в закрытом контуре
       url: /update/security/
+    - title:
+        en: Обновление узлов в кластере
+        ru: Обновление узлов в кластере
+      url: /update/update-nodes/
+    - title:
+        en: Обновление Kubernetes
+        ru: Обновление Kubernetes
+      url: /update/update-kubernetes/
