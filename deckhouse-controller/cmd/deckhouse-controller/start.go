@@ -169,7 +169,11 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
-	operator.SetupKubeConfigManager(kubeConfigBackend)
+	mf, err := modulefilter.New(operator.KubeClient().RestConfig())
+	if err != nil {
+		return fmt.Errorf("new module filter: %w", err)
+	}
+	operator.SetupKubeConfigManager(kubeConfigBackend, mf)
 	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
