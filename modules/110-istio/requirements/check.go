@@ -18,8 +18,6 @@ package requirements
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -64,10 +62,6 @@ func init() {
 			return false, fmt.Errorf("%s key is not registred", minVersionValuesKey)
 		}
 		currentMinIstioVersionStr := currentMinIstioVersionRaw.(string)
-		verParts := strings.Split(currentMinIstioVersionStr, ".")
-		if len(verParts) > 2 {
-			currentMinIstioVersionStr = verParts[0] + "." + verParts[1]
-		}
 
 		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
 		if !exists {
