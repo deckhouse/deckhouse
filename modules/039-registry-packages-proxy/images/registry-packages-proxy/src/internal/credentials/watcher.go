@@ -125,12 +125,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 }
 
 func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
-	var secret v1.Secret
-
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(secretEvent.Object.(*unstructured.Unstructured).Object, &secret)
-	if err != nil {
-		return err
-	}
+	secret := secretEvent.Object.(*v1.Secret)
 
 	switch secretEvent.Type {
 	case watch.Added, watch.Modified:
