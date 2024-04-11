@@ -16,6 +16,7 @@ package _import
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -173,6 +174,25 @@ func (i *Importer) scan(
 			return fmt.Errorf("unable to save cluster uuid to cache: %w", err)
 		}
 
+		clusterConfiguration, err := metaConfig.ClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to prepare cluster config yaml: %w", err)
+		}
+
+		providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
+		if err != nil {
+			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
+		}
+
+		res = &ScanResult{
+			ClusterConfiguration:                 string(clusterConfiguration),
+			ProviderSpecificClusterConfiguration: string(providerConfiguration),
+		}
+
+		if metaConfig.ClusterType == config.StaticClusterType {
+			return nil
+		}
+
 		if err = stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
 			return fmt.Errorf("unable to save cluster config to cache: %w", err)
 		}
@@ -195,19 +215,23 @@ func (i *Importer) scan(
 			return fmt.Errorf("unable to save cluster tf state to cache: %w", err)
 		}
 
-		clusterConfiguration, err := metaConfig.ClusterConfigYAML()
-		if err != nil {
-			return fmt.Errorf("unable to prepare cluster config yaml: %w", err)
+		hosts := map[string]string{}
+		for _, ngState := range nodesState {
+			for node, nState := range ngState.State {
+				state := nodeState{}
+				err = json.Unmarshal(nState, &state)
+				if err != nil {
+					return fmt.Errorf("unable to parse master ssh hosts: %w", err)
+				}
+				if state.Outputs.MasterIPAddressForSSH.Value != "" {
+					hosts[node] = state.Outputs.MasterIPAddressForSSH.Value
+				}
+			}
 		}
 
-		providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
+		err = stateCache.SaveStruct("cluster-hosts", hosts)
 		if err != nil {
-			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
-		}
-
-		res = &ScanResult{
-			ClusterConfiguration:                 string(clusterConfiguration),
-			ProviderSpecificClusterConfiguration: string(providerConfiguration),
+			return fmt.Errorf("unable to save master ssh hosts: %w", err)
 		}
 
 		return nil
@@ -264,4 +288,12 @@ func (i *Importer) check(
 	}
 
 	return res, nil
+}
+
+type nodeState struct {
+	Outputs struct {
+		MasterIPAddressForSSH struct {
+			Value string `json:"value,omitempty"`
+		} `json:"master_ip_address_for_ssh,omitempty"`
+	} `json:"outputs,omitempty"`
 }
