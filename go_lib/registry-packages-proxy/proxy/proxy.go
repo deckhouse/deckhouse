@@ -16,7 +16,6 @@ package proxy
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -128,7 +127,6 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
-		fmt.Println("cache is nil")
 		registryConfig, err := p.getter.Get(repository)
 		if err != nil {
 			return 0, nil, err

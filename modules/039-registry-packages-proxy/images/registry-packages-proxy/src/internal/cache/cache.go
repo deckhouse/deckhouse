@@ -31,7 +31,7 @@ const CacheHighUsagePercent = 80
 
 type CacheEntry struct {
 	lastAccessTime time.Time
-	size           int64
+	size           uint64
 }
 
 type Cache struct {
@@ -68,7 +68,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	}
 
 	stat, err := file.Stat()
-	c.logger.Infof("found file %s with size %d", stat.Name(), stat.Size())
+	c.logger.Infof("found file %s with size %d in the cache", stat.Name(), stat.Size())
 
 	if err != nil {
 		return 0, nil, err
@@ -92,7 +92,7 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	defer c.Unlock()
 	c.storage[digest] = &CacheEntry{
 		lastAccessTime: time.Now(),
-		size:           size,
+		size:           uint64(size),
 	}
 
 	c.metrics.CacheSize.Add(float64(size))
@@ -120,5 +120,21 @@ func (c *Cache) Reconcile(ctx context.Context) {
 }
 
 func (c *Cache) ApplyRetentionPolicy() error {
-	return nil
+	for {
+		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
+		if usagePercent > CacheHighUsagePercent {
+			c.logger.Infof("need to compact cache, current usage %d %% more than %d %%", usagePercent, CacheHighUsagePercent)
+			return nil
+		}
+		c.logger.Infof("current cache usage %d %% less than %d %%, compaction is not needed", usagePercent, CacheHighUsagePercent)
+		return nil
+	}
+}
+
+func (c *Cache) calculateCacheSize() uint64 {
+	var size uint64
+	for _, v := range c.storage {
+		size += v.size
+	}
+	return size
 }
