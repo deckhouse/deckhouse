@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -58,6 +59,7 @@ func NewProxy(server *http.Server,
 
 func (p *Proxy) Serve() {
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("%v\n", r.URL.Query().Encode())
 		if r.Method != "HEAD" && r.Method != "GET" {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -109,7 +111,7 @@ func (p *Proxy) Serve() {
 	})
 
 	p.logger.Infof("starting listener: %s", p.listener.Addr())
-	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
+	if err := p.server.Serve(p.listener); err != nil {
 		p.logger.Error(err)
 	}
 }
