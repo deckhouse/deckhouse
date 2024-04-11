@@ -246,7 +246,7 @@ func waitPodIsReady(componentName string, checksum string) error {
 			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
 		}
 
-		attemptReReadManifest := maxRetries - 20
+		attemptReReadManifest := maxRetries - 60
 
 		if tries == attemptReReadManifest {
 			err := triggerKubeletRereadManifest(componentName)
