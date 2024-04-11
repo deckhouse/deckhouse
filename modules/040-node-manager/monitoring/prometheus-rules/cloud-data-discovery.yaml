@@ -45,8 +45,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster
-      plk_create_group_if_not_exists__main: "ClusterHasOrphanedDisks,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__main: "ClusterHasOrphanedDisks,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__main: "ClusterHasCloudDataDiscovererAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__main: "ClusterHasCloudDataDiscovererAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster. You can manually delete these disks from your cloud:
           ID: {{ $labels.id }}, Name: {{ $labels.name }}
