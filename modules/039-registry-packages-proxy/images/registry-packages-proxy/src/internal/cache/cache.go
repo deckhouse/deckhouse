@@ -124,10 +124,10 @@ func (c *Cache) ApplyRetentionPolicy() error {
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
 		if usagePercent > CacheHighUsagePercent {
-			c.logger.Infof("need to compact cache, current usage %d %% more than %d %%", usagePercent, CacheHighUsagePercent)
+			c.logger.Infof("need to compact cache, current usage %d%% more than %d%%", usagePercent, CacheHighUsagePercent)
 			return nil
 		}
-		c.logger.Infof("current cache usage %d %% less than %d %%, compaction is not needed", usagePercent, CacheHighUsagePercent)
+		c.logger.Infof("current cache usage %d%% less than %d%%, compaction is not needed", usagePercent, CacheHighUsagePercent)
 		return nil
 	}
 }
