@@ -89,6 +89,40 @@ func TestParseConnectionConfig(t *testing.T) {
 			},
 			opts: []ValidateOption{ValidateOptionValidateExtensions(true)},
 		},
+		"valid config without hosts": {
+			config: configFunc(
+				validSSHConfigNoHosts,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
+			expected: &ConnectionConfig{
+				SSHConfig: &SSHConfig{
+					SSHUser:      "ubuntu",
+					SSHPort:      pointer.Int32(22),
+					SSHExtraArgs: "-vvv",
+					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
+						{
+							Key:        readFile(t, "./mocks/id_rsa"),
+							Passphrase: "",
+						},
+						{
+							Key:        readFile(t, "./mocks/id_passphrase_rsa"),
+							Passphrase: "test",
+						},
+					},
+				},
+			},
+			opts: []ValidateOption{ValidateOptionValidateExtensions(true)},
+		},
+		"valid config without hosts, but ssh hosts required": {
+			config: configFunc(
+				validSSHConfigNoHosts,
+				"./mocks/id_rsa",
+				"./mocks/id_passphrase_rsa",
+			),
+			errContains: `ValidationFailed: at least one "SSHHost" required`,
+			opts:        []ValidateOption{ValidateOptionValidateExtensions(true), ValidateOptionRequiredSSHHost(true)},
+		},
 		"invalid config: bad ssh key": {
 			config: configFunc(
 				validSSHConfig,
@@ -180,6 +214,23 @@ host: 158.160.112.65
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
 host: static.host.test
+`
+
+var validSSHConfigNoHosts = `
+---
+apiVersion: dhctl.deckhouse.io/v1
+kind: SSHConfig
+sshUser: ubuntu
+sshPort: 21 # without strict unmarshalling will be overwritten with value below
+sshPort: 22
+sshExtraArgs: -vvv
+sshAgentPrivateKeys:
+- key: |
+    %s
+- key: |
+    %s
+  passphrase: test
+---
 `
 
 var invalidSSHConfigNoUser = `

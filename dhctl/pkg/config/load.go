@@ -48,6 +48,7 @@ type validateOptions struct {
 	commanderMode      bool
 	strictUnmarshal    bool
 	validateExtensions bool
+	requiredSSHHost    bool
 }
 
 type ValidateOption func(o *validateOptions)
@@ -67,6 +68,12 @@ func ValidateOptionStrictUnmarshal(v bool) ValidateOption {
 func ValidateOptionValidateExtensions(v bool) ValidateOption {
 	return func(o *validateOptions) {
 		o.validateExtensions = v
+	}
+}
+
+func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.requiredSSHHost = v
 	}
 }
 
