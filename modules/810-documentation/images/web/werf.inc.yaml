@@ -163,6 +163,14 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
         warn: false
+    - name: "Get Deckhouse CLI version"
+      shell: |
+        grep -E '^\{\{- \$version' /src/registrypackages/werf.inc.yaml | sed -E 's/.+\"(.+)\".+/version: "\1"/' >> deckhouse-cli.yaml
+        echo "Deckhouse CLI version: $(cat deckhouse-cli.yaml)"
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - name: "Generating static file's of the main part..."
       shell: |
         JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
