@@ -288,7 +288,6 @@ func triggerKubeletRereadManifest(componentName string) error {
 	if err := copy.Copy(srcPath, dstPath); err != nil {
 		return err
 	}
-
 	if err := os.Remove(srcPath); err != nil {
 		return err
 	}
@@ -296,6 +295,9 @@ func triggerKubeletRereadManifest(componentName string) error {
 	time.Sleep(2 * time.Second)
 
 	if err := copy.Copy(dstPath, srcPath); err != nil {
+		return err
+	}
+	if err := os.Remove(dstPath); err != nil {
 		return err
 	}
 
