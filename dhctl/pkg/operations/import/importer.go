@@ -16,7 +16,6 @@ package _import
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -35,17 +34,19 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-//go:embed resources.go.tmpl
-var resourcesToCreate string
-
 type Params struct {
 	CommanderMode    bool
 	SSHClient        *ssh.Client
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
-	CommanderURL     string
+	ImportResources  ImportResources
 	ScanOnly         *bool
+}
+
+type ImportResources struct {
+	Template string
+	Values   map[string]any
 }
 
 type Importer struct {
@@ -220,9 +221,10 @@ func (i *Importer) capture(
 	kubeCl *client.KubernetesClient,
 ) error {
 	return log.Process("import", "Capture cluster", func() error {
-		res, err := template.ParseResourcesContent(resourcesToCreate, map[string]any{
-			"commanderURL": i.Params.CommanderURL,
-		})
+		res, err := template.ParseResourcesContent(i.Params.ImportResources.Template, i.Params.ImportResources.Values)
+		if err != nil {
+			return fmt.Errorf("unable to parse resources: %w", err)
+		}
 
 		checkers, err := resources.GetCheckers(kubeCl, res, nil)
 		if err != nil {
