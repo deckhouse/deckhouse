@@ -4,38 +4,23 @@
       {
         "$$hashKey": "object:1058",
         "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
+        "datasource": "-- Grafana --",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
         "type": "dashboard"
       }
     ]
   },
   "editable": false,
-  "fiscalYearStartMonth": 0,
   "gnetId": 1860,
   "graphTooltip": 0,
-  "id": 42,
-  "iteration": 1712829537833,
-  "links": [],
-  "liveNow": false,
+  "iteration": 1630508489644,
   "panels": [
     {
       "collapsed": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -44,28 +29,27 @@
       },
       "id": 261,
       "panels": [],
+      "repeat": null,
       "title": "Quick CPU / Mem / Disk",
       "type": "row"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Busy state of all CPU cores together",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "mappings": [
             {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
             }
           ],
           "max": 100,
@@ -112,7 +96,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
@@ -127,24 +111,22 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Busy state of all CPU cores together (5 min average)",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "mappings": [
             {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
             }
           ],
           "max": 100,
@@ -191,7 +173,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "avg(node_load5{node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
@@ -206,24 +188,22 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Busy state of all CPU cores together (15 min average)",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "mappings": [
             {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
             }
           ],
           "max": 100,
@@ -270,7 +250,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "avg(node_load15{node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
@@ -284,15 +264,15 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Non available RAM memory",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "decimals": 0,
           "mappings": [],
           "max": 100,
@@ -340,7 +320,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "((node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"}) / (node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} )) * 100",
@@ -363,24 +343,22 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Used Swap",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "mappings": [
             {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
             }
           ],
           "max": 100,
@@ -427,7 +405,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "((node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{node=~\"$node\",job=\"node-exporter\"}) / (node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} )) * 100",
@@ -440,24 +418,22 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "datasource": "$ds_prometheus",
       "description": "Used Root FS",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "custom": {},
           "mappings": [
             {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
             }
           ],
           "max": 100,
@@ -504,7 +480,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
           "expr": "100 - ((node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"})",
@@ -518,42 +494,29 @@
       "type": "gauge"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "datasource": "$ds_prometheus",
       "description": "Total number of CPU cores",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
+          "custom": {}
         },
         "overrides": []
+      },
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 2,
@@ -562,23 +525,41 @@
         "y": 1
       },
       "id": 14,
+      "interval": null,
       "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
         },
-        "textMode": "auto"
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "maxPerRow": 6,
+      "nullPointMode": "null",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
       },
-      "pluginVersion": "8.5.13",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
@@ -588,47 +569,44 @@
           "step": 240
         }
       ],
+      "thresholds": "",
       "title": "CPU Cores",
-      "type": "stat"
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 1,
       "description": "System uptime",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
+          "custom": {}
         },
         "overrides": []
+      },
+      "format": "s",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 2,
@@ -638,23 +616,42 @@
       },
       "hideTimeOverride": true,
       "id": 15,
+      "interval": null,
       "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "$$hashKey": "object:1094",
+          "name": "value to text",
+          "value": 1
         },
-        "textMode": "auto"
+        {
+          "$$hashKey": "object:1095",
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "null",
+      "nullText": null,
+      "postfix": "s",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
       },
-      "pluginVersion": "8.5.13",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "node_time_seconds{node=~\"$node\",job=\"node-exporter\"} - node_boot_time_seconds{node=~\"$node\",job=\"node-exporter\"}",
@@ -663,51 +660,45 @@
           "step": 240
         }
       ],
+      "thresholds": "",
       "title": "Uptime",
-      "type": "stat"
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "$$hashKey": "object:1097",
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(50, 172, 45, 0.97)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(245, 54, 54, 0.9)"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Total RootFS",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 70
-              },
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "bytes"
+          "custom": {}
         },
         "overrides": []
+      },
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 2,
@@ -716,23 +707,41 @@
         "y": 3
       },
       "id": 23,
+      "interval": null,
       "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
         },
-        "textMode": "auto"
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "maxPerRow": 6,
+      "nullPointMode": "null",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
       },
-      "pluginVersion": "8.5.13",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"}",
@@ -743,47 +752,44 @@
           "step": 240
         }
       ],
+      "thresholds": "70,90",
       "title": "RootFS Total",
-      "type": "stat"
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Total RAM",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "bytes"
+          "custom": {}
         },
         "overrides": []
+      },
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 2,
@@ -792,23 +798,41 @@
         "y": 3
       },
       "id": 75,
+      "interval": null,
       "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
         },
-        "textMode": "auto"
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "maxPerRow": 6,
+      "nullPointMode": "null",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "70%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
       },
-      "pluginVersion": "8.5.13",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
@@ -817,47 +841,44 @@
           "step": 240
         }
       ],
+      "thresholds": "",
       "title": "RAM Total",
-      "type": "stat"
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "datasource": "$ds_prometheus",
+      "decimals": 0,
       "description": "Total SWAP",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "bytes"
+          "custom": {}
         },
         "overrides": []
+      },
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 2,
@@ -866,23 +887,41 @@
         "y": 3
       },
       "id": 18,
+      "interval": null,
       "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
         },
-        "textMode": "auto"
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "maxPerRow": 6,
+      "nullPointMode": "null",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "70%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
       },
-      "pluginVersion": "8.5.13",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
@@ -891,14 +930,22 @@
           "step": 240
         }
       ],
+      "thresholds": "",
       "title": "SWAP Total",
-      "type": "stat"
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
       "collapsed": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -907,6 +954,7 @@
       },
       "id": 263,
       "panels": [],
+      "repeat": null,
       "title": "Basic CPU / Mem / Net / Disk",
       "type": "row"
     },
@@ -930,13 +978,12 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "decimals": 2,
       "description": "Basic CPU info",
       "fieldConfig": {
         "defaults": {
+          "custom": {},
           "links": []
         },
         "overrides": []
@@ -960,6 +1007,8 @@
         "rightSide": false,
         "show": true,
         "sideWidth": 250,
+        "sort": null,
+        "sortDesc": null,
         "total": false,
         "values": false
       },
@@ -972,7 +1021,7 @@
         "alertThreshold": true
       },
       "percentage": true,
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1054,7 +1103,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "CPU Basic",
       "tooltip": {
         "shared": true,
@@ -1063,7 +1114,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -1080,12 +1133,16 @@
         {
           "$$hashKey": "object:124",
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1113,13 +1170,12 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "decimals": 2,
       "description": "Basic memory usage",
       "fieldConfig": {
         "defaults": {
+          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1155,7 +1211,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1229,7 +1285,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Memory Basic",
       "tooltip": {
         "shared": true,
@@ -1238,7 +1296,9 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
@@ -1247,17 +1307,22 @@
           "format": "bytes",
           "label": "",
           "logBase": 1,
+          "max": null,
           "min": "0",
           "show": true
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1289,12 +1354,11 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "description": "Basic network info per interface",
       "fieldConfig": {
         "defaults": {
+          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1332,7 +1396,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1364,7 +1428,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Network Traffic Basic",
       "tooltip": {
         "shared": true,
@@ -1373,25 +1439,33 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "Bps",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
           "format": "pps",
           "label": "",
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
@@ -1399,13 +1473,12 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "decimals": 3,
       "description": "Disk space used of all filesystems mounted",
       "fieldConfig": {
         "defaults": {
+          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1443,7 +1516,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1462,7 +1535,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "Disk Space Used Basic",
       "tooltip": {
         "shared": true,
@@ -1471,13 +1546,16 @@
       },
       "type": "graph",
       "xaxis": {
+        "buckets": null,
         "mode": "time",
+        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "percent",
+          "label": null,
           "logBase": 1,
           "max": "100",
           "min": "0",
@@ -1485,19 +1563,21 @@
         },
         {
           "format": "short",
+          "label": null,
           "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false
+        "align": false,
+        "alignLevel": null
       }
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1522,9 +1602,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1553,6 +1631,8 @@
             "rightSide": false,
             "show": true,
             "sideWidth": 250,
+            "sort": null,
+            "sortDesc": null,
             "total": false,
             "values": true
           },
@@ -1569,6 +1649,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeat": null,
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
@@ -1648,7 +1729,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "CPU",
           "tooltip": {
             "shared": true,
@@ -1657,7 +1740,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -1672,12 +1757,16 @@
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -1705,9 +1794,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1736,6 +1823,8 @@
             "rightSide": false,
             "show": true,
             "sideWidth": 350,
+            "sort": null,
+            "sortDesc": null,
             "total": false,
             "values": true
           },
@@ -1844,7 +1933,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Stack",
           "tooltip": {
             "shared": true,
@@ -1853,7 +1944,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -1862,17 +1955,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -1885,9 +1983,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -1957,7 +2053,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic",
           "tooltip": {
             "shared": true,
@@ -1966,7 +2064,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -1976,17 +2076,23 @@
               "format": "bps",
               "label": "bits out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:5885",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -1994,9 +2100,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 3,
           "description": "",
           "fieldConfig": {
@@ -2058,7 +2162,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk Space Used",
           "tooltip": {
             "shared": true,
@@ -2067,7 +2173,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -2076,17 +2184,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2094,9 +2207,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -2250,7 +2361,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk IOps",
           "tooltip": {
             "shared": false,
@@ -2259,7 +2372,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -2268,16 +2383,22 @@
               "format": "iops",
               "label": "IO read (-) / write (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2287,9 +2408,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 3,
           "description": "",
           "fieldConfig": {
@@ -2317,6 +2436,8 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sort": null,
+            "sortDesc": null,
             "total": false,
             "values": true
           },
@@ -2383,7 +2504,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "I/O Usage Read / Write",
           "tooltip": {
             "shared": true,
@@ -2392,7 +2515,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": false,
             "values": []
           },
@@ -2402,6 +2527,8 @@
               "format": "Bps",
               "label": "bytes read (-) / write (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
@@ -2409,11 +2536,14 @@
               "format": "ms",
               "label": "",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2423,9 +2553,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 3,
           "description": "",
           "fieldConfig": {
@@ -2453,6 +2581,8 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sort": null,
+            "sortDesc": null,
             "total": false,
             "values": true
           },
@@ -2485,7 +2615,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "I/O Utilization",
           "tooltip": {
             "shared": true,
@@ -2494,7 +2626,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": false,
             "values": []
           },
@@ -2504,6 +2638,7 @@
               "format": "percentunit",
               "label": "%util",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
@@ -2512,22 +2647,24 @@
               "format": "s",
               "label": "",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "CPU / Memory / Net / Disk",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2559,9 +2696,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -2628,7 +2763,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Active / Inactive",
           "tooltip": {
             "shared": true,
@@ -2637,7 +2774,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -2646,17 +2785,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2682,9 +2826,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -2760,7 +2902,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Commited",
           "tooltip": {
             "shared": true,
@@ -2769,7 +2913,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -2778,17 +2924,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2814,9 +2965,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -2903,7 +3052,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Active / Inactive Detail",
           "tooltip": {
             "shared": true,
@@ -2912,7 +3063,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -2921,17 +3074,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "bytes",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -2959,9 +3117,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -2988,6 +3144,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -3035,7 +3192,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Writeback and Dirty",
           "tooltip": {
             "shared": true,
@@ -3044,7 +3203,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3053,17 +3214,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3089,9 +3255,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3185,7 +3349,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Shared and Mapped",
           "tooltip": {
             "shared": true,
@@ -3194,7 +3360,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3204,18 +3372,23 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:4107",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3243,9 +3416,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3272,6 +3443,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -3311,7 +3483,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Slab",
           "tooltip": {
             "shared": true,
@@ -3320,7 +3494,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3329,17 +3505,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3366,9 +3547,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3395,6 +3574,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -3445,7 +3625,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Vmalloc",
           "tooltip": {
             "shared": true,
@@ -3454,7 +3636,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3463,17 +3647,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3499,9 +3688,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3560,7 +3747,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Bounce",
           "tooltip": {
             "shared": true,
@@ -3569,7 +3758,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3578,17 +3769,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3615,9 +3811,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3644,6 +3838,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -3688,7 +3883,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Anonymous",
           "tooltip": {
             "shared": true,
@@ -3697,7 +3894,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3706,17 +3905,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3742,9 +3946,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3811,7 +4013,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Kernel / CPU",
           "tooltip": {
             "shared": true,
@@ -3820,7 +4024,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3829,17 +4035,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3866,9 +4077,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -3895,6 +4104,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -3942,7 +4152,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory HugePages Counter",
           "tooltip": {
             "shared": true,
@@ -3951,7 +4163,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -3960,6 +4174,7 @@
               "format": "short",
               "label": "pages",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
@@ -3967,11 +4182,14 @@
               "format": "short",
               "label": "",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -3998,9 +4216,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4027,6 +4243,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -4066,7 +4283,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory HugePages Size",
           "tooltip": {
             "shared": true,
@@ -4075,7 +4294,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4084,6 +4305,7 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
@@ -4091,11 +4313,14 @@
               "format": "short",
               "label": "",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4122,9 +4347,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4153,6 +4376,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -4200,7 +4424,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory DirectMap",
           "tooltip": {
             "shared": true,
@@ -4209,7 +4435,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4218,17 +4446,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4254,9 +4487,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4323,7 +4554,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Unevictable and MLocked",
           "tooltip": {
             "shared": true,
@@ -4332,7 +4565,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4341,17 +4576,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4379,9 +4619,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4408,6 +4646,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -4439,7 +4678,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory NFS",
           "tooltip": {
             "shared": true,
@@ -4448,7 +4689,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4457,28 +4700,32 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Memory Meminfo",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4492,9 +4739,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -4564,7 +4809,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Pages In / Out",
           "tooltip": {
             "shared": true,
@@ -4573,7 +4820,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4582,16 +4831,22 @@
               "format": "short",
               "label": "pages out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4599,9 +4854,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -4671,7 +4924,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Pages Swap In / Out",
           "tooltip": {
             "shared": true,
@@ -4680,7 +4935,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4689,16 +4946,22 @@
               "format": "short",
               "label": "pages out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4724,9 +4987,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4808,7 +5069,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Memory Page Faults",
           "tooltip": {
             "shared": true,
@@ -4817,7 +5080,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4827,18 +5092,23 @@
               "format": "short",
               "label": "faults",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6134",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -4866,9 +5136,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "decimals": 2,
           "fieldConfig": {
             "defaults": {
@@ -4895,6 +5163,7 @@
             "min": true,
             "rightSide": false,
             "show": true,
+            "sideWidth": null,
             "total": false,
             "values": true
           },
@@ -4926,7 +5195,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "OOM Killer",
           "tooltip": {
             "shared": true,
@@ -4935,7 +5206,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -4945,29 +5218,33 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:5374",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Memory Vmstat",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4981,9 +5258,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -5063,7 +5338,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Time Syncronized Drift",
           "tooltip": {
             "shared": true,
@@ -5072,7 +5349,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5081,17 +5360,22 @@
               "format": "s",
               "label": "seconds",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5099,9 +5383,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -5157,7 +5439,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Time PLL Adjust",
           "tooltip": {
             "shared": true,
@@ -5166,7 +5450,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5175,16 +5461,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5192,9 +5484,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -5263,7 +5553,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Time Syncronized Status",
           "tooltip": {
             "shared": true,
@@ -5272,7 +5564,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5281,16 +5575,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5298,9 +5598,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -5364,7 +5662,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Time Misc",
           "tooltip": {
             "shared": true,
@@ -5373,7 +5673,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5382,16 +5684,22 @@
               "format": "s",
               "label": "seconds",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
@@ -5400,9 +5708,7 @@
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5416,9 +5722,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -5482,7 +5786,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Processes Status",
           "tooltip": {
             "shared": true,
@@ -5491,7 +5797,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5501,18 +5809,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6501",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5520,9 +5833,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -5578,7 +5889,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Processes State",
           "tooltip": {
             "shared": true,
@@ -5587,7 +5900,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5597,18 +5912,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6501",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5616,9 +5936,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -5675,7 +5993,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Processes  Forks",
           "tooltip": {
             "shared": true,
@@ -5684,7 +6004,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5694,18 +6016,23 @@
               "format": "short",
               "label": "forks / sec",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6641",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5713,9 +6040,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -5799,7 +6124,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Processes Memory",
           "tooltip": {
             "shared": true,
@@ -5808,7 +6135,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5817,17 +6146,22 @@
               "format": "decbytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5835,9 +6169,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -5908,7 +6240,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "PIDs Number and Limit",
           "tooltip": {
             "shared": true,
@@ -5917,7 +6251,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -5927,18 +6263,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6501",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -5946,9 +6287,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6019,7 +6358,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Threads Number and Limit",
           "tooltip": {
             "shared": true,
@@ -6028,7 +6369,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6038,18 +6381,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6501",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
@@ -6058,9 +6406,7 @@
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6074,9 +6420,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6117,6 +6461,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeat": null,
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
@@ -6141,7 +6486,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Context Switches / Interrupts",
           "tooltip": {
             "shared": true,
@@ -6150,7 +6497,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6159,17 +6508,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -6177,9 +6531,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6220,6 +6572,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeat": null,
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": false,
@@ -6251,7 +6604,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "System Load",
           "tooltip": {
             "shared": true,
@@ -6260,7 +6615,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6270,18 +6627,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6262",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -6289,9 +6651,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6347,7 +6707,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "CPU time spent in user and system contexts",
           "tooltip": {
             "shared": true,
@@ -6356,7 +6718,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6366,17 +6730,23 @@
               "format": "s",
               "label": "seconds",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:4861",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -6384,9 +6754,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6442,7 +6810,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Entropy",
           "tooltip": {
             "shared": true,
@@ -6451,7 +6821,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6461,18 +6833,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6569",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -6480,9 +6857,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -6550,7 +6925,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "File Descriptors",
           "tooltip": {
             "shared": true,
@@ -6559,7 +6936,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6569,29 +6948,33 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:6339",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "System Misc",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6605,12 +6988,11 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The number (after merges) of I/O requests completed per second for the device",
           "fieldConfig": {
             "defaults": {
+              "custom": {},
               "links": []
             },
             "overrides": []
@@ -6621,7 +7003,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 27
+            "y": 28
           },
           "hiddenSeries": false,
           "id": 9,
@@ -6646,10 +7028,11 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "7.4.2",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "repeat": null,
           "seriesOverrides": [
             {
               "$$hashKey": "object:2033",
@@ -6777,7 +7160,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk IOps Completed",
           "tooltip": {
             "shared": false,
@@ -6786,7 +7171,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6796,17 +7183,23 @@
               "format": "iops",
               "label": "IO read (-) / write (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:2187",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -6814,12 +7207,11 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The number of bytes read from or written to the device per second",
           "fieldConfig": {
             "defaults": {
+              "custom": {},
               "links": []
             },
             "overrides": []
@@ -6830,7 +7222,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 27
+            "y": 28
           },
           "hiddenSeries": false,
           "id": 33,
@@ -6855,7 +7247,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "7.4.2",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -6967,7 +7359,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk R/W Data",
           "tooltip": {
             "shared": false,
@@ -6976,7 +7370,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -6986,17 +7382,23 @@
               "format": "Bps",
               "label": "bytes read (-) / write (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:370",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7004,12 +7406,11 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The average time for requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.",
           "fieldConfig": {
             "defaults": {
+              "custom": {},
               "links": []
             },
             "overrides": []
@@ -7020,7 +7421,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 37
+            "y": 38
           },
           "hiddenSeries": false,
           "id": 37,
@@ -7047,7 +7448,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "7.4.2",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -7159,7 +7560,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk Average Wait Time",
           "tooltip": {
             "shared": false,
@@ -7168,7 +7571,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -7178,17 +7583,23 @@
               "format": "s",
               "label": "time. read (-) / write (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:442",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7196,12 +7607,11 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The average queue length of the requests that were issued to the device",
           "fieldConfig": {
             "defaults": {
+              "custom": {},
               "links": []
             },
             "overrides": []
@@ -7212,7 +7622,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 37
+            "y": 38
           },
           "hiddenSeries": false,
           "id": 35,
@@ -7239,7 +7649,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "7.4.2",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -7338,7 +7748,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Average Queue Size",
           "tooltip": {
             "shared": false,
@@ -7347,7 +7759,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -7357,18 +7771,23 @@
               "format": "none",
               "label": "aqu-sz",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:514",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7376,9 +7795,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The number of read and write requests merged per second that were queued to the device",
           "fieldConfig": {
             "defaults": {
@@ -7393,7 +7810,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 48
           },
           "hiddenSeries": false,
           "id": 133,
@@ -7530,7 +7947,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk R/W Merged",
           "tooltip": {
             "shared": false,
@@ -7539,7 +7958,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -7549,17 +7970,23 @@
               "format": "iops",
               "label": "I/Os",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:586",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7567,9 +7994,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "Percentage of elapsed time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100% for devices serving requests serially.  But for devices  serving requests in parallel, such as RAID arrays and modern SSDs, this number does not reflect their performance limits.",
           "fieldConfig": {
             "defaults": {
@@ -7584,7 +8009,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 48
           },
           "hiddenSeries": false,
           "id": 36,
@@ -7717,7 +8142,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Time Spent Doing I/Os",
           "tooltip": {
             "shared": false,
@@ -7726,7 +8153,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -7736,18 +8165,23 @@
               "format": "percentunit",
               "label": "%util",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:658",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7755,9 +8189,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "The number of outstanding requests at the instant the sample was taken. Incremented as requests are given to appropriate struct request_queue and decremented as they finish.",
           "fieldConfig": {
             "defaults": {
@@ -7772,7 +8204,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 58
           },
           "hiddenSeries": false,
           "id": 34,
@@ -7898,7 +8330,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Instantaneous Queue Size",
           "tooltip": {
             "shared": false,
@@ -7907,7 +8341,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -7917,18 +8353,23 @@
               "format": "iops",
               "label": "I/Os",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:730",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -7936,9 +8377,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -7953,7 +8392,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 58
           },
           "hiddenSeries": false,
           "id": 301,
@@ -8104,7 +8543,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Disk IOps Discards completed / merged",
           "tooltip": {
             "shared": false,
@@ -8113,7 +8554,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -8123,28 +8566,33 @@
               "format": "iops",
               "label": "IOs",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:2187",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Storage Disk",
       "type": "row"
     },
     {
-      "collapsed": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "collapsed": true,
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -8152,645 +8600,685 @@
         "y": 27
       },
       "id": 271,
-      "panels": [],
-      "title": "Storage Filesystem",
-      "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "decimals": 3,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 0,
-        "y": 28
-      },
-      "hiddenSeries": false,
-      "id": 43,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "maxPerRow": 6,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": true,
-      "targets": [
+      "panels": [
         {
-          "expr": "node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Available",
-          "metric": "",
-          "refId": "A",
-          "step": 240
-        },
-        {
-          "expr": "node_filesystem_free_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Free",
-          "refId": "B",
-          "step": 240
-        },
-        {
-          "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": true,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Size",
-          "refId": "C",
-          "step": 240
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Filesystem space available",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:3826",
-          "format": "bytes",
-          "label": "bytes",
-          "logBase": 1,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:3827",
-          "format": "short",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": 3,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
           },
-          "custom": {
-            "axisLabel": "bytes",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+          "fill": 2,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 14
           },
+          "hiddenSeries": false,
+          "id": 43,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
           "links": [],
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
+          "maxPerRow": 6,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
           },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 28
-      },
-      "id": 316,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull",
-            "max",
-            "min"
+          "percentage": false,
+          "pluginVersion": "7.4.2",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Available",
+              "metric": "",
+              "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "node_filesystem_free_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": true,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Free",
+              "refId": "B",
+              "step": 240
+            },
+            {
+              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": true,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Size",
+              "refId": "C",
+              "step": 240
+            }
           ],
-          "displayMode": "table",
-          "placement": "bottom"
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Filesystem space available",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:3826",
+              "format": "bytes",
+              "label": "bytes",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "$$hashKey": "object:3827",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.5.13",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Size",
-          "refId": "A",
-          "step": 240
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "bytes",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 28
+          },
+          "id": 316,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Size",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Filesystem size",
+          "type": "timeseries"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 2,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "hiddenSeries": false,
+          "id": 41,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "hideZero": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.2",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "node_filesystem_files_free{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Free file nodes",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "File Nodes Free",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:3894",
+              "format": "short",
+              "label": "file nodes",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "$$hashKey": "object:3895",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 2,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "hiddenSeries": false,
+          "id": 28,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 6,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.2",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "node_filefd_maximum{node=~\"$node\",job=\"node-exporter\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Max open files",
+              "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "node_filefd_allocated{node=~\"$node\",job=\"node-exporter\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Open files",
+              "refId": "B",
+              "step": 240
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "File Descriptor",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "files",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 2,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 24
+          },
+          "hiddenSeries": false,
+          "id": 219,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "hideZero": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.2",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "node_filesystem_files{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - File nodes total",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "File Nodes Size",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "file Nodes",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {
+            "/ ReadOnly": "#890F02"
+          },
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "$ds_prometheus",
+          "decimals": null,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 2,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 34
+          },
+          "hiddenSeries": false,
+          "id": 44,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "hideEmpty": true,
+            "hideZero": true,
+            "max": true,
+            "min": true,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "maxPerRow": 6,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.2",
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": true,
+          "targets": [
+            {
+              "expr": "node_filesystem_readonly{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - ReadOnly",
+              "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "node_filesystem_device_error{node=~\"$node\",job=\"node-exporter\",device!~'rootfs',fstype!~'tmpfs'}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{mountpoint}} - Device error",
+              "refId": "B",
+              "step": 240
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Filesystem in ReadOnly / Error",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:3670",
+              "format": "short",
+              "label": "counter",
+              "logBase": 1,
+              "max": "1",
+              "min": "0",
+              "show": true
+            },
+            {
+              "$$hashKey": "object:3671",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
-      "title": "Filesystem size",
-      "type": "timeseries"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 0,
-        "y": 38
-      },
-      "hiddenSeries": false,
-      "id": 28,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "maxPerRow": 6,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "node_filefd_maximum{node=~\"$node\",job=\"node-exporter\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Max open files",
-          "refId": "A",
-          "step": 240
-        },
-        {
-          "expr": "node_filefd_allocated{node=~\"$node\",job=\"node-exporter\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Open files",
-          "refId": "B",
-          "step": 240
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "File Descriptor",
-      "tooltip": {
-        "shared": false,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "files",
-          "logBase": 1,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 38
-      },
-      "hiddenSeries": false,
-      "id": 41,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "hideZero": true,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "node_filesystem_files_free{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Free file nodes",
-          "refId": "A",
-          "step": 240
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "File Nodes Free",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:3894",
-          "format": "short",
-          "label": "file nodes",
-          "logBase": 1,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:3895",
-          "format": "short",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {
-        "/ ReadOnly": "#890F02"
-      },
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 0,
-        "y": 48
-      },
-      "hiddenSeries": false,
-      "id": 44,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "hideEmpty": true,
-        "hideZero": true,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "maxPerRow": 6,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "node_filesystem_readonly{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - ReadOnly",
-          "refId": "A",
-          "step": 240
-        },
-        {
-          "expr": "node_filesystem_device_error{node=~\"$node\",job=\"node-exporter\",device!~'rootfs',fstype!~'tmpfs'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - Device error",
-          "refId": "B",
-          "step": 240
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Filesystem in ReadOnly / Error",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:3670",
-          "format": "short",
-          "label": "counter",
-          "logBase": 1,
-          "max": "1",
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:3671",
-          "format": "short",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 48
-      },
-      "hiddenSeries": false,
-      "id": 219,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "hideZero": true,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.13",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": true,
-      "targets": [
-        {
-          "expr": "node_filesystem_files{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{mountpoint}} - File nodes total",
-          "refId": "A",
-          "step": 240
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "File Nodes Size",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "file Nodes",
-          "logBase": 1,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
+      "repeat": null,
+      "title": "Storage Filesystem",
+      "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 28
       },
       "id": 272,
       "panels": [
@@ -8804,9 +9292,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -8876,7 +9362,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic by Packets",
           "tooltip": {
             "shared": true,
@@ -8885,7 +9373,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -8894,16 +9384,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -8911,9 +9407,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -8987,7 +9481,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Errors",
           "tooltip": {
             "shared": true,
@@ -8996,7 +9492,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9005,16 +9503,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9022,9 +9526,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9098,7 +9600,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Drop",
           "tooltip": {
             "shared": true,
@@ -9107,7 +9611,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9116,16 +9622,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9133,9 +9645,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9209,7 +9719,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Compressed",
           "tooltip": {
             "shared": true,
@@ -9218,7 +9730,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9227,16 +9741,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9244,9 +9764,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9312,7 +9830,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Multicast",
           "tooltip": {
             "shared": true,
@@ -9321,7 +9841,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9330,16 +9852,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9347,9 +9875,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9423,7 +9949,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Fifo",
           "tooltip": {
             "shared": true,
@@ -9432,7 +9960,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9441,16 +9971,22 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9458,9 +9994,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9528,7 +10062,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Frame",
           "tooltip": {
             "shared": true,
@@ -9537,7 +10073,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9547,17 +10085,23 @@
               "format": "pps",
               "label": "packets out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:590",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9565,9 +10109,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9628,7 +10170,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Carrier",
           "tooltip": {
             "shared": true,
@@ -9637,7 +10181,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9646,16 +10192,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9663,9 +10215,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9731,7 +10281,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Traffic Colls",
           "tooltip": {
             "shared": true,
@@ -9740,7 +10292,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9749,16 +10303,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9766,9 +10326,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9839,7 +10397,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "NF Contrack",
           "tooltip": {
             "shared": true,
@@ -9848,7 +10408,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9858,18 +10420,23 @@
               "format": "short",
               "label": "entries",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:679",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9877,9 +10444,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -9935,7 +10500,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "ARP Entries",
           "tooltip": {
             "shared": true,
@@ -9944,7 +10511,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -9953,17 +10522,22 @@
               "format": "short",
               "label": "Entries",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -9971,9 +10545,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10029,7 +10601,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "MTU",
           "tooltip": {
             "shared": true,
@@ -10038,7 +10612,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10048,17 +10624,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10066,9 +10647,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10124,7 +10703,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Speed",
           "tooltip": {
             "shared": true,
@@ -10133,7 +10714,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10143,17 +10726,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10161,9 +10749,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10219,7 +10805,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Queue Length",
           "tooltip": {
             "shared": true,
@@ -10228,7 +10816,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10238,17 +10828,22 @@
               "format": "none",
               "label": "packets",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10256,9 +10851,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10326,7 +10919,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Network Operational Status",
           "tooltip": {
             "shared": true,
@@ -10335,7 +10930,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10344,32 +10941,37 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Network Traffic",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 29
       },
       "id": 273,
       "panels": [
@@ -10378,9 +10980,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10472,7 +11072,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Sockstat TCP",
           "tooltip": {
             "shared": true,
@@ -10481,7 +11083,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10490,17 +11094,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10508,9 +11117,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10585,7 +11192,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Sockstat UDP",
           "tooltip": {
             "shared": true,
@@ -10594,7 +11203,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10603,17 +11214,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10621,9 +11237,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10682,7 +11296,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Sockstat Used",
           "tooltip": {
             "shared": true,
@@ -10691,7 +11307,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10700,17 +11318,22 @@
               "format": "short",
               "label": "sockets",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10718,9 +11341,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10787,7 +11408,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Sockstat Memory Size",
           "tooltip": {
             "shared": true,
@@ -10796,7 +11419,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10805,17 +11430,22 @@
               "format": "bytes",
               "label": "bytes",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -10823,9 +11453,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -10900,7 +11528,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Sockstat FRAG / RAW",
           "tooltip": {
             "shared": true,
@@ -10909,7 +11539,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -10919,34 +11551,38 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:1573",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Network Sockstat",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 30
       },
       "id": 274,
       "panels": [
@@ -10955,9 +11591,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11034,7 +11668,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Netstat IP In / Out Octets",
           "tooltip": {
             "shared": true,
@@ -11043,7 +11679,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11053,17 +11691,23 @@
               "format": "short",
               "label": "octects out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:1890",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11071,9 +11715,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11135,7 +11777,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Netstat IP Forwarding",
           "tooltip": {
             "shared": true,
@@ -11144,7 +11788,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11154,18 +11800,23 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:1958",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11173,9 +11824,8 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
+          "decimals": null,
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11249,7 +11899,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "ICMP In / Out",
           "tooltip": {
             "shared": true,
@@ -11258,7 +11910,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11267,16 +11921,22 @@
               "format": "short",
               "label": "messages out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11284,9 +11944,8 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
+          "decimals": null,
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11352,7 +12011,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "ICMP Errors",
           "tooltip": {
             "shared": true,
@@ -11361,7 +12022,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11370,16 +12033,22 @@
               "format": "short",
               "label": "messages out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11387,9 +12056,8 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
+          "decimals": null,
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11467,7 +12135,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "UDP In / Out",
           "tooltip": {
             "shared": true,
@@ -11476,7 +12146,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11485,16 +12157,22 @@
               "format": "short",
               "label": "datagrams out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11502,9 +12180,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11594,7 +12270,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "UDP Errors",
           "tooltip": {
             "shared": true,
@@ -11603,7 +12281,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11613,17 +12293,23 @@
               "format": "short",
               "label": "datagrams",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:4233",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11631,9 +12317,8 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
+          "decimals": null,
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11712,7 +12397,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP In / Out",
           "tooltip": {
             "shared": true,
@@ -11721,7 +12408,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11730,16 +12419,22 @@
               "format": "short",
               "label": "datagrams out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11747,9 +12442,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -11840,7 +12533,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP Errors",
           "tooltip": {
             "shared": true,
@@ -11849,7 +12544,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11858,17 +12555,22 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11876,9 +12578,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -11955,7 +12655,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP Connections",
           "tooltip": {
             "shared": true,
@@ -11964,7 +12666,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -11974,18 +12678,23 @@
               "format": "short",
               "label": "connections",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "$$hashKey": "object:470",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -11993,9 +12702,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -12082,7 +12789,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP SynCookie",
           "tooltip": {
             "shared": true,
@@ -12091,7 +12800,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -12100,16 +12811,22 @@
               "format": "short",
               "label": "counter out (-) / in (+)",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -12117,9 +12834,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {},
@@ -12187,7 +12902,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP Direct Transition",
           "tooltip": {
             "shared": true,
@@ -12196,7 +12913,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -12205,17 +12924,22 @@
               "format": "short",
               "label": "connections",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -12223,9 +12947,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -12312,7 +13034,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "TCP TimeWait",
           "tooltip": {
             "shared": true,
@@ -12321,7 +13045,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -12330,33 +13056,37 @@
               "format": "short",
               "label": "Counter",
               "logBase": 1,
+              "max": null,
               "min": "0",
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Network Netstat",
       "type": "row"
     },
     {
       "collapsed": true,
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 31
       },
       "id": 279,
       "panels": [
@@ -12365,9 +13095,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -12426,7 +13154,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Node Exporter Scrape Time",
           "tooltip": {
             "shared": true,
@@ -12435,7 +13165,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -12444,16 +13176,22 @@
               "format": "s",
               "label": "seconds",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         },
         {
@@ -12461,9 +13199,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
+          "datasource": "$ds_prometheus",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -12536,7 +13272,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Node Exporter Scrape",
           "tooltip": {
             "shared": true,
@@ -12545,7 +13283,9 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
+            "name": null,
             "show": true,
             "values": []
           },
@@ -12555,28 +13295,37 @@
               "format": "short",
               "label": "counter",
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:1485",
               "format": "short",
+              "label": null,
               "logBase": 1,
+              "max": null,
+              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false
+            "align": false,
+            "alignLevel": null
           }
         }
       ],
+      "repeat": null,
       "title": "Node Exporter",
       "type": "row"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 36,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "nodes"
+  ],
   "templating": {
     "list": [
       {
@@ -12585,6 +13334,8 @@
           "text": "default",
           "value": "default"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "datasource",
@@ -12598,16 +13349,16 @@
         "type": "datasource"
       },
       {
+        "allValue": null,
         "current": {
           "selected": false,
           "text": "dev-master-0",
           "value": "dev-master-0"
         },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
+        "datasource": "$ds_prometheus",
         "definition": "",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Node:",
@@ -12623,18 +13374,23 @@
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
+        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
       },
       {
+        "allValue": null,
         "current": {
           "selected": false,
           "text": "[a-z]+|nvme[0-9]+n[0-9]+",
           "value": "[a-z]+|nvme[0-9]+n[0-9]+"
         },
+        "description": null,
+        "error": null,
         "hide": 2,
         "includeAll": false,
+        "label": null,
         "multi": false,
         "name": "diskdevices",
         "options": [
@@ -12682,6 +13438,5 @@
   "timezone": "browser",
   "title": "Node",
   "uid": "rYdddlPWk",
-  "version": 2,
-  "weekStart": ""
+  "version": 4
 }
