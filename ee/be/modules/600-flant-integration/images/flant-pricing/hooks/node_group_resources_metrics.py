@@ -36,7 +36,6 @@ def main(ctx: hook.Context):
         is_monitoring = "false"
         is_frontend = "false"
 
-
         for taint in ng.get("nodeTemplate", {}).get("taints", []):
             if taint.get("key") == "node-role.kubernetes.io/control-plane":
                 is_master = "true"
