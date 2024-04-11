@@ -99,7 +99,7 @@
         RabbitMQ StatefulSet: One or More Replicas Unavailable in `{{$labels.namespace}}`.
 
   - alert: ApplicationRabbitMQAckedMessagesRate
-    expr: sum(irate(rabbitmq_channel_messages_acked_total{job="rabbitmq"}[2m])) == 0
+    expr: sum by (namespace,pod) (irate(rabbitmq_channel_messages_acked_total{job="rabbitmq"}[2m])) == 0
     for: 5m
     labels:
       severity_level: "4"
