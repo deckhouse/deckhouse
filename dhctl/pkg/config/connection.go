@@ -61,9 +61,11 @@ func ParseConnectionConfig(
 	schemaStore *SchemaStore,
 	opts ...ValidateOption,
 ) (*ConnectionConfig, error) {
+	options := applyOptions(opts...)
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 	errs := &ValidationError{}
 	var connectionConfigDocsCount int
+	var sshHostConfigDocsCount int
 
 	config := &ConnectionConfig{}
 
@@ -105,6 +107,7 @@ func ParseConnectionConfig(
 			}
 			config.SSHConfig = sshConfig
 		case SSHConfigHostKind:
+			sshHostConfigDocsCount++
 			var sshHost SSHHost
 			if err = yaml.Unmarshal([]byte(doc), &sshHost); err != nil {
 				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
@@ -131,6 +134,12 @@ func ParseConnectionConfig(
 	if connectionConfigDocsCount != 1 {
 		errs.Append(ErrKindValidationFailed, Error{
 			Messages: []string{fmt.Errorf("exactly one %q required", SSHConfigKind).Error()},
+		})
+	}
+
+	if options.requiredSSHHost && sshHostConfigDocsCount == 0 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("at least one %q required", SSHConfigHostKind).Error()},
 		})
 	}
 
