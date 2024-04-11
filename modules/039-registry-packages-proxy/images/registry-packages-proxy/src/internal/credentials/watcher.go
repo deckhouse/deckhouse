@@ -67,15 +67,15 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 }
 
 func (w *Watcher) Watch(ctx context.Context) {
+	err := w.fetchSecret(ctx)
+	if err != nil {
+		w.logger.Fatalf("Fetch secret: %v", err)
+		return
+	}
+
 	var wg sync.WaitGroup
 
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-
-		w.watchSecret(ctx)
-	}()
+	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
@@ -84,30 +84,6 @@ func (w *Watcher) Watch(ctx context.Context) {
 	}()
 
 	wg.Wait()
-}
-
-func (w *Watcher) watchSecret(ctx context.Context) {
-	err := w.fetchSecret(ctx)
-	if err != nil {
-		w.logger.Errorf("Fetch secret: %v", err)
-		return
-	}
-
-	ticker := time.NewTicker(w.registrySecretDiscoveryPeriod)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			err := w.fetchSecret(ctx)
-			if err != nil {
-				w.logger.Errorf("Fetch secret: %v", err)
-				return
-			}
-		}
-	}
 }
 
 func (w *Watcher) fetchSecret(ctx context.Context) error {

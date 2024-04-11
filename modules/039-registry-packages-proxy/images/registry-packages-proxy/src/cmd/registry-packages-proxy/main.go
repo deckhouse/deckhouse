@@ -60,13 +60,13 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
+	go watcher.Watch(ctx)
+
 	cache := app.NewCache(logger, config, cacheMetrics)
 	if cache != nil {
 		go cache.Reconcile(ctx)
 	}
-
-	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
-	go watcher.Watch(ctx)
 
 	server := app.BuildServer()
 	rp, err := proxy.NewProxy(server, listener, watcher, proxy.Options{
