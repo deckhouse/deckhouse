@@ -16,7 +16,6 @@ package proxy
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -59,7 +58,6 @@ func NewProxy(server *http.Server,
 
 func (p *Proxy) Serve() {
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%v\n", r.URL.Query().Encode())
 		if r.Method != "HEAD" && r.Method != "GET" {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -102,7 +100,6 @@ func (p *Proxy) Serve() {
 		if r.Method == "HEAD" {
 			return
 		}
-
 		_, err = io.Copy(w, packageReader)
 		if err != nil {
 			p.logger.Errorf("send package: %v", err)
@@ -111,7 +108,7 @@ func (p *Proxy) Serve() {
 	})
 
 	p.logger.Infof("starting listener: %s", p.listener.Addr())
-	if err := p.server.Serve(p.listener); err != nil {
+	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
 	}
 }
@@ -126,7 +123,6 @@ func (p *Proxy) Stop() {
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
-
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
 		registryConfig, err := p.getter.Get(repository)
@@ -170,11 +166,10 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 
 	go func() {
 		defer packageReader.Close()
+		defer pipeWriter.Close()
 
 		err := p.cache.Set(digest, size, reader)
 		if err != nil {
-			defer pipeWriter.Close()
-
 			p.logger.Errorf("Add package to cache: %v", err)
 
 			// Copy remaining data to pipe
