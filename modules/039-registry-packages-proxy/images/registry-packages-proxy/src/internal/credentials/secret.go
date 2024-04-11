@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
@@ -87,7 +85,7 @@ func dockerConfigToAuth(config []byte, address string) (string, error) {
 
 	err := json.Unmarshal(config, &dockerConfig)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal docker config")
+		return "", err
 	}
 
 	if registryObj, ok := dockerConfig.Auths[address]; ok {

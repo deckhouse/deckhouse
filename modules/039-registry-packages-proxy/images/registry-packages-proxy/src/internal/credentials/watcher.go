@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,15 +67,15 @@ func (w *Watcher) Get(repository string) (*registry.ClientConfig, error) {
 }
 
 func (w *Watcher) Watch(ctx context.Context) {
-	err := w.fetchSecret(ctx)
-	if err != nil {
-		w.logger.Fatalf("Fetch secret: %v", err)
-		return
-	}
-
 	var wg sync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		w.watchSecret(ctx)
+	}()
 
 	go func() {
 		defer wg.Done()
@@ -86,28 +86,73 @@ func (w *Watcher) Watch(ctx context.Context) {
 	wg.Wait()
 }
 
-func (w *Watcher) fetchSecret(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+func (w *Watcher) watchSecret(ctx context.Context) {
+	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
+		timeout := int64((30 * time.Second).Seconds())
 
-	// Get the secret with the registry credentials
-	secret, err := w.k8sClient.CoreV1().Secrets("d8-system").Get(ctx, "deckhouse-registry", metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get secret")
+		// Get the module sources and their registry credentials
+		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
 	}
 
-	var input registrySecretData
-
-	input.FromSecretData(secret.Data)
-
-	registryConfig, err := input.toClientConfig()
+	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
-		return errors.Wrap(err, "failed to convert secret data to registry config")
+		w.logger.Errorf("Watch secrets: %v", err)
+		return
+	}
+	defer secretWatcher.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-secretWatcher.Done():
+			return
+		case event, ok := <-secretWatcher.ResultChan():
+			if !ok {
+				return
+			}
+
+			err = w.processSecretEvent(event)
+			if err != nil {
+				w.logger.Errorf("Process secret event: %v", err)
+			}
+		}
+	}
+}
+
+func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
+	var secret v1.Secret
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(secretEvent.Object.(*unstructured.Unstructured).Object, &secret)
+	if err != nil {
+		return err
 	}
 
-	w.Lock()
-	w.registryClientConfigs[registry.DefaultRepository] = registryConfig
-	w.Unlock()
+	if secret.Name != "deckhouse-registry" {
+		return nil
+	}
+
+	switch secretEvent.Type {
+	case watch.Added, watch.Modified:
+
+		var input registrySecretData
+
+		input.FromSecretData(secret.Data)
+
+		registryConfig, err := input.toClientConfig()
+		if err != nil {
+			return err
+		}
+
+		w.Lock()
+		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
+		w.Unlock()
+
+	case watch.Deleted:
+		w.Lock()
+		delete(w.registryClientConfigs, registry.DefaultRepository)
+		w.Unlock()
+	}
 
 	return nil
 }
@@ -147,22 +192,22 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 }
 
 func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error {
+	var moduleSource ModuleSource
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
+	if err != nil {
+		return err
+	}
+
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
-		var moduleSource ModuleSource
-
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
-		if err != nil {
-			return errors.Wrap(err, "failed to convert unstructured object to module source")
-		}
-
 		var auth string
 
 		if len(moduleSource.Spec.Registry.DockerCFG) > 0 {
 			var err error
 			auth, err = dockerConfigToAuth(moduleSource.Spec.Registry.DockerCFG, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
 			if err != nil {
-				return errors.Wrap(err, "failed to convert docker config to auth")
+				return err
 			}
 		}
 
@@ -177,13 +222,6 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
-		var moduleSource ModuleSource
-
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
-		if err != nil {
-			return errors.Wrap(err, "failed to convert unstructured object to module source")
-		}
-
 		w.Lock()
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
