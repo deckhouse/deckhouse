@@ -36,19 +36,18 @@ def main(ctx: hook.Context):
         is_monitoring = "false"
         is_frontend = "false"
 
-        taints = ng.get("nodeTemplate", {}).get("taints", [])
-        if taints:
-            for taint in taints:
-                if taint.get("key") == "node-role.kubernetes.io/control-plane":
-                    is_master = "true"
-                if taint.get("key") == "node-role.kubernetes.io/master":
-                    is_master = "true"
-                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "system":
-                    is_system = "true"
-                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "monitoring":
-                    is_monitoring = "true"
-                if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "frontend":
-                    is_frontend = "true"
+
+        for taint in ng.get("nodeTemplate", {}).get("taints", []):
+            if taint.get("key") == "node-role.kubernetes.io/control-plane":
+                is_master = "true"
+            if taint.get("key") == "node-role.kubernetes.io/master":
+                is_master = "true"
+            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "system":
+                is_system = "true"
+            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "monitoring":
+                is_monitoring = "true"
+            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "frontend":
+                is_frontend = "true"
 
         labels = {
             "is_master": is_master,
