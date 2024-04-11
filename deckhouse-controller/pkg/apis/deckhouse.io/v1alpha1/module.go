@@ -25,6 +25,8 @@ import (
 var _ runtime.Object = (*Module)(nil)
 var ModuleGVK = schema.GroupVersionKind{Group: SchemeGroupVersion.Group, Version: SchemeGroupVersion.Version, Kind: "Module"}
 
+const SourceEmbedded = "Embedded"
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen=true
