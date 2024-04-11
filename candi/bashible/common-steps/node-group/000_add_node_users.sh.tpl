@@ -28,49 +28,65 @@ function nodeuser_patch() {
   local username="$1"
   local data="$2"
 
-  local patch_pending=true
   # Skip this step after multiple failures.
   # This step puts information "how to get bootstrap logs" into Instance resource.
   # It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
   local failure_count=0
   local failure_limit=3
-  while [ "$patch_pending" = true ] ; do
-    for server in {{ .normal.apiserverEndpoints | join " " }} ; do
-      local server_addr=$(echo $server | cut -f1 -d":")
-      until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-        echo "The network is not ready for connecting to apiserver yet, waiting..."
-        sleep 1
-      done
 
-      if curl -sS --fail -x "" \
-        --max-time 10 \
-        -XPATCH \
-        -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-        -H "Accept: application/json" \
-        -H "Content-Type: application/json-patch+json" \
-        --cacert "$BOOTSTRAP_DIR/ca.crt" \
-        --data "${data}" \
-        "https://$server/apis/deckhouse.io/v1/nodeusers/${username}" ; then
-
-        echo "Successfully patched NodeUser."
-        patch_pending=false
-
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+    until kubectl_exec patch nodeusers.deckhouse.io ${username} --type=json --patch='${data}'; do
+      failure_count=$((failure_count + 1))
+      if [[ $failure_count -eq $failure_limit ]]; then
+        >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         break
-      else
-        failure_count=$((failure_count + 1))
-
-        if [[ $failure_count -eq $failure_limit ]]; then
-          >&2 echo "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
-          patch_pending=false
-          break
-        fi
-
-        >&2 echo "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
-        sleep 10
-        continue
       fi
+      >&2 echo "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+      sleep 10
     done
-  done
+  elif [ -f /var/lib/bashible/bootstrap-token ]; then
+    local patch_pending=true
+    while [ "$patch_pending" = true ] ; do
+      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+        local server_addr=$(echo $server | cut -f1 -d":")
+        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+          echo "The network is not ready for connecting to apiserver yet, waiting..."
+          sleep 1
+        done
+
+        if curl -sS --fail -x "" \
+          --max-time 10 \
+          -XPATCH \
+          -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+          -H "Accept: application/json" \
+          -H "Content-Type: application/json-patch+json" \
+          --cacert "$BOOTSTRAP_DIR/ca.crt" \
+          --data "${data}" \
+          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}" ; then
+
+          echo "Successfully patched NodeUser."
+          patch_pending=false
+
+          break
+        else
+          failure_count=$((failure_count + 1))
+
+          if [[ $failure_count -eq $failure_limit ]]; then
+            >&2 echo "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
+            patch_pending=false
+            break
+          fi
+
+          >&2 echo "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
+          sleep 10
+          continue
+        fi
+      done
+    done
+  else
+    >&2 echo "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
+    exit 1
+  fi
 }
 
 # $1 - username $2 - error message
