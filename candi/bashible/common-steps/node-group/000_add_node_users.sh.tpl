@@ -23,6 +23,10 @@ if bb-flag? disruption && bb-flag? reboot; then
   exit 0
 fi
 
+function kubectl_exec() {
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+}
+
 # $1 - username $2 - request data
 function nodeuser_patch() {
   local username="$1"
