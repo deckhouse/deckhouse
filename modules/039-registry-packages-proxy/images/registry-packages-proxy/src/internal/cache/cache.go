@@ -82,7 +82,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 }
 
 func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
-	c.logger.Infof("write file with digest %s with size %d to the cache dir", digest, size)
+	c.logger.Infof("start writing file with digest %s with size %d to the cache dir", digest, size)
 	err := c.copyPackage(digest, reader)
 	if err != nil {
 		return err
@@ -96,6 +96,7 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	}
 
 	c.metrics.CacheSize.Add(float64(size))
+	c.logger.Infof("finish writing file with digest %s with size %d to the cache dir", digest, size)
 	return nil
 }
 
