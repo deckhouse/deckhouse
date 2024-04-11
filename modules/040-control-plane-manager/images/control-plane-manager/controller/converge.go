@@ -243,13 +243,17 @@ func waitPodIsReady(componentName string, checksum string) error {
 		}
 
 		if tries > maxRetries {
-			log.Warnf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
+			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
+		}
+
+		attemptReReadManifest := maxRetries - 20
+
+		if tries == attemptReReadManifest {
 			err := triggerKubeletRereadManifest(componentName)
 			// https://github.com/kubernetes/kubernetes/issues/109596
 			if err != nil {
 				return fmt.Errorf("fail to trigger re-read manifest for %s: %s", componentName, err)
 			}
-			return fmt.Errorf("trying to trigger kubelet to re-read manifest")
 		}
 
 		if podChecksum := pod.Annotations["control-plane-manager.deckhouse.io/checksum"]; podChecksum != checksum {
@@ -276,17 +280,10 @@ func waitPodIsReady(componentName string, checksum string) error {
 }
 
 func triggerKubeletRereadManifest(componentName string) error {
+	log.Warnf("trying to trigger kubelet to re-read manifest")
 
 	srcPath := filepath.Join(manifestsPath, componentName+".yaml")
-	dstPath := filepath.Join(config.TmpPath, srcPath)
-
-	if err := os.RemoveAll(config.TmpPath); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(filepath.Join(config.TmpPath, manifestsPath), 0755); err != nil {
-		return err
-	}
+	dstPath := filepath.Join(manifestsPath, "."+componentName+".yaml")
 
 	if err := copy.Copy(srcPath, dstPath); err != nil {
 		return err
