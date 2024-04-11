@@ -39,7 +39,11 @@ data:
   trivy.repository: {{ $image._0 }}
   trivy.tag: {{ $image._1 }}
   trivy.additionalVulnerabilityReportFields: ""
+  {{- if .Values.operatorTrivy.severities }}
+  trivy.severity: {{ .Values.operatorTrivy.severities | join "," }}
+  {{- else }}
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  {{- end }}
   trivy.slow: "true"
   trivy.dbRepository: {{ $dbRepository }}
   trivy.command: "image"

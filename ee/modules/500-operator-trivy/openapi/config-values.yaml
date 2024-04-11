@@ -1,5 +1,12 @@
 type: object
 properties:
+  severities:
+    type: array
+    description: |
+      Filtration vulns reports by severities.
+
+    items:
+      type: string
   linkCVEtoBDU:
     type: boolean
     default: false
