@@ -54,7 +54,7 @@ if ! grep -qF -- "$completion"  /root/.bashrc; then
 fi
 
 # Install d8 with completion
-bb-rp-install "d8:{{ .images.registrypackages.d8003 }}"
+bb-rp-install "d8:{{ .images.registrypackages.d8005 }}"
 
 if [ ! -f "/etc/bash_completion.d/d8" ]; then
   mkdir -p /etc/bash_completion.d
