@@ -230,12 +230,12 @@ spec:
           jsonPath: .spec.nodeGroups
           type: string
           description: nodegroups for user
+        - name: Errors
+          jsonPath: .status.errors
+          type: string
+          description: Number of errors when creating a user on selected nodes
         - name: Age
           jsonPath: .metadata.creationTimestamp
           type: date
           description: >
             CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        - name: Errors
-          jsonPath: .status.errors
-          type: string
-          description: Number of errors when creating a user on selected nodes
