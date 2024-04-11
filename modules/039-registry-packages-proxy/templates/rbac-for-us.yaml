@@ -21,6 +21,7 @@ rules:
     - deckhouse-registry
   verbs:
     - get
+    - list
     - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1

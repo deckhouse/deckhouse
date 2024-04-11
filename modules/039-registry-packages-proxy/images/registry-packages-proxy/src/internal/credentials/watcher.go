@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
@@ -91,7 +92,10 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 		timeout := int64((30 * time.Second).Seconds())
 
 		// Get the module sources and their registry credentials
-		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
+		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{
+			TimeoutSeconds: &timeout,
+			FieldSelector:  fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
+		})
 	}
 
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
@@ -126,10 +130,6 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(secretEvent.Object.(*unstructured.Unstructured).Object, &secret)
 	if err != nil {
 		return err
-	}
-
-	if secret.Name != "deckhouse-registry" {
-		return nil
 	}
 
 	switch secretEvent.Type {
