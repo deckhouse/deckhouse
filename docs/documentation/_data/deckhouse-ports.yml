@@ -14,7 +14,6 @@ groups:
     description:
       en: Cluster API webhook handler
       ru: Webhook-обработчик Cluster API
-
 - group: MastersToNodes
   description:
     en: Master to nodes traffic
@@ -40,7 +39,6 @@ groups:
     description:
       en: runtime-audit-engine webhook
       ru: webhook компонента runtime-audit-engine
-
 - group: NodesToMasters
   description:
     en: Nodes to masters traffic
@@ -56,7 +54,6 @@ groups:
     description:
       en: machine-controller-manager metrics
       ru: Метрики компонента machine-controller-manager
-
 - group: NodesToNodes
   description:
     en: Nodes to nodes traffic
@@ -162,7 +159,6 @@ groups:
     description:
       en: sds-replicated-volume drbd replication
       ru: Репликация DRBD для sds-replicated-volume
-
 - group: ExternalToMaster
   description:
     en: External traffic to masters
@@ -173,7 +169,6 @@ groups:
     description:
       en: kube-apiserver for local admins
       ru: kube-apiserver для местных администраторов
- 
 - group: ExternalToFrontends
   description:
     en: External traffic to frontends
@@ -184,22 +179,21 @@ groups:
     description:
       en: NodePort range
       ru: Диапазон портов NodePort
-   - ports: "80,443"
+  - ports: "80,443"
     protocol: TCP
     description:
       en: Application's HTTP and HTTPS ingress
       ru: Прикладные порты для ingress-запросов по HTTP и HTTPS
-   - ports: "5416"
+  - ports: "5416"
     protocol: UDP
     description:
       en: OpenVPN
       ru: OpenVPN
-   - ports: "5416"
+  - ports: "5416"
     protocol: TCP
     description:
       en: OpenVPN
       ru: OpenVPN
- 
 - group: NodesToExternal
   description:
     en: External traffic for all nodes
@@ -215,4 +209,3 @@ groups:
     description:
       en: NTP for external time synchronization
       ru: NTP для синхронизации с внешними серверами точного времени
-
