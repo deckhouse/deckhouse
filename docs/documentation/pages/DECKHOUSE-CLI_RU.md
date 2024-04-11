@@ -11,6 +11,11 @@ Deckhouse CLI — это интерфейс командной строки дл
     Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
 * `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
+
+    {% alert level="warning" %}
+    Группа команд `d8 d` не доступна для редакции Community Edition (CE).
+    {% endalert %}
+
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
