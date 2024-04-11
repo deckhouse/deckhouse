@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -41,18 +42,17 @@ type Proxy struct {
 func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
-	options Options) (*Proxy, error) {
-	if options.RegistryClient == nil {
-		options.RegistryClient = &registry.DefaultClient{}
-	}
+	cache cache.Cache,
+	logger log.Logger,
+	registryClient registry.Client) (*Proxy, error) {
 
 	return &Proxy{
 		server:         server,
 		listener:       listener,
 		getter:         clientConfigGetter,
-		registryClient: options.RegistryClient,
-		cache:          options.Cache,
-		logger:         options.Logger,
+		registryClient: registryClient,
+		cache:          cache,
+		logger:         logger,
 	}, nil
 }
 
@@ -124,7 +124,7 @@ func (p *Proxy) Stop() {
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
-	if p.cache == nil {
+	if reflect.ValueOf(p.cache).IsNil() {
 		registryConfig, err := p.getter.Get(repository)
 		if err != nil {
 			return 0, nil, err

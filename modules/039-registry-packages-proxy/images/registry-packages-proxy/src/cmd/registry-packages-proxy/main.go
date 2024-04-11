@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
-
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	"registry-packages-proxy/internal/app"
 	"registry-packages-proxy/internal/credentials"
 )
@@ -39,6 +39,7 @@ func main() {
 
 	logger := app.InitLogger(config)
 
+	// init listener. Another listener is used in dhctl
 	listener, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
 		logger.Fatal(err)
@@ -48,8 +49,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cacheMetrics := app.RegisterMetrics()
-
+	// init kube clients
 	client, err := app.InitClient(config, logger)
 	if err != nil {
 		logger.Fatal(err)
@@ -60,19 +60,19 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	// watch resources
 	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
 	go watcher.Watch(ctx)
 
-	cache := app.NewCache(logger, config, cacheMetrics)
+	// init cache
+	cache := app.NewCache(logger, config, app.RegisterMetrics())
 	if cache != nil {
 		go cache.Reconcile(ctx)
 	}
 
+	// init http server
 	server := app.BuildServer()
-	rp, err := proxy.NewProxy(server, listener, watcher, proxy.Options{
-		Cache:  cache,
-		Logger: logger,
-	})
+	rp, err := proxy.NewProxy(server, listener, watcher, cache, logger, &registry.DefaultClient{})
 
 	if err != nil {
 		logger.Fatal(err)

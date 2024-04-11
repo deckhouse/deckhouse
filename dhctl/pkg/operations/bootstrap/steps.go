@@ -221,9 +221,7 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 		return fmt.Errorf("failed to create registry client config getter: %v", err)
 	}
 
-	proxy, err := proxy.NewProxy(&http.Server{}, listener, clientConfigGetter, proxy.Options{
-		Logger: registryPackagesProxyLogger{},
-	})
+	proxy, err := proxy.NewProxy(&http.Server{}, listener, clientConfigGetter, nil, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 	if err != nil {
 		return fmt.Errorf("failed to create registry packages proxy: %v", err)
 	}

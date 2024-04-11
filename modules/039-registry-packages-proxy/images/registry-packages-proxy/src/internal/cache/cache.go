@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 )
 
-const CacheHighUsagePercent = 80
+const HighUsagePercent = 80
 
 type CacheEntry struct {
 	lastAccessTime time.Time
@@ -44,7 +45,7 @@ type Cache struct {
 	metrics *Metrics
 }
 
-func New(logger *log.Entry, root string, retentionSize uint64, metrics *Metrics) *Cache {
+func NewCache(logger *log.Entry, root string, retentionSize uint64, metrics *Metrics) *Cache {
 	storage := make(map[string]*CacheEntry)
 	return &Cache{
 		storage:       storage,
@@ -57,6 +58,10 @@ func New(logger *log.Entry, root string, retentionSize uint64, metrics *Metrics)
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	path := c.digestToPath(digest)
+
+	if _, ok := c.storage[digest]; !ok {
+		return 0, nil, cache.ErrEntryNotFound
+	}
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -82,14 +87,32 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 }
 
 func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
+	c.Lock()
+	defer c.Unlock()
+	// check if cache entry already exists
+	if _, ok := c.storage[digest]; ok {
+		c.logger.Infof("file with digest %s already exists, skipping", digest)
+		return nil
+	}
+
 	c.logger.Infof("write file with digest %s with size %d to the cache dir", digest, size)
-	err := c.copyPackage(digest, reader)
-	if err != nil {
+
+	path := c.digestToPath(digest)
+
+	err := os.MkdirAll(filepath.Dir(path), 0755)
+	if err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	c.Lock()
-	defer c.Unlock()
+	file, err := os.Create(path)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return err
+	}
 	c.storage[digest] = &CacheEntry{
 		lastAccessTime: time.Now(),
 		size:           uint64(size),
@@ -122,11 +145,11 @@ func (c *Cache) Reconcile(ctx context.Context) {
 func (c *Cache) ApplyRetentionPolicy() error {
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
-		if usagePercent > CacheHighUsagePercent {
-			c.logger.Infof("need to compact cache, current usage %d%% more than %d%%", usagePercent, CacheHighUsagePercent)
+		if usagePercent > HighUsagePercent {
+			c.logger.Infof("need to compact cache, current usage %d%% more than %d%%", usagePercent, HighUsagePercent)
 			return nil
 		}
-		c.logger.Infof("current cache usage %d%% less than %d%%, compaction is not needed", usagePercent, CacheHighUsagePercent)
+		c.logger.Infof("current cache usage %d%% less than %d%%, compaction is not needed", usagePercent, HighUsagePercent)
 		return nil
 	}
 }
@@ -137,4 +160,10 @@ func (c *Cache) calculateCacheSize() uint64 {
 		size += v.size
 	}
 	return size
+}
+
+func (c *Cache) digestToPath(digest string) string {
+	// digest format is sha256:1234567...
+	hash := digest[7:]
+	return filepath.Join(c.root, "packages", hash[:2], hash)
 }

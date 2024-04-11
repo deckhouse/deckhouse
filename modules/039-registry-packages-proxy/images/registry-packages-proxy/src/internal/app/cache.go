@@ -25,5 +25,5 @@ func NewCache(logger *log.Entry, config *Config, metrics *cache.Metrics) *cache.
 		logger.Info("Cache is disabled")
 		return nil
 	}
-	return cache.New(logger, config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
+	return cache.NewCache(logger, config.CacheDirectory, uint64(config.CacheRetentionSize.Value()), metrics)
 }
