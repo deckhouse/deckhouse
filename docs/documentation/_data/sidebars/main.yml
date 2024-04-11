@@ -777,6 +777,18 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/500-okmeter/configuration.html
+            - title: operator-prometheus
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/200-operator-prometheus/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/200-operator-prometheus/configuration.html
+                - title: FAQ
+                  url: /modules/200-operator-prometheus/faq.html
             - title: prometheus-pushgateway
               folders:
                 - title:
