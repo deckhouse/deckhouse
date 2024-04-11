@@ -18,6 +18,7 @@ package requirements
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
