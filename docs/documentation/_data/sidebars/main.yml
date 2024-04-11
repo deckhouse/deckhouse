@@ -49,6 +49,10 @@ entries:
             en: Security software settings
             ru: Настройка ПО безопасности
           url: /security_software_setup.html
+        - title:
+            en: Network security settings
+            ru: Настройка сетевых политик
+          url: /network_security_setup.html
         - title: FAQ
           url: /deckhouse-faq.html
         - title:
