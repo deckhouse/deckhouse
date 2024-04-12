@@ -1,7 +1,7 @@
 ---
-title: Настройка сетевых политик для работы Deckhouse
-permalink: ru/network_security_setup.html
-lang: ru
+title: Configuring network policies for Deckhouse
+permalink: network_security_setup.html
+lang: en
 ---
 
 If the infrastructure where Deckhouse is running has requirements to limit network communication, the following conditions must be met:
