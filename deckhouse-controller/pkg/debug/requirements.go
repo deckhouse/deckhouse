@@ -15,8 +15,8 @@
 package debug
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -31,18 +31,10 @@ func DefineRequirementsCommands(kpApp *kingpin.Application) {
 		if err != nil || resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("error getting requirements")
 		}
+
 		defer resp.Body.Close()
+		_, err = io.Copy(os.Stdout, resp.Body)
 
-		var requirements = make(map[string]interface{})
-		decoder := json.NewDecoder(resp.Body)
-		if err := decoder.Decode(&requirements); err != nil {
-			return fmt.Errorf("error unmarshal requirements")
-		}
-
-		for key, value := range requirements {
-			fmt.Printf("%v: %v\n", key, value)
-		}
-
-		return nil
+		return err
 	})
 }

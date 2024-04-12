@@ -121,7 +121,7 @@ func GetValue(key string) (interface{}, bool) {
 }
 
 // DumpValues return all stored requirement values
-func DumpValues() interface{} {
+func DumpValues() map[string]interface{} {
 	return memoryStorage.GetAll()
 }
 
