@@ -37,7 +37,7 @@ type: kubernetes.io/service-account-token
 `
 
 var _ = Describe("Modules :: node-group :: hooks :: get_packages_proxy_token ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"packagesProxy":{}}}}`, `{}`)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -48,7 +48,7 @@ var _ = Describe("Modules :: node-group :: hooks :: get_packages_proxy_token ::"
 
 		It("Hook must not fail, token should be empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.packagesProxyToken").String()).To(Equal(""))
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxy.token").String()).To(Equal(""))
 		})
 	})
 
@@ -61,7 +61,7 @@ var _ = Describe("Modules :: node-group :: hooks :: get_packages_proxy_token ::"
 
 		It("Hook must not fail, token should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.packagesProxyToken").String()).To(Equal("AAAAAAAAAAA"))
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxy.token").String()).To(Equal("AAAAAAAAAAA"))
 		})
 	})
 

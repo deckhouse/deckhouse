@@ -72,7 +72,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"packagesProxy":{}}}}`, `{}`)
 
 	Context("Registry packages pods are not found", func() {
 		BeforeEach(func() {
@@ -93,7 +93,7 @@ status:
 
 		It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443"]`))
+			Expect(f.ValuesGet("nodeManager.internal.packagesProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5443"]`))
 		})
 
 		Context("Add second registry proxy pod", func() {
@@ -104,7 +104,7 @@ status:
 
 			It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
+				Expect(f.ValuesGet("nodeManager.internal.packagesProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
 			})
 
 			Context("Add third registry proxy pod", func() {
@@ -115,7 +115,7 @@ status:
 
 				It("`nodeManager.internal.packagesProxyAddresses` must be ['192.168.199.233:5443','192.168.199.234:5443'], third pod is not ready", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.packagesProxyAddresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
+					Expect(f.ValuesGet("nodeManager.internal.packagesProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5443","192.168.199.234:5443"]`))
 				})
 			})
 		})

@@ -145,17 +145,16 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		versionMapWrapper: versionMapFromMap(cb.versionMap),
 		RunType:           "Normal",
 		Normal: normal{
-			ClusterDomain:          cb.clusterInputData.ClusterDomain,
-			ClusterDNSAddress:      cb.clusterInputData.ClusterDNSAddress,
-			PackagesProxyAddresses: cb.clusterInputData.PackagesProxyAddresses,
-			PackagesProxyToken:     cb.clusterInputData.PackagesProxyToken,
-			BootstrapTokens:        cb.clusterInputData.BootstrapTokens,
-			ApiserverEndpoints:     cb.clusterInputData.APIServerEndpoints,
-			KubernetesCA:           cb.clusterInputData.KubernetesCA,
+			ClusterDomain:      cb.clusterInputData.ClusterDomain,
+			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
+			BootstrapTokens:    cb.clusterInputData.BootstrapTokens,
+			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
+			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 		},
-		Registry: cb.registryData,
-		Images:   cb.imagesDigests,
-		Proxy:    cb.clusterInputData.Proxy,
+		Registry:      cb.registryData,
+		Images:        cb.imagesDigests,
+		Proxy:         cb.clusterInputData.Proxy,
+		PackagesProxy: cb.clusterInputData.Proxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -210,9 +209,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		KubernetesVersion: ng.KubernetesVersion(),
 		Bundle:            bundle,
 		Normal: map[string]interface{}{
-			"apiserverEndpoints":     bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
-			"packagesProxyAddresses": bundleNgContext.tplContextCommon.Normal.PackagesProxyAddresses,
-			"packagesProxyToken":     bundleNgContext.tplContextCommon.Normal.PackagesProxyToken,
+			"apiserverEndpoints": bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
 		},
 		NodeGroup: ng,
 		RunType:   "Normal",
@@ -221,6 +218,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		Registry:          &cb.registryData,
 		Proxy:             cb.clusterInputData.Proxy,
 		CloudProviderType: cb.getCloudProvider(),
+		PackagesProxy:     cb.clusterInputData.PackagesProxy,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -448,6 +446,7 @@ type bashibleContext struct {
 	Registry          *registry                    `json:"registry" yaml:"registry"`
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
+	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -492,7 +491,8 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	Proxy map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -519,13 +519,11 @@ type bundleK8sVersionContext struct {
 }
 
 type normal struct {
-	ClusterDomain          string            `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress      string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	PackagesProxyAddresses []string          `json:"packagesProxyAddresses" yaml:"packagesProxyAddresses"`
-	PackagesProxyToken     string            `json:"packagesProxyToken" yaml:"packagesProxyToken"`
-	BootstrapTokens        map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	ApiserverEndpoints     []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA           string            `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ClusterDomain      string            `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress  string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens    map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
 }
 
 type registry struct {
@@ -560,8 +558,7 @@ type inputData struct {
 	CloudProvider             interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	BootstrapTokens           map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxyAddresses    []string               `json:"packagesProxyAddresses,omitempty" yaml:"packagesProxyAddresses,omitempty"`
-	PackagesProxyToken        string                 `json:"packagesProxyToken,omitempty" yaml:"packagesProxyToken,omitempty"`
+	PackagesProxy             map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`

@@ -68,7 +68,7 @@ func handleTokens(input *go_hook.HookInput) error {
 		token = snap[0].(string)
 	}
 
-	input.Values.Set("nodeManager.internal.packagesProxyToken", token)
+	input.Values.Set("nodeManager.internal.packagesProxy.token", token)
 
 	return nil
 }

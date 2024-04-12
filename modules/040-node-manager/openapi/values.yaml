@@ -58,22 +58,28 @@ properties:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
 
-      packagesProxyAddresses:
-        type: array
-        description: |
-          Array of package proxy servers addresses.
-        x-examples:
-          - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
-        items:
-          type: string
-          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
-
-      packagesProxyToken:
-        type: string
-        description: |
-          packages proxy token.
-        x-examples:
-        - "mytoken"
+      packagesProxy:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - addresses
+          - token
+        properties:
+          addresses:
+            type: array
+            description: |
+              Array of package proxy servers addresses.
+            x-examples:
+              - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
+            items:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+          token:
+            type: string
+            description: |
+              packages proxy token.
+            x-examples:
+            - "mytoken"
 
       kubernetesCA:
         type: string

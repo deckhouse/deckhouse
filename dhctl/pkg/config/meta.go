@@ -517,8 +517,6 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		ret["auth"] = auth
 	}
 
-	ret["packagesProxyEndpoints"] = []string{"127.0.0.1:5444"}
-
 	return ret, nil
 }
 
