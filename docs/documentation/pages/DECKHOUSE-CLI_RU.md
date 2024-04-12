@@ -13,7 +13,7 @@ Deckhouse CLI — это интерфейс командной строки дл
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
 
     {% alert level="warning" %}
-    Группа команд `d8 d` не доступна для Community Edition (CE).
+    Группа команд `d8 d` не доступна для Community Edition (CE) и Basic Edition (BE).
     {% endalert %}
 
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
