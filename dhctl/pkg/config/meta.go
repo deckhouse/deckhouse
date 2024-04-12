@@ -393,6 +393,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
+	configForBashibleBundleTemplate["packagesProxy"] = map[string]interface{}{"addresses": []string{"127.0.0.1:5444"}}
 	return configForBashibleBundleTemplate, nil
 }
 
