@@ -1,5 +1,11 @@
 # Changelog v1.58
 
+## [MALFORMED]
+
+
+ - #7459 unknown section "metallb"
+ - #7521 unknown section "metallb"
+
 ## Know before update
 
 
@@ -20,7 +26,6 @@
  - **[flant-integration]** flant-pricing based on ALT Linux image, grafana-agent and madison-proxy images based on a distroless image. [#6957](https://github.com/deckhouse/deckhouse/pull/6957)
  - **[ingress-nginx]** The controller image is now based on ALT Linux. [#7002](https://github.com/deckhouse/deckhouse/pull/7002)
  - **[kube-dns]** Added a parameter that allows you to change the upstream transport protocol (tcp/udp). [#7541](https://github.com/deckhouse/deckhouse/pull/7541)
- - **[metallb]** MetalLB dashboard for Grafana [#7459](https://github.com/deckhouse/deckhouse/pull/7459)
  - **[multitenancy-manager]** Prevent manual modification of Project resources. [#7480](https://github.com/deckhouse/deckhouse/pull/7480)
  - **[multitenancy-manager]** Remove all namespace from the `Project`, except the project one. [#7443](https://github.com/deckhouse/deckhouse/pull/7443)
  - **[openvpn]** Images are based on a distroless image. [#6245](https://github.com/deckhouse/deckhouse/pull/6245)
@@ -87,6 +92,7 @@
  - **[ingress-nginx]** Add libraries to the final image. [#7666](https://github.com/deckhouse/deckhouse/pull/7666)
     Ingress nginx controller will restart.
  - **[ingress-nginx]** Fix `/tmp` access rights for controller v1.6. [#7498](https://github.com/deckhouse/deckhouse/pull/7498)
+ - **[istio]** Fix `istio-to-k8s` requirement checker. [#8098](https://github.com/deckhouse/deckhouse/pull/8098)
  - **[istio]** Got rid of `istioMinimalVersion` requirement in `release.yaml` to fix the upgrading issue. [#7815](https://github.com/deckhouse/deckhouse/pull/7815)
  - **[istio]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
  - **[kube-dns]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
@@ -95,7 +101,6 @@
  - **[local-path-provisioner]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[log-shipper]** Add missing ca-certs to prevent errors with HTTPS connections. [#7686](https://github.com/deckhouse/deckhouse/pull/7686)
  - **[loki]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
- - **[metallb]** Bind `kube-rbac-proxy` sidecar container to the pod IP address. [#7521](https://github.com/deckhouse/deckhouse/pull/7521)
  - **[monitoring-custom]** Add the `reserved_domain_nodes` metrics. [#7361](https://github.com/deckhouse/deckhouse/pull/7361)
  - **[monitoring-kubernetes]** Use `go get` instead of `go get -u` to image immutability. [#7726](https://github.com/deckhouse/deckhouse/pull/7726)
  - **[monitoring-kubernetes]** Fix `UnsupportedContainerRuntimeVersion` alert to support the newest containerd versions (`1.7.*`). [#7622](https://github.com/deckhouse/deckhouse/pull/7622)
