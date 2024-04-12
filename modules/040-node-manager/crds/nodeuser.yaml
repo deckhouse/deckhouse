@@ -207,9 +207,11 @@ spec:
                   items:
                     type: string
             status:
+              default: {}
               type: object
               properties:
                 errors:
+                  default: {}
                   type: object
                   additionalProperties:
                     type: string
