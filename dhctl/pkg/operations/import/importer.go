@@ -100,7 +100,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	}
 
 	if pointer.BoolDeref(i.Params.ScanOnly, true) {
-		if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
+		if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
 			ScanResult: scanResult,
 		}); err != nil {
 			return nil, fmt.Errorf("unable to complete phase: %w", err)
@@ -141,7 +141,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		log.WarnF("Can't check imported cluster: %s\n", err)
 	}
 
-	if err = i.PhasedExecutionContext.CompletePhase(stateCache, PhaseData{
+	if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
 		CheckResult: checkResult,
 	}); err != nil {
 		return nil, fmt.Errorf("unable to complete phase: %w", err)
