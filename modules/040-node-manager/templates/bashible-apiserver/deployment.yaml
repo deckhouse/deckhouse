@@ -148,8 +148,9 @@ spec:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
-      addresses: {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 6 }}
-      token: {{- $.Values.nodeManager.internal.packagesProxy.token | toYaml | nindent 6 }}
+      addresses:
+        {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
+      token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
     {{- end }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}
     kubernetesCA: |
