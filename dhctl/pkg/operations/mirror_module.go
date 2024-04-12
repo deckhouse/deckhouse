@@ -36,11 +36,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 )
 
-func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string, skipVerifyTLS bool) error {
+func PullExternalModulesToLocalFS(
+	sourceYmlPath, mirrorDirectoryPath, moduleFilterExpression string,
+	skipVerifyTLS bool,
+) error {
 	src, err := loadModuleSourceFromPath(sourceYmlPath)
 	if err != nil {
 		return fmt.Errorf("Read ModuleSource: %w", err)
 	}
+
+	filter := mirror.ParseModuleFilterString(moduleFilterExpression)
 
 	insecure := strings.ToUpper(src.Spec.Registry.Scheme) == "HTTP"
 	authProvider, err := findRegistryAuthCredentials(src)
@@ -59,6 +64,12 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string, ski
 	}
 
 	for i, module := range modules {
+		if !filter.Match(module) {
+			continue
+		}
+
+		filter.FilterModuleReleases(&module)
+
 		log.InfoF("[%d / %d] Pulling module %s...\n", i+1, len(modules), module.RegistryPath)
 
 		moduleLayout, err := mirror.CreateEmptyImageLayoutAtPath(filepath.Join(mirrorDirectoryPath, module.Name))
@@ -70,7 +81,7 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string, ski
 			return fmt.Errorf("Create module OCI Layouts: %w", err)
 		}
 
-		moduleImageSet, releasesImageSet, err := mirror.FindExternalModuleImages(&module, authProvider, insecure, skipVerifyTLS)
+		moduleImageSet, releasesImageSet, err := mirror.FindExternalModuleImages(&module, authProvider, filter != nil, insecure, skipVerifyTLS)
 		if err != nil {
 			return fmt.Errorf("Find external module images`: %w", err)
 		}
@@ -82,12 +93,12 @@ func PullExternalModulesToLocalFS(sourceYmlPath, mirrorDirectoryPath string, ski
 		}
 		log.InfoLn("✅ Module contents pulled successfully")
 
-		log.InfoLn("Beginning to pull module releases")
+		log.InfoLn("Beginning to pull releases for module")
 		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure, skipVerifyTLS, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
-		log.InfoLn("✅ Module releases pulled successfully")
+		log.InfoLn("✅ Releases for module pulled successfully")
 	}
 
 	return nil

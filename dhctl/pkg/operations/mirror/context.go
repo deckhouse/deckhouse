@@ -37,7 +37,7 @@ type Context struct {
 	UnpackedImagesPath string
 	ValidationMode     ValidationMode // --validation, hidden flag
 
-	// Only one of those 2 is used at a time
+	// Only one of those 2 is used at a time or none at all.
 	MinVersion      *semver.Version // --min-version
 	SpecificVersion *semver.Version // --release
 }
