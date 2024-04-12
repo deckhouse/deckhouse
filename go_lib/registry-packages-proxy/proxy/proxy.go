@@ -78,6 +78,9 @@ func (p *Proxy) Serve() {
 		}
 
 		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
+		if packageReader != nil {
+			defer packageReader.Close()
+		}
 		if err != nil {
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
@@ -87,7 +90,6 @@ func (p *Proxy) Serve() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer packageReader.Close()
 
 		w.Header().Set("Content-Type", "application/x-gzip")
 		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
@@ -125,61 +127,64 @@ func (p *Proxy) Stop() {
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if reflect.ValueOf(p.cache).IsNil() {
-		registryConfig, err := p.getter.Get(repository)
-		if err != nil {
-			return 0, nil, err
-		}
-
-		size, packageReader, err := p.registryClient.GetPackage(ctx, registryConfig, digest)
-		if err != nil {
-			return 0, nil, err
-		}
-		return size, packageReader, nil
+		return p.getPackageFromRegistry(ctx, digest, repository)
 	}
 
 	// otherwise try to find digest in the cache
-	size, packageReader, cacheErr := p.cache.Get(digest)
-	if cacheErr == nil {
-		return size, packageReader, nil
+	size, cacheReader, err := p.cache.Get(digest)
+	if err == nil {
+		return size, cacheReader, nil
+	}
+	// if any error other than item in the cache not found, get digest directly from the registry
+	if !errors.Is(err, cache.ErrEntryNotFound) {
+		p.logger.Errorf("Get package from cache: %v", err)
+		return p.getPackageFromRegistry(ctx, digest, repository)
 	}
 
+	// if digest is not found in the cache, get digest from registry and add digest to the cache
+	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// TeeReader returns teeReader which writes to pipeWriter what it reads from registryReader
+	// pipeWriter is pipe to pipeReader
+	// so when we read from teeReader it read content from registryReader and write it to the pipeWriter
+	// and on the another side of the pipe we have second reader - pipeReader
+	// thus, we have two readers - teeReader and pipeReader that is copy of registryReader
+	pipeReader, pipeWriter := io.Pipe()
+	teeReader := io.TeeReader(registryReader, pipeWriter)
+
+	// asynchronously copy registry package to the cache
+	go func() {
+		defer registryReader.Close()
+		defer pipeWriter.Close()
+
+		err := p.cache.Set(digest, size, teeReader)
+		if err == nil {
+			return
+		}
+		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
+		p.logger.Error(err)
+		// Copy remaining data to pipe
+		_, err = io.Copy(pipeWriter, registryReader)
+		if err != nil {
+			p.logger.Error(err)
+		}
+	}()
+
+	return size, pipeReader, nil
+}
+
+func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	size, packageReader, err = p.registryClient.GetPackage(ctx, registryConfig, digest)
+	size, registryReader, err := p.registryClient.GetPackage(ctx, registryConfig, digest)
 	if err != nil {
 		return 0, nil, err
 	}
-
-	// if any error other than item in the cache not found, get digest directly from the registry
-	if !errors.Is(cacheErr, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get package from cache: %v", cacheErr)
-		return size, packageReader, nil
-	}
-
-	// Otherwise, get the digest from registry and put them to cache
-	pipeReader, pipeWriter := io.Pipe()
-
-	reader := io.TeeReader(packageReader, pipeWriter)
-
-	go func() {
-		defer packageReader.Close()
-		defer pipeWriter.Close()
-
-		err := p.cache.Set(digest, size, reader)
-		if err != nil {
-			p.logger.Errorf("Add package to cache: %v", err)
-
-			// Copy remaining data to pipe
-			_, err := io.Copy(pipeWriter, packageReader)
-			if err != nil {
-				p.logger.Errorf("Copy remaining data to pipe: %v", err)
-			}
-		}
-	}()
-
-	return size, pipeReader, nil
-
+	return size, registryReader, nil
 }
