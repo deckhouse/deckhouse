@@ -1,6 +1,6 @@
 ---
 title: Configuring network policies for Deckhouse
-permalink: network_security_setup.html
+permalink: en/network_security_setup.html
 lang: en
 ---
 
