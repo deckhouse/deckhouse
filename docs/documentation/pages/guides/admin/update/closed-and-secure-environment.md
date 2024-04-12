@@ -79,9 +79,7 @@ lang: ru
 - манифесты релизов Deckhouse Kubernetes Platform, соответствующие версиям образов поставки в файле `deckhousereleases.yaml`;
 - исполняемый файл `dhctl`.
 
-## Загрузка образов DKP
-
-by КОСТЯ!
+## Загрузка образов DKP 
 
 1. Создайте каталог на рабочей машине и перейдите в него.
 
@@ -115,78 +113,33 @@ by КОСТЯ!
 
 8. Перенесите содержимое каталога `d8-images` в закрытое окружение, где доступен приватный репозиторий образов контейнеров (container registry).
 
-### Загрузка и выгрузка образов в изолированный репозитрий образов контейнеров
+## Выгрузка образов DKP
 
-{% alert level="warning" %}
-Доступно только в Enterprise Edition.
-{% endalert %}
+ВЫГРУЗКА - нюансы: сертификаты
+есть кейсы - не может взять 28 Гб tar. ПОЯВИТСЯ ФИЧА ДЛЯ РАЗБИВКИ!!!
 
-качаем + запихиваем
+ЕСТЬ АРХИВ → upload в приватный registry - ПРИМЕНЕНИЕ СЕРТИФИКАТОВ!!!
 
-1. При необходимости авторизуйтесь в container registry `registry.deckhouse.ru` с помощью вашего лицензионного ключа.
+trusted CA!!!
 
-   ```shell
-   docker login -u license-token registry.deckhouse.ru
-   ```
+1. Перейдите в каталог `d8-images`, размещенный в закрытом окружении.
 
-1. Запустите установщик Deckhouse Kubernetes Platform версии 1.58.6 или выше.
+2. Задайте следующие переменные окружения, указав пути до сертификатов от закрытого репозитория образов контейнеров (container registry), а также путь до каталога с CA сертификатами:
 
-   ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.ru/deckhouse/ee/install:v1.58.6 bash
-   ```
+```bash
+export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
+export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
+```
 
-   Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы Deckhouse Kubernetes Platform и сгенерированы манифесты [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease).
+3. Выполните команду для выгрузки образов Deckhouse в ваш репозиторий образов контейнеров, предварительно задав корректный путь и данные доступа YOUR_USERNAME и YOUR_PASSWORD:
 
-1. Скачайте образы Deckhouse в выделенную директорию, используя команду `dhctl mirror`.
+```bash
+./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM/deckhouse/ee" -u "YOUR_USERNAME" -p "YOUR_PASSWORD"
+```
 
-   `dhctl mirror` скачивает только последнюю доступную патч-версию минорного релиза Deckhouse Kubernetes Platform. Например, для Deckhouse 1.58 будет скачана только одна версия `1.58.10`, т. к. этого достаточно для обновления Deckhouse Kubernetes Platform с версии 1.57.
+4. Дождитесь завершения процесса.
 
-   Следующая команда скачает образы Deckhouse тех версий, которые находятся на каналах обновлений (о текущем статусе версий на каналах обновлений можно узнать на [flow.deckhouse.io](https://flow.deckhouse.io)):
-
-   ```shell
-   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar
-   ```
-   {% alert level="warning" %}
-   Если загрузка образов будет прервана, повторный вызов команды проверит загруженные образы и продолжит загрузку с момента ее остановки. Продолжение загрузки возможно только если с момента остановки прошло не более суток.
-   Используйте параметр `--no-pull-resume`, чтобы принудительно начать загрузку сначала.
-   {% endalert %}
-
-1. Чтобы скачать все версии Deckhouse начиная с конкретной версии, укажите ее в параметре `--min-version` в формате `X.Y`. Например, для загрузки всех версий Deckhouse, начиная с версии 1.45, используйте команду:
-
-   ```shell
-   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --source="registry.deckhouse.ru/deckhouse/ee" --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
-   ```
-
-   {% alert level="warning" %}
-   Доступно только в Enterprise Edition.Обратите внимание, параметр `--min-version` будет проигнорирован если вы укажете версию выше находящейся в канале обновлений rock-solid.
-   {% endalert %}
-
-   Чтобы загрузить образы Deckhouse Kubernetes Platform из определенного репозитория registry, вы можете указать этот репозиторий с помощью флага `--source`.
-   Существуют также дополнительные флаги `--source-login` и `--source-password`, используемые для аутентификации в предоставленном registry.
-   Если они не указаны, `dhctl mirror` будет обращаться к registry анонимно.
-
-   Например, вот как можно загрузить образы из стороннего registry:
-
-   ```shell
-   DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.ru/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
-   ```
-
-   {% alert level="warning" %}
-   Параметр `--license` действует как сокращение для параметров `--source-login ($DHCTL_CLI_MIRROR_SOURCE_LOGIN)` и `--source-password ($DHCTL_CLI_MIRROR_SOURCE_PASSWORD)` и предназначен для использования с официальным registry Deckhouse.
-   Если вы укажете и параметр `--license`, и пару логин + пароль одновременно, будет использована последняя.
-   {% endalert %}
-
-
-   `dhctl mirror` поддерживает расчет контрольных сумм итогового набора образов Deckhouse в формате ГОСТ Р 34.11-2012 (Стрибог) (параметр `--gost-digest`).
-   Контрольная сумма будет выведена в лог и записана в файл с расширением `.tar.gostsum` рядом с tar-архивом, содержащим образы Deckhouse.
-
-1. Опционально: Скопируйте утилиту `dhctl` из контейнера в директорию со скачанными образами Deckhouse Kubernetes Platform.
-
-   ```shell
-   cp /usr/bin/dhctl /tmp/d8-images/dhctl
-   ```
-
-ВЫГРУЗКА!
+5. Убедитесь, что образы появились в вашем репозитории образов контейнеров.
 
 1. Передайте директорию с загруженными образами Deckhouse Kubernetes Platform на хост с доступом к изолированному registry.
    Для продолжения установки используйте скопированную ранее утилиту `dhctl` или запустите установщик Deckhouse аналогично пунктам 1 и 2 на хосте с доступом к изолированному registry. Не забудьте смонтировать директорию с загруженными образами Deckhouse в контейнер установщика.
@@ -217,34 +170,6 @@ by КОСТЯ!
    ```shell
    kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
    ```
-
-## Выгрузка образов DKP
-
-ВЫГРУЗКА - нюансы: сертификаты
-есть кейсы - не может взять 28 Гб tar. ПОЯВИТСЯ ФИЧА ДЛЯ РАЗБИВКИ!!!
-
-ЕСТЬ АРХИВ → upload в приватный registry - ПРИМЕНЕНИЕ СЕРТИФИКАТОВ!!!
-
-trusted CA!!!
-
-1. Перейдите в каталог `d8-images`, размещенный в закрытом окружении.
-
-2. Задайте следующие переменные окружения, указав пути до сертификатов от закрытого репозитория образов контейнеров (container registry), а также путь до каталога с CA сертификатами:
-
-```bash
-export SSL_CERT_FILE="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM/registry.example.com.cert"
-export SSL_CERT_DIR="/etc/docker/certs.d/REGISTRY.EXAMPLE.COM"
-```
-
-3. Выполните команду для выгрузки образов Deckhouse в ваш репозиторий образов контейнеров, предварительно задав корректный путь и данные доступа YOUR_USERNAME и YOUR_PASSWORD:
-
-```bash
-./dhctl mirror -i ./d8.tar -r "REGISTRY.EXAMPLE.COM/deckhouse/ee" -u "YOUR_USERNAME" -p "YOUR_PASSWORD"
-```
-
-4. Дождитесь завершения процесса.
-
-5. Убедитесь, что образы появились в вашем репозитории образов контейнеров. --- КАК ЭТО ПРОВЕРИТЬ?
 
 ## Подготовка к установке обновлений в закрытый контур
 
