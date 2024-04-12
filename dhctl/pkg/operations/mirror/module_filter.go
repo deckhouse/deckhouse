@@ -37,6 +37,9 @@ func ParseModuleFilterString(str string) ModuleFilter {
 			continue
 		}
 
+		moduleName = strings.TrimSpace(moduleName)
+		moduleTag = strings.TrimSpace(moduleTag)
+
 		if filter[moduleName] == nil {
 			filter[moduleName] = make([]string, 0)
 		}
