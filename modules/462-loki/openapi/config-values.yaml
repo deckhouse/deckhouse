@@ -9,7 +9,7 @@ properties:
     x-examples:
       - false
       - default
-    description: >
+    description: |
       The name of the StorageClass to use.
 
       If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, either the [global StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
