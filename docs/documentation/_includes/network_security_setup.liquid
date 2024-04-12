@@ -1,9 +1,30 @@
 {% for group in site.data.deckhouse-ports.groups %}
 ## {{ group.description[page.lang] }}
 
-| {%- if page.lang == 'ru' %} Порт {% else %} Port {% endif %} | {%- if page.lang == 'ru' %} Протокол {% else %} Protocol {% endif %} | {%- if page.lang == 'ru' %} Назначение {% else %} Purpose {% endif %} |
-| --- | --- | --- |
-{% for destination in group.destinations %}
-| {{ destination.ports }} | {{ destination.protocol }} | {{ destination.description[page.lang] }} |
-{% endfor %}
+<table>
+  <tr>
+    <td>
+      {% if page.lang == 'ru' %} Порт {% else %} Port {% endif %}
+    </td>
+    <td>
+      {% if page.lang == 'ru' %} Протокол {% else %} Protocol {% endif %}
+    </td>
+    <td>
+      {% if page.lang == 'ru' %} Назначение {% else %} Purpose {% endif %}
+    </td>
+  </tr>
+  {% for destination in group.destinations %}
+  <tr>
+    <td>
+      {{ destination.ports }}
+    </td>
+    <td>
+      {{ destination.protocol }}
+    </td>
+    <td>
+      {{ destination.description[page.lang] }}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
 {% endfor %}
