@@ -39,7 +39,7 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until kubectl_exec patch nodeusers ${username} --type=json --patch='${data}'; do
+    until kubectl_exec patch nodeusers ${username} --type=json --patch='${data}' --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -66,7 +66,7 @@ function nodeuser_patch() {
           -H "Content-Type: application/json-patch+json" \
           --cacert "$BOOTSTRAP_DIR/ca.crt" \
           --data "${data}" \
-          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}" ; then
+          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" ; then
 
           echo "Successfully patched NodeUser."
           patch_pending=false
