@@ -4,7 +4,7 @@ groups:
     en: Master to master nodes traffic
     ru: Трафик между мастер-узлами
   destinations:
-  - ports: "2379,2380"
+  - ports: "2379, 2380"
     protocol: TCP
     description:
       en: etcd replication
@@ -63,12 +63,12 @@ groups:
     protocol: ICMP
     description:
       en: ICMP for node-to-node connectivity monitoring
-      ru: ICMP для мониторинга связности между нодами
-  - ports: "8469,8472"
+      ru: ICMP для мониторинга связности между узлами
+  - ports: "8469, 8472"
     protocol: UDP
     description:
       en: VXLAN for pod-to-pod traffic encapsulation
-      ru: VXLAN для инкапсуляции траффика между подами
+      ru: VXLAN для инкапсуляции трафика между подами
   - ports: "123"
     protocol: UDP
     description:
@@ -112,13 +112,13 @@ groups:
   - ports: "9434"
     protocol: TCP
     description:
-      en: ebpf-exporter metrics
-      ru: Метрики ebpf-exporter
+      en: "*ebpf-exporter* metrics"
+      ru: "Метрики модуля *ebpf-exporter*"
   - ports: "9101"
     protocol: TCP
     description:
-      en: node-exporter metrics
-      ru: Метрики node-exporter
+      en: "*node-exporter* module metrics"
+      ru: "Метрики модуля *node-exporter*"
   - ports: "8008"
     protocol: TCP
     description:
@@ -127,8 +127,8 @@ groups:
   - ports: "9255"
     protocol: TCP
     description:
-      en: kube-proxy metrics
-      ru: Метрики kube-proxy
+      en: "*kube-proxy* metrics"
+      ru: "Метрики kube-proxy*"
   - ports: "8083"
     protocol: TCP
     description:
@@ -137,18 +137,18 @@ groups:
   - ports: "8766"
     protocol: TCP
     description:
-      en: runtime-audit-engine metrics
-      ru: Метрики компонента runtime-audit-engine
+      en: "*runtime-audit-engine* module metrics"
+      ru: "Метрики модуля *runtime-audit-engine*"
   - ports: "10445"
     protocol: TCP
     description:
-      en: kube-router metrics
-      ru: Метрики kube-router
+      en: "*kube-router* metrics"
+      ru: "Метрики *kube-router*"
   - ports: "3367"
     protocol: TCP
     description:
-      en: sds-replicated-volume node agent api
-      ru: API агента sds-replicated-volume
+      en: API of the *sds-replicated-volume* module node agent
+      ru: API агента модуля *sds-replicated-volume*
   - ports: "9942"
     protocol: TCP
     description:
@@ -162,7 +162,7 @@ groups:
 - group: ExternalToMaster
   description:
     en: External traffic to masters
-    ru: Внешний траффик на мастер-узлы
+    ru: Внешний трафик на мастер-узлы
   destinations:
   - ports: "6443"
     protocol: TCP
@@ -172,18 +172,18 @@ groups:
 - group: ExternalToFrontends
   description:
     en: External traffic to frontends
-    ru: Внешний траффик на фронтенд-узлы
+    ru: Внешний трафик на фронтенд-узлы
   destinations:
   - ports: "30000-32767"
     protocol: TCP
     description:
       en: NodePort range
       ru: Диапазон портов NodePort
-  - ports: "80,443"
+  - ports: "80, 443"
     protocol: TCP
     description:
-      en: Application's HTTP and HTTPS ingress
-      ru: Прикладные порты для ingress-запросов по HTTP и HTTPS
+      en: Application ports for requests to Ingress controllers over HTTP and HTTPS
+      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS
   - ports: "5416"
     protocol: UDP
     description:
@@ -197,7 +197,7 @@ groups:
 - group: NodesToExternal
   description:
     en: External traffic for all nodes
-    ru: Внешний траффик для каждого узла
+    ru: Внешний трафик для каждого узла
   destinations:
   - ports: "443"
     protocol: TCP
