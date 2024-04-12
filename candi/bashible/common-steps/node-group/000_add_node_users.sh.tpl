@@ -24,7 +24,9 @@ if bb-flag? disruption && bb-flag? reboot; then
 fi
 
 function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+  local params="${@}"
+  echo "kubectl params --> ${params}"
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${params}
 }
 
 # $1 - username $2 - request data
