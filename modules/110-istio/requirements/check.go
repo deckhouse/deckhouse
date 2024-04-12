@@ -56,8 +56,13 @@ func init() {
 	}
 
 	checkIstioAndK8sVersionsCompatibilityFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		comingDefaultK8sVersion := requirementValue
+		comingDefaultK8sVersionSemver, err := semver.NewVersion(requirementValue)
+		if err != nil {
+			return false, err
+		}
+		comingDefaultK8sVersion := fmt.Sprintf("%d.%d", comingDefaultK8sVersionSemver.Major(), comingDefaultK8sVersionSemver.Minor())
 
+		comingDefaultK8sVersion := requirementValue
 		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
 			return false, fmt.Errorf("%s key is not registred", minVersionValuesKey)
