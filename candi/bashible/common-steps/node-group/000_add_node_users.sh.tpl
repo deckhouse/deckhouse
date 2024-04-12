@@ -41,7 +41,7 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until kubectl_exec patch nodeusers ${username} --type=json --patch="'${data}'" --subresource=status; do
+    until kubectl_exec patch nodeusers.deckhouse.io ${username} --type=json --patch="'${data}'" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -104,7 +104,7 @@ function nodeuser_add_error() {
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
 
-  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\", \"value\": \"${message}\" }]"
+  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\", \"value\": \"${message}\"}]"
 }
 
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
