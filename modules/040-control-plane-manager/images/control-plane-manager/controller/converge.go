@@ -131,7 +131,19 @@ func convergeComponent(componentName string) error {
 		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return waitPodIsReady(componentName, checksum)
+	err = waitPodIsReady(componentName, checksum)
+	if err != nil {
+		if componentName == "kube-apiserver" {
+			if err = triggerKubeletRereadManifest(componentName); err != nil {
+				// https://github.com/kubernetes/kubernetes/issues/109596
+				return fmt.Errorf("fail to trigger re-read manifest kube-apiserver: %s", err)
+			}
+			return waitPodIsReady(componentName, checksum)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func prepareConverge(componentName string, isTemp bool) error {
@@ -244,16 +256,6 @@ func waitPodIsReady(componentName string, checksum string) error {
 
 		if tries > maxRetries {
 			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
-		}
-
-		attemptReReadManifest := maxRetries - 60
-
-		if tries == attemptReReadManifest {
-			err := triggerKubeletRereadManifest(componentName)
-			// https://github.com/kubernetes/kubernetes/issues/109596
-			if err != nil {
-				return fmt.Errorf("fail to trigger re-read manifest for %s: %s", componentName, err)
-			}
 		}
 
 		if podChecksum := pod.Annotations["control-plane-manager.deckhouse.io/checksum"]; podChecksum != checksum {
