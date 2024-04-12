@@ -24,9 +24,7 @@ if bb-flag? disruption && bb-flag? reboot; then
 fi
 
 function kubectl_exec() {
-  local params="${@}"
-  echo "kubectl params --> ${params}"
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${params}
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "{$1}" "{$2}" "{$3}" "{$4}"
 }
 
 # $1 - username $2 - request data
@@ -41,7 +39,7 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until kubectl_exec patch nodeusers.deckhouse.io ${username} --type=json --patch="'${data}'" --subresource=status; do
+    until kubectl_exec ${username} --type=json --patch="${data}" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
