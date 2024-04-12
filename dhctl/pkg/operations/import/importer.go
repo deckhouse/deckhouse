@@ -16,6 +16,7 @@ package _import
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -193,17 +194,9 @@ func (i *Importer) scan(
 			return nil
 		}
 
-		if err = stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
-			return fmt.Errorf("unable to save cluster config to cache: %w", err)
-		}
-
 		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
 		if err != nil {
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
-		}
-
-		if err = stateCache.SaveStruct("nodes-state", nodesState); err != nil {
-			return fmt.Errorf("unable to save nodes tf state to cache: %w", err)
 		}
 
 		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
@@ -211,13 +204,18 @@ func (i *Importer) scan(
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}
 
-		if err = stateCache.Save("cluster-state", clusterState); err != nil {
+		if err = stateCache.Save("base-infrastructure.tfstate", base64Encode(clusterState)); err != nil {
 			return fmt.Errorf("unable to save cluster tf state to cache: %w", err)
 		}
 
 		hosts := map[string]string{}
-		for _, ngState := range nodesState {
+		for ng, ngState := range nodesState {
 			for node, nState := range ngState.State {
+				key := fmt.Sprintf("%s-%s.tfstate", ng, node)
+				if err = stateCache.Save(key, base64Encode(nState)); err != nil {
+					return fmt.Errorf("unable to save node tf state to cache: %w", err)
+				}
+
 				state := nodeState{}
 				err = json.Unmarshal(nState, &state)
 				if err != nil {
@@ -296,4 +294,11 @@ type nodeState struct {
 			Value string `json:"value,omitempty"`
 		} `json:"master_ip_address_for_ssh,omitempty"`
 	} `json:"outputs,omitempty"`
+}
+
+func base64Encode(src []byte) []byte {
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+	base64.StdEncoding.Encode(dst, src)
+
+	return dst
 }
