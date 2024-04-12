@@ -5,6 +5,7 @@
 
  - Application traffic redirection setup method in the istio module deligated to a special CNI plugin. Cilium agent pods will restart, and L7-based policies will flap.
  - Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
+ - Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
  - `sds-drbd` module is renamed. Please switch to [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume) module ASAP. `sds-drbd` module cannot be enabled but will continue to work if it was already enabled before.
 
 ## Features
@@ -14,6 +15,7 @@
  - **[admission-policy-engine]** Add the ability to specify restrictions on applying cluster roles to users. [#7660](https://github.com/deckhouse/deckhouse/pull/7660)
  - **[admission-policy-engine]** Add a security policy to control the mounting of service account tokens in pods. This rule will prohibit running pods with `automountServiceAccountToken` for existing _SecurityPolicy_. To restore the old behavior, add `automountServiceAccountToken: true` to the policy. [#7571](https://github.com/deckhouse/deckhouse/pull/7571)
  - **[candi]** Add support credential providers for kubelet. [#8023](https://github.com/deckhouse/deckhouse/pull/8023)
+ - **[candi]** Added support of new cloud provider - zVirt. [#7447](https://github.com/deckhouse/deckhouse/pull/7447)
  - **[candi]** Add Deckhouse Kubernetes Platform Standart Edition (SE). [#7828](https://github.com/deckhouse/deckhouse/pull/7828)
  - **[candi]** Add support for Debian 12, remove support for Debian 9. [#7631](https://github.com/deckhouse/deckhouse/pull/7631)
  - **[candi]** Add OpenStack server group support for master nodes. [#7312](https://github.com/deckhouse/deckhouse/pull/7312)
@@ -87,6 +89,8 @@
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
  - **[global-hooks]** Fix ability to downgrade Kubernetes by more than 1 minor version. [#7279](https://github.com/deckhouse/deckhouse/pull/7279)
+ - **[ingress-nginx]** Preventing istio-proxy from terminating before the ingress-controller is stopped during grace period. [#8064](https://github.com/deckhouse/deckhouse/pull/8064)
+    Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#7933](https://github.com/deckhouse/deckhouse/pull/7933)
  - **[ingress-nginx]** Improve description of `NginxIngressSslWillExpire` and `NginxIngressSslExpired` alerts. [#7830](https://github.com/deckhouse/deckhouse/pull/7830)
  - **[ingress-nginx]** Fix HTTPS port validation for HostPort inlet. [#7813](https://github.com/deckhouse/deckhouse/pull/7813)
