@@ -20,7 +20,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -126,7 +125,7 @@ func (p *Proxy) Stop() {
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
-	if reflect.ValueOf(p.cache).IsNil() {
+	if p.cache == nil {
 		return p.getPackageFromRegistry(ctx, digest, repository)
 	}
 

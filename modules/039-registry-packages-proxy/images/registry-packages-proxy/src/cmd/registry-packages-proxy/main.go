@@ -72,8 +72,14 @@ func main() {
 
 	// init http server
 	server := app.BuildServer()
-	rp, err := proxy.NewProxy(server, listener, watcher, cache, logger, &registry.DefaultClient{})
 
+	// if cache is nil, send nil as cache parameter to avoid use reflection in proxy.Proxy
+	var rp *proxy.Proxy
+	if cache != nil {
+		rp, err = proxy.NewProxy(server, listener, watcher, cache, logger, &registry.DefaultClient{})
+	} else {
+		rp, err = proxy.NewProxy(server, listener, watcher, nil, logger, &registry.DefaultClient{})
+	}
 	if err != nil {
 		logger.Fatal(err)
 	}
