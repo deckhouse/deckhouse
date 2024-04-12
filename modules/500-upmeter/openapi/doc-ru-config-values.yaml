@@ -4,6 +4,7 @@ properties:
       Имя storageClass'а, который будет использоваться.
 
       * Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+      * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
       * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
       * Если указать `false`, будет форсироваться использование emptyDir'а.
   auth:
@@ -95,6 +96,7 @@ properties:
           StorageClass для использования при проверке работоспособности дисков.
 
           * Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+          * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
           * Если указать `false`, будет форсироваться использование emptyDir'а.
       ingressClass:
         description: |

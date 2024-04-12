@@ -13,9 +13,11 @@ properties:
 
       If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume reprovisioning and data loss.
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd"]
