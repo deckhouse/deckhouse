@@ -208,9 +208,9 @@ func (i *Importer) scan(
 		}
 
 		hosts := map[string]string{}
-		for ng, ngState := range nodesState {
+		for _, ngState := range nodesState {
 			for node, nState := range ngState.State {
-				key := fmt.Sprintf("%s-%s.tfstate", ng, node)
+				key := fmt.Sprintf("%s.tfstate", node)
 				if err = stateCache.Save(key, nState); err != nil {
 					return fmt.Errorf("unable to save node tf state to cache: %w", err)
 				}
