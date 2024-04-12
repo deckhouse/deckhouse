@@ -2,6 +2,8 @@ candi:
   features:
     - summary: Add support credential providers for kubelet.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8023
+    - summary: Added support of new cloud provider - zVirt.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7447
 cloud-provider-aws:
   features:
     - summary: Add support ECR credential provider for kubelet.
@@ -10,6 +12,13 @@ cloud-provider-vcd:
   features:
     - summary: Upgrade CSI driver. Support online and offline PV resize.
       pull_request: https://github.com/deckhouse/deckhouse/pull/7995
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Preventing istio-proxy from terminating before the ingress-controller is stopped during
+        grace period.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8064
+      impact: Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
 istio:
   fixes:
     - summary: Fix `istio-to-k8s` requirement checker.
