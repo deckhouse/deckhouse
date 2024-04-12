@@ -16,7 +16,6 @@ package _import
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -204,7 +203,7 @@ func (i *Importer) scan(
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}
 
-		if err = stateCache.Save("base-infrastructure.tfstate", base64Encode(clusterState)); err != nil {
+		if err = stateCache.Save("base-infrastructure.tfstate", clusterState); err != nil {
 			return fmt.Errorf("unable to save cluster tf state to cache: %w", err)
 		}
 
@@ -212,7 +211,7 @@ func (i *Importer) scan(
 		for ng, ngState := range nodesState {
 			for node, nState := range ngState.State {
 				key := fmt.Sprintf("%s-%s.tfstate", ng, node)
-				if err = stateCache.Save(key, base64Encode(nState)); err != nil {
+				if err = stateCache.Save(key, nState); err != nil {
 					return fmt.Errorf("unable to save node tf state to cache: %w", err)
 				}
 
@@ -294,11 +293,4 @@ type nodeState struct {
 			Value string `json:"value,omitempty"`
 		} `json:"master_ip_address_for_ssh,omitempty"`
 	} `json:"outputs,omitempty"`
-}
-
-func base64Encode(src []byte) []byte {
-	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
-	base64.StdEncoding.Encode(dst, src)
-
-	return dst
 }
