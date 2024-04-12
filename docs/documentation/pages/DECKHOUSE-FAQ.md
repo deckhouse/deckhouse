@@ -426,7 +426,8 @@ This feature is available in Enterprise Edition only.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
-   `dhctl mirror` pulls only the latest available patch versions of a minor Deckhouse release. For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
+   By default `dhctl mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
+   For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
 
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
@@ -436,6 +437,8 @@ This feature is available in Enterprise Edition only.
 
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
    > Use the `--no-pull-resume` flag, to start the download from scratch.
+   >
+   > To skip the download of the Deckhouse modules, use the `--no-modules` flag.
 
    To pull all Deckhouse images starting from a particular version, specify it in the `--min-version` parameter in the `X.Y` format.
 
@@ -446,6 +449,11 @@ This feature is available in Enterprise Edition only.
    ```
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
+
+   It is also possible to download only one specific Deckhouse release by using the `--release=X.Y.Z` flag.
+   In this case, release channels will not be used and only one specific release will be downloaded.
+
+   > The simultaneous use of the `--min-version` and `--release` flags is not supported.
 
    To pull Deckhouse images from a specific registry repository, specify that repository with the `--source` flag.
    The optional `--source-login` and `--source-password` flags are used to authenticate to a given registry.
@@ -517,12 +525,19 @@ The steps below are necessary for manually loading images of modules connected f
 
 1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `dhctl mirror-modules`.
 
-   `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying.
+   `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying if the `--modules-filter` flag was not set.
 
    The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
    ```shell
    dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
+   ```
+
+   To download only a set of specific modules of specific versions, use the `--modules-filter` flag, passing the set of required modules and their versions, separated by the `;` character.
+   For example:
+
+   ```shell
+   dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
    ```
 
 1. Optional: Copy the `dhctl` binary from the container to the directory to which Deckhouse images were pulled.
