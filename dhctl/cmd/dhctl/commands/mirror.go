@@ -84,7 +84,9 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Registry credentials validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Registry credentials validation failure: %w", err)
+		}
 	}
 
 	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
@@ -132,12 +134,14 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	if err := mirror.ValidateReadAccessForImage(
-		mirrorCtx.DeckhouseRegistryRepo+":rock-solid",
+		mirrorCtx.DeckhouseRegistryRepo+":alpha",
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Source registry access validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Source registry access validation failure: %w", err)
+		}
 	}
 
 	var versionsToMirror []semver.Version
