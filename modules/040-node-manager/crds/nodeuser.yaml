@@ -206,6 +206,13 @@ spec:
                   - [ '*' ]
                   items:
                     type: string
+            status:
+              type: object
+              properties:
+                errors:
+                  type: object
+                  additionalProperties:
+                    type: string
       subresources:
         status: {}
       additionalPrinterColumns:
