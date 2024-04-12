@@ -1,0 +1,31 @@
+candi:
+  features:
+    - summary: Add support credential providers for kubelet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8023
+cloud-provider-aws:
+  features:
+    - summary: Add support ECR credential provider for kubelet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8023
+cloud-provider-vcd:
+  features:
+    - summary: Upgrade CSI driver. Support online and offline PV resize.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7995
+istio:
+  fixes:
+    - summary: Fix `istio-to-k8s` requirement checker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8104
+    - summary: fix PromQL expression for alert `D8IstioDataPlaneVersionMismatch`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7898
+node-manager:
+  fixes:
+    - summary: Fix ClusterHasOrphanedDisks polk group.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8094
+prometheus:
+  fixes:
+    - summary: Add missing Grafana v10 `grafana-cli` binary to fix plugin installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8082
+registrypackages:
+  features:
+    - summary: Update the `d8` registry package version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8074
+
