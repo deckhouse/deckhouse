@@ -21,13 +21,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/mod/semver"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,8 +39,17 @@ func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
 
 	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
-	// if KubernetesVersion >= v1.29.0
-	if semver.Compare("v1.29.0", fmt.Sprintf("v%s", config.KubernetesVersion)) < 1 {
+
+	c, err := semver.NewConstraint(">= 1.29")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	v, err := semver.NewVersion(config.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
+	// if KubernetesVersion >= 1.29
+	if c.Check(v) {
 		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
 	}
 

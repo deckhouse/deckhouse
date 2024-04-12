@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+This migration creates a ClusterRoleBinding kubeadm:cluster-admins after upgrading to kubernetes 1.29.
+*/
+
 package hooks
 
 import (
@@ -58,6 +62,10 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	secret, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
+	// In managed clusters we do not have d8-cluster-configuration secret
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("error get d8-cluster-configuration secret: %s", err.Error())
 	}
@@ -71,11 +79,9 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	var kubernetesVersion string
 
 	if config.KubernetesVersion != "Automatic" {
-		kubernetesVersion = fmt.Sprintf("v%s", config.KubernetesVersion)
-	}
-
-	if kubernetesVersion == "" {
-		kubernetesVersion = fmt.Sprintf("v%s", string(secret.Data["deckhouseDefaultKubernetesVersion"]))
+		kubernetesVersion = config.KubernetesVersion
+	} else {
+		kubernetesVersion = string(secret.Data["deckhouseDefaultKubernetesVersion"])
 	}
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
@@ -100,6 +106,9 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterAdminsGroupAndClusterRoleBinding,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+			},
 		},
 		RoleRef: rbac.RoleRef{
 			APIGroup: rbac.GroupName,
