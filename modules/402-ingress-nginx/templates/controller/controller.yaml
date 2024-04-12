@@ -127,6 +127,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
+        inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
