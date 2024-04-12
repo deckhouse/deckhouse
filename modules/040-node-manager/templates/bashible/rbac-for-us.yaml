@@ -51,6 +51,7 @@ rules:
   verbs:
   - patch
   - update
+  - get
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
