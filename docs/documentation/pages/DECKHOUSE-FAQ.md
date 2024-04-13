@@ -533,7 +533,7 @@ The steps below are necessary for manually loading images of modules connected f
    dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
    ```
 
-   To download only a set of specific modules of specific versions, use the `--modules-filter` flag, passing the set of required modules and their versions, separated by the `;` character.
+   To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
    For example:
 
    ```shell
