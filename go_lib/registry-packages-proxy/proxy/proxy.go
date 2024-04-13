@@ -49,8 +49,12 @@ func NewProxy(server *http.Server,
 		listener:       listener,
 		getter:         clientConfigGetter,
 		registryClient: registryClient,
-		cache:          nil,
-		logger:         logger,
+		// by default, we set cache to nil, to use proxy without cache
+		// to set up cache use WithCache option
+		// using this option allows as to avoid interface conversion and
+		// usage of reflect to determine whether we want to use cache or not
+		cache:  nil,
+		logger: logger,
 	}
 
 	for _, opt := range opts {

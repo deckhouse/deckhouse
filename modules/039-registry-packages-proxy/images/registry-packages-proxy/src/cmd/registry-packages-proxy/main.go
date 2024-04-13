@@ -72,7 +72,6 @@ func main() {
 	// init http server
 	server := app.BuildServer()
 
-	// if cache is nil, send nil as cache parameter to avoid use reflection in proxy.Proxy
 	var opts []proxy.ProxyOption
 	if !config.DisableCache {
 		opts = append(opts, proxy.WithCache(cache))

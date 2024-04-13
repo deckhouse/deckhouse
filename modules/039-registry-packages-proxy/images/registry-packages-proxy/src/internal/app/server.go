@@ -16,12 +16,16 @@ package app
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func BuildServer() *http.Server {
-	server := &http.Server{}
+	server := &http.Server{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 300 * time.Second,
+	}
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
