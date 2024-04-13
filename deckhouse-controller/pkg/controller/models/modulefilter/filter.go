@@ -67,7 +67,7 @@ type APIFilter struct {
 func (f *APIFilter) IsEmbeddedModule(moduleName string) bool {
 	module, err := f.client.Get(context.Background(), moduleName, metav1.GetOptions{})
 	if err != nil {
-		log.Error("get module %s: %s", moduleName, err)
+		log.Errorf("get module %s: %s", moduleName, err)
 		return false
 	}
 

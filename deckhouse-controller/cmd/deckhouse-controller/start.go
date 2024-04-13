@@ -176,10 +176,13 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	}
 
 	//TODO: remove this
-	for _, m := range operator.ModuleManager.GetModuleNames() {
-		mf.IsEmbeddedModule(m)
-		altMf.IsEmbeddedModule(m)
-	}
+	go func() {
+		time.Sleep(time.Minute)
+		for _, m := range operator.ModuleManager.GetModuleNames() {
+			mf.IsEmbeddedModule(m)
+			altMf.IsEmbeddedModule(m)
+		}
+	}()
 
 	operator.SetupKubeConfigManager(kubeConfigBackend, mf)
 	validation.RegisterAdmissionHandlers(operator)
