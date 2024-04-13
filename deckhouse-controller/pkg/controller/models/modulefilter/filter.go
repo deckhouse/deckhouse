@@ -41,6 +41,6 @@ func (f *Filter) IsEmbeddedModule(moduleName string) bool {
 		return false
 	}
 
-	log.Infof("TMP: %v %v %v", moduleName, m.Path, strings.Contains(m.Path, f.externalModulesDir))
-	return strings.Contains(m.Path, f.externalModulesDir)
+	log.Infof("TMP: %v %v %v", moduleName, m.Path, !strings.Contains(m.Path, f.externalModulesDir))
+	return !strings.Contains(m.Path, f.externalModulesDir)
 }
