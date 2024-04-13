@@ -36,3 +36,39 @@ subjects:
   - kind: ServiceAccount
     name: bashible-apiserver
     namespace: d8-cloud-instance-manager
+
+# RBAC for registry-packages-proxy - access to registry secret
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - deckhouse-registry
+    verbs:
+      - get
+      - list
+      - watch
+# To read secrets in d8-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: registry-packages-proxy
+subjects:
+  - kind: ServiceAccount
+    name: registry-packages-proxy
+    namespace: d8-cloud-instance-manager
