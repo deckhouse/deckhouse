@@ -67,6 +67,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "registry-packages-proxy")) | nindent 6 }}
       serviceAccountName: registry-packages-proxy
+      hostNetwork: true
       containers:
       - name: registry-packages-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -109,7 +110,6 @@ spec:
           - "--livez-path=/livez"
         ports:
           - containerPort: 5443
-            hostPort: 5443
             name: https
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
