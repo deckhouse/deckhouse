@@ -450,8 +450,8 @@ This feature is available in Enterprise Edition only.
 
    > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
 
-   It is also possible to download only one specific Deckhouse release by using the `--release=X.Y.Z` flag.
-   In this case, release channels will not be used and only one specific release will be downloaded.
+   You can also pull a single specific Deckhouse release by using the `--release=X.Y.Z` flag.
+   In this case, no release channels will be used and only one specific release will be pulled.
 
    > The simultaneous use of the `--min-version` and `--release` flags is not supported.
 
