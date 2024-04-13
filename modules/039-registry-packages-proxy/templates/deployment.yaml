@@ -62,12 +62,16 @@ spec:
         kubectl.kubernetes.io/default-logs-container: registry-packages-proxy
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_tolerations"    (tuple . "any-node" "uninitialized")  | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "registry-packages-proxy")) | nindent 6 }}
       serviceAccountName: registry-packages-proxy
+      # registry-packages-proxy runs in the hostNetwork on the bootstrap phase due to this component should work
+      # when is cni plugin is absent
+      {{- if not .Values.global.clusterIsBootstrapped }}
       hostNetwork: true
+      {{- end }}
       containers:
       - name: registry-packages-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -110,6 +114,9 @@ spec:
           - "--livez-path=/livez"
         ports:
           - containerPort: 5443
+        {{- if .Values.global.clusterIsBootstrapped }}
+            hostPort: 5443
+        {{- end }}
             name: https
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
