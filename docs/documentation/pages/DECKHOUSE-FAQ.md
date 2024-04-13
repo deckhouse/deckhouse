@@ -426,7 +426,7 @@ This feature is available in Enterprise Edition only.
 
 1. Pull Deckhouse images using the `dhctl mirror` command.
 
-   By default `dhctl mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
+   By default, `dhctl mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
    For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
 
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
