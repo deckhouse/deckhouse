@@ -525,7 +525,7 @@ The steps below are necessary for manually loading images of modules connected f
 
 1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `dhctl mirror-modules`.
 
-   `dhctl mirror-modules` pulls only versions of modules available in the module release channels at the time of copying if the `--modules-filter` flag was not set.
+   `dhctl mirror-modules` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
 
    The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
