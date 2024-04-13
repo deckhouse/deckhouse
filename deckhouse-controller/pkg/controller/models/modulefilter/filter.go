@@ -17,12 +17,18 @@ limitations under the License.
 package modulefilter
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/flant/addon-operator/pkg/module_manager"
+	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
 )
 
 func New(mm *module_manager.ModuleManager) *Filter {
@@ -43,4 +49,28 @@ func (f *Filter) IsEmbeddedModule(moduleName string) bool {
 
 	log.Infof("TMP: %v %v %v", moduleName, m.Path, !strings.Contains(m.Path, f.externalModulesDir))
 	return !strings.Contains(m.Path, f.externalModulesDir)
+}
+
+func NewAPI(config *rest.Config) (*APIFilter, error) {
+	mcClient, err := versioned.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("new versioned client: %w", err)
+	}
+
+	return &APIFilter{client: mcClient.DeckhouseV1alpha1().Modules()}, nil
+}
+
+type APIFilter struct {
+	client deckhousev1alpha1.ModuleInterface
+}
+
+func (f *APIFilter) IsEmbeddedModule(moduleName string) bool {
+	module, err := f.client.Get(context.Background(), moduleName, metav1.GetOptions{})
+	if err != nil {
+		log.Error("get module %s: %s", moduleName, err)
+		return false
+	}
+
+	log.Infof("TMP-2: %v %v", moduleName, module.Properties.Source == "Embedded")
+	return module.Properties.Source == "Embedded"
 }
