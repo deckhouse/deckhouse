@@ -15,14 +15,13 @@
 package app
 
 import (
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func InitClient(config *Config, logger *log.Entry) (*kubernetes.Clientset, error) {
+func InitClient(config *Config) (*kubernetes.Clientset, error) {
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
 	if err != nil {
 		return nil, err
@@ -31,7 +30,7 @@ func InitClient(config *Config, logger *log.Entry) (*kubernetes.Clientset, error
 	return kubernetes.NewForConfig(kubeConfig)
 }
 
-func InitDynamicClient(config *Config, logger *log.Entry) (dynamic.Interface, error) {
+func InitDynamicClient(config *Config) (dynamic.Interface, error) {
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
 	if err != nil {
 		return nil, err

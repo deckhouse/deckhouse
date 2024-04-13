@@ -41,18 +41,22 @@ type Proxy struct {
 func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
-	cache cache.Cache,
 	logger log.Logger,
-	registryClient registry.Client) (*Proxy, error) {
+	registryClient registry.Client, opts ...ProxyOption) *Proxy {
 
-	return &Proxy{
+	p := &Proxy{
 		server:         server,
 		listener:       listener,
 		getter:         clientConfigGetter,
 		registryClient: registryClient,
-		cache:          cache,
+		cache:          nil,
 		logger:         logger,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
 }
 
 func (p *Proxy) Serve() {
@@ -186,4 +190,12 @@ func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repos
 		return 0, nil, err
 	}
 	return size, registryReader, nil
+}
+
+type ProxyOption func(*Proxy)
+
+func WithCache(cache cache.Cache) ProxyOption {
+	return func(p *Proxy) {
+		p.cache = cache
+	}
 }

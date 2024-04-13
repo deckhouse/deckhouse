@@ -50,12 +50,12 @@ func main() {
 	defer stop()
 
 	// init kube clients
-	client, err := app.InitClient(config, logger)
+	client, err := app.InitClient(config)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	dynamicClient, err := app.InitDynamicClient(config, logger)
+	dynamicClient, err := app.InitDynamicClient(config)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -66,20 +66,18 @@ func main() {
 
 	// init cache
 	cache := app.NewCache(logger, config, app.RegisterMetrics())
-	if cache != nil {
+	if !config.DisableCache {
 		go cache.Reconcile(ctx)
 	}
-
 	// init http server
 	server := app.BuildServer()
 
 	// if cache is nil, send nil as cache parameter to avoid use reflection in proxy.Proxy
-	var rp *proxy.Proxy
-	if cache != nil {
-		rp, err = proxy.NewProxy(server, listener, watcher, cache, logger, &registry.DefaultClient{})
-	} else {
-		rp, err = proxy.NewProxy(server, listener, watcher, nil, logger, &registry.DefaultClient{})
+	var opts []proxy.ProxyOption
+	if !config.DisableCache {
+		opts = append(opts, proxy.WithCache(cache))
 	}
+	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
 	if err != nil {
 		logger.Fatal(err)
 	}
