@@ -56,7 +56,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.13")
 		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
-		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.20")
+		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.20.0")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
@@ -66,7 +66,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.13")
 		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
-		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22")
+		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22.0")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
