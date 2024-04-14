@@ -21,10 +21,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
+
+	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
@@ -38,9 +42,13 @@ func New(mm *module_manager.ModuleManager) *Filter {
 type Filter struct {
 	mm                 *module_manager.ModuleManager
 	externalModulesDir string
+
+	initMm sync.Once
 }
 
 func (f *Filter) IsEmbeddedModule(moduleName string) bool {
+	f.initModuleManager()
+
 	m := f.mm.GetModule(moduleName)
 	if m == nil {
 		log.Warnf("module %s not found", moduleName)
@@ -49,6 +57,15 @@ func (f *Filter) IsEmbeddedModule(moduleName string) bool {
 
 	log.Infof("TMP: %v %v %v", moduleName, m.Path, !strings.Contains(m.Path, f.externalModulesDir))
 	return !strings.Contains(m.Path, f.externalModulesDir)
+}
+
+func (f *Filter) initModuleManager() {
+	f.initMm.Do(func() {
+		_ = wait.PollUntilContextCancel(context.Background(), d8utils.SyncedPollPeriod, false,
+			func(context.Context) (bool, error) {
+				return f.mm.AreModulesInited(), nil
+			})
+	})
 }
 
 func NewAPI(config *rest.Config) (*APIFilter, error) {
