@@ -93,7 +93,7 @@ spec:
             mountPath: /tmp
         ports:
           - name: https
-        {{ - if .Values.global.clusterIsBootstrapped }}
+        {{- if .Values.global.clusterIsBootstrapped }}
             hostPort: 10243
         {{- end }}
             containerPort: 10423
