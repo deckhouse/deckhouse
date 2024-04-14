@@ -47,7 +47,7 @@ case "$ID" in
   ;;
   astra)
     case "$VERSION_ID" in
-      1.7|1.7*)
+      1.7|1.7*|1.8|1.8*)
         echo "astra" && exit 0 ;;
       2.12|2.12.*)
         echo "debian" && exit 0 ;;
