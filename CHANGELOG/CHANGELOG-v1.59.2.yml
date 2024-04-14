@@ -1,0 +1,14 @@
+candi:
+  fixes:
+    - summary: Fix regex pattern for `httpProxy` to allow using reserved characters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8048
+control-plane-manager:
+  fixes:
+    - summary: Fix viewing logs and exec in pods for clusters upgraded to K8s 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7908
+kube-proxy:
+  fixes:
+    - summary: Add missing сonntrack binary to the `kube-proxy` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8091
+      impact: '`kube-proxy` pods will restart.'
+

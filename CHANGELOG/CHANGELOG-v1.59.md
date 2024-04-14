@@ -72,6 +72,7 @@
 
  - **[admission-policy-engine]** Fix storageClass fake alert. [#7912](https://github.com/deckhouse/deckhouse/pull/7912)
  - **[admission-policy-engine]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
+ - **[candi]** Fix regex pattern for `httpProxy` to allow using reserved characters. [#8048](https://github.com/deckhouse/deckhouse/pull/8048)
  - **[candi]** Disable updating tfadm for bootstraping. [#7930](https://github.com/deckhouse/deckhouse/pull/7930)
  - **[candi]** Fix bootstrap by replace bb-error checks with trap. [#7647](https://github.com/deckhouse/deckhouse/pull/7647)
  - **[candi]** Remove `yum versionlock` and `apt-mark hold`. [#7280](https://github.com/deckhouse/deckhouse/pull/7280)
@@ -81,6 +82,7 @@
  - **[cloud-provider-gcp]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
  - **[cloud-provider-yandex]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
  - **[cloud-provider-yandex]** Fix a long node name. [#6718](https://github.com/deckhouse/deckhouse/pull/6718)
+ - **[control-plane-manager]** Fix viewing logs and exec in pods for clusters upgraded to K8s 1.29. [#7908](https://github.com/deckhouse/deckhouse/pull/7908)
  - **[dashboard]** Add `kube-rbac-proxy-ca.crt` configMap to `d8-dashboard` namespace. [#7766](https://github.com/deckhouse/deckhouse/pull/7766)
  - **[deckhouse]** Use the same logic as minor/patch for `apply-now` release, except the time settings. [#7988](https://github.com/deckhouse/deckhouse/pull/7988)
  - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7770](https://github.com/deckhouse/deckhouse/pull/7770)
@@ -96,6 +98,8 @@
  - **[ingress-nginx]** Fix HTTPS port validation for HostPort inlet. [#7813](https://github.com/deckhouse/deckhouse/pull/7813)
  - **[ingress-nginx]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
  - **[istio]** fix PromQL expression for alert `D8IstioDataPlaneVersionMismatch`. [#7898](https://github.com/deckhouse/deckhouse/pull/7898)
+ - **[kube-proxy]** Add missing сonntrack binary to the `kube-proxy` image. [#8091](https://github.com/deckhouse/deckhouse/pull/8091)
+    `kube-proxy` pods will restart.
  - **[l2-load-balancer]** Fix missed `externalTrafficPolicy` option for L2LoadBalancer. [#7968](https://github.com/deckhouse/deckhouse/pull/7968)
  - **[monitoring-kubernetes]** Reducing the number of scans of release secrets in the cluster. [#7558](https://github.com/deckhouse/deckhouse/pull/7558)
  - **[node-manager]** Fix ClusterHasOrphanedDisks polk group. [#8094](https://github.com/deckhouse/deckhouse/pull/8094)
@@ -117,6 +121,7 @@
 ## Chore
 
 
+ - **[candi]** Allow Astra Linux 1.8 in a bashible bundle. [#8119](https://github.com/deckhouse/deckhouse/pull/8119)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.26.15`, `v1.27.12`, `v1.28.8`, `v1.29.3` [#7834](https://github.com/deckhouse/deckhouse/pull/7834)
     Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Change the terraform version to `0.14.8`. [#7513](https://github.com/deckhouse/deckhouse/pull/7513)
