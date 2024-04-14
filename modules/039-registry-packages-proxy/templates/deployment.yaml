@@ -71,6 +71,7 @@ spec:
       # when is cni plugin is absent
       {{- if not .Values.global.clusterIsBootstrapped }}
       hostNetwork: true
+      dnsPolicy: default
       {{- end }}
       containers:
       - name: registry-packages-proxy
