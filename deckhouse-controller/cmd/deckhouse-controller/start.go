@@ -175,6 +175,14 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return fmt.Errorf("new module filter: %w", err)
 	}
 
+	operator.SetupKubeConfigManager(kubeConfigBackend, mf)
+	validation.RegisterAdmissionHandlers(operator)
+
+	err = operator.Setup()
+	if err != nil {
+		return err
+	}
+
 	//TODO: remove this
 	go func() {
 		time.Sleep(time.Minute)
@@ -183,14 +191,6 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 			altMf.IsEmbeddedModule(m)
 		}
 	}()
-
-	operator.SetupKubeConfigManager(kubeConfigBackend, mf)
-	validation.RegisterAdmissionHandlers(operator)
-
-	err = operator.Setup()
-	if err != nil {
-		return err
-	}
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {
