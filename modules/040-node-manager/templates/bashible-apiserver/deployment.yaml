@@ -62,10 +62,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" .   | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | nindent 6 }}
-      {{- if not .Values.global.clusterIsBootstrapped }}
-      hostNetwork: true
-      dnsPolicy: Default
-      {{- end }}}
       serviceAccountName: bashible-apiserver
       imagePullSecrets:
         - name: deckhouse-registry
@@ -93,6 +89,7 @@ spec:
             mountPath: /tmp
         ports:
           - name: https
+            hostPort: 10423
             containerPort: 10423
         livenessProbe:
           httpGet:
