@@ -92,6 +92,7 @@
  - **[ingress-nginx]** Add libraries to the final image. [#7666](https://github.com/deckhouse/deckhouse/pull/7666)
     Ingress nginx controller will restart.
  - **[ingress-nginx]** Fix `/tmp` access rights for controller v1.6. [#7498](https://github.com/deckhouse/deckhouse/pull/7498)
+ - **[istio]** Fix Deckhouse release requirements. [#8123](https://github.com/deckhouse/deckhouse/pull/8123)
  - **[istio]** Fix `istio-to-k8s` requirement checker. [#8098](https://github.com/deckhouse/deckhouse/pull/8098)
  - **[istio]** Got rid of `istioMinimalVersion` requirement in `release.yaml` to fix the upgrading issue. [#7815](https://github.com/deckhouse/deckhouse/pull/7815)
  - **[istio]** Fix audit policy generation error. [#7406](https://github.com/deckhouse/deckhouse/pull/7406)
