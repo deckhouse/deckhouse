@@ -183,14 +183,10 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	//TODO: remove this
-	go func() {
-		time.Sleep(time.Minute)
-		for _, m := range operator.ModuleManager.GetModuleNames() {
-			mf.IsEmbeddedModule(m)
-			altMf.IsEmbeddedModule(m)
-		}
-	}()
+	for _, m := range operator.ModuleManager.GetModuleNames() {
+		mf.IsEmbeddedModule(m)
+		altMf.IsEmbeddedModule(m)
+	}
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {
