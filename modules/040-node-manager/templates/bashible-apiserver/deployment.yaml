@@ -71,14 +71,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
         imagePullPolicy: IfNotPresent
         args:
-          - "--bind-address=$(HOST_IP)"
           - "--cert-dir=/var/certs"
           - "--secure-port=10423"
-        env:
-        - name: HOST_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
         volumeMounts:
           - name: certs
             mountPath: /var/certs
