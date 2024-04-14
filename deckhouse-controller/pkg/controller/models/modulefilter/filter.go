@@ -63,7 +63,7 @@ func (f *Filter) initModuleManager() {
 	f.initMm.Do(func() {
 		_ = wait.PollUntilContextCancel(context.Background(), d8utils.SyncedPollPeriod, false,
 			func(context.Context) (bool, error) {
-				return f.mm.AreModulesInited(), nil
+				return f.mm != nil && f.mm.AreModulesInited(), nil
 			})
 	})
 }
