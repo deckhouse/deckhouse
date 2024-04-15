@@ -103,21 +103,17 @@ bb-package-fetch-blob() {
   cat - <<EOF | $python_binary
 import random
 import ssl
-
 try:
     from urllib.request import urlopen, Request
 except ImportError as e:
     from urllib2 import urlopen, Request
-
 # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 endpoint = random.choice(endpoints)
-
 ssl._create_default_https_context = ssl._create_unverified_context
 url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
 request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
 response = urlopen(request, timeout=300)
-
 with open('$2', 'wb') as f:
     f.write(response.read())
 EOF
