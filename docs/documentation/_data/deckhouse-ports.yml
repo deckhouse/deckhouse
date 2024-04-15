@@ -194,8 +194,23 @@ groups:
     description:
       en: Container registry
       ru: Container registry
+  - ports: "53"
+    protocol: UDP
+    description:
+      en: DNS
+      ru: DNS
+  - ports: "53"
+    protocol: TCP
+    description:
+      en: DNS
+      ru: DNS
   - ports: "123"
     protocol: UDP
     description:
       en: NTP for external time synchronization
       ru: NTP для синхронизации с внешними серверами точного времени
+  - ports: "389"
+    protocol: TCP
+    description:
+      en: LDAP
+      ru: LDAP
