@@ -120,6 +120,11 @@ func GetValue(key string) (interface{}, bool) {
 	return memoryStorage.Get(key)
 }
 
+// DumpValues return all stored requirement values
+func DumpValues() map[string]interface{} {
+	return memoryStorage.GetAll()
+}
+
 // CheckFunc check come precondition, comparing desired value (requirementValue) with current value (getter)
 type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
 

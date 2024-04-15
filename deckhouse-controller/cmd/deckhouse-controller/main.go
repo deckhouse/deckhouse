@@ -95,6 +95,9 @@ func main() {
 	// deckhouse-controller collect-debug-info
 	debug.DefineCollectDebugInfoCommand(kpApp)
 
+	// deckhouse-controller requirements
+	debug.DefineRequirementsCommands(kpApp)
+
 	// deckhouse-controller edit subcommands
 	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 	{
