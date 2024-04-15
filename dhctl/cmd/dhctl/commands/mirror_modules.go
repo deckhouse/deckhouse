@@ -24,7 +24,7 @@ import (
 )
 
 func DefineMirrorModulesCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("mirror-modules", "Copy Deckhouse modules images from ModuleSource's to local filesystem and to third-party registries.")
+	cmd := parent.Command("mirror-modules", "Copy Deckhouse modules images from ModuleSource to local filesystem and to third-party registries.")
 	app.DefineMirrorModulesFlags(cmd)
 
 	cmd.Action(func(context *kingpin.ParseContext) error {
@@ -38,12 +38,17 @@ func DefineMirrorModulesCommand(parent *kingpin.Application) *kingpin.CmdClause 
 			}
 
 			return log.Process("mirror", "Push Modules to registry", func() error {
-				return operations.PushModulesToRegistry(app.MirrorModuleDirectory, app.MirrorRegistry, authProvider, app.MirrorInsecure, app.MirrorTLSSkipVerify)
+				return operations.PushModulesToRegistry(app.MirrorModulesDirectory, app.MirrorRegistry, authProvider, app.MirrorInsecure, app.MirrorTLSSkipVerify)
 			})
 		}
 
 		return log.Process("mirror", "Pull Modules to local filesystem", func() error {
-			return operations.PullExternalModulesToLocalFS(app.MirrorModuleSourcePath, app.MirrorModuleDirectory, app.MirrorTLSSkipVerify)
+			return operations.PullExternalModulesToLocalFS(
+				app.MirrorModulesSourcePath,
+				app.MirrorModulesDirectory,
+				app.MirrorModulesFilter,
+				app.MirrorTLSSkipVerify,
+			)
 		})
 	})
 
