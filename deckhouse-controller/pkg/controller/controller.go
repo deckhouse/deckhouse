@@ -18,10 +18,8 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -170,25 +168,6 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 
 	go dml.runEventLoop(moduleEventC)
 	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
-
-	//TODO: rm
-	go func() {
-		http.ListenAndServe("0.0.0.0:1337", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var modules = make(map[string]bool)
-			for _, m := range dml.mm.GetModuleNames() {
-				modules[m] = dml.mm.IsEmbeddedModule(m)
-			}
-			w.WriteHeader(http.StatusOK)
-			e := json.NewEncoder(w)
-			e.SetIndent("", "  ")
-			e.Encode(map[string]any{
-				"isInited":               dml.mm.AreModulesInited(),
-				"modules":                modules,
-				"enabledModulesByConfig": dml.mm.GetEnabledModulesByConfig(),
-				"dynamicEnabled":         dml.mm.GetDynamicEnabled(),
-			})
-		}))
-	}()
 
 	// Init modules' and modules configs' statuses as soon as Module Manager's moduleset gets Inited flag (all modules are registered)
 	go func() {
