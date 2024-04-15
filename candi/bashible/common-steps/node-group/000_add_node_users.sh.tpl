@@ -40,8 +40,6 @@ function nodeuser_patch() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     until kubectl_exec ${username} --type=json --patch="${data}" --subresource=status; do
-      exit_code=$?
-      echo "kubectl exit code ${exit_code}"
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
