@@ -169,27 +169,13 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
-	mf := modulefilter.New(operator.ModuleManager)
-	altMf, err := modulefilter.NewAPI(operator.KubeClient().RestConfig())
-	if err != nil {
-		return fmt.Errorf("new module filter: %w", err)
-	}
-
-	operator.SetupKubeConfigManager(kubeConfigBackend, mf)
+	operator.SetupKubeConfigManager(kubeConfigBackend)
 	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
 	if err != nil {
 		return err
 	}
-
-	//TODO: remove this
-	go func() {
-		for _, m := range operator.ModuleManager.GetModuleNames() {
-			mf.IsEmbeddedModule(m)
-			altMf.IsEmbeddedModule(m)
-		}
-	}()
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {
