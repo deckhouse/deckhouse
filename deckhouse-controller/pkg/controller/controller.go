@@ -177,6 +177,11 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 				return dml.mm.AreModulesInited(), nil
 			})
 
+		// TODO: remove this
+		for _, m := range dml.mm.GetModuleNames() {
+			dml.mm.IsEmbeddedModule(m)
+		}
+
 		err := dml.InitModulesAndConfigsStatuses()
 		if err != nil {
 			log.Errorf("Error occurred when setting modules and module configs' initial statuses: %s", err)
