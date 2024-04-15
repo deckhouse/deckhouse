@@ -82,13 +82,8 @@ groups:
   - ports: "4244"
     protocol: TCP
     description:
-      en: ??? cilium hubble server
-      ru: ??? cilium hubble server
-  - ports: "4245"
-    protocol: TCP
-    description:
-      en: ??? culium hubble relay
-      ru: ??? culium hubble relay
+      en: Cilium Hubble interface
+      ru: Интерфейс для компонента Cilium Hubble
   - ports: "9734"
     protocol: TCP
     description:
@@ -99,11 +94,6 @@ groups:
     description:
       en: CNI cilium operator metrics
       ru: Метрики оператора CNI Cilium
-  - ports: "10256"
-    protocol: TCP
-    description:
-      en: ??? cilium KubeProxyReplacementHealthzBindAddr
-      ru: ??? cilium KubeProxyReplacementHealthzBindAddr
   - ports: "9889"
     protocol: TCP
     description:
@@ -122,8 +112,8 @@ groups:
   - ports: "8008"
     protocol: TCP
     description:
-      en: ??? control-plane-proxy???
-      ru: ??? control-plane-proxy
+      en: Kubernetes control-plane metrics
+      ru: Метрики Kubernetes control-plane
   - ports: "9255"
     protocol: TCP
     description:
