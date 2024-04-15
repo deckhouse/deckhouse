@@ -82,8 +82,8 @@ groups:
   - ports: "4244"
     protocol: TCP
     description:
-      en: Hubble API
-      ru: API для компонента Hubble
+      en: "*cilium-hubble* API
+      ru: API для модуля *cilium-hubble*
   - ports: "9734"
     protocol: TCP
     description:
