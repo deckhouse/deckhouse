@@ -35,12 +35,10 @@ EOF
 }
 
 function __main__() {
-projectTemplateName=$(context::jq -r '.review.request.oldObject.metadata.name')
 operation=$(context::jq -r '.review.request.operation')
 
-echo "<====== OPERATION: $operation ======>"
-
 if [ "$operation" = "DELETE" ]; then
+  projectTemplateName=$(context::jq -r '.review.request.oldObject.metadata.name')
   if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.projectTemplateName == $templateName) | .projectName] | first' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ProjectTemplate \"$projectTemplateName\" cannot be deleted. It is used in the Project \"$usedInProjectName\"" }
@@ -50,11 +48,16 @@ EOF
 fi
 
 if [ "$operation" = "CREATE" ] || [ "$operation" = "UPDATE" ]; then
+  projectTemplateName=$(context::jq -r '.review.request.object.metadata.name')
   user=$(context::jq -r '.review.request.userInfo.username')
-  groups=$(context::jq -r '.review.request.userInfo.groups')
-  labels=$(context::jq -r '.review.request.oldObject.metadata.labels')
+  labelExists=$(context::jq -r '.review.request.object.metadata.labels | select(.heritage != null) | .heritage=="deckhouse"')
 
-  echo "<====== USER: $user GROUPS: $groups LABELS: $labels  ======>"
+  if $labelExists && [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"ProjectTemplate \"$projectTemplateName\" has label \"heritage\" with forbidden value: \"deckhouse\"" }
+EOF
+    return 0
+  fi
 fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
