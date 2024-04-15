@@ -53,7 +53,7 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 		layouts.ReleaseChannelImages,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
-		false,
+		mirrorCtx.SpecificVersion != nil,
 	); err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func PullImageSet(
 			img, err := remote.Image(ref, remoteOpts...)
 			if err != nil {
 				if isImageNotFoundError(err) && allowMissingTags {
-					log.WarnLn("⚠️ Not found in registry")
+					log.WarnLn("⚠️ Not found in registry, skipping pull")
 					return nil
 				}
 

@@ -52,6 +52,9 @@ var (
 	MirrorImagesBundlePath        string
 	MirrorImagesBundleChunkSizeGB int64
 
+	mirrorSpecificVersion string
+	MirrorSpecificVersion *semver.Version
+
 	mirrorMinVersionString string
 	MirrorMinVersion       *semver.Version
 
@@ -63,6 +66,8 @@ var (
 
 	MirrorDoGOSTDigest            bool
 	MirrorDontContinuePartialPull bool
+
+	MirrorWithoutModules bool
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
@@ -112,6 +117,9 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Short('v').
 		Envar(configEnvName("MIRROR_MIN_VERSION")).
 		StringVar(&mirrorMinVersionString)
+	cmd.Flag("release", "Specific Deckhouse release to copy. Conflicts with --min-version.").
+		Envar(configEnvName("MIRROR_RELEASE")).
+		StringVar(&mirrorSpecificVersion)
 	cmd.Flag("validation", "Validate mirrored indexes and images after pull is complete. "+
 		`Defaults to "fast" validation, which only checks if manifests, configs and indexes are compliant with OCI specs, `+
 		`"full" validation also checks images contents for corruption.`).
@@ -123,6 +131,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
 		BoolVar(&MirrorDontContinuePartialPull)
+	cmd.Flag("no-modules", "Do not pull Deckhouse modules into bundle.").
+		BoolVar(&MirrorWithoutModules)
 	cmd.Flag("tls-skip-verify", "Disable TLS certificate validation.").
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
@@ -130,7 +140,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		var err error
-		if err = parseAndValidateMinVersionFlag(); err != nil {
+		if err = parseAndValidateVersionFlags(); err != nil {
 			return err
 		}
 		if err = parseAndValidateRegistryURLFlag(); err != nil {
@@ -198,12 +208,23 @@ func parseAndValidateRegistryURLFlag() error {
 	return nil
 }
 
-func parseAndValidateMinVersionFlag() error {
+func parseAndValidateVersionFlags() error {
+	if mirrorMinVersionString != "" && mirrorSpecificVersion != "" {
+		return errors.New("Using both --release and --min-version at the same time is ambiguous.")
+	}
+
 	var err error
 	if mirrorMinVersionString != "" {
 		MirrorMinVersion, err = semver.NewVersion(mirrorMinVersionString)
 		if err != nil {
-			return fmt.Errorf("Minimal deckhouse version: %w", err)
+			return fmt.Errorf("Parse minimal deckhouse version: %w", err)
+		}
+	}
+
+	if mirrorSpecificVersion != "" {
+		MirrorSpecificVersion, err = semver.NewVersion(mirrorSpecificVersion)
+		if err != nil {
+			return fmt.Errorf("Parse required deckhouse version: %w", err)
 		}
 	}
 	return nil

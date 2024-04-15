@@ -84,7 +84,9 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Registry credentials validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Registry credentials validation failure: %w", err)
+		}
 	}
 
 	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
@@ -108,6 +110,7 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		SkipModulesPull:       app.MirrorWithoutModules,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
@@ -119,8 +122,9 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 			"mirror_pull",
 			fmt.Sprintf("%x", md5.Sum([]byte(app.MirrorSourceRegistryRepo))),
 		),
-		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:     app.MirrorMinVersion,
+		ValidationMode:  mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:      app.MirrorMinVersion,
+		SpecificVersion: app.MirrorSpecificVersion,
 	}
 
 	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
@@ -130,17 +134,25 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	if err := mirror.ValidateReadAccessForImage(
-		mirrorCtx.DeckhouseRegistryRepo+":rock-solid",
+		mirrorCtx.DeckhouseRegistryRepo+":alpha",
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Source registry access validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Source registry access validation failure: %w", err)
+		}
 	}
 
 	var versionsToMirror []semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
+		if mirrorCtx.SpecificVersion != nil {
+			versionsToMirror = append(versionsToMirror, *mirrorCtx.SpecificVersion)
+			log.InfoF("Skipped releases lookup as release %v is specifically requested with --release\n", mirrorCtx.SpecificVersion)
+			return nil
+		}
+
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)
 		if err != nil {
 			return fmt.Errorf("Find versions to mirror: %w", err)
