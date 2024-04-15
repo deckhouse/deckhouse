@@ -160,112 +160,121 @@ function put_user_ssh_key() {
   fi
 }
 
-if getent group sudo >/dev/null; then
-  sudo_group="sudo"
-elif getent group wheel >/dev/null; then
-  sudo_group="wheel"
-else
-  bb-log-error "Cannot find sudo group"
-  nodeuser_add_error "${user_name}" "Cannot find sudo group"
-  exit 0
-fi
-
-main_group="100" # users
-home_base_path="/home/deckhouse"
-default_shell="/bin/bash"
-comment="created by deckhouse"
-
-mkdir -p $home_base_path
-
-for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
-  user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
-  password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
-  ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
-  extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
-
-  # check for uid > 1000
-  if [ $uid -le 1000 ]; then
-    bb-log-error "Uid for user $user_name must be > 1000"
-    nodeuser_add_error "${user_name}" "Uid for user $user_name must be > 1000"
+function main() {
+  if getent group sudo >/dev/null; then
+    sudo_group="sudo"
+  elif getent group wheel >/dev/null; then
+    sudo_group="wheel"
+  else
+    bb-log-error "Cannot find sudo group"
+    nodeuser_add_error "${user_name}" "Cannot find sudo group"
     exit 0
   fi
 
-  # Check user existence
-  if id $uid 1>/dev/null 2>/dev/null; then
-    user_info="$(getent passwd $uid)"
-    # check comment
-    if [[ "$(cut -d ":" -f5 <<< "$user_info")" != "$comment" ]]; then
-      bb-log-error "User with UID $uid was created before by someone else"
-      nodeuser_add_error "${user_name}" "User with UID $uid was created before by someone else"
-      exit 0
-    fi
-    # check username
-    if [[ "$(cut -d ":" -f1 <<< "$user_info")" != "$user_name" ]]; then
-      bb-log-error "Username of user with UID $uid was changed by someone else"
-      nodeuser_add_error "${user_name}" "Username of user with UID $uid was changed by someone else"
-      exit 0
-    fi
-    # check mainGroup
-    if [[ "$(cut -d ":" -f4 <<< "$user_info")" != "$main_group" ]]; then
-      bb-log-error "User GID of user with UID $uid was changed by someone else"
-      nodeuser_add_error "${user_name}" "User GID of user with UID $uid was changed by someone else"
-      exit 0
-    fi
-    # check homeDir
-    if [[ "$(cut -d ":" -f6 <<< "$user_info")" != "$home_base_path/$user_name" ]]; then
-      bb-log-error "User home dir of user with UID $uid was changed by someone else"
-      nodeuser_add_error "${user_name}" "User home dir of user with UID $uid was changed by someone else"
-      exit 0
-    fi
-    # All ok, modify user
-    error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
-    if error_check
-    then
-      nodeuser_add_error "${user_name}" "${error_message}"
-      exit 0
-    fi
-    error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-    if error_check
-    then
-      nodeuser_add_error "${user_name}" "${error_message}"
-      exit 0
-    fi
-  else
-    # Adding user
-    error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
-    if error_check
-    then
-      nodeuser_add_error "${user_name}" "${error_message}"
-      exit 0
-    fi
-    error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-    if error_check
-    then
-      nodeuser_add_error "${user_name}" "${error_message}"
-      exit 0
-    fi
-  fi
-  nodeuser_clear_error "${user_name}"
-done
+  main_group="100" # users
+  home_base_path="/home/deckhouse"
+  default_shell="/bin/bash"
+  comment="created by deckhouse"
 
-# Remove users which exist locally but does not exist in secret
-local_users_uids="$(getent passwd | grep "$comment" | cut -d ":" -f3 || true)"
-secret_users_uids="$(jq -r '.[].spec.uid' <<< "$node_users_json")"
-for local_user_id in $local_users_uids; do
-  is_user_id_found="false"
-  for secret_user_id in $secret_users_uids; do
-    if [ "$local_user_id" -eq "$secret_user_id" ]; then
-      is_user_id_found="true"
-      break
+  mkdir -p $home_base_path
+
+  for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
+    user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
+    password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
+    ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
+    extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
+
+    # check for uid > 1000
+    if [ $uid -le 1000 ]; then
+      bb-log-error "Uid for user $user_name must be > 1000"
+      nodeuser_add_error "${user_name}" "Uid for user $user_name must be > 1000"
+      exit 0
+    fi
+
+    # Check user existence
+    if id $uid 1>/dev/null 2>/dev/null; then
+      user_info="$(getent passwd $uid)"
+      # check comment
+      if [[ "$(cut -d ":" -f5 <<< "$user_info")" != "$comment" ]]; then
+        bb-log-error "User with UID $uid was created before by someone else"
+        nodeuser_add_error "${user_name}" "User with UID $uid was created before by someone else"
+        exit 0
+      fi
+      # check username
+      if [[ "$(cut -d ":" -f1 <<< "$user_info")" != "$user_name" ]]; then
+        bb-log-error "Username of user with UID $uid was changed by someone else"
+        nodeuser_add_error "${user_name}" "Username of user with UID $uid was changed by someone else"
+        exit 0
+      fi
+      # check mainGroup
+      if [[ "$(cut -d ":" -f4 <<< "$user_info")" != "$main_group" ]]; then
+        bb-log-error "User GID of user with UID $uid was changed by someone else"
+        nodeuser_add_error "${user_name}" "User GID of user with UID $uid was changed by someone else"
+        exit 0
+      fi
+      # check homeDir
+      if [[ "$(cut -d ":" -f6 <<< "$user_info")" != "$home_base_path/$user_name" ]]; then
+        bb-log-error "User home dir of user with UID $uid was changed by someone else"
+        nodeuser_add_error "${user_name}" "User home dir of user with UID $uid was changed by someone else"
+        exit 0
+      fi
+      # All ok, modify user
+      error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
+      if error_check
+      then
+        nodeuser_add_error "${user_name}" "${error_message}"
+        exit 0
+      fi
+      error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
+      if error_check
+      then
+        nodeuser_add_error "${user_name}" "${error_message}"
+        exit 0
+      fi
+    else
+      # Adding user
+      error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
+      if error_check
+      then
+        nodeuser_add_error "${user_name}" "${error_message}"
+        exit 0
+      fi
+      error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
+      if error_check
+      then
+        nodeuser_add_error "${user_name}" "${error_message}"
+        exit 0
+      fi
+    fi
+    nodeuser_clear_error "${user_name}"
+  done
+
+  # Remove users which exist locally but does not exist in secret
+  local_users_uids="$(getent passwd | grep "$comment" | cut -d ":" -f3 || true)"
+  secret_users_uids="$(jq -r '.[].spec.uid' <<< "$node_users_json")"
+  for local_user_id in $local_users_uids; do
+    is_user_id_found="false"
+    for secret_user_id in $secret_users_uids; do
+      if [ "$local_user_id" -eq "$secret_user_id" ]; then
+        is_user_id_found="true"
+        break
+      fi
+    done
+    if [[ "$is_user_id_found" == "false" ]]; then
+      if [ "$local_user_id" -gt "1000" ]; then
+        userdel -r "$(id -nu $local_user_id)"
+      else
+        bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
+        exit 0
+      fi
     fi
   done
-  if [[ "$is_user_id_found" == "false" ]]; then
-    if [ "$local_user_id" -gt "1000" ]; then
-      userdel -r "$(id -nu $local_user_id)"
-    else
-      bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
-      exit 0
-    fi
-  fi
-done
+}
+
+set +e
+
+main
+
+set -e
 {{- end  }}
+
