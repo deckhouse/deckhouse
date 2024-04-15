@@ -103,27 +103,37 @@ func getModulesForRepo(
 	return result, nil
 }
 
-func FindExternalModuleImages(mod *Module, authProvider authn.Authenticator, insecure, skipVerifyTLS bool) (moduleImages, releaseImages map[string]struct{}, err error) {
+func FindExternalModuleImages(
+	mod *Module,
+	authProvider authn.Authenticator,
+	skipReleaseChannels, insecure, skipVerifyTLS bool,
+) (moduleImages, releaseImages map[string]struct{}, err error) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
 
 	moduleImages = map[string]struct{}{}
-	releaseImages, err = getAvailableReleaseChannelsImagesForModule(mod, nameOpts, remoteOpts)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Get available release channels of module: %w", err)
+	releaseImages = map[string]struct{}{}
+
+	if skipReleaseChannels {
+		for _, tag := range mod.Releases {
+			moduleImages[mod.RegistryPath+":"+tag] = struct{}{}
+		}
+	} else {
+		releaseImages, err = getAvailableReleaseChannelsImagesForModule(mod, nameOpts, remoteOpts)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Get available release channels of module: %w", err)
+		}
+
+		releaseChannelVersions, err := fetchVersionsFromModuleReleaseChannels(releaseImages, authProvider, insecure, skipVerifyTLS)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Fetch versions from %q release channels: %w", mod.Name, err)
+		}
+		for _, versionTag := range releaseChannelVersions {
+			moduleImages[mod.RegistryPath+":"+versionTag] = struct{}{}
+			releaseImages[mod.RegistryPath+"/release:"+versionTag] = struct{}{}
+		}
 	}
 
-	releaseChannelVersions, err := fetchVersionsFromModuleReleaseChannels(releaseImages, authProvider, insecure, skipVerifyTLS)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Fetch versions from %q release channels: %w", mod.Name, err)
-	}
-	for _, versionTag := range releaseChannelVersions {
-		moduleImages[mod.RegistryPath+":"+versionTag] = struct{}{}
-		releaseImages[mod.RegistryPath+"/release:"+versionTag] = struct{}{}
-	}
-
-	fetchDigestsFrom := maputil.Keys(moduleImages)
-
-	for _, imageTag := range fetchDigestsFrom {
+	for _, imageTag := range maputil.Keys(moduleImages) {
 		ref, err := name.ParseReference(imageTag, nameOpts...)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Get digests for %q version: %w", imageTag, err)
