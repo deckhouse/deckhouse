@@ -96,12 +96,15 @@ func MirrorDeckhouseToLocalFS(
 		return fmt.Errorf("pull release channels: %w", err)
 	}
 
-	log.InfoF("Generating DeckhouseRelease manifests...\t")
-	deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.BundlePath), "deckhousereleases.yaml")
-	if err = mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
-		return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
+	// We should not generate deckhousereleases.yaml manifest for single-release bundles
+	if mirrorCtx.SpecificVersion == nil {
+		log.InfoF("Generating DeckhouseRelease manifests...\t")
+		deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.BundlePath), "deckhousereleases.yaml")
+		if err = mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
+			return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
+		}
+		log.InfoLn("✅")
 	}
-	log.InfoLn("✅")
 
 	if err = mirror.PullDeckhouseImages(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull Deckhouse: %w", err)
