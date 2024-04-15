@@ -22,8 +22,13 @@ import (
 func BootstrapOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(color.New(color.FgYellow, color.Bold))
 }
+
 func MirrorOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(color.New(color.FgGreen, color.Bold))
+}
+
+func ImportOptions(opts types.LogProcessOptionsInterface) {
+	opts.Style(color.New(color.FgLightCyan, color.Bold))
 }
 
 func CommonOptions(opts types.LogProcessOptionsInterface) {
