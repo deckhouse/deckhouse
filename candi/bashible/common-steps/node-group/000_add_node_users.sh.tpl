@@ -40,6 +40,8 @@ function nodeuser_patch() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     until kubectl_exec ${username} --type=json --patch="${data}" --subresource=status; do
+      exit_code=$?
+      echo "kubectl exit code ${exit_code}"
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         >&2 echo "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -102,7 +104,19 @@ function nodeuser_add_error() {
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
 
-  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\", \"value\": \"${message}\"}]"
+  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\",\"value\":\"${message}\"}]"
+}
+
+# $1 - username
+function nodeuser_clear_error() {
+  local username="$1"
+  local machine_name="${D8_NODE_HOSTNAME}"
+  if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
+    local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
+  fi
+
+  nodeuser_patch "${username}" "[{\"op\":\"remove\",\"path\":\"/status/errors/${machine_name}\"}]"
+
 }
 
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
@@ -149,7 +163,8 @@ elif getent group wheel >/dev/null; then
   sudo_group="wheel"
 else
   bb-log-error "Cannot find sudo group"
-  exit 1
+  nodeuser_add_error "${user_name}" "Cannot find sudo group"
+  exit 0
 fi
 
 main_group="100" # users
@@ -170,7 +185,8 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   # check for uid > 1000
   if [ $uid -le 1000 ]; then
     bb-log-error "Uid for user $user_name must be > 1000"
-    exit 1
+    nodeuser_add_error "${user_name}" "Uid for user $user_name must be > 1000"
+    exit 0
   fi
 
   # Check user existence
@@ -179,22 +195,26 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     # check comment
     if [[ "$(cut -d ":" -f5 <<< "$user_info")" != "$comment" ]]; then
       bb-log-error "User with UID $uid was created before by someone else"
-      exit 1
+      nodeuser_add_error "${user_name}" "User with UID $uid was created before by someone else"
+      exit 0
     fi
     # check username
     if [[ "$(cut -d ":" -f1 <<< "$user_info")" != "$user_name" ]]; then
       bb-log-error "Username of user with UID $uid was changed by someone else"
-      exit 1
+      nodeuser_add_error "${user_name}" "Username of user with UID $uid was changed by someone else"
+      exit 0
     fi
     # check mainGroup
     if [[ "$(cut -d ":" -f4 <<< "$user_info")" != "$main_group" ]]; then
       bb-log-error "User GID of user with UID $uid was changed by someone else"
-      exit 1
+      nodeuser_add_error "${user_name}" "User GID of user with UID $uid was changed by someone else"
+      exit 0
     fi
     # check homeDir
     if [[ "$(cut -d ":" -f6 <<< "$user_info")" != "$home_base_path/$user_name" ]]; then
       bb-log-error "User home dir of user with UID $uid was changed by someone else"
-      exit 1
+      nodeuser_add_error "${user_name}" "User home dir of user with UID $uid was changed by someone else"
+      exit 0
     fi
     # All ok, modify user
     modify_user "$user_name" "$extra_groups" "$password_hash"
@@ -204,6 +224,7 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name"
     put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys"
   fi
+  nodeuser_clear_error "${user_name}"
 done
 
 # Remove users which exist locally but does not exist in secret
@@ -222,7 +243,7 @@ for local_user_id in $local_users_uids; do
       userdel -r "$(id -nu $local_user_id)"
     else
       bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
-      exit 1
+      exit 0
     fi
   fi
 done
