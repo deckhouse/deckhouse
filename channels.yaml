@@ -2,7 +2,7 @@ groups:
  - name: "v1"
    channels:
     - name: alpha
-      version: v1.58
+      version: v1.59
     - name: beta
       version: v1.58
     - name: ea
@@ -10,4 +10,4 @@ groups:
     - name: stable
       version: v1.58
     - name: rock-solid
-      version: v1.57
+      version: v1.58
