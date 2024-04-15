@@ -148,11 +148,11 @@ export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
 export no_proxy=${NO_PROXY}
   {{- end }}
 {{- else }}
-  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 {{- if .packagesProxy }}
-  export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
-  export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 yum updateinfo
 until yum install nc curl wget -y; do
