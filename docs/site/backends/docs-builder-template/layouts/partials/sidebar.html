@@ -7,19 +7,6 @@
 {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/.*$` .File.Dir 1 ) 0 }}
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
-<!-- {{- range $ctx.Site.RegularPages.ByWeight }}
-  {{/* if ne .Section "modules" }}{{ continue }}{{ end */}}
-  {{/* $pages = $pages | sort "Weight" "asc" */}}
-  {{/* $pages = $pages | sort "Title" "asc" */}}
-  {{/* $pages = $pages | sort "File.Dir" "asc" */}}
-  section: {{ .Section }}<br>
-  Section {{ .File.Section }}<br>
-  sections: <b>{{ range .Sections }}{{ .Title }} ({{ .File.Path }})|{{ end }}</b><br>
-  File - <b>{{ .File.Dir }}</b>, {{ .File.Path }}<br>
-  subpages: <br>{{ range .Pages }}<pre>   {{ .File.Path }} ({{ .IsSection}})</pre>{{ end }}
-  <hr />
-{{- end }} //-->
-
 
 {{- range $module, $data := $modulesList }}
   {{- $moduleTitle := "" }}
@@ -84,6 +71,7 @@
                   {{- $sidebarItem.title }}
                   {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
                   {{- if eq $sidebarItem.moduleStatus "experimental" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.moduleStatus }}">Experimental</span>{{ end }}
+                </a>
                   {{- template "subpages" (dict "parent" $sidebarItem  "ctx" $ctx) }}
             </li>
         {{- end }}
@@ -96,13 +84,8 @@
 {{- $pages := .pages }}
 {{- $ctx := .ctx }}
 <ul class="sidebar__submenu" style="display: block;">
-    <!-- <a href="./modules/110-istio/configuration.html">Configuration</a> -->
     {{ range $pages }}
     <li class="sidebar__submenu-item {{ if or ($ctx.Page.IsAncestor .) (eq $ctx.Page .) }}active{{ end }}">
-      <!-- {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/$` .File.Dir 1 ) 0 }}
-      {{- $moduleName := index $_pathElements 1 }}
-      {{- $moduleChannel := index $_pathElements 2 }} //-->
-      {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/$` .File.Dir 1 ) 0 }}
       {{- if not .IsSection }}
         <a href="{{ .RelPermalink }}">{{ .Title }}</a>
       {{ end }}
@@ -140,23 +123,14 @@
   {{- $moduleChannel := index $_pathElements 2 }}
 
   {{- if or ( ne $moduleName $sidebarItem.module ) ( ne $moduleChannel $sidebarItem.channel ) ( eq .File.TranslationBaseName "README" ) }}{{ continue }}{{ end }}
-  <!--File - <b>{{ .File.Dir }}</b>, {{ .File.Path }} ({{ .IsSection}})<br>
-  moduleName: {{- $moduleName }}<br>
-  sidebarItem.module: {{ $sidebarItem.module }}<br>
-  $sidebarItem.channel: {{ $sidebarItem.channel }}<br>
-  moduleChannel: {{- $moduleChannel }}<br>
-  subpages: <br>{{ range .Pages }}<pre>   {{ .File.Path }} ({{ .IsSection}})</pre>{{ end }}
-  sections: {{ .Sections }}<br><hr>//-->
   {{ if .IsSection }}
      {{ $rootSectionPage := . }}
      {{ range .Pages }}
      {{ if not .IsSection }}{{ continue }}{{ end }}
-       <!-- path-{{ .File.Path }}, parent - {{ $sidebarItem }}<br> -->
        <li class="sidebar__submenu-item sidebar__submenu-item_parent {{ if or ($rootSectionPage.IsAncestor .) (eq $ctx.Page .) }}active{{ end }}">
          <a href="#"><span></span>{{ .Title }}</a>
            {{- template "nested-subpages" (dict "parent" $sidebarItem "pages" .Pages "ctx" $ctx) }}
        </li>
-        <!--section item: <b>{{ .Title }} ({{ .File.Path }})</b><br> -->
      {{ end }}
   {{ else }}
        <li class="sidebar__submenu-item {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
