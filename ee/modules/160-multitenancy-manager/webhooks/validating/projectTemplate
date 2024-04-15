@@ -28,7 +28,7 @@ kubernetesValidating:
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["DELETE"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
     resources:   ["projecttemplates"]
     scope:       "Cluster"
 EOF
@@ -36,12 +36,25 @@ EOF
 
 function __main__() {
 projectTemplateName=$(context::jq -r '.review.request.oldObject.metadata.name')
-                                                              
-if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.projectTemplateName == $templateName) | .projectName] | first' 2>&1)"; then
+operation=$(context::jq -r '.review.request.operation')
+
+echo "<====== OPERATION: $operation ======>"
+
+if [ "$operation" = "DELETE" ]; then
+  if usedInProjectName="$(context::jq -er --arg templateName "$projectTemplateName" '[.snapshots.projects[].filterResult | select(.projectTemplateName == $templateName) | .projectName] | first' 2>&1)"; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ProjectTemplate \"$projectTemplateName\" cannot be deleted. It is used in the Project \"$usedInProjectName\"" }
 EOF
-  return 0
+    return 0
+  fi
+fi
+
+if [ "$operation" = "CREATE" ] || [ "$operation" = "UPDATE" ]; then
+  user=$(context::jq -r '.review.request.userInfo.username')
+  groups=$(context::jq -r '.review.request.userInfo.groups')
+  labels=$(context::jq -r '.review.request.oldObject.metadata.labels')
+
+  echo "<====== USER: $user GROUPS: $groups LABELS: $labels  ======>"
 fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
