@@ -113,7 +113,7 @@ except ImportError as e:
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 endpoint = random.choice(endpoints)
 
-ssl.match_hostname = lambda cert, hostname: True
+ssl._create_default_https_context = ssl._create_unverified_context
 url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
 request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
 response = urlopen(request, timeout=300)
