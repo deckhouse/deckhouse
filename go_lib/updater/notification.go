@@ -27,14 +27,14 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/tidwall/gjson"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 type NotificationConfig struct {
-	WebhookURL              string
-	SkipTLSVerify           bool
-	MinimalNotificationTime v1alpha1.Duration
-	Auth                    *Auth `json:"auth,omitempty"`
+	WebhookURL              string          `json:"webhook"`
+	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
+	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
+	Auth                    *Auth           `json:"auth,omitempty"`
 }
 
 type Auth struct {
@@ -66,7 +66,7 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) (*NotificationC
 		webhook = gjson.Result{}
 	}
 
-	var minimalTime v1alpha1.Duration
+	var minimalTime libapi.Duration
 	t, ok := input.Values.GetOk("deckhouse.update.notification.minimalNotificationTime")
 	if ok {
 		err := json.Unmarshal([]byte(t.Raw), &minimalTime)

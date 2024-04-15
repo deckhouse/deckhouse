@@ -18,10 +18,10 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -32,6 +32,8 @@ const (
 	PhaseDeployed        = "Deployed"
 	PhaseSuperseded      = "Superseded"
 	PhaseSuspended       = "Suspended"
+
+	approvalAnnotation = "modules.deckhouse.io/approved"
 )
 
 var (
@@ -63,6 +65,83 @@ type ModuleRelease struct {
 	Spec ModuleReleaseSpec `json:"spec"`
 
 	Status ModuleReleaseStatus `json:"status,omitempty"`
+}
+
+func (mr *ModuleRelease) GetVersion() *semver.Version {
+	return mr.Spec.Version
+}
+
+func (mr *ModuleRelease) GetName() string {
+	return mr.Name
+}
+
+func (mr *ModuleRelease) GetApplyAfter() *time.Time {
+	if mr.Spec.ApplyAfter == nil {
+		return nil
+	}
+
+	return &mr.Spec.ApplyAfter.Time
+}
+
+func (mr *ModuleRelease) GetRequirements() map[string]string {
+	return mr.Spec.Requirements
+}
+
+func (mr *ModuleRelease) GetChangelogLink() string {
+	return ""
+}
+
+func (mr *ModuleRelease) GetCooldownUntil() *time.Time {
+	return nil
+}
+
+func (mr *ModuleRelease) GetDisruptions() []string {
+	return nil
+}
+
+func (mr *ModuleRelease) GetDisruptionApproved() bool {
+	return false
+}
+
+func (mr *ModuleRelease) GetPhase() string {
+	return mr.Status.Phase
+}
+
+func (mr *ModuleRelease) GetForce() bool {
+	return false
+}
+
+func (mr *ModuleRelease) GetApplyNow() bool {
+	return mr.Annotations["release.deckhouse.io/apply-now"] == "true"
+}
+
+func (mr *ModuleRelease) SetApprovedStatus(val bool) {
+	mr.Status.Approved = val
+}
+
+func (mr *ModuleRelease) GetSuspend() bool {
+	return false
+}
+
+func (mr *ModuleRelease) GetManuallyApproved() bool {
+	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+		value, err := strconv.ParseBool(approved)
+		if err != nil {
+			return false
+		}
+
+		return value
+	}
+
+	return false
+}
+
+func (mr *ModuleRelease) GetApprovedStatus() bool {
+	return mr.Status.Approved
+}
+
+func (mr *ModuleRelease) GetMessage() string {
+	return mr.Status.Message
 }
 
 // GetModuleSource returns module source for this release
@@ -140,36 +219,6 @@ func (in *ModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
 func (f *moduleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModuleReleaseGVK
-}
-
-// Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
-type Duration struct {
-	time.Duration
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		var err error
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
 }
 
 // +k8s:deepcopy-gen=true
