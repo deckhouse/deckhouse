@@ -50,7 +50,7 @@ fi
 if [ "$operation" = "CREATE" ] || [ "$operation" = "UPDATE" ]; then
   projectTemplateName=$(context::jq -r '.review.request.object.metadata.name')
   user=$(context::jq -r '.review.request.userInfo.username')
-  labelExists=$(context::jq -r '.review.request.object.metadata.labels | select(.heritage != null) | .heritage=="deckhouse"')
+  labelExists=$(context::jq -r '.review.request.object.metadata.labels | .heritage == "deckhouse"')
 
   if $labelExists && [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
