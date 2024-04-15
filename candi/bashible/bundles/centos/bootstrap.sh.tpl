@@ -108,7 +108,8 @@ import ssl
 try:
     from urllib.request import urlretrieve, build_opener, install_opener
 except ImportError as e:
-    from urllib2 import urlretrieve, build_opener, install_opener
+    from urllib2 import build_opener, install_opener
+    from urllib import urlretrieve
 
 socket.setdefaulttimeout(300)
 
@@ -121,10 +122,10 @@ token = "${PACKAGES_PROXY_TOKEN}"
 endpoint = random.choice(endpoints)
 
 opener = build_opener()
-opener.addheaders = [('Authorization', f'Bearer {token}')]
+opener.addheaders = [('Authorization', 'Bearer {}'.format(token))]
 install_opener(opener)
 
-url = f'https://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
+url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
 urlretrieve(url, "$2")
 EOF
 }
