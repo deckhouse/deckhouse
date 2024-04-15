@@ -178,8 +178,6 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
   extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
 
-  nodeuser_add_error "${user_name}" "Test message"
-
   # check for uid > 1000
   if [ $uid -le 1000 ]; then
     bb-log-error "Uid for user $user_name must be > 1000"
@@ -215,12 +213,32 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
       exit 0
     fi
     # All ok, modify user
-    modify_user "$user_name" "$extra_groups" "$password_hash"
-    put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys"
+    error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
+    if bb-error?
+    then
+      nodeuser_add_error "${user_name}" "${error_message}"
+      exit 0
+    fi
+    put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
+    if bb-error?
+    then
+      nodeuser_add_error "${user_name}" "${error_message}"
+      exit 0
+    fi
   else
     # Adding user
-    useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name"
-    put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys"
+    error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
+    if bb-error?
+    then
+      nodeuser_add_error "${user_name}" "${error_message}"
+      exit 0
+    fi
+    error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
+    if bb-error?
+    then
+      nodeuser_add_error "${user_name}" "${error_message}"
+      exit 0
+    fi
   fi
   nodeuser_clear_error "${user_name}"
 done
