@@ -24,7 +24,7 @@ if bb-flag? disruption && bb-flag? reboot; then
 fi
 
 function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "{$1}" "{$2}" "{$3}" "{$4}"
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${1}" "${2}" "${3}" "${4}"
 }
 
 # $1 - username $2 - request data
