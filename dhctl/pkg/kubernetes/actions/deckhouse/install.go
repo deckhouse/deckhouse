@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -175,7 +176,7 @@ func ConfigureReleaseChannel(kubeCl *client.KubernetesClient, cfg *config.Deckho
 		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
 			BreakIf(apierrors.IsAlreadyExists).
 			Run(func() error {
-				_, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
+				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
 				if err != nil {
 					return err
 				}
