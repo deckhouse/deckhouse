@@ -67,20 +67,11 @@ func NewImporter(params *Params) *Importer {
 }
 
 func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
-	kubeCl, err := operations.ConnectToKubernetesAPI(i.Params.SSHClient)
+	kubeClient, metaConfig, err := i.prepare(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create k8s client: %w", err)
+		return nil, fmt.Errorf("unable to prepare cluster import: %w", err)
 	}
 
-	metaConfig, err := config.ParseConfigInCluster(kubeCl)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse cluster config: %w", err)
-	}
-
-	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
-		return nil, err
-	}
 	stateCache := cache.Global()
 
 	if err = i.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
@@ -94,7 +85,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return &ImportResult{}, nil
 	}
 
-	scanResult, err := i.scan(ctx, kubeCl, metaConfig)
+	scanResult, err := i.scan(ctx, kubeClient, metaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
@@ -119,7 +110,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
 	}
 
-	err = i.capture(ctx, kubeCl)
+	err = i.capture(ctx, kubeClient)
 	if err != nil {
 		return nil, fmt.Errorf("unable to capture cluster: %w", err)
 	}
@@ -135,7 +126,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return &ImportResult{Status: ImportStatusImported}, nil
 	}
 
-	checkResult, err := i.check(ctx, scanResult)
+	checkResult, err := i.check(ctx, kubeClient, scanResult)
 	if err != nil {
 		// check is optional
 		log.WarnF("Can't check imported cluster: %s\n", err)
@@ -154,9 +145,39 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	}, nil
 }
 
+func (i *Importer) prepare(_ context.Context) (*client.KubernetesClient, *config.MetaConfig, error) {
+	var (
+		kubeClient *client.KubernetesClient
+		metaConfig *config.MetaConfig
+	)
+
+	err := log.Process("import", "Prepare cluster import", func() error {
+		var err error
+
+		kubeClient, err = operations.ConnectToKubernetesAPI(i.Params.SSHClient)
+		if err != nil {
+			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+		}
+
+		metaConfig, err = config.ParseConfigInCluster(kubeClient)
+		if err != nil {
+			return fmt.Errorf("unable to parse cluster config: %w", err)
+		}
+
+		cachePath := metaConfig.CachePath()
+		if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
+			return fmt.Errorf("unable to init cache: %w", err)
+		}
+
+		return nil
+	})
+
+	return kubeClient, metaConfig, err
+}
+
 func (i *Importer) scan(
 	_ context.Context,
-	kubeCl *client.KubernetesClient,
+	kubeClient *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 ) (*ScanResult, error) {
 	var res *ScanResult
@@ -165,7 +186,7 @@ func (i *Importer) scan(
 		var err error
 		stateCache := cache.Global()
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
@@ -193,12 +214,12 @@ func (i *Importer) scan(
 			return nil
 		}
 
-		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
 		}
 
-		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeCl)
+		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}
@@ -239,52 +260,67 @@ func (i *Importer) scan(
 
 func (i *Importer) capture(
 	_ context.Context,
-	kubeCl *client.KubernetesClient,
+	kubeClient *client.KubernetesClient,
 ) error {
 	return log.Process("import", "Capture cluster", func() error {
-		res, err := template.ParseResourcesContent(i.Params.ImportResources.Template, i.Params.ImportResources.Values)
+		importResources, err := template.ParseResourcesContent(
+			i.Params.ImportResources.Template,
+			i.Params.ImportResources.Values,
+		)
 		if err != nil {
 			return fmt.Errorf("unable to parse resources: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeCl, res, nil)
+		checkers, err := resources.GetCheckers(kubeClient, importResources, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, res, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, importResources, checkers)
+		if err != nil {
+			return fmt.Errorf("unable to create resources: %w", err)
+		}
+
+		return nil
 	})
 }
 
 func (i *Importer) check(
 	ctx context.Context,
+	kubeClient *client.KubernetesClient,
 	scanResult *ScanResult,
 ) (*check.CheckResult, error) {
-	var err error
+	var res *check.CheckResult
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     i.Params.SSHClient,
-		StateCache:    cache.Global(),
-		CommanderMode: i.Params.CommanderMode,
-		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(scanResult.ClusterConfiguration),
-			[]byte(scanResult.ProviderSpecificClusterConfiguration),
-		),
-		TerraformContext: i.Params.TerraformContext,
+	err := log.Process("import", "Check cluster", func() error {
+		var err error
+
+		checker := check.NewChecker(&check.Params{
+			KubeClient:    kubeClient,
+			StateCache:    cache.Global(),
+			CommanderMode: i.Params.CommanderMode,
+			CommanderModeParams: commander.NewCommanderModeParams(
+				[]byte(scanResult.ClusterConfiguration),
+				[]byte(scanResult.ProviderSpecificClusterConfiguration),
+			),
+			TerraformContext: i.Params.TerraformContext,
+		})
+
+		res, err = checker.Check(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to check cluster state: %w", err)
+		}
+
+		if i.Params.OnCheckResult != nil {
+			if err = i.Params.OnCheckResult(res); err != nil {
+				return fmt.Errorf("OnCheckResult error: %w", err)
+			}
+		}
+
+		return nil
 	})
 
-	res, err := checker.Check(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to check cluster state: %w", err)
-	}
-
-	if i.Params.OnCheckResult != nil {
-		if err = i.Params.OnCheckResult(res); err != nil {
-			return nil, fmt.Errorf("OnCheckResult error: %w", err)
-		}
-	}
-
-	return res, nil
+	return res, err
 }
 
 type nodeState struct {
