@@ -23,6 +23,11 @@ if bb-flag? disruption && bb-flag? reboot; then
   exit 0
 fi
 
+function error_check() {
+  error_code=$?
+  (( error_code != 0 ))
+}
+
 function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${1}" "${2}" "${3}" "${4}"
 }
@@ -214,13 +219,13 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     fi
     # All ok, modify user
     error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
-    if bb-error?
+    if error_check
     then
       nodeuser_add_error "${user_name}" "${error_message}"
       exit 0
     fi
     error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-    if bb-error?
+    if error_check
     then
       nodeuser_add_error "${user_name}" "${error_message}"
       exit 0
@@ -228,13 +233,13 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   else
     # Adding user
     error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
-    if bb-error?
+    if error_check
     then
       nodeuser_add_error "${user_name}" "${error_message}"
       exit 0
     fi
     error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-    if bb-error?
+    if error_check
     then
       nodeuser_add_error "${user_name}" "${error_message}"
       exit 0
