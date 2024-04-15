@@ -52,9 +52,11 @@ default            example-com                     13m
 
 ## What types of certificates are supported?
 
-Currently, the module supports the following two ClusterIssuers:
+Currently, the module supports the following four ClusterIssuers:
 * letsencrypt
 * letsencrypt-staging
+* selfsigned
+* selfsigned-no-trust
 
 ## Does the legacy tls-acme annotation work?
 
