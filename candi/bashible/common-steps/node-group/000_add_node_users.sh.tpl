@@ -219,7 +219,7 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
       nodeuser_add_error "${user_name}" "${error_message}"
       exit 0
     fi
-    put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
+    error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
     if bb-error?
     then
       nodeuser_add_error "${user_name}" "${error_message}"
