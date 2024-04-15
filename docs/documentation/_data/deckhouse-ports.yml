@@ -82,8 +82,8 @@ groups:
   - ports: "4244"
     protocol: TCP
     description:
-      en: "*cilium-hubble* API
-      ru: API для модуля *cilium-hubble*
+      en: "*cilium-hubble* API"
+      ru: "API для модуля *cilium-hubble*"
   - ports: "9734"
     protocol: TCP
     description:
@@ -149,6 +149,11 @@ groups:
     description:
       en: sds-replicated-volume drbd replication
       ru: Репликация DRBD для sds-replicated-volume
+  - ports: "49152, 49153"
+    protocol: TCP
+    description:
+      en: "*Deckhouse Virtualization Platform* VM live migration port"
+      ru: "Живая миграция ВМ в *Deckhouse Virtualization Platform*"
 - group: ExternalToMaster
   description:
     en: External traffic to masters
