@@ -21,14 +21,6 @@
 # We need to install jq from packages registry. But library for install packages requires jq.
 # To avoid this problem we use modified version of registry package helper functions, with python instead of jq.
 # When we will move to Centos 8, we should install jq from main repo.
-
-# If package registry uses self-signed certificate, we need to pass ca certificate to curl to verify certificate passed
-# from registry. But we cannot pass ca certificate to bootstrap script due to to size limitation of cloud-init scripts in some cloud providers (AWS<=16kb).
-# Instead we pass -k (insecure) flag to curl as workaround solution.
-
-# Now we render bootstrap with helm and parse registry.path and registry.dockerCfg to get registry host and auth credentials by unclear way.
-# Later, we plan render bootstrap with bashible-apiserver and use registry.host and registry.auth variables.
-# https://github.com/deckhouse/deckhouse/issues/143
 */}}
 {{- /*
 # By default, python is not installed on CentOS 8.
@@ -49,120 +41,96 @@ for FS_NAME in $(mount -l -t xfs | awk '{ print $1 }'); do
   fi
 done
 
-REGISTRY_ADDRESS="{{ .registry.address }}"
-SCHEME="{{ .registry.scheme }}"
-REGISTRY_PATH="{{ .registry.path }}"
-{{- if hasKey .registry "auth" }}
-REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
-{{- else }}
-REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); parsed["auths"]["'${REGISTRY_ADDRESS}'"].setdefault("auth", ""); print(parsed["auths"]["'${REGISTRY_ADDRESS}'"]["auth"]);' | base64 -d)"
-{{- end }}
-BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-{{- /*
-# check if image installed
-# bb-rp-is-installed? package digest
-*/}}
-bb-rp-is-installed?() {
-  if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
-    local INSTALLED_DIGEST=""
-    INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
-    if [[ "${INSTALLED_DIGEST}" == "${2}" ]]; then
+BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
+BB_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
       return 0
     fi
-  fi
+  done
+  echo "Python not found, exiting..."
   return 1
 }
-{{- /*
-# get token from registry auth
-# bb-rp-get-token
-*/}}
-bb-rp-get-token() {
-  local AUTH=""
-  local AUTH_HEADER=""
-  local AUTH_REALM=""
-  local AUTH_SERVICE=""
 
-  if [[ -n "${REGISTRY_AUTH}" ]]; then
-    AUTH="yes"
-  fi
-
-  AUTH_HEADER="$(curl --connect-timeout 10 --max-time 300 --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
-  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2)"
-  AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
-  if [ -z "${AUTH_REALM}" ]; then
-    >&2 echo "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
-    return 1
-  fi
-{{- /*
-  # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
-*/}}
-  curl --connect-timeout 10 --max-time 300 --retry 3 -k -fsSL ${AUTH:+-u "$REGISTRY_AUTH"} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
-}
-{{- /*
-# fetch manifest from registry and get list of digests
-# bb-rp-get-digests digest
-*/}}
-bb-rp-get-digests() {
-  local TOKEN=""
-  TOKEN="$(bb-rp-get-token)"
-  curl --connect-timeout 10 --max-time 300 --retry 3 -k -fsSL \
-			-H "Authorization: Bearer ${TOKEN}" \
-			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-        "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["layers"][-1]["digest"])'
-}
-{{- /*
-# Fetch digest from registry
-# bb-rp-fetch-digest digest outfile
-*/}}
-bb-rp-fetch-digest() {
-  local TOKEN=""
-  TOKEN="$(bb-rp-get-token)"
-  curl --connect-timeout 10 --max-time 300 --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
-}
-{{- /*
-# download package digests, unpack them and run install script
-# bb-rp-install package:digest
-*/}}
-bb-rp-install() {
-  shopt -u failglob
-
+bb-package-install() {
+  local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
     local DIGEST=""
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+    bb-package-fetch "${PACKAGE_WITH_DIGEST}"
+    local TMP_DIR=""
+    TMP_DIR="$(mktemp -d)"
+    tar -xf "${BB_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
 
-    if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
-      continue
-    fi
-
-    local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
-
-    local TMPDIR=""
-    TMPDIR="$(mktemp -d)"
-
-    for TMPDIGEST in ${DIGESTS}; do
-      local TMPFILE=""
-      TMPFILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${TMPDIGEST}" "${TMPFILE}"
-      tar -xf "${TMPFILE}" -C "${TMPDIR}"
-      rm -f "${TMPFILE}"
-    done
-
-    pushd "${TMPDIR}" >/dev/null
-    ./install
     # shellcheck disable=SC2164
+    pushd "${TMP_DIR}" >/dev/null
+    ./install
     popd >/dev/null
-
-    mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
-    echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
-    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
-    rm -rf "${TMPDIR}"
+    mkdir -p "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    echo "${DIGEST}" > "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
+    cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
   done
-
-  shopt -s failglob
 }
+
+bb-package-fetch() {
+  mkdir -p "${BB_FETCHED_PACKAGES_STORE}"
+  declare -A PACKAGES_MAP
+  local PACKAGE_WITH_DIGEST
+  for PACKAGE_WITH_DIGEST in "$@"; do
+    local PACKAGE=""
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+    PACKAGES_MAP[$DIGEST]="${PACKAGE}"
+  done
+  bb-package-fetch-blobs PACKAGES_MAP
+}
+
+bb-package-fetch-blobs() {
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    mkdir -p "${PACKAGE_DIR}"
+    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+  done
+}
+bb-package-fetch-blob() {
+  check_python
+
+  cat - <<EOF | $python_binary
+import random
+import socket
+import ssl
+
+try:
+    from urllib.request import urlretrieve, build_opener, install_opener
+except ImportError as e:
+    from urllib2 import urlretrieve, build_opener, install_opener
+
+socket.setdefaulttimeout(300)
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
+endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+token = "${PACKAGES_PROXY_TOKEN}"
+
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+endpoint = random.choice(endpoints)
+
+opener = build_opener()
+opener.addheaders = [('Authorization', f'Bearer {token}')]
+install_opener(opener)
+
+url = f'https://{endpoint}/package?digest=$1&repository=${REPOSITORY}'
+urlretrieve(url, "$2")
+EOF
+}
+
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
 {{- if .proxy }}
