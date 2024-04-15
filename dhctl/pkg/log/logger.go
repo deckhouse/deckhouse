@@ -140,6 +140,7 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
+			"import":    {"📦 ~ Import: %s", ImportOptions},
 			"default":   {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,
