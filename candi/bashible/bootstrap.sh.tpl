@@ -20,7 +20,7 @@ function get_bundle() {
 }
 
 function basic_bootstrap_{{ .bundle }} {
-  {{- tpl (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) . | nindent 2 }}
+  {{- tpl (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) . }}
 }
 
 set -Eeuo pipefail
