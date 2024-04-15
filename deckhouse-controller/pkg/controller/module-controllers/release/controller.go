@@ -566,6 +566,8 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 		if !releaseUpdater.ApplyPredictedRelease(nil) {
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
+
+		modulesChangedReason = "a new module release found"
 		return ctrl.Result{}, nil
 	}
 
@@ -579,7 +581,6 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	}
 
 	modulesChangedReason = "a new module release found"
-
 	return ctrl.Result{}, nil
 }
 
