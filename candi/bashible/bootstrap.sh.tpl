@@ -26,16 +26,12 @@ function basic_bootstrap_{{ .bundle }} {
 set -Eeuo pipefail
 shopt -s failglob
 
-BOOTSTRAP_DIR="/var/lib/bashible"
-TMPDIR="/opt/deckhouse/tmp"
+export BOOTSTRAP_DIR="/var/lib/bashible"
+export TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
-
-# Temporary dir
-export TMPDIR=/opt/deckhouse/tmp
-mkdir -p "$TMPDIR"
 
 # Detect bundle
 BUNDLE="{{ .bundle }}"

@@ -132,7 +132,7 @@ EOF
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
 export BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
-export BB_FETCHED_PACKAGES_STORE "/tmp/registrypackages"
+export BB_FETCHED_PACKAGES_STORE "/${TMPDIR}/registrypackages"
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
 export HTTP_PROXY={{ .proxy.httpProxy | quote }}
