@@ -3,17 +3,20 @@ properties:
   severities:
     type: array
     description: |
-      Filtration vulns reports by their severities. Can be UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
+      Filtration vulns reports by their severities.
 
     items:
       type: string
+      enum:
+        - UNKNOWN
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
     x-example:
       severities:
         - UNKNOWN
         - CRITICAl
-    x-kubernetes-validations:
-      - message: severities can be only UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
-        rule: self.exist(e, e in [''UNKNOWN'', ''LOW'', ''MEDIUM'',''HIGH'',''CRITICAL''])
   linkCVEtoBDU:
     type: boolean
     default: false

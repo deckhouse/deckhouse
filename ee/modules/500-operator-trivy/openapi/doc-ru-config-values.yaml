@@ -2,7 +2,7 @@ type: object
 properties:
   severities:
     description: |
-      Фильтрация отчетов уязвимостей по их уровню критичности. Возможные уровни критичности: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
+      Фильтрация отчетов уязвимостей по их уровню критичности.
 
   linkCVEtoBDU:
     description: |
