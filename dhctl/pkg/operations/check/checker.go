@@ -36,6 +36,8 @@ type Params struct {
 	*commander.CommanderModeParams
 
 	TerraformContext *terraform.TerraformContext
+
+	KubeClient *client.KubernetesClient // optional
 }
 
 type Checker struct {
@@ -53,9 +55,9 @@ func NewChecker(params *Params) *Checker {
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
+	kubeCl, err := c.kubeClient()
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+		return nil, err
 	}
 
 	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
@@ -171,4 +173,16 @@ func resolveStatisticsStatus(status string) CheckStatus {
 		return CheckStatusDestructiveOutOfSync
 	}
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
+}
+
+func (c *Checker) kubeClient() (*client.KubernetesClient, error) {
+	if c.KubeClient != nil {
+		return c.KubeClient, nil
+	}
+
+	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+	}
+	return kubeCl, nil
 }
