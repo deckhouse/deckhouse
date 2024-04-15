@@ -204,7 +204,7 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 var (
 	deprecatedPanelTypes = map[string]string{
 		"graph":                 "timeseries",
-		"flant-statusmap-panel": "status-history",
+		"flant-statusmap-panel": "state-timeline",
 	}
 )
 

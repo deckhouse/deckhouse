@@ -103,6 +103,6 @@
           To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0`
 
           Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
-          We recommend you to migrate to the Status History plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/status-history/
+          We recommend you to migrate to the State timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
