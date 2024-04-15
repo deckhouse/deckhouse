@@ -446,7 +446,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := deckhouse.AddReleaseChannelToDeckhouseModuleConfig(kubeCl, deckhouseInstallConfig); err != nil {
+	if err := deckhouse.ConfigureReleaseChannel(kubeCl, deckhouseInstallConfig); err != nil {
 		return err
 	}
 
