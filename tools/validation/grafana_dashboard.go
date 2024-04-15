@@ -75,16 +75,7 @@ func isGrafanaDashboard(fileName string) bool {
 func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages {
 	msgs := NewMessages()
 
-	dashboard := gjson.ParseBytes(fileContent)
-	dashboardPanels := make([]gjson.Result, 0)
-	dashboardRows := dashboard.Get("rows").Array()
-
-	for _, dashboardRow := range dashboardRows {
-		rowPanels := dashboardRow.Get("panels").Array()
-		dashboardPanels = append(dashboardPanels, rowPanels...)
-	}
-	panels := dashboard.Get("panels").Array()
-	dashboardPanels = append(dashboardPanels, panels...)
+	dashboardPanels := extractDashboardPanels(fileContent)
 
 	for _, panel := range dashboardPanels {
 		panelTitle := panel.Get("title").String()
@@ -146,6 +137,29 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 		}
 	}
 	return msgs
+}
+
+func extractDashboardPanels(fileContent []byte) []gjson.Result {
+	dashboard := gjson.ParseBytes(fileContent)
+
+	dashboardPanels := make([]gjson.Result, 0)
+	dashboardRows := dashboard.Get("rows").Array()
+	for _, dashboardRow := range dashboardRows {
+		rowPanels := dashboardRow.Get("panels").Array()
+		dashboardPanels = append(dashboardPanels, rowPanels...)
+	}
+
+	panels := dashboard.Get("panels").Array()
+	for _, panel := range panels {
+		panelType := panel.Get("type").String()
+		if panelType == "row" {
+			rowPanels := panel.Get("panels").Array()
+			dashboardPanels = append(dashboardPanels, rowPanels...)
+		} else {
+			dashboardPanels = append(dashboardPanels, panel)
+		}
+	}
+	return dashboardPanels
 }
 
 func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (legacyUIDs, hardcodedUIDs []string) {
