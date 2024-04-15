@@ -41,8 +41,6 @@ for FS_NAME in $(mount -l -t xfs | awk '{ print $1 }'); do
   fi
 done
 
-BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
-BB_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 function check_python() {
   for pybin in python3 python2 python; do
     if command -v "$pybin" >/dev/null 2>&1; then
@@ -133,6 +131,8 @@ EOF
 
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
+export BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
+export BB_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
 export HTTP_PROXY={{ .proxy.httpProxy | quote }}
@@ -148,6 +148,10 @@ export no_proxy=${NO_PROXY}
   {{- end }}
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
+{{- if .packagesProxy }}
+  export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 yum updateinfo
 until yum install nc curl wget -y; do
