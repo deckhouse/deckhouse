@@ -3,6 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ProjectTemplate
 metadata:
   name: secure
+  labels:
+    heritage: deckhouse
 spec:
   parametersSchema:
     openAPIV3Schema:
