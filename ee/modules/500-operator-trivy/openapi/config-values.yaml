@@ -3,7 +3,7 @@ properties:
   severities:
     type: array
     description: |
-      Filtration vulns reports by their severities.
+      Filter vulnerability reports by their severities.
 
     items:
       type: string
