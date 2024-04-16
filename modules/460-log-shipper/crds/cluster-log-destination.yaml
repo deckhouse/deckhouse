@@ -387,7 +387,7 @@ spec:
                           type: string
                           enum: ["JSON", "CEF"]
                           default: "JSON"
-                    key_field:
+                    keyField:
                       type: string
                       description: |
                         The log [field name](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field) or tag key to use for the topic key.
