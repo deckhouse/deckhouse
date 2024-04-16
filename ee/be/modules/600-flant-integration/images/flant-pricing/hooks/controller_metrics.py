@@ -119,6 +119,24 @@ class MetricCollector(AbstractMetricCollector):
             )
         """
 
+        if controller.kind == "Pod":
+            query = f"""
+                avg (
+                    sum by (pod) (
+                        ( {func}({metric_name}{{
+                            namespace="{controller.namespace}"
+                        }}[5m]) )
+
+                        + on(pod) group_left(controller_name, controller_type)
+
+                        ( kube_controller_pod{{
+                            namespace="{controller.namespace}",
+                            pod="{controller.name}",
+                        }} * 0 )
+                    )
+                )
+            """
+
         print(query)
 
         return self.querier.query_value(query)
