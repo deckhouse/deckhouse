@@ -107,6 +107,20 @@
     color: #fff !important;
 }
 
+.channel-menu > span {
+    font-size: 14px;
+    font-weight: 600;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: 1.71;
+    letter-spacing: -0.3px;
+    text-decoration: none;
+    padding: 4px 18px;
+    border-radius: 10px;
+    background: $color-muted;
+    color: #fff !important;
+}
+
 .channel-menu > a.highlight:after {
     filter: brightness(255);
 }
@@ -334,7 +348,7 @@
   position: -webkit-sticky;
   position: sticky;
   top: 105px;
-  width: 260px;
+  //width: 260px;
   height: calc(100vh - 105px);
   overflow-x: hidden;
   overflow-y: auto;
