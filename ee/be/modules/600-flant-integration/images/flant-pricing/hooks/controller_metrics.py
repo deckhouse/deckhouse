@@ -119,6 +119,8 @@ class MetricCollector(AbstractMetricCollector):
             )
         """
 
+        print(query)
+
         return self.querier.query_value(query)
 
 
