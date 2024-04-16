@@ -41,6 +41,7 @@ of_string: of strings
 boolean: boolean
 of_boolean: of booleans
 version: version
+version_of_module: "### module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
 

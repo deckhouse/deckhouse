@@ -5,7 +5,16 @@
 {{- $channelsInfo := .ctx.Site.Data.channels.info }}
 {{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 
-{{- if $moduleChannelsData }}
+{{- if and $moduleChannelsData ( eq site.Params.mode "module" ) }}
+  {{- $version := "" }}
+  {{- range sort $channelsInfo "stability" "desc" }}
+    {{- if and (index $moduleChannelsData .code) ( ( index $moduleChannelsData .code ).version ) }}
+      {{- $version = ( index $moduleChannelsData .code ).version  }}
+      {{ break }}
+    {{- end }}
+  {{- end }}
+  <span title='{{ replace  (T "version_of_module" ) "###" $module }}'>{{ $version }}</span>
+{{- else if $moduleChannelsData }}
 <a data-proofer-ignore="" href="#" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
 <div class="submenu-container">
     <ul class="submenu">
