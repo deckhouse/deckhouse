@@ -38,8 +38,8 @@ groups:
   - ports: "10423"
     protocol: TCP
     description:
-      en: bashible apiserver for delivering node configurations
-      ru: apiserver bashible для доставки конфигурации на узлы
+      en: "*bashible apiserver* for delivering node configurations"
+      ru: "*apiserver bashible* для доставки конфигурации на узлы"
   - ports: "9680"
     protocol: TCP
     description:
@@ -59,14 +59,13 @@ groups:
   - ports: "6443"
     protocol: TCP
     description:
-      en: kube-apiserver for controllers working in node's host network namespace
-      ru: kube-apiserver для контроллеров, работающих в сетевом неймспейсе узла
+      en: "*kube-apiserver* for controllers working in node's host network namespace"
+      ru: "*kube-apiserver* для контроллеров, работающих в сетевом пространстве имен узла"
   - ports: "8443"
     protocol: TCP
     description:
-      en: machine-controller-manager metrics
-      ru: Метрики компонента machine-controller-manager
-
+      en: "*machine-controller-manager* metrics"
+      ru: "Метрики компонента *machine-controller-manager*"
 - group: NodesToNodes
   description:
     en: Nodes to nodes traffic
@@ -100,12 +99,12 @@ groups:
   - ports: "9734"
     protocol: TCP
     description:
-      en: CNI cilium agent metrics
+      en: CNI Cilium agent metrics
       ru: Метрики агентов CNI Cilium
   - ports: "9735"
     protocol: TCP
     description:
-      en: CNI cilium operator metrics
+      en: CNI Cilium operator metrics
       ru: Метрики оператора CNI Cilium
   - ports: "9889"
     protocol: TCP
@@ -130,8 +129,8 @@ groups:
   - ports: "8008"
     protocol: TCP
     description:
-      en: Kubernetes control-plane metrics
-      ru: Метрики Kubernetes control-plane
+      en: Kubernetes control plane metrics
+      ru: Метрики управляющего слоя Kubernetes
   - ports: "9255"
     protocol: TCP
     description:
@@ -165,8 +164,8 @@ groups:
   - ports: "7000-7999"
     protocol: TCP
     description:
-      en: sds-replicated-volume drbd replication
-      ru: Репликация DRBD для sds-replicated-volume
+      en: "*sds-replicated-volume* DRBD replication"
+      ru: "Репликация DRBD для *sds-replicated-volume*"
   - ports: "49152, 49153"
     protocol: TCP
     description:
@@ -181,8 +180,8 @@ groups:
   - ports: "6443"
     protocol: TCP
     description:
-      en: kube-apiserver for local admins
-      ru: kube-apiserver для местных администраторов
+      en: "*kube-apiserver* for local administrators"
+      ru: "*kube-apiserver* для местных администраторов"
   - ports: "22, 22322"
     protocol: TCP
     description:
@@ -202,8 +201,8 @@ groups:
   - ports: "80, 443"
     protocol: TCP
     description:
-      en: Application ports for requests to Ingress controllers over HTTP and HTTPS, note that these ports are configurable in `IngressNginxController` resource and may vary in different setups
-      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS, обратите внимание, что эти порты настраиваются в ресурсе `IngressNginxController` и могут отличаться в разных инсталляциях
+      en: Application ports for requests to Ingress controllers over HTTP and HTTPS. Note that these ports are configurable in `IngressNginxController` resource and may vary in different setups
+      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS. Обратите внимание, что эти порты настраиваются в ресурсе `IngressNginxController` и могут отличаться в разных инсталляциях
   - ports: "5416"
     protocol: UDP
     description:
