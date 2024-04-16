@@ -22,8 +22,8 @@ configVersion: v1
 kubernetes:
   - name: nodeUsers
     apiVersion: deckhouse.io/v1alpha1
-    kind: StaticInstance
-    queue: "instances"
+    kind: NodeUser
+    queue: "nodeuser"
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
