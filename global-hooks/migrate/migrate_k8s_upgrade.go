@@ -81,7 +81,11 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	if config.KubernetesVersion != "Automatic" {
 		kubernetesVersion = config.KubernetesVersion
 	} else {
-		kubernetesVersion = string(secret.Data["deckhouseDefaultKubernetesVersion"])
+		defaultKubernetesVersion, ok := secret.Data["deckhouseDefaultKubernetesVersion"]
+		if !ok {
+			return nil
+		}
+		kubernetesVersion = string(defaultKubernetesVersion)
 	}
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
@@ -92,7 +96,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 	v, err := semver.NewVersion(kubernetesVersion)
 	if err != nil {
-		return fmt.Errorf("version not being parsable: %s", err.Error())
+		return fmt.Errorf("version \"%s\" not being parsable: %s", kubernetesVersion, err.Error())
 	}
 	// if kubernetesVersion < v1.29.0
 	if c.Check(v) {
