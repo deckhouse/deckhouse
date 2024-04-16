@@ -52,7 +52,7 @@ default            example-com                     13m
 
 ## Какие виды сертификатов поддерживаются?
 
-На данный момент модуль устанавливает четыре ClusterIssuer'а:
+На данный момент модуль устанавливает следующие ClusterIssuer:
 * letsencrypt
 * letsencrypt-staging
 * selfsigned

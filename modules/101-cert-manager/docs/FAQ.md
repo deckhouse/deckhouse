@@ -52,7 +52,7 @@ default            example-com                     13m
 
 ## What types of certificates are supported?
 
-Currently the module installs the following four ClusterIssuers:
+Currently the module installs the following ClusterIssuers:
 * letsencrypt
 * letsencrypt-staging
 * selfsigned
