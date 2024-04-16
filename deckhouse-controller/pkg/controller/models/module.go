@@ -61,7 +61,7 @@ func (dm DeckhouseModule) GetBasicModule() *modules.BasicModule {
 
 func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
 	if source == "" {
-		source = v1alpha1.SourceEmbedded
+		source = "Embedded"
 	}
 	return &v1alpha1.Module{
 		TypeMeta: metav1.TypeMeta{
