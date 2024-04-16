@@ -32,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dhctlconfig "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -73,19 +74,13 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	var config clusterConfig
 	err = yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &config)
 	if err != nil {
-		fmt.Printf("error unmarshal yaml: %v", err)
+		return fmt.Errorf("unmarshal 'cluster-configuration.yaml' failed: %w", err)
 	}
 
-	var kubernetesVersion string
+	var kubernetesVersion = dhctlconfig.DefaultKubernetesVersion
 
 	if config.KubernetesVersion != "Automatic" {
 		kubernetesVersion = config.KubernetesVersion
-	} else {
-		defaultKubernetesVersion, ok := secret.Data["deckhouseDefaultKubernetesVersion"]
-		if !ok {
-			return nil
-		}
-		kubernetesVersion = string(defaultKubernetesVersion)
 	}
 
 	input.LogEntry.Printf("kubernetesVersion: %s", kubernetesVersion)
@@ -96,7 +91,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 	v, err := semver.NewVersion(kubernetesVersion)
 	if err != nil {
-		return fmt.Errorf("version \"%s\" not being parsable: %s", kubernetesVersion, err.Error())
+		return fmt.Errorf("version %q not being parsable: %s", kubernetesVersion, err.Error())
 	}
 	// if kubernetesVersion < v1.29.0
 	if c.Check(v) {
