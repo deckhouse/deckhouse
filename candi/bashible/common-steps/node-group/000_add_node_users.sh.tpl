@@ -274,10 +274,12 @@ function main() {
 }
 
 set +e
+set -x
 
 output=$(main 2>&1)
 bb-log-info "${output}"
 
+set +x
 set -e
 {{- end  }}
 
