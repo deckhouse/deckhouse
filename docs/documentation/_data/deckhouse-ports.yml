@@ -14,6 +14,12 @@ groups:
     description:
       en: Cluster API webhook handler
       ru: Webhook-обработчик Cluster API
+  - ports: "9444"
+    protocol: TCP
+    description:
+      en: VMware Cloud Director cloud provider webhook handler
+      ru: Webhook-обработчик для cloud-провайдера VMware Cloud Director
+
 - group: MastersToNodes
   description:
     en: Master to nodes traffic
@@ -39,6 +45,12 @@ groups:
     description:
       en: runtime-audit-engine webhook
       ru: webhook компонента runtime-audit-engine
+  - ports: "8443"
+    protocol: TCP
+    description:
+      en: "*ingress-nginx* controller webhook for `HostWithFailover` inlet"
+      ru: "Webhook контроллера *ingress-nginx* для инлета `HostWithFailover`"
+
 - group: NodesToMasters
   description:
     en: Nodes to masters traffic
@@ -54,6 +66,7 @@ groups:
     description:
       en: machine-controller-manager metrics
       ru: Метрики компонента machine-controller-manager
+
 - group: NodesToNodes
   description:
     en: Nodes to nodes traffic
@@ -97,8 +110,8 @@ groups:
   - ports: "9889"
     protocol: TCP
     description:
-      en: Deckhouse metrics
-      ru: Метрики Deckhouse
+      en: Deckhouse controller metrics
+      ru: Метрики контроллера Deckhouse
   - ports: "9434"
     protocol: TCP
     description:
@@ -109,6 +122,11 @@ groups:
     description:
       en: "*node-exporter* module metrics"
       ru: "Метрики модуля *node-exporter*"
+  - ports: "10354, 10355"
+    protocol: TCP
+    description:
+      en: "*ingress-nginx* controller metrics for `HostWithFailover` inlet"
+      ru: "Метрики контроллера *ingress-nginx* для инлета `HostWithFailover`"
   - ports: "8008"
     protocol: TCP
     description:
@@ -118,7 +136,7 @@ groups:
     protocol: TCP
     description:
       en: "*kube-proxy* metrics"
-      ru: "Метрики kube-proxy*"
+      ru: "Метрики *kube-proxy*"
   - ports: "8083"
     protocol: TCP
     description:
@@ -154,6 +172,7 @@ groups:
     description:
       en: "*Deckhouse Virtualization Platform* VM live migration port"
       ru: "Живая миграция ВМ в *Deckhouse Virtualization Platform*"
+
 - group: ExternalToMaster
   description:
     en: External traffic to masters
@@ -164,6 +183,12 @@ groups:
     description:
       en: kube-apiserver for local admins
       ru: kube-apiserver для местных администраторов
+  - ports: "22, 22322"
+    protocol: TCP
+    description:
+      en: SSH for Deckhouse Kubernetes Platform initialization
+      ru: SSH для инициализации Deckhouse Kubernetes Platform
+
 - group: ExternalToFrontends
   description:
     en: External traffic to frontends
@@ -177,8 +202,8 @@ groups:
   - ports: "80, 443"
     protocol: TCP
     description:
-      en: Application ports for requests to Ingress controllers over HTTP and HTTPS
-      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS
+      en: Application ports for requests to Ingress controllers over HTTP and HTTPS, note that these ports are configurable in `IngressNginxController` resource and may vary in different setups
+      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS, обратите внимание, что эти порты настраиваются в ресурсе `IngressNginxController` и могут отличаться в разных инсталляциях
   - ports: "5416"
     protocol: UDP
     description:
@@ -189,6 +214,7 @@ groups:
     description:
       en: OpenVPN
       ru: OpenVPN
+
 - group: NodesToExternal
   description:
     en: External traffic for all nodes
@@ -214,8 +240,3 @@ groups:
     description:
       en: NTP for external time synchronization
       ru: NTP для синхронизации с внешними серверами точного времени
-  - ports: "389"
-    protocol: TCP
-    description:
-      en: LDAP
-      ru: LDAP

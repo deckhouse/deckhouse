@@ -7,6 +7,8 @@ lang: en
 If the infrastructure where Deckhouse Kubernetes Pllatform is running has requirements to limit network communication, the following conditions must be met:
 
 * [Tunneling mode](modules/021-cni-cilium/configuration.html#parameters-tunnelmode) for traffic between pods is enabled.
+* If there is integration with external systems (e.g. LDAP, SMTP or external APIs), it is required to allow network communication with them.
+* Local network communication on nodes is fully allowed.
 * Inter-node communication is allowed on the ports shown in the tables on the current page.
 
 {% include network_security_setup.liquid %}
