@@ -50,7 +50,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 77,
+  "id": 78,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -165,10 +165,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
-          },
+          "datasource": "prometheus_datasource_uid",
           "expr": "rate(metric_name[$__interval_rv])",
           "refId": "A"
         }
@@ -184,6 +181,44 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
       "type": "timeseries"
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 7,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
           "datasource": {
@@ -194,9 +229,36 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
           "refId": "A"
         }
       ],
+      "thresholds": [],
+      "timeRegions": [],
       "title": "Plugin Single Panel",
-      "type": "unknown_plugin",
-      "version": 1
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "version": 1,
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
     },
     {
       "gridPos": {
@@ -320,10 +382,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus_datasource_uid"
-          },
+          "datasource": "prometheus_datasource_uid",
           "expr": "rate(metric_name[$__interval_sx3])",
           "refId": "A"
         }
@@ -339,6 +398,38 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
       "type": "timeseries"
     },
     {
+      "cards": {
+        "cardHSpacing": 2,
+        "cardMinWidth": 5,
+        "cardVSpacing": 2
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGnYlRd",
+        "defaultColor": "#757575",
+        "exponent": 0.5,
+        "mode": "spectrum",
+        "thresholds": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "hideBranding": false,
+      "highlightCards": true,
+      "id": 8,
+      "legend": {
+        "show": true
+      },
+      "nullPointMode": "as empty",
+      "pageSize": 15,
+      "seriesFilterIndex": -1,
+      "statusmap": {
+        "ConfigVersion": "v1"
+      },
       "targets": [
         {
           "datasource": {
@@ -350,8 +441,32 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
         }
       ],
       "title": "Plugin Panel Inside Row",
-      "type": "unknown_plugin",
-      "version": 1
+      "tooltip": {
+        "extraInfo": "",
+        "freezeOnClick": true,
+        "items": [],
+        "show": true,
+        "showExtraInfo": false,
+        "showItems": false
+      },
+      "type": "flant-statusmap-panel",
+      "useMax": true,
+      "usingPagination": false,
+      "version": 1,
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "maxWidth": -1,
+        "minWidth": -1,
+        "show": true
+      },
+      "yAxisSort": "metrics",
+      "yLabel": {
+        "delimiter": "",
+        "labelTemplate": "",
+        "usingSplitLabel": false
+      }
     }
   ],
   "schemaVersion": 36,
@@ -374,14 +489,18 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
 	expected := &Messages{[]Message{
 		NewError("dashboard.json", "deprecated interval", "Panel Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy alert rule", "Panel Single Panel contains legacy alert rule: 'Alert Rule Inside Single Panel', consider using external alertmanager"),
+		NewError("dashboard.json", "legacy datasource uid", "Panel Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
 		NewError("dashboard.json", "hardcoded datasource uid", "Panel Single Panel contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Single Panel is of deprecated type: 'graph', consider using 'timeseries'"),
 		NewError("dashboard.json", "deprecated interval", "Panel Plugin Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "hardcoded datasource uid", "Panel Plugin Single Panel contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
 		NewError("dashboard.json", "deprecated interval", "Panel Panel Inside Row contains deprecated interval: 'interval_sx3', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy alert rule", "Panel Panel Inside Row contains legacy alert rule: 'Panel Inside Row Alert Rule', consider using external alertmanager"),
+		NewError("dashboard.json", "legacy datasource uid", "Panel Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
 		NewError("dashboard.json", "hardcoded datasource uid", "Panel Panel Inside Row contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Panel Inside Row is of deprecated type: 'flant-statusmap-panel', consider using 'state-timeline'"),
 		NewError("dashboard.json", "deprecated interval", "Panel Plugin Panel Inside Row contains deprecated interval: 'interval_sx4', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "hardcoded datasource uid", "Panel Plugin Panel Inside Row contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
 	}}
 
 	actual := validateGrafanaDashboardFile("dashboard.json", []byte(in))

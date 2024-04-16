@@ -58,19 +58,7 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 		return nil
 	}
 
-	dashboardPanels := make(map[string][]gjson.Result)
-
-	for _, dashboardCRDItem := range dashboardCRDItems {
-		dashboard := gjson.Parse(dashboardCRDItem.Spec.Definition)
-		dashboardTitle := dashboard.Get("title").String()
-		dashboardRows := dashboard.Get("rows").Array()
-		for _, dashboardRow := range dashboardRows {
-			rowPanels := dashboardRow.Get("panels").Array()
-			dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
-		}
-		panels := dashboard.Get("panels").Array()
-		dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], panels...)
-	}
+	dashboardPanels := extractDashboardPanels(dashboardCRDItems)
 
 	for dashboard := range dashboardPanels {
 		for _, panel := range dashboardPanels[dashboard] {
@@ -110,6 +98,34 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	return nil
+}
+
+func extractDashboardPanels(dashboardCRDItems []*DashboardCRD) map[string][]gjson.Result {
+	dashboardPanels := make(map[string][]gjson.Result)
+
+	for _, dashboardCRDItem := range dashboardCRDItems {
+		dashboard := gjson.Parse(dashboardCRDItem.Spec.Definition)
+		dashboardTitle := dashboard.Get("title").String()
+
+		dashboardRows := dashboard.Get("rows").Array()
+		for _, dashboardRow := range dashboardRows {
+			rowPanels := dashboardRow.Get("panels").Array()
+			dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
+		}
+
+		panels := dashboard.Get("panels").Array()
+		for _, panel := range panels {
+			panelType := panel.Get("type").String()
+			if panelType == "row" {
+				rowPanels := panel.Get("panels").Array()
+				dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], rowPanels...)
+			} else {
+				dashboardPanels[dashboardTitle] = append(dashboardPanels[dashboardTitle], panel)
+			}
+		}
+	}
+
+	return dashboardPanels
 }
 
 const (
