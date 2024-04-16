@@ -34,6 +34,8 @@ var (
 	EnabledByScript  = pointer.Bool(true)
 	DisabledByBundle = pointer.Bool(false)
 	DisabledByScript = pointer.Bool(false)
+
+	valuesValidator = validation.NewValuesValidator()
 )
 
 // NewModuleManager returns mocked ModuleManager to test hooks
@@ -53,7 +55,7 @@ func NewModuleManager(mods ...ModuleMock) *ModuleManagerMock {
 	return &ModuleManagerMock{
 		modules:         modulesMap,
 		enabledModules:  enabledModules,
-		valuesValidator: validation.NewValuesValidator(),
+		valuesValidator: valuesValidator,
 	}
 }
 
@@ -101,7 +103,7 @@ type ModuleMock struct {
 }
 
 func NewModule(name string, _ *bool, enabledByScript *bool) ModuleMock {
-	bm := modules.NewBasicModule(name, "mockpath", 100, nil, validation.NewValuesValidator())
+	bm := modules.NewBasicModule(name, "mockpath", 100, nil, valuesValidator)
 	return ModuleMock{
 		module:  bm,
 		enabled: enabledByScript,
