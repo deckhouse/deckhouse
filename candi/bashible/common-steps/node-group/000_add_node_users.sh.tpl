@@ -274,10 +274,7 @@ function main() {
 }
 
 set +e
-
-output=$(main 2>&1)
-bb-log-info "${output}"
-
+main
 set -e
 {{- end  }}
 
