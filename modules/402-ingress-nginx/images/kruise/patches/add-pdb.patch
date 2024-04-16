@@ -147,7 +147,7 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 3de1446b..6a30374a 100644
+index 3de1446b..ee46e6ef 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -177,8 +177,8 @@ index 3de1446b..6a30374a 100644
  
 +func (dsc *ReconcileDaemonSet) getEligibleNodesCount(ds *appsv1alpha1.DaemonSet) (int32, error) {
 +	// if the nodeSelector is set - use it to calculate the number of nodes possible to host the daemonset's pods
-+	if len(ds.Spec.NodeSelector) > 0 {
-+		nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(ds.Spec.NodeSelector).String()})
++	if len(ds.Spec.Template.Spec.NodeSelector) > 0 {
++		nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(ds.Spec.Template.Spec.NodeSelector).String()})
 +		if err != nil {
 +			return 0, err
 +		}
@@ -203,7 +203,7 @@ index 3de1446b..6a30374a 100644
 +func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled int) error {
 +	var nodeCount int32
 +	var err error
-+	nodeCount, err = dsc.getEligibleNodesCount(ds.Spec.Template.Spec.NodeSelector)
++	nodeCount, err = dsc.getEligibleNodesCount(ds)
 +	if err != nil {
 +		return err
 +	}
