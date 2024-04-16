@@ -57,12 +57,14 @@ function __main__() {
     dnsDomains=$(echo $kubeDNSConf | grep -oP  'kubernetes .*? ip6.arpa')
     publicDomainTemplate=$(context::jq -r '.review.request.object.spec.settings.modules.publicDomainTemplate' | sed s/%s.//)
 
-    if [[ $dnsDomains =~ $publicDomainTemplate  ]]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+    for domain in $dnsDomains; do
+      if [[ $publicDomainTemplate == $domain ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The publicDomainTemplate \"%s.$publicDomainTemplate\" MUST NOT match the one specified in the clusterDomain/clusterDomainAliases parameters of the resource: [\"$dnsDomains\"]." }
 EOF
-    return 0
-    fi
+      return 0
+      fi
+    done
   fi
 cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
