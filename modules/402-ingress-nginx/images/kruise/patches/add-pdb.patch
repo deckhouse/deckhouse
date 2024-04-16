@@ -147,10 +147,10 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 1934f145..f5e7bbc1 100644
+index 3de1446b..6a30374a 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+@@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
  	// newPod.Spec.NodeName = nodeName
  
  	// Added default tolerations for DaemonSet pods.
@@ -159,7 +159,7 @@ index 1934f145..f5e7bbc1 100644
  
  	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
  	return newPod
-@@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -551,6 +551,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
@@ -171,16 +171,33 @@ index 1934f145..f5e7bbc1 100644
  	// Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
  	if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
  		durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
-@@ -567,6 +572,77 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -558,6 +563,94 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  	return nil
  }
  
-+func (dsc *ReconcileDaemonSet) getEligibleNodesCount(nodeSelector map[string]string) (int32, error) {
-+	nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(nodeSelector).String()})
-+	if err != nil {
-+		return 0, err
++func (dsc *ReconcileDaemonSet) getEligibleNodesCount(ds *appsv1alpha1.DaemonSet) (int32, error) {
++	// if the nodeSelector is set - use it to calculate the number of nodes possible to host the daemonset's pods
++	if len(ds.Spec.NodeSelector) > 0 {
++		nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(ds.Spec.NodeSelector).String()})
++		if err != nil {
++			return 0, err
++		}
++		return int32(len(nodeCount.Items)), nil
 +	}
-+	return int32(len(nodeCount.Items)), nil
++
++	// if there is no nodeSelector in the spec - count the number by using nodeShouldRunDaemonPod againts each node
++	nodeList, err := dsc.nodeLister.List(labels.Everything())
++	if err != nil {
++		return 0, fmt.Errorf("couldn't get list of nodes when calculating the number of eligible nodes %#v: %v", ds, err)
++	}
++
++	var count int32
++	for _, node := range nodeList {
++		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds); shouldRun {
++			count += 1
++		}
++	}
++	return count, nil
 +}
 +
 +func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled int) error {
@@ -233,7 +250,7 @@ index 1934f145..f5e7bbc1 100644
 +				klog.Infof("Updating relevant PodDisruptionBudget %s/%s", ds.Namespace, ds.Name)
 +				toUpdate.Status.ExpectedPods = newScale.Spec.Replicas
 +
-+				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{}) 
++				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{})
 +				if err != nil {
 +					klog.Errorf("Couldn't update relevant PodDisruptionBudget status for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
 +					return err
