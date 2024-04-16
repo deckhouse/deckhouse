@@ -184,7 +184,7 @@ function main() {
     ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(";")' <<< "$node_users_json")"
     extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
 
-    nodeuser_add_error "${username}" "None"
+    nodeuser_add_error "${user_name}" "None"
 
     # check for uid > 1000
     if [ $uid -le 1000 ]; then

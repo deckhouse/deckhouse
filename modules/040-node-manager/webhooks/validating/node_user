@@ -51,9 +51,6 @@ function __main__() {
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups')
 
-  echo "$(context::jq -er '.snapshots.nodeusers[].filterResult' >/dev/null 2>&1)"
-
-  echo "${name} ${uid} ${nodeGroups}"
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
