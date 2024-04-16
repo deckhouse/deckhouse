@@ -273,7 +273,11 @@ function main() {
 
 set +e
 
-main
+error_message=$(main 2>&1)
+if error_check
+then
+  bb-log-error "${error_message}"
+fi
 
 set -e
 {{- end  }}
