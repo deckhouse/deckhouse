@@ -35,6 +35,7 @@
  - **[deckhouse-controller]** Rework the process of updating modules' statuses. [#7741](https://github.com/deckhouse/deckhouse/pull/7741)
  - **[deckhouse-controller]** Provides Deckhouse HA mode. [#7634](https://github.com/deckhouse/deckhouse/pull/7634)
  - **[deckhouse-controller]** Added module loading metrics. [#7424](https://github.com/deckhouse/deckhouse/pull/7424)
+ - **[dhctl]** Add options for dhctl mirror to pull only specific release and skip modules option. [#8063](https://github.com/deckhouse/deckhouse/pull/8063)
  - **[dhctl]** Support for creating chunked images bundles in mirror. [#8000](https://github.com/deckhouse/deckhouse/pull/8000)
  - **[extended-monitoring]** Support force image check with `image-availability-exporter`, even when workloads are disabled or suspended. [#7606](https://github.com/deckhouse/deckhouse/pull/7606)
  - **[external-module-manager]** Disable module hooks on restart. [#7582](https://github.com/deckhouse/deckhouse/pull/7582)
@@ -90,6 +91,7 @@
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
+ - **[global-hooks]** Fix K8s upgrade migration. [#8148](https://github.com/deckhouse/deckhouse/pull/8148)
  - **[global-hooks]** Fix ability to downgrade Kubernetes by more than 1 minor version. [#7279](https://github.com/deckhouse/deckhouse/pull/7279)
  - **[ingress-nginx]** Preventing istio-proxy from terminating before the ingress-controller is stopped during grace period. [#8064](https://github.com/deckhouse/deckhouse/pull/8064)
     Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
@@ -136,6 +138,7 @@
     Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - **[dhctl]** Support Deckhouse controller high availability mode during bootstrap. [#7919](https://github.com/deckhouse/deckhouse/pull/7919)
  - **[operator-prometheus]** Add documentation for the module. [#8009](https://github.com/deckhouse/deckhouse/pull/8009)
+ - **[prometheus]** Dashboards content validations improvements. [#8039](https://github.com/deckhouse/deckhouse/pull/8039)
  - **[prometheus]** Move memcached to distroless. [#7945](https://github.com/deckhouse/deckhouse/pull/7945)
     Memcached (Prometheus) will restart.
  - **[prometheus]** Update metrics rotation value. [#7560](https://github.com/deckhouse/deckhouse/pull/7560)
