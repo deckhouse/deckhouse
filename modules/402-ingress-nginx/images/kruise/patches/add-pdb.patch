@@ -147,7 +147,7 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 3de1446b..ee46e6ef 100644
+index 3de1446b..5723191a 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -193,7 +193,7 @@ index 3de1446b..ee46e6ef 100644
 +
 +	var count int32
 +	for _, node := range nodeList {
-+		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds); shouldRun {
++		if _, shouldRun := nodeShouldRunDaemonPod(node, ds); shouldRun {
 +			count += 1
 +		}
 +	}
