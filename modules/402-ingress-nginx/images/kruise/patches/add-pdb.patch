@@ -211,7 +211,7 @@ index 3de1446b..ee46e6ef 100644
 +	// if there are more nodes than Desired (cordoned and drained nodes)
 +	// we need to resync DaemonSet after some time in case the cordoned/drained nodes get deleted
 +	if nodeCount > int32(desiredNumberScheduled) {
-+		klog.Infof("Have to reconcile DaemonSet %s/%s in 60 seconds because there are more replicas available (possibly some nodes are cordoned) than desired: %d", ds.Namespace, ds.Name, nodeCount)
++		klog.Infof("Have to reconcile DaemonSet %s/%s in 60 seconds because there are more replicas available (possibly some nodes are cordoned or have intolerable taints) than desired: %d", ds.Namespace, ds.Name, nodeCount)
 +		durationStore.Push(keyFunc(ds), time.Duration(60)*time.Second)
 +	}
 +
