@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -156,11 +157,42 @@ func UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesCli
 	})
 }
 
-func AddReleaseChannelToDeckhouseModuleConfig(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+func ConfigureReleaseChannel(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+	// if we have correct semver version we should create Deckhouse Release for prevent rollback on previous version
+	// if installer version > version in release channel
+	if tag, found := config.ReadVersionTagFromInstallerContainer(); found {
+		deckhouseRelease := unstructured.Unstructured{}
+		deckhouseRelease.SetUnstructuredContent(map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "DeckhouseRelease",
+			"metadata": map[string]interface{}{
+				"name": tag,
+			},
+			"spec": map[string]interface{}{
+				"version": tag,
+			},
+		})
+
+		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
+			BreakIf(apierrors.IsAlreadyExists).
+			Run(func() error {
+				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+		if err != nil {
+			return err
+		}
+	}
+
 	if cfg.ReleaseChannel == "" {
 		return nil
 	}
-	return retry.NewLoop("Set release channel", 15, 5*time.Second).
+	// save release channel into module config we do not set it in Deckhouse mc because we want to install deckhouse only one release
+	return retry.NewLoop("Set release channel to deckhouse module config", 15, 5*time.Second).
 		BreakIf(apierrors.IsNotFound).
 		Run(func() error {
 			cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "deckhouse", metav1.GetOptions{})

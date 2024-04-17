@@ -107,7 +107,7 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()
 		if foundValidTag {
 			tag = versionTag
 		}
@@ -124,7 +124,7 @@ func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
 	return c.Registry.DockerCfg != ""
 }
 
-func readVersionTagFromInstallerContainer() (string, bool) {
+func ReadVersionTagFromInstallerContainer() (string, bool) {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
 		log.WarnF(
