@@ -84,9 +84,9 @@ spec:
           name: speaker
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 10 }}
           ports:
-            - containerPort: 7946
+            - containerPort: 7947
               name: memberlist-tcp
-            - containerPort: 7946
+            - containerPort: 7947
               name: memberlist-udp
               protocol: UDP
           livenessProbe:
