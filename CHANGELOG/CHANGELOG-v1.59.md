@@ -102,6 +102,7 @@
  - **[istio]** fix PromQL expression for alert `D8IstioDataPlaneVersionMismatch`. [#7898](https://github.com/deckhouse/deckhouse/pull/7898)
  - **[kube-proxy]** Add missing сonntrack binary to the `kube-proxy` image. [#8091](https://github.com/deckhouse/deckhouse/pull/8091)
     `kube-proxy` pods will restart.
+ - **[l2-load-balancer]** Fixes for ports conflict and hook panic. [#8160](https://github.com/deckhouse/deckhouse/pull/8160)
  - **[l2-load-balancer]** Fix missed `externalTrafficPolicy` option for L2LoadBalancer. [#7968](https://github.com/deckhouse/deckhouse/pull/7968)
  - **[monitoring-kubernetes]** Reducing the number of scans of release secrets in the cluster. [#7558](https://github.com/deckhouse/deckhouse/pull/7558)
  - **[node-manager]** Fix ClusterHasOrphanedDisks polk group. [#8094](https://github.com/deckhouse/deckhouse/pull/8094)
@@ -115,6 +116,9 @@
  - **[node-manager]** Add the ability to disable StaticInstance bootstrapping by adding the `"node.deckhouse.io/allow-bootstrap": "false"` label. [#7244](https://github.com/deckhouse/deckhouse/pull/7244)
  - **[node-manager]** Add the alert about an impossible node drain. [#6190](https://github.com/deckhouse/deckhouse/pull/6190)
  - **[operator-prometheus]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
+ - **[prometheus]** Fix grafana-v10 podAntiAffinity and environment variables. [#8166](https://github.com/deckhouse/deckhouse/pull/8166)
+    Grafana v10 deployment rolling restart.
+ - **[prometheus]** Switch Alertmanager configuration selector from `alertmanagerConfiguration` to `alertmanagerConfigSelector`. [#8158](https://github.com/deckhouse/deckhouse/pull/8158)
  - **[prometheus]** Add missing Grafana v10 `grafana-cli` binary to fix plugin installation. [#8082](https://github.com/deckhouse/deckhouse/pull/8082)
  - **[prometheus]** Fix aggregation with longterm Prometheus. [#8056](https://github.com/deckhouse/deckhouse/pull/8056)
  - **[prometheus]** Migrate from `statusmap` and `status-history` to `state-timeline` plugin. [#8040](https://github.com/deckhouse/deckhouse/pull/8040)
