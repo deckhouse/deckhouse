@@ -69,7 +69,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana-v10")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: grafana
       imagePullSecrets:
@@ -81,7 +81,7 @@ spec:
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
         - name: GF_SERVER_ROOT_URL
-          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
+          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
         {{- end }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
