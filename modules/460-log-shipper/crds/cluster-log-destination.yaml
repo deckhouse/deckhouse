@@ -390,9 +390,7 @@ spec:
                     keyField:
                       type: string
                       description: |
-                        The log [field name](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field) or tag key to use for the topic key.
-                        If the field does not exist in the log or in the tags, a blank value is used. If unspecified, the key is not sent.
-                        Kafka uses a hash of the key to choose the partition or uses round-robin if the record has no key.
+                        Allows to set the [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
                       x-doc-examples: ["host", "node", "namespace","parsed_data.app_info"]
                     sasl:
                       type: object
