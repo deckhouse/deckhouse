@@ -56,7 +56,8 @@ spec:
       containers:
         - args:
             - --host=127.0.0.1
-            - --port=7472
+            - --port=7474
+            - --ml-bindport=7947
             - --lb-class=l2-load-balancer.network.deckhouse.io
           env:
             - name: METALLB_NODE_NAME
@@ -83,16 +84,16 @@ spec:
           name: speaker
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 10 }}
           ports:
-            - containerPort: 7946
+            - containerPort: 7947
               name: memberlist-tcp
-            - containerPort: 7946
+            - containerPort: 7947
               name: memberlist-udp
               protocol: UDP
           livenessProbe:
             httpGet:
               path: /metrics
               host: 127.0.0.1
-              port: 7472
+              port: 7474
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
@@ -102,7 +103,7 @@ spec:
             httpGet:
               path: /metrics
               host: 127.0.0.1
-              port: 7472
+              port: 7474
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
@@ -118,12 +119,12 @@ spec:
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
           args:
-            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7473"
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7475"
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
           ports:
-            - containerPort: 7473
+            - containerPort: 7475
               name: https-metrics
           env:
             - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
@@ -133,7 +134,7 @@ spec:
             - name: KUBE_RBAC_PROXY_CONFIG
               value: |
                 upstreams:
-                - upstream: http://127.0.0.1:7472/metrics
+                - upstream: http://127.0.0.1:7474/metrics
                   path: /metrics
                   authorization:
                     resourceAttributes:
