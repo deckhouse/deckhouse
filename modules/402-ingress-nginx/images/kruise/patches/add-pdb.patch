@@ -147,7 +147,7 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 3de1446b..ee46e6ef 100644
+index 3de1446b..4b8cc676 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -193,7 +193,7 @@ index 3de1446b..ee46e6ef 100644
 +
 +	var count int32
 +	for _, node := range nodeList {
-+		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds); shouldRun {
++		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds, []bool{"true"}); shouldRun {
 +			count += 1
 +		}
 +	}
@@ -266,16 +266,49 @@ index 3de1446b..ee46e6ef 100644
  func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable int, updateObservedGen bool, hash string) error {
  	if int(ds.Status.DesiredNumberScheduled) == desiredNumberScheduled &&
  		int(ds.Status.CurrentNumberScheduled) == currentNumberScheduled &&
+diff --git a/pkg/controller/daemonset/daemonset_event_handler.go b/pkg/controller/daemonset/daemonset_event_handler.go
+index 26a33f3d..68c5ec35 100644
+--- a/pkg/controller/daemonset/daemonset_event_handler.go
++++ b/pkg/controller/daemonset/daemonset_event_handler.go
+@@ -284,6 +284,23 @@ func (e *nodeEventHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitin
+ }
+ 
+ func (e *nodeEventHandler) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
++	dsList := &appsv1alpha1.DaemonSetList{}
++	err := e.reader.List(context.TODO(), dsList)
++	if err != nil {
++		klog.V(4).Infof("Error enqueueing daemon sets: %v", err)
++		return
++	}
++
++	node := evt.Object.(*v1.Node)
++	for i := range dsList.Items {
++		ds := &dsList.Items[i]
++		if shouldSchedule, _ := nodeShouldRunDaemonPod(node, ds); shouldSchedule {
++			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
++				Name:      ds.GetName(),
++				Namespace: ds.GetNamespace(),
++			}})
++		}
++	}
+ }
+ 
+ func (e *nodeEventHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 diff --git a/pkg/controller/daemonset/daemonset_util.go b/pkg/controller/daemonset/daemonset_util.go
-index 420188f0..3209f43e 100644
+index 420188f0..40f239bc 100644
 --- a/pkg/controller/daemonset/daemonset_util.go
 +++ b/pkg/controller/daemonset/daemonset_util.go
-@@ -100,6 +100,8 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
+@@ -98,8 +98,12 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
+ //   - shouldContinueRunning:
+ //     Returns true when a daemonset should continue running on a node if a daemonset pod is already
  //     running on that node.
- func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet) (bool, bool) {
+-func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet) (bool, bool) {
++func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet, countReplicasFlag ...bool) (bool, bool) {
  	pod := NewPod(ds, node.Name)
 +	// add standard demonset tolerations
-+	util.AddOrUpdateDaemonPodTolerations(&pod.Spec)
++	if len(countReplicasFlag) > 0 {
++		util.AddOrUpdateDaemonPodTolerations(&pod.Spec)
++	}
  
  	// If the daemon set specifies a node name, check that it matches with node.Name.
  	if !(ds.Spec.Template.Spec.NodeName == "" || ds.Spec.Template.Spec.NodeName == node.Name) {
