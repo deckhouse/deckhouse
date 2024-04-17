@@ -50,6 +50,14 @@ function __main__() {
   name=$(context::jq -r '.review.request.object.metadata.name')
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
+
+  if ! context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] length==0' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: \"*\"" }
+EOF
+    return 0
+  fi
+
   for nodeGroup in $nodeGroups; do
     if [ $nodeGroup = "*" ] && [! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] length==0' >/dev/null 2>&1]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
@@ -58,13 +66,6 @@ EOF
     fi
 
     if ! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] length==0' >/dev/null 2>&1; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
-EOF
-      return 0
-    fi
-
-    if ! context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] length==0' >/dev/null 2>&1; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
