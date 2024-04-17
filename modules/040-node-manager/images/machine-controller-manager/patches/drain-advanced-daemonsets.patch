@@ -1,5 +1,5 @@
 diff --git a/pkg/controller/drain.go b/pkg/controller/drain.go
-index 5a4f3f3e..91912cf6 100644
+index 5a4f3f3e..10bc79de 100644
 --- a/pkg/controller/drain.go
 +++ b/pkg/controller/drain.go
 @@ -255,7 +255,7 @@ func (o *DrainOptions) daemonsetFilter(pod api.Pod) (bool, *warning, *fatal) {
@@ -7,7 +7,7 @@ index 5a4f3f3e..91912cf6 100644
  	// Such pods will be deleted if --force is used.
  	controllerRef := o.getPodController(pod)
 -	if controllerRef == nil || controllerRef.Kind != "DaemonSet" {
-+	if controllerRef == nil || controllerRef.Kind != "DaemonSet" || (controllerRef.Kind != "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1") {
++	if controllerRef == nil || controllerRef.Kind != "DaemonSet" || (controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1") {
  		return true, nil, nil
  	}
  	if !o.IgnoreDaemonsets {
