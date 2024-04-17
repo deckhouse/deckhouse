@@ -114,7 +114,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
 		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
-		if incorrectNodes, ok := hasIncorrectNodeUserErrors(nuForClear.statusErrors, nodes); ok {
+		if incorrectNodes, ok := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); ok {
 			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
