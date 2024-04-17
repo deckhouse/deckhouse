@@ -24,9 +24,9 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="dev"
+  - export VERSION="main"
   - mkdir -p /go/src/app
-  - git clone --depth 1 --branch main {{ $.SOURCE_REPO }}/deckhouse/dvp-csi-driver.git /go/src/app
+  - git clone --depth 1 --branch "${VERSION}" {{ $.SOURCE_REPO }}/deckhouse/dvp-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
