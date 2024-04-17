@@ -193,7 +193,7 @@ index 3de1446b..4b8cc676 100644
 +
 +	var count int32
 +	for _, node := range nodeList {
-+		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds, []bool{"true"}); shouldRun {
++		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds, true); shouldRun {
 +			count += 1
 +		}
 +	}
