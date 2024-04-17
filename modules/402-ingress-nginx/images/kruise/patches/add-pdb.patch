@@ -147,7 +147,7 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 3de1446b..4b8cc676 100644
+index 3de1446b..0e1f5efb 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -295,19 +295,24 @@ index 26a33f3d..68c5ec35 100644
  
  func (e *nodeEventHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 diff --git a/pkg/controller/daemonset/daemonset_util.go b/pkg/controller/daemonset/daemonset_util.go
-index 420188f0..40f239bc 100644
+index 420188f0..91911fbe 100644
 --- a/pkg/controller/daemonset/daemonset_util.go
 +++ b/pkg/controller/daemonset/daemonset_util.go
-@@ -98,8 +98,12 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
+@@ -98,8 +98,16 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
  //   - shouldContinueRunning:
  //     Returns true when a daemonset should continue running on a node if a daemonset pod is already
  //     running on that node.
 -func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet) (bool, bool) {
+-	pod := NewPod(ds, node.Name)
 +func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet, countReplicasFlag ...bool) (bool, bool) {
- 	pod := NewPod(ds, node.Name)
-+	// add standard demonset tolerations
++	var pod *corev1.Pod
++	// add standard demonset tolerations if countReplicasFlag isn't empty
 +	if len(countReplicasFlag) > 0 {
++		pod = &corev1.Pod{Spec: ds.Spec.Template.Spec, ObjectMeta: ds.Spec.Template.ObjectMeta}
++		pod.Namespace = ds.Namespace
 +		util.AddOrUpdateDaemonPodTolerations(&pod.Spec)
++	} else {
++		pod = NewPod(ds, node.Name)
 +	}
  
  	// If the daemon set specifies a node name, check that it matches with node.Name.
