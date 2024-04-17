@@ -159,8 +159,8 @@ groups:
   - ports: "9942"
     protocol: TCP
     description:
-      en: sds-replicated-volume node agent metrics
-      ru: Метрики агента sds-replicated-volume
+      en: "*sds-replicated-volume* node agent metrics"
+      ru: "Метрики агента *sds-replicated-volume*"
   - ports: "7000-7999"
     protocol: TCP
     description:
@@ -169,8 +169,8 @@ groups:
   - ports: "49152, 49153"
     protocol: TCP
     description:
-      en: "*Deckhouse Virtualization Platform* VM live migration port"
-      ru: "Живая миграция ВМ в *Deckhouse Virtualization Platform*"
+      en: "Deckhouse Virtualization Platform VM live migration port"
+      ru: "Живая миграция ВМ в Deckhouse Virtualization Platform"
   - ports: "7946, 7947"
     protocol: TCP
     description:
