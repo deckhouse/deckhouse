@@ -399,6 +399,7 @@ function run-test() {
 
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
+  multitenancy_projects_sync || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
@@ -738,6 +739,32 @@ END_SCRIPT
   write_deckhouse_logs
 
   return 1
+}
+
+# multitenancy_projects_sync checks if all in cluster multitenancy projects sync.
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+function multitenancy_projects_sync() {
+  test_multitenancy_script=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_multitenancy_script.sh")
+
+  testRunAttempts=50
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${test_multitenancy_script}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test multitenancy script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
 }
 
 # wait_cluster_ready constantly checks if cluster components become ready.

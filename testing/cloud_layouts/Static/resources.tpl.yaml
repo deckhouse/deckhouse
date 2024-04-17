@@ -52,3 +52,75 @@ spec:
     - effect: NoExecute
       key: dedicated
       value: worker
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test-project-1
+spec:
+  description: Test project
+  projectTemplateName: default
+  parameters:
+    resourceQuota:
+      requests:
+        cpu: 5
+        memory: 5Gi
+        storage: 1Gi
+      limits:
+        cpu: 5
+        memory: 5Gi
+    administrators:
+    - subject: User
+      name: admin1
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test-project-2
+spec:
+  description: Test project
+  projectTemplateName: secure
+  parameters:
+    resourceQuota:
+      requests:
+        cpu: 5
+        memory: 5Gi
+        storage: 1Gi
+      limits:
+        cpu: 5
+        memory: 5Gi
+    administrators:
+    - subject: User
+      name: admin2
+    allowedGIDs:
+      max: 3000
+      min: 2000
+    allowedUIDs:
+      max: 4000
+      min: 3000
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test-project-3
+spec:
+  description: Test project
+  projectTemplateName: secure-with-dedicated-nodes
+  parameters:
+    resourceQuota:
+      requests:
+        cpu: 5
+        memory: 5Gi
+        storage: 1Gi
+      limits:
+        cpu: 5
+        memory: 5Gi
+    administrators:
+    - subject: User
+      name: admin3
+    allowedGIDs:
+      max: 3000
+      min: 2000
+    allowedUIDs:
+      max: 4000
+      min: 3000

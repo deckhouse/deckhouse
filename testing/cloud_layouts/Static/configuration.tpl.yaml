@@ -59,3 +59,11 @@ spec:
   settings:
     earlyOomEnabled: false
   version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: multitenancy-manager
+spec:
+  enabled: true
+  version: 1
