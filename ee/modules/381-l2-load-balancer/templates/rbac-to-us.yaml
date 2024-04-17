@@ -8,6 +8,7 @@ metadata:
 rules:
 - apiGroups: ["apps"]
   resources: ["daemonsets/prometheus-metrics", "deployments/prometheus-metrics"]
+  resourceNames: ["l2-load-balancer", "speaker"]
   verbs: ["get"]
 
 {{- if (.Values.global.enabledModules | has "prometheus") }}
