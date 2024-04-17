@@ -69,17 +69,21 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		Status: CheckStatusInSync,
 	}
 
-	status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
-	if err != nil {
-		return nil, fmt.Errorf("unable to check infra state: %w", err)
-	}
-	res.Status = res.Status.CombineStatus(status)
-
-	if status == CheckStatusDestructiveOutOfSync {
-		res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+	if metaConfig.ClusterType == config.CloudClusterType {
+		status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
 		if err != nil {
-			return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+			return nil, fmt.Errorf("unable to check infra state: %w", err)
 		}
+		res.Status = res.Status.CombineStatus(status)
+
+		if status == CheckStatusDestructiveOutOfSync {
+			res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+			if err != nil {
+				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+			}
+		}
+
+		res.StatusDetails.Statistics = *statusDetails
 	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
@@ -87,9 +91,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		return nil, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
-
 	res.StatusDetails = StatusDetails{
-		Statistics:          *statusDetails,
 		ConfigurationStatus: configurationStatus,
 	}
 
