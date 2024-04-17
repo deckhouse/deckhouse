@@ -51,8 +51,7 @@ function __main__() {
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
   for nodeGroup in $nodeGroups; do
-    if [ nodeGroup = "*" ] && [! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] length==0' >/dev/null 2>&1]; then
-      echo "--> *"
+    if [ $nodeGroup = "*" ] && [! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] length==0' >/dev/null 2>&1]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
@@ -71,7 +70,6 @@ EOF
 EOF
       return 0
     fi
-
   done
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
