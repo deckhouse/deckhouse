@@ -181,7 +181,7 @@ groups:
     description:
       en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
       ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
-  - ports: "7943, 7974"
+  - ports: "7473, 7475"
     protocol: TCP
     description:
       en: "*metallb* and *l2-load-balancer* speakers metrics"
