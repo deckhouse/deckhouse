@@ -53,7 +53,7 @@ function __main__() {
 
   if ! context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] length==0' >/dev/null 2>&1; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: \"*\"" }
+{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: --> \"*\"" }
 EOF
     return 0
   fi
