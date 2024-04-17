@@ -53,9 +53,10 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry   bool
-	MasterNodeSelector bool
-	KubeadmBootstrap   bool
+	IsSecureRegistry       bool
+	MasterNodeSelector     bool
+	KubeadmBootstrap       bool
+	ExternalModulesEnabled bool
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -212,6 +213,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			HostNetwork:        true,
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
+			SecurityContext: &apiv1.PodSecurityContext{
+				RunAsUser:    pointer.Int64(0),
+				RunAsNonRoot: pointer.Bool(false),
+			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
 			},
@@ -373,8 +378,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
-	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
+	if params.ExternalModulesEnabled {
+		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+	}
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
