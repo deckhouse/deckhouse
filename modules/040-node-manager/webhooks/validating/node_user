@@ -59,7 +59,7 @@ EOF
   fi
 
   for nodeGroup in "$nodeGroups"; do
-    if [[ "$nodeGroup" == "*" ]] && [ $(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length') -gt 0 ]; then
+    if [ "$nodeGroup" = "*" ] && [ $(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length') -gt 0 ]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
