@@ -53,7 +53,7 @@ func MirrorDeckhouseToLocalFS(
 	modules := make([]mirror.Module, 0)
 
 	if !mirrorCtx.SkipModulesPull {
-		log.InfoF("Fetching Deckhouse modules list...\t")
+		log.InfoF("Fetching Deckhouse external modules list...\t")
 		modules, err = mirror.GetDeckhouseExternalModules(mirrorCtx)
 		if err != nil {
 			return fmt.Errorf("get Deckhouse modules: %w", err)
@@ -69,20 +69,15 @@ func MirrorDeckhouseToLocalFS(
 	log.InfoLn("✅")
 
 	mirror.FillLayoutsImages(mirrorCtx, layouts, versions)
-
-	if !mirrorCtx.SkipModulesPull {
-		log.InfoF("Searching for Deckhouse modules images...\t")
-		if err = mirror.FindDeckhouseModulesImages(mirrorCtx, layouts); err != nil {
-			return fmt.Errorf("find Deckhouse modules images: %w", err)
-		}
-		log.InfoLn("✅")
+	if err = layouts.TagsResolver.ResolveTagsDigestsForImageLayouts(mirrorCtx, layouts); err != nil {
+		return fmt.Errorf("Resolve images tags to digests: %w", err)
 	}
 
 	if err = mirror.PullInstallers(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull installers: %w", err)
 	}
 
-	log.InfoF("Searching for Deckhouse modules digests...\t")
+	log.InfoF("Searching for Deckhouse built-in modules digests...\t")
 	for imageTag := range layouts.InstallImages {
 		digests, err := mirror.ExtractImageDigestsFromDeckhouseInstaller(mirrorCtx, imageTag, layouts.Install)
 		if err != nil {
@@ -111,6 +106,11 @@ func MirrorDeckhouseToLocalFS(
 	}
 
 	if !mirrorCtx.SkipModulesPull {
+		log.InfoF("Searching for Deckhouse external modules images...\t")
+		if err = mirror.FindDeckhouseModulesImages(mirrorCtx, layouts); err != nil {
+			return fmt.Errorf("find Deckhouse modules images: %w", err)
+		}
+		log.InfoLn("✅")
 		if err = mirror.PullModules(mirrorCtx, layouts); err != nil {
 			return fmt.Errorf("pull Deckhouse modules: %w", err)
 		}
