@@ -37,9 +37,9 @@ const (
 	nodeUserForClearSnapName = "nodeuser_for_clear"
 )
 
-type nodeNodeUsersForClear struct {
+type nodeUsersForClear struct {
 	Name         string
-	statusErrors map[string]string
+	StatusErrors map[string]string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -93,7 +93,7 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, err
 	}
 
-	return nodeNodeUsersForClear{
+	return nodeUsersForClear{
 		Name:         nodeUser.Name,
 		statusErrors: nodeUser.Status.Errors,
 	}, nil
@@ -114,7 +114,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	}
 
 	for _, item := range nodeUserSnap {
-		nuForClear := item.(nodeNodeUsersForClear)
+		nuForClear := item.(nodeUsersForClear)
 		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
 		if incorrectNodes, ok := hasIncorrectNodeUserErrors(nuForClear.statusErrors, nodes); ok {
 			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
