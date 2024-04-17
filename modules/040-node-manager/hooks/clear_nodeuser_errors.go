@@ -19,8 +19,6 @@
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -67,7 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			WaitForSynchronization:       pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(true),
-			ApiVersion:                   "v1",
+			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeUser",
 			FilterFunc:                   applyNodeUsersForClearFilter,
 		},
@@ -95,7 +93,7 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	return nodeUsersForClear{
 		Name:         nodeUser.Name,
-		statusErrors: nodeUser.Status.Errors,
+		StatusErrors: nodeUser.Status.Errors,
 	}, nil
 }
 
@@ -141,16 +139,17 @@ func hasIncorrectNodeUserErrors(nodeUserStatusError map[string]string, nodes map
 }
 
 func clearNodeUserIncorrectErrors(nodeUserName string, incorrectNodes []string, input *go_hook.HookInput) error {
-	for _, node := range incorrectNodes {
-		jsonPatch := struct {
-			Op   string `json:"op"`
-			Path string `json:"path"`
-		}{
-			Op:   "remove",
-			Path: fmt.Sprintf("/status/errors/%s", node),
-		}
-		input.LogEntry.Debugf("clearErrors--> jsonPatch: %v", jsonPatch)
-		input.PatchCollector.JSONPatch(jsonPatch, "v1", "NodeUser", "", nodeUserName, object_patch.WithSubresource("status"))
+	patch := map[string]map[string]map[string]interface{}{
+		"status": {
+			"errors": {},
+		},
 	}
+
+	for _, node := range incorrectNodes {
+		patch["status"]["errors"][node] = nil
+	}
+
+	input.LogEntry.Debugf("clearErrors--> patch: %v", patch)
+	input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeUser", "", nodeUserName, object_patch.WithSubresource("/status"))
 	return nil
 }
