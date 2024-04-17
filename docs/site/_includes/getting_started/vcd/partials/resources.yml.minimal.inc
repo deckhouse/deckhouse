@@ -1,21 +1,20 @@
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cr.html
+# [<en>] hhttps://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-vsphere/cr.html
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-vcd/cr.html
 apiVersion: deckhouse.io/v1
-kind: VsphereInstanceClass
+kind: VCDInstanceClass
 metadata:
   name: worker
 spec:
-  numCPUs: 8
-  memory: 16384
-  # [<en>] VM disk size.
-  # [<ru>] Размер диска для виртуальной машины.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  rootDiskSize: 70
+  rootDiskSizeGb: 50
+  sizingPolicy: *!CHANGE_SIZING_POLICY*
+  storageProfile: *!CHANGE_STORAGE_PROFILE*
+  # [<en>] The name of the image, taking into account the vCloudDirector without catalog path.
+  # [<en>] Example: "catalog/ubuntu-jammy-22.04".
+  # [<ru>] Имя образа, созданного с без учета каталога размещения образа в vCloudDirector.
+  # [<ru>] Пример: "catatlog/ubuntu-jammy-22.04".
   template: *!CHANGE_TEMPLATE_NAME*
-  mainNetwork: *!CHANGE_NETWORK_NAME*
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup
@@ -28,24 +27,12 @@ metadata:
 spec:
   cloudInstances:
     classReference:
-      kind: VsphereInstanceClass
+      kind: VCDInstanceClass
       name: worker
-    # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
-    # [<en>] You might consider changing this.
-    # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
-    # [<ru>] Возможно, захотите изменить.
-    maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone.
-    # [<ru>] Минимальное количество инстансов в каждой зоне.
+    maxPerZone: 2
+    maxSurgePerZone: 0
+    maxUnavailablePerZone: 0
     minPerZone: 1
-    # [<en>] List of availability zones to create instances in.
-    # [<ru>] Список зон, в которых создаются инстансы.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    zones:
-    - *!CHANGE_ZONE_TAG_NAME*
-  disruptions:
-    approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of NGINX Ingress controller.

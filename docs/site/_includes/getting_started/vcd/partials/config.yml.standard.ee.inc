@@ -28,7 +28,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
+  imagesRepo: registry.deckhouse.ru/deckhouse/ee
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
@@ -96,85 +96,118 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  enabled: true
+---
+# [<en>] metallb module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/380-metallb/configuration.html
+# [<ru>] Настройки модуля metallb.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/380-metallb/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  version: 1
+  enabled: true
+  settings:
+      # [<ru>] Настройки metaillb-пула для входящего трафика.
+      # [<ru>] https://deckhouse.ru/documentation/v1/modules/380-metallb/configuration.html#parameters-addresspools
+      # [<en>] Metallb pool settings for incoming traffic.
+      # [<en>] https://deckhouse.io/documentation/v1/modules/380-metallb/configuration.html#parameters-addresspools
+    addressPools:
+    - addresses:
+      - *!CHANGE_SUBNET_METALLB_POOL*.10/32
+      name: frontend-pool
+      protocol: layer2
+    # [<ru>] Размещение спикера на frontend-узлах.
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/380-metallb/configuration.html#parameters-speaker
+    # [<en>] Speaker placement on frontend hosts.
+    # [<en>] https://deckhouse.io/documentation/v1/modules/380-metallb/configuration.html#parameters-speaker
+    speaker:
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
+      tolerations:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        operator: Equal
+        value: frontend
+---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: VsphereClusterConfiguration
+internalNetworkCIDR: 10.15.11.0/24
+kind: VCDClusterConfiguration
 layout: Standard
-# [<en>] vCenter API access parameters
-# [<ru>] параметры доступа к API vCenter
+masterNodeGroup:
+  instanceClass:
+    etcdDiskSizeGb: 10
+    # [<en>] List of IP addresses for control-plane node.
+    # [<en>] We recommend using .2, .3 .4 addresses, for example: 10.15.11.2.
+    # [<ru>] Список IP-адресов для control-plane нод.
+    # [<ru>] Рекомендуем использовать .2, .3 .4 адреса, например: 10.15.11.2.
+    mainNetworkIPAddresses:
+    - !CHANGE_SUBNET*.2
+    rootDiskSizeGb: 40
+    sizingPolicy: *!CHANGE_SIZING_POLICY*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
+    # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
+    # [<en>] Example: "catalog/ubuntu-jammy-22.04".
+    # [<ru>] Имя образа, созданного с учетом каталога размещения образа в vCloudDirector.
+    # [<ru>] Пример: "catatlog/ubuntu-jammy-22.04".
+    template: *!CHANGE_TEMPLATE_NAME*
+  replicas: 1
+nodeGroups:
+- instanceClass:
+    mainNetworkIPAddresses:
+    - !CHANGE_SUBNET*.11
+    rootDiskSizeGb: 40
+    sizingPolicy: *!CHANGE_SIZING_POLICY*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
+    # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
+    # [<en>] Example: "catalog/ubuntu-jammy-22.04".
+    # [<ru>] Имя образа, созданного с учетом каталога размещения образа в vCloudDirector.
+    # [<ru>] Пример: "catatlog/ubuntu-jammy-22.04".
+    template: flant-df-lab_DC1/ubuntu-22.04-template-23-03
+  name: frontend
+  replicas: 1
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/frontend: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
+# [<en>] vCloud Director API access parameters
+# [<ru>] параметры доступа к API vCloud Director
 provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
-  # [<ru>] Укажите true, если vCenter использует самоподписанный сертификат,
+  # [<ru>] Укажите true, если vCloud Directorиспользует самоподписанный сертификат,
   # [<ru>] иначе укажите false (или удалите строку с параметром insecure).
-  # [<en>] Set to true if vCenter has a self-signed certificate,
+  # [<en>] Set to true if vCloud Director has a self-signed certificate,
   # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
-# [<ru>] Укажите false, если vSphere DRS выключен,
-# [<ru>] иначе укажите true (или удалите строку с параметром useNestedResourcePool).
-# [<en>] Set to false if vSphere DRS is turned off,
-# [<en>] otherwise set true (or delete the string below with the useNestedResourcePool parameter).
-useNestedResourcePool: *!CHANGE_INSECURE*
-# [<en>] Path to a Folder in which VirtualMachines will be created.
-# [<en>] The folder itself will be created by the Deckhouse Installer.
-# [<ru>] Путь до Folder, в котором будут создаваться виртуальные машины.
-# [<ru>] Сам Folder будет создан Deckhouse Installer'ом.
-vmFolderPath: *!CHANGE_FOLDER*
-# [<en>] Region and zone tag category names.
-# [<ru>] Имена категорий тегов регионов и зон.
-regionTagCategory: k8s-region
-zoneTagCategory: k8s-zone
-# [<en>] Region and zone tag names in which cluster will operate.
-# [<ru>] Имена тегов зон и регионов, в которых будет работать кластер.
-region: *!CHANGE_REGION_TAG_NAME*
-zones:
-- *!CHANGE_ZONE_TAG_NAME*
+organization: *!CHANGE_ORG*
+virtualApplicationName: *!CHANGE_VAPP*
+virtualDataCenter: *!CHANGE__DC*
+# [<en>] Внутренная сеть узлов.
+# [<ru>] Internal network name.
+mainNetwork: *!CHANGE_SSH_KEY_MAIN_NETWORK*
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
-# [<en>] Name of the External Network which has access to the Internet.
-# [<en>] IP addresses from the External Network sets as ExternalIP of Node object.
-# [<en>] Optional parameter.
-# [<ru>] Имя External Network, у которой есть доступ в интернет.
-# [<ru>] IP-адреса из External Network проставляются как ExternalIP объекта Node.
-# [<ru>] Опциональный параметр.
-externalNetworkNames:
-- *!CHANGE_NETWORK_NAME*
-# [<en>] Name of the Internal Network that will be used for traffic between nodes.
-# [<en>] IP addresses from the Internal Network sets as InternalIP of Node object.
-# [<en>] Optional parameter.
-# [<ru>] Имя Internal Network, которая будет использоваться для трафика между узлами, в данном примере идентично externalNetworkNames.
-# [<ru>] IP-адреса из Internal Network проставляются как InternalIP объекта Node.
-# [<ru>] Опциональный параметр.
-internalNetworkNames:
-- *!CHANGE_NETWORK_NAME*
-# [<en>] Address space of the cluster's nodes.
-# [<ru>] Адресное пространство узлов кластера.
-internalNetworkCIDR: 10.90.0.0/24
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    numCPUs: 4
-    memory: 8192
-    rootDiskSize: 50
-    # [<en>] The name of the image, taking into account the vCenter folder path.
-    # [<en>] Example: "folder/ubuntu-jammy-22.04".
-    # [<ru>] Имя образа, созданного с учетом папки размещения образа в vCenter.
-    # [<ru>] Пример: "folder/ubuntu-jammy-22.04".
-    template: *!CHANGE_TEMPLATE_NAME*
-    datastore: *!CHANGE_DATASTORE_NAME*
-    # [<en>] Main network connected to node.
-    # [<ru>] Основная сеть подключенная к узлу.
-    mainNetwork: *!CHANGE_NETWORK_NAME*
-    # [<en>] Additional networks connected to node.
-    # [<en>] Optional parameter.
-    # [<ru>] Дополнительные сети, подключенные к узлу.
-    # [<ru>] Опциональный параметр.
-    additionalNetworks:
-    - *!CHANGE_NETWORK_NAME*
+
