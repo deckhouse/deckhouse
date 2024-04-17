@@ -1,0 +1,14 @@
+l2-load-balancer:
+  fixes:
+    - summary: Fixes for ports conflict and hook panic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8160
+prometheus:
+  fixes:
+    - summary: Fix grafana-v10 podAntiAffinity and environment variables.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8166
+      impact: Grafana v10 deployment rolling restart.
+    - summary: >-
+        Switch Alertmanager configuration selector from `alertmanagerConfiguration` to
+        `alertmanagerConfigSelector`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8158
+
