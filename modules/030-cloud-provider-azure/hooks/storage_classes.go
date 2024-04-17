@@ -30,6 +30,7 @@ type StorageClass struct {
 	CachingMode       string `json:"cachingMode,omitempty"`
 	DiskIOPSReadWrite int64  `json:"diskIOPSReadWrite,omitempty"`
 	DiskMBpsReadWrite int64  `json:"diskMBpsReadWrite,omitempty"`
+	Tags              string `json:"tags,omitempty"`
 }
 
 var storageClassesConfig = []StorageClass{
@@ -80,6 +81,7 @@ func storageClasses(input *go_hook.HookInput) error {
 			Type:              sc.Get("type").String(),
 			DiskIOPSReadWrite: sc.Get("diskIOPSReadWrite").Int(),
 			DiskMBpsReadWrite: sc.Get("diskMBpsReadWrite").Int(),
+			Tags:              sc.Get("tags").String(),
 		})
 	}
 

@@ -35,3 +35,6 @@ properties:
             diskMBpsReadWrite:
               description: |
                 Скорость обращения к диску в `MBps` (лимит 256 KiB/s на каждый IOPS).
+            tags:
+              description: |
+                Azure disk [теги](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources)
