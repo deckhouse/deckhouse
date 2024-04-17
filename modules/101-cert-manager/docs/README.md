@@ -2,7 +2,7 @@
 title: "The cert-manager module"
 ---
 
-This module installs the reliable and highly available cert-manager v1.12.3 [release](https://github.com/jetstack/cert-manager).
+This module installs the reliable and highly available cert-manager v1.12.9 [release](https://github.com/cert-manager/cert-manager).
 
 The installation process automatically takes into account cluster aspects:
 - the component (webhook) that the `kube-apiserver` is accessing is installed on master nodes;
@@ -17,7 +17,7 @@ The module has all the features of the original cert-manager, including:
 - Issuing self-signed certificates;
 - Keeping certificates up-to-date, reissuing them automatically, etc.
 
-Changes to the original [cert-manager](https://github.com/jetstack/cert-manager) were made so that the `cm-acme-http-solver` Pods could run on master and dedicated nodes.
+Changes to the original [cert-manager](https://github.com/cert-manager/cert-manager) were made so that the `cm-acme-http-solver` Pods could run on master and dedicated nodes.
 
 ## Monitoring
 

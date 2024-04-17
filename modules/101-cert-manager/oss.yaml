@@ -1,6 +1,6 @@
 - name: cert-manager
-  link: https://github.com/jetstack/cert-manager
+  link: https://github.com/cert-manager/cert-manager
   description: A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources.
-  logo: https://github.com/jetstack/cert-manager/raw/master/logo/logo.png
+  logo: https://github.com/cert-manager/cert-manager/raw/master/logo/logo.png
   licence: Apache License 2.0
 

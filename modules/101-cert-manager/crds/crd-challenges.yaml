@@ -8,7 +8,7 @@ metadata:
     module: 'cert-manager'
     app.kubernetes.io/name: 'cert-manager'
     app.kubernetes.io/instance: 'cert-manager'
-    app.kubernetes.io/version: 'v1.12.3'
+    app.kubernetes.io/version: 'v1.12.9'
 spec:
   group: acme.cert-manager.io
   names:

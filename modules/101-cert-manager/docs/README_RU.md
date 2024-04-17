@@ -2,7 +2,7 @@
 title: "Модуль cert-manager"
 ---
 
-Устанавливает надежную и высокодоступную инсталляцию cert-manager [release v1.12.3](https://github.com/jetstack/cert-manager).
+Устанавливает надежную и высокодоступную инсталляцию cert-manager [release v1.12.9](https://github.com/cert-manager/cert-manager).
 
 При установке модуля автоматически учитываются особенности кластера:
 - компонент (webhook), к которому обращается `kube-apiserver`, устанавливается на master-узлы;
@@ -17,7 +17,7 @@ title: "Модуль cert-manager"
 - выпуск самоподписанных сертификатов;
 - поддержку актуальности сертификатов, автоматический перевыпуск и т. д.
 
-Изменения в оригинальный [cert-manager](https://github.com/jetstack/cert-manager) были внесены, чтобы поды `cm-acme-http-solver` могли выполняться на master-узлах и выделенных узлах.
+Изменения в оригинальный [cert-manager](https://github.com/cert-manager/cert-manager) были внесены, чтобы поды `cm-acme-http-solver` могли выполняться на master-узлах и выделенных узлах.
 
 ## Мониторинг
 
