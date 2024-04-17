@@ -51,24 +51,21 @@ function __main__() {
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
 
-  echo "$(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))]')"
-  if ! context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] | length==0' >/dev/null 2>&1; then
+  if [ $(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] | length') -gt 0 ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: --> \"*\"" }
+{"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: \"*\"" }
 EOF
     return 0
   fi
 
   for nodeGroup in $nodeGroups; do
-    echo "$(context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length==0')"
-    echo "$(context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] | length==0')"
-    if [ "$nodeGroup" = "*" ] && [! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length==0' >/dev/null 2>&1]; then
+    if [ "$nodeGroup" = "*" ] && [ $(context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length') -gt 0 ]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
     fi
 
-    if ! context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] | length==0' >/dev/null 2>&1; then
+    if [ $(context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] | length') -gt 0 ]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
