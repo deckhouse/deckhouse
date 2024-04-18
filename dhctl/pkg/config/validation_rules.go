@@ -119,7 +119,7 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 			Image     string `yaml:"image"`     // GCPClusterConfiguration
 			ImageID   string `yaml:"imageID"`   // YandexClusterConfiguration
 			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration
-			Template  string `yaml:"template"`  // VsphereClusterConfiguration,VCDClusterConfiguration
+			Template  string `yaml:"template"`  // VsphereClusterConfiguration,VCDClusterConfiguration,ZvirtClusterConfiguration
 		} `yaml:"instanceClass"`
 	}
 
