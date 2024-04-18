@@ -19,15 +19,21 @@ import (
 )
 
 var (
-	ServerHost string
-	ServerPort int
+	ServerNetwork            string
+	ServerAddress            string
+	ServerParallelTasksLimit int
 )
 
 func DefineServerFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("host", "").
-		Envar(configEnvName("SERVER_HOST")).
-		StringVar(&ServerHost)
-	cmd.Flag("port", "").
-		Envar(configEnvName("SERVER_PORT")).
-		IntVar(&ServerPort)
+	cmd.Flag("server-network", "").
+		Envar(configEnvName("SERVER_NETWORK")).
+		Default("tcp").
+		EnumVar(&ServerNetwork, "tcp", "unix")
+	cmd.Flag("server-address", "").
+		Envar(configEnvName("SERVER_ADDRESS")).
+		StringVar(&ServerAddress)
+	cmd.Flag("server-parallel-tasks-limit", "").
+		Envar(configEnvName("SERVER_PARALLEL_TASKS_LIMIT")).
+		Default("10").
+		IntVar(&ServerParallelTasksLimit)
 }
