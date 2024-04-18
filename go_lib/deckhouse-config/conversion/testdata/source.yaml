@@ -1,0 +1,27 @@
+simpleField: simpleValue
+objectField:
+  arrayFieldInObjectValue:
+    - value1
+    - value2
+    - value3
+  mapFieldInObjectValue:
+    key1: val1
+    key2: val2
+  simpleFieldInObjectValue: 2
+arrayField:
+  - val1
+  - val2
+  - val3
+mapField:
+  simpleFieldInObjectValue: 2
+  arrayFieldInMapValue:
+    - v1
+    - v2
+    - v3
+  mapFieldInObjectValue:
+    k1: 1
+    k2: 2
+objectFirst:
+  check: true
+objectForDelete:
+  key: val

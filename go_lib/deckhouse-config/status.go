@@ -157,17 +157,11 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 		}
 	}
 
-	chain := conversion.Registry().Chain(cfg.GetName())
-
-	// Run conversions and validate versioned settings to warn about invalid spec.settings.
-	// TODO(future): add cache for these errors, for example in internal values.
-	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
-		res := Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
-			return ModuleConfigStatus{
-				Version: "",
-				Message: fmt.Sprintf("Error: %s", res.Error),
-			}
+	res := Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		return ModuleConfigStatus{
+			Version: "",
+			Message: fmt.Sprintf("Error: %s", res.Error),
 		}
 	}
 
@@ -175,17 +169,18 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 	// Also create warning if version is unknown or outdated.
 	versionWarning := ""
 	version := ""
+	converter := conversion.Store().Get(cfg.GetName())
 	if cfg.Spec.Version == 0 {
 		// Use latest version if spec.version is empty.
-		version = strconv.Itoa(chain.LatestVersion())
+		version = strconv.Itoa(converter.LatestVersion())
 	}
 	if cfg.Spec.Version > 0 {
 		version = strconv.Itoa(cfg.Spec.Version)
-		if !chain.IsKnownVersion(cfg.Spec.Version) {
-			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
-		} else if chain.Conversion(cfg.Spec.Version) != nil {
+		if !converter.IsKnownVersion(cfg.Spec.Version) {
+			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", converter.LatestVersion())
+		} else if converter.Conversion(cfg.Spec.Version) != "" {
 			// Warn about obsolete version if there is conversion for spec.version.
-			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
+			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", converter.LatestVersion())
 		}
 	}
 

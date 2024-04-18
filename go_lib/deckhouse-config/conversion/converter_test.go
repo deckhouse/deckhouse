@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package conversion
 
-//go:generate go run register/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
+import (
+	"testing"
+)
+
+func TestConvertToLatest(t *testing.T) {
+	t.Run("should convert from 1 to latest version", func(t *testing.T) {
+		converted, expected, equal, err := TestConvert(
+			"testdata/source.yaml",
+			"testdata/expected.yaml",
+			"testdata/conversions",
+			1,
+			0)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !equal {
+			t.Errorf("Expected %v, got %v", expected, converted)
+		}
+	})
+}

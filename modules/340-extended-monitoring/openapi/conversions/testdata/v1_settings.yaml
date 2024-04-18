@@ -1,0 +1,5 @@
+imageAvailability:
+  skipRegistryCertVerification: true
+events:
+  exporterEnabled: true
+  severityLevel: All

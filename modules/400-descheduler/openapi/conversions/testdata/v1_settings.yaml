@@ -1,0 +1,7 @@
+auth:
+  password: password
+  allowedUserGroups:
+    - group
+    - group2
+  whitelistSourceRange:
+    - source1

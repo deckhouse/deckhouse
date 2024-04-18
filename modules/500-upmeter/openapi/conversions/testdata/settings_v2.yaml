@@ -1,0 +1,11 @@
+auth:
+  status:
+    allowedUserGroups:
+      - group
+      - group2
+    whitelistSourceRange:
+      - source1
+  webui:
+    allowedUserGroups:
+      - group
+      - group2

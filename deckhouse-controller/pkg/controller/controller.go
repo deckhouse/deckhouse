@@ -335,13 +335,13 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				}
 
 				// update metrics
-				chain := conversion.Registry().Chain(moduleConfig.Name)
+				converter := conversion.Store().Get(moduleConfig.Name)
 
-				if moduleConfig.Spec.Version > 0 && chain.Conversion(moduleConfig.Spec.Version) != nil {
+				if moduleConfig.Spec.Version > 0 && converter.Conversion(moduleConfig.Spec.Version) != "" {
 					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
-						"latest":  strconv.Itoa(chain.LatestVersion()),
+						"latest":  strconv.Itoa(converter.LatestVersion()),
 					})
 				}
 			}

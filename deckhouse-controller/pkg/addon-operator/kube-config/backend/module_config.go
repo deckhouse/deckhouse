@@ -85,7 +85,7 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			mc.handleEvent(mconfig, eventC, config.EventAdd)
 		},
-		UpdateFunc: func(prevObj interface{}, obj interface{}) {
+		UpdateFunc: func(_ interface{}, obj interface{}) {
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			mc.handleEvent(mconfig, eventC, config.EventUpdate)
 		},
@@ -173,20 +173,13 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 		return utils.Values{}, nil
 	}
 
-	if item.Spec.Version == 0 {
-		// spec version not set explicitly
-		return utils.Values(item.Spec.Settings), nil
+	converter := conversion.Store().Get(item.Name)
+	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
+	if err != nil {
+		return utils.Values{}, err
 	}
-
-	chain := conversion.Registry().Chain(item.Name)
-	if chain.LatestVersion() != item.Spec.Version {
-		newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
-		if err != nil {
-			return utils.Values{}, err
-		}
-		item.Spec.Version = newVersion
-		item.Spec.Settings = newSettings
-	}
+	item.Spec.Version = newVersion
+	item.Spec.Settings = newSettings
 
 	return utils.Values(item.Spec.Settings), nil
 }
