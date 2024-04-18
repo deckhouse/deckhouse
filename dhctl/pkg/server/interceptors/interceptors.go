@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -47,6 +48,42 @@ func Logger(log *slog.Logger) logging.Logger {
 	})
 }
 
+func UnaryParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+		timeout := time.After(5 * time.Minute)
+		select {
+		case <-timeout:
+			return nil, status.Error(codes.ResourceExhausted, "ResourceExhausted")
+		case sem <- struct{}{}:
+			defer func() {
+				<-sem
+				log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+			}()
+
+			return handler(ctx, req)
+		}
+	}
+}
+
+func StreamParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+		timeout := time.After(5 * time.Minute)
+		select {
+		case <-timeout:
+			return status.Error(codes.ResourceExhausted, "ResourceExhausted")
+		case sem <- struct{}{}:
+			defer func() {
+				<-sem
+				log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+			}()
+
+			return handler(srv, ss)
+		}
+	}
+}
+
 func UnaryServerSinglefligt(m *sync.Mutex, log *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if !strings.Contains(info.FullMethod, "dhctl") {
@@ -60,6 +97,7 @@ func UnaryServerSinglefligt(m *sync.Mutex, log *slog.Logger) grpc.UnaryServerInt
 		}
 		defer func() {
 			rollbackAppVars()
+			tomb.Shutdown(0)
 			m.Unlock()
 			log.Info("global lock released", slog.String("method", info.FullMethod))
 		}()
@@ -80,6 +118,7 @@ func StreamServerSinglefligt(m *sync.Mutex, log *slog.Logger) grpc.StreamServerI
 		}
 		defer func() {
 			rollbackAppVars()
+			tomb.Shutdown(0)
 			m.Unlock()
 			log.Info("global lock released", slog.String("method", info.FullMethod))
 		}()
