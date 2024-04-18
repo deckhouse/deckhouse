@@ -28,6 +28,8 @@ const (
 type ScanResult struct {
 	ClusterConfiguration                 string `json:"cluster_configuration"`
 	ProviderSpecificClusterConfiguration string `json:"provider_specific_cluster_configuration"`
+	SSHPrivateKey                        string `json:"ssh_private_key"`
+	SSHPublicKey                         string `json:"ssh_public_key"`
 }
 
 type ImportResult struct {
