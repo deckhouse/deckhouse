@@ -209,10 +209,14 @@ spec:
             status:
               default: {}
               type: object
+              description: |
+                User creation status information
               properties:
                 errors:
                   default: {}
                   type: object
+                  description: |
+                    List of user creation errors on each node
                   additionalProperties:
                     type: string
       subresources:
