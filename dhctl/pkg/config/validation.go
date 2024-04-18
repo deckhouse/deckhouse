@@ -283,6 +283,7 @@ func ValidateClusterConfiguration(
 // "YandexClusterConfiguration",
 // "VsphereClusterConfiguration",
 // "AzureClusterConfiguration",
+// "VCDClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
 	providerSpecificClusterConfiguration string,
