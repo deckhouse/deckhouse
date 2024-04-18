@@ -27,7 +27,7 @@ shell:
   install:
   - mkdir /build
   - cd /build
-  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/cert-manager/cert-manager.git
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git
   - cd /build/cert-manager
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
   - export RELEASE_VERSION="v{{ $version }}-flant"
