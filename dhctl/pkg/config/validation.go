@@ -50,6 +50,7 @@ var cloudProviderToProviderKind = map[string]string{
 	"vSphere":   "VsphereClusterConfiguration",
 	"Azure":     "AzureClusterConfiguration",
 	"VCD":       "VCDClusterConfiguration",
+	"Zvirt":     "ZvirtClusterConfiguration",
 }
 
 type ClusterConfig struct {
