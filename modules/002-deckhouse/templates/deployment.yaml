@@ -137,6 +137,8 @@ spec:
             - name: DECKHOUSE_HA
 {{- if (include "helm_lib_ha_enabled" .) }}
               value: "true"
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
 {{- else }}
               value: "false"
 {{- end }}

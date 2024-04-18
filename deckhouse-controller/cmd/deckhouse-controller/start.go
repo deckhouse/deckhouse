@@ -89,11 +89,16 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		os.Exit(1)
 	}
 
+	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
+	if len(clusterDomain) == 0 {
+		log.Fatal("KUBERNETES_CLUSTER_DOMAIN env not set or empty")
+	}
+
 	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
 	if len(podNs) == 0 {
 		podNs = defaultNamespace
 	}
-	identity := fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+	identity := fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 
 	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
