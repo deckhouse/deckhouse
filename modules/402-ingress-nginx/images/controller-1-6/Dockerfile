@@ -1,5 +1,6 @@
 ARG CONTROLLER_BRANCH=controller-v1.6.4
 ARG BASE_ALPINE
+ARG BASE_ALT
 ARG BASE_ALT_DEV
 # controller artifact
 ARG BASE_GOLANG_19_BUSTER
@@ -67,7 +68,7 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     /build.sh
 
 # Final image
-FROM $BASE_ALT_DEV
+FROM $BASE_ALT
 # Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v1.0.4/images/nginx/rootfs/Dockerfile
 # Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v1.0.4/rootfs/Dockerfile
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
