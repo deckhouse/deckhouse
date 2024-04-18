@@ -16,14 +16,12 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
@@ -39,7 +37,7 @@ import (
 )
 
 // Serve starts GRPC server
-func Serve() error {
+func Serve(network, address string) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
@@ -54,8 +52,8 @@ func Serve() error {
 
 	log.Info(
 		"starting grpc server",
-		slog.String("host", app.ServerHost),
-		slog.Int("port", app.ServerPort),
+		slog.String("network", network),
+		slog.String("address", address),
 	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
@@ -64,7 +62,7 @@ func Serve() error {
 		log.Info("grpc server stopped")
 	})
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", app.ServerHost, app.ServerPort))
+	listener, err := net.Listen(network, address)
 	if err != nil {
 		log.Error("failed to listen", logger.Err(err))
 		return err
@@ -90,7 +88,7 @@ func Serve() error {
 	reflection.Register(s)
 
 	// services
-	dhctlService := dhctl.New(podName, log)
+	dhctlService := dhctl.New(podName, address, log)
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)

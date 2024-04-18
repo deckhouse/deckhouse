@@ -19,15 +19,16 @@ import (
 )
 
 var (
-	ServerHost string
-	ServerPort int
+	ServerNetwork string
+	ServerAddress string
 )
 
 func DefineServerFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("host", "").
-		Envar(configEnvName("SERVER_HOST")).
-		StringVar(&ServerHost)
-	cmd.Flag("port", "").
-		Envar(configEnvName("SERVER_PORT")).
-		IntVar(&ServerPort)
+	cmd.Flag("server-network", "").
+		Envar(configEnvName("SERVER_NETWORK")).
+		Default("tcp").
+		EnumVar(&ServerNetwork, "tcp", "unix")
+	cmd.Flag("server-address", "").
+		Envar(configEnvName("SERVER_ADDRESS")).
+		StringVar(&ServerAddress)
 }
