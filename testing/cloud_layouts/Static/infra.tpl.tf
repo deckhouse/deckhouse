@@ -194,7 +194,7 @@ resource "openstack_compute_instance_v2" "bastion" {
 resource "openstack_blockstorage_volume_v3" "system" {
   name                 = "candi-${PREFIX}-system-0"
   size                 = "20"
-  image_id             = data.openstack_images_image_v2.alt_image.id
+  image_id             = data.openstack_images_image_v2.astra_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
@@ -227,7 +227,7 @@ resource "openstack_compute_instance_v2" "system" {
 resource "openstack_blockstorage_volume_v3" "worker" {
   name                 = "candi-${PREFIX}-worker-0"
   size                 = "20"
-  image_id             = data.openstack_images_image_v2.redos_image.id
+  image_id             = data.openstack_images_image_v2.astra_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
