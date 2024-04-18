@@ -33,8 +33,9 @@ import (
 )
 
 const (
-	InitConfigurationKind    = "InitConfiguration"
-	ClusterConfigurationKind = "ClusterConfiguration"
+	InitConfigurationKind          = "InitConfiguration"
+	ClusterConfigurationKind       = "ClusterConfiguration"
+	StaticClusterConfigurationKind = "StaticClusterConfiguration"
 )
 
 var cloudProviderToProviderKind = map[string]string{
@@ -271,7 +272,7 @@ func ValidateClusterConfiguration(
 }
 
 // ValidateProviderSpecificClusterConfiguration parses and validates cluster ProviderSpecificClusterConfiguration.
-// For cloud clusters it requires one doc with kind in
+// It requires one doc with kind in
 // [
 // "OpenStackClusterConfiguration",
 // "AWSClusterConfiguration",
@@ -364,6 +365,82 @@ func ValidateProviderSpecificClusterConfiguration(
 	if providerKind != "" && clusterConfigDocsCount != 1 {
 		errs.Append(ErrKindValidationFailed, Error{
 			Messages: []string{fmt.Errorf("exactly one %q required", providerKind).Error()},
+		})
+	}
+
+	return errs.ErrorOrNil()
+}
+
+// ValidateStaticClusterConfiguration parses and validates cluster StaticClusterConfiguration.
+// It requires one or zero doc with StaticClusterConfiguration kind.
+func ValidateStaticClusterConfiguration(
+	staticClusterConfiguration string,
+	schemaStore *SchemaStore,
+	opts ...ValidateOption,
+) error {
+	options := applyOptions(opts...)
+	if !options.commanderMode {
+		panic("ValidateStaticClusterConfiguration operation currently supported only in commander mode")
+	}
+
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(staticClusterConfiguration), -1)
+	errs := &ValidationError{}
+	var clusterConfigDocsCount int
+
+	for i, doc := range docs {
+		if doc == "" {
+			continue
+		}
+
+		docData := []byte(doc)
+
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
+		if err != nil {
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    pointer.Int(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
+		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
+
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		if err != nil {
+			errMessages = append(errMessages, err.Error())
+		}
+
+		switch index.Kind {
+		case StaticClusterConfigurationKind:
+			clusterConfigDocsCount++
+		default:
+			errMessages = append(errMessages, fmt.Errorf(
+				"unknown kind, expected %q", StaticClusterConfigurationKind,
+			).Error())
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    pointer.Int(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
+		}
+	}
+
+	if clusterConfigDocsCount > 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("only one %q allowed", StaticClusterConfigurationKind).Error()},
 		})
 	}
 
