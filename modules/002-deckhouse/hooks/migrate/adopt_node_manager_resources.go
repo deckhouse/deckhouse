@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "v1",
 			Kind:                         "Namespace",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-cloud-instance-manager"}},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterResource,
 		},
@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-rbac-proxy-ca.crt"}},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterResource,
 		},
@@ -69,6 +69,7 @@ func adoptResources(input *go_hook.HookInput) error {
 		"metadata": map[string]interface{}{
 			"annotations": map[string]string{
 				"meta.helm.sh/release-name": "deckhouse",
+				"helm.sh/resource-policy":   "keep",
 			},
 		},
 	}
