@@ -213,10 +213,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			HostNetwork:        true,
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
-			// SecurityContext: &apiv1.PodSecurityContext{
-			// 	RunAsUser:    pointer.Int64(0),
-			// 	RunAsNonRoot: pointer.Bool(false),
-			// },
+			SecurityContext: &apiv1.PodSecurityContext{
+				RunAsUser:    pointer.Int64(0),
+				RunAsNonRoot: pointer.Bool(false),
+			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
 			},
