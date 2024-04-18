@@ -46,6 +46,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
+    helm.sh/resource-policy: keep
     meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:
@@ -69,6 +70,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
+    helm.sh/resource-policy: keep
     meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:
@@ -114,6 +116,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
+    helm.sh/resource-policy: keep
     meta.helm.sh/release-name: deckhouse
     meta.helm.sh/release-namespace: d8-system
   labels:

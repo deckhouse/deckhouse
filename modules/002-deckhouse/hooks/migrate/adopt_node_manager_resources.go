@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "v1",
 			Kind:                         "Namespace",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-cloud-instance-manager"}},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterResource,
 		},
@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-rbac-proxy-ca.crt"}},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterResource,
 		},
@@ -65,7 +65,16 @@ func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func adoptResources(input *go_hook.HookInput) error {
-	patch := map[string]interface{}{
+	nsPatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]string{
+				"meta.helm.sh/release-name": "deckhouse",
+				"helm.sh/resource-policy":   "keep",
+			},
+		},
+	}
+
+	cmPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]string{
 				"meta.helm.sh/release-name": "deckhouse",
@@ -77,7 +86,7 @@ func adoptResources(input *go_hook.HookInput) error {
 	if len(snap) == 1 {
 		if snap[0] != nil {
 			name := snap[0].(string)
-			input.PatchCollector.MergePatch(patch, "v1", "Namespace", "", name)
+			input.PatchCollector.MergePatch(nsPatch, "v1", "Namespace", "", name)
 		}
 	}
 
@@ -85,7 +94,7 @@ func adoptResources(input *go_hook.HookInput) error {
 	if len(snap) == 1 {
 		if snap[0] != nil {
 			name := snap[0].(string)
-			input.PatchCollector.MergePatch(patch, "v1", "ConfigMap", "d8-cloud-instance-manager", name)
+			input.PatchCollector.MergePatch(cmPatch, "v1", "ConfigMap", "d8-cloud-instance-manager", name)
 		}
 	}
 	return nil
