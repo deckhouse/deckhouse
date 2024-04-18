@@ -208,10 +208,16 @@ func (i *Importer) scan(
 		res = &ScanResult{
 			ClusterConfiguration:                 string(clusterConfiguration),
 			ProviderSpecificClusterConfiguration: string(providerConfiguration),
+			SSHPrivateKey:                        i.Params.SSHClient.PrivateKeys[0].Key,
 		}
 
 		if metaConfig.ClusterType == config.StaticClusterType {
 			return nil
+		}
+
+		res.SSHPublicKey, err = extractSSHPublicKey(metaConfig.ProviderName, metaConfig.ProviderClusterConfig)
+		if err != nil {
+			return fmt.Errorf("unable to get ssh public key: %w", err)
 		}
 
 		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeClient)
@@ -321,6 +327,29 @@ func (i *Importer) check(
 	})
 
 	return res, err
+}
+
+func extractSSHPublicKey(providerName string, providerConfig map[string]json.RawMessage) (string, error) {
+	var key string
+	switch providerName {
+	case "GCP":
+		key = "sshKey"
+	default:
+		key = "sshPublicKey"
+	}
+
+	sshKeyJSON, ok := providerConfig[key]
+	if !ok {
+		return "", fmt.Errorf("%s not found in cloud provider config", key)
+	}
+
+	var sshKey string
+	err := json.Unmarshal(sshKeyJSON, &sshKey)
+	if err != nil {
+		return "", fmt.Errorf("unable to unmarshal %s: %w", key, err)
+	}
+
+	return sshKey, nil
 }
 
 type nodeState struct {
