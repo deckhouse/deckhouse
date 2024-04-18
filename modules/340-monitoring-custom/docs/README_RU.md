@@ -63,6 +63,7 @@ metadata:
     prometheus.deckhouse.io/query-param-format: "prometheus"  # По умолчанию ''.
     prometheus.deckhouse.io/allow-unready-pod: "true"         # По умолчанию поды НЕ в Ready игнорируются.
     prometheus.deckhouse.io/sample-limit: "5000"              # По умолчанию принимается не больше 5000 метрик от одного пода.
+    prometheus.deckhouse.io/scrape-interval: "60s"            # По умолчанию значение scrapeInterval модуля monitoring.
 spec:
   ports:
   - name: my-app
@@ -93,7 +94,8 @@ spec:
         app: my-app
         prometheus.deckhouse.io/custom-target: my-app
       annotations:
-        prometheus.deckhouse.io/sample-limit: "5000"  # По умолчанию принимается не больше 5000 метрик от одного пода.
+        prometheus.deckhouse.io/sample-limit: "5000"   # По умолчанию принимается не больше 5000 метрик от одного пода.
+        prometheus.deckhouse.io/scrape-interval: "60s" # По умолчанию значение scrapeInterval модуля monitoring.
     spec:
       containers:
       - name: my-app

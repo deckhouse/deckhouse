@@ -26,7 +26,7 @@
   action: labeldrop
 
 # We do not differentiate containers on the discovery. The only thing matters is a combination of the pod id / port.
-# This is a fix for a bag with the duplicated endpoints for pod monitors.
+# This is a fix for a bug with the duplicated endpoints for pod monitors.
 - regex: container
   action: labeldrop
 
@@ -42,6 +42,11 @@
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_sample_limit]
   regex: (.+)
   targetLabel: __sample_limit__
+
+# Set scrape interval from the annotation
+- sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_scrape_interval]
+  regex: (.+)
+  targetLabel: __scrape_interval__
 {{- end }}
 
 {{- define "endpoint_by_container_port_name" }}
