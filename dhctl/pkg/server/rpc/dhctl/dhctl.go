@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
 
-func New(podName string, log *slog.Logger) *Service {
+func New(podName, cacheDir string, log *slog.Logger) *Service {
 	return &Service{
 		podName: podName,
 		log:     log,
@@ -39,8 +39,9 @@ func New(podName string, log *slog.Logger) *Service {
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
-	podName string
-	log     *slog.Logger
+	podName  string
+	cacheDir string
+	log      *slog.Logger
 }
 
 func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
