@@ -134,6 +134,7 @@ func (s *Service) check(
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task has been started by DHCTL Server pod/%s\n", s.podName)
 
