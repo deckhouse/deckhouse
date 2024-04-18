@@ -50,8 +50,14 @@ function __main__() {
   name=$(context::jq -r '.review.request.object.metadata.name')
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
+  operation=$(context::jq -r '.review.request.operation')
 
-  if [ $(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] | length') -gt 0 ]; then
+  snapshots=$(context::jq -cr '[.snapshots.nodeUsers[].filterResult')
+  if ["$operation" = "UPDATE"]; then
+    snapshots=$(context::jq -cr --arg name "$name" '[.snapshots.nodeUsers[].filterResult | select(.name==$name | not)')
+  fi
+
+  if [ $(jq -cr --arg uid "$uid" '[.[] | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] | length' <<< "$snapshots") -gt 0 ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: \"*\"" }
 EOF
@@ -59,14 +65,14 @@ EOF
   fi
 
   for nodeGroup in "$nodeGroups"; do
-    if [ "$nodeGroup" = "*" ] && [ $(context::jq -cr --arg uid "$uid" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) ] | length') -gt 0 ]; then
+    if [ "$nodeGroup" = "*" ] && [ $(jq -cr --arg uid "$uid" '[.[] | select(.uid==($uid | tonumber)) ] | length' <<< "$snapshots") -gt 0 ]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
       return 0
     fi
 
-    if [ $(context::jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.snapshots.nodeUsers[].filterResult | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] | length') -gt 0 ]; then
+    if [ $(jq -cr --arg uid "$uid" --arg nodeGroup "$nodeGroup" '[.[] | select(.uid==($uid | tonumber)) | select(.nodeGroups | index($nodeGroup))] | length' <<< "$snapshots") -gt 0 ]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"The user with the uid: ${uid} already exists in the nodeGroup: ${nodeGroup}" }
 EOF
