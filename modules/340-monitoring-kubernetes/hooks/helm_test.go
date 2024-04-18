@@ -308,7 +308,7 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
 	)
 
-	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {\"kubernetesVersion\": \"1.25.3\"}}}", "{}")
+	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {\"kubernetesVersion\": \"1.21.3\"}}}", "{}")
 	Context("helm3 release with deprecated versions", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
