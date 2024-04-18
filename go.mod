@@ -242,3 +242,5 @@ replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.
 
 // swag v0.22+ breaks schemas_test.go:TestMapMergeAnchor, seems it doesn't support anchoring. Have to figure out that.
 replace github.com/go-openapi/swag => github.com/go-openapi/swag v0.21.1
+
+replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./go_lib/registry-packages-proxy

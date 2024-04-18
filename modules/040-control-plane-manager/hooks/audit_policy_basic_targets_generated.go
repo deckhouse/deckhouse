@@ -53,6 +53,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-instance-manager:early-oom",
 	"system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager",
 	"system:serviceaccount:d8-cloud-instance-manager:node-group",
+	"system:serviceaccount:d8-cloud-instance-manager:registry-packages-proxy",
 	"system:serviceaccount:d8-cloud-provider-aws:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-aws:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-aws:node-termination-handler",

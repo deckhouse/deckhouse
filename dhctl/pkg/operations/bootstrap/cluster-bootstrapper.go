@@ -372,15 +372,40 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		resourcesToCreate = parsedResources
 	}
 
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	var clusterDomain string
+	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
+		return err
+	}
+
+	// we need clusterDomain to generate proper certificate for packages proxy
+	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
+	}
+
+	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+	}
+
+	tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+	if err != nil {
+		return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+	}
+	defer tun.Stop()
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
-		return err
-	}
 	if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}

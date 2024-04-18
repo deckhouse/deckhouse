@@ -169,6 +169,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/registry-packages-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/000-common/images/check-kernel-version/src"
   labels:
   - "type/dependencies"
@@ -269,6 +278,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

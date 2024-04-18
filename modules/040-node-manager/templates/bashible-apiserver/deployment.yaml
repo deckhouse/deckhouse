@@ -62,8 +62,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" .   | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | nindent 6 }}
-      hostNetwork: true
-      dnsPolicy: Default
       serviceAccountName: bashible-apiserver
       imagePullSecrets:
         - name: deckhouse-registry
@@ -73,14 +71,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
         imagePullPolicy: IfNotPresent
         args:
-          - "--bind-address=$(HOST_IP)"
           - "--cert-dir=/var/certs"
           - "--secure-port=10423"
-        env:
-        - name: HOST_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
         volumeMounts:
           - name: certs
             mountPath: /var/certs
@@ -91,6 +83,7 @@ spec:
             mountPath: /tmp
         ports:
           - name: https
+            hostPort: 10423
             containerPort: 10423
         livenessProbe:
           httpGet:
@@ -142,8 +135,16 @@ spec:
       noProxy:
         {{- $noProxy | toYaml | nindent 8 }}
     {{- end }}
+    bootstrapTokens:
+      {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
+    packagesProxy:
+      addresses:
+        {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
+      token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
+    {{- end }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}
     kubernetesCA: |
       {{- $.Values.nodeManager.internal.kubernetesCA | nindent 6 }}
