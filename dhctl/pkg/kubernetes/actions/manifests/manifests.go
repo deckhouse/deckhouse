@@ -333,10 +333,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "MODULES_DIR",
 			Value: "/deckhouse/modules:/deckhouse/external-modules/modules",
 		},
-		{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: "/deckhouse/external-modules/",
-		},
+		// {
+		// 	Name:  "EXTERNAL_MODULES_DIR",
+		// 	Value: "/deckhouse/external-modules/",
+		// },
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
 			Value: "deckhouse",
@@ -379,9 +379,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
-	// if params.ExternalModulesEnabled {
-	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-	// }
+	if params.ExternalModulesEnabled {
+		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+			Name:  "EXTERNAL_MODULES_DIR",
+			Value: "/deckhouse/external-modules/",
+		})
+	}
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
