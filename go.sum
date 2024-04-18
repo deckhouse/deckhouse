@@ -162,8 +162,8 @@ github.com/flant/kube-client v1.1.0 h1:KoainWTcAYefudhhD6fGfZphoOotMQIIY8yZIsokH
 github.com/flant/kube-client v1.1.0/go.mod h1:8kNeh6Fmtf3SsM4atqiiZUrJR3nnrYDNOxDBq/zjKHE=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNvyf6tjQ/p27DPY9iftxIBb37ALJRTg=
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
-github.com/flant/shell-operator v1.4.7-0.20240402124321-cf9374833a8e h1:aEynMsgpxKEDB0++kCYk/a/y2bR9/wuHn9o25nhG8us=
-github.com/flant/shell-operator v1.4.7-0.20240402124321-cf9374833a8e/go.mod h1:q/Kpv0q16xg0AEAGyxl2/zZw4nEew3zYVyT6fnWgDsg=
+github.com/flant/shell-operator v1.4.4 h1:tD6oXAk32OOyXYjvia6FVLiqUWTO/yowumcxFYYbDjE=
+github.com/flant/shell-operator v1.4.4/go.mod h1:Wv80dyE5ImQWGxPpDGkCWfUHMOiqmst95m+WCcUf9Dg=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
 github.com/foxcpp/go-mockdns v1.0.0/go.mod h1:lgRN6+KxQBawyIghpnl5CezHFGS9VLzvtVlwxvzXTQ4=
 github.com/frankban/quicktest v1.14.3 h1:FJKSZTDHjyhriyC81FLQ0LY93eSai0ZyR/ZIkd3ZUKE=
