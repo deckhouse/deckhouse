@@ -154,7 +154,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Registry:      cb.registryData,
 		Images:        cb.imagesDigests,
 		Proxy:         cb.clusterInputData.Proxy,
-		PackagesProxy: cb.clusterInputData.Proxy,
+		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
