@@ -52,9 +52,9 @@ function __main__() {
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
   operation=$(context::jq -r '.review.request.operation')
 
-  snapshots=$(context::jq -cr '[.snapshots.nodeUsers[].filterResult')
-  if ["$operation" = "UPDATE"]; then
-    snapshots=$(context::jq -cr --arg name "$name" '[.snapshots.nodeUsers[].filterResult | select(.name==$name | not)')
+  snapshots=$(context::jq -cr '[.snapshots.nodeUsers[].filterResult]')
+  if [ "$operation" = "UPDATE" ]; then
+    snapshots=$(context::jq -cr --arg name "$name" '[.snapshots.nodeUsers[].filterResult | select(.name==$name | not)]')
   fi
 
   if [ $(jq -cr --arg uid "$uid" '[.[] | select(.uid==($uid | tonumber)) | select(.nodeGroups | index("*"))] | length' <<< "$snapshots") -gt 0 ]; then
