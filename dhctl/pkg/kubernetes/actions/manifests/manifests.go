@@ -379,9 +379,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
-	if params.ExternalModulesEnabled {
-		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-	}
+	// if params.ExternalModulesEnabled {
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+	// }
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
