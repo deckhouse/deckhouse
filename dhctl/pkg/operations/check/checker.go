@@ -91,9 +91,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		return nil, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
-	res.StatusDetails = StatusDetails{
-		ConfigurationStatus: configurationStatus,
-	}
+	res.StatusDetails.ConfigurationStatus = configurationStatus
 
 	return res, nil
 }
