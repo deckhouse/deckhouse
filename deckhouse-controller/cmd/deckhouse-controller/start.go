@@ -91,7 +91,7 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 	}
 
 	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
-	if len(podIP) == 0 {
+	if len(clusterDomain) == 0 {
 		log.Info("KUBERNETES_CLUSTER_DOMAIN env not set or empty")
 		os.Exit(1)
 	}
