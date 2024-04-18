@@ -1,0 +1,256 @@
+groups:
+- group: MastersToMasters
+  description:
+    en: Master to master nodes traffic
+    ru: Трафик между мастер-узлами
+  destinations:
+  - ports: "2379, 2380"
+    protocol: TCP
+    description:
+      en: etcd replication
+      ru: Репликация etcd
+  - ports: "9443"
+    protocol: TCP
+    description:
+      en: Cluster API webhook handler
+      ru: Webhook-обработчик Cluster API
+  - ports: "9444"
+    protocol: TCP
+    description:
+      en: VMware Cloud Director cloud provider webhook handler
+      ru: Webhook-обработчик для cloud-провайдера VMware Cloud Director
+
+- group: MastersToNodes
+  description:
+    en: Master to nodes traffic
+    ru: Трафик между мастер-узлами и остальными узлами
+  destinations:
+  - ports: "22"
+    protocol: TCP
+    description:
+      en: SSH for Static nodes bootstrapping by static provider
+      ru: SSH для первичной настройки узлов статичным провайдером
+  - ports: "10250"
+    protocol: TCP
+    description:
+      en: kubelet
+      ru: kubelet
+  - ports: "10423"
+    protocol: TCP
+    description:
+      en: "*bashible apiserver* for delivering node configurations"
+      ru: "*apiserver bashible* для доставки конфигурации на узлы"
+  - ports: "9680"
+    protocol: TCP
+    description:
+      en: runtime-audit-engine webhook
+      ru: webhook компонента runtime-audit-engine
+  - ports: "8443"
+    protocol: TCP
+    description:
+      en: "*ingress-nginx* controller webhook for `HostWithFailover` inlet"
+      ru: "Webhook контроллера *ingress-nginx* для инлета `HostWithFailover`"
+
+- group: NodesToMasters
+  description:
+    en: Nodes to masters traffic
+    ru: Трафик между любыми узлами и мастер-узлами
+  destinations:
+  - ports: "6443"
+    protocol: TCP
+    description:
+      en: "*kube-apiserver* for controllers working in node's host network namespace"
+      ru: "*kube-apiserver* для контроллеров, работающих в сетевом пространстве имен узла"
+  - ports: "8443"
+    protocol: TCP
+    description:
+      en: "*machine-controller-manager* metrics"
+      ru: "Метрики компонента *machine-controller-manager*"
+- group: NodesToNodes
+  description:
+    en: Nodes to nodes traffic
+    ru: Трафик между любыми узлами
+  destinations:
+  - ports: ""
+    protocol: ICMP
+    description:
+      en: ICMP for node-to-node connectivity monitoring
+      ru: ICMP для мониторинга связности между узлами
+  - ports: "8469, 8472"
+    protocol: UDP
+    description:
+      en: VXLAN for pod-to-pod traffic encapsulation
+      ru: VXLAN для инкапсуляции трафика между подами
+  - ports: "123"
+    protocol: UDP
+    description:
+      en: NTP for time synchronization between nodes
+      ru: NTP для синхронизации времени между узлами
+  - ports: "4240"
+    protocol: TCP
+    description:
+      en: CNI Cilium agent node-to-node healthcheck
+      ru: Порт для процедуры healthcheck соседних узлов в CNI Cilium
+  - ports: "4244"
+    protocol: TCP
+    description:
+      en: "*cilium-hubble* API"
+      ru: "API для модуля *cilium-hubble*"
+  - ports: "9734"
+    protocol: TCP
+    description:
+      en: CNI Cilium agent metrics
+      ru: Метрики агентов CNI Cilium
+  - ports: "9735"
+    protocol: TCP
+    description:
+      en: CNI Cilium operator metrics
+      ru: Метрики оператора CNI Cilium
+  - ports: "9889"
+    protocol: TCP
+    description:
+      en: Deckhouse controller metrics
+      ru: Метрики контроллера Deckhouse
+  - ports: "9434"
+    protocol: TCP
+    description:
+      en: "*ebpf-exporter* metrics"
+      ru: "Метрики модуля *ebpf-exporter*"
+  - ports: "9101"
+    protocol: TCP
+    description:
+      en: "*node-exporter* module metrics"
+      ru: "Метрики модуля *node-exporter*"
+  - ports: "10354, 10355"
+    protocol: TCP
+    description:
+      en: "*ingress-nginx* controller metrics for `HostWithFailover` inlet"
+      ru: "Метрики контроллера *ingress-nginx* для инлета `HostWithFailover`"
+  - ports: "8008"
+    protocol: TCP
+    description:
+      en: Kubernetes control plane metrics
+      ru: Метрики управляющего слоя Kubernetes
+  - ports: "9255"
+    protocol: TCP
+    description:
+      en: "*kube-proxy* metrics"
+      ru: "Метрики *kube-proxy*"
+  - ports: "8083"
+    protocol: TCP
+    description:
+      en: Cluster API metrics
+      ru: Метрики Cluster API
+  - ports: "8766"
+    protocol: TCP
+    description:
+      en: "*runtime-audit-engine* module metrics"
+      ru: "Метрики модуля *runtime-audit-engine*"
+  - ports: "10445"
+    protocol: TCP
+    description:
+      en: "*kube-router* metrics"
+      ru: "Метрики *kube-router*"
+  - ports: "3367"
+    protocol: TCP
+    description:
+      en: API of the *sds-replicated-volume* module node agent
+      ru: API агента модуля *sds-replicated-volume*
+  - ports: "9942"
+    protocol: TCP
+    description:
+      en: "*sds-replicated-volume* node agent metrics"
+      ru: "Метрики агента *sds-replicated-volume*"
+  - ports: "7000-7999"
+    protocol: TCP
+    description:
+      en: "*sds-replicated-volume* DRBD replication"
+      ru: "Репликация DRBD для *sds-replicated-volume*"
+  - ports: "49152, 49153"
+    protocol: TCP
+    description:
+      en: "Deckhouse Virtualization Platform VM live migration port"
+      ru: "Живая миграция ВМ в Deckhouse Virtualization Platform"
+  - ports: "7946, 7947"
+    protocol: TCP
+    description:
+      en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
+      ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
+  - ports: "7946, 7947"
+    protocol: UDP
+    description:
+      en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
+      ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
+  - ports: "7473, 7475"
+    protocol: TCP
+    description:
+      en: "*metallb* and *l2-load-balancer* speakers metrics"
+      ru: "Метрики компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
+
+- group: ExternalToMaster
+  description:
+    en: External traffic to masters
+    ru: Внешний трафик на мастер-узлы
+  destinations:
+  - ports: "6443"
+    protocol: TCP
+    description:
+      en: "*kube-apiserver* for local administrators"
+      ru: "*kube-apiserver* для местных администраторов"
+  - ports: "22, 22322"
+    protocol: TCP
+    description:
+      en: SSH for Deckhouse Kubernetes Platform initialization
+      ru: SSH для инициализации Deckhouse Kubernetes Platform
+
+- group: ExternalToFrontends
+  description:
+    en: External traffic to frontends
+    ru: Внешний трафик на фронтенд-узлы
+  destinations:
+  - ports: "30000-32767"
+    protocol: TCP
+    description:
+      en: NodePort range
+      ru: Диапазон портов NodePort
+  - ports: "80, 443"
+    protocol: TCP
+    description:
+      en: Application ports for requests to Ingress controllers over HTTP and HTTPS. Note that these ports are configurable in `IngressNginxController` resource and may vary in different setups
+      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS. Обратите внимание, что эти порты настраиваются в ресурсе `IngressNginxController` и могут отличаться в разных инсталляциях
+  - ports: "5416"
+    protocol: UDP
+    description:
+      en: OpenVPN
+      ru: OpenVPN
+  - ports: "5416"
+    protocol: TCP
+    description:
+      en: OpenVPN
+      ru: OpenVPN
+
+- group: NodesToExternal
+  description:
+    en: External traffic for all nodes
+    ru: Внешний трафик для каждого узла
+  destinations:
+  - ports: "443"
+    protocol: TCP
+    description:
+      en: Container registry
+      ru: Container registry
+  - ports: "53"
+    protocol: UDP
+    description:
+      en: DNS
+      ru: DNS
+  - ports: "53"
+    protocol: TCP
+    description:
+      en: DNS
+      ru: DNS
+  - ports: "123"
+    protocol: UDP
+    description:
+      en: NTP for external time synchronization
+      ru: NTP для синхронизации с внешними серверами точного времени
