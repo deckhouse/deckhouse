@@ -477,4 +477,71 @@ sshPublicKey: ssh-key`,
 	}
 }
 
+func TestValidateStaticCLusterConfiguration(t *testing.T) {
+	t.Parallel()
+
+	const schemasDir = "./../../../candi/openapi"
+	newStore := newSchemaStore([]string{schemasDir})
+
+	tests := map[string]struct {
+		config      string
+		errContains string
+	}{
+		"ok": {
+			config: `
+---
+apiVersion: deckhouse.io/v1alpha1
+# type of the configuration section
+kind: StaticClusterConfiguration
+# address space for the cluster's internal network
+internalNetworkCIDRs:
+- 192.168.199.0/24
+---
+`,
+		},
+		"ok, empty": {
+			config: ``,
+		},
+		"empty StaticClusterConfiguration": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration`,
+		},
+		"bad config": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+someKey: someValue`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
+	* .someKey is a forbidden property
+
+`,
+		},
+		"bad internalNetworkCIDRs": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.199.0/24test`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
+	* internalNetworkCIDRs should match '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+
+`,
+		},
+	}
+
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateStaticClusterConfiguration(tt.config, newStore, validateOpts...)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
 var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}
