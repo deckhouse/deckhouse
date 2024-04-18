@@ -133,7 +133,7 @@ To dynamically order nodes, you must enable the DHCP server for the internal net
 
 Первые два правила используются для входящего трафика, а третье — для доступа по SSH к узлу с control plane (без этого правила установка будет невозможна).
 
-## Настрока firewall
+### Настрока firewall
 
 После настройки DNAT необходимо настроить firewall. Сначала необходимо настроить наборы IP-адресов (IP sets).
 
