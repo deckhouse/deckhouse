@@ -38,6 +38,9 @@ kubernetes:
       }
 kubernetesValidating:
 - name: publicdomaintemplate-policy.deckhouse.io
+	nameSelector:
+		matchNames:
+		- global
   group: main
   includeSnapshotsFrom: ["d8-kube-dns-cm-wh"]
   rules:
