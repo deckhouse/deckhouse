@@ -63,6 +63,8 @@ func PullExternalModulesToLocalFS(
 		return nil
 	}
 
+	tagsResolver := mirror.NewTagsResolver()
+
 	for i, module := range modules {
 		if !filter.Match(module) {
 			continue
@@ -86,15 +88,21 @@ func PullExternalModulesToLocalFS(
 			return fmt.Errorf("Find external module images`: %w", err)
 		}
 
+		for _, imageSet := range []map[string]struct{}{moduleImageSet, releasesImageSet} {
+			if err = tagsResolver.ResolveTagsDigestsFromImageSet(imageSet, authProvider, insecure, skipVerifyTLS); err != nil {
+				return fmt.Errorf("Resolve digests for images tags: %w", err)
+			}
+		}
+
 		log.InfoLn("Beginning to pull module contents")
-		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, insecure, skipVerifyTLS, false)
+		err = mirror.PullImageSet(authProvider, moduleLayout, moduleImageSet, tagsResolver.GetTagDigest, insecure, skipVerifyTLS, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
 		log.InfoLn("✅ Module contents pulled successfully")
 
 		log.InfoLn("Beginning to pull releases for module")
-		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, insecure, skipVerifyTLS, false)
+		err = mirror.PullImageSet(authProvider, moduleReleasesLayout, releasesImageSet, tagsResolver.GetTagDigest, insecure, skipVerifyTLS, false)
 		if err != nil {
 			return fmt.Errorf("Pull images: %w", err)
 		}
