@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -330,14 +331,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
-			Name:  "MODULES_DIR",
-			Value: "/deckhouse/modules:/deckhouse/external-modules/modules",
-		},
-		// {
-		// 	Name:  "EXTERNAL_MODULES_DIR",
-		// 	Value: "/deckhouse/external-modules/",
-		// },
-		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
 			Value: "deckhouse",
 		},
@@ -379,13 +372,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
+
+	modulesDirs := []string{
+		"/deckhouse/modules",
+	}
+
 	if params.ExternalModulesEnabled {
+		const externalModulesDir = "/deckhouse/external-modules/modules"
+		modulesDirs = append(modulesDirs, externalModulesDir)
 		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 			Name:  "EXTERNAL_MODULES_DIR",
-			Value: "/deckhouse/external-modules/",
+			Value: externalModulesDir,
 		})
 	}
+
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "MODULES_DIR",
+		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+	})
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
