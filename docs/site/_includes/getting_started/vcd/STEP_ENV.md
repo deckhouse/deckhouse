@@ -1,9 +1,9 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 {% alert level="warning" %}
-Работоспособность провайдера подтверждена только для шаблонов виртуальных машин на базе Ubuntu 22.04.
+The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
 {% endalert %}
 
-Для начала работы с провайдером необходим созданный тенант с ресурсами, указанными в [документации](/documentation/v1/modules/030-cloud-provider-vcd/environment.html#список-необходимых-ресурсов-vcd).
+To start working with the provider, you have to create a tenant with the resources listed in the [documentation](/documentation/v1/modules/030-cloud-provider-vcd/environment.html#list-of-required-vcd-resources).
 
-После получения тенанта, необходимо настроить внутренную сеть, EDGE Gateway и подготовить шаблон виртуальной машины. Следуйте инструкциям по настройке окружения в [документации](/documentation/v1/modules/030-cloud-provider-vcd/environment.html) провайдера.
+Once the tenant has been provisioned, you must configure the internal network, EDGE Gateway, and prepare the virtual machine template. Follow the instructions for setting up the environment in the provider's [documentation](/documentation/v1/modules/030-cloud-provider-vcd/environment.html).
