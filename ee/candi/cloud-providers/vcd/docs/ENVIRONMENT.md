@@ -28,73 +28,73 @@ Also, in the tenant, you need to grant the following rights to change VM paramet
 
 Network (internal network) can be configured by your VMware Cloud Director service provider, or you can configure it yourself. Next, we consider setting up the internal network yourself.
 
-### Добавление сети
+### Adding a network
 
 Go to the _Networking_ tab and click on the _NEW button_:
 
-![Добавление сети, шаг 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
+![Adding a network, step 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
 
 Select the Data Center:
 
-![Добавление сети, шаг 2](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
+![Adding a network, step 2](../../images/030-cloud-provider-vcd/network-setup/Screenshot2.png)
 
-_Network type_ must be _Routed_:
+Note that _Network type_ must be _Routed_:
 
-![Добавление сети, шаг 3](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
+![Adding a network, step 3](../../images/030-cloud-provider-vcd/network-setup/Screenshot3.png)
 
-Connect _EdgeRouter_ to the network:
+Connect the _EdgeRouter_ to the network:
 
-![Добавление сети, шаг 4](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
+![Adding a network, step 4](../../images/030-cloud-provider-vcd/network-setup/Screenshot4.png)
 
 Set the network name and CIDR:
 
-![Добавление сети, шаг 5](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
+![Adding a network, step 5](../../images/030-cloud-provider-vcd/network-setup/Screenshot5.png)
 
 Do not add Static IP Pools, because DHCP will be used:
 
-![Добавление сети, шаг 6](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
+![Adding a network, step 6](../../images/030-cloud-provider-vcd/network-setup/Screenshot6.png)
 
 Specify the DNS server addresses:
 
-![Добавление сети, шаг 7](../../images/030-cloud-provider-vcd/network-setup/Screenshot7.png)
+![Adding a network, step 7](../../images/030-cloud-provider-vcd/network-setup/Screenshot7.png)
 
 ### Configuring DHCP
 
-To dynamically order nodes, you must enable the DHCP server for the internal network.
+To provision nodes dynamically, you have to enable the DHCP server for the internal network.
 
 {% alert level="info" %}
-Рекомендуем выделить начало диапазона адресов сети на системные нагрузки (control plane, frontend-узлы, системные узлы), а остальное выделить на DHCP-пул. Например, для сети по маске `/24` будет достаточно выделения 20 адресов под системные нагрузки.
+We recommend allocating the beginning of the network address range to system consumers (control plane, frontend nodes, system nodes) and the rest to the DHCP pool. For example, for a `/24` mask network it would be enough to allocate 20 addresses to system consumers.
 {% endalert %}
 
-Перейдите во вкладку _Networking_ и откройте созданную сеть:
+Click the _Networking_ tab and open the network you created:
 
-![DHCP, шаг 1](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot.png)
+![DHCP, step 1](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot.png)
 
-В открытом окне откройте вкладку _IP Management_ -> _DHCP_ -> Activate:
+In the window that opens, select the _IP Management_ -> _DHCP_ -> Activate tab:
 
-![DHCP, шаг 2](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot2.png)
+![DHCP, step 2](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot2.png)
 
-Во вкладке _General settings_ настройте параметры аналогично примеру:
+In the _General settings_ tab, set the parameters as shown in the example:
 
-![DHCP, шаг 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot3.png)
+![DHCP, step 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot3.png)
 
-Добавьте пул:
+Next, add a pool:
 
-![DHCP, шаг 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot4.png)
+![DHCP, step 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot4.png)
 
-Установите адреса DNS-серверов:
+Set the DNS server addresses:
 
-![DHCP, шаг 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot5.png)
+![DHCP, step 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot5.png)
 
-### Добавление vApp
+### Adding vApp
 
-Перейдите во вкладку _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_: 
+Switch to the _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_ tab: 
 
-![Добавление vApp, шаг 1](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
+![Adding a vApp, step 1](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
 
-Установите имя и включите vApp:
+Set a name and enable the vApp:
 
-![Добавление vApp, шаг 2](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
+![Adding a vApp, step 2](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
 
 ### Добавление сети к vApp
 
