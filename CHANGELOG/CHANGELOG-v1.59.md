@@ -93,7 +93,7 @@
  - **[deckhouse]** Validation configs of disabled modules is disabled. [#7744](https://github.com/deckhouse/deckhouse/pull/7744)
  - **[deckhouse-controller]** Use FQDN K8s pod name for the lease leader. [#8187](https://github.com/deckhouse/deckhouse/pull/8187)
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
- - **[dhctl]** Added pod security context to deckhouse pod and disabled deckhouse init container if `external-module-manager` if off [#8173](https://github.com/deckhouse/deckhouse/pull/8173)
+ - **[dhctl]** Add pod security context to `deckhouse` pod and disable `deckhouse` init container if `external-module-manager` is off. [#8173](https://github.com/deckhouse/deckhouse/pull/8173)
  - **[dhctl]** Fix `dhctl mirror` producing bundles with unexpected components versions. [#8161](https://github.com/deckhouse/deckhouse/pull/8161)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)

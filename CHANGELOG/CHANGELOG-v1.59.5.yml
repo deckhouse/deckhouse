@@ -13,8 +13,8 @@ deckhouse-controller:
 dhctl:
   fixes:
     - summary: >-
-        Added pod security context to deckhouse pod and disabled deckhouse init container if
-        `external-module-manager` if off
+        Add pod security context to `deckhouse` pod and disable `deckhouse` init container if
+        `external-module-manager` is off.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8173
     - summary: Fix `dhctl mirror` producing bundles with unexpected components versions.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8161
