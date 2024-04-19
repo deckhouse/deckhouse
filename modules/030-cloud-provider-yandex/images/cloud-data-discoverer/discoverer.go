@@ -81,7 +81,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	return nil, nil
 }
 
-// TemporaryDisable, until CSI starts placing cluster labels that solve the problem discovery disks different cluster in one folder.
+// TemporaryDisable, until CSI starts placing cluster labels that solve the problem of discovery orphan disks from different clusters in one folder.
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
 	return []v1alpha1.DiskMeta{}, nil
 }
