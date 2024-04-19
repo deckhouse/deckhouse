@@ -37,7 +37,7 @@ type Converter struct {
 }
 
 func newConverter(pathToConversions string) (*Converter, error) {
-	c := &Converter{conversions: make(map[int]string)}
+	c := &Converter{conversions: make(map[int]string), latest: 1}
 	conversionsDir, err := os.ReadDir(pathToConversions)
 	if err != nil {
 		return nil, err

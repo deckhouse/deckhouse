@@ -184,7 +184,7 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 	return utils.Values(item.Spec.Settings), nil
 }
 
-// SaveConfigValues saving patches in ModuleConfigBackend. Used for settings-conversions
+// SaveConfigValues saving patches in ModuleConfigBackend.
 func (mc ModuleConfigBackend) SaveConfigValues(_ context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
 	mc.logger.Errorf("module %s tries to save values in ModuleConfig: %s", moduleName, values.DebugString())
 	return "", errors.New("saving patch values in ModuleConfig is forbidden")
