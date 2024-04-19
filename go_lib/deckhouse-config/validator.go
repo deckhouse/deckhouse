@@ -110,6 +110,10 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 	result.Settings = newSettings
 	result.Version = newVersion
 
+	if newVersion != latestVersion {
+		result.Warning = fmt.Sprintf("spec.version=%d is obsolete. Please migrate spec.settings to the latest version %d", cfg.Spec.Version, latestVersion)
+	}
+
 	return result
 }
 

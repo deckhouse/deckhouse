@@ -178,7 +178,7 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 		version = strconv.Itoa(cfg.Spec.Version)
 		if !converter.IsKnownVersion(cfg.Spec.Version) {
 			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", converter.LatestVersion())
-		} else if converter.Conversion(cfg.Spec.Version) != "" {
+		} else if cfg.Spec.Version < converter.LatestVersion() {
 			// Warn about obsolete version if there is conversion for spec.version.
 			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", converter.LatestVersion())
 		}
