@@ -53,8 +53,10 @@ data:
             - targets:
                 - prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
           metrics_relabel_configs:
+          {{- range append (keys .Values.prometheus.externalLabels) "prometheus" | uniq }}
             - action: labeldrop
-              source_label: prometheus
+              source_label: {{ . }}
+          {{- end }}
           ignore_error: true
           anti_affinity: 300s
           timeout: 5s
