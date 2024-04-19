@@ -81,41 +81,46 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	return nil, nil
 }
 
+// TemporaryDisable, until CSI starts placing cluster labels that solve the problem discovery disks different cluster in one folder.
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	disks, err := d.getDisksCreatedByCSIDriver(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get disks: %v", err)
-	}
-
-	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
-
-	for _, disk := range disks {
-		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
-	}
-
-	return disksMeta, nil
+	return []v1alpha1.DiskMeta{}, nil
 }
 
-func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute.Disk, error) {
-	diskList, err := d.sdk.Compute().Disk().List(ctx, &compute.ListDisksRequest{
-		FolderId: d.folderID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list disks: %v", err)
-	}
+// func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+// 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get disks: %v", err)
+// 	}
 
-	disks := diskList.GetDisks()
-	disksCreatedByCSIDriver := make([]*compute.Disk, 0, len(disks))
+// 	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
 
-	for _, disk := range disks {
-		if disk.Description == "Created by Yandex CSI driver" {
-			disksCreatedByCSIDriver = append(disksCreatedByCSIDriver, disk)
-		}
-	}
+// 	for _, disk := range disks {
+// 		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
+// 	}
 
-	if len(disksCreatedByCSIDriver) == 0 {
-		d.logger.Warnln("Unexpected behavior: no disks created by the CSI driver were found in the cloud. Should be checked manually")
-	}
+// 	return disksMeta, nil
+// }
 
-	return disksCreatedByCSIDriver, nil
-}
+// func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute.Disk, error) {
+// 	diskList, err := d.sdk.Compute().Disk().List(ctx, &compute.ListDisksRequest{
+// 		FolderId: d.folderID,
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to list disks: %v", err)
+// 	}
+
+// 	disks := diskList.GetDisks()
+// 	disksCreatedByCSIDriver := make([]*compute.Disk, 0, len(disks))
+
+// 	for _, disk := range disks {
+// 		if disk.Description == "Created by Yandex CSI driver" {
+// 			disksCreatedByCSIDriver = append(disksCreatedByCSIDriver, disk)
+// 		}
+// 	}
+
+// 	if len(disksCreatedByCSIDriver) == 0 {
+// 		d.logger.Warnln("Unexpected behavior: no disks created by the CSI driver were found in the cloud. Should be checked manually")
+// 	}
+
+// 	return disksCreatedByCSIDriver, nil
+// }
