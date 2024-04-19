@@ -39,6 +39,7 @@
  - **[dhctl]** Support for creating chunked images bundles in mirror. [#8000](https://github.com/deckhouse/deckhouse/pull/8000)
  - **[extended-monitoring]** Support force image check with `image-availability-exporter`, even when workloads are disabled or suspended. [#7606](https://github.com/deckhouse/deckhouse/pull/7606)
  - **[external-module-manager]** Disable module hooks on restart. [#7582](https://github.com/deckhouse/deckhouse/pull/7582)
+ - **[flant-integration]** Added metrics for the number of cpu and memory in node groups. [#7829](https://github.com/deckhouse/deckhouse/pull/7829)
  - **[ingress-nginx]** Add the IP address and hostname to the `status` field of the `IngressNginxController` resource. [#7785](https://github.com/deckhouse/deckhouse/pull/7785)
  - **[ingress-nginx]** Add VPA support to OpenKruise advance daemonsets. [#7557](https://github.com/deckhouse/deckhouse/pull/7557)
     Vpa-admission-controller/recommender/updater pods will be recreated. OpenKruise controller manager pod will restart.
@@ -46,6 +47,7 @@
     Application traffic redirection setup method in the istio module deligated to a special CNI plugin. Cilium agent pods will restart, and L7-based policies will flap.
  - **[l2-load-balancer]** Show public IP in the status field of the `L2LoadBalancer` CustomResource. [#7937](https://github.com/deckhouse/deckhouse/pull/7937)
  - **[l2-load-balancer]** The new module for redundant L2 load-balancing and a new IngressNginxController inlet L2LoadBalancer. [#7752](https://github.com/deckhouse/deckhouse/pull/7752)
+ - **[log-shipper]** Add the ability to set `key_field` for Kafka. [#8157](https://github.com/deckhouse/deckhouse/pull/8157)
  - **[log-shipper]** Validate the TLS certificate of the remote host for Loki. [#6911](https://github.com/deckhouse/deckhouse/pull/6911)
     Loki and Grafana will restart.
  - **[loki]** Add `kube-rbac-proxy` to prevent access to Loki from unauthorized clients. [#6911](https://github.com/deckhouse/deckhouse/pull/6911)
@@ -83,12 +85,16 @@
  - **[cloud-provider-gcp]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
  - **[cloud-provider-yandex]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
  - **[cloud-provider-yandex]** Fix a long node name. [#6718](https://github.com/deckhouse/deckhouse/pull/6718)
+ - **[control-plane-manager]** Fix infinite loop of checksum verification in `control-plane-manager`. [#7983](https://github.com/deckhouse/deckhouse/pull/7983)
  - **[control-plane-manager]** Fix viewing logs and exec in pods for clusters upgraded to K8s 1.29. [#7908](https://github.com/deckhouse/deckhouse/pull/7908)
  - **[dashboard]** Add `kube-rbac-proxy-ca.crt` configMap to `d8-dashboard` namespace. [#7766](https://github.com/deckhouse/deckhouse/pull/7766)
  - **[deckhouse]** Use the same logic as minor/patch for `apply-now` release, except the time settings. [#7988](https://github.com/deckhouse/deckhouse/pull/7988)
  - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7770](https://github.com/deckhouse/deckhouse/pull/7770)
  - **[deckhouse]** Validation configs of disabled modules is disabled. [#7744](https://github.com/deckhouse/deckhouse/pull/7744)
+ - **[deckhouse-controller]** Use FQDN K8s pod name for the lease leader. [#8187](https://github.com/deckhouse/deckhouse/pull/8187)
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
+ - **[dhctl]** Added pod security context to deckhouse pod and disabled deckhouse init container if `external-module-manager` if off [#8173](https://github.com/deckhouse/deckhouse/pull/8173)
+ - **[dhctl]** Fix `dhctl mirror` producing bundles with unexpected components versions. [#8161](https://github.com/deckhouse/deckhouse/pull/8161)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
  - **[global-hooks]** Fix K8s upgrade migration. [#8148](https://github.com/deckhouse/deckhouse/pull/8148)
@@ -104,6 +110,7 @@
     `kube-proxy` pods will restart.
  - **[l2-load-balancer]** Fixes for ports conflict and hook panic. [#8160](https://github.com/deckhouse/deckhouse/pull/8160)
  - **[l2-load-balancer]** Fix missed `externalTrafficPolicy` option for L2LoadBalancer. [#7968](https://github.com/deckhouse/deckhouse/pull/7968)
+ - **[monitoring-kubernetes]** Fix hook with helm releases scan for deprecated API versions. [#8159](https://github.com/deckhouse/deckhouse/pull/8159)
  - **[monitoring-kubernetes]** Reducing the number of scans of release secrets in the cluster. [#7558](https://github.com/deckhouse/deckhouse/pull/7558)
  - **[node-manager]** Fix ClusterHasOrphanedDisks polk group. [#8094](https://github.com/deckhouse/deckhouse/pull/8094)
  - **[node-manager]** Simplify ng zones check expression. [#8022](https://github.com/deckhouse/deckhouse/pull/8022)
@@ -141,6 +148,7 @@
  - **[deckhouse-controller]** Remove linstor module [#7091](https://github.com/deckhouse/deckhouse/pull/7091)
     Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - **[dhctl]** Support Deckhouse controller high availability mode during bootstrap. [#7919](https://github.com/deckhouse/deckhouse/pull/7919)
+ - **[docs]** Summary table of necessary ports using by Deckhouse. [#8099](https://github.com/deckhouse/deckhouse/pull/8099)
  - **[operator-prometheus]** Add documentation for the module. [#8009](https://github.com/deckhouse/deckhouse/pull/8009)
  - **[prometheus]** Dashboards content validations improvements. [#8039](https://github.com/deckhouse/deckhouse/pull/8039)
  - **[prometheus]** Move memcached to distroless. [#7945](https://github.com/deckhouse/deckhouse/pull/7945)
