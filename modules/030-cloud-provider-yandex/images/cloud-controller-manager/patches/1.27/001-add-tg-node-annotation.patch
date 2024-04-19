@@ -1,18 +1,65 @@
-diff --git a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
-index a8559f0..b9c8a30 100644
---- a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
-+++ b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
-@@ -24,6 +24,9 @@ import (
- 	"k8s.io/apimachinery/pkg/labels"
+diff --git a/pkg/cloudprovider/yandex/load_balancer.go b/pkg/cloudprovider/yandex/load_balancer.go
+index a8b61be..7b09147 100644
+--- a/pkg/cloudprovider/yandex/load_balancer.go
++++ b/pkg/cloudprovider/yandex/load_balancer.go
+@@ -13,10 +13,12 @@ import (
  )
 
-+// node annotation to put node to the specific target group
-+const targetGroupNodeAnnotation = "yandex.cpi.flant.com/target-group"
+ const (
+-	targetGroupNetworkIdAnnotation = "yandex.cpi.flant.com/target-group-network-id"
+-	externalLoadBalancerAnnotation = "yandex.cpi.flant.com/loadbalancer-external"
+-	listenerSubnetIdAnnotation     = "yandex.cpi.flant.com/listener-subnet-id"
+-	listenerAddressIPv4            = "yandex.cpi.flant.com/listener-address-ipv4"
++	// node annotation to put node to the specific target group
++	customTargetGroupNamePrefixAnnotation = "yandex.cpi.flant.com/target-group-name-prefix"
++	targetGroupNetworkIdAnnotation        = "yandex.cpi.flant.com/target-group-network-id"
++	externalLoadBalancerAnnotation        = "yandex.cpi.flant.com/loadbalancer-external"
++	listenerSubnetIdAnnotation            = "yandex.cpi.flant.com/listener-subnet-id"
++	listenerAddressIPv4                   = "yandex.cpi.flant.com/listener-address-ipv4"
+
+ 	nodesHealthCheckPath = "/healthz"
+ 	// NOTE: Please keep the following port in sync with ProxyHealthzPort in pkg/cluster/ports/ports.go
+@@ -178,7 +180,8 @@ func (yc *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.
+ 		},
+ 	}
+
+-	tgName := yc.config.ClusterName + lbParams.targetGroupNetworkID
++	tgName := lbParams.targetGroupNamePrefix + yc.config.ClusterName + lbParams.targetGroupNetworkID
 +
- type NodeTargetGroupSyncer struct {
- 	// TODO: refactor cloud out of here
- 	cloud *Cloud
-@@ -97,6 +100,11 @@ func (ntgs *NodeTargetGroupSyncer) cleanUpTargetGroups(ctx context.Context) erro
+ 	tg, err := yc.yandexService.LbSvc.GetTgByName(ctx, tgName)
+ 	if err != nil {
+ 		return nil, err
+@@ -201,10 +204,11 @@ func (yc *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.
+ }
+
+ type loadBalancerParameters struct {
+-	targetGroupNetworkID string
+-	listenerSubnetID     string
+-	listenerAddressIPv4  string
+-	internal             bool
++	targetGroupNetworkID  string
++	targetGroupNamePrefix string
++	listenerSubnetID      string
++	listenerAddressIPv4   string
++	internal              bool
+ }
+
+ func (yc *Cloud) getLoadBalancerParameters(svc *v1.Service) (lbParams loadBalancerParameters) {
+@@ -227,5 +231,9 @@ func (yc *Cloud) getLoadBalancerParameters(svc *v1.Service) (lbParams loadBalanc
+ 		lbParams.listenerAddressIPv4 = value
+ 	}
+
++	if value, ok := svc.ObjectMeta.Annotations[customTargetGroupNamePrefixAnnotation]; ok {
++		lbParams.targetGroupNamePrefix = value
++	}
++
+ 	return
+ }
+diff --git a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
+index a8559f0..54dca0c 100644
+--- a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
++++ b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
+@@ -97,6 +97,11 @@ func (ntgs *NodeTargetGroupSyncer) cleanUpTargetGroups(ctx context.Context) erro
  	return nil
  }
 
@@ -24,7 +71,7 @@ index a8559f0..b9c8a30 100644
  func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.Context, nodes []*corev1.Node) error {
  	if len(nodes) == 0 {
  		klog.Info("no nodes to synchronize TGs with, skipping...")
-@@ -109,7 +117,7 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
+@@ -109,7 +114,7 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
  	}
 
  	// TODO: speed up by not performing individual lookups
@@ -33,7 +80,7 @@ index a8559f0..b9c8a30 100644
  	for _, node := range nodes {
  		nodeName := MapNodeNameToInstanceName(types.NodeName(node.Name))
  		log.Printf("Finding Instance by Folder %q and Name %q", ntgs.cloud.config.FolderID, nodeName)
-@@ -118,7 +126,7 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
+@@ -118,7 +123,7 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
  			return fmt.Errorf("failed to find Instance by its name: %s", err)
  		}
 
@@ -42,7 +89,7 @@ index a8559f0..b9c8a30 100644
  	}
 
  	mapping, err := ntgs.constructNetworkIdToTargetMap(ctx, instances)
-@@ -126,8 +134,8 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
+@@ -126,8 +131,8 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
  		return fmt.Errorf("failed to construct NetworkIdToTargetMap: %s", err)
  	}
 
@@ -53,7 +100,7 @@ index a8559f0..b9c8a30 100644
  		if err != nil {
  			return err
  		}
-@@ -138,18 +146,22 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
+@@ -138,18 +143,22 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
  	return nil
  }
 
@@ -72,10 +119,23 @@ index a8559f0..b9c8a30 100644
 
 -			mapping[subnetInfo.NetworkId] = append(mapping[subnetInfo.NetworkId], &loadbalancer.Target{
 +			key := ntgs.cloud.config.ClusterName + subnetInfo.NetworkId
-+			if v, ok := instance.Node.Annotations[targetGroupNodeAnnotation]; ok {
-+				key = v + subnetInfo.NetworkId
++			if v, ok := instance.Node.Annotations[customTargetGroupNamePrefixAnnotation]; ok {
++				key = truncateAnnotationValue(v) + key
 +			}
 +			mapping[key] = append(mapping[subnetInfo.NetworkId], &loadbalancer.Target{
  				SubnetId: iface.SubnetId,
  				Address:  iface.PrimaryV4Address.Address,
  			})
+@@ -162,3 +171,12 @@ func (ntgs *NodeTargetGroupSyncer) constructNetworkIdToTargetMap(ctx context.Con
+
+ 	return mapping, nil
+ }
++
++func truncateAnnotationValue(value string) string {
++	// maximum length of annotation values should not exceed 63 - length of cluster uuid(26 symbols) - length of network id(21)
++	if len(value) > 36 {
++		log.Printf("annotation '%s' length should be less than 36 characters, truncate it", value)
++		value = value[:36]
++	}
++	return value
++}
