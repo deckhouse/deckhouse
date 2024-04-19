@@ -59,7 +59,27 @@ kubernetes:
     labelSelector:
       matchLabels:
         heritage: "deckhouse"
-
+  - name: pod
+    queue: /controller_metrics_pod
+    apiVersion: v1
+    kind: Pod
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "kind": .kind,
+        "module": .metadata.labels.module,
+      }
+    labelSelector:
+      matchLabels:
+        tier: "control-plane"
 schedule:
   - name: "d8_controllers_schedule"
     # NOTE: If you are changing crontab frequency - please change a time duration
