@@ -82,6 +82,9 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+	// TemporaryDisable, until CSI starts placing cluster labels that solve the problem of discovery orphan disks from different clusters in one folder.
+	return []v1alpha1.DiskMeta{}, nil
+
 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disks: %v", err)
