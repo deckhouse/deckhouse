@@ -161,6 +161,9 @@ spec:
                     encoding:
                       description: |
                         В каком формате закодировать сообщение.
+                    keyField:
+                      description: |
+                        Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
                     sasl:
                       description: Конфигурация аутентификации SASL для взаимодействия с Kafka.
                       properties:
