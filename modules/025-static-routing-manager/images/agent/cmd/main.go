@@ -48,7 +48,11 @@ var (
 
 func main() {
 	ctx := context.Background()
-	cfgParams := config.NewConfig()
+	cfgParams, err := config.NewConfig()
+	if err != nil {
+		fmt.Println("unable to create NewConfig " + err.Error())
+		os.Exit(1)
+	}
 
 	log, err := logger.NewLogger(cfgParams.Loglevel)
 	if err != nil {
@@ -60,9 +64,11 @@ func main() {
 	log.Info(fmt.Sprintf("[main] OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
 
 	log.Info("[main] CfgParams has been successfully created")
-	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevel, cfgParams.Loglevel))
-	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueInterval, cfgParams.RequeueInterval))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPort, cfgParams.ProbeAddressPort))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
+	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.ConfigmapENV, cfgParams.ConfigmapName))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {

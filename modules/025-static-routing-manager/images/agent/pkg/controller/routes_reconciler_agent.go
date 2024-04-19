@@ -18,13 +18,21 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/rand"
+	"net"
+	"reflect"
 	"static-routing-manager-agent/api/v1alpha1"
 	"static-routing-manager-agent/pkg/config"
 	"static-routing-manager-agent/pkg/logger"
 	"static-routing-manager-agent/pkg/monitoring"
 	"time"
+
+	"github.com/vishvananda/netlink"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1 "k8s.io/api/core/v1"
 
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,17 +44,29 @@ import (
 )
 
 const (
-	RoutingTableCtrlName = "static-routing-manager-agent"
-
-	RouteTableIDMin int = 10000
-	RouteTableIDMax int = 11000
-
-	StatusRouteTableIDReconcile reconcileType = "StatusRouteTableID"
+	CtrlName                        = "static-routing-manager-agent"
+	d8Realm                         = 216
+	RoutesAreNotEqual reconcileType = "RoutesAreNotEqual"
 )
 
 type (
 	reconcileType string
 )
+
+type routes struct {
+	route map[string]string
+}
+
+type NodeRouteTables struct {
+	routeTable         map[int]routes
+	status             string
+	lastCheckTimestamp string
+}
+
+type nodesRoutesMap struct {
+	generation int64
+	node       map[string]NodeRouteTables
+}
 
 func RunRoutesReconcilerAgentController(
 	mgr manager.Manager,
@@ -56,24 +76,30 @@ func RunRoutesReconcilerAgentController(
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
 
-	c, err := controller.New(RoutingTableCtrlName, mgr, controller.Options{
+	c, err := controller.New(CtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Info("[RoutingTableReconciler] starts Reconcile")
-			rt := &v1alpha1.RoutingTable{}
-			err := cl.Get(ctx, request.NamespacedName, rt)
+
+			cm := &v1.ConfigMap{}
+			err := cl.Get(ctx, request.NamespacedName, cm)
 			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[RoutingTableReconciler] unable to get RoutingTable, name: %s", request.Name))
+				log.Error(err, fmt.Sprintf("[RoutingTableReconciler] unable to get ConfigMap, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
 
-			if rt.Name == "" {
-				log.Info(fmt.Sprintf("[RoutingTableReconciler] seems like the RoutingTable for the request %s was deleted. Reconcile retrying will stop.", request.Name))
+			if cm.Name == "" {
+				log.Info(fmt.Sprintf("[RoutingTableReconciler] seems like the ConfigMap for the request %s was deleted. Reconcile retrying will stop.", request.Name))
 				return reconcile.Result{}, nil
 			}
 
-			shouldRequeue, err := runEventReconcile(ctx, cl, log, rt)
+			nrmFromCM, err := getRoutesFromCMbyNodeName(cm, cfg.NodeName)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("[RoutingTableReconciler] an error occured while reconciles the RoutingTable, name: %s", rt.Name))
+				log.Error(err, fmt.Sprintf("[RoutingTableReconciler] cant get nodeRouteMap from configmap for Node: %v", cfg.NodeName))
+			}
+
+			shouldRequeue, err := runEventReconcile(ctx, cl, log, nrmFromCM)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("[RoutingTableReconciler] an error occured while reconciles the RoutingTable, name: %s", cm.Name))
 			}
 
 			if shouldRequeue {
@@ -92,7 +118,7 @@ func RunRoutesReconcilerAgentController(
 		return nil, err
 	}
 
-	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.RoutingTable{}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &v1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: cfg.ConfigmapName}}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		log.Error(err, "[RunRoutesReconcilerAgentController] unable to watch the events")
 		return nil, err
@@ -101,30 +127,201 @@ func RunRoutesReconcilerAgentController(
 	return c, nil
 }
 
-func runEventReconcile(ctx context.Context, cl client.Client, log logger.Logger, rt *v1alpha1.RoutingTable) (bool, error) {
-	recType, err := identifyReconcileFunc(rt, log)
+func runEventReconcile(ctx context.Context, cl client.Client, log logger.Logger, cmNRM *NodeRouteTables) (bool, error) {
+	nodeNRM, err := getRoutesFromNode()
+
+	recType, err := identifyReconcileFunc(cmNRM, nodeNRM, log)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("[runEventReconcile] unable to identify reconcile func for the RoutingTable %s", rt.Name))
+		log.Error(err, fmt.Sprintf("[runEventReconcile] unable to identify reconcile func"))
 		return true, err
 	}
 	log.Debug(fmt.Sprintf("[runEventReconcile] reconcile operation: %s", recType))
 	switch recType {
-	case StatusRouteTableIDReconcile:
-		log.Debug(fmt.Sprintf("[runEventReconcile] StatusRouteTableIDReconcile starts reconciliataion for the RoutingTable, name: %s", rt.Name))
-		return reconcileRTGenerateIDFunc(ctx, cl, log, rt)
+	case RoutesAreNotEqual:
+		log.Debug(fmt.Sprintf("[runEventReconcile] StatusRouteTableIDReconcile starts reconciliataion"))
+		return reconcileRoutesOnNodeFunc(cmNRM, nodeNRM, log)
 	default:
-		log.Debug(fmt.Sprintf("[runEventReconcile] the RoutingTable %s should not be reconciled", rt.Name))
+		log.Debug(fmt.Sprintf("[runEventReconcile] the RoutingTable should not be reconciled"))
 	}
 
 	return false, nil
 }
 
-func identifyReconcileFunc(rt *v1alpha1.RoutingTable, log logger.Logger) (reconcileType, error) {
-	should := shouldReconcileByEmptyStatusRouteTableIDFunc(rt, log)
+func identifyReconcileFunc(cmNRM, nodeNRM *NodeRouteTables, log logger.Logger) (reconcileType, error) {
+	should := reflect.DeepEqual(cmNRM, nodeNRM)
 	if should {
-		return StatusRouteTableIDReconcile, nil
+		return RoutesAreNotEqual, nil
 	}
 	return "none", nil
+}
+
+func reconcileRoutesOnNodeFunc(cmNRM, nodeNRM *NodeRouteTables, log logger.Logger) (bool, error) {
+	log.Debug(fmt.Sprintf("[reconcileRoutesOnNodeFunc] Start"))
+
+	appendToNode, deleteFromNode, err := routeTablesDeepEqual(cmNRM, nodeNRM)
+	if err != nil {
+		return false, fmt.Errorf("can not compare two nodeRouteTables, err: %v", err)
+	}
+
+	err = deleteRoutesFromNode(deleteFromNode)
+	if err != nil {
+		return false, fmt.Errorf("can not delete routes from node, err: %v", err)
+	}
+	err = addRoutesToNode(appendToNode)
+	if err != nil {
+		return false, fmt.Errorf("can not add routes to node, err: %v", err)
+	}
+
+	return false, nil
+}
+
+func getRoutesFromCMbyNodeName(cm *v1.ConfigMap, nodeName string) (*NodeRouteTables, error) {
+	nrm := new(NodeRouteTables)
+	if cm.Data[nodeName] == "" || cm.DeletionTimestamp != nil {
+		return new(NodeRouteTables), nil
+	}
+	err := json.Unmarshal([]byte(cm.Data[nodeName]), &nrm)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ConfigMap, err: %v", err)
+	}
+	return nrm, nil
+}
+
+func getRoutesFromNode() (*NodeRouteTables, error) {
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM)
+	if err != nil {
+		return nil, fmt.Errorf("failed get routes from node, err: %v", err)
+	}
+	ndRrTbls := new(NodeRouteTables)
+
+	for _, route := range routes {
+		ndRrTbls.routeTable[route.Table].route[route.Dst.String()] = route.Gw.String()
+	}
+
+	return ndRrTbls, nil
+}
+
+func routeTablesDeepEqual(cm, node *NodeRouteTables) (*NodeRouteTables, *NodeRouteTables, error) {
+	appendToNode := new(NodeRouteTables)
+	deleteFromNode := new(NodeRouteTables)
+	// deleteFromNode, err := DeepCopyNRT(node)
+	// if err != nil {
+	//	return nil, nil, err
+	//}
+	for tblId, routes := range cm.routeTable {
+		if _, ok := node.routeTable[tblId]; ok {
+			for dst, gw := range routes.route {
+				if ndgw, ok := node.routeTable[tblId].route[dst]; ok {
+					if gw != ndgw {
+						deleteFromNode.routeTable[tblId].route[dst] = ndgw
+						appendToNode.routeTable[tblId].route[dst] = gw
+					}
+				} else {
+					appendToNode.routeTable[tblId].route[dst] = gw
+				}
+			}
+		} else {
+			appendToNode.routeTable[tblId] = routes
+		}
+	}
+
+	for tblId, routes := range node.routeTable {
+		if _, ok := cm.routeTable[tblId]; ok {
+			for dst, gw := range routes.route {
+				if cmgw, ok := cm.routeTable[tblId].route[dst]; ok {
+					if gw != cmgw {
+						deleteFromNode.routeTable[tblId].route[dst] = gw
+						appendToNode.routeTable[tblId].route[dst] = cmgw
+					}
+				} else {
+					deleteFromNode.routeTable[tblId].route[dst] = gw
+				}
+			}
+
+		} else {
+			deleteFromNode.routeTable[tblId] = routes
+		}
+	}
+	return appendToNode, deleteFromNode, nil
+}
+
+func deleteRoutesFromNode(rtToDel *NodeRouteTables) error {
+	for tblId, routes := range rtToDel.routeTable {
+		for dst, gw := range routes.route {
+			_, dstnetIPNet, err := net.ParseCIDR(dst)
+			if err != nil {
+				return fmt.Errorf("can't parse dst in route %v gw %v tbl %v, err: %v", tblId, dst, gw, err)
+			}
+			gwNetIP := net.ParseIP(gw)
+			err = netlink.RouteDel(&netlink.Route{
+				Realm: d8Realm,
+				Table: tblId,
+				Dst:   dstnetIPNet,
+				Gw:    gwNetIP,
+			})
+			if err != nil {
+				return fmt.Errorf("can't del route %v gw %v tbl %v, err: %v", tblId, dst, gw, err)
+			}
+		}
+	}
+	return nil
+}
+
+func addRoutesToNode(rtToAdd *NodeRouteTables) error {
+	for tblId, routes := range rtToAdd.routeTable {
+		for dst, gw := range routes.route {
+			_, dstnetIPNet, err := net.ParseCIDR(dst)
+			if err != nil {
+				return fmt.Errorf("can't parse dst in route %v gw %v tbl %v, err: %v", tblId, dst, gw, err)
+			}
+			gwNetIP := net.ParseIP(gw)
+			err = netlink.RouteAdd(&netlink.Route{
+				Realm: d8Realm,
+				Table: tblId,
+				Dst:   dstnetIPNet,
+				Gw:    gwNetIP,
+			})
+			if err != nil {
+				return fmt.Errorf("can't add route %v gw %v tbl %v, err: %v", tblId, dst, gw, err)
+			}
+		}
+	}
+	return nil
+}
+
+// The dying hole
+
+func parseRoutesCM(cm *v1.ConfigMap) (*nodesRoutesMap, error) {
+	nsrm := new(nodesRoutesMap)
+	for k, v := range cm.Data {
+		var nrm interface{}
+		err := json.Unmarshal([]byte(v), &nrm)
+		if err == nil {
+			switch value := nrm.(type) {
+			case NodeRouteTables:
+				nsrm.node[k] = value
+			default:
+				return nil, fmt.Errorf("invalid ConfigMap")
+			}
+		}
+	}
+	return nsrm, nil
+}
+
+func DeepCopyNRT(in *NodeRouteTables) (*NodeRouteTables, error) {
+	if in == nil {
+		return nil, nil
+	}
+	data, err := json.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
+	out := new(NodeRouteTables)
+	err = json.Unmarshal(data, &out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func shouldReconcileByEmptyStatusRouteTableIDFunc(rt *v1alpha1.RoutingTable, log logger.Logger) bool {
@@ -138,108 +335,26 @@ func shouldReconcileByEmptyStatusRouteTableIDFunc(rt *v1alpha1.RoutingTable, log
 		return true
 	}
 
-	if &rt.Status.IpRouteTableID == nil {
-		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID is not exist", rt.Name))
+	if &rt.Status.IPRouteTableID == nil {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IPRouteTableID is not exist", rt.Name))
 		return true
 	}
 
-	if rt.Status.IpRouteTableID == 0 {
-		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID is set to 0", rt.Name))
+	if rt.Status.IPRouteTableID == 0 {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IPRouteTableID is set to 0", rt.Name))
 		return true
 	}
 
-	if &rt.Spec.IpRouteTableID == nil || (&rt.Spec.IpRouteTableID != nil && rt.Spec.IpRouteTableID == 0) {
-		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID(%v) is present but Spec.IpRouteTableID is not exist or eq 0", rt.Name, rt.Status.IpRouteTableID))
+	if &rt.Spec.IPRouteTableID == nil || (&rt.Spec.IPRouteTableID != nil && rt.Spec.IPRouteTableID == 0) {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IPRouteTableID(%v) is present but Spec.IPRouteTableID is not exist or eq 0", rt.Name, rt.Status.IPRouteTableID))
 		return false
 	}
 
-	if rt.Status.IpRouteTableID == rt.Spec.IpRouteTableID {
-		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IpRouteTableID(%v) and Spec.IpRouteTableID(%v) are both present, they have the same value, and it is not equil to 0", rt.Name, rt.Status.IpRouteTableID, rt.Spec.IpRouteTableID))
+	if rt.Status.IPRouteTableID == rt.Spec.IPRouteTableID {
+		log.Debug(fmt.Sprintf("[shouldReconcileBy] In the RoutingTable %s Status.IPRouteTableID(%v) and Spec.IPRouteTableID(%v) are both present, they have the same value, and it is not equil to 0", rt.Name, rt.Status.IPRouteTableID, rt.Spec.IPRouteTableID))
 		return false
 	}
 
 	log.Debug(fmt.Sprintf("[shouldReconcileBy] Reconcile by default"))
 	return true
-}
-
-func reconcileRTGenerateIDFunc(
-	ctx context.Context,
-	cl client.Client,
-	log logger.Logger,
-	rt *v1alpha1.RoutingTable,
-) (bool, error) {
-	log.Debug(fmt.Sprintf("[reconcileRTGenerateIDFunc] starts the RoutingTable %s validation", rt.Name))
-
-	var newRTId int
-	var err error
-
-	if &rt.Spec.IpRouteTableID != nil &&
-		rt.Spec.IpRouteTableID != 0 {
-		newRTId = rt.Spec.IpRouteTableID
-		log.Debug(fmt.Sprintf("[reconcileRTGenerateIDFunc] Spec.IpRouteTableID(%v) is exist, use it for status", rt.Spec.IpRouteTableID))
-	} else {
-		log.Debug(fmt.Sprintf("[reconcileRTGenerateIDFunc] Spec.IpRouteTableID is not exist, generate new for status"))
-		newRTId, err = generateFreeRoutingTableID(ctx, cl, log)
-		if err != nil {
-			log.Error(err, fmt.Sprintf("[reconcileRTGenerateIDFunc] unable to generate free RoutingTableID"))
-			return true, err
-		}
-	}
-
-	err = updateRoutingTableIDInStatus(ctx, cl, rt, newRTId)
-	if err != nil {
-		log.Error(err, fmt.Sprintf("[reconcileRTGenerateIDFunc] unable to update the RoutingTable, name: %s", rt.Name))
-		return true, err
-	}
-	log.Debug(fmt.Sprintf("[reconcileRTGenerateIDFunc] successfully updated the RoutingTable %s status", rt.Name))
-
-	return false, nil
-}
-
-func generateFreeRoutingTableID(
-	ctx context.Context,
-	cl client.Client,
-	log logger.Logger,
-) (int, error) {
-	rtList := &v1alpha1.RoutingTableList{}
-	err := cl.List(ctx, rtList)
-	if err != nil {
-		log.Error(err, "[generateFreeRoutingTableID] unable to list Routing Tables")
-		return 65536, err
-	}
-LABEL:
-	for {
-		randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-		newRTId := randomizer.Intn(RouteTableIDMax-RouteTableIDMin) + RouteTableIDMin
-		for _, rt := range rtList.Items {
-			if &rt.Status != nil && rt.Status.IpRouteTableID == newRTId {
-				continue LABEL
-			}
-		}
-		log.Debug(fmt.Sprintf("[generateFreeRoutingTableID] Successfully generate newRTId - %v", newRTId))
-		return newRTId, nil
-	}
-}
-
-func updateRoutingTableIDInStatus(
-	ctx context.Context,
-	cl client.Client,
-	rt *v1alpha1.RoutingTable,
-	newRTId int,
-) error {
-
-	if &rt.Status == nil {
-		rt.Status = v1alpha1.RoutingTableStatus{
-			// IpRouteTableID: 65536,
-		}
-	}
-
-	rt.Status.IpRouteTableID = newRTId
-
-	err := cl.Status().Update(ctx, rt)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

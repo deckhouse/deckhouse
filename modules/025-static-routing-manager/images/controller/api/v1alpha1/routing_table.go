@@ -32,7 +32,7 @@ type RoutingTableList struct {
 }
 
 type RoutingTableSpec struct {
-	IpRouteTableID int               `json:"ipRouteTableID"`
+	IPRouteTableID int               `json:"ipRouteTableID"`
 	Routes         []Routes          `json:"routes"`
 	NodeSelector   map[string]string `json:"nodeSelector"`
 }
@@ -43,5 +43,5 @@ type Routes struct {
 }
 
 type RoutingTableStatus struct {
-	IpRouteTableID int `json:"ipRouteTableID,omitempty"`
+	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }

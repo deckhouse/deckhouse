@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            iprulesets crd
+            describe iprulesets
           properties:
             spec:
               properties:

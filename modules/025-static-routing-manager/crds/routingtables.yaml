@@ -19,11 +19,18 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+    - jsonPath: .status.ipRouteTableID
+      name: ipRouteTableID
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     schema: &schema
       openAPIV3Schema:
         type: object
         description: |
-          routingtable crd
+          describe routingtable and routes
         required:
         - spec
         properties:
@@ -41,7 +48,7 @@ spec:
                 x-kubernetes-validations:
                 - message: ipRouteTableID is immutable field
                   rule: self == oldSelf
-                minimum: 0
+                minimum: 1
                 maximum: 4294967295
                 description: |
                   ID of route table on node
@@ -76,6 +83,6 @@ spec:
             properties:
               ipRouteTableID:
                 type: integer
-                minimum: 0
+                minimum: 1
                 maximum: 4294967295
 

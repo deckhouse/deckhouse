@@ -14,41 +14,84 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"os"
 	"static-routing-manager-agent/pkg/logger"
+	"strconv"
 	"time"
 )
 
 const (
-	LogLevel         = "LOG_LEVEL"
-	RequeueInterval  = "REQUEUE_INTERVAL"
-	ProbeAddressPort = "PROBE_ADDRESS_PORT"
+	LogLevelENV            = "LOG_LEVEL"
+	RequeueIntervalENV     = "REQUEUE_INTERVAL"
+	ProbeAddressPortENV    = "PROBE_ADDRESS_PORT"
+	ControllerNamespaceEnv = "CONTROLLER_NAMESPACE"
+	NodeNameENV            = "NODE_NAME"
+	ConfigmapENV           = "CONFIGMAP_NAME"
+	ControllerName         = "static-routing-manager-agent"
+	ConfigmapName          = "static-routes"
 )
 
 type Options struct {
-	Loglevel         logger.Verbosity
-	RequeueInterval  time.Duration
-	ProbeAddressPort string
+	Loglevel            logger.Verbosity
+	ProbeAddressPort    string
+	ControllerNamespace string
+	RequeueInterval     time.Duration
+	NodeName            string
+	ConfigmapName       string
 }
 
-func NewConfig() *Options {
+func NewConfig() (*Options, error) {
 	var opts Options
 
-	loglevel := os.Getenv(LogLevel)
+	loglevel := os.Getenv(LogLevelENV)
 	if loglevel == "" {
 		opts.Loglevel = logger.DebugLevel
 	} else {
 		opts.Loglevel = logger.Verbosity(loglevel)
 	}
 
-	probeAddressPort := os.Getenv(ProbeAddressPort)
+	probeAddressPort := os.Getenv(ProbeAddressPortENV)
 	if probeAddressPort == "" {
 		opts.ProbeAddressPort = ":0"
 	} else {
 		opts.ProbeAddressPort = probeAddressPort
 	}
 
-	opts.RequeueInterval = 10
+	controllerNamespace := os.Getenv(ControllerNamespaceEnv)
+	if controllerNamespace == "" {
+		opts.ControllerNamespace = "d8-static-routing-manager"
+	} else {
+		opts.ControllerNamespace = controllerNamespace
+	}
 
-	return &opts
+	requeueInterval := os.Getenv(RequeueIntervalENV)
+	if requeueInterval != "" {
+		ri, err := strconv.ParseInt(requeueInterval, 10, 64)
+		if err != nil {
+			opts.RequeueInterval = time.Duration(ri)
+		} else {
+			opts.RequeueInterval = time.Duration(10)
+		}
+	} else {
+		opts.RequeueInterval = time.Duration(10)
+	}
+
+	// opts.RequeueInterval = 10
+
+	nodeName := os.Getenv(NodeNameENV)
+	if nodeName != "" {
+		opts.NodeName = nodeName
+	} else {
+		return nil, fmt.Errorf("%s environment variable not set", NodeNameENV)
+	}
+
+	configmapName := os.Getenv(ConfigmapENV)
+	if configmapName == "" {
+		opts.ConfigmapName = ConfigmapName
+	} else {
+		opts.ConfigmapName = configmapName
+	}
+
+	return &opts, nil
 }

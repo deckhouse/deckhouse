@@ -23,7 +23,7 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          iprulesets crd
+          describe iprulesets
         required:
         - spec
         properties:
@@ -70,7 +70,7 @@ spec:
                       properties:
                         ipRouteTableID:
                           type: integer
-                          minimum: 0
+                          minimum: 1
                           maximum: 4294967295
                           description: |
                             ID of route table on node
@@ -89,7 +89,7 @@ spec:
             properties:
               ipRouteTableID:
                 type: integer
-                minimum: 0
+                minimum: 1
                 maximum: 4294967295
               routeTableName:
                 type: string

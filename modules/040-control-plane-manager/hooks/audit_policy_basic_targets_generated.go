@@ -122,7 +122,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-pod-reloader:pod-reloader",
 	"system:serviceaccount:d8-runtime-audit-engine:runtime-audit-engine",
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
-	"system:serviceaccount:d8-static-routing-manager:controller",
 	"system:serviceaccount:d8-system:deckhouse",
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
