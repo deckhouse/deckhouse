@@ -56,9 +56,18 @@ index a8b61be..7b09147 100644
  	return
  }
 diff --git a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
-index a8559f0..54dca0c 100644
+index a8559f0..f850521 100644
 --- a/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
 +++ b/pkg/cloudprovider/yandex/load_balancer_tg_controller.go
+@@ -64,7 +64,7 @@ func (ntgs *NodeTargetGroupSyncer) SyncTGs(ctx context.Context, nodes []*corev1.
+ 	return nil
+ }
+
+-type networkIdToTargetMap map[string][]*loadbalancer.Target
++type tgNameToTargetMap map[string][]*loadbalancer.Target
+
+ func fromNodeToInterfaceSlice(nodes []*corev1.Node) (ret []interface{}) {
+ 	for _, node := range nodes {
 @@ -97,6 +97,11 @@ func (ntgs *NodeTargetGroupSyncer) cleanUpTargetGroups(ctx context.Context) erro
  	return nil
  }
@@ -80,7 +89,7 @@ index a8559f0..54dca0c 100644
  	for _, node := range nodes {
  		nodeName := MapNodeNameToInstanceName(types.NodeName(node.Name))
  		log.Printf("Finding Instance by Folder %q and Name %q", ntgs.cloud.config.FolderID, nodeName)
-@@ -118,7 +123,7 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
+@@ -118,16 +123,16 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
  			return fmt.Errorf("failed to find Instance by its name: %s", err)
  		}
 
@@ -88,9 +97,11 @@ index a8559f0..54dca0c 100644
 +		instances = append(instances, &instanceWithNodeInfo{Instance: instance, Node: node})
  	}
 
- 	mapping, err := ntgs.constructNetworkIdToTargetMap(ctx, instances)
-@@ -126,8 +131,8 @@ func (ntgs *NodeTargetGroupSyncer) synchronizeNodesWithTargetGroups(ctx context.
- 		return fmt.Errorf("failed to construct NetworkIdToTargetMap: %s", err)
+-	mapping, err := ntgs.constructNetworkIdToTargetMap(ctx, instances)
++	mapping, err := ntgs.constructTgNameToTargetMap(ctx, instances)
+ 	if err != nil {
+-		return fmt.Errorf("failed to construct NetworkIdToTargetMap: %s", err)
++		return fmt.Errorf("failed to construct tgNameToTargetMap: %s", err)
  	}
 
 -	for networkID, targets := range mapping {
@@ -105,8 +116,9 @@ index a8559f0..54dca0c 100644
  }
 
 -func (ntgs *NodeTargetGroupSyncer) constructNetworkIdToTargetMap(ctx context.Context, instances []*compute.Instance) (networkIdToTargetMap, error) {
-+func (ntgs *NodeTargetGroupSyncer) constructNetworkIdToTargetMap(ctx context.Context, instances []*instanceWithNodeInfo) (networkIdToTargetMap, error) {
- 	mapping := make(networkIdToTargetMap)
+-	mapping := make(networkIdToTargetMap)
++func (ntgs *NodeTargetGroupSyncer) constructTgNameToTargetMap(ctx context.Context, instances []*instanceWithNodeInfo) (tgNameToTargetMap, error) {
++	mapping := make(tgNameToTargetMap)
 
  	// TODO: Implement simple caching mechanism for subnet-VPC membership lookups
  	for _, instance := range instances {
@@ -122,7 +134,7 @@ index a8559f0..54dca0c 100644
 +			if v, ok := instance.Node.Annotations[customTargetGroupNamePrefixAnnotation]; ok {
 +				key = truncateAnnotationValue(v) + key
 +			}
-+			mapping[key] = append(mapping[subnetInfo.NetworkId], &loadbalancer.Target{
++			mapping[key] = append(mapping[key], &loadbalancer.Target{
  				SubnetId: iface.SubnetId,
  				Address:  iface.PrimaryV4Address.Address,
  			})
