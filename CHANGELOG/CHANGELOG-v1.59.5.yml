@@ -1,6 +1,6 @@
 cloud-provider-yandex:
   fixes:
-    - summary: Temporary disable orphan disks discovery for yandex cloud.
+    - summary: Temporary disable orphan disks discovery for Yandex cloud.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8203
 control-plane-manager:
   fixes:
@@ -12,6 +12,8 @@ deckhouse-controller:
       pull_request: https://github.com/deckhouse/deckhouse/pull/8187
 dhctl:
   fixes:
+    - summary: Remove dependency on addon-operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8210
     - summary: >-
         Add pod security context to `deckhouse` pod and disable `deckhouse` init container if
         `external-module-manager` is off.
