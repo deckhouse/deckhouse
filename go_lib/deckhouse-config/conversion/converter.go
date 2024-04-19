@@ -96,7 +96,7 @@ func (c *Converter) IsKnownVersion(version int) bool {
 			return true
 		}
 	}
-	return version == c.latest
+	return version == c.latest || version == 1
 }
 
 func (c *Converter) VersionList() []int {
