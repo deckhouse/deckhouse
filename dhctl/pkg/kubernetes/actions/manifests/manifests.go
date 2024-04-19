@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -389,7 +388,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 		Name:  "MODULES_DIR",
-		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+		Value: strings.Join(modulesDirs, ":"),
 	})
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
