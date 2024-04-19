@@ -18,11 +18,11 @@ package main
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
+	// "github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
 	ycsdk "github.com/yandex-cloud/go-sdk"
 	"github.com/yandex-cloud/go-sdk/iamkey"
 
