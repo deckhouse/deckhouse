@@ -387,6 +387,11 @@ spec:
                           type: string
                           enum: ["JSON", "CEF"]
                           default: "JSON"
+                    keyField:
+                      type: string
+                      description: |
+                        Allows to set the [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
+                      x-doc-examples: ["host", "node", "namespace","parsed_data.app_info"]
                     sasl:
                       type: object
                       description: Configuration for SASL authentication when interacting with Kafka.
