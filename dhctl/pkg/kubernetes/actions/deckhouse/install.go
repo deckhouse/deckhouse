@@ -592,7 +592,8 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
-	externalModuleManagerEnabled := true
+	// TODO remove this after integrating external-module-manager into deckhouse-controller
+	externalModuleManagerEnabled := strings.ToLower(cfg.Bundle) != "minimal"
 	for _, mc := range cfg.ModuleConfigs {
 		if mc != nil && mc.GetName() == "external-module-manager" {
 			if mc.Spec.Enabled != nil {

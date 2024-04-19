@@ -57,7 +57,7 @@ type DeckhouseDeploymentParams struct {
 	IsSecureRegistry       bool
 	MasterNodeSelector     bool
 	KubeadmBootstrap       bool
-	ExternalModulesEnabled bool
+	ExternalModulesEnabled bool // TODO remove this after integrating external-module-manager into deckhouse-controller
 }
 
 type imagesDigests map[string]map[string]interface{}
