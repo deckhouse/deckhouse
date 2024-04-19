@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"io"
 
 	. "github.com/onsi/ginkgo"
@@ -27,14 +29,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	helmreleases "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks/internal"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
-	helmReleasesInterval = helmreleases.IntervalImmediately
-
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -269,6 +269,201 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	})
 })
 
+var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
+	var (
+		stateAClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.122.0.0/16
+podSubnetNodeCIDRPrefix: "26"
+serviceSubnetCIDR: 10.213.0.0/16
+kubernetesVersion: "Automatic"
+`
+		stateAutomatic = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
+
+		stateBClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.122.0.0/16
+podSubnetNodeCIDRPrefix: "26"
+serviceSubnetCIDR: 10.213.0.0/16
+kubernetesVersion: "1.25"
+`
+		stateConcreteVersion = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
+	)
+
+	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {\"kubernetesVersion\": \"1.21.3\"}}}", "{}")
+	Context("helm3 release with deprecated versions", func() {
+		Context("check for kubernetesVersion: \"Automatic\"", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("appns").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				f.RunGoHook()
+			})
+
+			It("must have autoK8sVersion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				var k8sVersion string
+				if val, exists := requirements.GetValue(K8sVersionsWithDeprecations); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+
+				Expect(k8sVersion).To(Equal("1.22"))
+			})
+		})
+
+		Context("check for kubernetesVersion: \"1.25\"", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("appns").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+				f.RunGoHook()
+			})
+
+			It("autoK8sVersion must be empty", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				var k8sVersion string
+				if val, exists := requirements.GetValue(K8sVersionsWithDeprecations); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				Expect(k8sVersion).To(BeEmpty())
+			})
+		})
+
+		Context("check for empty \"ClusterConfiguration\"", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunGoHook()
+			})
+
+			It("must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+		})
+	})
+
+	Context("helm3 release without deprecated apis", func() {
+		Context("check for kubernetesVersion: \"Automatic\"", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
+				var sec corev1.Secret
+				_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					Secrets("default").
+					Create(context.TODO(), &sec, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				f.RunGoHook()
+			})
+
+			It("autoK8sVersion must be empty", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				var k8sVersion string
+				if val, exists := requirements.GetValue(K8sVersionsWithDeprecations); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+				Expect(k8sVersion).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("helm2 release with deprecated versions", func() {
+		Context("check for kubernetesVersion: \"Automatic\"", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
+				var cm corev1.ConfigMap
+				_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
+
+				_, err := dependency.TestDC.MustGetK8sClient().
+					CoreV1().
+					ConfigMaps("default").
+					Create(context.TODO(), &cm, metav1.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				f.RunGoHook()
+
+			})
+
+			It("must have autoK8sVersion", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				var k8sVersion string
+				if val, exists := requirements.GetValue(K8sVersionsWithDeprecations); exists {
+					k8sVersion = fmt.Sprintf("%v", val)
+				}
+
+				Expect(k8sVersion).To(Equal("1.22"))
+			})
+		})
+	})
+
+	Context("release with doubled fields", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+
+			var sec corev1.Secret
+			_ = yaml.Unmarshal([]byte(releaseWithDoubleFields), &sec)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Secrets("default").
+				Create(context.TODO(), &sec, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.RunGoHook()
+
+		})
+
+		It("must be valid and have no deprecated resources", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			var k8sVersion string
+			if val, exists := requirements.GetValue(K8sVersionsWithDeprecations); exists {
+				k8sVersion = fmt.Sprintf("%v", val)
+			}
+			Expect(k8sVersion).To(BeEmpty())
+		})
+	})
+})
+
 const helm3ReleaseWithDeprecated = `
 apiVersion: v1
 data:
@@ -329,7 +524,7 @@ metadata:
 type: helm.sh/release.v1
 `
 
-// helm manifest can contains duplicated fields. Check it
+// helm manifestHead can contains duplicated fields. Check it
 const releaseWithDoubleFields = `
 apiVersion: v1
 data:
