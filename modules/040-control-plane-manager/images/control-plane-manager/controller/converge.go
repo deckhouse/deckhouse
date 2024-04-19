@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,7 +131,19 @@ func convergeComponent(componentName string) error {
 		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return waitPodIsReady(componentName, checksum)
+	err = waitPodIsReady(componentName, checksum)
+	if err != nil {
+		if componentName == "kube-apiserver" {
+			if err = triggerKubeletRereadManifest(componentName); err != nil {
+				// https://github.com/kubernetes/kubernetes/issues/109596
+				return fmt.Errorf("fail to trigger re-read manifest kube-apiserver: %s", err)
+			}
+			return waitPodIsReady(componentName, checksum)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func prepareConverge(componentName string, isTemp bool) error {
@@ -240,6 +253,11 @@ func waitPodIsReady(componentName string, checksum string) error {
 		if err != nil {
 			log.Warn(err)
 		}
+
+		if tries > maxRetries {
+			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
+		}
+
 		if podChecksum := pod.Annotations["control-plane-manager.deckhouse.io/checksum"]; podChecksum != checksum {
 			log.Warnf("kubernetes pod %s checksum %s does not match expected checksum %s", podName, podChecksum, checksum)
 			time.Sleep(1 * time.Second)
@@ -258,11 +276,32 @@ func waitPodIsReady(componentName string, checksum string) error {
 			continue
 		}
 
-		if tries > 240 {
-			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
-		}
-
 		log.Infof("kubernetes pod %s has matching checksum %s and is ready", podName, checksum)
 		return nil
 	}
+}
+
+func triggerKubeletRereadManifest(componentName string) error {
+	log.Warnf("trying to trigger kubelet to re-read manifest")
+
+	srcPath := filepath.Join(manifestsPath, componentName+".yaml")
+	dstPath := filepath.Join(manifestsPath, "."+componentName+".yaml")
+
+	if err := copy.Copy(srcPath, dstPath); err != nil {
+		return err
+	}
+	if err := os.Remove(srcPath); err != nil {
+		return err
+	}
+
+	time.Sleep(2 * time.Second)
+
+	if err := copy.Copy(dstPath, srcPath); err != nil {
+		return err
+	}
+	if err := os.Remove(dstPath); err != nil {
+		return err
+	}
+
+	return nil
 }
