@@ -1,37 +1,29 @@
 diff --git a/web/federate.go b/web/federate.go
-index b0f4c0610..82ccd291f 100644
+index b0f4c0610..8b82deac0 100644
 --- a/web/federate.go
 +++ b/web/federate.go
-@@ -71,6 +71,9 @@ func (h *Handler) federation(w http.ResponseWriter, req *http.Request) {
+@@ -71,6 +71,12 @@ func (h *Handler) federation(w http.ResponseWriter, req *http.Request) {
  		matcherSets = append(matcherSets, matchers)
  	}
  
-+	addExternalLabels := (req.Form.Get("add_external_labels") == "1")
-+	level.Info(h.logger).Log("msg", "Federation request", "req", req.URL.String())
++	dropExternalLabels := (req.Form.Get("drop_external_labels") == "1")
++
++	if dropExternalLabels {
++		level.Info(h.logger).Log("msg", "drop_external_labels requested")
++	}
 +
  	var (
  		mint   = timestamp.FromTime(h.now().Time().Add(-h.lookbackDelta))
  		maxt   = timestamp.FromTime(h.now().Time())
-@@ -256,13 +259,15 @@ Loop:
- 			continue
- 		}
- 		// Attach global labels if they do not exist yet.
--		for _, ln := range externalLabelNames {
--			lv := externalLabels[ln]
--			if _, ok := globalUsed[ln]; !ok {
--				protMetric.Label = append(protMetric.Label, &dto.LabelPair{
--					Name:  proto.String(ln),
--					Value: proto.String(lv),
--				})
-+		if addExternalLabels {
-+			for _, ln := range externalLabelNames {
-+				lv := externalLabels[ln]
-+				if _, ok := globalUsed[ln]; !ok {
-+					protMetric.Label = append(protMetric.Label, &dto.LabelPair{
-+						Name:  proto.String(ln),
-+						Value: proto.String(lv),
-+					})
-+				}
- 			}
- 		}
+@@ -169,6 +175,11 @@ Loop:
+ 	sort.Sort(byName(vec))
  
+ 	externalLabels := h.config.GlobalConfig.ExternalLabels.Map()
++
++	if dropExternalLabels {
++		externalLabels = make(map[string]string)
++	}
++
+ 	if _, ok := externalLabels[model.InstanceLabel]; !ok {
+ 		externalLabels[model.InstanceLabel] = ""
+ 	}
