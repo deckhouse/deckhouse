@@ -16,7 +16,7 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
-    path: "/federate?drop_external_labels=1"
+    path: "/federate"
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop

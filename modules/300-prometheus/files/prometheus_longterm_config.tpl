@@ -11,6 +11,8 @@ scrape_configs:
   tls_config:
     insecure_skip_verify: true
   params:
+    drop_external_labels:
+    - "1"
     'match[]':
     - '{job=~".+"}'
   static_configs:
