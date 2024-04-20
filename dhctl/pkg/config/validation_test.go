@@ -477,7 +477,7 @@ sshPublicKey: ssh-key`,
 	}
 }
 
-func TestValidateStaticCLusterConfiguration(t *testing.T) {
+func TestValidateStaticClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
