@@ -151,3 +151,16 @@ index a8559f0..f850521 100644
 +	}
 +	return value
 +}
+diff --git a/pkg/yapi/loadbalancer.go b/pkg/yapi/loadbalancer.go
+index f716235..b97d1d8 100644
+--- a/pkg/yapi/loadbalancer.go
++++ b/pkg/yapi/loadbalancer.go
+@@ -197,7 +197,7 @@ func (ySvc *LoadBalancerService) GetTGsByClusterName(ctx context.Context, cluste
+ 	}
+
+ 	for _, tg := range result.TargetGroups {
+-		if strings.HasPrefix(tg.Name, clusterName) {
++		if strings.Contains(tg.Name, clusterName) {
+ 			ret = append(ret, tg)
+ 		}
+ 	}
