@@ -290,6 +290,17 @@ metadata:
 `,
 			schema: testSchemaStore(t),
 		},
+		"empty new config": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 3`,
+			newConfig: "",
+			schema:    testSchemaStore(t),
+		},
 	}
 
 	for name, tt := range tests {
