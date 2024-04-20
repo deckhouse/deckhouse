@@ -30,7 +30,7 @@ Network (internal network) can be configured by your VMware Cloud Director servi
 
 ### Adding a network
 
-Go to the _Networking_ tab and click on the _NEW button_:
+Go to the _Networking_ tab and click on the _NEW_ button:
 
 ![Adding a network, step 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
 
@@ -86,7 +86,7 @@ Set the DNS server addresses:
 
 ![DHCP, step 3](../../images/030-cloud-provider-vcd/dhcp-setup/Screenshot5.png)
 
-### Adding vApp
+### Adding a vApp
 
 Switch to the _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_ tab: 
 
@@ -96,109 +96,109 @@ Set a name and enable the vApp:
 
 ![Adding a vApp, step 2](../../images/030-cloud-provider-vcd/application-setup/Screenshot2.png)
 
-### Добавление сети к vApp
+### Adding a network to the vApp
 
-После создания vApp, необходимо присоединить к ней созданную внутреннюю сеть.
+Once the vApp is created, you have to connect the created internal network to it.
 
-Перейдите во вкладку _Data Centers_ -> _vApps_, откройте необходимый _vApp_:
+Switch to the _Data Centers_ -> _vApps_ tab and open the target _vApp_:
 
-![Добавление сети к vApp, шаг 1](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+![Adding a network to the vApp, step 1](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
 
-Перейдите во вкладку _Networks_ и нажмите на кнопку _NEW_:
+Go to the _Networks_ tab and click on the _NEW_ button:
 
-![Добавление сети к vApp, шаг 2](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+![Adding a network to the vApp, step 2](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
-В появившемся окне выберите тип _Direct_ и выберите сеть:
+In the window that opens, click the _Direct_ type and select the network:
 
-![Добавление сети к vApp, шаг 3](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
+![Adding a network to the vApp, step 3](../../images/030-cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
 
-### Входящий трафик
+### Incoming traffic
 
-Входящий трафик необходимо направить на edge router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети. 
-Этот адрес поднимается при помощи MetalLB в L2 режиме на выделенных frontend-узлах. 
+Incoming traffic should be routed to the edge router (ports 80, 443) using DNAT rules to be forwarded to a dedicated address on the internal network.  
+This address can be created by running MetalLB in L2 mode for dedicated frontend nodes.
 
-### Настройка правила DNAT на edge gateway.
+### Configuring DNAT rules on the edge gateway
 
-Перейдите во вкладку _Networking_ -> _Edge Gateways_, откройте edge gateway:
+Navigate to the _Networking_ -> _Edge Gateways_ tab, open the edge gateway:
 
-![Настройка правил DNAT на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+![Configuring DNAT rules on the edge gateway, step 1](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
 
-Перейдите во вкладку _Services_ -> _NAT_:
+Switch to the _Services_ -> _NAT_ tab:
 
-![Настройка правил DNAT на edge gateway, шаг 2](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
+![Configuring DNAT rules on the edge gateway, step 2](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
-Добавьте следующие правила:
+Add the following rules:
 
-![Настройка правил DNAT на edge gateway, шаг 3](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
+![Configuring DNAT rules on the edge gateway, step 3](../../images/030-cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
 
-Первые два правила используются для входящего трафика, а третье — для доступа по SSH к узлу с control plane (без этого правила установка будет невозможна).
+The first two rules are used for incoming traffic, while the third rule is used for SSH access to the control plane host (without this rule the installation will not be possible).
 
-### Настрока firewall
+### Configuring a firewall
 
-После настройки DNAT необходимо настроить firewall. Сначала необходимо настроить наборы IP-адресов (IP sets).
+Once DNAT is configured, you have to set up the firewall. First, configure the IP sets.
 
-Перейдите во вкладку _Security_ -> _IP Sets_:
+Switch to the _Security_ -> _IP Sets_ tab:
 
-![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot.png)
+![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot.png)
 
-Создайте следующий набор IP (тут подразумевается, что адрес MetalLB будет `.10` а адрес узла с control plane — `.2`):
+Create the following set of IPs (the MetalLB address here is `.10` and the control plane node address is `.2`):
 
-![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot2.png)
+![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot2.png)
 
-![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot3.png)
+![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot3.png)
 
-![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot4.png)
+![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot4.png)
 
-Добавьте следующие правила firewall:
+Add the following firewall rules:
 
-![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot5.png)
+![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot5.png)
 
-## Шаблон виртуальной машины
+## Virtual machine template
 {% alert level="warning" %}
-Работоспособность провайдера подтверждена только для шаблонов виртуальных машин на базе Ubuntu 22.04.
+The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
 {% endalert %}
 
-В примере используется OVA-файл предоставляемый Ubuntu, с двумя исправлениями.
-Исправления необходимы для корректного заказа CloudPermanent-узлов и для возможности подключать диски, созданные CSI.
+The example below uses the OVA file provided by Ubuntu, updated to include two fixes.
+Those fixes are essential for CloudPermanent nodes to be provisioned correctly and to be able to mount CSI-created disks.
 
-### Подготовка шаблона из OVA-файла
+### Making a template from an OVA file
 
-Скачайте [OVA-файл](https://cloud-images.ubuntu.com/jammy/):
+Download the [OVA file](https://cloud-images.ubuntu.com/jammy/):
 
-![Настройка шаблона, шаг 1](../../images/030-cloud-provider-vcd/template/Screenshot.png)
+![Setting up the template, step 1](../../images/030-cloud-provider-vcd/template/Screenshot.png)
 
-Перейдите на вкладку _Libraries_ -> _Catalogs_ -> _Каталог организации_:
+Switch to the _Libraries_ -> _Catalogs_ -> _Organization Catalog_ tab:
 
-![Настройка шаблона, шаг 2](../../images/030-cloud-provider-vcd/template/Screenshot2.png)
+![Setting up the template, step 2](../../images/030-cloud-provider-vcd/template/Screenshot2.png)
 
-Выберите скаченный шаблон и загрузите его в каталог:
+Select the template you downloaded and add it to the catalog:
 
-![Настройка шаблона, шаг 3](../../images/030-cloud-provider-vcd/template/Screenshot3.png)
+![Setting up the template, step 3](../../images/030-cloud-provider-vcd/template/Screenshot3.png)
 
-![Настройка шаблона, шаг 4](../../images/030-cloud-provider-vcd/template/Screenshot4.png)
+![Setting up the template, step 4](../../images/030-cloud-provider-vcd/template/Screenshot4.png)
 
-![Настройка шаблона, шаг 5](../../images/030-cloud-provider-vcd/template/Screenshot5.png)
+![Setting up the template, step 5](../../images/030-cloud-provider-vcd/template/Screenshot5.png)
 
-Создайте виртуальную машину из шаблона:
+Create a virtual machine from the template:
 
-![Настройка шаблона, шаг 6](../../images/030-cloud-provider-vcd/template/Screenshot6.png)
+![Setting up the template, step 6](../../images/030-cloud-provider-vcd/template/Screenshot6.png)
 
-![Настройка шаблона, шаг 7](../../images/030-cloud-provider-vcd/template/Screenshot7.png)
+![Setting up the template, step 7](../../images/030-cloud-provider-vcd/template/Screenshot7.png)
 
 {% alert level="warning" %}
-Укажите пароль по умолчанию и публичный ключ. Это необходимо для того, чтобы войти в консоль виртуальной машины.
+Enter the default password and public key. You will need them to log in to the VM console.
 {% endalert %}
 
-![Настройка шаблона, шаг 8](../../images/030-cloud-provider-vcd/template/Screenshot8.png)
+![Setting up the template, step 8](../../images/030-cloud-provider-vcd/template/Screenshot8.png)
 
-Для того чтобы получить возможность подключения к виртуальной машине, выполните следующие шаги: 
-1. Запустите виртуальную машину
-2. Дождитесь получение IP-адреса
-3. _Пробросьте_ порт 22 до виртуальной машины:
+Follow these steps to be able to connect to the virtual machine: 
+1. Start the virtual machine
+2. Wait for the IP address to be set
+3. _Forward_ port 22 to the virtual machine:
 
-![Настройка шаблона, шаг 9](../../images/030-cloud-provider-vcd/template/Screenshot9.png)
+![Setting up the template, step 9](../../images/030-cloud-provider-vcd/template/Screenshot9.png)
 
-Войдите на виртуальную машину по SSH и выполните следующие команды:
+Log on to the virtual machine over SSH and run the following commands:
 
 ```shell
 echo -e '\n[deployPkg]\nwait-cloudinit-timeout=1800\n' >> /etc/vmware-tools/tools.conf
@@ -209,16 +209,16 @@ history -c
 shutdown -P now
 ```
 
-Выключите виртуальную машину и создайте шаблон виртуальной машины:
+Shut down the virtual machine and create a virtual machine template:
 
-![Настройка шаблона, шаг 10](../../images/030-cloud-provider-vcd/template/Screenshot10.png)
+![Setting up the template, step 10](../../images/030-cloud-provider-vcd/template/Screenshot10.png)
 
-![Настройка шаблона, шаг 11](../../images/030-cloud-provider-vcd/template/Screenshot11.png)
+![Setting up the template, step 11](../../images/030-cloud-provider-vcd/template/Screenshot11.png)
 
-После создания шаблона виртуальной машины, обратитесь к поставщику услуг VMware Cloud Director с просьбой включить для шаблона параметр `disk.enableUUID`.
+After creating a virtual machine template, ask your VMware Cloud Director service provider to enable the `disk.enableUUID` parameter for the template.
 
-## Использование хранилища
+## Using the storage
 
-* VCD поддерживает CSI, диски создаются как VCD Independent Disks.
-* Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
-* Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
+* VCD supports CSI; disks are created as VCD Independent Disks.
+* The `disk.EnableUUID` guest property must be set for the virtual machine templates in use.
+* Deckhouse Kubernetes Platform supports disk resizing as of v1.59.1.
