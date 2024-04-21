@@ -19,10 +19,10 @@ package linter
 import (
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/iancoleman/strcase"
+
 	"github.com/gammazero/deque"
 	"github.com/go-openapi/spec"
-	"github.com/iancoleman/strcase"
 	"github.com/mohae/deepcopy"
 	"helm.sh/helm/v3/pkg/chartutil"
 
@@ -73,15 +73,14 @@ func helmFormatModuleImages(m utils.Module, rawValues []interface{}) ([]chartuti
 
 func ComposeValuesFromSchemas(m utils.Module) ([]chartutil.Values, error) {
 	// TODO(maksim.nabokikh): Move the code from below after migrating from values matrix to load schemas only once.
-	validator := validation.NewValuesValidator()
-	err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path)
+	valueValidator, err := values_validation.NewValuesValidator(m.Name, m.Path)
 	if err != nil {
 		return nil, fmt.Errorf("schemas load: %v", err)
 	}
 
 	camelizedModuleName := strcase.ToLowerCamel(m.Name)
 
-	values := validator.SchemaStorage.ModuleSchemas[camelizedModuleName]["values"]
+	values := valueValidator.ModuleSchemaStorage.Schemas["values"]
 	if values == nil {
 		return nil, fmt.Errorf("cannot find openapi values schema for module %s", m.Name)
 	}
@@ -89,7 +88,7 @@ func ComposeValuesFromSchemas(m utils.Module) ([]chartutil.Values, error) {
 	moduleSchema := *values
 	moduleSchema.Default = make(map[string]interface{})
 
-	globalSchema := *validator.SchemaStorage.GlobalSchemas["values"]
+	globalSchema := *valueValidator.GlobalSchemaStorage.Schemas["values"]
 	globalSchema.Default = make(map[string]interface{})
 
 	combinedSchema := spec.Schema{}

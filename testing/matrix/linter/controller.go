@@ -27,7 +27,6 @@ import (
 	"syscall"
 
 	"github.com/fatih/color"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/kyokomi/emoji"
 	"github.com/mitchellh/hashstructure/v2"
 	"gopkg.in/yaml.v3"
@@ -46,21 +45,21 @@ var (
 )
 
 type ModuleController struct {
-	Module          utils.Module
-	Values          []chartutil.Values
-	ValuesValidator *validation.ValuesValidator
+	Module         utils.Module
+	Values         []chartutil.Values
+	valueValidator *values_validation.ValuesValidator
 }
 
 func NewModuleController(m utils.Module, values []chartutil.Values) *ModuleController {
-	validator := validation.NewValuesValidator()
-	if err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path); err != nil {
+	valueValidator, err := values_validation.NewValuesValidator(m.Name, m.Path)
+	if err != nil {
 		panic(fmt.Errorf("schemas load: %v", err))
 	}
 
 	return &ModuleController{
-		Module:          m,
-		Values:          values,
-		ValuesValidator: validator,
+		Module:         m,
+		Values:         values,
+		valueValidator: valueValidator,
 	}
 }
 
@@ -186,7 +185,7 @@ func (c *ModuleController) RunRender(values chartutil.Values, objectStore *stora
 }
 
 func lint(c *ModuleController, task *Task) error {
-	err := values_validation.ValidateValues(c.ValuesValidator, c.Module.Name, task.values)
+	err := c.valueValidator.ValidateValues(c.Module.Name, task.values)
 	if err != nil {
 		return testsError(task.index, err, task.values)
 	}

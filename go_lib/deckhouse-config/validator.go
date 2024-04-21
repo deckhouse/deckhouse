@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
-	"github.com/go-openapi/spec"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
@@ -43,9 +43,8 @@ func NewConfigValidator(valuesValidator ValuesValidator) *ConfigValidator {
 // ValuesValidator is a part of ValuesValidator from addon-operator with needed
 // methods to validate config values.
 type ValuesValidator interface {
-	GetSchema(schemaType validation.SchemaType, valuesType validation.SchemaType, modName string) *spec.Schema
-	ValidateGlobalConfigValues(values utils.Values) error
-	ValidateModuleConfigValues(moduleName string, values utils.Values) error
+	GetGlobal() *modules.GlobalModule
+	GetModule(name string) *modules.BasicModule
 }
 
 type ValidationResult struct {
@@ -144,7 +143,7 @@ func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult 
 	return result
 }
 
-// validateSettings uses ValuesValidator from ModuleManager instance to validate spec.settings.
+// validateSettings uses module from ModuleManager instance to validate spec.settings.
 // cfgName arg is a kebab-cased name of the ModuleConfig resource.
 // cfgSettings is a content of spec.settings and can be nil if settings field wasn't set.
 // (Note: cfgSettings map is a map with 'plain values', i.e. without camelCased module name as a root key).
@@ -160,14 +159,20 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 	}
 
 	valuesKey := valuesKeyFromObjectName(cfgName)
-	schemaType := validation.ModuleSchema
+	var schemaStorage *validation.SchemaStorage
 	if cfgName == "global" {
-		schemaType = validation.GlobalSchema
+		schemaStorage = c.valuesValidator.GetGlobal().GetSchemaStorage()
+	} else {
+		module := c.valuesValidator.GetModule(cfgName)
+		if module == nil {
+			return fmt.Errorf("module %s not found", cfgName)
+		}
+		schemaStorage = module.GetSchemaStorage()
 	}
 
 	// Instantiate defaults from the OpenAPI schema.
 	defaultSettings := make(map[string]interface{})
-	s := c.valuesValidator.GetSchema(schemaType, validation.ConfigValuesSchema, valuesKey)
+	s := schemaStorage.Schemas[validation.ConfigValuesSchema]
 	if s != nil {
 		validation.ApplyDefaults(defaultSettings, s)
 	}
@@ -178,11 +183,7 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 		utils.Values{valuesKey: cfgSettings},
 	)
 
-	if cfgName == "global" {
-		return c.valuesValidator.ValidateGlobalConfigValues(values)
-	}
-
-	return c.valuesValidator.ValidateModuleConfigValues(valuesKey, values)
+	return schemaStorage.ValidateConfigValues(cfgName, values)
 }
 
 func valuesKeyFromObjectName(name string) string {

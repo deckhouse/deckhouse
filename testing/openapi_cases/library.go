@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/testing/library/values_validation"
+
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"sigs.k8s.io/yaml"
@@ -148,21 +150,21 @@ func TestCasesFromFile(filename string) (*TestCases, error) {
 	return &testCases, nil
 }
 
-func ValidatePositiveCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+func ValidatePositiveCase(validator *values_validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
 	if _, hasFocus := testValues[FocusFieldName]; !hasFocus && runFocused {
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	return validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+	return validator.ModuleSchemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
 }
 
-func ValidateNegativeCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+func ValidateNegativeCase(validator *values_validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
 	_, hasFocus := testValues[FocusFieldName]
 	if !hasFocus && runFocused {
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	err := validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+	err := validator.ModuleSchemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
 	if err == nil {
 		return fmt.Errorf("negative case error for %s values: test case should not pass validation: %+v", schema, ValuesToString(testValues))
 	}

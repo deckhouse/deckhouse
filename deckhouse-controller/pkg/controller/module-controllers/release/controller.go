@@ -32,7 +32,6 @@ import (
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -965,8 +964,12 @@ func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinit
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	dm := models.NewDeckhouseModule(def, addonutils.Values{}, validator.GetValuesValidator())
-	err := validator.ValidateModule(dm.GetBasicModule())
+	dm, err := models.NewDeckhouseModule(def, addonutils.Values{}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("new deckhouse module: %w", err)
+	}
+
+	err = validator.ValidateModule(dm.GetBasicModule())
 	if err != nil {
 		return err
 	}
@@ -987,7 +990,6 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 
 type moduleValidator interface {
 	ValidateModule(m *addonmodules.BasicModule) error
-	GetValuesValidator() *validation.ValuesValidator
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error

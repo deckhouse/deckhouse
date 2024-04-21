@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/testing/library/values_validation"
+
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	. "github.com/onsi/ginkgo"
@@ -80,8 +82,7 @@ func ExecuteTestCases(testCases *TestCases) {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Parse openAPI schemas")
-	validator := validation.NewValuesValidator()
-	err = validator.SchemaStorage.AddModuleValuesSchemas(moduleName, configBytes, valuesBytes)
+	validator, err := values_validation.NewValuesValidator(moduleName, testCases.dir)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Check if test cases for config values are present and openapi/config-values.yaml is loaded")
@@ -103,7 +104,7 @@ func ExecuteTestCases(testCases *TestCases) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
+func PositiveCasesTest(validator *values_validation.ValuesValidator, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Positive.ConfigValues {
 		err := ValidatePositiveCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
@@ -125,7 +126,7 @@ func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string,
 	return nil
 }
 
-func NegativeCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
+func NegativeCasesTest(validator *values_validation.ValuesValidator, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Negative.ConfigValues {
 		err := ValidateNegativeCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
