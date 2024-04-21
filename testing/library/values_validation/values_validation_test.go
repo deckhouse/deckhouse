@@ -43,11 +43,16 @@ properties:
         type: string
 `
 
-	validator := validation.NewValuesValidator()
-	// Add schema
-	err := validator.SchemaStorage.AddModuleValuesSchemas("nodeManager", []byte{}, []byte(schema))
+	schemaStorage, err := validation.NewSchemaStorage([]byte{}, []byte(schema))
 	require.NoError(t, err, "should load schema")
+
+	valuesValidator := &ValuesValidator{
+		ModuleSchemaStorages: map[string]*validation.SchemaStorage{
+			"nodeManager": schemaStorage,
+		},
+	}
+
 	// Validate empty string
-	err = ValidateJSONValues(validator, "nodeManager", []byte(values), false)
+	err = valuesValidator.ValidateJSONValues("nodeManager", []byte(values), false)
 	require.NoError(t, err, message)
 }
