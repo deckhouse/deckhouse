@@ -1,9 +1,0 @@
-auth:
-  allowedUserGroups:
-    - group
-    - group2
-  whitelistSourceRange:
-    - source1
-externalLabels:
-  prometheus_replica: pod
-  shard: shard

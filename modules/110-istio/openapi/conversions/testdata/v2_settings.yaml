@@ -1,6 +1,0 @@
-auth:
-  allowedUserGroups:
-    - group
-    - group2
-  whitelistSourceRange:
-    - source1

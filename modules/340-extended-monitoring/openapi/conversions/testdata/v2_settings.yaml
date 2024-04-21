@@ -1,7 +1,0 @@
-imageAvailability:
-  registry:
-    tlsConfig:
-      insecureSkipVerify: true
-events:
-  exporterEnabled: true
-  severityLevel: All

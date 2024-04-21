@@ -22,18 +22,71 @@ import (
 
 func TestConvertToLatest(t *testing.T) {
 	t.Run("should convert from 1 to latest version", func(t *testing.T) {
-		converted, expected, equal, err := TestConvert(
-			"testdata/source.yaml",
-			"testdata/expected.yaml",
-			"testdata/conversions",
+		err := TestConvert(
+			`
+simpleField: simpleValue
+objectField:
+  arrayFieldInObjectValue:
+    - value1
+    - value2
+    - value3
+  mapFieldInObjectValue:
+    key1: val1
+    key2: val2
+  simpleFieldInObjectValue: 2
+arrayField:
+  - val1
+  - val2
+  - val3
+mapField:
+  simpleFieldInObjectValue: 2
+  arrayFieldInMapValue:
+    - v1
+    - v2
+    - v3
+  mapFieldInObjectValue:
+    k1: 1
+    k2: 2
+objectFirst:
+  check: true
+objectForDelete:
+  key: val
+`,
+			`
+simpleField: value
+objectField:
+  arrayFieldInObjectValue:
+    - value1
+    - value2
+    - value3
+  mapFieldInObjectValue:
+    key1: val2
+  simpleFieldInObjectValue: 2
+mapField:
+  arrayFieldInMapValue:
+    - v1
+    - v2
+    - v3
+    - v4
+  mapFieldInObjectValue:
+    k1: 1
+    k2: 2
+    k3: 3
+newField: value
+objectFirst:
+  objectSecond:
+    objectThird:
+      check: true
+arrayField:
+  - v1
+  - v2
+  - v3
+`,
+			"testdata",
 			1,
 			0)
 		if err != nil {
 			t.Error(err)
-			return
-		}
-		if !equal {
-			t.Errorf("Expected %v, got %v", expected, converted)
 		}
 	})
 }

@@ -337,7 +337,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				// update metrics
 				converter := conversion.Store().Get(moduleConfig.Name)
 
-				if moduleConfig.Spec.Version > 0 && converter.Conversion(moduleConfig.Spec.Version) != "" {
+				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
 					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),

@@ -19,6 +19,7 @@ package conversion
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -78,15 +79,6 @@ func (c *Converter) LatestVersion() int {
 	return c.latest
 }
 
-func (c *Converter) Conversion(version int) string {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	if c.conversions == nil {
-		return ""
-	}
-	return c.conversions[version]
-}
-
 func (c *Converter) IsKnownVersion(version int) bool {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
@@ -99,20 +91,7 @@ func (c *Converter) IsKnownVersion(version int) bool {
 	return version == c.latest || version == 1
 }
 
-func (c *Converter) VersionList() []int {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	versions := make([]int, 0)
-	if c.conversions == nil {
-		return versions
-	}
-	for ver := range c.conversions {
-		versions = append(versions, ver)
-	}
-	versions = append(versions, c.latest)
-	return versions
-}
-func (c *Converter) PreviousVersionsList() []int {
+func (c *Converter) ListVersionsWithoutLatest() []int {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -158,66 +137,51 @@ func (c *Converter) convert(version int, settings map[string]interface{}) (map[s
 	if err != nil {
 		return nil, err
 	}
-	iter := query.Run(settings)
-	var filtered map[string]interface{}
-	for {
-		v, ok := iter.Next()
-		if !ok {
-			break
-		}
-		if err, ok = v.(error); ok {
-			var haltErr *gojq.HaltError
-			if errors.As(err, &haltErr) && haltErr.Value() == nil {
-				break
-			}
-			return nil, err
-		}
-		if v == nil {
-			return nil, nil
-		}
-		if filtered, ok = v.(map[string]interface{}); !ok {
-			return nil, errors.New("cannot unmarshal after converting")
-		}
+	v, _ := query.Run(settings).Next()
+	if err, ok := v.(error); ok {
+		return nil, err
 	}
-	return filtered, err
+	if filtered, ok := v.(map[string]interface{}); !ok {
+		return nil, errors.New("cannot unmarshal after converting")
+	} else {
+		return filtered, nil
+	}
 }
 
-func TestConvert(pathToSettings, pathToExpectedSettings, pathToConversions string, currentVersion,
-	version int) (map[string]interface{}, map[string]interface{}, bool, error) {
+func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVersion, version int) error {
 	converter, err := newConverter(pathToConversions)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
 
-	settings, err := readSettings(pathToSettings)
+	settings, err := readSettings(rawSettings)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
 	_, converted, err := converter.ConvertTo(currentVersion, version, settings)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
 	marshaledConverted, err := json.Marshal(converted)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
 
-	expected, err := readSettings(pathToExpectedSettings)
+	expected, err := readSettings(rawExpected)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
 	marshaledExpected, err := json.Marshal(expected)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
-	return converted, expected, string(marshaledConverted) == string(marshaledExpected), nil
+	if string(marshaledConverted) != string(marshaledExpected) {
+		return errors.New(fmt.Sprintf("Expected: %s got: %s\n", marshaledExpected, marshaledConverted))
+	}
+	return nil
 }
-func readSettings(pathToSettings string) (map[string]interface{}, error) {
-	raw, err := os.ReadFile(pathToSettings)
-	if err != nil {
-		return nil, err
-	}
+func readSettings(settings string) (map[string]interface{}, error) {
 	var parsed map[string]interface{}
-	err = yaml.Unmarshal(raw, &parsed)
+	err := yaml.Unmarshal([]byte(settings), &parsed)
 	return parsed, err
 }

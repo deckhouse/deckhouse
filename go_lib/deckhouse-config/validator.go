@@ -86,7 +86,7 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 
 	// Check if version is unknown.
 	if !converter.IsKnownVersion(cfg.Spec.Version) {
-		prevVersionsMsg := concatIntList(converter.PreviousVersionsList())
+		prevVersionsMsg := concatIntList(converter.ListVersionsWithoutLatest())
 		if prevVersionsMsg != "" {
 			prevVersionsMsg = fmt.Sprintf(", or one of previous versions: %s", prevVersionsMsg)
 		}

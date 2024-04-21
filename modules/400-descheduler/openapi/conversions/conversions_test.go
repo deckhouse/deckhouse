@@ -22,19 +22,27 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
-func Test(t *testing.T) {
-	pathToConversions := "."
+func TestDeschedulerConversions(t *testing.T) {
+	conversions := "."
 	cases := []struct {
 		name            string
-		pathToSettings  string
-		pathToExpected  string
+		settings        string
+		expected        string
 		currentVersion  int
 		expectedVersion int
 	}{
 		{
-			name:            "should convert from 1 to 2 version",
-			pathToSettings:  "testdata/v1_settings.yaml",
-			pathToExpected:  "testdata/v2_settings.yaml",
+			name: "should convert from 1 to 2 version",
+			settings: `
+auth:
+  password: password
+  allowedUserGroups:
+    - group
+    - group2
+  whitelistSourceRange:
+    - source1
+`,
+			expected:        ``,
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
@@ -42,17 +50,9 @@ func Test(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			converted, expected, equal, err := conversion.TestConvert(
-				c.pathToSettings,
-				c.pathToExpected,
-				pathToConversions,
-				c.currentVersion,
-				c.expectedVersion)
+			err := conversion.TestConvert(c.settings, c.expected, conversions, c.currentVersion, c.expectedVersion)
 			if err != nil {
 				t.Error(err)
-			}
-			if !equal {
-				t.Errorf("Expected %v, got %v", converted, expected)
 			}
 		})
 	}
