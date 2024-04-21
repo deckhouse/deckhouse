@@ -134,7 +134,7 @@ func (vv *ValuesValidator) ValidateJSONValues(moduleName string, values []byte, 
 	valuesKey := utils.ModuleNameToValuesKey(moduleName)
 
 	if configValues {
-		err = vv.ValidateConfigValues(valuesKey, obj)
+		err = vv.ValidateConfigValues("config", obj)
 	} else {
 		err = vv.ValidateModuleValues(valuesKey, obj)
 	}
