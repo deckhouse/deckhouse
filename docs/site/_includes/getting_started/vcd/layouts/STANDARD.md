@@ -1,3 +1,3 @@
-Currently this is the only placement strategy for vSphere provider. It provides deep customization options for lots of network layouts.
+Currently, this is the only layout strategy for the vSphere provider. It features a wide range of customization options for many various network layouts.
 
-Here we'll describe setting up a cluster on a single Network which has a DHCP server and access to the Internet.
+Here, we'll cover setting up a cluster on a common Network that has a DHCP server and Internet access.

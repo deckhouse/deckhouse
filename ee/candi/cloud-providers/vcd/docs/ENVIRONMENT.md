@@ -16,8 +16,8 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 * _EdgeRouter_
 * _Catalog_
 
-Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter and Catalog must be provided by your VMware Cloud Director service provider.
-Also, in the tenant, you need to grant the following rights to change VM parameters (use the [instruction](https://kb.vmware.com/s/article/92067)):
+Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog must be provided by your VMware Cloud Director service provider.
+Also, in the tenant, you will need to grant the following rights to able to modify the VM parameters (refer to the [instruction](https://kb.vmware.com/s/article/92067)):
 
 * _guestinfo.metadata_
 * _guestinfo.metadata.encoding_
