@@ -173,10 +173,6 @@ func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils
 }
 
 func (vv *ValuesValidator) ValidateConfigValues(moduleName string, obj utils.Values) error {
-	if moduleName == "config" {
-		fmt.Println(obj[moduleName])
-	}
-
 	ss := vv.ModuleSchemaStorages[moduleName]
 	if ss == nil {
 		log.Warnf("schema storage for '%s' is not found", moduleName)
