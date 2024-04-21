@@ -36,8 +36,8 @@ const (
 	candiDir          = "/deckhouse/candi"
 	modulesDir        = "/deckhouse/modules"
 	globalHooksModule = "/deckhouse/global-hooks"
-	// don't forget to update the version in release requirements (release.yaml)
-	DefaultKubernetesVersion = "1.25"
+	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
+	DefaultKubernetesVersion = "1.27"
 )
 
 const (
