@@ -155,7 +155,7 @@ func ValidatePositiveCase(validator *values_validation.ValuesValidator, moduleNa
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	return validator.ModuleSchemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
+	return validator.ModuleSchemaStorages[moduleName].Validate(schema, moduleName, utils.Values{moduleName: testValues})
 }
 
 func ValidateNegativeCase(validator *values_validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
@@ -164,7 +164,7 @@ func ValidateNegativeCase(validator *values_validation.ValuesValidator, moduleNa
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	err := validator.ModuleSchemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
+	err := validator.ModuleSchemaStorages[moduleName].Validate(schema, moduleName, utils.Values{moduleName: testValues})
 	if err == nil {
 		return fmt.Errorf("negative case error for %s values: test case should not pass validation: %+v", schema, ValuesToString(testValues))
 	}

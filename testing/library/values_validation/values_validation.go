@@ -25,13 +25,14 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/flant/addon-operator/pkg/utils"
+	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
 )
 
 type ValuesValidator struct {
-	GlobalSchemaStorage *validation.SchemaStorage
-	ModuleSchemaStorage *validation.SchemaStorage
+	GlobalSchemaStorage  *validation.SchemaStorage
+	ModuleSchemaStorages map[string]*validation.SchemaStorage
 }
 
 func NewValuesValidator(moduleName, modulePath string) (*ValuesValidator, error) {
@@ -63,7 +64,9 @@ func NewValuesValidator(moduleName, modulePath string) (*ValuesValidator, error)
 
 	return &ValuesValidator{
 		GlobalSchemaStorage: globalSchemaStorage,
-		ModuleSchemaStorage: moduleSchemaStorage,
+		ModuleSchemaStorages: map[string]*validation.SchemaStorage{
+			moduleName: moduleSchemaStorage,
+		},
 	}, nil
 }
 
@@ -150,13 +153,35 @@ func (vv *ValuesValidator) ValidateGlobalValues(obj utils.Values) error {
 }
 
 func (vv *ValuesValidator) ValidateModuleValues(moduleName string, obj utils.Values) error {
-	return vv.ModuleSchemaStorage.ValidateValues(moduleName, obj)
+	ss := vv.ModuleSchemaStorages[moduleName]
+	if ss == nil {
+		log.Warnf("schema storage for '%s' is not found", moduleName)
+		return nil
+	}
+
+	return vv.ModuleSchemaStorages[moduleName].ValidateValues(moduleName, obj)
 }
 
 func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils.Values) error {
-	return vv.ModuleSchemaStorage.ValidateModuleHelmValues(moduleName, obj)
+	ss := vv.ModuleSchemaStorages[moduleName]
+	if ss == nil {
+		log.Warnf("schema storage for '%s' is not found", moduleName)
+		return nil
+	}
+
+	return vv.ModuleSchemaStorages[moduleName].ValidateModuleHelmValues(moduleName, obj)
 }
 
 func (vv *ValuesValidator) ValidateConfigValues(moduleName string, obj utils.Values) error {
-	return vv.ModuleSchemaStorage.ValidateConfigValues(moduleName, obj)
+	if moduleName == "config" {
+		fmt.Println(obj[moduleName])
+	}
+
+	ss := vv.ModuleSchemaStorages[moduleName]
+	if ss == nil {
+		log.Warnf("schema storage for '%s' is not found", moduleName)
+		return nil
+	}
+
+	return vv.ModuleSchemaStorages[moduleName].ValidateConfigValues(moduleName, obj)
 }
