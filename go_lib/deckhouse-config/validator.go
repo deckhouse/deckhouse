@@ -183,7 +183,7 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 		utils.Values{valuesKey: cfgSettings},
 	)
 
-	return schemaStorage.ValidateConfigValues(cfgName, values)
+	return schemaStorage.ValidateConfigValues(valuesKey, values)
 }
 
 func valuesKeyFromObjectName(name string) string {
