@@ -193,6 +193,7 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 					"modules":                modules,
 					"enabledModulesByConfig": dml.mm.GetEnabledModulesByConfig(),
 					"dynamicEnabled":         dml.mm.GetDynamicEnabled(),
+					"enabledModules":         dml.mm.GetEnabledModules(),
 				})
 			}))
 		}()
