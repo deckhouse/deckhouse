@@ -19,10 +19,9 @@ package linter
 import (
 	"fmt"
 
-	"github.com/iancoleman/strcase"
-
 	"github.com/gammazero/deque"
 	"github.com/go-openapi/spec"
+	"github.com/iancoleman/strcase"
 	"github.com/mohae/deepcopy"
 	"helm.sh/helm/v3/pkg/chartutil"
 

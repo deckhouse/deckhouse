@@ -61,10 +61,6 @@ type ModuleManagerMock struct {
 	enabledModules set.Set
 }
 
-func (m *ModuleManagerMock) ValidateModule(module *modules.BasicModule) error {
-	panic("TODO")
-}
-
 func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
 	return m.enabledModules.Has(name)
 }
