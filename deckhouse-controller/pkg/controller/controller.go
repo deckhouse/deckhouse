@@ -189,11 +189,8 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 				e := json.NewEncoder(w)
 				e.SetIndent("", "  ")
 				e.Encode(map[string]any{
-					"isInited":               dml.mm.AreModulesInited(),
-					"modules":                modules,
-					"enabledModulesByConfig": dml.mm.GetEnabledModulesByConfig(),
-					"dynamicEnabled":         dml.mm.GetDynamicEnabled(),
-					"enabledModules":         dml.mm.GetEnabledModules(),
+					"isInited": dml.mm.AreModulesInited(),
+					"modules":  modules,
 				})
 			}))
 		}()
