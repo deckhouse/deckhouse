@@ -88,7 +88,7 @@ Set the DNS server addresses:
 
 ### Adding a vApp
 
-Switch to the _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_ tab: 
+Switch to the _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_ tab:
 
 ![Adding a vApp, step 1](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
 
@@ -154,6 +154,7 @@ Add the following firewall rules:
 ![Configuring the edge gateway firewall, step 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot5.png)
 
 ## Virtual machine template
+
 {% alert level="warning" %}
 The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
 {% endalert %}
@@ -191,7 +192,7 @@ Enter the default password and public key. You will need them to log in to the V
 
 ![Setting up the template, step 8](../../images/030-cloud-provider-vcd/template/Screenshot8.png)
 
-Follow these steps to be able to connect to the virtual machine: 
+Follow these steps to be able to connect to the virtual machine:
 1. Start the virtual machine
 2. Wait for the IP address to be set
 3. _Forward_ port 22 to the virtual machine:

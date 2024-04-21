@@ -29,6 +29,7 @@ Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Cata
 Network (внутренная сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. Далее рассматривается настройка внутренней сети самостоятельно.
 
 ### Добавление сети
+
 Перейдите во вкладку _Networking_ и нажмите на кнопку _NEW_:
 
 ![Добавление сети, шаг 1](../../images/030-cloud-provider-vcd/network-setup/Screenshot.png)
@@ -87,7 +88,7 @@ _Network type_ должен быть _Routed_:
 
 ### Добавление vApp
 
-Перейдите во вкладку _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_: 
+Перейдите во вкладку _Data Centers_ -> _vApps_ -> _NEW_ -> _New vApp_:
 
 ![Добавление vApp, шаг 1](../../images/030-cloud-provider-vcd/application-setup/Screenshot.png)
 
@@ -113,10 +114,10 @@ _Network type_ должен быть _Routed_:
 
 ### Входящий трафик
 
-Входящий трафик необходимо направить на edge router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети. 
-Этот адрес поднимается при помощи MetalLB в L2 режиме на выделенных frontend-узлах. 
+Входящий трафик необходимо направить на edge router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети.
+Этот адрес поднимается при помощи MetalLB в L2 режиме на выделенных frontend-узлах.
 
-### Настройка правила DNAT на edge gateway.
+### Настройка правила DNAT на edge gateway
 
 Перейдите во вкладку _Networking_ -> _Edge Gateways_, откройте edge gateway:
 
@@ -153,6 +154,7 @@ _Network type_ должен быть _Routed_:
 ![Настройка firewall на edge gateway, шаг 1](../../images/030-cloud-provider-vcd/edge-firewall/Screenshot5.png)
 
 ## Шаблон виртуальной машины
+
 {% alert level="warning" %}
 Работоспособность провайдера подтверждена только для шаблонов виртуальных машин на базе Ubuntu 22.04.
 {% endalert %}
@@ -190,7 +192,7 @@ _Network type_ должен быть _Routed_:
 
 ![Настройка шаблона, шаг 8](../../images/030-cloud-provider-vcd/template/Screenshot8.png)
 
-Для того чтобы получить возможность подключения к виртуальной машине, выполните следующие шаги: 
+Для того чтобы получить возможность подключения к виртуальной машине, выполните следующие шаги:
 1. Запустите виртуальную машину
 2. Дождитесь получение IP-адреса
 3. _Пробросьте_ порт 22 до виртуальной машины:
