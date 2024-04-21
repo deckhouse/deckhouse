@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/values/validation"
 
@@ -68,21 +67,6 @@ func NewValuesValidator(moduleName, modulePath string) (*ValuesValidator, error)
 			moduleName: moduleSchemaStorage,
 		},
 	}, nil
-}
-
-func toJson(val any) string {
-	var buf strings.Builder
-	enc := json.NewEncoder(&buf)
-	enc.SetIndent("", "  ")
-	check(enc.Encode(val))
-
-	return buf.String()
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
 
 // ValidateValues is an adapter between JSONRepr and Values
