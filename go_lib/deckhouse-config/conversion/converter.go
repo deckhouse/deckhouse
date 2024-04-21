@@ -141,11 +141,14 @@ func (c *Converter) convert(version int, settings map[string]interface{}) (map[s
 	if err, ok := v.(error); ok {
 		return nil, err
 	}
-	if filtered, ok := v.(map[string]interface{}); !ok {
-		return nil, errors.New("cannot unmarshal after converting")
-	} else {
-		return filtered, nil
+	if v == nil {
+		return nil, nil
 	}
+	filtered, ok := v.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("cannot unmarshal after converting")
+	}
+	return filtered, nil
 }
 
 func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVersion, version int) error {
