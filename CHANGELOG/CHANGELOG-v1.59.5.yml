@@ -32,4 +32,8 @@ monitoring-kubernetes:
   fixes:
     - summary: Fix hook with helm releases scan for deprecated API versions.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8159
+prometheus:
+  fixes:
+    - summary: Don't query longterm Prometheus in the aggregating-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8216
 
