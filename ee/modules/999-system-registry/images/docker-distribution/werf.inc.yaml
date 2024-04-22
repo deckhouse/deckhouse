@@ -10,7 +10,7 @@ mount:
 shell:
   beforeInstall:
   - mkdir -m 1777 /tmp-tmp
-  - apk add --no-cache git make bash gpg
+  - apk add --no-cache git make bash gnupg
   install:
     - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
     - cd {{ $GIT_CLONE_DEST_PATH }}
