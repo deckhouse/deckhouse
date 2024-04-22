@@ -41,6 +41,8 @@ const (
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 
 var (
+	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
+	// "local" is kept for manual builds only
 	AppVersion = "local"
 
 	ConfigPath  = ""
