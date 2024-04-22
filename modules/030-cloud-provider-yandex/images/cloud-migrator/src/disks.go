@@ -33,11 +33,11 @@ type DiskMigrator struct {
 	logger      *log.Entry
 	folderID    string
 	sdk         *ycsdk.SDK
-	clusterName string
+	clusterUUID string
 	client      *kubernetes.Clientset
 }
 
-func NewDiskMigrator(logger *log.Entry, kubeClient *kubernetes.Clientset, folderID, saKeyJSON, clusterName string) *DiskMigrator {
+func NewDiskMigrator(logger *log.Entry, kubeClient *kubernetes.Clientset, folderID, saKeyJSON, clusterUUID string) *DiskMigrator {
 	saKeyJSONBytes := []byte(saKeyJSON)
 	key, err := iamkey.ReadFromJSONBytes(saKeyJSONBytes)
 	if err != nil {
@@ -61,7 +61,7 @@ func NewDiskMigrator(logger *log.Entry, kubeClient *kubernetes.Clientset, folder
 		folderID:    folderID,
 		sdk:         sdk,
 		client:      kubeClient,
-		clusterName: clusterName,
+		clusterUUID: clusterUUID,
 	}
 }
 
@@ -84,8 +84,8 @@ func (d *DiskMigrator) MigrateDisks(ctx context.Context) error {
 	}
 
 	for _, disk := range disks {
-		if _, ok := disk.Labels["cluster"]; ok {
-			d.logger.Warnf("disk %s already has 'cluster' label, skipping", disk.Name)
+		if _, ok := disk.Labels["clusterUUID"]; ok {
+			d.logger.Warnf("disk %s already has 'clusterUUID' label, skipping", disk.Name)
 			continue
 		}
 
@@ -128,7 +128,7 @@ func (d *DiskMigrator) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compu
 }
 
 func (d *DiskMigrator) migrateDisk(ctx context.Context, disk *compute.Disk) error {
-	disk.Labels["cluster"] = d.clusterName
+	disk.Labels["clusterUUID"] = d.clusterUUID
 	_, err := d.sdk.Compute().Disk().Update(ctx, &compute.UpdateDiskRequest{DiskId: disk.Id, Labels: disk.Labels})
 	return err
 }

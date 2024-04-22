@@ -29,18 +29,18 @@ func main() {
 		kubeConfig  string
 		folderID    string
 		saKeyJSON   string
-		clusterName string
+		clusterUUID string
 	)
 
 	folderID = os.Getenv("YC_FOLDER_ID")
 	kubeConfig = os.Getenv("KUBE_CONFIG")
 	saKeyJSON = os.Getenv("YC_SA_KEY_JSON")
-	clusterName = os.Getenv("CLUSTER_NAME")
+	clusterUUID = os.Getenv("CLUSTER_UUID")
 
 	flag.StringVar(&kubeConfig, "kube-config", kubeConfig, "Path to kube-config")
 	flag.StringVar(&folderID, "folder-id", folderID, "Yandex folder id")
 	flag.StringVar(&saKeyJSON, "sa-key-json", saKeyJSON, "Yandex SA key in JSON format")
-	flag.StringVar(&saKeyJSON, "cluster-name", clusterName, "Cluster name")
+	flag.StringVar(&saKeyJSON, "cluster-uuid", clusterUUID, "Cluster UUID")
 
 	flag.Parse()
 
@@ -63,8 +63,8 @@ func main() {
 		logger.Fatal("Cannot get YC_SA_KEY_JSON")
 	}
 
-	if clusterName == "" {
-		logger.Fatal("Cannot get CLUSTER_NAME")
+	if clusterUUID == "" {
+		logger.Fatal("Cannot get CLUSTER_UUID")
 	}
 
 	// init kube clients
@@ -73,7 +73,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	d := NewDiskMigrator(log.NewEntry(logger), client, folderID, saKeyJSON, clusterName)
+	d := NewDiskMigrator(log.NewEntry(logger), client, folderID, saKeyJSON, clusterUUID)
 	err = d.MigrateDisks(context.Background())
 	if err != nil {
 		logger.Fatal(err)

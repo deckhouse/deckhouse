@@ -86,8 +86,8 @@ spec:
             secretKeyRef:
               name: cloud-controller-manager
               key: service-acount-json
-        - name: CLUSTER_NAME
-          value: { { .Values.global.discovery.clusterUUID | sha256sum | trunc 30 } }
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID | quote }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -153,8 +153,8 @@ spec:
             secretKeyRef:
               name: cloud-controller-manager
               key: service-acount-json
-        - name: CLUSTER_NAME
-          value: {{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID | quote }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

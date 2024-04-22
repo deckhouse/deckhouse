@@ -32,7 +32,7 @@ import (
 type Discoverer struct {
 	logger      *log.Entry
 	folderID    string
-	clusterName string
+	clusterUUID string
 	sdk         *ycsdk.SDK
 }
 
@@ -47,9 +47,9 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatal("Cannot get YC_SA_KEY_JSON env")
 	}
 
-	clusterName := os.Getenv("CLUSTER_NAME")
-	if clusterName == "" {
-		logger.Fatal("Cannot get CLUSTER_NAME env")
+	clusterUUID := os.Getenv("CLUSTER_UUID")
+	if clusterUUID == "" {
+		logger.Fatal("Cannot get CLUSTER_UUID env")
 	}
 
 	saKeyJSONBytes := []byte(saKeyJSON)
@@ -73,7 +73,7 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	return &Discoverer{
 		logger:      logger,
 		folderID:    folderID,
-		clusterName: clusterName,
+		clusterUUID: clusterUUID,
 		sdk:         sdk,
 	}
 }
@@ -98,8 +98,8 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 
 	for _, disk := range disks {
 		// skip disks created from another clusters
-		clusterName, ok := disk.Labels["cluster"]
-		if ok && clusterName != d.clusterName {
+		clusterUUID, ok := disk.Labels["clusterUUID"]
+		if ok && clusterUUID != d.clusterUUID {
 			continue
 		}
 		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
