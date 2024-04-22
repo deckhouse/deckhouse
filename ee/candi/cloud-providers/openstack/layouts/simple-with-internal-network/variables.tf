@@ -23,6 +23,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "systemRegistryEnable" {
+  type    = bool
+  default = false
+}
+
 locals {
   prefix                = var.clusterConfiguration.cloud.prefix
   pod_subnet_cidr       = var.clusterConfiguration.podSubnetCIDR

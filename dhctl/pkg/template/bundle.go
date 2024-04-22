@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -59,7 +60,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeIP, bundleName string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -72,7 +73,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
+	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, dataDevices); err != nil {
 		return err
 	}
 
@@ -85,7 +86,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
 }
 
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
+func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, bundle string, dataDevices terraform.DataDevices) error {
 	dataWithoutNodeGroup := withoutNodeGroup(templateData)
 	getDataForStep := func(step string) map[string]interface{} {
 		if step != "node-group" {
@@ -150,10 +151,17 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		return err
 	}
 
-	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	log.InfoF("Create %q\n", devicePathFile)
+	if len(dataDevices.SystemRegistryDataDevicePath) != 0 {
+		systemRegistryDataDevicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "system_registry_data_device_path")
+		log.InfoF("Create %q\n", systemRegistryDataDevicePathFile)
+		if err := fs.CreateFileWithContent(systemRegistryDataDevicePathFile, dataDevices.SystemRegistryDataDevicePath); err != nil {
+			return err
+		}
+	}
 
-	return fs.CreateFileWithContent(devicePathFile, devicePath)
+	kubernetesDataDevicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
+	log.InfoF("Create %q\n", kubernetesDataDevicePathFile)
+	return fs.CreateFileWithContent(kubernetesDataDevicePathFile, dataDevices.KubeDataDevicePath)
 }
 
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {

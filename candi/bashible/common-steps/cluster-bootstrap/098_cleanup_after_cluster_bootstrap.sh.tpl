@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,11 @@
 
 rm -rf /var/lib/bashible/kubeadm
 bb-package-remove kubeadm
+
+{{- if and .registryMode (ne .registryMode "Direct") }}
+bb-package-remove seaweedfs dockerAuth dockerDistribution etcd
+rm -rf $IGNITER_DIR
+{{- end }}
 
 rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*

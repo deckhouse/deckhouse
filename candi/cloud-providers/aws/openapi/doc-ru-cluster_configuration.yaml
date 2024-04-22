@@ -65,6 +65,13 @@ apiVersions:
                     description: Размер диска для etcd. Значение указывается в `ГиБ`.
                   type:
                     description: Тип диска для etcd.
+              systemRegistryDisk:
+                type: object
+                properties:
+                  sizeGb:
+                    description: Размер диска для system registry. Значение указывается в `ГиБ`.
+                  type:
+                    description: Тип диска для system registry.
           zones:
             description: |
               Список зон, в которых допустимо создавать master-узлы.

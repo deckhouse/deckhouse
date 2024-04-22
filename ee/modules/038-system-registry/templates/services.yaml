@@ -1,0 +1,47 @@
+##### For specific mode
+{{- if $.Values.systemRegistry.mode }}
+{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
+#####
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: system-registry-manager
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http-healthz
+    protocol: TCP
+    targetPort: 8097
+    port: 8097
+  - name: https-api
+    protocol: TCP
+    targetPort: 4577
+    port: 4577
+  selector:
+    app: system-registry-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: embedded-registry
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "embedded-registry")) | nindent 2 }}
+spec:
+  clusterIP: None
+  selector:
+    component: system-registry
+  ports:
+    - protocol: TCP
+      port: 5001
+      targetPort: 5001
+
+
+##### For specific mode
+{{- end }}
+{{- end }}
+#####

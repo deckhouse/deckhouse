@@ -45,3 +45,117 @@ apiVersions:
               Используйте параметр [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
 
               Уровень логирования Deckhouse.
+
+- apiVersion: deckhouse.io/v2alpha1
+  openAPISpec:
+    description: |
+      Конфигурация Deckhouse, с которой он запустится после установки.
+    additionalProperties: false
+    x-examples:
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: direct
+          direct:
+            repo: nexus.company.my/deckhouse/ee
+            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: Proxy
+          proxy:
+            repo: nexus.company.my/deckhouse/ee
+            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+            storageMode: Fs
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: Detached
+          detached:
+            imagesBundlePath: ~/deckhouse/bundle.tar
+            storageMode: Fs
+    properties:
+      apiVersion:
+        type: string
+        description: Используемая версия API Deckhouse.
+      registry:
+        description: Параметры, необходимые для установки Registry.
+        properties:
+          mode:
+            description: |
+              Определяет режим доступа к реестру контейнеров для Deckhouse. Этот параметр влияет на то, как будут выбираться и сохраняться образы контейнеров в процессе развертывания:
+
+              - `Direct` — Deckhouse будет напрямую обращаться к указанному docker registry.
+              - `Proxy` — Deckhouse настроит модуль system-registry, который будет выполнять функцию кэширующего прокси для указанного docker registry. Данный режим помогает сократить сетевой трафик и повысить скорость загрузки docker образов за счет локального кэширования.
+              - `Detached` — Deckhouse создаст автономный docker registry с помощью модуля system-registry, загрузив docker образы из imagesBundle. Необходимо вручную обновить system-registry новыми образами. Подробные инструкции по настройке и обслуживанию приведены в документации.
+          direct:
+            description: Параметры `Direct` режима.
+            properties: &directProperties
+              imagesRepo:
+                description: |
+                  Адрес container registry с образами Deckhouse.
+
+                  Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
+
+                  Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+              dockerCfg:
+                description: |
+                  Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+
+                  Например, для доступа к container registry `registry.company.my` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
+              ca:
+                description: |
+                  Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+              scheme:
+                description: Протокол доступа к container registry (HTTP или HTTPS).
+          detached:
+            description: Параметры `Detached` режима.
+            properties:
+              imagesBundlePath:
+                description: |
+                  Путь к imagesBundle для дистрибутива платформы Deckhouse Kubernetes. Путь можно указать как к папке, так и к .tar архиву.
+
+                  Для получения дополнительной информации о том, как получить imagesBundle, обратитесь к документации по адресу https://deckhouse.io/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry
+              storageMode: &storageMode
+                description: |
+                  Тип хранилища данных для модуля system-registry.
+          proxy:
+            description: Параметры `Proxy` режима.
+            properties:
+              <<: *directProperties
+              storageMode:
+                <<: *storageMode
+      deckhouse:
+        description: Параметры, необходимые для установки Deckhouse.
+        properties:
+          releaseChannel:
+            description: |
+              Используйте параметр [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере канал обновлений Deckhouse.
+          devBranch:
+            description: |
+              Параметр используется для нужд разработки. Будет заменен на аргумент CLI-команды.
+          bundle:
+            description: |
+              Используйте параметр [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере вариант поставки Deckhouse.
+          logLevel:
+            description: |
+              Используйте параметр [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Уровень логирования Deckhouse.

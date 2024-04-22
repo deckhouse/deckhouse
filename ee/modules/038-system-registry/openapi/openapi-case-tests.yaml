@@ -1,0 +1,21 @@
+positive:
+  values:
+    - {}
+  configValues:
+    - mode: Direct
+    - mode: Proxy
+      proxy:
+        ca: ""
+        host: dev-registry.deckhouse.io
+        password: "password"
+        path: /sys/deckhouse-oss
+        scheme: http
+        user: "user"
+    - mode: Detached
+      detached:
+        storageMode: S3
+negative:
+  values:
+    - somethingInConfig: yes
+  configValues:
+    - somethingInConfig: yes

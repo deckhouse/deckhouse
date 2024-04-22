@@ -77,7 +77,7 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
 }
 
-func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
+func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState []byte, dataDevices terraform.DataDevices) error {
 	if len(tfState) == 0 {
 		return ErrNoTerraformState
 	}
@@ -85,8 +85,13 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	getTerraformStateManifest := func() interface{} {
 		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
 	}
-	getDevicePathManifest := func() interface{} {
-		return manifests.SecretMasterDevicePath(nodeName, devicePath)
+
+	getKubernetesDataDevicePathManifest := func() interface{} {
+		return manifests.SecretMasterKubernetesDataDevicePath(nodeName, []byte(dataDevices.KubeDataDevicePath))
+	}
+
+	getSystemRegistryDataDevicePathManifest := func() interface{} {
+		return manifests.SecretMasterSystemRegistryDataDevicePath(nodeName, []byte(dataDevices.SystemRegistryDataDevicePath))
 	}
 
 	tasks := []actions.ManifestTask{
@@ -104,7 +109,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 		},
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
-			Manifest: getDevicePathManifest,
+			Manifest: getKubernetesDataDevicePathManifest,
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -117,6 +122,28 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
 					context.TODO(),
 					"d8-masters-kubernetes-data-device-path",
+					types.MergePatchType,
+					data,
+					metav1.PatchOptions{},
+				)
+				return err
+			},
+		},
+		{
+			Name:     `Secret "d8-masters-system-registry-data-device-path"`,
+			Manifest: getSystemRegistryDataDevicePathManifest,
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				data, err := json.Marshal(manifest.(*apiv1.Secret))
+				if err != nil {
+					return err
+				}
+				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
+					context.TODO(),
+					"d8-masters-system-registry-data-device-path",
 					types.MergePatchType,
 					data,
 					metav1.PatchOptions{},

@@ -10,6 +10,7 @@ locals {
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
   etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
+  system_registry_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.systemRegistryDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
   server_group = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
 }
@@ -55,6 +56,20 @@ module "kubernetes_data" {
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags = local.tags
+}
+
+module "system_registry_data" {
+  count = var.systemRegistryEnable ? 1 : 0
+  source = "../../../terraform-modules/system-registry-data"
+  prefix = local.prefix
+  node_index = var.nodeIndex
+  master_id = module.master.id
+  volume_size = local.system_registry_volume_size
+  volume_type = local.volume_type
+  volume_zone = module.volume_zone.zone
+  tags = local.tags
+
+  depends_on = [module.kubernetes_data] # For sequential attachment
 }
 
 module "security_groups" {

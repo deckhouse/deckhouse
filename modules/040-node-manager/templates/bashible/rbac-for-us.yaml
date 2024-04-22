@@ -92,6 +92,7 @@ rules:
 - apiGroups: [""]
   resourceNames:
   - d8-masters-kubernetes-data-device-path
+  - d8-masters-system-registry-data-device-path
   resources:
   - secrets
   verbs:

@@ -33,6 +33,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "systemRegistryEnable" {
+  type = bool
+  default = false
+}
+
 data "aws_availability_zones" "available" {}
 
 locals {

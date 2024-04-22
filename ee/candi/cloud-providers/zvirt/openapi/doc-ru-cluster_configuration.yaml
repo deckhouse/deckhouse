@@ -46,6 +46,9 @@ apiVersions:
               rootDiskSize:
                 description: |
                   Размер корневого диска в GiB для использования в виртуальных машинах.
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска для system registry. Значение указывается в GiB.
               template:
                 description: |
                   Имя шаблона, который будет использован при заказе виртуальных машин.

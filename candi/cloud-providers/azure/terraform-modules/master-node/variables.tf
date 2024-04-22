@@ -39,22 +39,28 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "systemRegistryEnable" {
+  type    = bool
+  default = false
+}
+
 locals {
-  prefix                 = var.clusterConfiguration.cloud.prefix
-  admin_username         = "azureuser"
-  machine_size           = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineSize
-  ssh_public_key         = var.providerClusterConfiguration.sshPublicKey
-  disk_type              = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "StandardSSD_LRS")
-  disk_size_gb           = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 50)
-  etcd_disk_size_gb      = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
-  enable_external_ip     = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "enableExternalIP", false)
-  urn                    = split(":", var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn)
-  image_publisher        = local.urn[0]
-  image_offer            = local.urn[1]
-  image_sku              = local.urn[2]
-  image_version          = local.urn[3]
-  actual_zones           = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
-  zones                  = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
-  additional_tags        = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {}))
-  accelerated_networking = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "acceleratedNetworking", false)
+  prefix                       = var.clusterConfiguration.cloud.prefix
+  admin_username               = "azureuser"
+  machine_size                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineSize
+  ssh_public_key               = var.providerClusterConfiguration.sshPublicKey
+  disk_type                    = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "StandardSSD_LRS")
+  disk_size_gb                 = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 50)
+  etcd_disk_size_gb            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
+  system_registry_disk_size_gb = var.providerClusterConfiguration.masterNodeGroup.instanceClass.systemRegistryDiskSizeGb
+  enable_external_ip           = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "enableExternalIP", false)
+  urn                          = split(":", var.providerClusterConfiguration.masterNodeGroup.instanceClass.urn)
+  image_publisher              = local.urn[0]
+  image_offer                  = local.urn[1]
+  image_sku                    = local.urn[2]
+  image_version                = local.urn[3]
+  actual_zones                 = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
+  zones                        = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
+  additional_tags              = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {}))
+  accelerated_networking       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "acceleratedNetworking", false)
 }

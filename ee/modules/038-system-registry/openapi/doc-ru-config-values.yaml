@@ -1,0 +1,46 @@
+type: object
+properties:
+  imagesOverride:
+    description: |
+      Переопределение образов
+    properties:
+      registryManager:
+        description: |
+          Образ registry manager-а
+  enableRegistryManager:
+    description: |
+      Флаг включения registry manager-а
+  mode:
+    description: |
+      Тип регистри
+  detached:
+    description: |
+      Параметры для detached режима
+    properties:
+      storageMode: &storageMode
+        description: |
+          Тип хранилища данных
+  proxy:
+    description: |
+      Параметры для proxy режима
+    properties:
+      host:
+        description: |
+          Host или upstream регистри
+      scheme:
+        description: |
+          Схема upstream регистри
+      ca:
+        description: |
+          CA сертификат upstream регистри
+      path:
+        description: |
+          Путь upstream регистри
+      user:
+        description: |
+          Имя пользователя для upstream регистри
+      password:
+        description: |
+          Пароль для upstream регистри
+      storageMode:
+        <<: *storageMode

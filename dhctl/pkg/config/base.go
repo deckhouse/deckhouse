@@ -65,6 +65,13 @@ func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, er
 		return nil, err
 	}
 
+	if metaConfig.Registry.Mode != "" && metaConfig.Registry.Mode != "Direct" {
+		if metaConfig.Images["systemRegistry"] == nil {
+			return nil, fmt.Errorf("RegistryMode allowed only in Enterprise / Standard editions.\n" +
+				"Please remove RegistryMode from InitConfiguration, or set it to 'Direct'.")
+		}
+	}
+
 	err = metaConfig.LoadInstallerVersion()
 	if err != nil {
 		return nil, err
@@ -178,6 +185,17 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		var parsedProviderClusterConfig map[string]json.RawMessage
 		if err := yaml.Unmarshal(providerClusterConfigData, &parsedProviderClusterConfig); err != nil {
 			return nil, err
+		}
+
+		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
+
+		systemRegistryConfigData := providerClusterConfig.Data["system-registry-configuration.yaml"]
+		if len(systemRegistryConfigData) != 0 {
+			var parsedSystemRegistryConfig SystemRegistryConfig
+			if err := yaml.Unmarshal(systemRegistryConfigData, &parsedSystemRegistryConfig); err != nil {
+				return nil, err
+			}
+			metaConfig.SystemRegistryConfig = parsedSystemRegistryConfig
 		}
 
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig

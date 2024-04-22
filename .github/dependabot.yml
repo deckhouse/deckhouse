@@ -142,6 +142,33 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/038-system-registry/images/docker-distribution/s3_healthcheck"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/038-system-registry/images/old-system-registry-manager/manager"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/038-system-registry/images/system-registry-manager/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/110-istio/images/api-proxy"
   labels:
   - "type/dependencies"
@@ -197,6 +224,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/go_lib/registry-packages-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/system-registry-manager"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

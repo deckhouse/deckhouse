@@ -32,9 +32,22 @@ type PipelineOutputs struct {
 
 	BastionHost string
 
-	MasterIPForSSH     string
-	NodeInternalIP     string
-	KubeDataDevicePath string
+	MasterIPForSSH               string
+	NodeInternalIP               string
+	KubeDataDevicePath           string
+	SystemRegistryDataDevicePath string
+}
+
+type DataDevices struct {
+	KubeDataDevicePath           string
+	SystemRegistryDataDevicePath string
+}
+
+func (out *PipelineOutputs) GetDataDevices() DataDevices {
+	return DataDevices{
+		KubeDataDevicePath: out.KubeDataDevicePath,
+		SystemRegistryDataDevicePath: out.SystemRegistryDataDevicePath,
+	}
 }
 
 func equalArray(a, b []string) bool {
@@ -283,16 +296,22 @@ func GetMasterNodeResult(r RunnerInterface) (*PipelineOutputs, error) {
 		return nil, err
 	}
 
+	systemRegistryDataDevicePath, err := getStringOrIntOutput(r, "system_registry_data_device_path")
+	if err != nil {
+		return nil, err
+	}
+
 	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
 	}
 
 	return &PipelineOutputs{
-		TerraformState:     tfState,
-		MasterIPForSSH:     masterIPAddressForSSH,
-		NodeInternalIP:     nodeInternalIP,
-		KubeDataDevicePath: kubernetesDataDevicePath,
+		TerraformState:               tfState,
+		MasterIPForSSH:               masterIPAddressForSSH,
+		NodeInternalIP:               nodeInternalIP,
+		KubeDataDevicePath:           kubernetesDataDevicePath,
+		SystemRegistryDataDevicePath: systemRegistryDataDevicePath,
 	}, nil
 }
 

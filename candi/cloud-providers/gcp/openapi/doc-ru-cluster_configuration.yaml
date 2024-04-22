@@ -80,6 +80,8 @@ apiVersions:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
               etcdDiskSizeGb:
                 description: Размер диска для etcd. Значение указывается в `ГиБ`.
+              systemRegistryDiskSizeGb:
+                description: Размер диска для system registry. Значение указывается в `ГиБ`.
               disableExternalIP:
                 description: |
                   Устанавливает, запретить назначение внешнего IP для инстанса или нет.

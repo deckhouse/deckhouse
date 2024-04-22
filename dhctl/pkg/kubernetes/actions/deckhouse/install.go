@@ -303,7 +303,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			},
 		},
 	}
-
+	
 	if cfg.IsRegistryAccessRequired() {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "deckhouse-registry"`,
@@ -370,7 +370,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
+					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.SystemRegistryConfig,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
@@ -471,6 +471,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	}
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
+
+	if err := config.CheckOrSetupSystemRegistryModuleConfig(cfg); err != nil {
+		return err
+	}
 
 	if len(cfg.ModuleConfigs) > 0 {
 		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {

@@ -16,10 +16,12 @@ package frontend
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
@@ -145,6 +147,55 @@ func (t *Tunnel) ConsumeLines(r io.Reader, fn func(l string)) {
 
 		if fn != nil {
 			fn(text)
+		}
+	}
+}
+
+func RecreateSshTun(ctx context.Context, tun *Tunnel, recreateTun func() (*Tunnel, error)) error {
+	if tun == nil {
+		return fmt.Errorf("error, an empty tunnel has been transmitted")
+	}
+
+	healthMonitorErrorCh := make(chan error)
+	tunAddress := tun.Address
+
+	defer func() {
+		log.DebugF("Stop tunnel %s\n", tunAddress)
+		tun.Stop()
+	}()
+
+	go tun.HealthMonitor(healthMonitorErrorCh)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-healthMonitorErrorCh:
+			var lastError error
+			log.DebugF("Detected error in tunnel %s\n", tunAddress)
+			for retryCount := 0; retryCount < 1024; retryCount++ {
+				select {
+				case <-ctx.Done():
+					return nil
+				default:
+				}
+				log.DebugF("[%d/1024] Trying to recreate the tunnel %s\n", retryCount+1, tunAddress)
+				tun.Stop()
+				tun, lastError = recreateTun()
+				if lastError != nil {
+					lastError = fmt.Errorf("error recreating the tunnel %s: %v", tunAddress, lastError.Error())
+					log.DebugF("[%d/1024] %s\n", retryCount+1, lastError.Error())
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				go tun.HealthMonitor(healthMonitorErrorCh)
+				lastError = nil
+				log.DebugF("[%d/1024] Successfully recreated the tunnel %s\n", retryCount+1, tunAddress)
+				break
+			}
+			if lastError != nil {
+				return lastError
+			}
 		}
 	}
 }

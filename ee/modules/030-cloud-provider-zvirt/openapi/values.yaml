@@ -109,6 +109,11 @@ properties:
                       Etcd disk size in GiB.
                     example: 10
                     type: integer
+                  systemRegistryDiskSizeGb:
+                    description: |
+                      System registry disk size in GiB.
+                    example: 40
+                    type: integer
                   template:
                     type: string
                     description: |

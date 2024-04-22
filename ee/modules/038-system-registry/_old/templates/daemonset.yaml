@@ -1,0 +1,197 @@
+# {{- define "system_registry_manager_resources" }}
+# cpu: 25m
+# memory: 40Mi
+# {{- end }}
+
+# {{- define "image_holder_resources" }}
+# cpu: 10m
+# memory: 10Mi
+# {{- end }}
+
+# ##### For specific registryMode
+# {{- if $.Values.systemRegistry.registryMode }}
+# {{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
+# #####
+
+# {{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
+
+# {{- $images := dict }}
+# {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
+# {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
+# {{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+
+
+# {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+# ---
+# apiVersion: autoscaling.k8s.io/v1
+# kind: VerticalPodAutoscaler
+# metadata:
+#   name: system-registry-manager
+#   namespace: d8-system
+#   {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+# spec:
+#   targetRef:
+#     apiVersion: "apps/v1"
+#     kind: DaemonSet
+#     name: system-registry-manager
+#   updatePolicy:
+#     updateMode: "Auto"
+#   resourcePolicy:
+#     containerPolicies:
+#     - containerName: system-registry-manager
+#       minAllowed:
+#         {{- include "system_registry_manager_resources" . | nindent 8 }}
+#       maxAllowed:
+#         cpu: 50m
+#         memory: 80Mi
+#     {{- range $name, $imageDigest := $images }}
+#     - containerName: image-holder-{{ $name | kebabcase }}
+#       minAllowed:
+#         {{- include "image_holder_resources" $ | nindent 8 }}
+#       maxAllowed:
+#         cpu: 10m
+#         memory: 10Mi
+#     {{- end }}
+# {{- end }}
+
+
+# #########################
+# #       For test        #
+# #########################
+# {{- if $.Values.systemRegistry.enableRegistryManager  }}
+# ---
+# apiVersion: apps/v1
+# kind: DaemonSet
+# metadata:
+#   name: system-registry-manager
+#   namespace: d8-system
+#   {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+# spec:
+#   selector:
+#     matchLabels:
+#       app: system-registry-manager
+#   updateStrategy:
+#     type: RollingUpdate
+#     rollingUpdate:
+#       maxUnavailable: 100%
+#       maxSurge: 0%
+#   template:
+#     metadata:
+#       labels:
+#         app: system-registry-manager
+#       annotations:
+#         {{- range $configFilesInfo.secrets }}
+#         {{ .annotationNameForCheckSum }}: {{ include .templateName $ | sha256sum }}
+#         {{- end }}
+#     spec:
+#       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+#       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+#       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+#       imagePullSecrets:
+#       - name: deckhouse-registry
+#       serviceAccountName: {{ .Chart.Name }}
+#       containers:
+#       - name: system-registry-manager
+#         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
+#         {{- if $.Values.systemRegistry.imagesOverride.registryManager  }}
+#         image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
+#         imagePullPolicy: Always
+#         {{- else }}
+#         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
+#         {{- end }}
+#         args:
+#           - start
+#           - --config=/config/config.yaml
+#         volumeMounts:
+#         {{- range $configFilesInfo.files }}
+#         - name: configs
+#           mountPath: {{ .filePath }}
+#           subPath: {{ .templateName }}
+#           readOnly: true
+#         {{- end }}
+#         - mountPath: /pki
+#           name: pki
+#           readOnly: true
+#         - mountPath: /etc/kubernetes
+#           name: etc-kubernetes
+#         - mountPath: /root/.kube/
+#           name: root-kube
+#         - mountPath: /tmp
+#           name: tmp
+#         env:
+#         - name: HOST_IP
+#           valueFrom:
+#             fieldRef:
+#               fieldPath: status.hostIP
+#         - name: POD_NAME
+#           valueFrom:
+#             fieldRef:
+#               fieldPath: metadata.name
+#         - name: HOSTNAME
+#           valueFrom:
+#             fieldRef:
+#               fieldPath: spec.nodeName
+#         ports:
+#         - name: http
+#           protocol: TCP
+#           containerPort: 8097
+#         livenessProbe:
+#           httpGet:
+#             path: /healthz
+#             port: 8097
+#             scheme: HTTP
+#         readinessProbe:
+#           httpGet:
+#             path: /readyz
+#             scheme: HTTP
+#             port: 8097
+#           initialDelaySeconds: 10
+#           periodSeconds: 3
+#           timeoutSeconds: 8
+#         resources:
+#           requests:
+#             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+# {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+#             {{- include "system_registry_manager_resources" . | nindent 12 }}
+# {{- end }}
+# {{- range $name, $imageDigest := $images }}
+#       - name: image-holder-{{ $name | kebabcase }}
+#         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
+#         command:
+#         - /pause
+#   {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+#         resources:
+#           requests:
+#             {{- include "image_holder_resources" $ | nindent 12 }}
+#   {{- end }}
+# {{- end }}
+#       # hostNetwork: true
+#       # dnsPolicy: ClusterFirstWithHostNet
+#       priorityClassName: system-cluster-critical
+#       volumes:
+#       - name: pki
+#         secret:
+#           secretName: system-registry-manager-pki
+#       - name: configs
+#         secret:
+#           secretName: system-registry-manager-configs
+#       - name: etc-kubernetes
+#         hostPath:
+#           path: /etc/kubernetes/
+#           type: DirectoryOrCreate
+#       - name: root-kube
+#         hostPath:
+#           path: /root/.kube/
+#           type: DirectoryOrCreate
+#       - name: tmp
+#         emptyDir: {}
+
+# #########################
+# #       For test        #
+# #########################
+# {{- end  }}
+
+# ##### For specific registryMode
+# {{- end }}
+# {{- end }}
+# #####

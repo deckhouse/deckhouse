@@ -33,6 +33,7 @@ events {
   worker_connections 16384;
 }
 
+
 stream {
   upstream kubernetes {
     least_conn;
@@ -44,6 +45,26 @@ stream {
     server ${discovered_node_ip}:6443;
 {{- end }}
   }
+
+{{- if eq .runType "Normal" }}
+  {{- if and .registryMode (ne .registryMode "Direct") }}
+  upstream system-registry {
+    least_conn;
+    {{- range $key, $value := .normal.apiserverEndpoints }}
+    {{ $parts := splitList ":" $value -}}
+    {{ $ip := index $parts 0 -}}
+    server {{ $ip }}:5001;
+    {{- end }}
+  }
+  {{- end }}
+ {{- else if eq .runType "ClusterBootstrap" }}
+  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+  upstream system-registry {
+    least_conn;
+    server ${discovered_node_ip}:5001;
+  }
+  {{- end }}
+{{- end }}
   server {
     listen 127.0.0.1:6445;
     proxy_pass kubernetes;
@@ -52,6 +73,15 @@ stream {
     proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
+ {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+  server {
+    listen 127.0.0.1:5001;
+    proxy_pass system-registry;
+    # 1h timeout for very log pull/push operations
+    proxy_timeout 1h;
+    proxy_connect_timeout 1s;
+  }
+{{- end }}
 }
 EOF
 

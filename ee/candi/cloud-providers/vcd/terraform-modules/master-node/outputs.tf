@@ -12,3 +12,7 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = "/dev/sdb"
 }
+
+output "system_registry_data_device_path" {
+  value = var.systemRegistryEnable ? "/dev/sdc" : ""
+}

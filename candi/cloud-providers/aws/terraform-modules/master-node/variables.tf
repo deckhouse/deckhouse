@@ -63,6 +63,10 @@ variable "tags" {
   type = map(string)
 }
 
+variable "systemRegistryEnable" {
+  type = bool
+}
+
 locals {
   zones = sort(distinct(var.zones))
 }

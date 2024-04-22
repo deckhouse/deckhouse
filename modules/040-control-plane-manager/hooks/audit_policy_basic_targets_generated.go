@@ -133,6 +133,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-system:deckhouse-tools",
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
+	"system:serviceaccount:d8-system:system-registry",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
 	"system:serviceaccount:d8-system:terraform-state-exporter",
 	"system:serviceaccount:d8-system:webhook-handler",
