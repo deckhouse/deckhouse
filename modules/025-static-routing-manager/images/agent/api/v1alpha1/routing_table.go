@@ -18,6 +18,19 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// network.deckhouse.io/v1alpha1
+
+type Route struct {
+	Destination string `json:"destination"`
+	Gateway     string `json:"gateway"`
+}
+
+type Routes struct {
+	Routes []Route `json:"routes"`
+}
+
+// CR RoutingTable
+
 type RoutingTable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,15 +46,33 @@ type RoutingTableList struct {
 
 type RoutingTableSpec struct {
 	IPRouteTableID int               `json:"ipRouteTableID"`
-	Routes         []Routes          `json:"routes"`
+	Routes         []Route           `json:"routes"`
 	NodeSelector   map[string]string `json:"nodeSelector"`
 }
 
-type Routes struct {
-	Destination string `json:"destination"`
-	Gateway     string `json:"gateway"`
+type RoutingTableStatus struct {
+	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
 
-type RoutingTableStatus struct {
+// CR NodeRoutingTables
+
+type NodeRoutingTables struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              NodeRoutingTablesSpec   `json:"spec"`
+	Status            NodeRoutingTablesStatus `json:"status,omitempty"`
+}
+
+type NodeRoutingTablesList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NodeRoutingTables `json:"items"`
+}
+
+type NodeRoutingTablesSpec struct {
+	RoutingTables map[int]Routes `json:"routingTables"`
+}
+
+type NodeRoutingTablesStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }

@@ -73,9 +73,22 @@ type NodeRoutingTablesList struct {
 }
 
 type NodeRoutingTablesSpec struct {
-	RoutingTables map[int]Routes `json:"routingTables"`
+	RoutingTables map[string]Routes `json:"routingTables"`
 }
 
 type NodeRoutingTablesStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
+
+/*
+type instanceKind struct{}
+
+func (in *NodeRoutingTablesStatus) GetObjectKind() schema.ObjectKind {
+	return &instanceKind{}
+}
+
+func (f *instanceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
+func (f *instanceKind) GroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "network.deckhouse.io", Version: "v1alpha1", Kind: "NodeRoutingTable"}
+}
+*/

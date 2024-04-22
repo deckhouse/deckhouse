@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -29,12 +30,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 
-	. "github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/sstatic-routing-manager",
+	Queue: "/modules/static-routing-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "routetables",
@@ -60,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		rt     v1alpha1.RoutingTable
-		result RoutingTableInfo
+		result lib.RoutingTableInfo
 	)
 	err := sdk.FromUnstructured(obj, &rt)
 	if err != nil {
@@ -68,7 +69,11 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 	}
 
 	result.Name = rt.Name
-	result.IPRouteTableID = rt.Spec.IPRouteTableID
+	if rt.Status.IPRouteTableID != 0 {
+		result.IPRouteTableID = rt.Status.IPRouteTableID
+	} else {
+		return nil, fmt.Errorf("Status.IPRouteTableID of RoutingTable %v is 0, skip", rt.Name)
+	}
 	result.Routes = rt.Spec.Routes
 	result.NodeSelector = rt.Spec.NodeSelector
 
@@ -78,7 +83,7 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 func applyMainHandlerNodeRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		nrt    v1alpha1.NodeRoutingTables
-		result NodeRoutingTableInfo
+		result lib.NodeRoutingTableInfo
 	)
 	err := sdk.FromUnstructured(obj, &nrt)
 	if err != nil {
@@ -94,7 +99,7 @@ func applyMainHandlerNodeRouteTablesFilter(obj *unstructured.Unstructured) (go_h
 func applyMainHandlerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		node   v1.Node
-		result NodeInfo
+		result lib.NodeInfo
 	)
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
@@ -114,20 +119,20 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 		// nodeRoutingTablesCache map[string]v1alpha1.NodeRoutingTablesSpec
 		// desiredNodeRoutingTables map[string]v1alpha1.NodeRoutingTablesSpec
 		// actualNodeRoutingTables   map[string]v1alpha1.NodeRoutingTablesSpec
-		nodeRoutingTablesToCreate []v1alpha1.NodeRoutingTables
-		nodeRoutingTablesToUpdate []v1alpha1.NodeRoutingTables
+		nodeRoutingTablesToCreate []*v1alpha1.NodeRoutingTables
+		nodeRoutingTablesToUpdate []*v1alpha1.NodeRoutingTables
 		nodeRoutingTablesToDelete []string
 	)
 
 	// main logic start
 
 	// Filling affectedNodes
-	affectedNodes := make(map[string][]RoutingTableInfo)
+	affectedNodes := make(map[string][]lib.RoutingTableInfo)
 	for _, rtiRaw := range input.Snapshots["routetables"] {
-		rti := rtiRaw.(RoutingTableInfo)
+		rti := rtiRaw.(lib.RoutingTableInfo)
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
-			nodei := nodeiRaw.(NodeInfo)
+			nodei := nodeiRaw.(lib.NodeInfo)
 			if validatedSelector.Matches(labels.Set(nodei.Labels)) {
 				affectedNodes[nodei.Name] = append(affectedNodes[nodei.Name], rti)
 			}
@@ -137,7 +142,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	// Filling actualNodeRoutingTables
 	actualNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTablesSpec)
 	for _, nrtRaw := range input.Snapshots["noderoutetables"] {
-		nrtis := nrtRaw.(NodeRoutingTableInfo)
+		nrtis := nrtRaw.(lib.NodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis.NodeRoutingTables
 	}
 
@@ -150,12 +155,13 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 		if _, ok := nodeRoutingTablesCache[hash]; ok {
 			desiredNodeRoutingTables[nodeName] = nodeRoutingTablesCache[hash]
 		} else {
-			var nrts v1alpha1.NodeRoutingTablesSpec
+			tmpNRTS := new(v1alpha1.NodeRoutingTablesSpec)
+			// var nrts v1alpha1.NodeRoutingTablesSpec
 			for _, rti := range rtis {
-				NRTSAppend(&nrts, rti)
+				lib.NRTSAppend(tmpNRTS, rti)
 			}
-			nodeRoutingTablesCache[hash] = nrts
-			desiredNodeRoutingTables[nodeName] = nrts
+			nodeRoutingTablesCache[hash] = *tmpNRTS
+			desiredNodeRoutingTables[nodeName] = *tmpNRTS
 		}
 	}
 
@@ -181,13 +187,15 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	}
 
 	for _, nrt := range nodeRoutingTablesToUpdate {
+		// unnrt, _ := json.Marshal(nrt)
 		input.PatchCollector.Create(nrt, object_patch.UpdateIfExists())
 	}
 	for _, nrt := range nodeRoutingTablesToCreate {
+		// unnrt, _ := json.Marshal(nrt)
 		input.PatchCollector.Create(nrt, object_patch.IgnoreIfExists())
 	}
 	for _, nrtName := range nodeRoutingTablesToDelete {
-		input.PatchCollector.Delete(GroupVersion, NRTKind, "", nrtName, object_patch.InForeground())
+		input.PatchCollector.Delete(lib.GroupVersion, lib.NRTKind, "", nrtName, object_patch.InForeground())
 	}
 
 	// main logic end
@@ -197,7 +205,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 // service functions
 
-func getHash(rtis []RoutingTableInfo) string {
+func getHash(rtis []lib.RoutingTableInfo) string {
 	var tmp []string
 	for _, rt := range rtis {
 		tmp = append(tmp, rt.Name)
@@ -206,11 +214,11 @@ func getHash(rtis []RoutingTableInfo) string {
 	return strings.Join(tmp, ":")
 }
 
-func generateNRT(name string, nrts v1alpha1.NodeRoutingTablesSpec) v1alpha1.NodeRoutingTables {
+func generateNRT(name string, nrts v1alpha1.NodeRoutingTablesSpec) *v1alpha1.NodeRoutingTables {
 	nrt := &v1alpha1.NodeRoutingTables{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       NRTKind,
-			APIVersion: GroupVersion,
+			Kind:       lib.NRTKind,
+			APIVersion: lib.GroupVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -218,5 +226,5 @@ func generateNRT(name string, nrts v1alpha1.NodeRoutingTablesSpec) v1alpha1.Node
 		Spec: nrts,
 	}
 
-	return *nrt
+	return nrt
 }

@@ -23,9 +23,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	. "github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
@@ -42,7 +43,7 @@ type routingTableInfo struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/sstatic-routing-manager",
+	Queue: "/modules/static-routing-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "routetables",
@@ -93,9 +94,10 @@ func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 	for _, rtiRaw := range input.Snapshots["routetables"] {
 		rti := rtiRaw.(routingTableInfo)
 
-		if !shouldUpdateStatusRouteTableID(rti) {
+		if !shouldUpdateStatusRouteTableID(rti, input.LogEntry) {
 			continue
 		}
+		input.LogEntry.Infof("RoutingTable %v needs to be updated", rti.Name)
 
 		if rti.SpecIPRouteTableID != 0 {
 			newRTId = rti.SpecIPRouteTableID
@@ -112,8 +114,8 @@ func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 		}
 		input.PatchCollector.MergePatch(
 			statusPatch,
-			GroupVersion,
-			RTKind,
+			lib.GroupVersion,
+			lib.RTKind,
 			"",
 			rti.Name,
 			object_patch.WithSubresource("/status"),
@@ -124,19 +126,25 @@ func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 
 // service functions
 
-func shouldUpdateStatusRouteTableID(rti routingTableInfo) bool {
+func shouldUpdateStatusRouteTableID(rti routingTableInfo, log *logrus.Entry) bool {
 	if rti.DeletionTimestampExists {
 		return false
 	}
 
 	if rti.StatusIPRouteTableID == 0 {
+		log.Infof("In RoutingTable %v status.IPRouteTableID is empty", rti.Name)
 		return true
+	}
+
+	if rti.StatusIPRouteTableID != 0 && rti.SpecIPRouteTableID == 0 {
+		return false
 	}
 
 	if rti.SpecIPRouteTableID != 0 && rti.SpecIPRouteTableID == rti.StatusIPRouteTableID {
 		return false
 	}
 
+	log.Infof("RoutingTable %v is not in the deletion status, status.IPRouteTableID and spec.IPRouteTableID are not empty, but not are equal", rti.Name)
 	return true
 }
 
