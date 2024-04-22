@@ -35,3 +35,4 @@ import:
     before: setup
 docker:
   ENTRYPOINT: ["/auth_server"]
+
