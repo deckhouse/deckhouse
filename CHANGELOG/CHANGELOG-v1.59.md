@@ -92,6 +92,7 @@
  - **[deckhouse]** Use the same logic as minor/patch for `apply-now` release, except the time settings. [#7988](https://github.com/deckhouse/deckhouse/pull/7988)
  - **[deckhouse]** Сhange the way the `deckhouse` pod readiness is determined during the minor version update. [#7770](https://github.com/deckhouse/deckhouse/pull/7770)
  - **[deckhouse]** Validation configs of disabled modules is disabled. [#7744](https://github.com/deckhouse/deckhouse/pull/7744)
+ - **[deckhouse-controller]** Drop cluster-domain part of the leader identity if KUBERNETES_CLUSTER_DOMAIN isn't set. [#8225](https://github.com/deckhouse/deckhouse/pull/8225)
  - **[deckhouse-controller]** Use FQDN K8s pod name for the lease leader. [#8187](https://github.com/deckhouse/deckhouse/pull/8187)
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
  - **[dhctl]** Remove dependency on addon-operator. [#8210](https://github.com/deckhouse/deckhouse/pull/8210)
