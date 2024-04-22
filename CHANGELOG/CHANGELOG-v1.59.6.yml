@@ -1,0 +1,5 @@
+deckhouse-controller:
+  fixes:
+    - summary: Drop cluster-domain part of the leader identity if KUBERNETES_CLUSTER_DOMAIN isn't set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8225
+
