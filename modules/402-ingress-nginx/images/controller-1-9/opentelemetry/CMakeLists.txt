@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# Copyright 2021 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+cmake_minimum_required(VERSION 3.11 FATAL_ERROR)
+
+project(
+  dependencies
+  LANGUAGES CXX
+  VERSION 0.0.1)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "-O2 -fpic")
+set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON" FORCE)
+
+set(CMAKE_BUILD_TYPE
+    Release
+    CACHE STRING "Build type" FORCE)
+
+include(GNUInstallDirs)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+
+set(INSTALL_LIBDIR
+    ${CMAKE_INSTALL_LIBDIR}
+    CACHE PATH "directory for libraries")
+set(INSTALL_BINDIR
+    ${CMAKE_INSTALL_BINDIR}
+    CACHE PATH "directory for executables")
+set(INSTALL_INCLUDEDIR
+    ${CMAKE_INSTALL_INCLUDEDIR}
+    CACHE PATH "directory for header files")
+
+set(DEF_INSTALL_CMAKEDIR share/cmake/${PROJECT_NAME})
+set(INSTALL_CMAKEDIR
+    ${DEF_INSTALL_CMAKEDIR}
+    CACHE PATH "directory for CMake files")
+
+set_property(DIRECTORY PROPERTY EP_BASE ${CMAKE_BINARY_DIR}/subs)
+
+set(STAGED_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/stage)
+message(STATUS "${PROJECT_NAME} staged install: ${STAGED_INSTALL_PREFIX}")
+
+find_package(OpenSSL REQUIRED)
+message("OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
+message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
+
+set(GRPC_GIT_TAG
+    "v1.45.2"
+    CACHE STRING "gRPC version")
+
+include(ExternalProject)
+set(ABSEIL_GIT_TAG "20230802.1" CACHE STRING "Abseil version")
+
+ExternalProject_Add(
+  Abseil
+  GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+  GIT_TAG ${ABSEIL_GIT_TAG}
+  GIT_SHALLOW 1
+  UPDATE_COMMAND ""
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${STAGED_INSTALL_PREFIX}
+             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+             -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+             -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+  USES_TERMINAL_BUILD TRUE
+  DOWNLOAD_NO_PROGRESS TRUE
+  LOG_CONFIGURE TRUE
+  LOG_BUILD TRUE
+  LOG_INSTALL TRUE)
+
+# RE2 settings
+set(RE2_GIT_TAG "2023-11-01" CACHE STRING "RE2 version")
+
+ExternalProject_Add(
+  RE2
+  DEPENDS Abseil
+  GIT_REPOSITORY https://github.com/google/re2.git
+  GIT_TAG ${RE2_GIT_TAG}
+  GIT_SHALLOW 1
+  UPDATE_COMMAND ""
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${STAGED_INSTALL_PREFIX}
+             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+             -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+             -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+  USES_TERMINAL_BUILD TRUE
+  DOWNLOAD_NO_PROGRESS TRUE
+  LOG_CONFIGURE TRUE
+  LOG_BUILD TRUE
+  LOG_INSTALL TRUE)
+
+ExternalProject_Add(
+  gRPC
+  DEPENDS Abseil RE2
+  GIT_REPOSITORY https://github.com/grpc/grpc.git
+  GIT_TAG ${GRPC_GIT_TAG}
+  GIT_SHALLOW 1
+  UPDATE_COMMAND ""
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${STAGED_INSTALL_PREFIX}
+             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+             -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+             -DgRPC_SSL_PROVIDER=package
+             -DgRPC_RE2_PROVIDER=package
+             -DgRPC_ABSEIL_PROVIDER=package
+             -DOPENSSL_ROOT_DIR=OpenSSL
+             -DgRPC_BUILD_TESTS=OFF
+             -DBUILD_SHARED_LIBS=OFF
+             -DgRPC_INSTALL=ON
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF
+             -DgRPC_USE_PROTO_LITE=OFF
+             -DgRPC_BUILD_CSHARP_EXT=OFF
+             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_JAVA_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_GRPC_JAVA_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_WEB_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_C_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF
+             -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+             CMAKE_CACHE_ARGS -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+  TEST_AFTER_INSTALL FALSE
+  USES_TERMINAL_BUILD TRUE
+  DOWNLOAD_NO_PROGRESS TRUE
+  LOG_CONFIGURE TRUE
+  LOG_BUILD TRUE
+  LOG_INSTALL TRUE)
+
+install(
+  DIRECTORY ${STAGED_INSTALL_PREFIX}/
+  DESTINATION .
+  USE_SOURCE_PERMISSIONS)
