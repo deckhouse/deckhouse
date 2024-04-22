@@ -269,3 +269,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/999-system-registry
+  to: /deckhouse/modules/999-system-registry
+  stageDependencies:
+    setup:
+        - '**/*.go'

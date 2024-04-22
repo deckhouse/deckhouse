@@ -269,6 +269,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/999-system-registry
+  to: /deckhouse/modules/999-system-registry
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:

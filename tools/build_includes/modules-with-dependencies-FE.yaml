@@ -1241,6 +1241,29 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/999-system-registry
+  to: /deckhouse/modules/999-system-registry
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   excludePaths:
