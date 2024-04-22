@@ -24,8 +24,7 @@ shell:
     - GO111MODULE=off make binaries
 
 ---
-image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-from: {{ $.Images.BASE_DISTROLESS }}
+fromImage: common/distroless
 import:
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
