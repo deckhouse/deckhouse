@@ -567,17 +567,11 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
+shell:
   install:
-  - shell: go mod download
-    args:
-      chdir: /dhctl
-
+    - cd /dhctl && go mod download
   setup:
-  - command: D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
-    args:
-      chdir: /dhctl
-
+    - cd /dhctl && D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
 ---
 image: dev/install
 from: {{ .Images.BASE_ALT }}
