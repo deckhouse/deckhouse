@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -424,7 +425,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 		err = tun.Stop()
 		if err != nil {
-			log.InfoF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+			f := log.InfoF
+			// signal: killed is normal signal for stopping tunnel process
+			// because we kill it
+			if strings.Contains(err.Error(), "signal: killed") {
+				f = log.DebugF
+			}
+			f("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
 		}
 
 		if err := RebootMaster(sshClient); err != nil {
