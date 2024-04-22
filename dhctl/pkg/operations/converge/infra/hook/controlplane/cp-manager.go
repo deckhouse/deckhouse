@@ -42,7 +42,7 @@ func NewManagerReadinessChecker(kubeCl *client.KubernetesClient) *ManagerReadine
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll() error {
-	return retry.NewLoop("Control-plane manager pods readiness", 25, 10*time.Second).Run(func() error {
+	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).Run(func() error {
 		nodes, err := c.kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 			LabelSelector: "node.deckhouse.io/group=master",
 		})
@@ -60,15 +60,22 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 		}
 
 		readyPods := make(map[string]struct{})
-		message := fmt.Sprintf("Pods Ready %v of %v\n", len(cpmPodsList.Items), len(nodes.Items))
 		for _, pod := range cpmPodsList.Items {
 			p := pod
 			ready, err := isPodReady(&p)
-			condition := "NotReady"
 			if err != nil {
 				log.DebugF("Error while getting control-plane manager pod readiness: %v\n", err)
 			}
 			if ready {
+				readyPods[p.Name] = struct{}{}
+			}
+		}
+
+		message := fmt.Sprintf("Pods Ready %v of %v\n", len(readyPods), len(nodes.Items))
+		for _, pod := range cpmPodsList.Items {
+			p := pod
+			condition := "NotReady"
+			if _, ok := readyPods[p.Name]; ok {
 				condition = "Ready"
 				readyPods[p.Name] = struct{}{}
 			}
