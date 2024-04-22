@@ -12,6 +12,7 @@ shell:
   - mkdir -m 1777 /tmp-tmp
   - apk add --no-cache git
   install:
+    - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
     - cd {{ $GIT_CLONE_DEST_PATH }}/weed
     - export GOPROXY={{ .GOPROXY }}
