@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "seaweedfs")) | nindent 2 }}
+spec:
+  selector:
+    app: seaweedfs
+  ports:
+    - name: "master"
+      protocol: TCP
+      port: 9333
+      targetPort: 9333
+    - name: "volume"
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: "filer"
+      protocol: TCP
+      port: 8888
+      targetPort: 8888
+    - name: "s3"
+      protocol: TCP
+      port: 8333
+      targetPort: 8333
+    - name: "webdav"
+      protocol: TCP
+      port: 7333
+      targetPort: 7333
+    - name: "metrics"
+      protocol: TCP
+      port: 9324
+      targetPort: 9324

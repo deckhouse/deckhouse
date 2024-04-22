@@ -1,0 +1,36 @@
+{{- $REPO := "https://github.com/cesanta/docker_auth"}}
+{{- $BRANCH := "1.12.0"}}
+{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/cesanta/docker_auth"}}
+---
+artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ $.Images.BASE_GOLANG_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -m 1777 /tmp-tmp
+  - apk add --no-cache git make
+  install:
+    - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
+    - cd {{ $GIT_CLONE_DEST_PATH }}/auth_server
+    - export GOPROXY={{ .GOPROXY }}
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - export CGO_ENABLED=0
+    - make build
+
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /tmp-tmp
+    to: /tmp
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "{{ $GIT_CLONE_DEST_PATH }}/auth_server/auth_server"
+    to: /auth_server
+    before: setup
+docker:
+  ENTRYPOINT: ["/auth_server"]

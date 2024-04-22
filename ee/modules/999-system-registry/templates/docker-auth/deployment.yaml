@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "auth")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      # {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      # {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      containers:
+        - name: auth
+          image: {{ include "helm_lib_module_image" (list . "dockerAuth") }}
+          args:
+            - -logtostderr
+            - /etc/docker_auth/config.yaml
+          ports:
+            - name: "server"
+              containerPort: 5001
+          volumeMounts:
+            - name: config-files
+              mountPath: /etc/docker_auth/config.yaml
+              subPath: config.yaml
+              readOnly: true
+      volumes:
+        - name: config-files
+          configMap:
+            name: auth-config-files
