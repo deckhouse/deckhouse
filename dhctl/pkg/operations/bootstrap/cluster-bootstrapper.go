@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -443,6 +444,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	} else if shouldStop {
 		return nil
+	}
+
+	if err := controlplane.NewManagerReadinessChecker(kubeCl).IsReadyAll(); err != nil {
+		return err
 	}
 
 	err = createResources(kubeCl, resourcesToCreate, metaConfig)
