@@ -179,7 +179,7 @@ func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVers
 		return err
 	}
 	if string(marshaledConverted) != string(marshaledExpected) {
-		return fmt.Errorf("expected: %s got: %s\n", marshaledExpected, marshaledConverted)
+		return fmt.Errorf("expected: %s got: %s", marshaledExpected, marshaledConverted)
 	}
 	return nil
 }
