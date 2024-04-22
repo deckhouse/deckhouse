@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready")
+var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
 
 type ManagerReadinessChecker struct {
 	kubeCl *client.KubernetesClient
