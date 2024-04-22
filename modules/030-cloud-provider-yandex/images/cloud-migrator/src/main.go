@@ -32,15 +32,10 @@ func main() {
 		clusterUUID string
 	)
 
-	folderID = os.Getenv("YC_FOLDER_ID")
-	kubeConfig = os.Getenv("KUBE_CONFIG")
-	saKeyJSON = os.Getenv("YC_SA_KEY_JSON")
-	clusterUUID = os.Getenv("CLUSTER_UUID")
-
-	flag.StringVar(&kubeConfig, "kube-config", kubeConfig, "Path to kube-config")
-	flag.StringVar(&folderID, "folder-id", folderID, "Yandex folder id")
-	flag.StringVar(&saKeyJSON, "sa-key-json", saKeyJSON, "Yandex SA key in JSON format")
-	flag.StringVar(&saKeyJSON, "cluster-uuid", clusterUUID, "Cluster UUID")
+	flag.StringVar(&kubeConfig, "kube-config", os.Getenv("KUBE_CONFIG"), "Path to kube-config")
+	flag.StringVar(&folderID, "folder-id", os.Getenv("YC_FOLDER_ID"), "Yandex folder id")
+	flag.StringVar(&saKeyJSON, "sa-key-json", os.Getenv("YC_SA_KEY_JSON"), "Yandex SA key in JSON format")
+	flag.StringVar(&clusterUUID, "cluster-uuid", os.Getenv("CLUSTER_UUID"), "Cluster UUID")
 
 	flag.Parse()
 
