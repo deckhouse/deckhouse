@@ -40,6 +40,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-snapshot-controller",
 	"d8-static-routing-manager",
 	"d8-system",
+	"d8-system-registry",
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
