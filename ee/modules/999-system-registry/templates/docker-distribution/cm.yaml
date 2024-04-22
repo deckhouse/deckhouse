@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: distribution-config-files
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "distribution")) | nindent 2 }}
+data:
+  config.yaml: |
+    # empty config.yaml
+    version: 0.1

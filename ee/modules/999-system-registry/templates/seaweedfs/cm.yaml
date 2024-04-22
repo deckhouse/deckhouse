@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seaweedfs-config-files
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "seaweedfs")) | nindent 2 }}
+data:
+  filer.toml: |
+    [filer.options]
+    recursive_delete = true
+
+    [leveldb2]
+    enabled = false
+
+    [redis2]
+    enabled = false
+
+    [etcd]
+    enabled = true
+    servers = "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+    key_prefix = "seaweedfmeta."

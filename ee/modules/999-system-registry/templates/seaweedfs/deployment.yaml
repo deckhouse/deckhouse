@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+# Replace to statefulset
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "seaweedfs")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweedfs
+  template:
+    metadata:
+      labels:
+        app: seaweedfs
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      # {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      # {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      containers:
+        - name: seaweedfs
+          image: {{ include "helm_lib_module_image" (list . "seaweedfs") }}
+          args:
+            - "-config_dir=\"/etc/seaweedfs/\""
+            - "-logtostderr=true"
+            - "-v=0"
+            - "server"
+            - "-filer"
+            - "-s3"
+            - "-webdav"
+            - "-dir=/seaweedfs_data"
+            - "-volume.max=0"
+            - "-master.volumeSizeLimitMB=1024"
+            - "-metricsPort=9324"
+            - "-volume.readMode=local"
+            - "-s3.allowDeleteBucketNotEmpty=true"
+            - "-master.defaultReplication=002"
+            - "-filer.maxMB=16"
+            - "-ip=localhost"
+            - "-ip.bind=0.0.0.0"
+            - "-master.peers=localhost:9333"
+          ports:
+            - name: "master"
+              containerPort: 9333
+            - name: "volume"
+              containerPort: 8080
+            - name: "filer"
+              containerPort: 8888
+            - name: "s3"
+              containerPort: 8333
+            - name: "webdav"
+              containerPort: 7333
+            - name: "metrics"
+              containerPort: 9324
+          volumeMounts:
+            - name: config-files
+              mountPath: /etc/seaweedfs/filer.toml
+              subPath: filer.toml
+              readOnly: true
+      volumes:
+        - name: config-files
+          configMap:
+            name: seaweedfs-config-files

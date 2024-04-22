@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: distribution
+  namespace: d8-system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "distribution")) | nindent 2 }}
+spec:
+  selector:
+    app: distribution
+  ports:
+    - name: "http-addr"
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+    - name: "http-debug-addr"
+      protocol: TCP
+      port: 5001
+      targetPort: 5001
