@@ -426,10 +426,11 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
  * @param {object} inputs
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  */
-const setCRIAndVersionsFromInputs = ({ context, core }) => {
+const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }) => {
   const defaultCRI = e2eDefaults.criName.toLowerCase();
-  const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+  const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
 
   let cri = [defaultCRI];
   let ver = [defaultVersion];
@@ -459,8 +460,9 @@ const setCRIAndVersionsFromInputs = ({ context, core }) => {
  * @param {object} inputs
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @param {object[]} inputs.labels - Array for labels on pull request.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  */
-const setCRIAndVersionsFromLabels = ({ core, labels }) => {
+const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion }) => {
   core.startGroup(`Detect e2e/use labels ...`);
   core.info(`Input labels: ${JSON.stringify(labels.map((l) => l.name), null, '  ')}`);
   let ver = [];
@@ -482,7 +484,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels }) => {
   }
 
   if (ver.length === 0) {
-    const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+    const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
     core.info(`No 'e2e/use/k8s' labels found. Will run e2e with default version=${defaultVersion}.`);
     ver = [defaultVersion];
   }
@@ -514,12 +516,13 @@ const setCRIAndVersionsFromLabels = ({ core, labels }) => {
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @param {string} inputs.provider - A slug of the provider.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  * @returns {Promise<void>}
  */
-module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
+module.exports.checkE2ELabels = async ({ github, context, core, provider, kubernetesDefaultVersion }) => {
   // Use workflow_dispatch inputs to enable e2e jobs if run for non-PR ref.
   if (!context.payload.inputs.pull_request_ref) {
-    return setCRIAndVersionsFromInputs({ context, core });
+    return setCRIAndVersionsFromInputs({ context, core, kubernetesDefaultVersion });
   }
 
   // Run for PR: get PR labels to detect CRI and K8s versions and remove trigger label.
@@ -541,7 +544,7 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
     return core.notice(`No e2e label for provider '${provider}'. Stop running next jobs.`);
   }
 
-  return setCRIAndVersionsFromLabels({ core, labels: issueLabels });
+  return setCRIAndVersionsFromLabels({ core, labels: issueLabels, kubernetesDefaultVersion });
 };
 
 /**

@@ -34,11 +34,12 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.25" "1.26" "1.27" "1.28" "1.29" -}!}
+{!{- $kubernetesVersions := slice "1.25" "1.26" "1.27" "1.28" "1.29" "Automatic" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
-{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions }!}
+{!{-   $kubernetesDefaultVersion := "1.25" -}!}
+{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "kubernetesDefaultVersion" $kubernetesDefaultVersion }!}
 {!{-   $outFile := printf "e2e-%s.yml" $provider }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}
 {!{-   tmpl.Exec "e2e_workflow_template" $ctx | file.Write $outPath }!}
@@ -122,7 +123,7 @@ jobs:
 {!{- $jobNames := dict -}!}
 {!{- range $criName := $ctx.criNames -}!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
-{!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
+{!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" -}!}
 {!{-     $cri := $criName | toLower -}!}
 {!{-     $criEnv := $cri | toUpper -}!}
 {!{-     $layout := (tmpl.Exec "e2e_get_layout" $ctx | strings.TrimSpace ) -}!}
