@@ -106,7 +106,7 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		return nil, ErrConvergeInterrupted
 	}
 
-	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return outputs, err
 	}

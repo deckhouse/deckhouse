@@ -74,7 +74,7 @@ type TerraNodeGroupSpec struct {
 	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
 }
 
-type DeckhouseClusterConfig struct {
+type DeckhouseClusterConfigOld struct {
 	ReleaseChannel    string                 `json:"releaseChannel,omitempty"`
 	DevBranch         string                 `json:"devBranch,omitempty"`
 	Bundle            string                 `json:"bundle,omitempty"`
@@ -83,5 +83,38 @@ type DeckhouseClusterConfig struct {
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
+	ImagesBundlePath  string                 `json:"imagesBundlePath,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+}
+
+type DeckhouseClusterConfig struct {
+	ReleaseChannel  string                 `json:"releaseChannel,omitempty"`
+	DevBranch       string                 `json:"devBranch,omitempty"`
+	Bundle          string                 `json:"bundle,omitempty"`
+	LogLevel        string                 `json:"logLevel,omitempty"`
+	ConfigOverrides map[string]interface{} `json:"configOverrides"` // Deprecated
+}
+
+type RegistryClusterConfig struct {
+	Mode                   string                          `json:"mode,omitempty"`
+	DirectModeProperties   *RegistryDirectModeProperties   `json:"direct,omitempty"`
+	DetachedModeProperties *RegistryDetachedModeProperties `json:"detached,omitempty"`
+	ProxyModeProperties    *RegistryProxyModeProperties    `json:"proxy,omitempty"`
+}
+
+type RegistryDirectModeProperties struct {
+	ImagesRepo string `json:"imagesRepo,omitempty"`
+	DockerCfg  string `json:"dockerCfg,omitempty"`
+	CA         string `json:"ca,omitempty"`
+	Scheme     string `json:"scheme,omitempty"`
+}
+
+type RegistryProxyModeProperties struct {
+	RegistryDirectModeProperties
+	StorageMode string `json:"storageMode,omitempty"`
+}
+
+type RegistryDetachedModeProperties struct {
+	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
+	StorageMode      string `json:"storageMode,omitempty"`
 }

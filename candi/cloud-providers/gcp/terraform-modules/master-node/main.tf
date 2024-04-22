@@ -35,6 +35,15 @@ resource "google_compute_disk" "kubernetes_data" {
   labels = local.additional_labels
 }
 
+resource "google_compute_disk" "system_registry_data" {
+  count  = var.systemRegistryEnable ? 1 : 0
+  zone   = local.zone
+  name   = join("-", [local.prefix, "system-registry-data", var.nodeIndex])
+  type   = "pd-ssd"
+  size   = local.system_registry_disk_size_gb
+  labels = local.additional_labels
+}
+
 resource "google_compute_instance" "master" {
   zone         = local.zone
   name         = join("-", [local.prefix, "master", var.nodeIndex])
@@ -50,6 +59,15 @@ resource "google_compute_instance" "master" {
     source      = google_compute_disk.kubernetes_data.self_link
     device_name = google_compute_disk.kubernetes_data.name
   }
+
+  dynamic "attached_disk" {
+    for_each = var.systemRegistryEnable ? [1] : []
+    content {
+      source      = google_compute_disk.system_registry_data[0].self_link
+      device_name = google_compute_disk.system_registry_data[0].name
+    }
+  }
+  
   network_interface {
     subnetwork = data.google_compute_subnetwork.kube.self_link
     dynamic "access_config" {

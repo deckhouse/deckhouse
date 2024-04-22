@@ -56,6 +56,11 @@ apiVersions:
                   Размер диска для etcd. Значение указывается в `ГиБ`.
 
                   При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud (причина такого поведения — в [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска для system registry. Значение указывается в `ГиБ`.
+
+                  При изменении этого параметра необходимо вручную расширить каждый диск для system registry в интерфейсе Yandex Cloud (причина такого поведения — в [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
               externalIPAddresses:
                 description: |
                   Список внешних IP-адресов.
