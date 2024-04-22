@@ -57,7 +57,7 @@ func (t *ReverseTunnel) Up() error {
 	go func() {
 		err = t.sshCmd.Wait()
 		if err != nil {
-			log.ErrorF("cannot open tunnel '%s': %v", t.String(), err)
+			log.InfoF("cannot gracefully stop tunnel '%s': %v\n", t.String(), err)
 		}
 	}()
 

@@ -334,11 +334,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
-	if err := ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
-		return err
-	}
-
-	return RebootMaster(sshClient)
+	return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
 }
 
 const dependencyCmd = "type"

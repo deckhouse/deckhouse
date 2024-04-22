@@ -406,6 +406,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if err != nil {
 				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v", err)
 			}
+			if err := RebootMaster(sshClient); err != nil {
+				log.ErrorF("Cannot reboot master: %v\n", err)
+			}
 		}()
 
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
