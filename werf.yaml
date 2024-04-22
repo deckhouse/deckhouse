@@ -574,7 +574,7 @@ ansible:
       chdir: /dhctl
 
   setup:
-  - command: D8_VERSION=${{- env "CI_COMMIT_TAG" | default "dev" }} make build
+  - command: D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
     args:
       chdir: /dhctl
 
