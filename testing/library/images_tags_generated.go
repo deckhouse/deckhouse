@@ -407,6 +407,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
 	},
+	"systemRegistry": map[string]interface{}{
+		"dockerAuth":         "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution": "imageHash-systemRegistry-dockerDistribution",
+		"seaweedfs":          "imageHash-systemRegistry-seaweedfs",
+	},
 	"terraformManager": map[string]interface{}{
 		"baseTerraformManager":      "imageHash-terraformManager-baseTerraformManager",
 		"terraformManagerAws":       "imageHash-terraformManager-terraformManagerAws",

@@ -38,6 +38,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-runtime-audit-engine",
 	"d8-snapshot-controller",
 	"d8-system",
+	"d8-system-registry",
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
