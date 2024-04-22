@@ -22,6 +22,7 @@ shell:
     - make build
 
 ---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
