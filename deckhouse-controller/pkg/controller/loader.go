@@ -49,7 +49,7 @@ func (dml *DeckhouseController) LoadModule(moduleSource, modulePath string) (*mo
 		return nil, err
 	}
 
-	def, err := dml.parseModuleDir(filepath.Base(modulePath), modulePath)
+	def, err := dml.parseModuleDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
 	if err != nil {
 		return nil, err
 	}
