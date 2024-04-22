@@ -1,0 +1,38 @@
+{{- $REPO := "https://github.com/distribution/distribution"}}
+{{- $BRANCH := "v2.8.3"}}
+{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/docker/distribution"}}
+---
+artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ $.Images.BASE_GOLANG_ALPINE }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -m 1777 /tmp-tmp
+  - apk add --no-cache git make bash gpg
+  install:
+    - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
+    - cd {{ $GIT_CLONE_DEST_PATH }}
+    - export GOPROXY={{ .GOPROXY }}
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - export CGO_ENABLED=0
+    - GO111MODULE=on script/setup/install-dev-tools
+    - GO111MODULE=off make build
+    - GO111MODULE=off make binaries
+
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /tmp-tmp
+    to: /tmp
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "{{ $GIT_CLONE_DEST_PATH }}/bin/registry"
+    to: /registry
+    before: setup
+docker:
+  ENTRYPOINT: ["/registry"]
