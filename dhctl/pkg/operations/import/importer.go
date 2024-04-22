@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
@@ -205,10 +206,15 @@ func (i *Importer) scan(
 			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
 		}
 
+		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys[0].Key)
+		if err != nil {
+			return fmt.Errorf("unable to read ssh private key: %w", err)
+		}
+
 		res = &ScanResult{
 			ClusterConfiguration:                 string(clusterConfiguration),
 			ProviderSpecificClusterConfiguration: string(providerConfiguration),
-			SSHPrivateKey:                        i.Params.SSHClient.PrivateKeys[0].Key,
+			SSHPrivateKey:                        string(sshPrivateKey),
 		}
 
 		if metaConfig.ClusterType == config.StaticClusterType {
