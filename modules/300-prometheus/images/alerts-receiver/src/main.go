@@ -44,7 +44,7 @@ func main() {
 	server := newServer(config.listenHost, config.listenPort)
 	server.setHandlers(config, store)
 
-	log.Infof("starting listener: %s\n\n", server.Addr)
+	log.Infof("starting listener: %s", server.Addr)
 	go func() {
 		err := server.ListenAndServe()
 		if err == nil || err == http.ErrServerClosed {
