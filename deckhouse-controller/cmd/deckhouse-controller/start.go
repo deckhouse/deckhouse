@@ -77,6 +77,7 @@ func start(_ *kingpin.ParseContext) error {
 }
 
 func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
+	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
 		log.Info("DECKHOUSE_POD env not set or empty")
@@ -89,16 +90,18 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		os.Exit(1)
 	}
 
-	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
-	if len(clusterDomain) == 0 {
-		log.Fatal("KUBERNETES_CLUSTER_DOMAIN env not set or empty")
-	}
-
 	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
 	if len(podNs) == 0 {
 		podNs = defaultNamespace
 	}
-	identity := fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+
+	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
+	if len(clusterDomain) == 0 {
+		log.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - it's value won't be used for the leader election")
+		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+	} else {
+		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+	}
 
 	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
