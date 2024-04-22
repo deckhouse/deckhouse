@@ -157,4 +157,4 @@ spec:
           value: {{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
         resources:
           requests:
-            {{ - include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
