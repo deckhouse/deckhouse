@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"time"
 
+	modules2 "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -181,9 +183,9 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 
 		go func() {
 			http.ListenAndServe("0.0.0.0:1337", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var modules = make(map[string]bool)
+				var modules = make(map[string]*modules2.BasicModule)
 				for _, m := range dml.mm.GetModuleNames() {
-					modules[m] = dml.mm.IsEmbeddedModule(m)
+					modules[m] = dml.mm.GetModule(m)
 				}
 				w.WriteHeader(http.StatusOK)
 				e := json.NewEncoder(w)
