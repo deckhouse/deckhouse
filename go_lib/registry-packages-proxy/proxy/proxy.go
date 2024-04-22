@@ -116,7 +116,7 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Infof("starting listener: %s", p.listener.Addr())
+	p.logger.Infof("starting listener: %s\n\n", p.listener.Addr())
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
 	}
