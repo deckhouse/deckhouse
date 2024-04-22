@@ -23,7 +23,6 @@ import (
 	"time"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/client"
 	sh_app "github.com/flant/shell-operator/pkg/app"
@@ -173,7 +172,6 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	operator.SetupKubeConfigManager(kubeConfigBackend)
 	validation.RegisterAdmissionHandlers(operator)
 
-	ad_app.EmbeddedModulesDir = "/deckhouse/modules"
 	err = operator.Setup()
 	if err != nil {
 		return err

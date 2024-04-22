@@ -366,6 +366,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
 			Value: "127.0.0.1:9652",
 		},
+		{
+			Name:  "EMBEDDED_MODULES_DIR",
+			Value: "/deckhouse/modules",
+		},
 	}
 
 	// Deployment composition
