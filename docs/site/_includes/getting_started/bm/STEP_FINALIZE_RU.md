@@ -39,11 +39,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - master
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -53,7 +52,7 @@ EOF
 </p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -75,11 +74,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - worker
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -88,7 +86,7 @@ EOF
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -103,9 +101,21 @@ metadata:
   name: worker
 spec:
   nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
 EOF
 ```
 {% endsnippetcut %}
+
+1. создать ssh ключь в /dev/shm на master
+2. сделать SSHCredentials на мастер через подстановку файла из прошлой команды
+3. создать пользователя caps на серверах (оставить вариант с простой последовательностью)
+в https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-cluster-api-provider-static добавить вариант с ansible
+4. создать StaticInstance
+
   </li>
   <li>
     <p>Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):</p>

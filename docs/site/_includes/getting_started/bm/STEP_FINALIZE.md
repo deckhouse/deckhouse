@@ -39,11 +39,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - master
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -52,7 +51,7 @@ EOF
 <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -74,11 +73,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - worker
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -87,7 +85,7 @@ EOF
   <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
