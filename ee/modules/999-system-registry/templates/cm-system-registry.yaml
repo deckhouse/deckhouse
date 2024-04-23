@@ -62,7 +62,7 @@ data:
   REGISTRY_AUTH_TOKEN_AUTOREDIRECT: "false"
   REGISTRY_AUTH_TOKEN_ISSUER: "Registry test server"
   REGISTRY_AUTH_TOKEN_REALM: http://localhost:5051/auth
-  REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/kubernetes/pki/etcd/server.crt
+  REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/kubernetes/pki/apiserver-etcd-client.crt
   REGISTRY_AUTH_TOKEN_SERVICE: "Docker registry"
   REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "false"
   REGISTRY_HEALTH_STORAGEDRIVER_INTERVAL: 10s
