@@ -1,0 +1,5 @@
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix hook with checking Helm deprecated resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8246
+
