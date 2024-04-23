@@ -17,6 +17,7 @@ package source
 import (
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -266,12 +267,12 @@ func (c *Controller) getModuleSourceChecksum(msName string) moduleChecksum {
 
 const (
 	defaultScanInterval = 3 * time.Minute
+
+	registryChecksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
 )
 
 var (
 	ErrNoPolicyFound = errors.New("no matching update policy found")
-
-	checksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
 )
 
 func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMS *v1alpha1.ModuleSource) (ctrl.Result, error) {
@@ -388,7 +389,7 @@ func (c *Controller) processSourceModule(ctx context.Context, md *downloader.Mod
 		Policy:     "",
 		Overridden: false,
 	}
-	// check if we have ModulePullOverride for source/module
+	// check if we have a ModulePullOverride for source/module
 	exists, err := c.isModulePullOverrideExists(ms.Name, moduleName)
 	if err != nil {
 		log.Warnf("Unexpected error on getting ModulePullOverride for %s/%s", ms.Name, moduleName)
@@ -621,44 +622,93 @@ func (c *Controller) getReleasePolicy(sourceName, moduleName string, policies []
 	return matchedPolicy, nil
 }
 
-// checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing checksumAnnotation annotation and current registry spec)
+// checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing registryChecksumAnnotation annotation and current registry spec)
 // and update relevant module releases' openapi values files if it the case
 func (c *Controller) checkAndPropagateRegistrySettings(msCopy *v1alpha1.ModuleSource) ( /* update required */ bool, error) {
 	// get registry settings checksum
-	currentChecksum := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s/%s", msCopy.Spec.Registry.Repo, msCopy.Spec.Registry.DockerCFG))))
+	marshaledSpec, err := json.Marshal(msCopy.Spec.Registry)
+	if err != nil {
+		return false, fmt.Errorf("couldn't marshal %s module source registry spec: %w", msCopy.Name, err)
+	}
+
+	currentChecksum := fmt.Sprintf("%x", md5.Sum(marshaledSpec))
 	// if there is no annotations - only set the current checksum value
 	if msCopy.ObjectMeta.Annotations == nil {
 		msCopy.ObjectMeta.Annotations = make(map[string]string)
-		msCopy.ObjectMeta.Annotations[checksumAnnotation] = currentChecksum
+		msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
 		return true, nil
 	}
 
 	// if the annotation matches current checksum - there is nothing to do here
-	if msCopy.ObjectMeta.Annotations[checksumAnnotation] == currentChecksum {
+	if msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] == currentChecksum {
 		return false, nil
 	}
 
 	// get related releases
 	moduleReleasesFromSource, err := c.moduleReleasesLister.List(labels.SelectorFromSet(labels.Set{"source": msCopy.Name}))
 	if err != nil {
-		return false, fmt.Errorf("could list module releases to update registry settings: %w", err)
+		return false, fmt.Errorf("Couldn't list module releases to update registry settings: %w", err)
 	}
 
-	for _, release := range moduleReleasesFromSource {
-		if release.Status.Phase == v1alpha1.PhaseDeployed {
-			ownerReferences := release.GetOwnerReferences()
+	for _, rl := range moduleReleasesFromSource {
+		if rl.Status.Phase == v1alpha1.PhaseDeployed {
+			ownerReferences := rl.GetOwnerReferences()
 			for _, ref := range ownerReferences {
 				if ref.UID == msCopy.UID && ref.Name == msCopy.Name && ref.Kind == "ModuleSource" {
-					err = downloader.InjectRegistryToModuleValues(filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version)), msCopy)
+					// update the values.yaml file in externam-modules/<module_name>/v<module_version/openapi path
+					err = downloader.InjectRegistryToModuleValues(filepath.Join(c.externalModulesDir, rl.Spec.ModuleName, fmt.Sprintf("v%s", rl.Spec.Version)), msCopy)
 					if err != nil {
-						return false, fmt.Errorf("couldn't update module release %v registry settings: %w", release.Name, err)
+						return false, fmt.Errorf("Couldn't update module release %s registry settings: %w", rl.Name, err)
 					}
+					// annotate module release with the release.RegistrySpecChangedAnnotation annotation to notify module release controller about registry spec
+					// change, if the module release isn't overridden by a module pull override
+					mpoExists, err := c.isModulePullOverrideExists(msCopy.Name, rl.Spec.ModuleName)
+					if err != nil {
+						return false, fmt.Errorf("Unexpected error on getting ModulePullOverride for %s/%s: %w", msCopy.Name, rl.Spec.ModuleName, err)
+					}
+					if mpoExists {
+						break
+					}
+
+					if rl.ObjectMeta.Annotations == nil {
+						rl.ObjectMeta.Annotations = make(map[string]string)
+					}
+
+					rl.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = time.Now().UTC().Format(time.RFC3339)
+					if _, err := c.kubeClient.DeckhouseV1alpha1().ModuleReleases().Update(context.TODO(), rl, metav1.UpdateOptions{}); err != nil {
+						return false, fmt.Errorf("Couldn't set RegistrySpecChangedAnnotation to %s the module release: %w", rl.Name, err)
+					}
+
 					break
 				}
 			}
 		}
 	}
-	msCopy.ObjectMeta.Annotations[checksumAnnotation] = currentChecksum
+
+	// get related module pull overrides
+	mposFromSource, err := c.modulePullOverridesLister.List(labels.SelectorFromSet(labels.Set{"source": msCopy.Name}))
+	if err != nil {
+		return false, fmt.Errorf("Could list module pull overrides to update registry settings: %w", err)
+	}
+
+	for _, mpo := range mposFromSource {
+		// update the values.yaml file in externam-modules/<module_name>/dev/openapi path
+		err = downloader.InjectRegistryToModuleValues(filepath.Join(c.externalModulesDir, mpo.Name, "dev"), msCopy)
+		if err != nil {
+			return false, fmt.Errorf("Couldn't update module pull override %s registry settings: %w", mpo.Name, err)
+		}
+		// annotate module pull override with the release.RegistrySpecChangedAnnotation annotation to notify module pull override controller about registry spec change
+		if mpo.ObjectMeta.Annotations == nil {
+			mpo.ObjectMeta.Annotations = make(map[string]string)
+		}
+
+		mpo.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = time.Now().UTC().Format(time.RFC3339)
+		if _, err := c.kubeClient.DeckhouseV1alpha1().ModulePullOverrides().Update(context.TODO(), mpo, metav1.UpdateOptions{}); err != nil {
+			return false, fmt.Errorf("Couldn't set RegistrySpecChangedAnnotation to the %s module pull override: %w", mpo.Name, err)
+		}
+	}
+
+	msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
 
 	return true, nil
 }

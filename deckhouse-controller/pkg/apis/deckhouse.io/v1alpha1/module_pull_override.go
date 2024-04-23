@@ -66,6 +66,7 @@ type ModulePullOverrideStatus struct {
 	UpdatedAt   metav1.Time `json:"updatedAt"`
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
+	Weight      uint32      `json:"weight,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -105,7 +106,7 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 	return mo.Spec.ImageTag
 }
 
-// GetWeight always returns 0
+// GetWeight returns the weight of the module
 func (mo *ModulePullOverride) GetWeight() uint32 {
-	return 0
+	return mo.Status.Weight
 }
