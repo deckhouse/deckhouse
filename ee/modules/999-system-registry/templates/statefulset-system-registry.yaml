@@ -90,6 +90,9 @@ spec:
             - name: usr-share-ca-certificates
               mountPath: /usr/share/ca-certificates
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
             - name: seaweedfs-data
               mountPath: /seaweedfs_data
               readOnly: false
@@ -132,6 +135,8 @@ spec:
           hostPath:
             path: /etc/ssl/certs
             type: DirectoryOrCreate
+        - name: tmp
+          emptyDir: {}
 {{- $storageClass := .Values.systemRegistry.internal.effectiveStorageClass }}
 {{- if not $storageClass }}
         - name: seaweedfs-data
