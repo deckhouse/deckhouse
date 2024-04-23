@@ -155,7 +155,7 @@ echo $key >> /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
-    <p>On the <strong>master-node</strong>, create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added:</p>
+    <p>On the <strong>master node</strong>, create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added:</p>
 {% snippetcut %}
 ```bash
 export node=d8cluster-worker-ip
