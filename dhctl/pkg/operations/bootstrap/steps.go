@@ -227,7 +227,7 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 
 	proxy := proxy.NewProxy(&http.Server{}, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 
-	go proxy.Serve()
+	go proxy.Serve(true)
 
 	return nil
 }

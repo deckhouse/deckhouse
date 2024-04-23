@@ -396,15 +396,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
 
-	// need closure for close registry packages tunnel
+	// need closure for registry packages tunnel
 	runBashible := func() error {
 		tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
 		if err != nil {
 			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 		}
-		tunStopper := false
+		tunStopped := false
 		defer func() {
-			if tunStopper {
+			if tunStopped {
 				return
 			}
 			err := tun.Stop()
@@ -424,6 +424,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 
 		err = tun.Stop()
+		tunStopped = true
 		if err != nil {
 			f := log.InfoF
 			// signal: killed is normal signal for stopping tunnel process

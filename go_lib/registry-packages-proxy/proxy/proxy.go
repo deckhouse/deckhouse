@@ -63,7 +63,11 @@ func NewProxy(server *http.Server,
 	return p
 }
 
-func (p *Proxy) Serve() {
+// Serve
+// logAsDebugServeAddress - for dhctl we should hide "tarting packages proxy listener" message
+// because it can break logboek output because Serve run in standalone goroutine
+// we cannot use chan here because we do not want to complicate logic
+func (p *Proxy) Serve(logAsDebugServeAddress bool) {
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "HEAD" && r.Method != "GET" {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -116,7 +120,12 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Infof("Starting packages proxy listener: %s\n\n", p.listener.Addr())
+	logServe := p.logger.Infof
+	if logAsDebugServeAddress {
+		logServe = p.logger.Debugf
+	}
+	logServe("Starting packages proxy listener: %s\n\n", p.listener.Addr())
+
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
 	}

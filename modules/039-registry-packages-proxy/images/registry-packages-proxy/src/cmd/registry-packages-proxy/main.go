@@ -23,10 +23,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	"registry-packages-proxy/internal/app"
 	"registry-packages-proxy/internal/credentials"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 func main() {
@@ -81,7 +82,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	go rp.Serve()
+	go rp.Serve(false)
 
 	<-ctx.Done()
 
