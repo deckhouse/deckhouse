@@ -20,6 +20,9 @@ data:
     enabled = true
     servers = "{{ .Values.systemRegistry.internal.etcd.addresses | join "," }}"
     key_prefix = "seaweedfmeta."
+    tls_ca_file="/etc/kubernetes/pki/ca.crt"
+    tls_client_crt_file="/etc/kubernetes/pki/apiserver-etcd-client.crt"
+    tls_client_key_file="/etc/kubernetes/pki/apiserver-etcd-client.key"
   distribution_config.yaml: |
     # empty config.yaml
     version: 0.1
@@ -30,8 +33,8 @@ data:
     token:
       issuer: "Registry test server"
       expiration: 900
-      certificate: "/etc/kubernetes/pki/etcd/server.crt"
-      key: "/etc/kubernetes/pki/etcd/server.key"
+      certificate: "/etc/kubernetes/pki/apiserver-etcd-client.crt"
+      key: "/etc/kubernetes/pki/apiserver-etcd-client.key"
 
     users:
       # Password is specified as a BCrypt hash. Use `htpasswd -nB USERNAME` to generate.
