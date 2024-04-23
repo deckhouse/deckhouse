@@ -20,7 +20,7 @@ data:
     enabled = true
     servers = "{{ .Values.systemRegistry.internal.etcd.addresses | join "," }}"
     key_prefix = "seaweedfmeta."
-    tls_ca_file="/etc/kubernetes/pki/ca.crt"
+    tls_ca_file="/etc/kubernetes/pki/etcd/ca.crt"
     tls_client_crt_file="/etc/kubernetes/pki/apiserver-etcd-client.crt"
     tls_client_key_file="/etc/kubernetes/pki/apiserver-etcd-client.key"
   distribution_config.yaml: |
