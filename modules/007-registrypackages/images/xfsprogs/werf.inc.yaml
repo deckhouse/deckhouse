@@ -1,0 +1,41 @@
+{{- $version := "6.7.0" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - xfsprogs
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    xfsprogs: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_UBUNTU_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - apt-get update
+    - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool -y
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git src
+    - cd /src
+    - libtoolize -c -i -f
+    - cp -f include/install-sh .
+    - aclocal -I m4 &&	autoconf
+    - LDFLAGS="-static" ./configure --enable-shared=no  --disable-scrub
+    - make LLDFLAGS=-all-static
+    - mv mkfs/mkfs.xfs /mkfs.xfs && mv ./repair/xfs_repair /xfs_repair && mv quota/xfs_quota /xfs_quota && mv growfs/xfs_growfs /xfs_growfs && mv mdrestore/xfs_mdrestore /xfs_mdrestore
+    - chmod +x /mkfs.xfs /xfs_repair /xfs_quota /xfs_growfs /xfs_mdrestore /install /uninstall
