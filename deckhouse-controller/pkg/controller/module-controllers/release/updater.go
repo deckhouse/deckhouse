@@ -90,6 +90,7 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 		return fmt.Errorf("get release %s: %w", release.Name, err)
 	}
 
+	r = r.DeepCopy()
 	r.Status.Phase = phase
 	r.Status.Message = msg
 
@@ -211,10 +212,16 @@ func (k *kubeAPI) SaveReleaseData(releaseName string, data updater.DeckhouseRele
 
 func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
 	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
-	release.Status.Size = ds.Size
-	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
+	r, err := k.moduleReleaseLister.Get(release.Name)
+	if err != nil {
+		return nil, fmt.Errorf("get release %s: %w", release.Name, err)
+	}
 
-	return k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+	r = r.DeepCopy()
+	r.Status.Size = ds.Size
+	r.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
+
+	return k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
 }
 
 type metricsUpdater struct{}
