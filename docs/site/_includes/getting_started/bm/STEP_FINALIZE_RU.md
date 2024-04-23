@@ -109,27 +109,69 @@ spec:
 EOF
 ```
 {% endsnippetcut %}
-
-1. создать ssh ключь в /dev/shm на master
-2. сделать SSHCredentials на мастер через подстановку файла из прошлой команды
-3. создать пользователя caps на серверах (оставить вариант с простой последовательностью)
-в https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-cluster-api-provider-static добавить вариант с ansible
-4. создать StaticInstance
-
   </li>
   <li>
-    <p>Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):</p>
+    <p>Сгенерируйте на master сервере пару SSH-ключей с пустой парольной фразой:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p><strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:</p>
+    <p>Создайте в кластере ресурс <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>:</p>
 {% snippetcut %}
 ```bash
-echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Запомним содержимое публичного ssh ключа:</p>
+{% snippetcut %}
+```bash
+echo "export key='`cat /dev/shm/caps-id.pub`'"
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p><strong> На подготовленной виртуальной машине</strong> выполните следующую команды для создания пользователя <a href="/documentation/v1/modules/040-node-manager/examples.html#с-помощью-cluster-api-provider-static">caps</a>:</p>
+{% snippetcut %}
+```bash
+export key=....
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $key >> /home/caps/.ssh/authorized_keys
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>На <strong>master-узле</strong> создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемой ноды:</p>
+{% snippetcut %}
+```bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: d8cluster-worker
+  labels:
+    role: worker
+spec:
+  address: "d8cluster-worker-ip"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+EOF
 ```
 {% endsnippetcut %}
   </li>
