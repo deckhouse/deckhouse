@@ -5,3 +5,9 @@ properties:
   internal:
     type: object
     default: {}
+    properties:
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
