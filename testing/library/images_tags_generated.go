@@ -223,7 +223,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"madisonProxy": "imageHash-flantIntegration-madisonProxy",
 	},
 	"ingressNginx": map[string]interface{}{
-		"controller11":          "imageHash-ingressNginx-controller11",
 		"controller16":          "imageHash-ingressNginx-controller16",
 		"controller19":          "imageHash-ingressNginx-controller19",
 		"kruise":                "imageHash-ingressNginx-kruise",
