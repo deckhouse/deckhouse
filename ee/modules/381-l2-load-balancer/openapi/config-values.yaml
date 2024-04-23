@@ -20,6 +20,8 @@ properties:
           type: array
           description: |
             A list of ranges, where each range can look like a subnet/mask or a numeric address range (with "-" as a delimiter).
+
+            **Caution!** The address ranges must be available for use on frontend nodes and must not overlap with the addresses of existing cluster nodes.
           items:
             type: string
             oneOf:
