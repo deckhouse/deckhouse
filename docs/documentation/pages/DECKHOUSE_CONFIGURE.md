@@ -167,6 +167,7 @@ If no `nodeSelector/tolerations` are explicitly specified in the module paramete
 1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
 1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
 1. You can set both parameters to `false` to disable their automatic calculation.
+1. In the absence of designated `nodes` and with automatic node selection enabled, the resource module will not specify a `nodeSelector`. In this case, the module's behavior will be to use any node with non-conflicting `taints`.
 
 You cannot set `nodeSelector` and `tolerations` for modules:
 - that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`);
