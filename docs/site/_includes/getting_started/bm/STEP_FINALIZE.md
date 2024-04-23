@@ -100,23 +100,78 @@ metadata:
   name: worker
 spec:
   nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
 EOF
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):</p>
+    <p>Generate a pair of SSH keys on the master server with an empty passphrase:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:</p>
+    <p>Create an <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster:</p>
 {% snippetcut %}
 ```bash
-echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Memorize the contents of the public ssh key:</p>
+{% snippetcut %}
+```bash
+echo "export key='`cat /dev/shm/caps-id.pub`'"
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>On the <strong>virtual machine you have started</strong>,  run the following command to create <a href="/documentation/v1/modules/040-node-manager/examples.html#using-the-cluster-api-provider-static">the caps</a> user:</p>
+{% snippetcut %}
+```bash
+export key=....
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $key >> /home/caps/.ssh/authorized_keys
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>On the <strong>master-node</strong>, create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added:</p>
+{% snippetcut %}
+```bash
+export node=d8cluster-worker-ip
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: d8cluster-worker
+  labels:
+    role: worker
+spec:
+  address: "$node"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+EOF
 ```
 {% endsnippetcut %}
   </li>

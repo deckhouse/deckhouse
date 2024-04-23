@@ -159,6 +159,7 @@ echo $key >> /home/caps/.ssh/authorized_keys
     <p>На <strong>master-узле</strong> создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемой ноды:</p>
 {% snippetcut %}
 ```bash
+export node=d8cluster-worker-ip
 kubectl create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
@@ -167,7 +168,7 @@ metadata:
   labels:
     role: worker
 spec:
-  address: "d8cluster-worker-ip"
+  address: "$node"
   credentialsRef:
     kind: SSHCredentials
     name: caps
