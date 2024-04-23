@@ -37,7 +37,7 @@ spec:
               mountPath: /etc/docker_auth/config.yaml
               subPath: auth_config.yaml
               readOnly: true
-            - name: host-pki
+            - name: k8s-certs
               mountPath: /etc/kubernetes/pki
               readOnly: true
 
@@ -81,13 +81,18 @@ spec:
               mountPath: /etc/seaweedfs/filer.toml
               subPath: seaweedfs_filer.toml
               readOnly: true
-            - name: host-pki
+            - name: k8s-certs
               mountPath: /etc/kubernetes/pki
+              readOnly: true
+            - name: ca-certs
+              mountPath: /etc/ssl/certs
+              readOnly: true
+            - name: usr-share-ca-certificates
+              mountPath: /usr/share/ca-certificates
               readOnly: true
             - name: seaweedfs-data
               mountPath: /seaweedfs_data
               readOnly: false
-
         - name: distribution
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "dockerDistribution") }}
@@ -107,7 +112,7 @@ spec:
               mountPath: /etc/docker/registry/config.yaml
               subPath: distribution_config.yaml
               readOnly: true
-            - name: host-pki
+            - name: k8s-certs
               mountPath: /etc/kubernetes/pki
               readOnly: true
 
@@ -115,9 +120,17 @@ spec:
         - name: config-files
           configMap:
             name: system-registry-config-files
-        - name: host-pki
+        - name: k8s-certs
           hostPath:
             path: /etc/kubernetes/pki
+            type: DirectoryOrCreate
+        - name: usr-share-ca-certificates
+          hostPath:
+            path: /usr/share/ca-certificates
+            type: DirectoryOrCreate
+        - name: ca-certs
+          hostPath:
+            path: /etc/ssl/certs
             type: DirectoryOrCreate
 {{- $storageClass := .Values.systemRegistry.internal.effectiveStorageClass }}
 {{- if not $storageClass }}
