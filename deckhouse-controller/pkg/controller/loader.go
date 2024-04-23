@@ -25,13 +25,14 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
 var (
@@ -109,6 +110,21 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		}
 	}
 
+	// Load conversions
+	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+		log.Debugf("conversions for %q module found", valuesModuleName)
+		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+	} else {
+		if !os.IsNotExist(err) {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+		log.Debugf("conversions for %q module not found", valuesModuleName)
+	}
+
 	dm := models.NewDeckhouseModule(def, moduleStaticValues, dml.mm.GetValuesValidator())
 
 	if _, ok := dml.deckhouseModules[def.Name]; ok {
@@ -133,20 +149,6 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 					continue
 				}
 				return err
-			}
-
-			if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
-				log.Debugf("conversions for %q module found", dm.GetBasicModule().GetName())
-				if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
-					log.Debugf("loading conversions for %q module failed", dm.GetBasicModule().GetName())
-					return err
-				}
-			} else {
-				if !os.IsNotExist(err) {
-					log.Debugf("loading conversions for %q module failed", dm.GetBasicModule().GetName())
-					return err
-				}
-				log.Debugf("conversions for %q module not found", dm.GetBasicModule().GetName())
 			}
 
 			dml.deckhouseModules[def.Name] = dm
