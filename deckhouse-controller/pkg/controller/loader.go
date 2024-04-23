@@ -136,17 +136,17 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 			}
 
 			if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
-				log.Debugf("conversions for %q module found", valuesModuleName)
+				log.Debugf("conversions for %q module found", dm.GetBasicModule().GetName())
 				if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
-					log.Debugf("loading conversions for %q module failed", valuesModuleName)
+					log.Debugf("loading conversions for %q module failed", dm.GetBasicModule().GetName())
 					return err
 				}
 			} else {
 				if !os.IsNotExist(err) {
-					log.Debugf("loading conversions for %q module failed", valuesModuleName)
+					log.Debugf("loading conversions for %q module failed", dm.GetBasicModule().GetName())
 					return err
 				}
-				log.Debugf("conversions for %q module not found", valuesModuleName)
+				log.Debugf("conversions for %q module not found", dm.GetBasicModule().GetName())
 			}
 
 			dml.deckhouseModules[def.Name] = dm
