@@ -47,20 +47,6 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
-			//s := struct {
-			//	Items []corev1.ConfigMap `json:"items" yaml:"items"`
-			//}{}
-
-			//var cm corev1.ConfigMap
-			//_ = yaml.Unmarshal([]byte(aaaa), &s)
-			//for _, cm := range s.Items {
-			//	_, err = dependency.TestDC.MustGetK8sClient().
-			//		CoreV1().
-			//		ConfigMaps("kube-system").
-			//		Create(context.TODO(), &cm, metav1.CreateOptions{})
-			//	Expect(err).To(BeNil())
-			//}
-
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 		})
 
