@@ -24,15 +24,12 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/itchyny/gojq"
 	"sigs.k8s.io/yaml"
 )
 
 type Converter struct {
-	mtx sync.Mutex
-
 	latest      int
 	conversions map[int]string
 }
@@ -74,15 +71,10 @@ func readConversions(path string) (int, string, error) {
 }
 
 func (c *Converter) LatestVersion() int {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	return c.latest
 }
 
 func (c *Converter) IsKnownVersion(version int) bool {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
 	if c.conversions != nil {
 		if _, has := c.conversions[version]; has {
 			return true
@@ -92,9 +84,6 @@ func (c *Converter) IsKnownVersion(version int) bool {
 }
 
 func (c *Converter) ListVersionsWithoutLatest() []int {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
 	versions := make([]int, 0)
 	if c.conversions == nil {
 		return versions
@@ -112,8 +101,6 @@ func (c *Converter) ConvertToLatest(currentVersion int, settings map[string]inte
 }
 
 func (c *Converter) ConvertTo(currentVersion, version int, settings map[string]interface{}) (int, map[string]interface{}, error) {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	if currentVersion == c.latest || settings == nil || c.conversions == nil {
 		return currentVersion, settings, nil
 	}
@@ -138,11 +125,11 @@ func (c *Converter) convert(version int, settings map[string]interface{}) (map[s
 		return nil, err
 	}
 	v, _ := query.Run(settings).Next()
-	if err, ok := v.(error); ok {
-		return nil, err
-	}
 	if v == nil {
 		return nil, nil
+	}
+	if err, ok := v.(error); ok {
+		return nil, err
 	}
 	filtered, ok := v.(map[string]interface{})
 	if !ok {

@@ -173,6 +173,10 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 		return utils.Values{}, nil
 	}
 
+	if item.Spec.Version == 0 {
+		return utils.Values(item.Spec.Settings), nil
+	}
+
 	converter := conversion.Store().Get(item.Name)
 	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 	if err != nil {
