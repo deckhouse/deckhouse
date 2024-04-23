@@ -25,14 +25,13 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
 var (
