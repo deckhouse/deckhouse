@@ -107,7 +107,7 @@ configOverrides:
 				})
 
 			case "common":
-				assertModuleConfig(t, mc, true, 2, map[string]interface{}{
+				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
 					"testString": "aaaaa",
 				})
 
