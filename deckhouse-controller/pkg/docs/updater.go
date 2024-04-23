@@ -261,6 +261,11 @@ func (d *Updater) getDocsBuilderAddresses(_ context.Context) (addresses []string
 			continue
 		}
 
+		// a stale lease found
+		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(time.Now()) {
+			continue
+		}
+
 		addresses = append(addresses, "http://"+*lease.Spec.HolderIdentity)
 	}
 
