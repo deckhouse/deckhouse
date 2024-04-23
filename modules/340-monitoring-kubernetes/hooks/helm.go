@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -397,7 +398,7 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("listing Secrets failed: %w", err)
 		}
 		secretsList.GetRemainingItemCount()
 
@@ -409,7 +410,8 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 
 			release, err := helm3DecodeRelease(string(releaseData))
 			if err != nil {
-				return err
+				h.logger.Warnf("failed to decode %s/%s helm3 release: %s. Skipping", secret.Namespace, secret.Name, err)
+				continue
 			}
 			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
 			// fetch namespace from secret is more reliable
@@ -442,22 +444,24 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("listing ConfigMaps failed: %w", err)
 		}
 
-		for _, secret := range cmList.Items {
-			releaseData := secret.Data["release"]
+		for _, cm := range cmList.Items {
+			releaseData := cm.Data["release"]
 			if len(releaseData) == 0 {
 				continue
 			}
 
 			release, err := helm2DecodeRelease(releaseData)
 			if err != nil {
-				return err
+				h.logger.Warnf("failed to decode %s/%s helm2 release: %s. Skipping", cm.Namespace, cm.Name, err)
+				continue
 			}
+
 			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
 			// fetch namespace from secret is more reliable
-			release.Namespace = secret.Namespace
+			release.Namespace = cm.Namespace
 			release.HelmVersion = "2"
 
 			releasesC <- release
@@ -598,7 +602,7 @@ func helm2DecodeRelease(data string) (*Release, error) {
 		if err != nil {
 			return nil, err
 		}
-		b2, err := io.ReadAll(r)
+		b2, err := ioutil.ReadAll(r)
 		if err != nil {
 			return nil, err
 		}
