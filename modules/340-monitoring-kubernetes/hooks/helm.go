@@ -265,7 +265,7 @@ loop:
 
 		case <-ctx.Done():
 			if ctx.Err() != nil {
-				return "", ctx.Err()
+				return "", context.Cause(ctx)
 			}
 			break loop
 		}
@@ -516,7 +516,7 @@ func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan
 		for rel := range releasesC {
 			if h.ctx.Err() != nil {
 				// return on cancelled context
-				return
+				break
 			}
 			for _, manifestData := range releaseutil.SplitManifests(rel.Manifest) {
 				resource := new(manifestHead)
