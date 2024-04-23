@@ -98,9 +98,9 @@ spec:
             - configMapRef:
                 name: system-registry-distribution-envs
           ports:
-            - name: "distr-http-addr"
+            - name: "dd-http-addr"
               containerPort: 5000
-            - name: "distr-http-debug-addr"
+            - name: "dd-http-d-addr"
               containerPort: 5001
           volumeMounts:
             - name: config-files
