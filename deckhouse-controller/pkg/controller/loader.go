@@ -43,12 +43,14 @@ var (
 )
 
 // reads single directory and returns BasicModule
+// modulePath is in the following format: /deckhouse-controller/external-modules/<module_name>/<module_version>
 func (dml *DeckhouseController) LoadModule(moduleSource, modulePath string) (*modules.BasicModule, error) {
 	_, err := readDir(modulePath)
 	if err != nil {
 		return nil, err
 	}
 
+	// run parseModuleDir("<module_name>", "/deckhouse-controller/external-modules/<module_name>/<module_version>")
 	def, err := dml.parseModuleDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
 	if err != nil {
 		return nil, err
