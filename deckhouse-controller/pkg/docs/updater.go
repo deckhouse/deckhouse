@@ -25,6 +25,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -75,7 +76,8 @@ type Updater struct {
 	docsBuilder *docs_builder.Client
 	httpClient  d8http.Client
 
-	logger logger.Logger
+	logger    logger.Logger
+	apiCallMu sync.Mutex
 }
 
 func NewUpdater(
@@ -147,6 +149,9 @@ func (d *Updater) RunPreflightCheck(ctx context.Context) error {
 }
 
 func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) error {
+	d.apiCallMu.Lock()
+	defer d.apiCallMu.Unlock()
+
 	moduleName := m.GetModuleName()
 	moduleVersion := m.GetReleaseVersion()
 	d.logger.Infof("Updating documentation for %s module", moduleName)
@@ -170,7 +175,7 @@ func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) 
 		d.logger.Infof("Getting the %s module's documentation locally", moduleName)
 		docsArchive, err := d.getDocumentationFromModuleDir(m)
 		if err != nil {
-			d.logger.Infof("Failed to get %s module documentation from local directory with error: %w", moduleName, err)
+			d.logger.Infof("Failed to get %s module documentation from local directory with error: %v", moduleName, err)
 
 			// Trying to get the documentation from the registry
 			docsArchive, err = md.GetDocumentationArchive(moduleName, moduleVersion)
