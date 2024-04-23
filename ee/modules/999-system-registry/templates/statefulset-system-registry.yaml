@@ -3,17 +3,17 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: system-registry
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      app: {{ $.Chart.Name }}
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name }}
+        app: {{ $.Chart.Name }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -140,10 +140,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: system-registry
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 2 0) }} ## TODO temporary for matrix tests
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      app: {{ $.Chart.Name }}

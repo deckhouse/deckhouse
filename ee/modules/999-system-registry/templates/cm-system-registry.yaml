@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: system-registry-config-files
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 data:
   seaweedfs_filer.toml: |
@@ -18,7 +18,7 @@ data:
 
     [etcd]
     enabled = true
-    servers = "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+    servers = "{{ .Values.systemRegistry.internal.etcd.addresses | join "," }}"
     key_prefix = "seaweedfmeta."
   distribution_config.yaml: |
     # empty config.yaml
@@ -53,7 +53,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: system-registry-distribution-envs
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 data:
   REGISTRY_AUTH_TOKEN_AUTOREDIRECT: "false"
