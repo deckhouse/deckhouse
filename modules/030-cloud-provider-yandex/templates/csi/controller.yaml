@@ -7,7 +7,7 @@
 - "--address=$(MY_POD_IP):12302"
 - "--endpoint=unix:///csi/csi.sock"
 - {{ printf "--folder-id=%s" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | required "providerClusterConfiguration.provider.folderID is required") | quote }}
-- {{ printf "--cluster-name=%s" ( .Values.global.discovery.clusterUUID | sha256sum | trunc 30 ) | quote }} 
+- {{ printf "--cluster-uuid=%s" .Values.global.discovery.clusterUUID | quote }}
 {{- end }}
 
 {{- define "csi_controller_envs" }}
