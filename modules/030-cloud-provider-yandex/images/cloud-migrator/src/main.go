@@ -71,6 +71,6 @@ func main() {
 	d := NewDiskMigrator(log.NewEntry(logger), client, folderID, saKeyJSON, clusterUUID)
 	err = d.MigrateDisks(context.Background())
 	if err != nil {
-		logger.Fatal(err)
+		logger.Warn(err)
 	}
 }
