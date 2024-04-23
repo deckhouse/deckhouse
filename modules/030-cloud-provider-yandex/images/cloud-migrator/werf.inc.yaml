@@ -2,10 +2,10 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /migrator
-    to: /migrator
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /migrator
+  to: /migrator
+  before: setup
 docker:
   ENTRYPOINT: ["/migrator"]
 ---
@@ -13,23 +13,19 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 shell:
   setup:
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /migrator
-    - chown 64535:64535 /migrator
-    - chmod 0755 /migrator
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /migrator
+  - chown 64535:64535 /migrator
+  - chmod 0755 /migrator
 git:
-  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
-    to: /src
-    includePaths:
-      - '**/*.go'
-      - '**/*.mod'
-      - '**/*.sum'
-    stageDependencies:
-      install:
-        - '**/*.go'
-        - 'go.mod'
-        - 'go.sum'
+- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  stageDependencies:
+    setup:
+    - '*.go'
+    - 'go.mod'
+    - 'go.sum'
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg

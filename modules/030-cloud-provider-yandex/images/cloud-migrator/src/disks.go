@@ -24,6 +24,7 @@ import (
 	"github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
 	ycsdk "github.com/yandex-cloud/go-sdk"
 	"github.com/yandex-cloud/go-sdk/iamkey"
+	"google.golang.org/genproto/protobuf/field_mask"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -77,14 +78,14 @@ func (d *DiskMigrator) MigrateDisks(ctx context.Context) error {
 	pvMap := make(map[string]struct{}, len(pvs))
 	for _, pv := range pvs {
 		// if not yandex csi PV, skip it
-		if pv.Annotations[" pv.kubernetes.io/provisioned-by"] != "yandex.csi.flant.com" {
+		if pv.Annotations["pv.kubernetes.io/provisioned-by"] != "yandex.csi.flant.com" {
 			continue
 		}
 		pvMap[pv.Name] = struct{}{}
 	}
 
 	for _, disk := range disks {
-		if _, ok := disk.Labels["clusterUUID"]; ok {
+		if _, ok := disk.Labels["cluster_uuid"]; ok {
 			d.logger.Warnf("disk %s already has 'clusterUUID' label, skipping", disk.Name)
 			continue
 		}
@@ -128,8 +129,17 @@ func (d *DiskMigrator) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compu
 }
 
 func (d *DiskMigrator) migrateDisk(ctx context.Context, disk *compute.Disk) error {
-	disk.Labels["clusterUUID"] = d.clusterUUID
-	_, err := d.sdk.Compute().Disk().Update(ctx, &compute.UpdateDiskRequest{DiskId: disk.Id, Labels: disk.Labels})
+	if disk.Labels == nil {
+		disk.Labels = make(map[string]string)
+	}
+	disk.Labels["cluster_uuid"] = d.clusterUUID
+	_, err := d.sdk.Compute().Disk().Update(ctx, &compute.UpdateDiskRequest{
+		DiskId: disk.Id,
+		UpdateMask: &field_mask.FieldMask{
+			Paths: []string{"labels"},
+		},
+		Labels: disk.Labels,
+	})
 	return err
 }
 
