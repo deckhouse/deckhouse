@@ -105,7 +105,7 @@ key: |
 `,
 				"./mocks/id_passphrase_invalid_rsa",
 			),
-			errContains: "structure error: tags don't match",
+			errContains: "invalid ssh key: x509: decryption password incorrect",
 		},
 	}
 

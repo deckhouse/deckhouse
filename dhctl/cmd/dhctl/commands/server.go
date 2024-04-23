@@ -16,7 +16,8 @@ package commands
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/proxy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -25,7 +26,17 @@ func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve()
+		return proxy.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit)
+	})
+	return cmd
+}
+
+func DefineSingleThreadedServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
+	cmd := parent.Command("_server", "Start dhctl as GRPC server. Single threaded version.")
+	app.DefineServerFlags(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return server.Serve(app.ServerNetwork, app.ServerAddress)
 	})
 	return cmd
 }
