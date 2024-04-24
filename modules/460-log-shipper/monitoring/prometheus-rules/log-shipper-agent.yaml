@@ -117,3 +117,32 @@
 
         Consider checking logs of the pod or follow advanced debug instructions.
         `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+
+  - alert: D8LogShipperBufferOverflow
+    for: 10m
+    expr: |
+      clamp(
+          (
+            vector_buffer_events{buffer_type="memory",component_kind="sink",component_name!="prometheus_sink"}
+            /
+            vector_buffer_max_event_size{buffer_type="memory",component_kind="sink",component_name!="prometheus_sink"}
+          )* 100,
+        0,100
+      ) > 90
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Buffer usage of the log-shipper-agent is above 90% for {{ $labels.component_id }} on the {{ $labels.node }} node.
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        The buffer of the `{{ $labels.host }}` log-shipper agent on the `{{ $labels.node }}` node has exceeded 90% of its capacity.
+        This indicates potential loss of data or backpressure issues in the pipeline.
+        
+        Immediate attention is required to prevent data loss or service disruption.
+        Consider checking the buffer sizes and scaling resources if necessary.
+        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
