@@ -58,7 +58,7 @@ spec:
             - "-metricsPort=9324"
             - "-volume.readMode=local"
             - "-s3.allowDeleteBucketNotEmpty=true"
-            - "-master.defaultReplication=002"
+            - "-master.defaultReplication=000"
             - "-filer.maxMB=16"
             - "-ip=localhost"
             - "-ip.bind=0.0.0.0"
