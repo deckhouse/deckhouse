@@ -23,6 +23,7 @@ spec:
         type: object
         description: |
           The interface for configuring distributed L2 load balancers.
+
           **Caution!** The module is **experimental**, don't use it in production environment.
         x-doc-d8Revision: ee
         x-doc-deprecated: true
