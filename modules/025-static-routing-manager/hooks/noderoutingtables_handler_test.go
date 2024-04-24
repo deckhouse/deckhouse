@@ -44,6 +44,8 @@ spec:
     gateway: 192.168.0.1
   nodeSelector:
     node-role: testrole1
+status:
+  ipRouteTableID: 500
 `
 		rt2YAML = `
 ---
@@ -51,6 +53,21 @@ apiVersion: network.deckhouse.io/v1alpha1
 kind: RoutingTable
 metadata:
   name: test2
+spec:
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 2.2.2.1
+  nodeSelector:
+    node-role: testrole1
+status:
+  ipRouteTableID: 300
+`
+		rt3YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: test3
 spec:
   ipRouteTableID: 300
   routes:
@@ -90,37 +107,26 @@ metadata:
 	)
 
 	var (
-		// rtGVR = schema.GroupVersionResource{
-		// 	Group:    "network.deckhouse.io",
-		// 	Version:  "v1alpha1",
-		// 	Resource: "routingtables",
-		// }
 		rtGVK = schema.GroupVersionKind{
 			Group:   "network.deckhouse.io",
 			Version: "v1alpha1",
 			Kind:    "RoutingTable",
 		}
-		// nrtGVR = schema.GroupVersionResource{
-		// 	Group:    "network.deckhouse.io",
-		// 	Version:  "v1alpha1",
-		// 	Resource: "noderoutingtables",
-		// }
 		nrtGVK = schema.GroupVersionKind{
 			Group:   "network.deckhouse.io",
 			Version: "v1alpha1",
 			Kind:    "NodeRoutingTables",
 		}
-		// rt1   *v1alpha1.RoutingTable
-		rt1u *unstructured.Unstructured
-		// rt2   *v1alpha1.RoutingTable
-		rt2u *unstructured.Unstructured
-		// nrt1  *v1alpha1.NodeRoutingTables
+		rt1u  *unstructured.Unstructured
+		rt2u  *unstructured.Unstructured
+		rt3u  *unstructured.Unstructured
 		nrt1u *unstructured.Unstructured
 		node1 *v1.Node
 	)
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(rt1YAML), &rt1u)
 		_ = yaml.Unmarshal([]byte(rt2YAML), &rt2u)
+		_ = yaml.Unmarshal([]byte(rt3YAML), &rt3u)
 		_ = yaml.Unmarshal([]byte(nrt1YAML), &nrt1u)
 		_ = yaml.Unmarshal([]byte(node1YAML), &node1)
 	})
@@ -164,6 +170,18 @@ routingTables:
     - destination: 0.0.0.0/0
       gateway: 2.2.2.1
 `))
+		})
+	})
+
+	Context("Checking the creation operation of a CR NodeRoutingTables from CR RoutingTable without ipRouteTableID in status", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt3YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeFalse())
 		})
 	})
 

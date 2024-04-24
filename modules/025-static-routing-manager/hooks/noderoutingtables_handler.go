@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -69,11 +68,7 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 	}
 
 	result.Name = rt.Name
-	if rt.Status.IPRouteTableID != 0 {
-		result.IPRouteTableID = rt.Status.IPRouteTableID
-	} else {
-		return nil, fmt.Errorf("Status.IPRouteTableID of RoutingTable %v is 0, skip", rt.Name)
-	}
+	result.IPRouteTableID = rt.Status.IPRouteTableID
 	result.Routes = rt.Spec.Routes
 	result.NodeSelector = rt.Spec.NodeSelector
 
@@ -130,6 +125,9 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	affectedNodes := make(map[string][]lib.RoutingTableInfo)
 	for _, rtiRaw := range input.Snapshots["routetables"] {
 		rti := rtiRaw.(lib.RoutingTableInfo)
+		if rti.IPRouteTableID == 0 {
+			continue
+		}
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
 			nodei := nodeiRaw.(lib.NodeInfo)

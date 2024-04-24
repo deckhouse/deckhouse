@@ -70,9 +70,10 @@ type NodeRoutingTablesList struct {
 }
 
 type NodeRoutingTablesSpec struct {
-	RoutingTables map[int]Routes `json:"routingTables"`
+	RoutingTables map[string]Routes `json:"routingTables"`
 }
 
 type NodeRoutingTablesStatus struct {
-	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
+	ReconcileStatus  string `json:"reconcileStatus,omitempty"`
+	ReconcileMessage string `json:"reconcileMessage,omitempty"`
 }
