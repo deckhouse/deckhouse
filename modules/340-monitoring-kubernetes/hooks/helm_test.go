@@ -499,11 +499,11 @@ data:
 kind: ConfigMap
 metadata:
   labels:
-    NAME: moderation-microservice-preprod
+    NAME: invalid-wire-data
     OWNER: TILLER
     STATUS: DEPLOYED
     VERSION: "94"
-  name: moderation-microservice-preprod.v94
+  name: invalid-wire-data.v94
   namespace: kube-system
 `
 
