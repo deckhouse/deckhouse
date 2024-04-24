@@ -31,6 +31,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
 var (
@@ -106,6 +107,21 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Load conversions
+	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+		log.Debugf("conversions for %q module found", valuesModuleName)
+		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+	} else {
+		if !os.IsNotExist(err) {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
 	dm := models.NewDeckhouseModule(def, moduleStaticValues, dml.mm.GetValuesValidator())
