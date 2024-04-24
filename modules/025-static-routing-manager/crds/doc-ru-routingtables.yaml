@@ -5,27 +5,30 @@ spec:
     schema: &schema
       openAPIV3Schema:
         description: |
-          describe routingtable and routes
+          Ресурс описывающий желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
         properties:
           spec:
             properties:
               ipRouteTableID:
                 description: |
-                  ID of route table on node
+                  ID желаемой таблицы маршрутизации.
+                  Если значение не указано явно, то оно сгенерируется автоматически. И будет добавлено в status.
+                  После создания ресурса изменить это поле нельзя.
+                  При необходимости нужно пересоздать ресурс.
               routes:
                 type: array
                 items:
                   description: |
-                    Routes
+                    Желаемые маршруты.
                   properties:
                     destination:
                       description: |
-                        description network
+                        Целевая подсеть.
                     gateway:
                       description: |
-                        nexthop
+                        Шлюз, через которую достижима подсеть.
               nodeSelector:
                 description: |
-                  nodeSelector of node on which config iprouting
+                  Набор лейблов, по которым определяются ноды, на которых необходимо создать желаемые маршруты.
 
 

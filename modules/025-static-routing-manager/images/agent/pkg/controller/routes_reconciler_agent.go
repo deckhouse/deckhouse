@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -31,8 +32,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/vishvananda/netlink"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -60,6 +59,10 @@ type RouteEntry struct {
 	table       int
 }
 
+var (
+	ErrNetworkIsUnreachable = errors.New("network is unreachable")
+)
+
 func RunRoutesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
@@ -71,6 +74,12 @@ func RunRoutesReconcilerAgentController(
 
 	c, err := controller.New(CtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+			log.Debug(fmt.Sprintf("[NodeRoutingTablesReconciler] Received a reconcile.Request for CR %v", request.Name))
+			if request.Name != cfg.NodeName {
+				log.Debug(fmt.Sprintf("[NodeRoutingTablesReconciler] This request is not intended for our node (%v)", cfg.NodeName))
+				return reconcile.Result{}, nil
+			}
+
 			log.Info("[NodeRoutingTablesReconciler] starts Reconcile")
 			nrt := &v1alpha1.NodeRoutingTables{}
 
@@ -106,7 +115,7 @@ func RunRoutesReconcilerAgentController(
 		return nil, err
 	}
 
-	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.NodeRoutingTables{ObjectMeta: metav1.ObjectMeta{Name: cfg.NodeName}}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.NodeRoutingTables{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		log.Error(err, "[RunRoutesReconcilerAgentController] unable to watch the events")
 		return nil, err
@@ -184,9 +193,9 @@ func deleteRoutesFromNode(routesToDel []RouteEntry) error {
 		_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 		if err != nil {
 			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %v",
-				route.table,
 				route.destination,
 				route.gateway,
+				route.table,
 				err,
 			)
 		}
@@ -199,9 +208,9 @@ func deleteRoutesFromNode(routesToDel []RouteEntry) error {
 		})
 		if err != nil {
 			return fmt.Errorf("can't del route %v gw %v tbl %v, err: %v",
-				route.table,
 				route.destination,
 				route.gateway,
+				route.table,
 				err,
 			)
 		}
@@ -214,9 +223,9 @@ func addRoutesToNode(routesToAdd []RouteEntry) error {
 		_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 		if err != nil {
 			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %v",
-				route.table,
 				route.destination,
 				route.gateway,
+				route.table,
 				err,
 			)
 		}
@@ -229,9 +238,9 @@ func addRoutesToNode(routesToAdd []RouteEntry) error {
 		})
 		if err != nil {
 			return fmt.Errorf("can't add route %v gw %v tbl %v, err: %v",
-				route.table,
 				route.destination,
 				route.gateway,
+				route.table,
 				err,
 			)
 		}
@@ -257,6 +266,9 @@ func reconcileRoutesOnNodeFunc(desiredRoutes, actualRoutes map[string]RouteEntry
 	}
 	err = addRoutesToNode(routesToAdd)
 	if err != nil {
+		if errors.Is(err, ErrNetworkIsUnreachable) {
+			return false, fmt.Errorf("[NodeRoutingTablesReconciler] unable to add routes to node, err: %v", err)
+		}
 		return true, fmt.Errorf("[NodeRoutingTablesReconciler] unable to add routes to node, err: %v", err)
 	}
 	return false, nil

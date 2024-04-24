@@ -30,6 +30,7 @@ const (
 	ConfigmapENV           = "CONFIGMAP_NAME"
 	ControllerName         = "static-routing-manager-agent"
 	ConfigmapName          = "static-routes"
+	defaultRequeueInterval = 10
 )
 
 type Options struct {
@@ -67,14 +68,15 @@ func NewConfig() (*Options, error) {
 
 	requeueInterval := os.Getenv(RequeueIntervalENV)
 	if requeueInterval != "" {
-		ri, err := strconv.ParseInt(requeueInterval, 10, 64)
+		// ri, err := strconv.ParseInt(requeueInterval, 10, 64)
+		ri, err := strconv.Atoi(requeueInterval)
 		if err != nil {
 			opts.RequeueInterval = time.Duration(ri)
 		} else {
-			opts.RequeueInterval = time.Duration(10)
+			opts.RequeueInterval = time.Duration(defaultRequeueInterval)
 		}
 	} else {
-		opts.RequeueInterval = time.Duration(10)
+		opts.RequeueInterval = time.Duration(defaultRequeueInterval)
 	}
 
 	// opts.RequeueInterval = 10

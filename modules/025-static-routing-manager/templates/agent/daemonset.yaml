@@ -60,7 +60,7 @@ spec:
         - name: LOG_LEVEL
           value: "2"
         - name: PROBE_ADDRESS_PORT
-          value: ":9234"
+          value: ":9239"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -69,7 +69,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9234
+            port: 9239
             scheme: HTTP
           initialDelaySeconds: 60
           periodSeconds: 10

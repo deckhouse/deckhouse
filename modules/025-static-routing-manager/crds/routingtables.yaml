@@ -30,7 +30,7 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          describe routingtable and routes
+          A resource describing the desired routing table and the routes it contains.
         required:
         - spec
         properties:
@@ -51,13 +51,16 @@ spec:
                 minimum: 1
                 maximum: 4294967295
                 description: |
-                  ID of route table on node
+                  ID of the desired routing table.
+                  If the value is not explicitly specified, it will be generated automatically.
+                  This field cannot be changed after the resource is created.
+                  If necessary, you need to recreate the resource.
               routes:
                 type: array
                 items:
                   type: object
                   description: |
-                    Routes
+                    Desired routes.
                   required:
                   - destination
                   - gateway
@@ -66,16 +69,16 @@ spec:
                       type: string
                       format: cidr
                       description: |
-                        description network
+                        Description network.
                     gateway:
                       type: string
                       format: ipv4
                       description: |
-                        nexthop
+                        Nexthop.
               nodeSelector:
                 type: object
                 description: |
-                  nodeSelector of node on which config iprouting
+                  A set of labels that determine the nodes on which the desired routes should be created.
                 additionalProperties:
                   type: string
           status:

@@ -1,6 +1,7 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+fromCacheVersion: 2404202401
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
@@ -25,11 +26,11 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd
   - go build -ldflags="-s -w" -o agent .
-  - chown 64535:64535 /src/cmd/agent
-  - chmod 0700 /src/cmd/agent
+  - chmod +x /src/cmd/agent
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2404202401
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /src/cmd/agent

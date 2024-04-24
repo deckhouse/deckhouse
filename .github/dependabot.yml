@@ -232,15 +232,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/025-static-routing-manager/images/controller"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
