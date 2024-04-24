@@ -4,6 +4,7 @@ spec:
     schema: &schema
       openAPIV3Schema:
         description: Интерфейс для настройки распределённого балансировщика в режиме L2.
+        deprecationWarning: "Модуль **экспериментальный**, не используйте его в production-окружении."
         properties:
           spec:
             properties:
