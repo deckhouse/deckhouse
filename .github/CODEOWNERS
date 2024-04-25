@@ -11,7 +11,6 @@
 011-flow-schema/                @RomanenkoDenys @name212
 015-admission-policy-engine/    @yalosev @miklezzzz
 021-cni-cilium/                 @apolovov
-021-kube-proxy/                 @RomanenkoDenys
 030-cloud-provider-aws/         @RomanenkoDenys @name212
 030-cloud-provider-azure/       @RomanenkoDenys @name212
 030-cloud-provider-gcp/         @RomanenkoDenys @name212
@@ -21,6 +20,7 @@
 031-local-path-provisioner/     @RomanenkoDenys @name212
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
+036-kube-proxy/                 @RomanenkoDenys
 040-control-plane-manager/      @RomanenkoDenys @name212
 040-node-manager/               @RomanenkoDenys @name212 @aleksey-su
 040-terraform-manager/          @name212 @aleksey-su
