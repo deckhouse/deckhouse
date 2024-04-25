@@ -38,6 +38,8 @@ Developer notes:
   there is no way to get enabled modules list in global hook.
 */
 
+const kubeProxyEnabled = "kubeProxyEnabled"
+
 var (
 	cniNameToModule = map[string]string{
 		"flannel":       "cniFlannelEnabled",
@@ -131,5 +133,8 @@ func enableCni(input *go_hook.HookInput) error {
 
 	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
 	input.Values.Set(cniNameToModule[cniToEnable], true)
+	if cniToEnable == "flannel" || cniToEnable == "simple-bridge" {
+		input.Values.Set(kubeProxyEnabled, true)
+	}
 	return nil
 }
