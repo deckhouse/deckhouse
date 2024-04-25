@@ -394,7 +394,13 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePods 
 
 	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 
-	regClient, err := dc.GetRegistryClient(repo, cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)), cr.WithAuth(dockerCfg))
+	opts := []cr.Option{
+		cr.WithCA(getCA(input)),
+		cr.WithInsecureSchema(isHTTP(input)),
+		cr.WithAuth(dockerCfg),
+	}
+
+	regClient, err := dc.GetRegistryClient(repo, opts...)
 	if err != nil {
 		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
 		return nil

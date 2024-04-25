@@ -25,13 +25,11 @@ const (
 	SyncedPollPeriod = 100 * time.Millisecond
 )
 
-// GenerateRegistryOptions feteches settings from ModuleSource and generate registry options from them
+// GenerateRegistryOptions fetches settings from ModuleSource and generate registry options from them
 func GenerateRegistryOptions(ms *v1alpha1.ModuleSource) []cr.Option {
 	opts := make([]cr.Option, 0)
 	if ms.Spec.Registry.DockerCFG != "" {
 		opts = append(opts, cr.WithAuth(ms.Spec.Registry.DockerCFG))
-	} else {
-		opts = append(opts, cr.WithDisabledAuth())
 	}
 
 	if ms.Spec.Registry.CA != "" {
