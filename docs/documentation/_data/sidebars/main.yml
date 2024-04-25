@@ -1253,6 +1253,7 @@ entries:
               url: /modules/380-metallb/configuration.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: experimental
           folders:
             - title:
                 en: Description
