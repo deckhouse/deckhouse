@@ -3,7 +3,7 @@ title: "The l2-load-balancer module"
 ---
 
 {% alert level="warning" %}
-The module is **experimental**, don't use it in production environments.
+The module is **experimental**. It is actively developed and its features and API might significantly change in the future.
 {% endalert %}
 
 The module implements an improved (relative to the standard [L2 mode in MetalLB](../../modules/380-metallb/#layer-2-mode)) balancing mechanism for services in bare metal clusters when there is no option to use cloud load balancers or [MetalLB](../../modules/380-metallb/#mode-bgp) in BGP mode with Equal-cost multi-path (ECMP) configured.
