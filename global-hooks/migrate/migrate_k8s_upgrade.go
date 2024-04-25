@@ -42,7 +42,6 @@ import (
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 15},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "clusterConfiguration",
