@@ -60,8 +60,19 @@ properties:
               description: |
                 Disk throughput in `MBps` (limit of a single disk is 256 KiB/s for each provisioned IOPS).
             tags:
-              type: string
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+              x-examples:
+                -
+                  - key: key1
+                    value: val1
+                  - key: key2
+                    value: val2
               description: |
                 Azure disk [tags](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources)
-              x-examples:
-                - "key1=val1,key2=val2"
