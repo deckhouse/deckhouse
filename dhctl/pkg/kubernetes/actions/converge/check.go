@@ -17,17 +17,17 @@ package converge
 import (
 	"encoding/json"
 	"fmt"
-	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"reflect"
 	"sort"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 

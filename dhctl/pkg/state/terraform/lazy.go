@@ -15,10 +15,10 @@
 package terraform
 
 import (
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type StateLoader interface {

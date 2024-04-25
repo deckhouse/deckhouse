@@ -15,8 +15,6 @@
 package operations
 
 import (
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"net/http"
 	"os"
 	"time"
@@ -29,7 +27,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 

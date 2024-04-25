@@ -22,18 +22,19 @@ import (
 	"sync"
 	"time"
 
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
-	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+
+	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
+	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 // Serve starts GRPC server

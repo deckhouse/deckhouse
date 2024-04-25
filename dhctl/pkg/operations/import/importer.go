@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 
+	"k8s.io/utils/pointer"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -33,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"k8s.io/utils/pointer"
 )
 
 type Params struct {

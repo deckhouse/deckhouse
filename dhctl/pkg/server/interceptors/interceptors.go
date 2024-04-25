@@ -22,13 +22,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func PanicRecoveryHandler(log *slog.Logger) func(p any) error {

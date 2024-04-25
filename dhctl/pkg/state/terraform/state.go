@@ -3,13 +3,13 @@ package terraform
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"time"
 
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 

@@ -22,6 +22,10 @@ import (
 	"io"
 	"log/slog"
 
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -33,9 +37,6 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {

@@ -20,11 +20,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (

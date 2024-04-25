@@ -20,13 +20,14 @@ import (
 	"net"
 	"os"
 
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 )
 
 type Agent struct {
