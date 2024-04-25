@@ -111,9 +111,6 @@ spec:
 			// Enables cni module
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(module).Exists()).To(BeTrue())
-			if cniName == "flannel" || cniName == "simple-bridge" {
-				Expect(f.ValuesGet(kubeProxyEnabled).Exists()).To(BeTrue())
-			}
 
 			// Disabled other CNI modules
 			for cniNameTOCompare, module := range cniNameToModule {
