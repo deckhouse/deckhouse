@@ -135,7 +135,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Запомним содержимое публичного ssh ключа:</p>
+    <p>Вставьте команду ниже и скопируйте ее вывод в буфер обмена:</p>
 {% snippetcut %}
 ```bash
 echo "export key='`cat /dev/shm/caps-id.pub`'"
@@ -146,7 +146,8 @@ echo "export key='`cat /dev/shm/caps-id.pub`'"
     <p><strong> На подготовленной виртуальной машине</strong> выполните следующую команды для создания пользователя <a href="/documentation/v1/modules/040-node-manager/examples.html#с-помощью-cluster-api-provider-static">caps</a>:</p>
 {% snippetcut %}
 ```bash
-export key=....
+# Вставьте из буфера обмена, чтобы экспортировать открытый SSH-ключ для пользователя
+export key=<SSH-PUB-KEY>
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -161,7 +162,8 @@ chmod 600 /home/caps/.ssh/authorized_keys
     <p>На <strong>master-узле</strong> создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемой ноды:</p>
 {% snippetcut %}
 ```bash
-export node=d8cluster-worker-ip
+# IP-адрес узла, который необходимо подключить к кластеру
+export node=<VM-IP-ADDRESS>
 kubectl create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance

@@ -134,7 +134,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Memorize the contents of the public ssh key:</p>
+    <p>Paste command below and copy output of the command to clipboard:</p>
 {% snippetcut %}
 ```bash
 echo "export key='`cat /dev/shm/caps-id.pub`'"
@@ -145,7 +145,8 @@ echo "export key='`cat /dev/shm/caps-id.pub`'"
     <p>On the <strong>virtual machine you have started</strong>,  run the following command to create <a href="/documentation/v1/modules/040-node-manager/examples.html#using-the-cluster-api-provider-static">the caps</a> user:</p>
 {% snippetcut %}
 ```bash
-export key=....
+# Paste from your clipboard to export public SSH key for user
+export key=<SSH-PUB-KEY>
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -160,7 +161,8 @@ chmod 600 /home/caps/.ssh/authorized_keys
     <p>On the <strong>master node</strong>, create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added:</p>
 {% snippetcut %}
 ```bash
-export node=d8cluster-worker-ip
+# IP address of node you want to connect to cluster
+export node=<VM-IP-ADDRESS>
 kubectl create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
