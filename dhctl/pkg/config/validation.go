@@ -286,6 +286,7 @@ func ValidateClusterConfiguration(
 // "VsphereClusterConfiguration",
 // "AzureClusterConfiguration",
 // "VCDClusterConfiguration",
+// "ZvirtClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
 	providerSpecificClusterConfiguration string,
