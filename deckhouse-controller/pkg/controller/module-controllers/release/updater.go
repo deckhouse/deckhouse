@@ -143,7 +143,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		Weight: release.Spec.Weight,
 		Path:   moduleVersionPath,
 	}
-	err = validateModule(k.modulesValidator, def)
+	err = validateModule(def)
 	if err != nil {
 		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 		release.Status.Phase = v1alpha1.PhaseSuspended

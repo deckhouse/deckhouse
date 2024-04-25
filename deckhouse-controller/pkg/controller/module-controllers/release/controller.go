@@ -955,7 +955,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinition) error {
+func validateModule(def models.DeckhouseModuleDefinition) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -969,9 +969,9 @@ func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinit
 		return fmt.Errorf("new deckhouse module: %w", err)
 	}
 
-	err = validator.ValidateModule(dm.GetBasicModule())
+	err = dm.GetBasicModule().Validate()
 	if err != nil {
-		return err
+		return fmt.Errorf("validate module: %w", err)
 	}
 
 	return nil
@@ -989,7 +989,6 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 }
 
 type moduleValidator interface {
-	ValidateModule(m *addonmodules.BasicModule) error
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error
