@@ -192,6 +192,11 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
+// ValidateWithIndex
+// validate one document with schema
+// two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
+// if schema not fount then return ErrSchemaNotFound
+// if schema not found for ModuleConfig then return ErrSchemaNotFound also
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -213,13 +218,17 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
 		}
-		if len(mc.Spec.Settings) == 0 {
-			return nil
-		}
+
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for modules from sources", mc.GetName())
+			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			// we need return error because on top level we want filter module configs from modulesources and move into resources
+			return ErrSchemaNotFound
+		}
+
+		if len(mc.Spec.Settings) == 0 {
+			return nil
 		}
 
 		if mc.Spec.Version == 0 {
@@ -236,7 +245,9 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	}
 
 	if schema == nil {
-		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
+		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		// we need return error because on top level we want filter documents without index and move into resources
+		return ErrSchemaNotFound
 	}
 
 	isValid, err := openAPIValidate(&docForValidate, schema)

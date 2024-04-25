@@ -54,6 +54,7 @@ type MetaConfig struct {
 	Registry         RegistryData           `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
+	ResourcesYAML    string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}

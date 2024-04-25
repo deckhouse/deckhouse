@@ -78,7 +78,7 @@ type Params struct {
 	OnPhaseFunc                phases.OnPhaseFunc
 	CommanderMode              bool
 
-	ConfigPath              string
+	ConfigPaths             []string
 	ResourcesPath           string
 	ResourcesTimeout        string
 	DeckhouseTimeout        time.Duration
@@ -123,8 +123,8 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		}
 	}
 
-	if b.ConfigPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPath, b.ConfigPath))
+	if len(b.ConfigPaths) > 0 {
+		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
 	}
 	if b.ResourcesPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
@@ -194,17 +194,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
-	if err != nil {
-		return err
+	if app.ResourcesPath != "" {
+		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
 	}
 
-	if app.ResourcesPath != "" {
-		err := template.OnlyModulesFromSourcesConfigsInResources(app.ResourcesPath)
-		if err != nil {
-			return err
-		}
+	// first, parse and check cluster config
+	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	if err != nil {
+		return err
 	}
 
 	// next init cache
@@ -363,8 +361,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
 	var resourcesToCreate template.Resources
-	if app.ResourcesPath != "" {
-		parsedResources, err := template.ParseResources(app.ResourcesPath, resourcesTemplateData)
+	if metaConfig.ResourcesYAML != "" {
+		parsedResources, err := template.ParseResources(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}

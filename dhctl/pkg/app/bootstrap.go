@@ -71,8 +71,8 @@ Experimental. This feature may be deleted in the future.`).
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
-	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format. It can be go-template file. Passed data contains next keys:
-  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format.
+Deprecated. Please use --config flag multiple repeatedly for logical resources separation.
 `).
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)

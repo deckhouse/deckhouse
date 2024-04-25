@@ -45,7 +45,7 @@ var (
 	// "local" is kept for manual builds only
 	AppVersion = "local"
 
-	ConfigPath  = ""
+	ConfigPaths = make([]string, 0)
 	SanityCheck = false
 	LoggerType  = "pretty"
 	IsDebug     = false
@@ -80,10 +80,13 @@ func GlobalFlags(cmd *kingpin.Application) {
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("config", "Config file path").
+	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
+It can be go-template file (for only string keys!). Passed data contains next keys:
+  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+`).
 		Required().
 		Envar(configEnvName("CONFIG")).
-		StringVar(&ConfigPath)
+		StringsVar(&ConfigPaths)
 }
 
 func DefineSanityFlags(cmd *kingpin.CmdClause) {

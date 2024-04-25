@@ -73,7 +73,7 @@ func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
