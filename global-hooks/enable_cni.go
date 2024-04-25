@@ -38,8 +38,6 @@ Developer notes:
   there is no way to get enabled modules list in global hook.
 */
 
-const kubeProxyEnabled = "kubeProxyEnabled"
-
 var (
 	cniNameToModule = map[string]string{
 		"flannel":       "cniFlannelEnabled",
