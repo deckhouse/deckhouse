@@ -308,7 +308,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
