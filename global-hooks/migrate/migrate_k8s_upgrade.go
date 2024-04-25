@@ -50,13 +50,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
+			FilterFunc:        k8sUpgradeHookTriggerFilter,
 		},
 	},
 }, dependency.WithExternalDependencies(k8sPostUpgrade))
 
 // Required to run the hook when the k8s version has been changed
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func k8sUpgradeHookTriggerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
