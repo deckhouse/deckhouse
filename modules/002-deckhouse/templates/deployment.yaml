@@ -189,6 +189,8 @@ spec:
             - name: MODULES_DIR
               value: "/deckhouse/modules"
 {{- end }}
+            - name: EMBEDDED_MODULES_DIR
+              value: "/deckhouse/modules"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
