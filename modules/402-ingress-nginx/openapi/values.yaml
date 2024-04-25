@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.6", "1.9"]
+                  x-examples: ["1.6", "1.9", "1.10"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:

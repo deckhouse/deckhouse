@@ -618,7 +618,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9']
+                  enum: ['1.6','1.9', "1.10"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
