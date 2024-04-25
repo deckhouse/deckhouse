@@ -33,4 +33,5 @@ type RunnerInterface interface {
 	GetPlanDestructiveChanges() *PlanDestructiveChanges
 	GetPlanPath() string
 	GetTerraformExecutor() Executor
+	CleanupPlanPath() error
 }

@@ -454,6 +454,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 			r.changesInPlan = PlanHasChanges
 			destructiveChanges, err := r.getPlanDestructiveChanges(tmpFile.Name())
 			if err != nil {
+				r.CleanupPlanPath()
 				return err
 			}
 			if destructiveChanges != nil {
@@ -461,6 +462,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 				r.planDestructiveChanges = destructiveChanges
 			}
 		} else if err != nil {
+			r.CleanupPlanPath()
 			return err
 		}
 
@@ -468,6 +470,19 @@ func (r *Runner) Plan(opts PlanOptions) error {
 
 		return nil
 	})
+}
+
+func (r *Runner) CleanupPlanPath() error {
+	if r.planPath == "" {
+		return nil
+	}
+
+	err := os.Remove(r.planPath)
+	if err != nil {
+		log.WarnF("Can't remove terraform plan file: %v", err)
+	}
+
+	return err
 }
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
