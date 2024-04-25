@@ -16,6 +16,7 @@ package commander
 
 import (
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )

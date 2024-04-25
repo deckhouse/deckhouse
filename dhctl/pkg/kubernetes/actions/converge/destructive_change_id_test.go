@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func TestDestructiveChangeID(t *testing.T) {

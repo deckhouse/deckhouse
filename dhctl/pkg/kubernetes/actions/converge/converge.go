@@ -22,7 +22,7 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -759,6 +759,7 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
 	})
 }
+
 func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
 	for {

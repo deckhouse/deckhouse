@@ -15,10 +15,11 @@
 package commands
 
 import (
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/proxy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {

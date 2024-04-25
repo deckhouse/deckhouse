@@ -24,11 +24,6 @@ import (
 	"path/filepath"
 	"time"
 
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -39,6 +34,12 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
+
+	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 // Serve starts GRPC server

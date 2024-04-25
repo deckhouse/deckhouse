@@ -3,6 +3,7 @@ package phases
 import (
 	"errors"
 	"fmt"
+
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 

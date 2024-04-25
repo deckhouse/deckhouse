@@ -17,11 +17,8 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-
-	"gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -29,7 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {

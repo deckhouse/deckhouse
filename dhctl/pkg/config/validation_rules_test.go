@@ -17,8 +17,9 @@ package config
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
 func TestValidateClusterSettingsChanges(t *testing.T) {

@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/go-openapi/spec"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,8 +30,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (
