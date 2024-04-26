@@ -271,6 +271,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 	}
 
 	metaConfig.ResourcesYAML = strings.TrimSpace(strings.Join(resourcesDocs, "\n\n---\n\n"))
+	log.DebugF("Collected ResourcesYAML:%s\n", metaConfig.ResourcesYAML)
 
 	// init configuration can be empty, but we need default from openapi spec
 	if len(metaConfig.InitClusterConfig) == 0 {
