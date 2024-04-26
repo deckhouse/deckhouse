@@ -362,7 +362,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// and we want to fail immediately if template has errors
 	var resourcesToCreate template.Resources
 	if metaConfig.ResourcesYAML != "" {
-		parsedResources, err := template.ParseResources(metaConfig.ResourcesYAML, resourcesTemplateData)
+		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}
