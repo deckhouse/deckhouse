@@ -42,12 +42,11 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if config.CA != "" {
-		var certPool x509.CertPool
-
+		certPool := x509.NewCertPool()
 		certPool.AppendCertsFromPEM([]byte(config.CA))
 
 		httpTransport.TLSClientConfig = &tls.Config{
-			RootCAs: &certPool,
+			RootCAs: certPool,
 		}
 	}
 
