@@ -79,6 +79,8 @@ spec:
               containerPort: 7333
             - name: "seaweed-metrics"
               containerPort: 9324
+            - name: "seaweed-debug"
+              containerPort: 6060
           volumeMounts:
             - name: config-files
               mountPath: /etc/seaweedfs/filer.toml
