@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64 \
     CGO_ENABLED=0
 
-RUN git clone --depth 1 --branch v2.7.7 ${SOURCE_REPO}/grafana/loki.git /loki
+RUN git clone --depth 1 --branch v2.9.7 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
 
 RUN go get golang.org/x/net@v0.17.0 \
