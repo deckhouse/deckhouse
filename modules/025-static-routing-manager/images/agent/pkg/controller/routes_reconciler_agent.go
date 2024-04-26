@@ -312,7 +312,10 @@ func runEventReconcile(
 			}
 		} else {
 			if nrt.DeletionTimestamp != nil {
-				// delete finalizer
+				err4 := deleteFinalizers(ctx, cl, nrt)
+				if err4 != nil {
+					log.Debug(fmt.Sprintf("[runEventReconcile] unable to delete finalizers from CR NodeRoutingTables %v, err: %v", nrt.Name, err4))
+				}
 				err3 := generateEvent(eventRecorder, nrt, corev1.EventTypeNormal, "NodeRoutingTablesDeletionSucceed", "")
 				if err3 != nil {
 					log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %v", nrt.Name, err3))
@@ -335,6 +338,21 @@ func runEventReconcile(
 	}
 
 	return false, nil
+}
+
+func deleteFinalizers(
+	ctx context.Context,
+	cl client.Client,
+	nrt *v1alpha1.NodeRoutingTables,
+) error {
+	if nrt.DeletionTimestamp != nil && nrt.ObjectMeta.Finalizers != nil {
+		nrt.ObjectMeta.Finalizers = []string{}
+		err := cl.Update(ctx, nrt)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func updateCRStatus(
