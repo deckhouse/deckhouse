@@ -261,17 +261,14 @@ func WithInsecureSchema(insecure bool) Option {
 	}
 }
 
-// WithDisabledAuth don't use authConfig
-func WithDisabledAuth() Option {
-	return func(options *registryOptions) {
-		options.withoutAuth = true
-	}
-}
-
 // WithAuth use docker config base64 as authConfig
+// if dockerCfg is empty - will use client without auth
 func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
+		if dockerCfg == "" {
+			options.withoutAuth = true
+		}
 	}
 }
 

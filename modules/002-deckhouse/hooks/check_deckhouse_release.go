@@ -577,8 +577,16 @@ func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Containe
 	repo := input.Values.Get("global.modulesImages.registry.base").String() // host/ns/repo
 	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
+
+	opts := []cr.Option{
+		cr.WithCA(getCA(input)),
+		cr.WithInsecureSchema(isHTTP(input)),
+		cr.WithUserAgent(clusterUUID),
+		cr.WithAuth(dockerCfg),
+	}
+
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithAuth(dockerCfg), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)), cr.WithUserAgent(clusterUUID))
+	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), opts...)
 	if err != nil {
 		return nil, err
 	}
