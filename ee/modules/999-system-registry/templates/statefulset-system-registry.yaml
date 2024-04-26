@@ -63,6 +63,9 @@ spec:
             - "-ip=localhost"
             - "-ip.bind=0.0.0.0"
             - "-master.peers=localhost:9333"
+          envFrom:
+            - configMapRef:
+                name: system-registry-seaweedfs-envs
           ports:
             - name: "seaweed-master"
               containerPort: 9333
