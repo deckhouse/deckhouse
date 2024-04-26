@@ -191,10 +191,10 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 //	    ModuleConfig
 //
 // if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) error {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) (bool, error) {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
-		return nil
+		return false, nil
 	}
 
 	docData := []byte(doc)
@@ -202,53 +202,58 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 	var index SchemaIndex
 	err := yaml.Unmarshal(docData, &index)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if index.Kind == ModuleConfigKind {
 		moduleConfig := ModuleConfig{}
 		err = yaml.Unmarshal(docData, &moduleConfig)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		_, err = schemaStore.Validate(&docData)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
-				return ErrSchemaNotFound
+				return false, nil
 			}
-			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
-		return nil
+		return true, nil
 	}
 
 	_, err = schemaStore.Validate(&docData)
 	if err != nil {
 		if errors.Is(err, ErrSchemaNotFound) {
-			return ErrSchemaNotFound
+			return false, nil
 		}
-		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
+	found := false
 	switch {
 	case index.Kind == "InitConfiguration":
 		metaConfig.InitClusterConfig = data
+		found = true
 	case index.Kind == "ClusterConfiguration":
 		metaConfig.ClusterConfig = data
+		found = true
 	case index.Kind == "StaticClusterConfiguration":
 		metaConfig.StaticClusterConfig = data
+		found = true
 	case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
 		metaConfig.ProviderClusterConfig = data
+		found = true
 	}
 
-	return nil
+	return found, nil
 }
 
 func ParseConfigFromData(configData string) (*MetaConfig, error) {
@@ -261,12 +266,12 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
-			if errors.Is(err, ErrSchemaNotFound) {
-				resourcesDocs = append(resourcesDocs, doc)
-				continue
-			}
+		found, err := parseDocument(doc, &metaConfig, schemaStore)
+		if err != nil {
 			return nil, err
+		}
+		if !found && doc != "" {
+			resourcesDocs = append(resourcesDocs, doc)
 		}
 	}
 
@@ -280,8 +285,12 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		found, err := parseDocument(doc, &metaConfig, schemaStore)
+		if err != nil {
 			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("init configuration index not found")
 		}
 	}
 
@@ -300,7 +309,7 @@ func ValidateClusterSettings(configData string) error {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
+		_, err := parseDocument(doc, &metaConfig, schemaStore)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err

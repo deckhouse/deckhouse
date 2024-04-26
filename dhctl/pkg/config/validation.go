@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/go-openapi/spec"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
@@ -53,7 +54,7 @@ func ValidateClusterSettingsFormat(settings string, opts ValidateOptions) error 
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
+		_, err := parseDocument(doc, &metaConfig, schemaStore)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err
