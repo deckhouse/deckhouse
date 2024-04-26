@@ -153,7 +153,8 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
 		if gvk.Empty() || gvk.GroupVersion().Empty() || gvk.GroupKind().Empty() {
-			log.WarnF("Empty gvr for resource:\n%s\n", doc)
+			log.DebugF("Empty gvr for resource:\n%s\n", doc)
+			continue
 		}
 
 		resources = append(resources, &Resource{
