@@ -3,7 +3,7 @@ index 00104c89d..5fa499ba4 100644
 --- a/rootfs/etc/nginx/lua/balancer.lua
 +++ b/rootfs/etc/nginx/lua/balancer.lua
 @@ -120,6 +120,13 @@ local function sync_backend(backend)
-
+ 
    if not balancer then
      balancers[backend.name] = implementation:new(backend)
 +    if backend.ingress then
@@ -15,7 +15,7 @@ index 00104c89d..5fa499ba4 100644
 +    end
      return
    end
-
+ 
 @@ -131,6 +138,13 @@ local function sync_backend(backend)
          string.format("LB algorithm changed from %s to %s, resetting the instance",
                        balancer.name, implementation.name))
@@ -29,11 +29,11 @@ index 00104c89d..5fa499ba4 100644
 +    end
      return
    end
-
+ 
 @@ -330,6 +344,12 @@ function _M.balance()
      return
    end
-
+ 
 +  if balancer["ingress_name"] then ngx.var.ingress_name = balancer["ingress_name"]:gsub("%-rwr", "") end
 +  if not (ngx.var.proxy_upstream_name == "upstream-default-backend") then
 +    if balancer["backend_name"] then ngx.var.service_name = balancer["backend_name"] end

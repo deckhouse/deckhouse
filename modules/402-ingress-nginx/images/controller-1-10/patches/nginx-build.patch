@@ -1,11 +1,11 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index 3fe610945..e643b024b 100755
+index 3fe610945..fa4b25178 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
-
+ 
 +SOURCE_REPO="${SOURCE_REPO}"
 +CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
 +
@@ -14,16 +14,16 @@ index 3fe610945..e643b024b 100755
  set -o pipefail
 @@ -110,6 +113,7 @@ export OPENTELEMETRY_CPP_VERSION="v1.11.0"
  export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
-
+ 
  export BUILD_PATH=/tmp/build
 +export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
-
+ 
  ARCH=$(uname -m)
-
+ 
 @@ -134,57 +138,6 @@ get_src()
    rm -rf "$f"
  }
-
+ 
 -# install required packages to build
 -# Dependencies from "ninja" and below are OTEL dependencies
 -apk add \
@@ -71,7 +71,7 @@ index 3fe610945..e643b024b 100755
 -  c-ares-dev \
 -  re2-dev \
 -  grpc-dev \
--  protobuf-dev
+-  protobuf-dev 
 -
 -# apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
 -
@@ -81,7 +81,7 @@ index 3fe610945..e643b024b 100755
 @@ -194,94 +147,6 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
-
+ 
 -# download, verify and extract the source files
 -get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
 -        "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
@@ -172,9 +172,9 @@ index 3fe610945..e643b024b 100755
 -
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-
-@@ -327,15 +192,17 @@ git config --global --add core.compression -1
-
+ 
+@@ -327,15 +192,16 @@ git config --global --add core.compression -1
+ 
  # Get Brotli source and deps
  cd "$BUILD_PATH"
 -git clone --depth=100 https://github.com/google/ngx_brotli.git
@@ -185,17 +185,18 @@ index 3fe610945..e643b024b 100755
  git submodule init
 +git submodule set-url deps/brotli "${SOURCE_REPO}/google/brotli.git"
  git submodule update
-
+ 
  cd "$BUILD_PATH"
- git clone --depth=1 https://github.com/ssdeep-project/ssdeep
+-git clone --depth=1 https://github.com/ssdeep-project/ssdeep
 +git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
  cd ssdeep/
-
+ 
  ./bootstrap
-@@ -347,9 +214,13 @@ make install
+@@ -346,10 +212,13 @@ make install
+ 
  # build modsecurity library
  cd "$BUILD_PATH"
- git clone -n https://github.com/SpiderLabs/ModSecurity
+-git clone -n https://github.com/SpiderLabs/ModSecurity
 +git clone -n "${SOURCE_REPO}/SpiderLabs/ModSecurity"
  cd ModSecurity/
  git checkout $MODSECURITY_LIB_VERSION
@@ -204,18 +205,18 @@ index 3fe610945..e643b024b 100755
 +git submodule set-url others/libinjection "${SOURCE_REPO}/libinjection/libinjection.git"
 +git submodule set-url bindings/python "${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git"
  git submodule update
-
+ 
  sh build.sh
-@@ -379,7 +250,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -379,7 +248,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
-
+ 
 -git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
 +git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
-
-@@ -447,6 +318,7 @@ WITH_FLAGS="--with-debug \
+ 
+@@ -447,6 +316,7 @@ WITH_FLAGS="--with-debug \
    --with-http_gzip_static_module \
    --with-http_sub_module \
    --with-http_v2_module \
@@ -223,12 +224,12 @@ index 3fe610945..e643b024b 100755
    --with-stream \
    --with-stream_ssl_module \
    --with-stream_realip_module \
-@@ -616,7 +488,7 @@ writeDirs=( \
+@@ -616,7 +486,7 @@ writeDirs=( \
    /var/log/nginx \
  );
-
+ 
 -adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
 +adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-
+ 
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};

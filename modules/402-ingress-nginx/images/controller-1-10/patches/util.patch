@@ -9,6 +9,6 @@ index 8851f323f..d5f78df92 100644
 -	return exec.Command(nc.Binary, "-c", cfg, "-t").CombinedOutput()
 +	return exec.Command(nc.Binary, "-c", cfg, "-t", "-e", "/dev/null").CombinedOutput()
  }
-
+ 
  // getSysctl returns the value for the specified sysctl setting
-
+ 

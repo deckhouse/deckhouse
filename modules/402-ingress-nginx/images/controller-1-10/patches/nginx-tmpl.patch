@@ -5,7 +5,7 @@ index 4c0da2eb9..c219d1685 100644
 @@ -12,6 +12,9 @@
  # setup custom paths that do not require root access
  pid {{ .PID }};
-
+ 
 +# enables the use of “just-in-time compilation” for the regular expressions known by the time of configuration parsing
 +pcre_jit on;
 +
@@ -14,7 +14,7 @@ index 4c0da2eb9..c219d1685 100644
  {{ end }}
 @@ -98,11 +101,11 @@ http {
          end
-
+ 
          {{ if $all.EnableMetrics }}
 -        ok, res = pcall(require, "monitor")
 +        ok, res = pcall(require, "pbmetrics")
@@ -25,7 +25,7 @@ index 4c0da2eb9..c219d1685 100644
 +          pbmetrics = res
          end
          {{ end }}
-
+ 
 @@ -127,11 +130,9 @@ http {
      init_worker_by_lua_block {
          lua_ingress.init_worker()
@@ -33,11 +33,11 @@ index 4c0da2eb9..c219d1685 100644
 -        {{ if $all.EnableMetrics }}
 -        monitor.init_worker({{ $all.MonitorMaxBatchSize }})
 -        {{ end }}
-
+ 
          plugins.run()
 +        pbmetrics.init_worker()
      }
-
+ 
      {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
 @@ -415,6 +416,12 @@ http {
          {{ $reqUri }} 0;{{ end }}
@@ -49,11 +49,11 @@ index 4c0da2eb9..c219d1685 100644
 +    map $server_name $upstream_retries {
 +        default 0;
 +    }
-
+ 
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
 @@ -960,9 +967,7 @@ stream {
-
+ 
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
 -                {{ if $enableMetrics }}
@@ -66,40 +66,40 @@ index 4c0da2eb9..c219d1685 100644
 @@ -1255,6 +1260,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
-
+ 
 +            set $content_kind "";
 +
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
-
+ 
              {{ if $location.Mirror.Source }}
 @@ -1285,11 +1292,9 @@ stream {
-
+ 
              log_by_lua_block {
                  balancer.log()
 -                {{ if $all.EnableMetrics }}
 -                monitor.call()
 -                {{ end }}
-
+ 
                  plugins.run()
 +                pbmetrics.call()
              }
-
+ 
              {{ if not $location.Logs.Access }}
 @@ -1570,14 +1575,15 @@ stream {
-
+ 
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
 -        location {{ $all.HealthzURI }} {
 +        location = {{ $all.HealthzURI }} {
-
+ 
              {{ if $all.Cfg.EnableOpentelemetry }}
              opentelemetry off;
              {{ end }}
-
+ 
              access_log off;
 -            return 200;
 +            proxy_set_header D8s-External-Check "True";
 +            proxy_pass http://127.0.0.1:10254;
          }
-
+ 
          # this is required to avoid error if nginx is being monitored

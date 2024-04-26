@@ -5,7 +5,7 @@ index b81734154..e532264ce 100644
 @@ -71,6 +71,8 @@ const (
  	emptyUID         = "-1"
  )
-
+ 
 +var tmpDir = os.TempDir() + "/nginx/"
 +
  // NewNGINXController creates a new NGINX Ingress controller.
@@ -22,7 +22,7 @@ index b81734154..e532264ce 100644
 @@ -1041,11 +1042,11 @@ func createOpentelemetryCfg(cfg *ngx_config.Configuration) error {
  func cleanTempNginxCfg() error {
  	var files []string
-
+ 
 -	err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
 +	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
  		if err != nil {
@@ -32,4 +32,4 @@ index b81734154..e532264ce 100644
 +		if info.IsDir() && tmpDir != path {
  			return filepath.SkipDir
  		}
-
+ 

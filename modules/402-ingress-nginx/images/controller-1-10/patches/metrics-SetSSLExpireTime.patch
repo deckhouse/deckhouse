@@ -8,5 +8,5 @@ index 4ee84bc56..2ff5e089a 100644
  		labels["secret_name"] = s.SSLCert.Name
 +		labels["namespace"] = s.SSLCert.Namespace
  		labels["identifier"] = s.SSLCert.Identifier()
-
+ 
  		cm.sslExpireTime.With(labels).Set(float64(s.SSLCert.ExpireTime.Unix()))
