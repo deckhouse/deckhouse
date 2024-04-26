@@ -20,7 +20,7 @@ index 3fe610945..fa4b25178 100755
  
  ARCH=$(uname -m)
  
-@@ -134,57 +138,6 @@ get_src()
+@@ -134,56 +138,6 @@ get_src()
    rm -rf "$f"
  }
  
@@ -74,10 +74,9 @@ index 3fe610945..fa4b25178 100755
 -  protobuf-dev 
 -
 -# apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
--
+ 
  # There is some bug with some platforms and git, so force HTTP/1.1
  git config --global http.version HTTP/1.1
- git config --global http.postBuffer 157286400
 @@ -194,94 +147,6 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
