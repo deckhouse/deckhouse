@@ -488,8 +488,8 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
-    - go_lib/cloud-data/go.mod
-    - go_lib/cloud-data/go.sum
+    - go_lib/**/go.mod
+    - go_lib/**/go.sum
     - go.mod
     - go.sum
     - tools
@@ -513,8 +513,8 @@ git:
       - deckhouse-controller/go-build.sh
       - global-hooks/**/*.go
       - go_lib/**/*.go
-      - go_lib/cloud-data/go.mod
-      - go_lib/cloud-data/go.sum
+      - go_lib/**/go.mod
+      - go_lib/**/go.sum
       - modules/**/*.go
       - editions.yaml
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
