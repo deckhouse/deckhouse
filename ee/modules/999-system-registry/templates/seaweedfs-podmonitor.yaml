@@ -5,29 +5,25 @@ kind: PodMonitor
 metadata:
   name: system-registry-metrics
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
   podMetricsEndpoints:
   - port: "seaweed-metrics"
+    path: "/metrics"
     scheme: http
     scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 10) }}
     relabelings:
-    - sourceLabels: ["__address__", "__port__"]
-      targetLabel: __address__
-      replacement: "${1}:${2}"
-    - sourceLabels: ["pod"]
-      targetLabel: pod
-    - targetLabel: job
-      replacement: "system-registry"
-    - sourceLabels: [__meta_kubernetes_pod_ready]
-      regex: "true"
-      action: keep
+    - action: labeldrop
+      regex: endpoint|namespace|container
+    - action: replace
+      replacement: cluster
+      targetLabel: tier
   selector:
     matchLabels:
-      app: system-registry
+      app: {{ $.Chart.Name }}
   namespaceSelector:
     matchNames:
-    - d8-{{ .Chart.Name }}
+    - d8-{{ $.Chart.Name }}
 {{- end }}
 
