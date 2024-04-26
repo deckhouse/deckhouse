@@ -17,6 +17,10 @@
 {!{ $layout }!}
 {!{ end -}!}
 
+{!{- define "e2e_kubernetesDefaultVersion" -}!}
+1.25
+{!{- end -}!}
+
 # job for set e2e requirement status
 # $1 - name of function to set status. see ../scripts/e2e-commit-status.js
 {!{ define "set_e2e_requirement_status" }!}
