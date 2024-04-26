@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -27,6 +26,7 @@ import (
 	"static-routing-manager-agent/pkg/logger"
 	"static-routing-manager-agent/pkg/monitoring"
 	"strconv"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -44,9 +44,10 @@ import (
 )
 
 const (
-	CtrlName                        = "static-routing-manager-agent"
-	d8Realm                         = 216
-	RoutesAreNotEqual reconcileType = "RoutesAreNotEqual"
+	CtrlName                              = "static-routing-manager-agent"
+	d8Realm                               = 216
+	RoutesAreNotEqual       reconcileType = "RoutesAreNotEqual"
+	ErrNetworkIsUnreachable               = "network is unreachable"
 )
 
 type (
@@ -59,10 +60,6 @@ type RouteEntry struct {
 	table       int
 }
 
-var (
-	ErrNetworkIsUnreachable = errors.New("network is unreachable")
-)
-
 func RunRoutesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
@@ -74,39 +71,39 @@ func RunRoutesReconcilerAgentController(
 
 	c, err := controller.New(CtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-			log.Debug(fmt.Sprintf("[NodeRoutingTablesReconciler] Received a reconcile.Request for CR %v", request.Name))
+			log.Debug(fmt.Sprintf("[NRTReconciler] Received a reconcile.Request for CR %v", request.Name))
 			if request.Name != cfg.NodeName {
-				log.Debug(fmt.Sprintf("[NodeRoutingTablesReconciler] This request is not intended for our node (%v)", cfg.NodeName))
+				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended for our node (%v)", cfg.NodeName))
 				return reconcile.Result{}, nil
 			}
 
-			log.Info("[NodeRoutingTablesReconciler] starts Reconcile")
+			log.Info("[NRTReconciler] starts Reconcile")
 			nrt := &v1alpha1.NodeRoutingTables{}
 
 			err := cl.Get(ctx, request.NamespacedName, nrt)
 			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[NodeRoutingTablesReconciler] unable to get NodeRoutingTables, name: %s", request.Name))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get NodeRoutingTables, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
 
 			if nrt.Name == "" {
-				log.Info(fmt.Sprintf("[NodeRoutingTablesReconciler] seems like the NodeRoutingTables for the request %s was deleted. Reconcile retrying will stop.", request.Name))
+				log.Info(fmt.Sprintf("[NRTReconciler] seems like the NodeRoutingTables for the request %s was deleted. Reconcile retrying will stop.", request.Name))
 				return reconcile.Result{}, nil
 			}
 
 			shouldRequeue, err := runEventReconcile(nrt, log, ctx, cl, eventRecorder)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("[NodeRoutingTablesReconciler] an error occured while reconciles the NodeRoutingTables, name: %s", nrt.Name))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] an error occured while reconciles the NodeRoutingTables %s", nrt.Name))
 			}
 
 			if shouldRequeue {
-				log.Warning(fmt.Sprintf("[NodeRoutingTablesReconciler] Reconciler will requeue the request, name: %s", request.Name))
+				log.Warning(fmt.Sprintf("[NRTReconciler] Reconciler will requeue the request, name: %s", request.Name))
 				return reconcile.Result{
 					RequeueAfter: cfg.RequeueInterval * time.Second,
 				}, nil
 			}
 
-			log.Info("[NodeRoutingTablesReconciler] ends Reconcile")
+			log.Info("[NRTReconciler] ends Reconcile")
 			return reconcile.Result{}, nil
 		}),
 	})
@@ -155,7 +152,7 @@ func getDesiredRoutesFromCR(nrt *v1alpha1.NodeRoutingTables) (map[string]RouteEn
 func getActualRoutesFromNode() (map[string]RouteEntry, error) {
 	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM)
 	if err != nil {
-		return nil, fmt.Errorf("failed get routes from node, err: %v", err)
+		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
 	ar := make(map[string]RouteEntry)
 
@@ -192,7 +189,7 @@ func deleteRoutesFromNode(routesToDel []RouteEntry) error {
 	for _, route := range routesToDel {
 		_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 		if err != nil {
-			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %v",
+			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %w",
 				route.destination,
 				route.gateway,
 				route.table,
@@ -207,7 +204,7 @@ func deleteRoutesFromNode(routesToDel []RouteEntry) error {
 			Gw:    gwNetIP,
 		})
 		if err != nil {
-			return fmt.Errorf("can't del route %v gw %v tbl %v, err: %v",
+			return fmt.Errorf("can't del route %v gw %v tbl %v, err: %w",
 				route.destination,
 				route.gateway,
 				route.table,
@@ -222,7 +219,7 @@ func addRoutesToNode(routesToAdd []RouteEntry) error {
 	for _, route := range routesToAdd {
 		_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 		if err != nil {
-			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %v",
+			return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %w",
 				route.destination,
 				route.gateway,
 				route.table,
@@ -237,7 +234,7 @@ func addRoutesToNode(routesToAdd []RouteEntry) error {
 			Gw:    gwNetIP,
 		})
 		if err != nil {
-			return fmt.Errorf("can't add route %v gw %v tbl %v, err: %v",
+			return fmt.Errorf("can't add route %v gw %v tbl %v, err: %w",
 				route.destination,
 				route.gateway,
 				route.table,
@@ -262,14 +259,15 @@ func reconcileRoutesOnNodeFunc(desiredRoutes, actualRoutes map[string]RouteEntry
 
 	err := deleteRoutesFromNode(routesToDel)
 	if err != nil {
-		return true, fmt.Errorf("[NodeRoutingTablesReconciler] unable to del routes from node, err: %v", err)
+		return true, fmt.Errorf("[reconcileRoutes] unable to del routes from node, err: %w", err)
 	}
 	err = addRoutesToNode(routesToAdd)
 	if err != nil {
-		if errors.Is(err, ErrNetworkIsUnreachable) {
-			return false, fmt.Errorf("[NodeRoutingTablesReconciler] unable to add routes to node, err: %v", err)
+		// if errors.Is(errors.Unwrap(err), errors.New(ErrNetworkIsUnreachable)) {
+		if strings.Contains(err.Error(), ErrNetworkIsUnreachable) {
+			return false, fmt.Errorf("[reconcileRoutes] unable to add routes to node, err: %w", err)
 		}
-		return true, fmt.Errorf("[NodeRoutingTablesReconciler] unable to add routes to node, err: %v", err)
+		return true, fmt.Errorf("[reconcileRoutes] unable to add routes to node, err: %w", err)
 	}
 	return false, nil
 }
@@ -283,58 +281,58 @@ func runEventReconcile(
 ) (bool, error) {
 	desiredRoutes, err := getDesiredRoutesFromCR(nrt)
 	if err != nil {
-		return true, fmt.Errorf("[runEventReconcile] unable to get desired routes from CR %v", nrt.Name)
+		return true, fmt.Errorf("[EventReconcile] unable to get desired routes from CR %v", nrt.Name)
 	}
 	actualRoutes, err := getActualRoutesFromNode()
 	if err != nil {
-		return true, fmt.Errorf("[runEventReconcile] unable to get Actual routes from node")
+		return true, fmt.Errorf("[EventReconcile] unable to get Actual routes from node")
 	}
 
 	recType, err := identifyReconcileFunc(nrt, desiredRoutes, actualRoutes)
 	if err != nil {
-		return true, fmt.Errorf("[runEventReconcile] unable to identify reconcile func")
+		return true, fmt.Errorf("[EventReconcile] unable to identify reconcile func")
 	}
-	log.Debug(fmt.Sprintf("[runEventReconcile] reconcile operation: %s", recType))
+	log.Debug(fmt.Sprintf("[EventReconcile] reconcile operation: %s", recType))
 	switch recType {
 	case RoutesAreNotEqual:
-		log.Debug(fmt.Sprintf("[runEventReconcile] StatusRouteTableIDReconcile starts reconciliataion"))
+		log.Debug(fmt.Sprintf("[EventReconcile] StatusRouteTableIDReconcile starts reconciliataion"))
 
 		shouldRequeue, err := reconcileRoutesOnNodeFunc(desiredRoutes, actualRoutes)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("[runEventReconcile] an error occured while reconciles the NodeRoutingTables, name: %s", nrt.Name))
+			log.Error(err, fmt.Sprintf("[EventReconcile] an error occured while reconciles the NodeRoutingTables, name: %s", nrt.Name))
 			err2 := updateCRStatus(ctx, cl, nrt, "Failed", err.Error())
 			if err2 != nil {
-				log.Debug(fmt.Sprintf("[runEventReconcile] unable to update status of CR NodeRoutingTables %v, err: %v", nrt.Name, err2))
+				log.Debug(fmt.Sprintf("[runEventReconcile] unable to update status of CR NodeRoutingTables %v, err: %w", nrt.Name, err2))
 			}
 			err3 := generateEvent(eventRecorder, nrt, corev1.EventTypeWarning, "RouteReconcilingFailed", err.Error())
 			if err3 != nil {
-				log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %v", nrt.Name, err3))
+				log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %w", nrt.Name, err3))
 			}
 		} else {
 			if nrt.DeletionTimestamp != nil {
 				err4 := deleteFinalizers(ctx, cl, nrt)
 				if err4 != nil {
-					log.Debug(fmt.Sprintf("[runEventReconcile] unable to delete finalizers from CR NodeRoutingTables %v, err: %v", nrt.Name, err4))
+					log.Debug(fmt.Sprintf("[runEventReconcile] unable to delete finalizers from CR NodeRoutingTables %v, err: %w", nrt.Name, err4))
 				}
 				err3 := generateEvent(eventRecorder, nrt, corev1.EventTypeNormal, "NodeRoutingTablesDeletionSucceed", "")
 				if err3 != nil {
-					log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %v", nrt.Name, err3))
+					log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %w", nrt.Name, err3))
 				}
 			} else {
 				err2 := updateCRStatus(ctx, cl, nrt, "Succeed", "")
 				if err2 != nil {
-					log.Debug(fmt.Sprintf("[runEventReconcile] unable to update status of CR NodeRoutingTables %v, err: %v", nrt.Name, err2))
+					log.Debug(fmt.Sprintf("[runEventReconcile] unable to update status of CR NodeRoutingTables %v, err: %w", nrt.Name, err2))
 				}
 				err3 := generateEvent(eventRecorder, nrt, corev1.EventTypeWarning, "NodeRoutingTablesReconcilationSucceed", "")
 				if err3 != nil {
-					log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %v", nrt.Name, err3))
+					log.Debug(fmt.Sprintf("[runEventReconcile] unable to create event for CR NodeRoutingTables %v, err: %w", nrt.Name, err3))
 				}
 			}
 
 		}
 		return shouldRequeue, err
 	default:
-		log.Debug(fmt.Sprintf("[runEventReconcile] the RoutingTable should not be reconciled"))
+		log.Debug(fmt.Sprintf("[EventReconcile] the NodeRoutingTables should not be reconciled"))
 	}
 
 	return false, nil
