@@ -270,7 +270,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !found && doc != "" {
+		if !found && strings.TrimSpace(doc) != "" {
 			resourcesDocs = append(resourcesDocs, doc)
 		}
 	}
