@@ -101,30 +101,40 @@ spec:
               port: https
               scheme: HTTPS
           env:
-            - name: HOST_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: YANDEX_CLUSTER_NAME
-              value: a{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
-            - name: YANDEX_CLOUD_SERVICE_ACCOUNT_JSON
-              valueFrom:
-                secretKeyRef:
-                  name: cloud-controller-manager
-                  key: service-acount-json
-            - name: YANDEX_CLOUD_FOLDER_ID
-              value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | quote }}
-            - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
-              value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
-            - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
-              value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
-            - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
-              value: {{ join "," .Values.cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs | quote }}
-            - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
-              value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
-            - name: YANDEX_CLOUD_ROUTE_TABLE_ID
-              value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
-            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
+      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
+      {{- if not .Values.global.clusterIsBootstrapped }}
+          - name: KUBERNETES_SERVICE_HOST
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: KUBERNETES_SERVICE_PORT
+            value: "6443"
+      {{- end }}
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: YANDEX_CLUSTER_NAME
+            value: a{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
+          - name: YANDEX_CLOUD_SERVICE_ACCOUNT_JSON
+            valueFrom:
+              secretKeyRef:
+                name: cloud-controller-manager
+                key: service-acount-json
+          - name: YANDEX_CLOUD_FOLDER_ID
+            value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | quote }}
+          - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
+            value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
+          - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
+            value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
+          - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
+            value: {{ join "," .Values.cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs | quote }}
+          - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
+            value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
+          - name: YANDEX_CLOUD_ROUTE_TABLE_ID
+            value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           volumeMounts:
           - mountPath: /tmp
             name: tmp

@@ -66,7 +66,7 @@ area/modules:
 area/kubernetes:
   - '**/version_map.yml'
   - modules/007-registrypackages/images/kube*/**
-  - modules/021-kube-proxy/**
+  - modules/036-kube-proxy/**
 
 area/logs:
   - modules/460-log-shipper/**
@@ -87,7 +87,7 @@ area/monitoring:
 area/network:
   - modules/021-cni-cilium/**
   - modules/500-cilium-hubble/**
-  - modules/021-kube-proxy/**
+  - modules/036-kube-proxy/**
   - modules/035-cni-flannel/**
   - modules/035-cni-simple-bridge/**
   - modules/050-network-policy-engine/**
