@@ -50,3 +50,7 @@ spec:
       protocol: TCP
       port: 9324
       targetPort: 9324
+    - name: "seaweed-debug"
+      protocol: TCP
+      port: 6060
+      targetPort: 6060
