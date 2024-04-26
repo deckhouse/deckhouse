@@ -1,0 +1,29 @@
+diff --git a/pkg/cloudprovider/yandex/load_balancer.go b/pkg/cloudprovider/yandex/load_balancer.go
+index 7b09147..f110610 100644
+--- a/pkg/cloudprovider/yandex/load_balancer.go
++++ b/pkg/cloudprovider/yandex/load_balancer.go
+@@ -19,6 +19,7 @@ const (
+ 	externalLoadBalancerAnnotation        = "yandex.cpi.flant.com/loadbalancer-external"
+ 	listenerSubnetIdAnnotation            = "yandex.cpi.flant.com/listener-subnet-id"
+ 	listenerAddressIPv4                   = "yandex.cpi.flant.com/listener-address-ipv4"
++	loadBalancerTypeAnnotation            = "yandex.cloud/load-balancer-type"
+ 
+ 	nodesHealthCheckPath = "/healthz"
+ 	// NOTE: Please keep the following port in sync with ProxyHealthzPort in pkg/cluster/ports/ports.go
+@@ -217,8 +218,14 @@ func (yc *Cloud) getLoadBalancerParameters(svc *v1.Service) (lbParams loadBalanc
+ 		lbParams.listenerSubnetID = value
+ 	} else if len(yc.config.lbListenerSubnetID) != 0 {
+ 		lbParams.listenerSubnetID = yc.config.lbListenerSubnetID
+-		_, isExternal := svc.ObjectMeta.Annotations[externalLoadBalancerAnnotation]
+-		lbParams.internal = !isExternal
++
++		if lbType, hasAnnotation := svc.ObjectMeta.Annotations[loadBalancerTypeAnnotation]; hasAnnotation && lbType == "Internal" {
++			lbParams.internal = true
++		}
++
++		if _, hasAnnotation := svc.ObjectMeta.Annotations[externalLoadBalancerAnnotation]; hasAnnotation {
++			lbParams.internal = false
++		}
+ 	}
+ 
+ 	if value, ok := svc.ObjectMeta.Annotations[targetGroupNetworkIdAnnotation]; ok {
