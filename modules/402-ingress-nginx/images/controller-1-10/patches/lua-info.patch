@@ -5,12 +5,12 @@ index 2e782f485..09fa1563a 100644
 @@ -774,7 +774,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
  					continue
  				}
-  
+ 
 -				upsName := upstreamName(ing.Namespace, path.Backend.Service)
 +				upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
-  
+ 
  				ups := upstreams[upsName]
-  
+ 
 @@ -1006,10 +1006,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
  
  		var defBackend string
