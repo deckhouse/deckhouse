@@ -69,13 +69,13 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make install && \
     cd / && \
     patch build.sh < nginx-build.patch && \
-    /build.sh
+    bash /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
-# Based on tag "controller-v1.9.5":
-# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/images/nginx/rootfs/Dockerfile
-# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
-# - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/chroot.sh
+# Based on tag "controller-v1.10.1":
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/images/nginx-1.25/rootfs/Dockerfile
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/Dockerfile-chroot
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/chroot.sh
 FROM $BASE_ALT_DEV as chroot
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
@@ -194,7 +194,7 @@ RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
   && patch -p1 < /auth-cookie-always.patch
 
 # Final image
-# Based on tag "controller-v1.9.5":
+# Based on tag "controller-v1.10.1":
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
 FROM $BASE_ALT
 
