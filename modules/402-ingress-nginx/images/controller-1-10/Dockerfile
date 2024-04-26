@@ -69,7 +69,7 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     make install && \
     cd / && \
     patch build.sh < nginx-build.patch && \
-    bash /build.sh
+    /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.10.1":

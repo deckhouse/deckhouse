@@ -31,7 +31,7 @@ index 8ff0f0ca0..bbed9acee 100644
 @@ -118,7 +119,9 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
  		REPO_INFO=$(REPO_INFO) \
  		TAG=$(TAG) \
- 		build/build.sh
+ 		bash build/build.sh
 -
 +else
 +	build/build.sh
