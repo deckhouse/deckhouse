@@ -177,7 +177,7 @@ spec:
     zones:
     - ru-central1-a
     additionalSubnets:
-    - {{ index .cloudDiscovery.zoneToSubnetIdMap "ru-central1-a" }}
+    - '{{ index .cloudDiscovery.zoneToSubnetIdMap "ru-central1-a" }}'
   disruptions:
     approvalMode: Automatic
   nodeTemplate:
@@ -333,7 +333,7 @@ spec:
 			require.True(t, instanceClassFound)
 		})
 
-		t.Run("", func(t *testing.T) {
+		t.Run("Should move resourcesYAML", func(t *testing.T) {
 			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + ngWithTemplating)
 			require.NoError(t, err)
 

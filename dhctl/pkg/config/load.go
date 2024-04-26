@@ -37,6 +37,7 @@ import (
 type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
+	modulesCache       map[string]struct{}
 }
 
 var once sync.Once
@@ -61,6 +62,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
+		modulesCache:       make(map[string]struct{}),
 	}
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
@@ -122,6 +124,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 		name := e.Name()
 		moduleName := strings.TrimLeft(name, "01234567890-")
+		st.modulesCache[moduleName] = struct{}{}
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
 			// We don't expect panic here our logger does not support log.Fatal
@@ -216,19 +219,25 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		}
 		mcName := mc.GetName()
 		if mc.Spec.Enabled == nil && mcName != "global" {
+			// we need return error because on top level we want filter module configs from modulesources and move into resources
+			// global is special mc without module
 			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
+		}
+
+		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
+			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			return ErrSchemaNotFound
+		}
+
+		if len(mc.Spec.Settings) == 0 {
+			return nil
 		}
 
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
 			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
-			// we need return error because on top level we want filter module configs from modulesources and move into resources
-			return ErrSchemaNotFound
-		}
-
-		if len(mc.Spec.Settings) == 0 {
-			return nil
+			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {

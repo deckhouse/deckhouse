@@ -22,11 +22,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var kindOrderMap map[string]int
@@ -150,6 +151,10 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 		}
 
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
+
+		if gvk.Empty() || gvk.GroupVersion().Empty() || gvk.GroupKind().Empty() {
+			log.WarnF("Empty gvr for resource:\n%s\n", doc)
+		}
 
 		resources = append(resources, &Resource{
 			GVK:    gvk,
