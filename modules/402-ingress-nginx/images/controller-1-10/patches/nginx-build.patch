@@ -1,5 +1,5 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index 3fe610945..41a1093c2 100755
+index 3fe610945..e643b024b 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
 @@ -14,6 +14,9 @@
@@ -20,7 +20,7 @@ index 3fe610945..41a1093c2 100755
 
  ARCH=$(uname -m)
 
-@@ -134,55 +138,6 @@ get_src()
+@@ -134,57 +138,6 @@ get_src()
    rm -rf "$f"
  }
 
@@ -73,10 +73,12 @@ index 3fe610945..41a1093c2 100755
 -  grpc-dev \
 -  protobuf-dev
 -
- # apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
-
+-# apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
+-
  # There is some bug with some platforms and git, so force HTTP/1.1
-@@ -194,94 +149,6 @@ mkdir -p /etc/nginx
+ git config --global http.version HTTP/1.1
+ git config --global http.postBuffer 157286400
+@@ -194,94 +147,6 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
 
@@ -171,7 +173,7 @@ index 3fe610945..41a1093c2 100755
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
 
-@@ -327,11 +194,12 @@ git config --global --add core.compression -1
+@@ -327,15 +192,17 @@ git config --global --add core.compression -1
 
  # Get Brotli source and deps
  cd "$BUILD_PATH"
@@ -185,11 +187,15 @@ index 3fe610945..41a1093c2 100755
  git submodule update
 
  cd "$BUILD_PATH"
-@@ -346,10 +214,13 @@ make install
+ git clone --depth=1 https://github.com/ssdeep-project/ssdeep
++git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
+ cd ssdeep/
 
+ ./bootstrap
+@@ -347,9 +214,13 @@ make install
  # build modsecurity library
  cd "$BUILD_PATH"
--git clone -n https://github.com/SpiderLabs/ModSecurity
+ git clone -n https://github.com/SpiderLabs/ModSecurity
 +git clone -n "${SOURCE_REPO}/SpiderLabs/ModSecurity"
  cd ModSecurity/
  git checkout $MODSECURITY_LIB_VERSION
@@ -200,6 +206,15 @@ index 3fe610945..41a1093c2 100755
  git submodule update
 
  sh build.sh
+@@ -379,7 +250,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+ # Download owasp modsecurity crs
+ cd /etc/nginx/
+
+-git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
++git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
+ mv coreruleset owasp-modsecurity-crs
+ cd owasp-modsecurity-crs
+
 @@ -447,6 +318,7 @@ WITH_FLAGS="--with-debug \
    --with-http_gzip_static_module \
    --with-http_sub_module \
