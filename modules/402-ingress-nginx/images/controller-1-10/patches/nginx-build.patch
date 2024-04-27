@@ -1,29 +1,32 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index 3fe610945..fa4b25178 100755
+index 3fe610945..440e39094 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
-@@ -14,6 +14,9 @@
- # See the License for the specific language governing permissions and
- # limitations under the License.
- 
-+SOURCE_REPO="${SOURCE_REPO}"
-+CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
-+
- set -o errexit
- set -o nounset
- set -o pipefail
-@@ -110,6 +113,7 @@ export OPENTELEMETRY_CPP_VERSION="v1.11.0"
- export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
- 
- export BUILD_PATH=/tmp/build
-+export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
+@@ -113,174 +113,12 @@ export BUILD_PATH=/tmp/build
  
  ARCH=$(uname -m)
  
-@@ -134,56 +138,6 @@ get_src()
-   rm -rf "$f"
- }
- 
+-get_src()
+-{
+-  hash="$1"
+-  url="$2"
+-  dest="${3-}"
+-  ARGS=""
+-  f=$(basename "$url")
+-
+-  echo "Downloading $url"
+-
+-  curl -sSL "$url" -o "$f"
+-  # TODO: Reenable checksum verification but make it smarter
+-  # echo "$hash  $f" | sha256sum -c - || exit 10
+-  if [ ! -z "$dest" ]; then
+-        mkdir ${BUILD_PATH}/${dest}
+-        ARGS="-C ${BUILD_PATH}/${dest} --strip-components=1"
+-  fi
+-  tar xvzf "$f" $ARGS
+-  rm -rf "$f"
+-}
+-
 -# install required packages to build
 -# Dependencies from "ninja" and below are OTEL dependencies
 -apk add \
@@ -74,10 +77,13 @@ index 3fe610945..fa4b25178 100755
 -  protobuf-dev 
 -
 -# apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
+-
+-# There is some bug with some platforms and git, so force HTTP/1.1
+-git config --global http.version HTTP/1.1
+-git config --global http.postBuffer 157286400
+-
+ mkdir -p /etc/nginx
  
- # There is some bug with some platforms and git, so force HTTP/1.1
- git config --global http.version HTTP/1.1
-@@ -194,94 +147,6 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
  
@@ -168,11 +174,11 @@ index 3fe610945..fa4b25178 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
--
++git clone -b "$CONTROLLER_BRANCH" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
+ 
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
- 
-@@ -327,15 +192,16 @@ git config --global --add core.compression -1
+@@ -327,15 +165,16 @@ git config --global --add core.compression -1
  
  # Get Brotli source and deps
  cd "$BUILD_PATH"
@@ -191,7 +197,7 @@ index 3fe610945..fa4b25178 100755
  cd ssdeep/
  
  ./bootstrap
-@@ -346,10 +212,13 @@ make install
+@@ -346,10 +185,13 @@ make install
  
  # build modsecurity library
  cd "$BUILD_PATH"
@@ -206,7 +212,7 @@ index 3fe610945..fa4b25178 100755
  git submodule update
  
  sh build.sh
-@@ -379,7 +248,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -379,7 +221,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
  
@@ -215,7 +221,7 @@ index 3fe610945..fa4b25178 100755
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
-@@ -447,6 +316,7 @@ WITH_FLAGS="--with-debug \
+@@ -447,6 +289,7 @@ WITH_FLAGS="--with-debug \
    --with-http_gzip_static_module \
    --with-http_sub_module \
    --with-http_v2_module \
@@ -223,7 +229,7 @@ index 3fe610945..fa4b25178 100755
    --with-stream \
    --with-stream_ssl_module \
    --with-stream_realip_module \
-@@ -616,7 +486,7 @@ writeDirs=( \
+@@ -616,7 +459,7 @@ writeDirs=( \
    /var/log/nginx \
  );
  
