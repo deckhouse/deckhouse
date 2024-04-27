@@ -42,10 +42,6 @@ spec:
       protocol: TCP
       port: 8333
       targetPort: 8333
-    - name: "seaweed-webdav"
-      protocol: TCP
-      port: 7333
-      targetPort: 7333
     - name: "seaweed-metrics"
       protocol: TCP
       port: 9324
