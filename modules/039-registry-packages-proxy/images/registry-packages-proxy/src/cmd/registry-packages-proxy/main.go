@@ -82,7 +82,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	go rp.Serve(false)
+	go rp.Serve()
 
 	<-ctx.Done()
 
