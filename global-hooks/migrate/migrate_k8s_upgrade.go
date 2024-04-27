@@ -27,10 +27,13 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	dhctlconfig "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -39,8 +42,31 @@ import (
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 15},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:              "clusterConfiguration",
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
+			FilterFunc:        k8sUpgradeHookTriggerFilter,
+		},
+	},
 }, dependency.WithExternalDependencies(k8sPostUpgrade))
+
+// Required to run the hook when the k8s version has been changed
+func k8sUpgradeHookTriggerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+	version, ok := secret.Data["maxUsedControlPlaneKubernetesVersion"]
+	if !ok {
+		return nil, nil
+	}
+	return version, nil
+}
 
 type clusterConfig struct {
 	KubernetesVersion string `yaml:"kubernetesVersion"`
