@@ -17,6 +17,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"reflect"
 	"time"
 
 	logger "github.com/docker/distribution/context"
@@ -85,9 +86,19 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			mc.handleEvent(mconfig, eventC, config.EventAdd)
 		},
-		UpdateFunc: func(_ interface{}, obj interface{}) {
+		UpdateFunc: func(prev interface{}, obj interface{}) {
+			prevConfig := prev.(*v1alpha1.ModuleConfig)
 			mconfig := obj.(*v1alpha1.ModuleConfig)
-			mc.handleEvent(mconfig, eventC, config.EventUpdate)
+			// TODO: find a better way of comparing mconfigs (some sort of generator for DeepEqual method)
+			if !reflect.DeepEqual(prevConfig.Spec, mconfig.Spec) {
+				mc.handleEvent(mconfig, eventC, config.EventUpdate)
+				// send an event to moduleEventC so that the moduleconfig status could be refreshed
+			} else if mc.moduleEventC != nil {
+				mc.moduleEventC <- events.ModuleEvent{
+					ModuleName: mconfig.Name,
+					EventType:  events.ModuleConfigChanged,
+				}
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC, config.EventDelete)
