@@ -52,7 +52,6 @@ spec:
             - "server"
             - "-filer"
             - "-s3"
-            - "-webdav"
             - "-dir=/seaweedfs_data"
             - "-volume.max=0"
             - "-master.volumeSizeLimitMB=1024"
