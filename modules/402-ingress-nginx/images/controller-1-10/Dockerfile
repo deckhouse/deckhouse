@@ -58,7 +58,7 @@ ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-COPY --from=controller-builder /src/images/nginx/rootfs/ /
+COPY --from=controller-builder /src/images/nginx-1.25/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
