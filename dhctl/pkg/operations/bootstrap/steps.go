@@ -88,12 +88,16 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 					}
 					return fmt.Errorf("script path: %v", err)
 				}
+				logs := make([]string, 0)
 				cmd := sshClient.UploadScript(scriptPath).
-					WithStdoutHandler(func(l string) { log.InfoLn(l) }).
-					Sudo()
+					WithStdoutHandler(func(l string) {
+						logs = append(logs, l)
+						log.DebugLn(l)
+					}).Sudo()
 
 				_, err := cmd.Execute()
 				if err != nil {
+					log.ErrorLn(strings.Join(logs, "\n"))
 					return fmt.Errorf("run %s: %w", scriptPath, err)
 				}
 				return nil
