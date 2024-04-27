@@ -15,7 +15,7 @@
       plk_grouped_by__malfunctioning: "D8CloudDataDiscovererMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Cloud data discoverer cannot get data from cloud. See cloud data discoverer logs for more information:
-        `kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer`
+        `kubectl -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer`
 
   - alert: D8CloudDataDiscovererSaveError
     for: 1h
@@ -32,8 +32,10 @@
       plk_grouped_by__malfunctioning: "D8CloudDataDiscovererMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Cloud data discoverer cannot save data to k8s resource. See cloud data discoverer logs for more information:
-        `kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer`
+        `kubectl -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer`
 
+{{- if ne .Values.global.clusterConfiguration.cloud.provider "Yandex" }}
+{{/* TODO remove this condition after release 1.61 when all yandex clusters applied cloud-migrator in discoverer  */}}
   - alert: ClusterHasOrphanedDisks
     for: 1h
     expr: max by(job, id, name)(cloud_data_discovery_orphaned_disk_info == 1)
@@ -49,4 +51,5 @@
       plk_grouped_by__main: "ClusterHasCloudDataDiscovererAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster. You can manually delete these disks from your cloud:
-          ID: {{ $labels.id }}, Name: {{ $labels.name }}
+          ID: {{`{{ $labels.id }}`}}, Name: {{`{{ $labels.name }}`}}
+{{- end }}
