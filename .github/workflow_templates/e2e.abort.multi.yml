@@ -38,7 +38,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
-{!{-   $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetesDefaultVersion" $ | strings.TrimSpace ) -}!}
+{!{-   $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
 {!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "kubernetesDefaultVersion" $kubernetesDefaultVersion }!}
 {!{-   $outFile := printf "e2e-abort-%s.yml" $provider }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}

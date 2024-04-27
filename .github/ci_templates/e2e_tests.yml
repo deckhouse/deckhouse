@@ -17,7 +17,7 @@
 {!{ $layout }!}
 {!{ end -}!}
 
-{!{- define "e2e_kubernetesDefaultVersion" -}!}
+{!{- define "e2e_kubernetes_default_version" -}!}
 1.25
 {!{- end -}!}
 
