@@ -140,7 +140,7 @@ module "eks" {
     system = {
       name = "system-node-group"
 
-      instance_types = ["m5a.large"]
+      instance_types = ["m5a.xlarge"]
 
       min_size     = 1
       max_size     = 3

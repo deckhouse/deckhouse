@@ -173,19 +173,3 @@
         3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
         `Current Number of Nodes Scheduled`, check the pertinent Ingress Nginx Controller's 'nodeSelector' and 'toleration' settings,
         and compare them to the relevant nodes' 'labels' and 'taints' settings
-  - alert: NginxIngressDeprecatedVersion
-    expr: count(d8_ingress_nginx_controller{controller_version="1.1"}) > 0
-    labels:
-      severity_level: "4"
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_ignore_labels: "name"
-      summary: |-
-        Ingress version 1.1 will be disabled in upcoming Deckhouse releases
-      description: |-
-        There is at least one ingress nginx controller with deprecated version 1.1. Ingress nginx version 1.1 will be disabled in upcoming Deckhouse releases. Consider upgrading to a newer version of Ingress nginx controller (all the pods of the affected Ingress Nginx controllers will be consequently recreated during upgrade).
-        Use the following command to list the affected Ingress nginx controllers:
-        `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(.spec.controllerVersion == "1.1") | .metadata.name'`
-
-

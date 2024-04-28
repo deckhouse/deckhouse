@@ -1,10 +1,10 @@
 type: object
 properties:
   defaultControllerVersion:
-    default: "1.6"
+    default: "1.9"
     oneOf:
       - type: string
-        enum: ["1.1", "1.6", "1.9"]
+        enum: ["1.6", "1.9"]
     description: |
       The version of the ingress-nginx controller that is used for all controllers by default if the `controllerVersion` parameter is omitted in the IngressNginxController CR.
   highAvailability:

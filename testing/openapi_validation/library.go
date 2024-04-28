@@ -18,6 +18,7 @@ package openapi_validation
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -46,6 +47,69 @@ type fileValidation struct {
 	filePath string
 
 	validationError error
+}
+
+type moduleVersions struct {
+	specVersion        int
+	conversionsVersion int
+}
+
+func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
+	result := map[string]*moduleVersions{}
+	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".yaml") {
+			if info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.Contains(path, "/openapi/") {
+			var module string
+			splits := strings.Split(path, "/")
+			for i := 1; i < len(splits); i++ {
+				if splits[i] == "openapi" && i > 0 {
+					module = splits[i-1]
+				}
+			}
+			if module == "" {
+				return nil
+			}
+			if strings.HasSuffix(path, "config-values.yaml") {
+				config := getFileYAMLContent(path)
+				if val, ok := config["x-config-version"]; ok && val.(int) > 1 {
+					if mv, ok := result[module]; ok {
+						mv.specVersion = val.(int)
+					} else {
+						result[module] = &moduleVersions{specVersion: val.(int)}
+					}
+				}
+			}
+			if strings.Contains(path, "/conversions/") {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				var parsed struct {
+					Version int
+				}
+				if err = yaml.Unmarshal(data, &parsed); err != nil {
+					return err
+				}
+				if mv, ok := result[module]; ok {
+					if parsed.Version > mv.conversionsVersion {
+						mv.conversionsVersion = parsed.Version
+					}
+				} else {
+					result[module] = &moduleVersions{conversionsVersion: parsed.Version}
+				}
+			}
+		}
+		return nil
+	})
+	return result, err
 }
 
 // GetOpenAPIYAMLFiles returns all .yaml files which are placed into openapi/ | crds/ directory

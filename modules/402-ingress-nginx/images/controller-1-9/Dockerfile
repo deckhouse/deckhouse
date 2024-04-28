@@ -12,6 +12,24 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
+# Build opentelemetry assets
+FROM $BASE_ALT_DEV as opentelemetry-artifact
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
+RUN mkdir -p /opt/third_party/install
+COPY ./opentelemetry/ /opt/third_party/
+
+RUN apt-get update && \
+	apt-get install libpcre2-devel libcurl-devel libgnutls-openssl-devel libcares-devel ninja-build \
+        libgtest-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins -y
+
+ENV NINJA_STATUS "[%p/%f/%t] "
+
+RUN bash /opt/third_party/build.sh -o v1.11.0-flant && \
+         cp -r /opt/third_party/install/* /usr/ && \
+         bash /opt/third_party/build.sh -n
+
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
@@ -78,6 +96,7 @@ RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/images/nginx/rootfs/Dockerfile
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/chroot.sh
+
 FROM $BASE_ALT_DEV as chroot
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
@@ -143,6 +162,7 @@ RUN bash -eu -c ' \
     /chroot/var/lib/nginx/scgi \
     /chroot/var/lib/nginx/uwsgi \
     /chroot/tmp/nginx \
+    /chroot/modules_mount \
   ); \
   for dir in "${writeDirs[@]}"; do \
     mkdir -p ${dir}; \
@@ -183,6 +203,10 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/nginx /chroot/usr/local/ \
   # replace pcre with version with jit support
   && rm -f /chroot/lib64/libpcre*
+
+#opentelemetry-artifacts and libs
+COPY --from=opentelemetry-artifact /etc/nginx/modules /chroot/modules_mount/etc/nginx/modules/otel
+COPY --from=opentelemetry-artifact /usr/lib64/libcares.so.2 /usr/lib64/libre2.so.9 /usr/lib64/libgpr.so.16 /usr/lib64/libaddress_sorting.so.16 /usr/lib64/libgrpc++.so.1.38.0 /usr/lib64/libprotobuf.so.27.0.0 /usr/lib64/libgrpc.so.16 /usr/lib64/libgpr.so.16 /usr/lib64/libupb.so.16 /chroot/lib64/
 
 COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
@@ -230,12 +254,15 @@ RUN  chmod 1777 /tmp \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && rm -rf /etc/pki \
+  # Remove opentracing.json - deprecated
+  && rm /chroot/etc/nginx/opentracing.json \
   && ln -sf /chroot/etc/pki /etc/pki \
   && ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates \
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
+  && ln -sf /chroot/modules_mount /modules_mount \
   && touch /chroot/var/log/nginx/access.log \
   && chown www-data:www-data /chroot/var/log/nginx/access.log \
   && echo "" > /chroot/etc/resolv.conf \
@@ -247,9 +274,6 @@ RUN  chmod 1777 /tmp \
   && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
   && mknod -m 0666 /chroot/dev/zero c 1 5 \
   && mknod -m 0666 /chroot/dev/tty c 5 0 \
-  && mkdir -p /chroot/modules_mount \
-  && mkdir -p modules_mount \
-  && ln -s /modules_mount /chroot/modules_mount \
   && echo -e "/usr/local/lib\n/usr/local/lib64\n/modules_mount/etc/nginx/modules/otel" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
   # Create ld.so.cache inside chroot

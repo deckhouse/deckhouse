@@ -56,6 +56,9 @@ spec:
                 imageDigest:
                   type: string
                   description: "Digest of the module image."
+                weight:
+                  type: integer
+                  description: "Module weight."
       subresources:
         status: {}
       additionalPrinterColumns:

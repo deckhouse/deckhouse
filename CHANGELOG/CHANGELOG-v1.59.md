@@ -111,8 +111,11 @@
  - **[istio]** fix PromQL expression for alert `D8IstioDataPlaneVersionMismatch`. [#7898](https://github.com/deckhouse/deckhouse/pull/7898)
  - **[kube-proxy]** Add missing сonntrack binary to the `kube-proxy` image. [#8091](https://github.com/deckhouse/deckhouse/pull/8091)
     `kube-proxy` pods will restart.
+ - **[l2-load-balancer]** Module is declared as experimental. [#8236](https://github.com/deckhouse/deckhouse/pull/8236)
  - **[l2-load-balancer]** Fixes for ports conflict and hook panic. [#8160](https://github.com/deckhouse/deckhouse/pull/8160)
  - **[l2-load-balancer]** Fix missed `externalTrafficPolicy` option for L2LoadBalancer. [#7968](https://github.com/deckhouse/deckhouse/pull/7968)
+ - **[monitoring-kubernetes]** Avoid hook fails on decoding old Helm 2 releases. [#8251](https://github.com/deckhouse/deckhouse/pull/8251)
+ - **[monitoring-kubernetes]** Fix hook with checking Helm deprecated resources. [#8246](https://github.com/deckhouse/deckhouse/pull/8246)
  - **[monitoring-kubernetes]** Fix hook with helm releases scan for deprecated API versions. [#8159](https://github.com/deckhouse/deckhouse/pull/8159)
  - **[monitoring-kubernetes]** Reducing the number of scans of release secrets in the cluster. [#7558](https://github.com/deckhouse/deckhouse/pull/7558)
  - **[node-manager]** Fix ClusterHasOrphanedDisks polk group. [#8094](https://github.com/deckhouse/deckhouse/pull/8094)

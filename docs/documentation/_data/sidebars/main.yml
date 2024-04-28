@@ -460,7 +460,7 @@ entries:
                 - title:
                     en: Description
                     ru: Описание
-                  url: /modules/021-kube-proxy/
+                  url: /modules/036-kube-proxy/
             - title: kube-dns
               folders:
                 - title:
@@ -1253,6 +1253,7 @@ entries:
               url: /modules/380-metallb/configuration.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: experimental
           folders:
             - title:
                 en: Description

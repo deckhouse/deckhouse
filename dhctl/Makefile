@@ -31,6 +31,10 @@ ifndef OS
 	endif
 endif
 
+ifndef D8_VERSION
+	D8_VERSION = local
+endif
+
 export PATH := $(abspath bin/):${PATH}
 
 INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/install:main
@@ -51,7 +55,7 @@ bin/gofumpt:
 	@chmod +x "./bin/gofumpt"
 
 build:
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION)"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test:
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl

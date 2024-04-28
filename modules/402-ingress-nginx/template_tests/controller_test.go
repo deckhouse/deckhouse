@@ -44,7 +44,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.1")
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.6")
 
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
@@ -76,7 +76,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     additionalLogFields:
       my-cookie: "$cookie_MY_COOKIE"
     validationEnabled: true
-    controllerVersion: "1.1"
+    controllerVersion: "1.6"
     inlet: LoadBalancer
     hsts: true
     hstsOptions:
@@ -100,7 +100,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     config:
       load-balance: ewma
     ingressClass: nginx
-    controllerVersion: "1.1"
+    controllerVersion: "1.6"
     inlet: LoadBalancerWithProxyProtocol
     resourcesRequests:
       mode: Static
@@ -119,13 +119,13 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
   spec:
     inlet: LoadBalancer
     ingressClass: nginx
-    controllerVersion: "1.1"
+    controllerVersion: "1.6"
     maxReplicas: 3
     minReplicas: 3
 - name: test-next
   spec:
     ingressClass: test
-    controllerVersion: "1.1"
+    controllerVersion: "1.6"
     inlet: "HostPortWithProxyProtocol"
     geoIP2:
       maxmindLicenseKey: abc12345
@@ -138,7 +138,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 - name: solid
   spec:
     ingressClass: solid
-    controllerVersion: "1.1"
+    controllerVersion: "1.6"
     inlet: "HostWithFailover"
     resourcesRequests:
       mode: VPA
@@ -241,7 +241,7 @@ memory: 200Mi`))
 			testNextDaemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next")
 			Expect(testNextDaemonSet.Exists()).To(BeTrue())
 
-			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`1.1`))
+			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`1.6`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
 			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=60`)))
 			// should not have --publish-service, inlet: HostPort

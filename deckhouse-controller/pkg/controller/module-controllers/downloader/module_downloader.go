@@ -144,6 +144,16 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	return res, nil
 }
 
+// DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
+func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*models.DeckhouseModuleDefinition, error) {
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return md.fetchModuleDefinitionFromImage(moduleName, img)
+}
+
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
@@ -467,6 +477,7 @@ func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleS
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
 	reg.SetScheme(moduleSource.Spec.Registry.Scheme)
+	reg.SetCA(moduleSource.Spec.Registry.CA)
 
 	var yamlData injectedValues
 
@@ -503,6 +514,10 @@ type registrySchemaForValues struct {
 			Type    string `yaml:"type"`
 			Default string `yaml:"default"`
 		} `yaml:"scheme"`
+		CA struct {
+			Type    string `yaml:"type"`
+			Default string `yaml:"default,omitempty"`
+		} `yaml:"ca"`
 	} `yaml:"properties"`
 }
 
@@ -510,6 +525,7 @@ func (rsv *registrySchemaForValues) fillTypes() {
 	rsv.Properties.Base.Type = "string"
 	rsv.Properties.Dockercfg.Type = "string"
 	rsv.Properties.Scheme.Type = "string"
+	rsv.Properties.CA.Type = "string"
 	rsv.Type = "object"
 }
 
@@ -529,6 +545,10 @@ func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
 
 func (rsv *registrySchemaForValues) SetScheme(scheme string) {
 	rsv.Properties.Scheme.Default = scheme
+}
+
+func (rsv *registrySchemaForValues) SetCA(ca string) {
+	rsv.Properties.CA.Default = ca
 }
 
 type injectedValues struct {
