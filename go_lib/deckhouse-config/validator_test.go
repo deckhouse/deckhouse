@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
 )
 
@@ -35,11 +34,6 @@ const (
 )
 
 func TestValidatorValidateCR(t *testing.T) {
-	// Latest version is 2.
-	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
-		return nil
-	})
-
 	tests := []struct {
 		name     string
 		manifest string
@@ -70,7 +64,7 @@ spec:
   settings:
     paramStr: val1
 `,
-			expectValid,
+			expectInvalid,
 		},
 		{
 			"settings-versions-enabled",
@@ -187,11 +181,6 @@ spec:
 }
 
 func TestValidatorValidate(t *testing.T) {
-	// Latest version is 2.
-	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
-		return nil
-	})
-
 	tests := []struct {
 		name     string
 		manifest string

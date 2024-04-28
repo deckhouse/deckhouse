@@ -24,6 +24,7 @@ type Context struct {
 	Insecure            bool // --insecure
 	SkipTLSVerification bool // --skip-tls-verify
 	DoGOSTDigests       bool // --gost-digest
+	SkipModulesPull     bool // --no-modules
 
 	RegistryAuth authn.Authenticator // --registry-login + --registry-password (can be nil in this case) or --license depending on the operation requested
 	RegistryHost string              // --registry (FQDN with port, if one is provided)
@@ -31,8 +32,12 @@ type Context struct {
 
 	DeckhouseRegistryRepo string // --source
 
-	TarBundlePath      string // --images
+	BundlePath         string // --images-bundle-path
+	BundleChunkSize    int64  // Plain bytes
 	UnpackedImagesPath string
-	ValidationMode     ValidationMode  // --validation, hidden flag
-	MinVersion         *semver.Version // --min-version
+	ValidationMode     ValidationMode // --validation, hidden flag
+
+	// Only one of those 2 is used at a time or none at all.
+	MinVersion      *semver.Version // --min-version
+	SpecificVersion *semver.Version // --release
 }

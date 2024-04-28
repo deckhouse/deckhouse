@@ -14,6 +14,8 @@
 
 # shellcheck disable=SC2211,SC2153
 
+# TODO remove this file in the release after 1.59 after migrate to use bb-package-* functions in the all external modules
+
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 
@@ -35,6 +37,7 @@ bb-rp-curl() {
 # check if package installed
 # bb-rp-is-installed? package digest
 bb-rp-is-installed?() {
+  bb-log-deprecated "bb-package-is-installed?"
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
     local INSTALLED_DIGEST=""
     INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
@@ -48,6 +51,7 @@ bb-rp-is-installed?() {
 # Check if package fetched
 # bb-rp-is-fetched? package digest
 bb-rp-is-fetched?() {
+  bb-log-deprecated "bb-rp-is-fetched?"
   if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
     if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
       return 0
@@ -131,6 +135,7 @@ bb-rp-fetch-blobs() {
 # Fetch packages by digest
 # bb-rp-fetch package1:digest1 [package2:digest2 ...]
 bb-rp-fetch() {
+  bb-log-deprecated "bb-package-fetch"
   mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP
@@ -182,6 +187,7 @@ bb-rp-fetch() {
 # Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
+  bb-log-deprecated "bb-rp-install"
   local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
@@ -238,6 +244,7 @@ bb-rp-install() {
 # Unpack package from module image and run install script
 # bb-rp-module-install package:digest registry_auth scheme registry_address registry_path
 bb-rp-module-install() {
+  bb-log-deprecated "bb-package-module-install"
   local MODULE_PACKAGE=$1
   local REGISTRY_AUTH=$2
   local SCHEME=$3
@@ -250,6 +257,7 @@ bb-rp-module-install() {
 # run uninstall script from hold dir
 # bb-rp-remove package
 bb-rp-remove() {
+  bb-log-deprecated "bb-package-remove"
   for PACKAGE in "$@"; do
     if [[ -f "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${PACKAGE:?}/uninstall" ]]; then
       bb-log-info "Removing package '${PACKAGE}'"

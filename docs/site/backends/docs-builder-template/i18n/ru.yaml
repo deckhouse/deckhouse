@@ -41,5 +41,6 @@ of_string: строк
 boolean: булевый
 of_boolean: булевых значений
 version: версия
+version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр

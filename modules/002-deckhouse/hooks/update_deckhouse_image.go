@@ -39,8 +39,9 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
+	d8updater "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -155,15 +156,18 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	if ok {
 		clusterBootstrapping = !clusterBootstrappedV.Bool()
 	}
-	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, isDeckhousePodReady(dc.GetHTTPClient()), clusterBootstrapping)
+
+	podReady := isDeckhousePodReady(dc.GetHTTPClient())
+	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, podReady, clusterBootstrapping)
+
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)
 	}
 
-	if isDeckhousePodReady(dc.GetHTTPClient()) {
+	if podReady {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
-			deckhouseUpdater.ChangeUpdatingFlag(false)
+			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
 		labels := map[string]string{
@@ -173,7 +177,13 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// fetch releases from snapshot and patch initial statuses
-	deckhouseUpdater.FetchAndPrepareReleases(input.Snapshots["releases"])
+	releases := make([]*d8updater.DeckhouseRelease, 0, len(snap))
+	for _, rl := range input.Snapshots["releases"] {
+		releases = append(releases, rl.(*d8updater.DeckhouseRelease))
+	}
+
+	// fetch releases from snapshot and patch initial statuses
+	deckhouseUpdater.PrepareReleases(releases)
 	if deckhouseUpdater.ReleasesCount() == 0 {
 		return nil
 	}
@@ -230,7 +240,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		return nil, err
 	}
 
-	var annotationFlags updater.DeckhouseReleaseAnnotationsFlags
+	var annotationFlags d8updater.DeckhouseReleaseAnnotationsFlags
 
 	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
 		if v == "true" {
@@ -279,7 +289,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		}
 	}
 
-	return updater.DeckhouseRelease{
+	return &d8updater.DeckhouseRelease{
 		Name:          release.Name,
 		Version:       semver.MustParse(release.Spec.Version),
 		ApplyAfter:    release.Spec.ApplyAfter,
@@ -384,7 +394,13 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePods 
 
 	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 
-	regClient, err := dc.GetRegistryClient(repo, cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)), cr.WithAuth(dockerCfg))
+	opts := []cr.Option{
+		cr.WithCA(getCA(input)),
+		cr.WithInsecureSchema(isHTTP(input)),
+		cr.WithAuth(dockerCfg),
+	}
+
+	regClient, err := dc.GetRegistryClient(repo, opts...)
 	if err != nil {
 		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
 		return nil

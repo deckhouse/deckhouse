@@ -46,10 +46,14 @@ var (
 	MirrorRegistryUsername string
 	MirrorRegistryPassword string
 
-	MirrorInsecure       bool
-	MirrorTLSSkipVerify  bool
-	MirrorDHLicenseToken string
-	MirrorTarBundlePath  string
+	MirrorInsecure                bool
+	MirrorTLSSkipVerify           bool
+	MirrorDHLicenseToken          string
+	MirrorImagesBundlePath        string
+	MirrorImagesBundleChunkSizeGB int64
+
+	mirrorSpecificVersion string
+	MirrorSpecificVersion *semver.Version
 
 	mirrorMinVersionString string
 	MirrorMinVersion       *semver.Version
@@ -62,15 +66,22 @@ var (
 
 	MirrorDoGOSTDigest            bool
 	MirrorDontContinuePartialPull bool
+
+	MirrorWithoutModules bool
 )
 
 func DefineMirrorFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("images-bundle-path", "Path of tar bundle with pulled images. Should be a path to tar archive (.tar)").
+	cmd.Flag("images-bundle-path", "Path to the directory with pulled images bundle.").
 		Short('i').
 		PlaceHolder("PATH").
 		Required().
 		Envar(configEnvName("MIRROR_IMAGES_BUNDLE")).
-		StringVar(&MirrorTarBundlePath)
+		StringVar(&MirrorImagesBundlePath)
+	cmd.Flag("images-bundle-chunk-size", "Size of the chunks file in bundle in gigabytes.").
+		Short('c').
+		PlaceHolder("GB").
+		Envar(configEnvName("MIRROR_IMAGES_BUNDLE_CHUNK_SIZE")).
+		Int64Var(&MirrorImagesBundleChunkSizeGB)
 	cmd.Flag("source", "Pull Deckhouse images from source registry. This is the default mode of operation.").
 		Default(enterpriseEditionRepo).
 		Envar(configEnvName("MIRROR_SOURCE")).
@@ -106,6 +117,9 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		Short('v').
 		Envar(configEnvName("MIRROR_MIN_VERSION")).
 		StringVar(&mirrorMinVersionString)
+	cmd.Flag("release", "Specific Deckhouse release to copy. Conflicts with --min-version.").
+		Envar(configEnvName("MIRROR_RELEASE")).
+		StringVar(&mirrorSpecificVersion)
 	cmd.Flag("validation", "Validate mirrored indexes and images after pull is complete. "+
 		`Defaults to "fast" validation, which only checks if manifests, configs and indexes are compliant with OCI specs, `+
 		`"full" validation also checks images contents for corruption.`).
@@ -117,6 +131,8 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&MirrorDoGOSTDigest)
 	cmd.Flag("no-pull-resume", "Do not continue last unfinished pull operation.").
 		BoolVar(&MirrorDontContinuePartialPull)
+	cmd.Flag("no-modules", "Do not pull Deckhouse modules into bundle.").
+		BoolVar(&MirrorWithoutModules)
 	cmd.Flag("tls-skip-verify", "Disable TLS certificate validation.").
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
@@ -124,7 +140,7 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		var err error
-		if err = parseAndValidateMinVersionFlag(); err != nil {
+		if err = parseAndValidateVersionFlags(); err != nil {
 			return err
 		}
 		if err = parseAndValidateRegistryURLFlag(); err != nil {
@@ -136,30 +152,33 @@ func DefineMirrorFlags(cmd *kingpin.CmdClause) {
 		if err = validateImagesBundlePathFlag(); err != nil {
 			return err
 		}
+		if err = validateChunkSizeFlag(); err != nil {
+			return err
+		}
 
 		return nil
 	})
 }
 
 func validateImagesBundlePathFlag() error {
-	MirrorTarBundlePath = filepath.Clean(MirrorTarBundlePath)
-	if filepath.Ext(MirrorTarBundlePath) != ".tar" {
+	MirrorImagesBundlePath = filepath.Clean(MirrorImagesBundlePath)
+	if filepath.Ext(MirrorImagesBundlePath) != ".tar" {
 		return errors.New("--images-bundle-path should be a path to tar archive (.tar)")
 	}
 
-	stats, err := os.Stat(MirrorTarBundlePath)
+	stats, err := os.Stat(MirrorImagesBundlePath)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		// If only the file is not there it is fine, it will be created, but if directories on the path are also missing, this is bad.
-		tarBundleDir := filepath.Dir(MirrorTarBundlePath)
+		tarBundleDir := filepath.Dir(MirrorImagesBundlePath)
 		if _, err = os.Stat(tarBundleDir); err != nil {
 			return err
 		}
 		break
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return err
-	case stats.IsDir() || filepath.Ext(MirrorTarBundlePath) != ".tar":
-		return fmt.Errorf("%s should be a tar archive", MirrorTarBundlePath)
+	case stats.IsDir() || filepath.Ext(MirrorImagesBundlePath) != ".tar":
+		return fmt.Errorf("%s should be a tar archive", MirrorImagesBundlePath)
 	}
 	return nil
 }
@@ -189,13 +208,32 @@ func parseAndValidateRegistryURLFlag() error {
 	return nil
 }
 
-func parseAndValidateMinVersionFlag() error {
+func parseAndValidateVersionFlags() error {
+	if mirrorMinVersionString != "" && mirrorSpecificVersion != "" {
+		return errors.New("Using both --release and --min-version at the same time is ambiguous.")
+	}
+
 	var err error
 	if mirrorMinVersionString != "" {
 		MirrorMinVersion, err = semver.NewVersion(mirrorMinVersionString)
 		if err != nil {
-			return fmt.Errorf("Minimal deckhouse version: %w", err)
+			return fmt.Errorf("Parse minimal deckhouse version: %w", err)
 		}
 	}
+
+	if mirrorSpecificVersion != "" {
+		MirrorSpecificVersion, err = semver.NewVersion(mirrorSpecificVersion)
+		if err != nil {
+			return fmt.Errorf("Parse required deckhouse version: %w", err)
+		}
+	}
+	return nil
+}
+
+func validateChunkSizeFlag() error {
+	if MirrorImagesBundleChunkSizeGB < 0 {
+		return errors.New("Chunk size cannot be less than zero GB")
+	}
+
 	return nil
 }

@@ -53,7 +53,7 @@ const (
 	caKey      = "ca"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag string, insecure, dryRun bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool) error {
 	ctx := context.Background()
 	logEntry := log.WithField("operator.component", "ChangeRegistry")
 
@@ -64,7 +64,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	nameOpts := newNameOptions(insecure)
+	nameOpts := newNameOptions(scheme)
 	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent)
+	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent, scheme)
 	if err != nil {
 		return err
 	}
@@ -150,9 +150,9 @@ func newRemoteOptions(ctx context.Context, repo name.Repository, authConfig auth
 	}, nil
 }
 
-func newNameOptions(insecure bool) []name.Option {
+func newNameOptions(scheme string) []name.Option {
 	opts := []name.Option{name.StrictValidation}
-	if insecure {
+	if scheme == "http" {
 		opts = append(opts, name.Insecure)
 	}
 	return opts
@@ -196,7 +196,7 @@ func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient
 	return nil
 }
 
-func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent string) (map[string]string, error) {
+func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig, caContent, specScheme string) (map[string]string, error) {
 	authConfBytes, err := json.Marshal(
 		map[string]map[string]*dockerCfgAuthEntry{
 			"auths": {
@@ -208,11 +208,16 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 		return nil, err
 	}
 
+	scheme := specScheme
+	if scheme != "http" && scheme != "https" {
+		scheme = newRepo.Scheme()
+	}
+
 	newSecretData := map[string]string{
 		".dockerconfigjson": string(authConfBytes),
 		"address":           newRepo.RegistryStr(),
 		"path":              path.Join("/", newRepo.RepositoryStr()),
-		"scheme":            newRepo.Scheme(),
+		"scheme":            scheme,
 	}
 
 	if caContent != "" {

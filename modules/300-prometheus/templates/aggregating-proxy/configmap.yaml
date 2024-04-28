@@ -48,19 +48,3 @@ data:
             bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
             tls_config:
               insecure_skip_verify: true
-          {{- if ne (int .Values.prometheus.longtermRetentionDays) 0 }}
-        - static_configs:
-            - targets:
-                - prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
-          ignore_error: true
-          anti_affinity: 300s
-          timeout: 5s
-          remote_read: false
-          prefer_max: true
-          scheme: https
-          http_client:
-            dial_timeout: 1s
-            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-            tls_config:
-              insecure_skip_verify: true
-          {{- end }}

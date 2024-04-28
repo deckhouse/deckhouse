@@ -26,6 +26,7 @@ monitoringKubernetesControlPlaneEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 namespaceConfiguratorEnabled: true
+registryPackagesProxyEnabled: true
 nodeManagerEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
@@ -45,3 +46,4 @@ userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
+

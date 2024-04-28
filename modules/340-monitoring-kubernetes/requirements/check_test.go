@@ -28,17 +28,22 @@ import (
 
 func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue(hooks.AutoK8sVersion, "1.22.0")
-		requirements.SaveValue(hooks.AutoK8sReason, "networking.k8s.io/v1beta1: Ingress")
-		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.21.8")
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "1.22,1.23,1.24")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.21")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
-		requirements.SaveValue(hooks.AutoK8sVersion, "1.22.0")
-		requirements.SaveValue(hooks.AutoK8sReason, "networking.k8s.io/v1beta1: Ingress")
-		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27.1")
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "1.22,1.23,1.25")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("requirement initial", func(t *testing.T) {
+		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "initial")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

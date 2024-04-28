@@ -645,11 +645,12 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-    curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-    curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt-get update
-    apt-get install -y nvidia-container-toolkit nvidia-driver-525-server
+    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
+      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    fi
+    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
   nodeGroups:
   - gpu
   weight: 30
@@ -680,9 +681,11 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-    curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    yum install -y nvidia-container-toolkit nvidia-driver
+    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
+      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+    fi
+    bb-yum-install nvidia-container-toolkit nvidia-driver
   nodeGroups:
   - gpu
   weight: 30

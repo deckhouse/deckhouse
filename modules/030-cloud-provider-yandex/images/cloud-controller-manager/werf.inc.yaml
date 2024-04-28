@@ -14,11 +14,11 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
     {{- else if semverCompare ">=1.25" $version }}
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
     {{- end }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -30,13 +30,11 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-    - apk add --no-cache make bash git mercurial patch rsync
   install:
-    - git clone https://github.com/deckhouse/yandex-cloud-controller-manager.git /src
+    - git clone --depth 1 --branch {{ $value.ccm.yandex }} https://github.com/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
-    - git checkout {{ $value.ccm.yandex }}
-    - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+    - git apply /patches/{{ $version }}/*.patch
+    - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
     - chown 64535:64535 /src/yandex-cloud-controller-manager
     - chmod 0755 /src/yandex-cloud-controller-manager

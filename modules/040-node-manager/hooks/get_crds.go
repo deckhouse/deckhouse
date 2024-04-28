@@ -312,7 +312,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
 
-			input.LogEntry.Errorf("ICSSSSS  %+v", input.Snapshots["ics"])
 			for _, icsItem := range input.Snapshots["ics"] {
 				ic := icsItem.(InstanceClassCrdInfo)
 				instanceClasses[ic.Name] = ic.Spec
@@ -342,7 +341,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			// check #2 — .spec.cloudInstances.classReference should be valid
 			nodeGroupInstanceClassName := nodeGroup.Spec.CloudInstances.ClassReference.Name
 			isKnownClassName := false
-			input.LogEntry.Errorf("ICSSS %+v", instanceClasses)
 			for className := range instanceClasses {
 				if className == nodeGroupInstanceClassName {
 					isKnownClassName = true

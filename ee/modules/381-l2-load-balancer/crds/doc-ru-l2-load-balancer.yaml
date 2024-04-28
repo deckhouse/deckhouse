@@ -1,0 +1,48 @@
+spec:
+  versions:
+  - name: v1alpha1
+    schema: &schema
+      openAPIV3Schema:
+        description: |
+          Интерфейс для настройки распределённого балансировщика в режиме L2.
+
+          **Важно!** Модуль **экспериментальный** и находится в процессе активного развития. Функциональность и API могут существенно измениться.
+        properties:
+          spec:
+            properties:
+              addressPool:
+                description: Пул адресов MetalLB для выдачи приложению.
+              nodeSelector:
+                description: |
+                  Группа узлов-балансировщиков, которые обслуживают публичные IP-адреса.
+
+                  Как в `spec.nodeSelector` у подов. Если не указать, то в качестве балансировщика будут использованы все узлы кластера.
+              service:
+                description: Описание сервиса по аналогии с ресурсом _Service_.
+                properties:
+                  sourceRanges:
+                    description: |
+                      Список разрешённых диапазонов клиентских IP-адресов для взаимодействия с сервисом.
+                  externalTrafficPolicy:
+                    description: |
+                      Описывает каким образом балансировщик отправляет трафик к конечным подам:
+                      * `Local` (по умолчанию) — трафик направляется к подам, расположенным на том же узле, что и L2 LoadBalancer speaker.
+                      * `Cluster` — трафик может быть направлен на любой под в кластере.
+                  selector:
+                    description: |
+                      Как в `spec.selector` ресурса `Service`
+                  ports:
+                    description: |
+                      Список портов, опубликованных сервисом.
+                    items:
+                      properties:
+                        name:
+                          description: |
+                            Имя порта в рамках сервиса. Все имена портов должны быть уникальны.
+                        port:
+                          description: Порт, который будут использовать клиенты для подключения к сервису.
+                        protocol:
+                          description: IP-протокол, TCP, UDP или SCTP.
+                        targetPort:
+                          description: Порт, который слушает приложение в рамках пода.
+

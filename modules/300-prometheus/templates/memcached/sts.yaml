@@ -38,6 +38,8 @@ spec:
       labels:
         app: memcached
     spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}

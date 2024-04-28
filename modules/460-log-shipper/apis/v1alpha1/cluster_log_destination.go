@@ -134,9 +134,9 @@ type LokiSpec struct {
 type KafkaSpec struct {
 	BootstrapServers []string `json:"bootstrapServers,omitempty"`
 
-	Topic string `json:"topic,omitempty"`
-
-	TLS CommonTLSSpec `json:"tls,omitempty"`
+	Topic    string        `json:"topic,omitempty"`
+	KeyField string        `json:"keyField,omitempty"`
+	TLS      CommonTLSSpec `json:"tls,omitempty"`
 
 	SASL KafkaSASL `json:"sasl,omitempty"`
 

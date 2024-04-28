@@ -38,7 +38,15 @@ func PullTrivyVulnerabilityDatabaseImageToLayout(
 	}
 
 	images := map[string]struct{}{ref.String(): {}}
-	if err = PullImageSet(authProvider, targetLayout, images, insecure, skipVerifyTLS, false); err != nil {
+	if err = PullImageSet(
+		authProvider,
+		targetLayout,
+		images,
+		NopTagToDigestMappingFunc,
+		insecure,
+		skipVerifyTLS,
+		false,
+	); err != nil {
 		return fmt.Errorf("pull vulnerability database: %w", err)
 	}
 

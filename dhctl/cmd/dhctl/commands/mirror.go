@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"crypto/md5"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,7 +64,7 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		RegistryHost:          app.MirrorRegistryHost,
 		RegistryPath:          app.MirrorRegistryPath,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
-		TarBundlePath:         app.MirrorTarBundlePath,
+		BundlePath:            app.MirrorImagesBundlePath,
 		UnpackedImagesPath:    filepath.Join(app.TmpDirName, time.Now().Format("mirror_tmp_02-01-2006_15-04-05")),
 		ValidationMode:        mirror.ValidationMode(app.MirrorValidationMode),
 	}
@@ -83,7 +84,9 @@ func mirrorPushDeckhouseToPrivateRegistry() error {
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Registry credentials validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Registry credentials validation failure: %w", err)
+		}
 	}
 
 	err := log.Process("mirror", "Unpacking Deckhouse bundle", func() error {
@@ -107,18 +110,21 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	mirrorCtx := &mirror.Context{
 		Insecure:              app.MirrorInsecure,
 		SkipTLSVerification:   app.MirrorTLSSkipVerify,
+		SkipModulesPull:       app.MirrorWithoutModules,
 		DoGOSTDigests:         app.MirrorDoGOSTDigest,
 		RegistryHost:          app.MirrorRegistryHost,
 		DeckhouseRegistryRepo: app.MirrorSourceRegistryRepo,
 		RegistryAuth:          getSourceRegistryAuthProvider(),
-		TarBundlePath:         app.MirrorTarBundlePath,
+		BundlePath:            app.MirrorImagesBundlePath,
+		BundleChunkSize:       app.MirrorImagesBundleChunkSizeGB * 1024 * 1024 * 1024,
 		UnpackedImagesPath: filepath.Join(
 			app.TmpDirName,
 			"mirror_pull",
 			fmt.Sprintf("%x", md5.Sum([]byte(app.MirrorSourceRegistryRepo))),
 		),
-		ValidationMode: mirror.ValidationMode(app.MirrorValidationMode),
-		MinVersion:     app.MirrorMinVersion,
+		ValidationMode:  mirror.ValidationMode(app.MirrorValidationMode),
+		MinVersion:      app.MirrorMinVersion,
+		SpecificVersion: app.MirrorSpecificVersion,
 	}
 
 	if app.MirrorDontContinuePartialPull || lastPullWasTooLongAgoToRetry(mirrorCtx) {
@@ -128,17 +134,25 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 	}
 
 	if err := mirror.ValidateReadAccessForImage(
-		mirrorCtx.DeckhouseRegistryRepo+":rock-solid",
+		mirrorCtx.DeckhouseRegistryRepo+":alpha",
 		mirrorCtx.RegistryAuth,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 	); err != nil {
-		return fmt.Errorf("Source registry access validation failure: %w", err)
+		if os.Getenv("MIRROR_BYPASS_ACCESS_CHECKS") != "1" {
+			return fmt.Errorf("Source registry access validation failure: %w", err)
+		}
 	}
 
 	var versionsToMirror []semver.Version
 	var err error
 	err = log.Process("mirror", "Looking for required Deckhouse releases", func() error {
+		if mirrorCtx.SpecificVersion != nil {
+			versionsToMirror = append(versionsToMirror, *mirrorCtx.SpecificVersion)
+			log.InfoF("Skipped releases lookup as release %v is specifically requested with --release\n", mirrorCtx.SpecificVersion)
+			return nil
+		}
+
 		versionsToMirror, err = mirror.VersionsToCopy(mirrorCtx)
 		if err != nil {
 			return fmt.Errorf("Find versions to mirror: %w", err)
@@ -166,18 +180,9 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 
 	if mirrorCtx.DoGOSTDigests {
 		err = log.Process("mirror", "Compute GOST digest", func() error {
-			tarBundle, err := os.Open(mirrorCtx.TarBundlePath)
-			if err != nil {
-				return fmt.Errorf("Read tar bundle: %w", err)
+			if err = computeGOSTDigest(mirrorCtx); err != nil {
+				return fmt.Errorf("Compute GOST digest: %w", err)
 			}
-			gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(tarBundle, 128*1024))
-			if err != nil {
-				return fmt.Errorf("Calculate GOST Checksum: %w", err)
-			}
-			if err = os.WriteFile(mirrorCtx.TarBundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
-				return fmt.Errorf("Write GOST Checksum: %w", err)
-			}
-			log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.TarBundlePath+".gostsum")
 			return nil
 		})
 		if err != nil {
@@ -189,6 +194,46 @@ func mirrorPullDeckhouseToLocalFilesystem() error {
 		return fmt.Errorf("Cleanup temporary data after mirroring: %w", err)
 	}
 
+	return nil
+}
+
+func computeGOSTDigest(mirrorCtx *mirror.Context) error {
+	bundleDir := filepath.Dir(mirrorCtx.BundlePath)
+	catalog, err := os.ReadDir(bundleDir)
+	if err != nil {
+		return fmt.Errorf("read tar bundle directory: %w", err)
+	}
+	streams := make([]io.Reader, 0)
+	for _, entry := range catalog {
+		fileName := entry.Name()
+		if !entry.Type().IsRegular() || filepath.Ext(fileName) != ".chunk" {
+			continue
+		}
+		chunkStream, err := os.Open(filepath.Join(bundleDir, fileName))
+		if err != nil {
+			return fmt.Errorf("open bundle chunk for reading: %w", err)
+		}
+		defer chunkStream.Close() // nolint // defer in a loop is valid here as we need those streams to survive until everything is calculated at the end of this function
+		streams = append(streams, chunkStream)
+	}
+
+	bundleStream := io.NopCloser(io.MultiReader(streams...))
+	if len(streams) == 0 {
+		bundleStream, err = os.Open(mirrorCtx.BundlePath)
+		if err != nil {
+			return fmt.Errorf("read tar bundle: %w", err)
+		}
+	}
+	defer bundleStream.Close()
+
+	gostDigest, err := mirror.CalculateBlobGostDigest(bufio.NewReaderSize(bundleStream, 512*1024))
+	if err != nil {
+		return fmt.Errorf("Calculate GOST Checksum: %w", err)
+	}
+	if err = os.WriteFile(mirrorCtx.BundlePath+".gostsum", []byte(gostDigest), 0666); err != nil {
+		return fmt.Errorf("Write GOST Checksum: %w", err)
+	}
+	log.InfoF("Digest: %s\nWritten to %s\n", gostDigest, mirrorCtx.BundlePath+".gostsum")
 	return nil
 }
 

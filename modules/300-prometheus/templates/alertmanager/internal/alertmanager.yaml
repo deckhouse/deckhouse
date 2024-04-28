@@ -8,8 +8,9 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager")) | nindent 2 }}
 spec:
-  alertmanagerConfiguration:
-    name: {{ .name }}
+  alertmanagerConfigSelector:
+    matchLabels:
+      alertmanagerConfig: {{ .name }}
   replicas: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
   image: {{ include "helm_lib_module_image" (list $ "alertmanager") }}
   imagePullSecrets:

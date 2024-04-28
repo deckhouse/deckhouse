@@ -44,6 +44,8 @@ type ImageLayouts struct {
 	SecurityImages map[string]struct{}
 
 	Modules map[string]ModuleImageLayout
+
+	TagsResolver *TagsResolver
 }
 
 type ModuleImageLayout struct {
@@ -59,7 +61,10 @@ func CreateOCIImageLayoutsForDeckhouse(
 	modules []Module,
 ) (*ImageLayouts, error) {
 	var err error
-	layouts := &ImageLayouts{Modules: map[string]ModuleImageLayout{}}
+	layouts := &ImageLayouts{
+		TagsResolver: NewTagsResolver(),
+		Modules:      map[string]ModuleImageLayout{},
+	}
 
 	fsPaths := map[*layout.Path]string{
 		&layouts.Deckhouse:      rootFolder,
@@ -146,31 +151,14 @@ type ociLayout struct {
 	ImageLayoutVersion string `json:"imageLayoutVersion"`
 }
 
-func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersions []semver.Version) {
-	layouts.DeckhouseImages = map[string]struct{}{
-		mirrorCtx.DeckhouseRegistryRepo + ":alpha":        {},
-		mirrorCtx.DeckhouseRegistryRepo + ":beta":         {},
-		mirrorCtx.DeckhouseRegistryRepo + ":early-access": {},
-		mirrorCtx.DeckhouseRegistryRepo + ":stable":       {},
-		mirrorCtx.DeckhouseRegistryRepo + ":rock-solid":   {},
-	}
-
-	layouts.InstallImages = map[string]struct{}{
-		mirrorCtx.DeckhouseRegistryRepo + "/install:alpha":        {},
-		mirrorCtx.DeckhouseRegistryRepo + "/install:beta":         {},
-		mirrorCtx.DeckhouseRegistryRepo + "/install:early-access": {},
-		mirrorCtx.DeckhouseRegistryRepo + "/install:stable":       {},
-		mirrorCtx.DeckhouseRegistryRepo + "/install:rock-solid":   {},
-	}
-
-	layouts.ReleaseChannelImages = map[string]struct{}{
-		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:alpha":        {},
-		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:beta":         {},
-		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:early-access": {},
-		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:stable":       {},
-		mirrorCtx.DeckhouseRegistryRepo + "/release-channel:rock-solid":   {},
-	}
-
+func FillLayoutsImages(
+	mirrorCtx *Context,
+	layouts *ImageLayouts,
+	deckhouseVersions []semver.Version,
+) {
+	layouts.DeckhouseImages = map[string]struct{}{}
+	layouts.InstallImages = map[string]struct{}{}
+	layouts.ReleaseChannelImages = map[string]struct{}{}
 	layouts.SecurityImages = map[string]struct{}{
 		mirrorCtx.DeckhouseRegistryRepo + "/security/trivy-db:2": {},
 	}
@@ -180,9 +168,32 @@ func FillLayoutsImages(mirrorCtx *Context, layouts *ImageLayouts, deckhouseVersi
 		layouts.InstallImages[fmt.Sprintf("%s/install:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
 		layouts.ReleaseChannelImages[fmt.Sprintf("%s/release-channel:v%s", mirrorCtx.DeckhouseRegistryRepo, version.String())] = struct{}{}
 	}
+
+	// If we are to pull only the specific requested version, we should not pull any release channels at all.
+	if mirrorCtx.SpecificVersion != nil {
+		return
+	}
+
+	layouts.DeckhouseImages[mirrorCtx.DeckhouseRegistryRepo+":alpha"] = struct{}{}
+	layouts.DeckhouseImages[mirrorCtx.DeckhouseRegistryRepo+":beta"] = struct{}{}
+	layouts.DeckhouseImages[mirrorCtx.DeckhouseRegistryRepo+":early-access"] = struct{}{}
+	layouts.DeckhouseImages[mirrorCtx.DeckhouseRegistryRepo+":stable"] = struct{}{}
+	layouts.DeckhouseImages[mirrorCtx.DeckhouseRegistryRepo+":rock-solid"] = struct{}{}
+
+	layouts.InstallImages[mirrorCtx.DeckhouseRegistryRepo+"/install:alpha"] = struct{}{}
+	layouts.InstallImages[mirrorCtx.DeckhouseRegistryRepo+"/install:beta"] = struct{}{}
+	layouts.InstallImages[mirrorCtx.DeckhouseRegistryRepo+"/install:early-access"] = struct{}{}
+	layouts.InstallImages[mirrorCtx.DeckhouseRegistryRepo+"/install:stable"] = struct{}{}
+	layouts.InstallImages[mirrorCtx.DeckhouseRegistryRepo+"/install:rock-solid"] = struct{}{}
+
+	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:alpha"] = struct{}{}
+	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:beta"] = struct{}{}
+	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:early-access"] = struct{}{}
+	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:stable"] = struct{}{}
+	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:rock-solid"] = struct{}{}
 }
 
-var digestRegex = regexp.MustCompile(`sha256:([a-f0-9]{64})`)
+var digestRegex = regexp.MustCompile(`@sha256:([a-f0-9]{64})`)
 
 func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 	modulesNames := maputil.Keys(layouts.Modules)

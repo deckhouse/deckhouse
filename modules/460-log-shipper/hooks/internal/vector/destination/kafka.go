@@ -30,8 +30,8 @@ type Kafka struct {
 
 	Encoding Encoding `json:"encoding,omitempty"`
 
-	Topic string `json:"topic"`
-
+	Topic       string `json:"topic"`
+	KeyField    string `json:"key_field,omitempty"`
 	Compression string `json:"compression,omitempty"`
 
 	TLS CommonTLS `json:"tls"`
@@ -118,6 +118,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		Topic:            spec.Topic,
 		Encoding:         encoding,
 		SASL:             sasl,
+		KeyField:         spec.KeyField,
 		Compression:      "gzip",
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
 	}

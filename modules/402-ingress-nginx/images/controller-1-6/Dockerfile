@@ -1,6 +1,7 @@
 ARG CONTROLLER_BRANCH=controller-v1.6.4
 ARG BASE_ALPINE
 ARG BASE_ALT
+ARG BASE_ALT_DEV
 # controller artifact
 ARG BASE_GOLANG_19_BUSTER
 FROM $BASE_GOLANG_19_BUSTER as artifact
@@ -27,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
-FROM $BASE_ALT as luarocks_artifact
+FROM $BASE_ALT_DEV as luarocks_artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apt-get update && apt-get install -y gcc gcc-c++ git lua5.1-luarocks lua5.1-devel
@@ -48,55 +49,11 @@ RUN apk update && apk add git gcc g++ bash make
 RUN git clone --branch v1.2.5 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && make
 
 #nginx for controller
-FROM $BASE_ALT as nginx_artifact
+FROM $BASE_ALT_DEV as nginx_artifact
 ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-# install required packages to build
-RUN apt-get update && apt-get install -y \
-  gcc \
-  clang \
-  glibc-devel \
-  make \
-  automake \
-  openssl-devel \
-  pcre-devel \
-  zlib-devel \
-  kernel-headers-common \
-  libxslt-devel \
-  libgd3-devel \
-  perl-devel \
-  libedit-devel \
-  mercurial \
-  findutils \
-  curl \
-  ca-certificates \
-  patch \
-  libaio-devel \
-  openssl \
-  cmake \
-  util-linux \
-  wget \
-  curl-devel \
-  libprotobuf \
-  liblmdb-devel \
-  git gcc-c++ flex bison doxygen libyajl-devel libtool autoconf libxml2 libxml2-devel \
-  python3 \
-  bc \
-  libmaxminddb-devel \
-  unzip \
-  dos2unix \
-  libyaml-cpp0 \
-  coreutils \
-  libstdc++-devel \
-  pkg-config \
-  libstdc++-devel-static \
-  libGeoIP-devel \
-  lua-devel \
-  libbrotli-devel \
-  patch
-
 COPY --from=artifact /src/images/nginx/rootfs/ /
 COPY patches/nginx-build.patch /
 

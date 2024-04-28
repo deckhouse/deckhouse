@@ -20,9 +20,11 @@ limitations under the License.
 package openapi_validation
 
 import (
-	"github.com/deckhouse/deckhouse/testing/openapi_validation/validators"
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/testing/openapi_validation/validators"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
@@ -118,7 +120,6 @@ func TestCRDIsSubset(t *testing.T) {
 	err := nonparentValidator.Run("crd.yaml", "", childMap)
 
 	require.Error(t, err)
-
 }
 
 func TestNginxCDRisSubset(t *testing.T) {
@@ -129,5 +130,14 @@ func TestNginxCDRisSubset(t *testing.T) {
 	parentValidator := validators.NewExtendedCRDValidator().WithParentCRD(getFileYAMLContent(parentFile))
 
 	require.NoError(t, parentValidator.Run("ingress-nginx-ce.yaml", "", childMap))
+}
 
+func TestModulesVersionsValidation(t *testing.T) {
+	mv, err := modulesVersions(deckhousePath)
+	require.NoError(t, err)
+	for m, v := range mv {
+		message := fmt.Sprintf("conversions version(%d) and spec version(%d) for module %s are not equal",
+			v.conversionsVersion, v.specVersion, m)
+		assert.Equal(t, true, v.conversionsVersion == v.specVersion, message)
+	}
 }

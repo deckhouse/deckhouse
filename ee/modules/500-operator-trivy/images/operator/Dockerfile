@@ -21,12 +21,14 @@ COPY patches/002-skip-some-checks.patch /src
 COPY patches/003-aws-ecr.patch /src
 COPY patches/004-scan-job-registry-ca.patch /src
 COPY patches/005-cis-benchmark-on-startup.patch /src
+COPY patches/006-new-metrics.patch /src
 
 RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
     patch -p1 < 003-aws-ecr.patch && \
     patch -p1 < 004-scan-job-registry-ca.patch && \
-    patch -p1 < 005-cis-benchmark-on-startup.patch
+    patch -p1 < 005-cis-benchmark-on-startup.patch && \
+    patch -p1 < 006-new-metrics.patch
 
 RUN go get golang.org/x/net@v0.17.0 && go mod tidy && go mod vendor
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go

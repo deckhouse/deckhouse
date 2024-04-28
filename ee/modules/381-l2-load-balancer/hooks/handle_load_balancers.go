@@ -66,13 +66,14 @@ func applyLoadBalancerFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return L2LoadBalancerInfo{
-		Name:         lb.Name,
-		Namespace:    lb.Namespace,
-		AddressPool:  lb.Spec.AddressPool,
-		NodeSelector: lb.Spec.NodeSelector,
-		Selector:     lb.Spec.Service.Selector,
-		Ports:        lb.Spec.Service.Ports,
-		SourceRanges: lb.Spec.Service.SourceRanges,
+		Name:                  lb.Name,
+		Namespace:             lb.Namespace,
+		AddressPool:           lb.Spec.AddressPool,
+		NodeSelector:          lb.Spec.NodeSelector,
+		Selector:              lb.Spec.Service.Selector,
+		ExternalTrafficPolicy: lb.Spec.Service.ExternalTrafficPolicy,
+		Ports:                 lb.Spec.Service.Ports,
+		SourceRanges:          lb.Spec.Service.SourceRanges,
 	}, nil
 }
 

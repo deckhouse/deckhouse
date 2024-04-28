@@ -85,6 +85,16 @@ spec:
           - --secure-port=10471
           - --v=4
           env:
+      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
+      {{- if not .Values.global.clusterIsBootstrapped }}
+          - name: KUBERNETES_SERVICE_HOST
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: KUBERNETES_SERVICE_PORT
+            value: "6443"
+      {{- end }}
           - name: HOST_IP
             valueFrom:
               fieldRef:
@@ -95,6 +105,7 @@ spec:
           - name: ENABLE_ALPHA_NSXT_LB
             value: "1"
         {{- end }}
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           ports:
           - name: https
             containerPort: 10471

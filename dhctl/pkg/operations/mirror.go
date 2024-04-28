@@ -49,12 +49,17 @@ func MirrorDeckhouseToLocalFS(
 	mirrorCtx *mirror.Context,
 	versions []semver.Version,
 ) error {
-	log.InfoF("Fetching Deckhouse modules list...\t")
-	modules, err := mirror.GetDeckhouseExternalModules(mirrorCtx)
-	if err != nil {
-		return fmt.Errorf("get Deckhouse modules: %w", err)
+	var err error
+	modules := make([]mirror.Module, 0)
+
+	if !mirrorCtx.SkipModulesPull {
+		log.InfoF("Fetching Deckhouse external modules list...\t")
+		modules, err = mirror.GetDeckhouseExternalModules(mirrorCtx)
+		if err != nil {
+			return fmt.Errorf("get Deckhouse modules: %w", err)
+		}
+		log.InfoLn("✅")
 	}
-	log.InfoLn("✅")
 
 	log.InfoF("Creating OCI Image Layouts...\t")
 	layouts, err := mirror.CreateOCIImageLayoutsForDeckhouse(mirrorCtx.UnpackedImagesPath, modules)
@@ -64,18 +69,15 @@ func MirrorDeckhouseToLocalFS(
 	log.InfoLn("✅")
 
 	mirror.FillLayoutsImages(mirrorCtx, layouts, versions)
-
-	log.InfoF("Searching for Deckhouse modules images...\t")
-	if err = mirror.FindDeckhouseModulesImages(mirrorCtx, layouts); err != nil {
-		return fmt.Errorf("find Deckhouse modules images: %w", err)
+	if err = layouts.TagsResolver.ResolveTagsDigestsForImageLayouts(mirrorCtx, layouts); err != nil {
+		return fmt.Errorf("Resolve images tags to digests: %w", err)
 	}
-	log.InfoLn("✅")
 
 	if err = mirror.PullInstallers(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull installers: %w", err)
 	}
 
-	log.InfoF("Searching for Deckhouse modules digests...\t")
+	log.InfoF("Searching for Deckhouse built-in modules digests...\t")
 	for imageTag := range layouts.InstallImages {
 		digests, err := mirror.ExtractImageDigestsFromDeckhouseInstaller(mirrorCtx, imageTag, layouts.Install)
 		if err != nil {
@@ -89,19 +91,29 @@ func MirrorDeckhouseToLocalFS(
 		return fmt.Errorf("pull release channels: %w", err)
 	}
 
-	log.InfoF("Generating DeckhouseRelease manifests...\t")
-	deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.TarBundlePath), "deckhousereleases.yaml")
-	if err := mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
-		return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
+	// We should not generate deckhousereleases.yaml manifest for single-release bundles
+	if mirrorCtx.SpecificVersion == nil {
+		log.InfoF("Generating DeckhouseRelease manifests...\t")
+		deckhouseReleasesManifestFile := filepath.Join(filepath.Dir(mirrorCtx.BundlePath), "deckhousereleases.yaml")
+		if err = mirror.GenerateDeckhouseReleaseManifests(versions, deckhouseReleasesManifestFile, layouts.ReleaseChannel); err != nil {
+			return fmt.Errorf("Generate DeckhouseRelease manifests: %w", err)
+		}
+		log.InfoLn("✅")
 	}
-	log.InfoLn("✅")
 
 	if err = mirror.PullDeckhouseImages(mirrorCtx, layouts); err != nil {
 		return fmt.Errorf("pull Deckhouse: %w", err)
 	}
 
-	if err = mirror.PullModules(mirrorCtx, layouts); err != nil {
-		return fmt.Errorf("pull Deckhouse modules: %w", err)
+	if !mirrorCtx.SkipModulesPull {
+		log.InfoF("Searching for Deckhouse external modules images...\t")
+		if err = mirror.FindDeckhouseModulesImages(mirrorCtx, layouts); err != nil {
+			return fmt.Errorf("find Deckhouse modules images: %w", err)
+		}
+		log.InfoLn("✅")
+		if err = mirror.PullModules(mirrorCtx, layouts); err != nil {
+			return fmt.Errorf("pull Deckhouse modules: %w", err)
+		}
 	}
 
 	if err = validateLayoutsIfRequired(layouts, mirrorCtx.ValidationMode); err != nil {
@@ -110,7 +122,7 @@ func MirrorDeckhouseToLocalFS(
 
 	// Trivy database image is not strictly compliant to OCI specs, it lacks platform data and uses custom layer media type.
 	// We avoid its validation by adding it after all validations on the Deckhouse distribution are performed.
-	log.InfoLn("Pulling Trivy vulnerability database...")
+	log.InfoLn("Pulling Trivy vulnerability database...\n")
 	if err = mirror.PullTrivyVulnerabilityDatabaseImageToLayout(
 		mirrorCtx.DeckhouseRegistryRepo,
 		mirrorCtx.RegistryAuth,

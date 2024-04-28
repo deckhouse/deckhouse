@@ -38,7 +38,7 @@ func TestCheckRequirements(t *testing.T) {
 	}
 
 	// overwrite the regexp
-	mreg = regexp.MustCompile(`/go_lib/(\S+)/requirements`)
+	mreg = regexp.MustCompile(`/go_lib/([0-9]+-)?(\S+)/requirements`)
 
 	RegisterCheck("test-me", f)
 

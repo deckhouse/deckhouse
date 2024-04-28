@@ -168,6 +168,10 @@ function main() {
   export REGISTRY_PATH="{{ .registry.path }}"
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
 {{- end }}
+{{- if .packagesProxy }}
+  export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+{{- end }}
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
   export HTTP_PROXY={{ .proxy.httpProxy | quote }}

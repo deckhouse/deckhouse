@@ -36,9 +36,15 @@ spec:
                   matchLabels:
                     source: example
                     module: module-1
-              releaseChannel: alpha
+              releaseChannel: Alpha
               update:
-                mode: Manual
+                mode: Auto
+                windows:
+                  - days:
+                      - "Mon"
+                      - "Wed"
+                    from: "13:30"
+                    to: "14:00"
           required:
             - spec
           properties:
@@ -72,10 +78,10 @@ spec:
                         Modules minor version update mode (release change).
                         - `Auto` — all updates are applied automatically.
 
-                        Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
-                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
+                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
-                        To confirm the update, edit relevant modulereleases.deckhouse.io object, corresponding to the version, by setting the `approved' field to 'true'.
+                        - `Ignore` — updates are ignored.
                       enum:
                         - 'Auto'
                         - 'Manual'

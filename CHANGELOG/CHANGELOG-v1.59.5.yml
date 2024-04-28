@@ -1,0 +1,39 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: Temporary disable orphan disks discovery for Yandex cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8203
+control-plane-manager:
+  fixes:
+    - summary: Fix infinite loop of checksum verification in `control-plane-manager`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7983
+deckhouse-controller:
+  fixes:
+    - summary: Use FQDN K8s pod name for the lease leader.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8187
+dhctl:
+  fixes:
+    - summary: Remove dependency on addon-operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8210
+    - summary: >-
+        Add pod security context to `deckhouse` pod and disable `deckhouse` init container if
+        `external-module-manager` is off.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8173
+    - summary: Fix `dhctl mirror` producing bundles with unexpected components versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8161
+flant-integration:
+  features:
+    - summary: Added metrics for the number of cpu and memory in node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7829
+log-shipper:
+  features:
+    - summary: Add the ability to set `key_field` for Kafka.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8157
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix hook with helm releases scan for deprecated API versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8159
+prometheus:
+  fixes:
+    - summary: Don't query longterm Prometheus in the aggregating-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8216
+

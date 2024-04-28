@@ -26,6 +26,7 @@ type OperationPhase string
 
 const (
 	BaseInfraPhase                         OperationPhase = "BaseInfra"
+	RegistryPackagesProxyPhase             OperationPhase = "RegistryPackagesProxyBundle"
 	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"
 	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
 	CreateResourcesPhase                   OperationPhase = "CreateResources"

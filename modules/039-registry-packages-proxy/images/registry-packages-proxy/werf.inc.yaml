@@ -1,0 +1,48 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /registry-packages-proxy
+    before: setup
+docker:
+  ENTRYPOINT: ["/registry-packages-proxy"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+shell:
+  install:
+    - cd /src
+    - export GOPROXY={{ .GOPROXY }}
+    - go mod download
+  setup:
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
+    - chown 64535:64535 /registry-packages-proxy
+    - chmod 0755 /registry-packages-proxy
+git:
+- add: /{{ .ModulePath }}modules/039-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+    - '**/*.go'
+    - '**/*.mod'
+    - '**/*.sum'
+  stageDependencies:
+    install:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+- add: /{{ .ModulePath }}go_lib/registry-packages-proxy
+  to: /go_lib/registry-packages-proxy
+  includePaths:
+    - '**/*.go'
+    - '**/*.mod'
+    - '**/*.sum'
+  stageDependencies:
+    install:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg

@@ -90,7 +90,7 @@ func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
-			if minDebianVersion == nil || ctrlDebianVersion.LessThan(minUbuntuVersion) {
+			if minDebianVersion == nil || ctrlDebianVersion.LessThan(minDebianVersion) {
 				minDebianVersion = ctrlDebianVersion
 			}
 		default:

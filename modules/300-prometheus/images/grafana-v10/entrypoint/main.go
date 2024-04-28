@@ -164,7 +164,8 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 		if strings.Contains(plugin, ";") {
 			part := strings.Split(plugin, ";")
 			cmd := exec.Command(
-				"grafana-cli",
+				"grafana",
+				"cli",
 				"--pluginUrl",
 				part[0],
 				"--pluginsDir",
@@ -180,7 +181,8 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 			continue
 		}
 		cmd := exec.Command(
-			"grafana-cli",
+			"grafana",
+			"cli",
 			"--pluginsDir",
 			gfPathsPlugins,
 			"plugins",

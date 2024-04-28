@@ -56,6 +56,19 @@ index 94dc12412..93b7d2efc 100644
      {{ if $cfg.UseGeoIP2 }}
      # https://github.com/leev/ngx_http_geoip2_module#example-usage
  
+@@ -387,6 +387,12 @@ http {
+         {{ $reqUri }} 0;{{ end }}
+         default 1;
+     }
++    map $server_name $total_upstream_response_time {
++        default 0;
++    }
++    map $server_name $upstream_retries {
++        default 0;
++    }
+ 
+     {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
+     access_log off;
 @@ -928,9 +939,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
@@ -67,13 +80,11 @@ index 94dc12412..93b7d2efc 100644
              }
          }
          {{ end }}
-@@ -1223,6 +1232,10 @@ stream {
+@@ -1223,6 +1232,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
 +            set $content_kind "";
-+            set $total_upstream_response_time "0";
-+            set $upstream_retries "0";
 +
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  

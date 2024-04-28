@@ -46,7 +46,10 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, err
 	}
 
-	externalIP := service.Status.LoadBalancer.Ingress[0].IP
+	externalIP := "Pending"
+	if len(service.Status.LoadBalancer.Ingress) > 0 {
+		externalIP = service.Status.LoadBalancer.Ingress[0].IP
+	}
 	loadBalancerName := service.Labels["instance"]
 
 	return ServiceInfo{

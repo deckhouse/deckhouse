@@ -1,0 +1,174 @@
+{{- define "registry_packages_proxy_resources" }}
+cpu: 10m
+memory: 30Mi
+{{- end }}
+
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: registry-packages-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "registry-packages-proxy"
+      minAllowed:
+        {{- include "registry_packages_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 30Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: "registry-packages-proxy"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: registry-packages-proxy
+  template:
+    metadata:
+      labels:
+        app: registry-packages-proxy
+      annotations:
+        kubectl.kubernetes.io/default-exec-container: registry-packages-proxy
+        kubectl.kubernetes.io/default-logs-container: registry-packages-proxy
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized")  | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "registry-packages-proxy")) | nindent 6 }}
+      serviceAccountName: registry-packages-proxy
+      # registry-packages-proxy runs in the hostNetwork on the bootstrap phase due to this component should work
+      # when is cni plugin is absent
+      containers:
+      - name: registry-packages-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - "--listen-address=127.0.0.1:5080"
+        - "--cache-directory=/cache"
+        - "--cache-retention-size=1Gi"
+        env:
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 5443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 5443
+            scheme: HTTPS
+        resources:
+          requests:
+            ephemeral-storage: 1Gi
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "registry_packages_proxy_resources" . | nindent 12 }}
+          {{- end }}
+        volumeMounts:
+          - name: cache
+            mountPath: /cache
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5443"
+          - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        ports:
+          - containerPort: 5443
+            hostPort: 5443
+            name: https
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              upstreams:
+              - upstream: http://127.0.0.1:5080/healthz
+                path: /healthz
+              - upstream: http://127.0.0.1:5080/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/package
+                path: /package
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: http
+                    name: registry-packages-proxy
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 5443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 5443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
+        volumeMounts:
+          - name: kube-rbac-proxy-ca
+            mountPath: /etc/kube-rbac-proxy
+      volumes:
+        - name: kube-rbac-proxy-ca
+          configMap:
+            defaultMode: 420
+            name: kube-rbac-proxy-ca.crt
+        - name: cache
+          emptyDir:
+            sizeLimit: 1G

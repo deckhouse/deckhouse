@@ -616,11 +616,16 @@ spec:
 
 ## Control the data-plane behavior
 
-### [experimental feature] Prevent istio-proxy from terminating before the main application's connections are closed
+### Prevent istio-proxy from terminating before the main application's connections are closed
 
 By default, during termination, all containers in a Pod, including istio-proxy one, receive SIGTERM signal simultaneously. But some applications need time to properly handle the termination and sometimes they need to do some network requests. It isn't possible when the istio-proxy stops before the application do. The solution is to add a preStop hook which evaluates the application's activity via discovering application's network sockets and let the sidecar stop when they aren't in the network namespace.
+
 The annotation below adds the preStop hook to istio-proxy container in application's Pod:
-`inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
+
+```yaml
+annotations:
+  inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
+```
 
 ## Upgrading Istio
 

@@ -41,6 +41,7 @@ import (
 	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
@@ -65,6 +66,8 @@ type ModulePullOverrideController struct {
 	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
+
+	documentationUpdater *docs.Updater
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -73,6 +76,7 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 	moduleSourceInformer d8informers.ModuleSourceInformer,
 	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
 	modulesValidator moduleValidator,
+	documentationUpdater *docs.Updater,
 ) *ModulePullOverrideController {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -96,6 +100,8 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+
+		documentationUpdater: documentationUpdater,
 	}
 
 	_, err := modulePullOverridesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -234,6 +240,20 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	mo := moRO.DeepCopy()
 
+	// check if RegistrySpecChangedAnnotation annotation is set and processes it
+	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+		// if module is enabled - push runModule task in the main queue
+		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
+		err := c.modulesValidator.RunModuleWithNewStaticValues(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, "dev"))
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		// delete annotation and reque
+		delete(mo.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		_, err = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+		return ctrl.Result{Requeue: true}, err
+	}
+
 	// add labels if empty
 	// source and release controllers are looking for this labels
 	if _, ok := mo.Labels["module"]; !ok {
@@ -282,17 +302,18 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
-	// what if it is nil?
-	if moduleDef != nil {
-		err = validateModule(c.modulesValidator, *moduleDef)
-		if err != nil {
-			mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-			if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
+	if moduleDef == nil {
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("Got an empty module definition for %s module pull override", mo.Name)
+	}
 
-			return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+	err = validateModule(c.modulesValidator, *moduleDef)
+	if err != nil {
+		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
+		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+			return ctrl.Result{Requeue: true}, e
 		}
+
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))
@@ -305,10 +326,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 		return ctrl.Result{Requeue: true}, err
 	}
+
 	// disable target module hooks so as not to invoke them before restart
 	if c.modulesValidator.GetModule(mo.Name) != nil {
 		c.modulesValidator.DisableModuleHooks(mo.Name)
 	}
+
 	defer func() {
 		c.logger.Infof("Restarting Deckhouse because %q ModulePullOverride image was updated", mo.Name)
 		err := syscall.Kill(1, syscall.SIGUSR2)
@@ -319,6 +342,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 
 	mo.Status.Message = ""
 	mo.Status.ImageDigest = newChecksum
+	mo.Status.Weight = moduleDef.Weight
 
 	if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
 		return ctrl.Result{Requeue: true}, e
@@ -327,6 +351,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	if _, ok := mo.Labels["renew"]; ok {
 		delete(mo.Labels, "renew")
 		_, _ = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+	}
+
+	// update module's documentation
+	err = c.documentationUpdater.SendDocumentation(ctx, mo)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
