@@ -4,7 +4,11 @@ import (
 	"github.com/rivo/tview"
 )
 
-func MainFormPanel(onStart func()) (tview.Primitive, []tview.Primitive) {
+func box() *tview.Box {
+	return tview.NewBox()
+}
+
+func welcomePage(onStart func()) (tview.Primitive, []tview.Primitive) {
 	lbl1 := tview.NewTextView().SetText("Welcome to Deckhouse kubernetes platform bootstrap wizard!").SetTextAlign(tview.AlignCenter)
 	btn1 := tview.NewButton("Shall we begin?").SetSelectedFunc(onStart)
 

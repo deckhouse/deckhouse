@@ -1,8 +1,11 @@
 package ui
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"github.com/go-openapi/spec"
 	"github.com/rivo/tview"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 )
 
 const (
@@ -10,68 +13,56 @@ const (
 	FormSelectClusterType = "FormSelectClusterType"
 )
 
+type Schemas interface {
+	ClusterConfig() *spec.Schema
+}
+
 type App struct {
-	app     *tview.Application
-	builder *configBuilder
-	pages   *tview.Pages
+	app         *tview.Application
+	state       *state.State
+	pages       *tview.Pages
+	schemaStore *state.Schema
 }
 
 func NewApp() *App {
-	app := tview.NewApplication()
-	pages := tview.NewPages()
-	builder := newConfigBuilder()
+	schemaStore := state.NewSchema(config.NewSchemaStore())
 
-	selectCls, selectFocusables := SelectClusterForm(builder, func() {
-		app.Stop()
+	res := &App{
+		app:         tview.NewApplication(),
+		pages:       tview.NewPages(),
+		state:       state.NewState(schemaStore),
+		schemaStore: schemaStore,
+	}
+
+	buildPages(res)
+
+	return res
+}
+
+func buildPages(a *App) {
+	selectCls, selectFocusables := selectClusterForm(a.state, a.schemaStore, func() {
+		a.app.Stop()
 	})
 
-	mainForm, mainFocusables := MainFormPanel(func() {
-		addSwitchFocusEvent(app, pages, selectFocusables)
-		pages.SwitchToPage(FormSelectClusterType)
+	mainForm, mainFocusables := welcomePage(func() {
+		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
+		a.pages.SwitchToPage(FormSelectClusterType)
 	})
 
-	pages.AddPage(FormMain, mainForm, true, false).
+	a.pages.AddPage(FormMain, mainForm, true, false).
 		AddPage(FormSelectClusterType, selectCls, true, false)
 
-	addSwitchFocusEvent(app, pages, mainFocusables)
-	pages.SwitchToPage(FormMain)
-
-	return &App{
-		app:     app,
-		pages:   pages,
-		builder: builder,
-	}
+	addSwitchFocusEvent(a.app, a.pages, mainFocusables)
+	a.pages.SwitchToPage(FormMain)
 }
 
 func (a *App) Start() error {
 	if err := a.app.SetRoot(a.pages, true).EnableMouse(true).EnablePaste(true).Run(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func (a *App) SetBuilder(builder *configBuilder) {}
-
-func (a *App) Configs() []string {
-	return a.builder.build()
-}
-
-func box() *tview.Box {
-	return tview.NewBox()
-}
-
-func addSwitchFocusEvent(app *tview.Application, parent *tview.Pages, forFocus []tview.Primitive) {
-	curIndex := 0
-
-	parent.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyTab:
-			curIndex = (curIndex + 1) % len(forFocus)
-			app.SetFocus(forFocus[curIndex])
-		case tcell.KeyEscape:
-			app.Stop()
-		}
-		return event
-	})
+func (a *App) State() *state.State {
+	return a.state
 }

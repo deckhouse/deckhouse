@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -194,7 +193,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 
-		log.InfoF(strings.Join(uiApp.Configs(), ""))
+		s := uiApp.State()
+		log.InfoF("%s %s %s\n", s.ClusterType, s.Provider, s.Prefix)
 	}
 
 	masterAddressesForSSH := make(map[string]string)
