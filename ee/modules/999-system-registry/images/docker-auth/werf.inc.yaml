@@ -41,11 +41,8 @@ import:
     to: /auth_server
     before: setup
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
+    add: /scripts
     to: /
-    includePaths:
-      - install
-      - uninstall
     before: setup
 docker:
   ENTRYPOINT: ["/auth_server"]
