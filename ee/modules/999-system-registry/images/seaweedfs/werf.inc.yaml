@@ -9,7 +9,7 @@ mount:
     to: /go/pkg
 git:
   - add: /{{ $.ModulePath }}modules/999-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
+    to: /scripts
     stageDependencies:
       install:
         - '**/*'
@@ -38,11 +38,8 @@ import:
     to: /weed
     before: setup
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
+    add: /scripts
     to: /
-    includePaths:
-      - install
-      - uninstall
     before: setup
 docker:
   ENTRYPOINT: ["/weed"]
