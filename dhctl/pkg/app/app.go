@@ -81,7 +81,6 @@ func GlobalFlags(cmd *kingpin.Application) {
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", "Config file path").
-		Required().
 		Envar(configEnvName("CONFIG")).
 		StringVar(&ConfigPath)
 }

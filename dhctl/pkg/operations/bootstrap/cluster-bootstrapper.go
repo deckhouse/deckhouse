@@ -17,6 +17,8 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -184,6 +186,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	} else {
 		defer restore()
+	}
+
+	if app.ConfigPath == "" {
+		uiApp := ui.NewApp()
+		if err := uiApp.Start(); err != nil {
+			return err
+		}
+
+		log.InfoF(strings.Join(uiApp.Configs(), ""))
 	}
 
 	masterAddressesForSSH := make(map[string]string)
