@@ -34,21 +34,13 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 fromCacheVersion: 2024042201
 import:
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /tmp-tmp
-    to: /tmp
-    before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "{{ $GIT_CLONE_DEST_PATH }}/bin/registry"
-    to: /registry
-    before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /install
-    to: /install
-    before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /uninstall
-    to: /uninstall
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /
+    to: /
+    includePaths:
+      - registry
+      - install
+      - uninstall
     before: setup
 
 docker:
