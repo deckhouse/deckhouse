@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/{etcd,etcdctl}
+rm -f opt/deckhouse/bin/{etcd,etcdctl}
