@@ -284,6 +284,7 @@ apiVersions:
             x-unsafe: true
           serviceAccountJSON:
             type: string
+            x-ui-multiline: "5"
             description: |
               A key to the Service Account with Project Admin privileges (`service account key`) in the JSON format.
 

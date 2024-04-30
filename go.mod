@@ -39,7 +39,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/vmware/govmomi v0.24.1
+	github.com/vmware/govmomi v0.37.2
 	go.etcd.io/etcd/api/v3 v3.5.9
 	go.etcd.io/etcd/client/v3 v3.5.9
 	google.golang.org/grpc v1.63.0
