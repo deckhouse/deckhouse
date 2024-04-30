@@ -28,15 +28,19 @@ shell:
     - go build -ldflags="-s -w" -o weed
 
 ---
-image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-fromImage: common/distroless
-fromCacheVersion: 2024042201
 import:
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /tmp-tmp
+    to: /tmp
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "{{ $GIT_CLONE_DEST_PATH }}/weed/weed"
+    to: /weed
+    before: setup
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /
     to: /
     includePaths:
-      - weed
       - install
       - uninstall
     before: setup
