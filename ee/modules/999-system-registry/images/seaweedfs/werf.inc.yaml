@@ -28,6 +28,8 @@ shell:
     - go build -ldflags="-s -w" -o weed
 
 ---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
 import:
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
