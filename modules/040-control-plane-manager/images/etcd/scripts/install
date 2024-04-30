@@ -15,4 +15,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f /usr/bin/{etcd,etcdctl} /opt/deckhouse/bin
+cp -f usr/bin/{etcd,etcdctl} /opt/deckhouse/bin
