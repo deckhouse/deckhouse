@@ -8,6 +8,7 @@ type State struct {
 	ClusterType string
 	Provider    string
 	Prefix      string
+	K8sVersion  string
 	schema      *Schema
 }
 
@@ -38,4 +39,8 @@ func (b *State) SetProvider(p string) {
 
 func (b *State) SetClusterPrefix(p string) {
 	b.Prefix = p
+}
+
+func (b *State) SetK8sVersion(v string) {
+	b.K8sVersion = v
 }

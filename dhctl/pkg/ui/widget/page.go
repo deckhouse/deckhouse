@@ -1,12 +1,13 @@
 package widget
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/rivo/tview"
 )
 
-func OptionsPage(child tview.Primitive, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+func OptionsPage(title string, child tview.Primitive, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	v := reflect.ValueOf(child)
 	m := v.MethodByName("SetBorderPadding")
 	if m.IsValid() {
@@ -31,13 +32,13 @@ func OptionsPage(child tview.Primitive, onNext func(), onBack func()) (tview.Pri
 		AddItem(backBtn, 1, 0, 1, 1, 0, 0, false).
 		AddItem(nextBtn, 1, 1, 1, 1, 0, 0, false)
 
-	title := tview.NewTextView().
+	titleTxt := tview.NewTextView().
 		SetTextAlign(tview.AlignCenter).
-		SetText("DKP bootstrap wizard")
+		SetText(fmt.Sprintf("Deckhouse bootstrap wizard. %s", title))
 
 	mainGrid := tview.NewGrid().
 		SetColumns(40, 0, 40).SetRows(1, 0, 1).
-		AddItem(title, 0, 0, 1, 3, 0, 0, false).
+		AddItem(titleTxt, 0, 0, 1, 3, 0, 0, false).
 		AddItem(child, 1, 1, 1, 1, 0, 0, false).
 		AddItem(nextBtnContainer, 2, 2, 1, 1, 0, 0, false)
 

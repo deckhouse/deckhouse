@@ -31,6 +31,16 @@ func (s *Schema) CloudProviders() []string {
 	return res
 }
 
+func (s *Schema) K8sVersions() []string {
+	cl := s.getClusterSchema()
+	enum := cl.SchemaProps.Properties["kubernetesVersion"].SchemaProps.Enum
+	res := make([]string, len(enum))
+	for i := range enum {
+		res[i] = enum[i].(string)
+	}
+	return res
+}
+
 func (s *Schema) getClusterSchema() *spec.Schema {
 	return s.store.Get(&config.SchemaIndex{
 		Kind:    "ClusterConfiguration",
