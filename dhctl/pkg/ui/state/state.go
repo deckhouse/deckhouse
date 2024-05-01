@@ -5,11 +5,12 @@ import (
 )
 
 type State struct {
-	ClusterType string
-	Provider    string
-	Prefix      string
-	K8sVersion  string
-	schema      *Schema
+	ClusterType  string
+	Provider     string
+	Prefix       string
+	K8sVersion   string
+	ProviderData map[string]interface{}
+	schema       *Schema
 }
 
 func NewState(s *Schema) *State {
@@ -43,4 +44,12 @@ func (b *State) SetClusterPrefix(p string) {
 
 func (b *State) SetK8sVersion(v string) {
 	b.K8sVersion = v
+}
+
+func (b *State) SetProviderData(d map[string]interface{}) {
+	b.ProviderData = d
+}
+
+func (b *State) GetProvider() string {
+	return b.Provider
 }

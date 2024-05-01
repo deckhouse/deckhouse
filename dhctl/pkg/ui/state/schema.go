@@ -41,6 +41,17 @@ func (s *Schema) K8sVersions() []string {
 	return res
 }
 
+func (s *Schema) ProviderSchema(p string) *spec.Schema {
+	ss := s.store.Get(&config.SchemaIndex{
+		Kind:    p + "ClusterConfiguration",
+		Version: "deckhouse.io/v1",
+	})
+
+	pp := ss.SchemaProps.Properties["provider"]
+
+	return &pp
+}
+
 func (s *Schema) getClusterSchema() *spec.Schema {
 	return s.store.Get(&config.SchemaIndex{
 		Kind:    "ClusterConfiguration",

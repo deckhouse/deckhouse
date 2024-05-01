@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	FormMain              = "FormMain"
-	FormSelectClusterType = "FormSelectClusterType"
+	pageMain              = "pageMain"
+	pageSelectClusterType = "pageSelectClusterType"
+	pageProvider          = "pageProvider"
 )
 
 type Schemas interface {
@@ -40,20 +41,37 @@ func NewApp() *App {
 }
 
 func buildPages(a *App) {
-	selectCls, selectFocusables := selectClusterForm(a.state, a.schemaStore, func() {
+	var selectFocusables []tview.Primitive
+
+	providerCls := newProviderPage(a.state, a.schemaStore, func() {
+		a.app.Stop()
+	}, func() {
+		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
+		a.pages.SwitchToPage(pageSelectClusterType)
+	})
+
+	selectCls, selectFocusables := clusterPage(a.state, a.schemaStore, func() {
+		if a.state.ClusterType == state.CloudCluster {
+			p, focusable := providerCls.Show()
+			a.pages.AddPage(pageProvider, p, true, false)
+			addSwitchFocusEvent(a.app, a.pages, focusable)
+			a.pages.SwitchToPage(pageProvider)
+			return
+		}
+
 		a.app.Stop()
 	})
 
 	mainForm, mainFocusables := welcomePage(func() {
 		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
-		a.pages.SwitchToPage(FormSelectClusterType)
+		a.pages.SwitchToPage(pageSelectClusterType)
 	})
 
-	a.pages.AddPage(FormMain, mainForm, true, false).
-		AddPage(FormSelectClusterType, selectCls, true, false)
+	a.pages.AddPage(pageMain, mainForm, true, false).
+		AddPage(pageSelectClusterType, selectCls, true, false)
 
 	addSwitchFocusEvent(a.app, a.pages, mainFocusables)
-	a.pages.SwitchToPage(FormMain)
+	a.pages.SwitchToPage(pageMain)
 }
 
 func (a *App) Start() error {

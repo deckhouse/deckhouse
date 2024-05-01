@@ -19,7 +19,7 @@ type clusterTypesSchema interface {
 	K8sVersions() []string
 }
 
-func selectClusterForm(st clusterTypeState, schema clusterTypesSchema, onNext func()) (tview.Primitive, []tview.Primitive) {
+func clusterPage(st clusterTypeState, schema clusterTypesSchema, onNext func()) (tview.Primitive, []tview.Primitive) {
 	const constInputsWidth = 30
 
 	lblType := tview.NewTextView().

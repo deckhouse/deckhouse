@@ -29,8 +29,10 @@ func OptionsPage(title string, child tview.Primitive, onNext func(), onBack func
 	}
 
 	nextBtnContainer := tview.NewGrid().
+		SetColumns(0, 2, 0).
 		AddItem(backBtn, 1, 0, 1, 1, 0, 0, false).
-		AddItem(nextBtn, 1, 1, 1, 1, 0, 0, false)
+		AddItem(tview.NewBox(), 1, 1, 1, 1, 0, 0, false).
+		AddItem(nextBtn, 1, 2, 1, 1, 0, 0, false)
 
 	titleTxt := tview.NewTextView().
 		SetTextAlign(tview.AlignCenter).
