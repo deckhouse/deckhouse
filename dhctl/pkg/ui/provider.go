@@ -35,10 +35,12 @@ func newProviderPage(st providerState, schema providerSchema, onNext func(), onB
 }
 
 func (p *providerPage) Show() (tview.Primitive, []tview.Primitive) {
+	const inputsWidth = 50
+
 	providerName := p.st.GetProvider()
 	providerS := p.schema.ProviderSchema(providerName)
 
-	form := widget.NewOpenapiForm(providerS, 30)
+	form := widget.NewOpenapiForm(providerS, inputsWidth)
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 

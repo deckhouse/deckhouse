@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"strconv"
+
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
@@ -26,12 +28,27 @@ func NewOpenapiForm(schema *spec.Schema, fieldsWidth int) *OpenAPIForm {
 
 	for prop, schemaProp := range schema.SchemaProps.Properties {
 		t := schemaProp.Type
+		prop := prop
 		switch t[0] {
 		case "string":
 			d := ""
 			if schemaProp.SchemaProps.Default != nil {
 				d = schemaProp.SchemaProps.Default.(string)
 			}
+			val, found := schemaProp.Extensions.GetString("x-ui-multiline")
+			if found {
+				rows, err := strconv.Atoi(val)
+				if err != nil {
+					panic(err)
+				}
+
+				form.AddTextArea(prop, d, fieldsWidth, rows, 0, func(text string) {
+					form.data[prop] = text
+				})
+
+				continue
+			}
+
 			form.AddInputField(prop, d, fieldsWidth, nil, func(text string) {
 				form.data[prop] = text
 			})
