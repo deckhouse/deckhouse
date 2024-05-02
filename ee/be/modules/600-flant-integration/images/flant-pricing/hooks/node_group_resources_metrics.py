@@ -33,16 +33,17 @@ def main(ctx: hook.Context):
         ng = snapshot["filterResult"]
         label_key = ""
         for taint in ng.get("nodeTemplate", {}).get("taints", []):
-            match taint.get("key"):
-                case "node-role.kubernetes.io/control-plane" | "node-role.kubernetes.io/master":
-                    label_key = "is_master"
-                case "dedicated.deckhouse.io":
-                    match taint.get("value"):
-                        case "system":
+            if taint.get("key") == "node-role.kubernetes.io/control-plane" or taint.get("key") ==  "node-role.kubernetes.io/master":
+                label_key = "is_master"
+                break
+            elif taint.get("key") == "dedicated.deckhouse.io":
+                    if taint.get("value") == "system":
                             label_key = "is_system"
-                        case "monitoring":
+                            break
+                    elif taint.get("value") == "monitoring":
                             label_key = "is_monitoring"
-                        case "frontend":
+                            break
+                    elif taint.get("value") == "frontend":
                             label_key = "is_frontend"
 
         # empty label key matches worker load
