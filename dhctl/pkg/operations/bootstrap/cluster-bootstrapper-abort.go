@@ -79,7 +79,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 	}
 
 	cachePath := metaConfig.CachePath()
-	log.InfoF("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath)
+	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}

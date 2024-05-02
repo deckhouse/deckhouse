@@ -75,6 +75,11 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 
 		// Wrap them with our default logger
 		logrus.SetOutput(defaultLogger)
+	} else {
+		klog.SetOutput(io.Discard)
+		flags := &flag.FlagSet{}
+		klog.InitFlags(flags)
+		flags.Set("logtostderr", "false")
 	}
 }
 
