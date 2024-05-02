@@ -77,7 +77,6 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 			condition := "NotReady"
 			if _, ok := readyPods[p.Name]; ok {
 				condition = "Ready"
-				readyPods[p.Name] = struct{}{}
 			}
 
 			message += fmt.Sprintf("* %s (%s) | %s\n", p.Name, p.Spec.NodeName, condition)
