@@ -50,7 +50,7 @@ function nodeuser_patch() {
         bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         break
       fi
-      >&2 echo "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+      bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
