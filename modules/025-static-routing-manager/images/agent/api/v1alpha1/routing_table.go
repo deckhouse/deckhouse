@@ -95,8 +95,8 @@ type NodeRoutingTableConditionType string
 
 const (
 	// Types
-	ReconcilationSucceed NodeRoutingTableConditionType = "ReconcilationSucceed"
+	ReconciliationSucceed NodeRoutingTableConditionType = "ReconciliationSucceed"
 	// Reasons
-	NRTReconcilationSucceed = "NRTReconcilationSucceed"
-	NRTReconcilationFailed  = "NRTReconcilationFailed"
+	NRTReconciliationSucceed = "NRTReconciliationSucceed"
+	NRTReconciliationFailed  = "NRTReconciliationFailed"
 )

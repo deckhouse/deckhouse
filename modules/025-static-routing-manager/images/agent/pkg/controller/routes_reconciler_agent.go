@@ -58,7 +58,7 @@ type workingSubstance struct {
 	nrtWasDeleted           bool
 	desiredRoutesToAddByNRT RouteEntryMap
 	desiredRoutesToDelByNRT RouteEntryMap
-	newReconcilationStatus  NRTReconcilationStatus
+	newReconciliationStatus NRTReconciliationStatus
 	specNeedToUpdate        bool
 }
 
@@ -72,13 +72,6 @@ var (
 	actualRoutesOnNode         RouteEntryMap
 	globalDesiredRoutesForNode RouteEntryMap
 )
-
-// ============
-
-type RouteWithOwnerEntry struct {
-	re    RouteEntry
-	Owner map[string]struct{}
-}
 
 // ============
 
@@ -113,7 +106,7 @@ func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
 	(*rem)[re.getHash()] = re
 }
 
-type NRTReconcilationStatus struct {
+type NRTReconciliationStatus struct {
 	IsSuccess    bool
 	ErrorMessage string
 }
@@ -161,7 +154,7 @@ func RunRoutesReconcilerAgentController(
 			deletedNRTRouteEntryMaps := make(map[string]RouteEntryMap)
 			erasedNRTRouteEntryMaps := make(map[string]RouteEntryMap)
 			nrtK8sResourcesMap := make(map[string]*v1alpha1.NodeRoutingTable)
-			nrtReconcilationStatusMap := make(map[string]NRTReconcilationStatus)
+			nrtReconciliationStatusMap := make(map[string]NRTReconciliationStatus)
 			specNeedToUpdate := make(map[string]bool)
 			shouldRequeue := false
 
@@ -182,11 +175,11 @@ func RunRoutesReconcilerAgentController(
 
 			for _, nrt := range nrtList.Items {
 				// Gathering facts
-				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconcilationStatusMap[nrt.Name]
+				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
 				tmpNrt := nrt
 				tmpNrt.Status.ObservedGeneration = nrt.Generation
 				nrtK8sResourcesMap[nrt.Name] = &tmpNrt
-				nrtReconcilationStatusMap[nrt.Name] = NRTReconcilationStatus{IsSuccess: true}
+				nrtReconciliationStatusMap[nrt.Name] = NRTReconciliationStatus{IsSuccess: true}
 				specNeedToUpdate[nrt.Name] = false
 
 				if nrt.DeletionTimestamp != nil {
@@ -213,10 +206,12 @@ func RunRoutesReconcilerAgentController(
 				// Filling nrtLastAppliedRouteEntryMap
 				nrtLastAppliedRouteEntryMap := make(RouteEntryMap)
 				nrtLastAppliedConfiguration := &v1alpha1.NodeRoutingTableSpec{}
-				err = json.Unmarshal([]byte(nrt.Annotations[lastAppliedConfigurationAnnotation]), nrtLastAppliedConfiguration)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get lastAppliedConfiguration from NodeRoutingTable %s", nrt.Name))
-					return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
+				if _, ok := nrt.Annotations[lastAppliedConfigurationAnnotation]; ok && nrt.Annotations[lastAppliedConfigurationAnnotation] != "" {
+					err = json.Unmarshal([]byte(nrt.Annotations[lastAppliedConfigurationAnnotation]), nrtLastAppliedConfiguration)
+					if err != nil {
+						log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get lastAppliedConfiguration from NodeRoutingTable %s", nrt.Name))
+						return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
+					}
 				}
 				for _, route := range nrtLastAppliedConfiguration.Routes {
 					nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
@@ -227,23 +222,6 @@ func RunRoutesReconcilerAgentController(
 				for hash, desiredRoute := range nrtDesiredRouteEntryMap {
 					if _, ok := actualRouteEntryMap[hash]; !ok {
 						routesToAdd = append(routesToAdd, desiredRoute)
-					}
-				}
-
-				// experimental
-				routesWithOwnerToAdd := make(map[string]RouteWithOwnerEntry)
-				for hash, desiredRoute := range nrtDesiredRouteEntryMap {
-					if _, ok := actualRouteEntryMap[hash]; !ok {
-						if _, ok := routesWithOwnerToAdd[hash]; !ok {
-							rwoe := RouteWithOwnerEntry{}
-							rwoe.re = desiredRoute
-							rwoe.Owner[nrt.Name] = struct{}{}
-							routesWithOwnerToAdd[hash] = rwoe
-						} else {
-							rwoe := routesWithOwnerToAdd[hash]
-							rwoe.Owner[nrt.Name] = struct{}{}
-							routesWithOwnerToAdd[hash] = rwoe
-						}
 					}
 				}
 
@@ -263,7 +241,7 @@ func RunRoutesReconcilerAgentController(
 
 				// Actions: add routes
 				if len(routesToAdd) > 0 {
-					status := nrtReconcilationStatusMap[nrt.Name]
+					status := nrtReconciliationStatusMap[nrt.Name]
 					for _, route := range routesToAdd {
 						err := addRouteToNode(route)
 						if err != nil {
@@ -273,8 +251,8 @@ func RunRoutesReconcilerAgentController(
 							actualRouteEntryMap.AppendRE(route)
 						}
 					}
-					nrtReconcilationStatusMap[nrt.Name] = status
-					if nrtReconcilationStatusMap[nrt.Name].IsSuccess {
+					nrtReconciliationStatusMap[nrt.Name] = status
+					if nrtReconciliationStatusMap[nrt.Name].IsSuccess {
 						specNeedToUpdate[nrt.Name] = true
 					}
 
@@ -283,13 +261,13 @@ func RunRoutesReconcilerAgentController(
 
 			// Actions: delete routes because NRT has been deleted
 			for nrtName, rem := range deletedNRTRouteEntryMaps {
-				status := nrtReconcilationStatusMap[nrtName]
-				nrtReconcilationStatusMap[nrtName] = deleteRouteEntriesFromNode(
+				status := nrtReconciliationStatusMap[nrtName]
+				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
 					status,
 				)
-				if nrtReconcilationStatusMap[nrtName].IsSuccess {
+				if nrtReconciliationStatusMap[nrtName].IsSuccess {
 					removeFinalizer(nrtK8sResourcesMap[nrtName])
 					specNeedToUpdate[nrt.Name] = true
 				}
@@ -297,27 +275,27 @@ func RunRoutesReconcilerAgentController(
 
 			// Actions: delete routes because they were deleted from NRT
 			for nrtName, rem := range erasedNRTRouteEntryMaps {
-				status := nrtReconcilationStatusMap[nrtName]
-				nrtReconcilationStatusMap[nrtName] = deleteRouteEntriesFromNode(
+				status := nrtReconciliationStatusMap[nrtName]
+				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
 					status,
 				)
-				if nrtReconcilationStatusMap[nrtName].IsSuccess {
+				if nrtReconciliationStatusMap[nrtName].IsSuccess {
 					specNeedToUpdate[nrt.Name] = true
 				}
 			}
 
 			// Generate new condition for each processed nrt
-			for nrtName, nrtReconcilationStatus := range nrtReconcilationStatusMap {
+			for nrtName, nrtReconciliationStatus := range nrtReconciliationStatusMap {
 				t := metav1.NewTime(time.Now())
-				if nrtReconcilationStatus.IsSuccess {
+				if nrtReconciliationStatus.IsSuccess {
 					newCond := v1alpha1.NodeRoutingTableCondition{
-						Type:               v1alpha1.ReconcilationSucceed,
+						Type:               v1alpha1.ReconciliationSucceed,
 						LastHeartbeatTime:  t,
 						Status:             corev1.ConditionTrue,
 						LastTransitionTime: nrtK8sResourcesMap[nrtName].Status.Conditions[0].LastTransitionTime,
-						Reason:             v1alpha1.NRTReconcilationSucceed,
+						Reason:             v1alpha1.NRTReconciliationSucceed,
 					}
 					if nrtK8sResourcesMap[nrtName].Status.Conditions[0].Status != corev1.ConditionTrue {
 						newCond.LastTransitionTime = t
@@ -325,12 +303,12 @@ func RunRoutesReconcilerAgentController(
 					nrtK8sResourcesMap[nrtName].Status.Conditions[0] = newCond
 				} else {
 					newCond := v1alpha1.NodeRoutingTableCondition{
-						Type:               v1alpha1.ReconcilationSucceed,
+						Type:               v1alpha1.ReconciliationSucceed,
 						LastHeartbeatTime:  t,
 						Status:             corev1.ConditionFalse,
 						LastTransitionTime: nrtK8sResourcesMap[nrtName].Status.Conditions[0].LastTransitionTime,
-						Reason:             v1alpha1.NRTReconcilationFailed,
-						Message:            nrtReconcilationStatus.ErrorMessage,
+						Reason:             v1alpha1.NRTReconciliationFailed,
+						Message:            nrtReconciliationStatus.ErrorMessage,
 					}
 					if nrtK8sResourcesMap[nrtName].Status.Conditions[0].Status != corev1.ConditionFalse {
 						newCond.LastTransitionTime = t
@@ -464,7 +442,7 @@ func delRouteFromNode(route RouteEntry) error {
 	return nil
 }
 
-func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconcilationStatus) NRTReconcilationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconciliationStatus) NRTReconciliationStatus {
 	for hash, route := range delREM {
 		if _, ok := gdREM[hash]; !ok {
 			err := delRouteFromNode(route)

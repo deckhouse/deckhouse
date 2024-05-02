@@ -79,16 +79,3 @@ type NodeRoutingTableSpec struct {
 type NodeRoutingTableStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
-
-/*
-type instanceKind struct{}
-
-func (in *NodeRoutingTableStatus) GetObjectKind() schema.ObjectKind {
-	return &instanceKind{}
-}
-
-func (f *instanceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *instanceKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "network.deckhouse.io", Version: "v1alpha1", Kind: "NodeRoutingTable"}
-}
-*/
