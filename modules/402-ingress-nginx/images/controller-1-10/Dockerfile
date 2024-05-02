@@ -62,7 +62,7 @@ COPY --from=controller-builder /src/images/nginx-1.25/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-essential libgrpc-devel  \
-    libprotobuf-devel grpc-plugins openssl
+    libprotobuf-devel grpc-plugins openssl libpcre2-devel
 RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     # build pcre library with jit support due to lack of jit support in standard alt pcre library
     cd pcre && \
