@@ -73,7 +73,7 @@ function nodeuser_patch() {
           --data "${data}" \
           "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" ; then
 
-          echo "Successfully patched NodeUser."
+          bb-log-info "Successfully patched NodeUser."
           patch_pending=false
 
           break
