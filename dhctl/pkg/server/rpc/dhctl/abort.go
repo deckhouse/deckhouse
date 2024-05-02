@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
@@ -43,25 +42,25 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
+func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.bootstrapServerTransitions())
+	f := fsm.New("initial", s.abortServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.BootstrapRequest)
-	sendCh := make(chan *pb.BootstrapResponse)
-	phaseSwitcher := &bootstrapPhaseSwitcher{
+	receiveCh := make(chan *pb.AbortRequest)
+	sendCh := make(chan *pb.AbortResponse)
+	phaseSwitcher := &abortPhaseSwitcher{
 		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
 
-	s.startBootstrapperReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startBootstrapperSender(server, sendCh, internalErrCh)
+	s.startAborterReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startAborterSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -76,22 +75,22 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing BootstrapRequest",
+				"processing AbortRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.BootstrapRequest_Start:
+			case *pb.AbortRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startBootstrap(
-					ctx, message.Start, phaseSwitcher, &bootstrapLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startAbort(
+					ctx, message.Start, phaseSwitcher, &abortLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
-			case *pb.BootstrapRequest_Continue:
+			case *pb.AbortRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
@@ -118,9 +117,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startBootstrapperReceiver(
-	server pb.DHCTL_BootstrapServer,
-	receiveCh chan *pb.BootstrapRequest,
+func (s *Service) startAborterReceiver(
+	server pb.DHCTL_AbortServer,
+	receiveCh chan *pb.AbortRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -140,9 +139,9 @@ func (s *Service) startBootstrapperReceiver(
 	}()
 }
 
-func (s *Service) startBootstrapperSender(
-	server pb.DHCTL_BootstrapServer,
-	sendCh chan *pb.BootstrapResponse,
+func (s *Service) startAborterSender(
+	server pb.DHCTL_AbortServer,
+	sendCh chan *pb.AbortResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -159,29 +158,29 @@ func (s *Service) startBootstrapperSender(
 	}()
 }
 
-func (s *Service) startBootstrap(
+func (s *Service) startAbort(
 	ctx context.Context,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
-	logWriter *bootstrapLogWriter,
-	sendCh chan *pb.BootstrapResponse,
+	request *pb.AbortStart,
+	phaseSwitcher *abortPhaseSwitcher,
+	logWriter *abortLogWriter,
+	sendCh chan *pb.AbortResponse,
 ) {
 	go func() {
-		result := s.bootstrap(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.BootstrapResponse{
-			Message: &pb.BootstrapResponse_Result{
+		result := s.abort(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.AbortResponse{
+			Message: &pb.AbortResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) bootstrap(
+func (s *Service) abort(
 	_ context.Context,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
+	request *pb.AbortStart,
+	phaseSwitcher *abortPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.BootstrapResult {
+) *pb.AbortResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -190,8 +189,8 @@ func (s *Service) bootstrap(
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.PreflightSkipDeckhouseVersionCheck = true
-	app.PreflightSkipAll = true
+	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
@@ -200,9 +199,8 @@ func (s *Service) bootstrap(
 	}()
 
 	var (
-		configPath              string
-		resourcesPath           string
-		postBootstrapScriptPath string
+		configPath    string
+		resourcesPath string
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
 		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
@@ -219,23 +217,10 @@ func (s *Service) bootstrap(
 			return fmt.Errorf("failed to write resources: %w", err)
 		}
 
-		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
-		if err != nil {
-			return fmt.Errorf("failed to write post bootstrap script: %w", err)
-		}
-		postBootstrapScript, err := os.Open(postBootstrapScriptPath)
-		if err != nil {
-			return fmt.Errorf("failed to open post bootstrap script: %w", err)
-		}
-		err = postBootstrapScript.Chmod(0555)
-		if err != nil {
-			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 
 	var initialState phases.DhctlState
@@ -249,7 +234,7 @@ func (s *Service) bootstrap(
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -272,37 +257,35 @@ func (s *Service) bootstrap(
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		SSHClient:                  sshClient,
-		InitialState:               initialState,
-		ResetInitialState:          true,
-		DisableBootstrapClearCache: true,
-		OnPhaseFunc:                phaseSwitcher.switchPhase,
-		CommanderMode:              request.Options.CommanderMode,
-		TerraformContext:           terraform.NewTerraformContext(),
-		ConfigPaths:                []string{configPath},
-		ResourcesPath:              resourcesPath,
-		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 pointer.Bool(true),
-		AutoApprove:                pointer.Bool(true),
-		KubernetesInitParams:       nil,
+		ConfigPaths:      []string{configPath},
+		ResourcesPath:    resourcesPath,
+		InitialState:     initialState,
+		SSHClient:        sshClient,
+		UseTfCache:       pointer.Bool(true),
+		AutoApprove:      pointer.Bool(true),
+		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
+		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
+
+		ResetInitialState: true,
+		OnPhaseFunc:       phaseSwitcher.switchPhase,
+		CommanderMode:     request.Options.CommanderMode,
+		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
+	abortErr := bootstrapper.Abort(false)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(bootstrapErr, marshalErr)
+	err = errors.Join(abortErr, marshalErr)
 
-	return &pb.BootstrapResult{State: string(stateData), Err: errToString(err)}
+	return &pb.AbortResult{State: string(stateData), Err: errToString(err)}
 }
 
-func (s *Service) bootstrapServerTransitions() []fsm.Transition {
+func (s *Service) abortServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -322,15 +305,15 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 	}
 }
 
-type bootstrapLogWriter struct {
+type abortLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.BootstrapResponse
+	sendCh chan *pb.AbortResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *bootstrapLogWriter) Write(p []byte) (n int, err error) {
+func (w *abortLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -353,21 +336,21 @@ func (w *bootstrapLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.BootstrapResponse{
-			Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.AbortResponse{
+			Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 
 	return len(p), nil
 }
 
-type bootstrapPhaseSwitcher struct {
-	sendCh chan *pb.BootstrapResponse
+type abortPhaseSwitcher struct {
+	sendCh chan *pb.AbortResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *bootstrapPhaseSwitcher) switchPhase(
+func (b *abortPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	_ interface{},
@@ -379,9 +362,9 @@ func (b *bootstrapPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	b.sendCh <- &pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_PhaseEnd{
-			PhaseEnd: &pb.BootstrapPhaseEnd{
+	b.sendCh <- &pb.AbortResponse{
+		Message: &pb.AbortResponse_PhaseEnd{
+			PhaseEnd: &pb.AbortPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				NextPhase:           string(nextPhase),

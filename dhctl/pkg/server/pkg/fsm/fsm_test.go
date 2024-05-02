@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 )
 
 func TestFiniteStateMachine(t *testing.T) {
