@@ -93,7 +93,7 @@ function nodeuser_patch() {
       done
     done
   else
-    >&2 echo "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
+    bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
     exit 1
   fi
 }
