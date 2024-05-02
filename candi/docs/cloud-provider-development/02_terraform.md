@@ -47,3 +47,40 @@ terraform-modules/ <<--- Здесь описываются ресурсы для
 /deckhouse/ee/layouts/standart/master-node -> ../../terraform-modules/master-node
 /deckhouse/ee/layouts/standart/static-node -> ../../terraform-modules/static-node
 ```
+
+## Возвращаемые значения из Terraform
+
+### Base infrastructure
+
+Необходимо вернуть данные для CloudDiscoveryData. Если провайдер не поддерживает ```zones``` необходимо вернуть список с зоной ```default```.
+Пример:
+
+```text
+output "cloud_discovery_data" {
+  value = {
+    "apiVersion"       = "deckhouse.io/v1"
+    "kind"             = "ZvirtCloudProviderDiscoveryData"
+    "storageDomains"   = []
+    "zones"            = ["default"]
+  }
+}
+```
+
+### Master node
+
+Необходимо вернуть ```master_ip_address_for_ssh``` ip адрес master-node ```node_internal_ip_address``` внутренний ip адрес master-node и ```kubernetes_data_device_path``` путь к устройству диска для etcd
+Пример:
+
+```text
+output "master_ip_address_for_ssh" {
+  value = local.master_vm_ip
+}
+
+output "node_internal_ip_address" {
+  value = local.master_vm_ip
+}
+
+output "kubernetes_data_device_path" {
+  value = "/dev/sdb"
+}
+```

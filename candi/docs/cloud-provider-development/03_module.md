@@ -1,4 +1,4 @@
-# Модуль 030-cloud-provider-*****
+# Модуль 030-cloud-provider-<имя провайдера>
 
 Модуль cloud-provider в основе своей является модулем addon-operator, который представляет из себя Helm-чарт и состоит из:
 
@@ -28,6 +28,8 @@
 9. Файла `.namespace`, содержащего имя k8s namespace в котором будут размещаться ресурсы этого провайдера.
    Имя формируется по шаблону `d8-cloud-provider-*****`
 
+>Новый провайдер обязятельно нужно добавить в список провайдеров в файле ```/deckhouse/global-hooks/enable_cloud_provider.go```
+
 ## Ресурсы Cluster API (`capi`)
 
 Ресурсы, используемые для работы с Cluster API, в случае с провайдером Proxmox, со стороны модуля состоят из объектов `ProxmoxCluster` и `MachineTemplate`.
@@ -37,8 +39,18 @@
 
 ## Структура Helm Values (`openapi`)
 
-TODO(alexey_su)
+Необходимо описать схему для providerClusterConfiguration, включающую в себя информацию о masterNodeGroup, nodeGroups, provider. Схему для providerDiscoveryData и storageClasses. Это основной набор данных.
 
 ## Шаблоны манифестов модуля (`templates`)
 
 TODO
+
+## Hooks
+
+Обязательные hooks:
+
+1. Сохранение в values информации от CloudDiscoveryData
+1. Регистрация CRDs
+1. Регистрация InstanceClass
+1. Сохранение в values ClusterConfiguration
+1. Hook wait_for_all_master_nodes_to_become_initialized.go одинаковый для всех провайдеров
