@@ -149,7 +149,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 		for _, rti := range rtis {
 			tmpNRTS := new(v1alpha1.NodeRoutingTableSpec)
 			lib.NRTSAppend(tmpNRTS, rti)
-			desiredNodeRoutingTables[nodeName+":"+rti.Name] = *tmpNRTS
+			desiredNodeRoutingTables[nodeName+"-"+rti.Name] = *tmpNRTS
 		}
 	}
 
