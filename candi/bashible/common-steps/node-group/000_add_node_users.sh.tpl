@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+# The step is 000_ because we need to be able to create users before possible errors occur in other steps and not lose access to the node
 
 {{- if eq .runType "Normal" }}
   {{- if .nodeUsers }}
@@ -28,10 +31,6 @@ function error_check() {
   (( error_code != 0 ))
 }
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${1}" "${2}" "${3}" "${4}"
-}
-
 # $1 - username $2 - request data
 function nodeuser_patch() {
   local username="$1"
@@ -44,7 +43,7 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until kubectl_exec "${username}" --type=json --patch="${data}" --subresource=status; do
+    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch="${data}" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
