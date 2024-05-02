@@ -127,7 +127,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 }
 
 func hasIncorrectNodeUserErrors(nodeUserStatusError map[string]string, nodes map[string]struct{}) ([]string, bool) {
-	result := []string{}
+	result := make([]string, 0, 0)
 	has := false
 	for k := range nodeUserStatusError {
 		if _, ok := nodes[k]; !ok {
