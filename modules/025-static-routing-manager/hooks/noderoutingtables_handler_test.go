@@ -34,7 +34,7 @@ var _ = Describe("StatisRouteMgr hooks :: noderoutingtables_handler ::", func() 
 apiVersion: network.deckhouse.io/v1alpha1
 kind: RoutingTable
 metadata:
-  name: test1
+  name: testrt1
 spec:
   ipRouteTableID: 500
   routes:
@@ -47,12 +47,46 @@ spec:
 status:
   ipRouteTableID: 500
 `
+		desiredRT1SpecYAML = `
+ipRouteTableID: 500
+routes:
+- destination: 0.0.0.0/0
+  gateway: 1.2.3.4
+- destination: 192.168.0.0/24
+  gateway: 192.168.0.1
+`
+		rt1upYAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: testrt1
+spec:
+  ipRouteTableID: 500
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.1.0/24
+    gateway: 192.168.2.1
+  nodeSelector:
+    node-role: testrole1
+status:
+  ipRouteTableID: 500
+`
+		desiredRT1upSpecYAML = `
+ipRouteTableID: 500
+routes:
+- destination: 0.0.0.0/0
+  gateway: 1.2.3.4
+- destination: 192.168.1.0/24
+  gateway: 192.168.2.1
+`
 		rt2YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
 kind: RoutingTable
 metadata:
-  name: test2
+  name: testrt2
 spec:
   routes:
   - destination: 0.0.0.0/0
@@ -62,12 +96,18 @@ spec:
 status:
   ipRouteTableID: 300
 `
+		desiredRT2SpecYAML = `
+ipRouteTableID: 300
+routes:
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`
 		rt3YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
 kind: RoutingTable
 metadata:
-  name: test3
+  name: testrt3
 spec:
   ipRouteTableID: 300
   routes:
@@ -76,31 +116,35 @@ spec:
   nodeSelector:
     node-role: testrole1
 `
-		nrt1YAML = `
+		nrt11YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeRoutingTables
+kind: NodeRoutingTable
 metadata:
-  name: kube-worker-3
+  name: kube-worker-1:testrt1
 spec:
-  routingTables:
-    "500":
-      routes:
-      - destination: 0.0.0.0/0
-        gateway: 1.2.3.4
-      - destination: 192.168.0.0/24
-        gateway: 192.168.0.1
-    "300":
-      routes:
-      - destination: 0.0.0.0/0
-        gateway: 2.2.2.1
+  ipRouteTableID: 500
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.0.0/24
+    gateway: 192.168.0.1
 `
 		node1YAML = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: kube-worker-3
+  name: kube-worker-1
+  labels:
+    node-role: "testrole1"
+`
+		node2YAML = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: kube-worker-2
   labels:
     node-role: "testrole1"
 `
@@ -115,20 +159,22 @@ metadata:
 		nrtGVK = schema.GroupVersionKind{
 			Group:   "network.deckhouse.io",
 			Version: "v1alpha1",
-			Kind:    "NodeRoutingTables",
+			Kind:    "NodeRoutingTable",
 		}
 		rt1u  *unstructured.Unstructured
 		rt2u  *unstructured.Unstructured
 		rt3u  *unstructured.Unstructured
 		nrt1u *unstructured.Unstructured
 		node1 *v1.Node
+		node2 *v1.Node
 	)
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(rt1YAML), &rt1u)
 		_ = yaml.Unmarshal([]byte(rt2YAML), &rt2u)
 		_ = yaml.Unmarshal([]byte(rt3YAML), &rt3u)
-		_ = yaml.Unmarshal([]byte(nrt1YAML), &nrt1u)
+		_ = yaml.Unmarshal([]byte(nrt11YAML), &nrt1u)
 		_ = yaml.Unmarshal([]byte(node1YAML), &node1)
+		_ = yaml.Unmarshal([]byte(node2YAML), &node2)
 	})
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
@@ -147,33 +193,30 @@ metadata:
 		})
 	})
 
-	Context("Checking the creation operation of a CR NodeRoutingTables", func() {
+	Context("Checking the creation operation of a CR NodeRoutingTable", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + rt2YAML))
+			f.BindingContexts.Set(f.KubeStateSet(node1YAML + node2YAML + rt1YAML + rt2YAML))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeTrue())
-			nrtspec := f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Field("spec").String()
-			Expect(nrtspec).To(MatchYAML(`
-routingTables:
-  "500":
-    routes:
-    - destination: 0.0.0.0/0
-      gateway: 1.2.3.4
-    - destination: 192.168.0.0/24
-      gateway: 192.168.0.1
-  "300":
-    routes:
-    - destination: 0.0.0.0/0
-      gateway: 2.2.2.1
-`))
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Exists()).To(BeTrue())
+			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Field("spec").String()
+			Expect(nrt11spec).To(MatchYAML(desiredRT1SpecYAML))
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt2").Exists()).To(BeTrue())
+			nrt12spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt2").Field("spec").String()
+			Expect(nrt12spec).To(MatchYAML(desiredRT2SpecYAML))
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2:testrt1").Exists()).To(BeTrue())
+			nrt21spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2:testrt1").Field("spec").String()
+			Expect(nrt21spec).To(MatchYAML(desiredRT1SpecYAML))
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2:testrt2").Exists()).To(BeTrue())
+			nrt22spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2:testrt2").Field("spec").String()
+			Expect(nrt22spec).To(MatchYAML(desiredRT2SpecYAML))
 		})
 	})
 
-	Context("Checking the creation operation of a CR NodeRoutingTables from CR RoutingTable without ipRouteTableID in status", func() {
+	Context("Checking the creation operation of a CR NodeRoutingTable from CR RoutingTable without ipRouteTableID in status", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt3YAML))
 			f.RunHook()
@@ -181,53 +224,45 @@ routingTables:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt3").Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Checking the deletion operation of a CR NodeRoutingTables", func() {
+	Context("Checking the deletion operation of a CR NodeRoutingTable", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + rt2YAML + nrt1YAML))
+			f.BindingContexts.Set(f.KubeStateSet(node1YAML + nrt11YAML))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Checking the updating operation of a CR NodeRoutingTables", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + nrt1YAML))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeTrue())
-			nrtspec := f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Field("spec").String()
-			Expect(nrtspec).To(MatchYAML(`
-routingTables:
-  "500":
-    routes:
-    - destination: 0.0.0.0/0
-      gateway: 1.2.3.4
-    - destination: 192.168.0.0/24
-      gateway: 192.168.0.1
-`))
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Checking case when node was deleted", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1YAML + nrt1YAML))
+			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + nrt11YAML))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTables", "kube-worker-3").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Checking the updating operation of a CR NodeRoutingTable", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1upYAML + nrt11YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Exists()).To(BeTrue())
+			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1:testrt1").Field("spec").String()
+			Expect(nrt11spec).To(MatchYAML(desiredRT1upSpecYAML))
 		})
 	})
 

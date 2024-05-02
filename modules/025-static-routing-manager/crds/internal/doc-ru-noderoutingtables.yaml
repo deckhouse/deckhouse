@@ -8,26 +8,21 @@ spec:
         properties:
           spec:
             properties:
-              routingTables:
+              ipRouteTableID:
                 description: |
-                  routingTables
-                patternProperties:
-                  '^[1-9][0-9]{0,9}$':
-                    description: |
-                      Routes
-                    properties:
-                      routes:
-                        items:
-                          description: |
-                            Routes
-                          properties:
-                            destination:
-                              description: |
-                                description network
-                            gateway:
-                              description: |
-                                nexthop
-
-
-
-
+                  ID желаемой таблицы маршрутизации.
+                  Если значение не указано явно, то оно сгенерируется автоматически. И будет добавлено в status.
+                  После создания ресурса изменить это поле нельзя.
+                  При необходимости нужно пересоздать ресурс.
+              routes:
+                type: array
+                items:
+                  description: |
+                    Желаемые маршруты.
+                  properties:
+                    destination:
+                      description: |
+                        Целевая подсеть.
+                    gateway:
+                      description: |
+                        Шлюз, через которую достижима подсеть.

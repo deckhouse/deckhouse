@@ -47,43 +47,43 @@ type RoutingTableList struct {
 }
 
 type RoutingTableSpec struct {
-	IPRouteTableID int `json:"ipRouteTableID"`
-	// Routes         Routes            `json:"routes"`
-	Routes       []Route           `json:"routes"`
-	NodeSelector map[string]string `json:"nodeSelector"`
+	IPRouteTableID int               `json:"ipRouteTableID"`
+	Routes         []Route           `json:"routes"`
+	NodeSelector   map[string]string `json:"nodeSelector"`
 }
 
 type RoutingTableStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
 
-// CR NodeRoutingTables
+// CR NodeRoutingTable
 
-type NodeRoutingTables struct {
+type NodeRoutingTable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeRoutingTablesSpec   `json:"spec"`
-	Status            NodeRoutingTablesStatus `json:"status,omitempty"`
+	Spec              NodeRoutingTableSpec   `json:"spec"`
+	Status            NodeRoutingTableStatus `json:"status,omitempty"`
 }
 
-type NodeRoutingTablesList struct {
+type NodeRoutingTableList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []NodeRoutingTables `json:"items"`
+	Items           []NodeRoutingTable `json:"items"`
 }
 
-type NodeRoutingTablesSpec struct {
-	RoutingTables map[string]Routes `json:"routingTables"`
+type NodeRoutingTableSpec struct {
+	IPRouteTableID int     `json:"ipRouteTableID"`
+	Routes         []Route `json:"routes"`
 }
 
-type NodeRoutingTablesStatus struct {
+type NodeRoutingTableStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
 
 /*
 type instanceKind struct{}
 
-func (in *NodeRoutingTablesStatus) GetObjectKind() schema.ObjectKind {
+func (in *NodeRoutingTableStatus) GetObjectKind() schema.ObjectKind {
 	return &instanceKind{}
 }
 

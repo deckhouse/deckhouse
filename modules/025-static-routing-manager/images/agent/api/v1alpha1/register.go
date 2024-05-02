@@ -26,7 +26,7 @@ const (
 	APIGroup   = "network.deckhouse.io"
 	APIVersion = "v1alpha1"
 	RTKind     = "RoutingTable"
-	NRTKind    = "NodeRoutingTables"
+	NRTKind    = "NodeRoutingTable"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -44,8 +44,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&RoutingTable{},
 		&RoutingTableList{},
-		&NodeRoutingTables{},
-		&NodeRoutingTablesList{},
+		&NodeRoutingTable{},
+		&NodeRoutingTableList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -18,8 +18,6 @@ package hooks
 
 import (
 	"reflect"
-	"sort"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -45,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "noderoutetables",
 			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "NodeRoutingTables",
+			Kind:       "NodeRoutingTable",
 			FilterFunc: applyMainHandlerNodeRouteTablesFilter,
 		},
 		{
@@ -77,7 +75,7 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 
 func applyMainHandlerNodeRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
-		nrt    v1alpha1.NodeRoutingTables
+		nrt    v1alpha1.NodeRoutingTable
 		result lib.NodeRoutingTableInfo
 	)
 	err := sdk.FromUnstructured(obj, &nrt)
@@ -86,7 +84,7 @@ func applyMainHandlerNodeRouteTablesFilter(obj *unstructured.Unstructured) (go_h
 	}
 
 	result.Name = nrt.Name
-	result.NodeRoutingTables = nrt.Spec
+	result.NodeRoutingTable = nrt.Spec
 
 	return result, nil
 }
@@ -111,11 +109,11 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	// prepare
 	var (
 		// affectedNodes             map[string][]RoutingTableInfo
-		// nodeRoutingTablesCache map[string]v1alpha1.NodeRoutingTablesSpec
-		// desiredNodeRoutingTables map[string]v1alpha1.NodeRoutingTablesSpec
-		// actualNodeRoutingTables   map[string]v1alpha1.NodeRoutingTablesSpec
-		nodeRoutingTablesToCreate []*v1alpha1.NodeRoutingTables
-		nodeRoutingTablesToUpdate []*v1alpha1.NodeRoutingTables
+		// nodeRoutingTablesCache map[string]v1alpha1.NodeRoutingTableSpec
+		// desiredNodeRoutingTable map[string]v1alpha1.NodeRoutingTableSpec
+		// actualNodeRoutingTable   map[string]v1alpha1.NodeRoutingTableSpec
+		nodeRoutingTablesToCreate []*v1alpha1.NodeRoutingTable
+		nodeRoutingTablesToUpdate []*v1alpha1.NodeRoutingTable
 		nodeRoutingTablesToDelete []string
 	)
 
@@ -138,49 +136,41 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	}
 
 	// Filling actualNodeRoutingTables
-	actualNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTablesSpec)
+	actualNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTableSpec)
 	for _, nrtRaw := range input.Snapshots["noderoutetables"] {
 		nrtis := nrtRaw.(lib.NodeRoutingTableInfo)
-		actualNodeRoutingTables[nrtis.Name] = nrtis.NodeRoutingTables
+		actualNodeRoutingTables[nrtis.Name] = nrtis.NodeRoutingTable
 	}
 
 	// Filling desiredNodeRoutingTables
-	desiredNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTablesSpec)
-	nodeRoutingTablesCache := make(map[string]v1alpha1.NodeRoutingTablesSpec)
+	desiredNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTableSpec)
 	for nodeName, rtis := range affectedNodes {
-		hash := getHash(rtis)
-
-		if _, ok := nodeRoutingTablesCache[hash]; ok {
-			desiredNodeRoutingTables[nodeName] = nodeRoutingTablesCache[hash]
-		} else {
-			tmpNRTS := new(v1alpha1.NodeRoutingTablesSpec)
-			// var nrts v1alpha1.NodeRoutingTablesSpec
-			for _, rti := range rtis {
-				lib.NRTSAppend(tmpNRTS, rti)
-			}
-			nodeRoutingTablesCache[hash] = *tmpNRTS
-			desiredNodeRoutingTables[nodeName] = *tmpNRTS
+		// var nrts v1alpha1.NodeRoutingTableSpec
+		for _, rti := range rtis {
+			tmpNRTS := new(v1alpha1.NodeRoutingTableSpec)
+			lib.NRTSAppend(tmpNRTS, rti)
+			desiredNodeRoutingTables[nodeName+":"+rti.Name] = *tmpNRTS
 		}
 	}
 
 	// Filling actions tasks
-	for nodeName, ntrs := range desiredNodeRoutingTables {
-		if _, ok := actualNodeRoutingTables[nodeName]; ok {
-			if reflect.DeepEqual(ntrs, nodeRoutingTablesCache[nodeName]) {
+	for nrtName, ntrs := range desiredNodeRoutingTables {
+		if _, ok := actualNodeRoutingTables[nrtName]; ok {
+			if reflect.DeepEqual(ntrs, actualNodeRoutingTables[nrtName]) {
 				continue
 			}
-			nrt := generateNRT(nodeName, ntrs)
+			nrt := generateNRT(nrtName, ntrs)
 			nodeRoutingTablesToUpdate = append(nodeRoutingTablesToUpdate, nrt)
 		} else {
-			nrt := generateNRT(nodeName, ntrs)
+			nrt := generateNRT(nrtName, ntrs)
 			nodeRoutingTablesToCreate = append(nodeRoutingTablesToCreate, nrt)
 		}
 	}
-	for nodeName, ntrs := range actualNodeRoutingTables {
-		if _, ok := desiredNodeRoutingTables[nodeName]; ok {
+	for nrtName, ntrs := range actualNodeRoutingTables {
+		if _, ok := desiredNodeRoutingTables[nrtName]; ok {
 			continue
 		}
-		nrt := generateNRT(nodeName, ntrs)
+		nrt := generateNRT(nrtName, ntrs)
 		nodeRoutingTablesToDelete = append(nodeRoutingTablesToDelete, nrt.Name)
 	}
 
@@ -203,17 +193,8 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 // service functions
 
-func getHash(rtis []lib.RoutingTableInfo) string {
-	var tmp []string
-	for _, rt := range rtis {
-		tmp = append(tmp, rt.Name)
-	}
-	sort.Strings(tmp)
-	return strings.Join(tmp, ":")
-}
-
-func generateNRT(name string, nrts v1alpha1.NodeRoutingTablesSpec) *v1alpha1.NodeRoutingTables {
-	nrt := &v1alpha1.NodeRoutingTables{
+func generateNRT(name string, nrts v1alpha1.NodeRoutingTableSpec) *v1alpha1.NodeRoutingTable {
+	nrt := &v1alpha1.NodeRoutingTable{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       lib.NRTKind,
 			APIVersion: lib.GroupVersion,

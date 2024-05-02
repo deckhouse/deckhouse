@@ -26,7 +26,6 @@ import (
 	"static-routing-manager-agent/pkg/controller"
 	"static-routing-manager-agent/pkg/kubutils"
 	"static-routing-manager-agent/pkg/logger"
-	"static-routing-manager-agent/pkg/monitoring"
 
 	v1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -100,9 +99,9 @@ func main() {
 	}
 	log.Info("[main] successfully created kubernetes manager")
 
-	metrics := monitoring.GetMetrics("")
+	// metrics := monitoring.GetMetrics("")
 
-	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, *log, metrics); err != nil {
+	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, *log); err != nil {
 		log.Error(err, "[main] unable to controller.RunRoutesReconcilerAgentController")
 		os.Exit(1)
 	}

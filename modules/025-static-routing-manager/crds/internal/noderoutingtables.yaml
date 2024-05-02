@@ -10,7 +10,8 @@ spec:
   scope: Cluster
   names:
     plural: noderoutingtables
-    kind: NodeRoutingTables
+    singular: noderoutingtable
+    kind: NodeRoutingTable
   preserveUnknownFields: false
   versions:
   - name: v1alpha1
@@ -29,37 +30,38 @@ spec:
           spec:
             type: object
             required:
-            - routingTables
+            - ipRouteTableID
+            - routes
             properties:
-              routingTables:
-                type: object
+              ipRouteTableID:
+                type: integer
+                minimum: 1
+                maximum: 4294967295
                 description: |
-                  routingTables
-                additionalProperties:
+                  ID of the desired routing table.
+                  If the value is not explicitly specified, it will be generated automatically.
+                  This field cannot be changed after the resource is created.
+                  If necessary, you need to recreate the resource.
+              routes:
+                type: array
+                items:
                   type: object
                   description: |
-                    Routes
+                    Desired routes.
+                  required:
+                    - destination
+                    - gateway
                   properties:
-                    routes:
-                      type: array
-                      items:
-                        type: object
-                        description: |
-                          Routes
-                        required:
-                        - destination
-                        - gateway
-                        properties:
-                          destination:
-                            type: string
-                            format: cidr
-                            description: |
-                              description network
-                          gateway:
-                            type: string
-                            format: ipv4
-                            description: |
-                              nexthop
+                    destination:
+                      type: string
+                      format: cidr
+                      description: |
+                        Description network.
+                    gateway:
+                      type: string
+                      format: ipv4
+                      description: |
+                        Nexthop.
           status:
             type: object
             properties:

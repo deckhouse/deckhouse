@@ -16,7 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // network.deckhouse.io/v1alpha1
 
@@ -54,26 +57,46 @@ type RoutingTableStatus struct {
 	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
 }
 
-// CR NodeRoutingTables
+// CR NodeRoutingTable
 
-type NodeRoutingTables struct {
+type NodeRoutingTable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeRoutingTablesSpec   `json:"spec"`
-	Status            NodeRoutingTablesStatus `json:"status,omitempty"`
+	Spec              NodeRoutingTableSpec   `json:"spec"`
+	Status            NodeRoutingTableStatus `json:"status,omitempty"`
 }
 
-type NodeRoutingTablesList struct {
+type NodeRoutingTableList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []NodeRoutingTables `json:"items"`
+	Items           []NodeRoutingTable `json:"items"`
 }
 
-type NodeRoutingTablesSpec struct {
-	RoutingTables map[string]Routes `json:"routingTables"`
+type NodeRoutingTableSpec struct {
+	IPRouteTableID int     `json:"ipRouteTableID"`
+	Routes         []Route `json:"routes"`
 }
 
-type NodeRoutingTablesStatus struct {
-	ReconcileStatus  string `json:"reconcileStatus,omitempty"`
-	ReconcileMessage string `json:"reconcileMessage,omitempty"`
+type NodeRoutingTableStatus struct {
+	ObservedGeneration int64                       `json:"observedGeneration,omitempty"`
+	Conditions         []NodeRoutingTableCondition `json:"conditions,omitempty"`
 }
+
+type NodeRoutingTableCondition struct {
+	LastHeartbeatTime  metav1.Time                   `json:"lastHeartbeatTime,omitempty"`
+	Type               NodeRoutingTableConditionType `json:"type"`
+	Status             corev1.ConditionStatus        `json:"status"`
+	LastTransitionTime metav1.Time                   `json:"lastTransitionTime,omitempty"`
+	Reason             string                        `json:"reason,omitempty"`
+	Message            string                        `json:"message,omitempty"`
+}
+
+type NodeRoutingTableConditionType string
+
+const (
+	// Types
+	ReconcilationSucceed NodeRoutingTableConditionType = "ReconcilationSucceed"
+	// Reasons
+	NRTReconcilationSucceed = "NRTReconcilationSucceed"
+	NRTReconcilationFailed  = "NRTReconcilationFailed"
+)

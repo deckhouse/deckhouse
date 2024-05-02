@@ -17,8 +17,6 @@ limitations under the License.
 package lib
 
 import (
-	"strconv"
-
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
@@ -32,8 +30,8 @@ type RoutingTableInfo struct {
 }
 
 type NodeRoutingTableInfo struct {
-	Name              string
-	NodeRoutingTables v1alpha1.NodeRoutingTablesSpec
+	Name             string
+	NodeRoutingTable v1alpha1.NodeRoutingTableSpec
 }
 
 type NodeInfo struct {
@@ -48,7 +46,7 @@ const (
 	Version      = "v1alpha1"
 	GroupVersion = Group + "/" + Version
 	RTKind       = "RoutingTable"
-	NRTKind      = "NodeRoutingTables"
+	NRTKind      = "NodeRoutingTable"
 	// RTResource   = "routingtables"
 )
 
@@ -56,24 +54,7 @@ const (
 
 // Common func
 
-func NRTSAppend(nrts *v1alpha1.NodeRoutingTablesSpec, rti RoutingTableInfo) {
-	if len(nrts.RoutingTables) == 0 {
-		nrts.RoutingTables = make(map[string]v1alpha1.Routes)
-	}
-	if _, ok := nrts.RoutingTables[strconv.Itoa(rti.IPRouteTableID)]; !ok {
-		var tmpRts v1alpha1.Routes
-		tmpRts.Routes = rti.Routes
-		nrts.RoutingTables[strconv.Itoa(rti.IPRouteTableID)] = tmpRts
-	} else {
-		for _, rt := range rti.Routes {
-			for _, nrt := range nrts.RoutingTables[strconv.Itoa(rti.IPRouteTableID)].Routes {
-				if rt.Destination == nrt.Destination && rt.Gateway == nrt.Gateway {
-					continue
-				}
-				tmpNRts := nrts.RoutingTables[strconv.Itoa(rti.IPRouteTableID)]
-				tmpNRts.Routes = append(tmpNRts.Routes, rt)
-				nrts.RoutingTables[strconv.Itoa(rti.IPRouteTableID)] = tmpNRts
-			}
-		}
-	}
+func NRTSAppend(nrts *v1alpha1.NodeRoutingTableSpec, rti RoutingTableInfo) {
+	nrts.IPRouteTableID = rti.IPRouteTableID
+	nrts.Routes = rti.Routes
 }
