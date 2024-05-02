@@ -324,6 +324,10 @@
   margin-top: 25px;
 }
 
+.layout-sidebar__sidebar {
+  width: 330px;
+}
+
 .layout-sidebar__sidebar,
 .layout-sidebar__sidebar_right {
   position: relative;
@@ -1454,10 +1458,8 @@ select#contact-select {
     justify-content: flex-start;
     overflow-x: hidden;
     overflow-y: auto;
-    margin: 0 auto;
-    margin-bottom: 50px;
+    margin: 0 auto 50px;
     padding: 0;
-    padding-right: 10px;
     list-style-type: none;
 }
 
