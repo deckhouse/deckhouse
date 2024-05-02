@@ -59,7 +59,7 @@ function nodeuser_patch() {
       for server in {{ .normal.apiserverEndpoints | join " " }} ; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-          echo "The network is not ready for connecting to apiserver yet, waiting..."
+          bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
           sleep 1
         done
 
