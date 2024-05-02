@@ -401,11 +401,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		if err != nil {
 			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 		}
-		tunStopped := false
 		defer func() {
-			if tunStopped {
-				return
-			}
 			err := tun.Stop()
 			if err != nil {
 				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
@@ -423,19 +419,18 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 
 		err = tun.Stop()
-		tunStopped = true
 		if err != nil {
 			log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-		}
-
-		if err := RebootMaster(sshClient); err != nil {
-			return err
 		}
 
 		return nil
 	}
 
 	if err := runBashible(); err != nil {
+		return err
+	}
+
+	if err := RebootMaster(sshClient); err != nil {
 		return err
 	}
 
