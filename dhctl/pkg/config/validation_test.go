@@ -99,8 +99,7 @@ func TestValidateInitConfiguration(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
-  registryDockerCfg: eyJhdXRocyI6eyJyZWdpc3RyeS5kZWNraG91c2UuaW8iOnsiYXV0aCI6ImJHbGpaVzV6WlMxMGIydGxianBtZWxkeFMzZGxOR2s0VEU0ME5tUmtNbGxWTWxKWmJYTkNXVmcyV25sTVJ3PT0ifX19
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
   releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -139,15 +138,13 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
-  registryDockerCfg: 1eyJhdXRocyI6eyJyZWdpc3RyeS5kZWNraG91c2UuaW8iOnsiYXV0aCI6ImJHbGpaVzV6WlMxMGIydGxianBtZWxkeFMzZGxOR2s0VEU0ME5tUmtNbGxWTWxKWmJYTkNXVmcyV25sTVJ3PT0ifX19
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
   releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
-  registryDockerCfg: 2eyJhdXRocyI6eyJyZWdpc3RyeS5kZWNraG91c2UuaW8iOnsiYXV0aCI6ImJHbGpaVzV6WlMxMGIydGxianBtZWxkeFMzZGxOR2s0VEU0ME5tUmtNbGxWTWxKWmJYTkNXVmcyV25sTVJ3PT0ifX19
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
   releaseChannel: Stable`,
 			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
@@ -156,8 +153,7 @@ deckhouse:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
-  registryDockerCfg: eyJhdXRocyI6eyJyZWdpc3RyeS5kZWNraG91c2UuaW8iOnsiYXV0aCI6ImJHbGpaVzV6WlMxMGIydGxianBtZWxkeFMzZGxOR2s0VEU0ME5tUmtNbGxWTWxKWmJYTkNXVmcyV25sTVJ3PT0ifX19
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
   releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
