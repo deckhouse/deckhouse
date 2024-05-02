@@ -418,10 +418,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 
-		err = tun.Stop()
-		if err != nil {
-			log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-		}
 
 		return nil
 	}
