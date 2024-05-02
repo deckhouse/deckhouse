@@ -47,30 +47,39 @@ type connectionConfigParser interface {
 }
 
 func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
+	var sshFlagSetByUser bool
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
 		StringsVar(&SSHAgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
+		IsSetByUser(&sshFlagSetByUser).
 		Default(SSHBastionUser).
 		Envar(configEnvName("SSH_BASTION_USER")).
 		StringVar(&SSHBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_USER")).
 		Default(SSHUser).
 		StringVar(&SSHUser)
 	cmd.Flag("ssh-host", "SSH destination hosts, can be specified multiple times").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_HOSTS")).
 		StringsVar(&SSHHosts)
 	cmd.Flag("ssh-port", "SSH destination port").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
 	cmd.Flag("ssh-extra-args", "extra args for ssh commands (-vvv)").
+		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_EXTRA_ARGS")).
 		StringVar(&SSHExtraArgs)
 	cmd.Flag("connection-config", "SSH connection config file path").
@@ -82,7 +91,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		if len(ConnectionConfigPath) == 0 {
 			return nil
 		}
-		return processConnectionConfigFile(parser)
+		return processConnectionConfigFile(sshFlagSetByUser, parser)
 	})
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
@@ -128,14 +137,9 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&AskBecomePass)
 }
 
-func processConnectionConfigFile(parser connectionConfigParser) error {
-	for _, flag := range []any{
-		SSHAgentPrivateKeys, SSHBastionHost, SSHBastionPort, SSHBastionUser,
-		SSHUser, SSHHosts, SSHPort, SSHExtraArgs,
-	} {
-		if flag != "" {
-			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
-		}
+func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
+	if sshFlagSetByUser {
+		return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
 	}
 
 	return parser.ParseConnectionConfigFromFile()
