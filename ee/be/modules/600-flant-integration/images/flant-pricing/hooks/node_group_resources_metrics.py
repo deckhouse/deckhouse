@@ -10,7 +10,6 @@ from kubernetes import utils
 
 from shell_operator import hook
 
-
 def main(ctx: hook.Context):
     metric_group = "group_node_group_resources_metrics"
     ctx.metrics.expire(metric_group)
@@ -28,44 +27,50 @@ def main(ctx: hook.Context):
         ngs_capacity[ng_name]["cpu"] += cpu
         ngs_capacity[ng_name]["memory"] += ram_in_bytes
 
+    capacity = defaultdict(lambda: defaultdict(int))
+
     for snapshot in ctx.snapshots["ngs"]:
         ng = snapshot["filterResult"]
-
-        is_master = "false"
-        is_system = "false"
-        is_monitoring = "false"
-        is_frontend = "false"
-
+        label_key = ""
         for taint in ng.get("nodeTemplate", {}).get("taints", []):
-            if taint.get("key") == "node-role.kubernetes.io/control-plane":
-                is_master = "true"
-            if taint.get("key") == "node-role.kubernetes.io/master":
-                is_master = "true"
-            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "system":
-                is_system = "true"
-            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "monitoring":
-                is_monitoring = "true"
-            if taint.get("key") == "dedicated.deckhouse.io" and taint.get("value") == "frontend":
-                is_frontend = "true"
+            match taint.get("key"):
+                case "node-role.kubernetes.io/control-plane" | "node-role.kubernetes.io/master":
+                    label_key = "is_master"
+                case "dedicated.deckhouse.io":
+                    match taint.get("value"):
+                        case "system":
+                            label_key = "is_system"
+                        case "monitoring":
+                            label_key = "is_monitoring"
+                        case "frontend":
+                            label_key = "is_frontend"
 
+        # empty label key matches worker load
+        capacity[label_key]["cpu"] += float(ngs_capacity[ng["name"]]["cpu"])
+        capacity[label_key]["memory"] += float(ngs_capacity[ng["name"]]["memory"])
+
+    for key, value in capacity.items():
         labels = {
-            "is_master": is_master,
-            "is_system": is_system,
-            "is_monitoring": is_monitoring,
-            "is_frontend": is_frontend,
+            "is_master": "false",
+            "is_system": "false",
+            "is_monitoring": "false",
+            "is_frontend": "false",
         }
+
+        if key != "":
+            labels[key] = "true"
 
         ctx.metrics.collect({
             "name": "flant_pricing_node_group_cpu_cores",
             "group": metric_group,
-            "set": float(ngs_capacity[ng["name"]]["cpu"]),
+            "set": value["cpu"],
             "labels": labels,
         })
 
         ctx.metrics.collect({
             "name": "flant_pricing_node_group_memory",
             "group": metric_group,
-            "set": float(ngs_capacity[ng["name"]]["memory"]),
+            "set": value["memory"],
             "labels": labels,
         })
 
