@@ -1,0 +1,57 @@
+type: object
+required: [apiKey]
+properties:
+  apiKey:
+    type: string
+    description: |
+      Key to access Okmeter API.
+
+      You can get the key for your project on the `okmeter` installation page (`OKMETER_API_TOKEN`).
+    x-examples: [5ff9z2a3-9127-1sh4-2192-06a3fc6e13e3]
+  disableAutoDiscovery:
+    description: |
+      Disables okagent autodiscovery. Setting this option to `true` will leave only basic host monitoring, all other plugins (postgresql/mysql/redis/etc.) will be disabled.
+      Default value is `false`
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+    x-examples:
+    - test: test
+  tolerations:
+    type: array
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  image:
+    type: object
+    default: {}
+    required: [repository, tag]
+    properties:
+      repository:
+        type: string
+        default: 'registry.okmeter.io/agent/okagent'
+        description: Docker repository for okmeter agent image.
+      tag:
+        type: string
+        default: 'latest'
+        description: Okmeter agent image tag.

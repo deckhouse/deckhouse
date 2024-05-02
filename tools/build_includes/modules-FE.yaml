@@ -239,3 +239,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/fe/modules/500-okmeter
+  to: /deckhouse/modules/500-okmeter
+  stageDependencies:
+    setup:
+        - '**/*.go'

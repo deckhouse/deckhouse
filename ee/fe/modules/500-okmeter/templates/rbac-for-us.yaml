@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: okmeter
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "okmeter")) | nindent 2 }}
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:okmeter
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: [get, list, watch]
+  - nonResourceURLs: ['*']
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:okmeter
+  {{- include "helm_lib_module_labels" (list . (dict "app" "okmeter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:okmeter
+subjects:
+- kind: ServiceAccount
+  name: okmeter
+  namespace: d8-okmeter

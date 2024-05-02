@@ -1,0 +1,25 @@
+properties:
+  apiKey:
+    description: |
+      Ключ для доступа к API Okmeter.
+
+      Можно взять на странице документации по установке `okmeter` (`OKMETER_API_TOKEN`).
+  disableAutoDiscovery:
+    description: |
+      Отключает автоматическое обнаружение сервисов, которые способен мониторить okmeter. Установка опции в `true` оставит лишь базовый мониторинг хоста, прочие плагины (postgresql, mysql, redis и др.) будут отключены.
+      По умолчанию установлено значение `false`.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  image:
+    repository:
+      description: Репозиторий с образом для okmeter agent.
+    tag:
+      description: Tag образа для okmeter agent.

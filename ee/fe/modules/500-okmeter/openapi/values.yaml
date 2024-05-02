@@ -1,0 +1,13 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      currentReleaseImage:
+        type: string
+        default: 'registry.okmeter.io/agent/okagent:stub'
+      currentReleaseImageHash:
+        type: string
