@@ -12,6 +12,7 @@ const (
 	pageMain              = "pageMain"
 	pageSelectClusterType = "pageSelectClusterType"
 	pageProvider          = "pageProvider"
+	pageStaticMaster      = "pageStaticMaster"
 )
 
 type Schemas interface {
@@ -42,6 +43,7 @@ func NewApp() *App {
 
 func buildPages(a *App) {
 	var selectFocusables []tview.Primitive
+	var selectStaticMaster []tview.Primitive
 
 	providerCls := newProviderPage(a.state, a.schemaStore, func() {
 		a.app.Stop()
@@ -59,7 +61,18 @@ func buildPages(a *App) {
 			return
 		}
 
-		a.app.Stop()
+		var p tview.Primitive
+		p, selectStaticMaster = staticMasterPage(a.state, func() {
+			a.app.Stop()
+		}, func() {
+			addSwitchFocusEvent(a.app, a.pages, selectFocusables)
+			a.pages.SwitchToPage(pageSelectClusterType)
+		})
+
+		addSwitchFocusEvent(a.app, a.pages, selectStaticMaster)
+		a.pages.AddPage(pageStaticMaster, p, true, false)
+		a.pages.SwitchToPage(pageStaticMaster)
+
 	})
 
 	mainForm, mainFocusables := welcomePage(func() {

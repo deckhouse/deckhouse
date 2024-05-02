@@ -39,7 +39,7 @@ func OptionsPage(title string, child tview.Primitive, onNext func(), onBack func
 		SetText(fmt.Sprintf("Deckhouse bootstrap wizard. %s", title))
 
 	mainGrid := tview.NewGrid().
-		SetColumns(40, 0, 40).SetRows(1, 0, 1).
+		SetColumns(10, 0, 10).SetRows(1, 0, 1).
 		AddItem(titleTxt, 0, 0, 1, 3, 0, 0, false).
 		AddItem(child, 1, 1, 1, 1, 0, 0, false).
 		AddItem(nextBtnContainer, 2, 2, 1, 1, 0, 0, false)

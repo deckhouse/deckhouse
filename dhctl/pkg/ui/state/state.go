@@ -4,13 +4,49 @@ import (
 	"fmt"
 )
 
+type StaticState struct {
+	SSHHost         string
+	SSHUser         string
+	AskSudoPassword bool
+
+	InternalNetworkCIDR string
+
+	BastionHost string
+	BastionUser string
+}
+
 type State struct {
 	ClusterType  string
 	Provider     string
 	Prefix       string
 	K8sVersion   string
 	ProviderData map[string]interface{}
+	StaticState  StaticState
 	schema       *Schema
+}
+
+func (b *State) SetSSHUser(s string) {
+	b.StaticState.SSHUser = s
+}
+
+func (b *State) SetSSHHost(s string) {
+	b.StaticState.SSHHost = s
+}
+
+func (b *State) SetInternalNetworkCIDR(s string) {
+	b.StaticState.InternalNetworkCIDR = s
+}
+
+func (b *State) SetUsePasswordForSudo(b2 bool) {
+	b.StaticState.AskSudoPassword = b2
+}
+
+func (b *State) SetBastionSSHUser(s string) {
+	b.StaticState.BastionUser = s
+}
+
+func (b *State) SetBastionSSHHost(s string) {
+	b.StaticState.BastionHost = s
 }
 
 func NewState(s *Schema) *State {

@@ -35,7 +35,7 @@ func newProviderPage(st providerState, schema providerSchema, onNext func(), onB
 }
 
 func (p *providerPage) Show() (tview.Primitive, []tview.Primitive) {
-	const inputsWidth = 50
+	const inputsWidth = 20
 
 	providerName := p.st.GetProvider()
 	providerS := p.schema.ProviderSchema(providerName)
