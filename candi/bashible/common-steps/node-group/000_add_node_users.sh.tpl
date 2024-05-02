@@ -81,7 +81,7 @@ function nodeuser_patch() {
           failure_count=$((failure_count + 1))
 
           if [[ $failure_count -eq $failure_limit ]]; then
-            >&2 echo "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
+            bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
             patch_pending=false
             break
           fi
