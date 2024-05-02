@@ -1,17 +1,17 @@
 diff --git a/chroot/etc/nginx/lua/balancer.lua b/chroot/etc/nginx/lua/balancer.lua
-index 00104c89d..5fa499ba4 100644
---- a/rootfs/etc/nginx/lua/balancer.lua
-+++ b/rootfs/etc/nginx/lua/balancer.lua
+index 00104c89d..b9d1f3573 100644
+--- a/chroot/etc/nginx/lua/balancer.lua
++++ b/chroot/etc/nginx/lua/balancer.lua
 @@ -120,6 +120,13 @@ local function sync_backend(backend)
  
    if not balancer then
      balancers[backend.name] = implementation:new(backend)
 +    if backend.ingress then
-+       balancers[backend.name]["ingress_name"] = backend.ingress.metadata.name
++      balancers[backend.name]["ingress_name"] = backend.ingress.metadata.name
 +    end
 +    if backend.service then
-+        balancers[backend.name]["backend_name"] = backend.service.metadata.name
-+        balancers[backend.name]["backend_port"] = backend.port
++      balancers[backend.name]["backend_name"] = backend.service.metadata.name
++      balancers[backend.name]["backend_port"] = backend.port
 +    end
      return
    end
@@ -21,11 +21,11 @@ index 00104c89d..5fa499ba4 100644
                        balancer.name, implementation.name))
      balancers[backend.name] = implementation:new(backend)
 +    if backend.ingress then
-+        balancers[backend.name]["ingress_name"] = backend.ingress.metadata.name
++      balancers[backend.name]["ingress_name"] = backend.ingress.metadata.name
 +    end
 +    if backend.service then
-+        balancers[backend.name]["backend_name"] = backend.service.metadata.name
-+        balancers[backend.name]["backend_port"] = backend.port
++      balancers[backend.name]["backend_name"] = backend.service.metadata.name
++      balancers[backend.name]["backend_port"] = backend.port
 +    end
      return
    end
