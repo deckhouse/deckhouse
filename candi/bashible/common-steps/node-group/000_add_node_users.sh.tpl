@@ -86,7 +86,7 @@ function nodeuser_patch() {
             break
           fi
 
-          >&2 echo "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
+          bb-log-error "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
           sleep 10
           continue
         fi
