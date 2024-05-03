@@ -226,9 +226,9 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
-			if errors.Is(err, ErrSchemaNotFound) {
-				return false, nil
-			}
+		if errors.Is(err, ErrSchemaNotFound) {
+			return false, nil
+		}
 		return false, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
