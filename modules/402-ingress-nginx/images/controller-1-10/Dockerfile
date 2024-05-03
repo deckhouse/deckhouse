@@ -171,7 +171,7 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/lib64 /chroot/usr/local/ \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
   && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
-  && cp -a /usr/local/nginx /chroot/usr/local/ \
+  && cp -a /usr/local/nginx /chroot/usr/local/ 
 
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
