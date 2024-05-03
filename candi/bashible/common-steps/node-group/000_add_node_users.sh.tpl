@@ -34,7 +34,7 @@ function error_check() {
 # $1 - username $2 - request data
 function nodeuser_patch() {
   local username="$1"
-  local data=$( echo "$2" )
+  local data="$2"
 
   # Skip this step after multiple failures.
   # This step puts information "how to get bootstrap logs" into Instance resource.
@@ -43,7 +43,10 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch="${data}" --subresource=status; do
+    json_file=$( mktemp -t patch_json.XXXXX )
+    echo "${data}" > $json_file
+
+    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -52,6 +55,7 @@ function nodeuser_patch() {
       bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
+    rm $json_file
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
     while [ "$patch_pending" = true ] ; do
