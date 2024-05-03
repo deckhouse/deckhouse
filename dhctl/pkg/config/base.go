@@ -202,14 +202,14 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 	var index SchemaIndex
 	err := yaml.Unmarshal(docData, &index)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("document unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	if index.Kind == ModuleConfigKind {
 		moduleConfig := ModuleConfig{}
 		err = yaml.Unmarshal(docData, &moduleConfig)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("module config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		_, err = schemaStore.Validate(&docData)
