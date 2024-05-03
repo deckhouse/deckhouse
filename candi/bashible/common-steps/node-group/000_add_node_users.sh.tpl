@@ -43,7 +43,7 @@ function nodeuser_patch() {
   local failure_limit=3
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json "--patch=${data}" --subresource=status; do
+    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch="${data}" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
         bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -123,7 +123,12 @@ function nodeuser_clear_error() {
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
 
-  nodeuser_patch "${username}" "[{\"op\":\"remove\",\"path\":\"/status/errors/${machine_name}\"}]"
+  data=$( jq -n \
+            --arg op "remove" \
+            --arg pt "/status/errors/${machine_name}" \
+            '[{op:$op,path:$pt}]' )
+
+  nodeuser_patch "${username}" "${datd}"
 
 }
 
