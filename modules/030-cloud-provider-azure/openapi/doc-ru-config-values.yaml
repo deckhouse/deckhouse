@@ -37,4 +37,4 @@ properties:
                 Скорость обращения к диску в `MBps` (лимит 256 KiB/s на каждый IOPS).
             tags:
               description: |
-                Azure disk [теги](https://learn.microsoft.com/ru-ru/azure/azure-resource-manager/management/tag-resources).
+                Azure disk [теги](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/).
