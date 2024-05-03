@@ -183,16 +183,23 @@ func RunRoutesReconcilerAgentController(
 
 				if nrt.DeletionTimestamp != nil {
 					log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
-					for _, route := range nrt.Spec.Routes {
-						var tmpREM RouteEntryMap
-						if len(deletedNRTRouteEntryMaps[nrt.Name]) == 0 {
-							tmpREM = make(RouteEntryMap)
-						} else {
-							tmpREM = deletedNRTRouteEntryMaps[nrt.Name]
-						}
-						tmpREM.AppendR(route, nrt.Spec.IPRouteTableID)
-						deletedNRTRouteEntryMaps[nrt.Name] = tmpREM
+					var tmpREM RouteEntryMap
+					if len(deletedNRTRouteEntryMaps[nrt.Name]) == 0 {
+						tmpREM = make(RouteEntryMap)
+					} else {
+						tmpREM = deletedNRTRouteEntryMaps[nrt.Name]
 					}
+					for _, route := range nrt.Spec.Routes {
+						hash := fmt.Sprintf("%d#%s#%s",
+							nrt.Spec.IPRouteTableID,
+							route.Destination,
+							route.Gateway,
+						)
+						if _, ok := actualRouteEntryMap[hash]; ok {
+							tmpREM.AppendR(route, nrt.Spec.IPRouteTableID)
+						}
+					}
+					deletedNRTRouteEntryMaps[nrt.Name] = tmpREM
 					continue
 				}
 
@@ -230,18 +237,20 @@ func RunRoutesReconcilerAgentController(
 
 				// Filling erasedNRTRouteEntryMaps[nrt.Name]
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: erasedRoute"))
+				var tmpREM RouteEntryMap
+				if len(erasedNRTRouteEntryMaps[nrt.Name]) == 0 {
+					tmpREM = make(RouteEntryMap)
+				} else {
+					tmpREM = erasedNRTRouteEntryMaps[nrt.Name]
+				}
 				for hash, route := range nrtLastAppliedRouteEntryMap {
 					if _, ok := nrtDesiredRouteEntryMap[hash]; !ok {
-						var tmpREM RouteEntryMap
-						if len(erasedNRTRouteEntryMaps[nrt.Name]) == 0 {
-							tmpREM = make(RouteEntryMap)
-						} else {
-							tmpREM = erasedNRTRouteEntryMaps[nrt.Name]
+						if _, ok := actualRouteEntryMap[hash]; ok {
+							tmpREM.AppendRE(route)
 						}
-						tmpREM.AppendRE(route)
-						erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
 					}
 				}
+				erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
 
 				// Actions: add routes
 				if len(routesToAdd) > 0 {
@@ -252,7 +261,7 @@ func RunRoutesReconcilerAgentController(
 						if err != nil {
 							log.Debug(fmt.Sprintf("err: %v", err))
 							status.IsSuccess = false
-							status.ErrorMessage = status.ErrorMessage + err.Error()
+							status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
 						} else {
 							actualRouteEntryMap.AppendRE(route)
 						}
@@ -401,7 +410,7 @@ func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 func addRouteToNode(route RouteEntry) error {
 	_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
-		return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %w",
+		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
@@ -416,7 +425,7 @@ func addRouteToNode(route RouteEntry) error {
 		Gw:    gwNetIP,
 	})
 	if err != nil {
-		return fmt.Errorf("can't add route %v gw %v tbl %v, err: %w",
+		return fmt.Errorf("unable to add route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
@@ -429,7 +438,7 @@ func addRouteToNode(route RouteEntry) error {
 func delRouteFromNode(route RouteEntry) error {
 	_, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
-		return fmt.Errorf("can't parse destination in route %v gw %v tbl %v, err: %w",
+		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
@@ -444,7 +453,7 @@ func delRouteFromNode(route RouteEntry) error {
 		Gw:    gwNetIP,
 	})
 	if err != nil {
-		return fmt.Errorf("can't del route %v gw %v tbl %v, err: %w",
+		return fmt.Errorf("unable to del route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
@@ -461,7 +470,7 @@ func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconcili
 			if err != nil {
 				log.Debug(fmt.Sprintf("err: %v", err))
 				status.IsSuccess = false
-				status.ErrorMessage = status.ErrorMessage + err.Error()
+				status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
 			}
 		}
 	}
