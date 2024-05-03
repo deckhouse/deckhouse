@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.3
-	github.com/vmware/govmomi v0.35.0
+	github.com/vmware/govmomi v0.37.1
 )
 
 require (
