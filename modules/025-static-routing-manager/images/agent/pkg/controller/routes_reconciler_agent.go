@@ -31,8 +31,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/vishvananda/netlink"
 
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -175,6 +173,7 @@ func RunRoutesReconcilerAgentController(
 
 			for _, nrt := range nrtList.Items {
 				// Gathering facts
+				log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
 				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
 				tmpNrt := nrt
 				tmpNrt.Status.ObservedGeneration = nrt.Generation
@@ -183,6 +182,7 @@ func RunRoutesReconcilerAgentController(
 				specNeedToUpdate[nrt.Name] = false
 
 				if nrt.DeletionTimestamp != nil {
+					log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
 					for _, route := range nrt.Spec.Routes {
 						var tmpREM RouteEntryMap
 						if len(deletedNRTRouteEntryMaps[nrt.Name]) == 0 {
@@ -197,6 +197,7 @@ func RunRoutesReconcilerAgentController(
 				}
 
 				// Filling nrtDesiredRouteEntryMap and globalDesiredRouteEntryMap
+				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: DesiredRoute and globalDesiredRoute"))
 				nrtDesiredRouteEntryMap := make(RouteEntryMap)
 				for _, route := range nrt.Spec.Routes {
 					nrtDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
@@ -204,6 +205,7 @@ func RunRoutesReconcilerAgentController(
 				}
 
 				// Filling nrtLastAppliedRouteEntryMap
+				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: LastAppliedRoute"))
 				nrtLastAppliedRouteEntryMap := make(RouteEntryMap)
 				nrtLastAppliedConfiguration := &v1alpha1.NodeRoutingTableSpec{}
 				if _, ok := nrt.Annotations[lastAppliedConfigurationAnnotation]; ok && nrt.Annotations[lastAppliedConfigurationAnnotation] != "" {
@@ -218,6 +220,7 @@ func RunRoutesReconcilerAgentController(
 				}
 
 				// Filling routesToAdd
+				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: routesToAdd"))
 				routesToAdd := make([]RouteEntry, 0)
 				for hash, desiredRoute := range nrtDesiredRouteEntryMap {
 					if _, ok := actualRouteEntryMap[hash]; !ok {
@@ -226,6 +229,7 @@ func RunRoutesReconcilerAgentController(
 				}
 
 				// Filling erasedNRTRouteEntryMaps[nrt.Name]
+				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: erasedRoute"))
 				for hash, route := range nrtLastAppliedRouteEntryMap {
 					if _, ok := nrtDesiredRouteEntryMap[hash]; !ok {
 						var tmpREM RouteEntryMap
@@ -241,10 +245,12 @@ func RunRoutesReconcilerAgentController(
 
 				// Actions: add routes
 				if len(routesToAdd) > 0 {
+					log.Debug(fmt.Sprintf("[NRTReconciler] Starting adding routes to the node"))
 					status := nrtReconciliationStatusMap[nrt.Name]
 					for _, route := range routesToAdd {
 						err := addRouteToNode(route)
 						if err != nil {
+							log.Debug(fmt.Sprintf("err: %v", err))
 							status.IsSuccess = false
 							status.ErrorMessage = status.ErrorMessage + err.Error()
 						} else {
@@ -260,12 +266,14 @@ func RunRoutesReconcilerAgentController(
 			}
 
 			// Actions: delete routes because NRT has been deleted
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because NRT has been deleted)"))
 			for nrtName, rem := range deletedNRTRouteEntryMaps {
 				status := nrtReconciliationStatusMap[nrtName]
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
 					status,
+					log,
 				)
 				if nrtReconciliationStatusMap[nrtName].IsSuccess {
 					removeFinalizer(nrtK8sResourcesMap[nrtName])
@@ -274,12 +282,14 @@ func RunRoutesReconcilerAgentController(
 			}
 
 			// Actions: delete routes because they were deleted from NRT
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because they were deleted from NRT)"))
 			for nrtName, rem := range erasedNRTRouteEntryMaps {
 				status := nrtReconciliationStatusMap[nrtName]
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
 					status,
+					log,
 				)
 				if nrtReconciliationStatusMap[nrtName].IsSuccess {
 					specNeedToUpdate[nrt.Name] = true
@@ -287,38 +297,38 @@ func RunRoutesReconcilerAgentController(
 			}
 
 			// Generate new condition for each processed nrt
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starting generate new conditions"))
 			for nrtName, nrtReconciliationStatus := range nrtReconciliationStatusMap {
+				newCond := v1alpha1.NodeRoutingTableCondition{}
 				t := metav1.NewTime(time.Now())
+
+				if nrtK8sResourcesMap[nrtName].Status.Conditions == nil {
+					nrtK8sResourcesMap[nrtName].Status.Conditions = make([]v1alpha1.NodeRoutingTableCondition, 0)
+				}
+
 				if nrtReconciliationStatus.IsSuccess {
-					newCond := v1alpha1.NodeRoutingTableCondition{
-						Type:               v1alpha1.ReconciliationSucceed,
-						LastHeartbeatTime:  t,
-						Status:             corev1.ConditionTrue,
-						LastTransitionTime: nrtK8sResourcesMap[nrtName].Status.Conditions[0].LastTransitionTime,
-						Reason:             v1alpha1.NRTReconciliationSucceed,
+					newCond = v1alpha1.NodeRoutingTableCondition{
+						Type:              v1alpha1.ReconciliationSucceed,
+						LastHeartbeatTime: t,
+						Status:            metav1.ConditionTrue,
+						Reason:            v1alpha1.NRTReconciliationSucceed,
+						Message:           "",
 					}
-					if nrtK8sResourcesMap[nrtName].Status.Conditions[0].Status != corev1.ConditionTrue {
-						newCond.LastTransitionTime = t
-					}
-					nrtK8sResourcesMap[nrtName].Status.Conditions[0] = newCond
 				} else {
-					newCond := v1alpha1.NodeRoutingTableCondition{
-						Type:               v1alpha1.ReconciliationSucceed,
-						LastHeartbeatTime:  t,
-						Status:             corev1.ConditionFalse,
-						LastTransitionTime: nrtK8sResourcesMap[nrtName].Status.Conditions[0].LastTransitionTime,
-						Reason:             v1alpha1.NRTReconciliationFailed,
-						Message:            nrtReconciliationStatus.ErrorMessage,
+					newCond = v1alpha1.NodeRoutingTableCondition{
+						Type:              v1alpha1.ReconciliationSucceed,
+						LastHeartbeatTime: t,
+						Status:            metav1.ConditionFalse,
+						Reason:            v1alpha1.NRTReconciliationFailed,
+						Message:           nrtReconciliationStatus.ErrorMessage,
 					}
-					if nrtK8sResourcesMap[nrtName].Status.Conditions[0].Status != corev1.ConditionFalse {
-						newCond.LastTransitionTime = t
-					}
-					nrtK8sResourcesMap[nrtName].Status.Conditions[0] = newCond
 					shouldRequeue = true
 				}
+				_ = SetStatusCondition(&nrtK8sResourcesMap[nrtName].Status.Conditions, newCond)
 			}
 
 			// Update state in k8s
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starting updating resourses in k8s"))
 			for _, nrt := range nrtK8sResourcesMap {
 				if specNeedToUpdate[nrt.Name] {
 					// Update spec
@@ -442,11 +452,12 @@ func delRouteFromNode(route RouteEntry) error {
 	return nil
 }
 
-func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconciliationStatus) NRTReconciliationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconciliationStatus, log logger.Logger) NRTReconciliationStatus {
 	for hash, route := range delREM {
 		if _, ok := gdREM[hash]; !ok {
 			err := delRouteFromNode(route)
 			if err != nil {
+				log.Debug(fmt.Sprintf("err: %v", err))
 				status.IsSuccess = false
 				status.ErrorMessage = status.ErrorMessage + err.Error()
 			}
@@ -465,4 +476,59 @@ func removeFinalizer(nrt *v1alpha1.NodeRoutingTable) {
 		}
 	}
 	nrt.Finalizers = tmpNRTFinalizers
+}
+
+func SetStatusCondition(conditions *[]v1alpha1.NodeRoutingTableCondition, newCondition v1alpha1.NodeRoutingTableCondition) (changed bool) {
+	if conditions == nil {
+		return false
+	}
+
+	timeNow := metav1.NewTime(time.Now())
+
+	existingCondition := FindStatusCondition(*conditions, newCondition.Type)
+	if existingCondition == nil {
+		if newCondition.LastTransitionTime.IsZero() {
+			newCondition.LastTransitionTime = timeNow
+		}
+		if newCondition.LastHeartbeatTime.IsZero() {
+			newCondition.LastHeartbeatTime = timeNow
+		}
+		*conditions = append(*conditions, newCondition)
+		return true
+	}
+
+	if !newCondition.LastHeartbeatTime.IsZero() {
+		existingCondition.LastHeartbeatTime = newCondition.LastHeartbeatTime
+	} else {
+		existingCondition.LastHeartbeatTime = timeNow
+	}
+
+	if existingCondition.Status != newCondition.Status {
+		existingCondition.Status = newCondition.Status
+		if !newCondition.LastTransitionTime.IsZero() {
+			existingCondition.LastTransitionTime = newCondition.LastTransitionTime
+		} else {
+			existingCondition.LastTransitionTime = timeNow
+		}
+		changed = true
+	}
+
+	if existingCondition.Reason != newCondition.Reason {
+		existingCondition.Reason = newCondition.Reason
+		changed = true
+	}
+	if existingCondition.Message != newCondition.Message {
+		existingCondition.Message = newCondition.Message
+		changed = true
+	}
+	return changed
+}
+
+func FindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType v1alpha1.NodeRoutingTableConditionType) *v1alpha1.NodeRoutingTableCondition {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return &conditions[i]
+		}
+	}
+	return nil
 }
