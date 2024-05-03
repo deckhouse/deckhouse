@@ -106,7 +106,13 @@ function nodeuser_add_error() {
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
 
-  nodeuser_patch "${username}" "[{\"op\":\"add\",\"path\":\"/status/errors/${machine_name}\",\"value\":\"${message}\"}]"
+  data=$( jq -n \
+            --arg op "add" \
+            --arg pt "/status/errors/${machine_name}" \
+            --arg msg "${message}" \
+            '[{op:$op,path:$pt,value:$msg}]' )
+
+  nodeuser_patch "${username}" "${data}"
 }
 
 # $1 - username
