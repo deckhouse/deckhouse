@@ -164,9 +164,10 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 ### Advanced scheduling
 
 If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
-1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
+1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see [the list](#module-features-that-depend-on-its-type) below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
 1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
 1. You can set both parameters to `false` to disable their automatic calculation.
+1. If there are no nodes with a [specific role](#module-features-that-depend-on-its-type) in the cluster and `nodeSelector` is automatically selected (see point 1), `nodeSelector` will not be specified in the module resources. The module will then use any node with non-conflicting `taints`.
 
 You cannot set `nodeSelector` and `tolerations` for modules:
 - that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`);
