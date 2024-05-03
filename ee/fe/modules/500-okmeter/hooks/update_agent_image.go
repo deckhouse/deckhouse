@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func checkRelease(input *go_hook.HookInput, dc dependency.Container) error {
 	repo := input.ConfigValues.Get("okmeter.image.repository").String()
 	if repo == "" {
-		repo = "registry.okmeter.io/agent/okagent"
+		repo = "registry.okmeter.io/agent/okmeter"
 	}
 	tag := input.ConfigValues.Get("okmeter.image.tag").String()
 	if tag == "" {
