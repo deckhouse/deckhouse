@@ -110,7 +110,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Generate a pair of SSH keys on the master server with an empty passphrase:</p>
+    <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
@@ -118,7 +118,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create an <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster:</p>
+    <p>Create an <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 kubectl create -f - <<EOF
@@ -134,35 +134,35 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Paste command below and copy output of the command to clipboard:</p>
+    <p>Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-echo "export key='`cat /dev/shm/caps-id.pub`'"
+cat /dev/shm/caps-id.pub
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>On the <strong>virtual machine you have started</strong>,  run the following command to create <a href="/documentation/v1/modules/040-node-manager/examples.html#using-the-cluster-api-provider-static">the caps</a> user:</p>
+    <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
 {% snippetcut %}
 ```bash
-# Paste from your clipboard to export public SSH key for user
-export key=<SSH-PUB-KEY>
+# Specify the public part of the user SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/caps/.ssh
-echo $key >> /home/caps/.ssh/authorized_keys
+echo $KEY >> /home/caps/.ssh/authorized_keys
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>On the <strong>master node</strong>, create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added:</p>
+    <p>Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 {% snippetcut %}
 ```bash
-# IP address of node you want to connect to cluster
-export node=<VM-IP-ADDRESS>
+# Specify the IP address of the node you want to connect to the cluster.
+export NODE=<NODE-IP-ADDRESS>
 kubectl create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
@@ -171,7 +171,7 @@ metadata:
   labels:
     role: worker
 spec:
-  address: "$node"
+  address: "$NODE"
   credentialsRef:
     kind: SSHCredentials
     name: caps
