@@ -77,5 +77,25 @@ type NodeRoutingTableSpec struct {
 }
 
 type NodeRoutingTableStatus struct {
-	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
+	ObservedGeneration int64                       `json:"observedGeneration,omitempty"`
+	Conditions         []NodeRoutingTableCondition `json:"conditions,omitempty"`
 }
+
+type NodeRoutingTableCondition struct {
+	LastHeartbeatTime  metav1.Time                   `json:"lastHeartbeatTime,omitempty"`
+	Type               NodeRoutingTableConditionType `json:"type"`
+	Status             metav1.ConditionStatus        `json:"status"`
+	LastTransitionTime metav1.Time                   `json:"lastTransitionTime,omitempty"`
+	Reason             string                        `json:"reason,omitempty"`
+	Message            string                        `json:"message,omitempty"`
+}
+
+type NodeRoutingTableConditionType string
+
+const (
+	// Types
+	ReconciliationSucceed NodeRoutingTableConditionType = "ReconciliationSucceed"
+	// Reasons
+	NRTReconciliationSucceed = "NRTReconciliationSucceed"
+	NRTReconciliationFailed  = "NRTReconciliationFailed"
+)

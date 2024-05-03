@@ -65,10 +65,43 @@ spec:
           status:
             type: object
             properties:
-              reconcileStatus:
-                type: string
-              reconcileMessage:
-                type: string
+              observedGeneration:
+                description: ObservedGeneration is the latest generation observed
+                    by the controller.
+                format: int64
+                type: integer
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - type
+                    - status
+                    - reason
+                  properties:
+                    type:
+                      description: Type of node group condition.
+                      type: string
+                    lastHeartbeatTime:
+                      type: string
+                      format: date-time
+                      description: Last time the routes were checked.
+                    status:
+                      description: Status of the condition, one of True, False.
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                      description: Last time the condition transit from one status to another.
+                    reason:
+                      description: The reason for the condition's last transition
+                        in CamelCase.
+                      type: string
+                    message:
+                      description: Human readable message indicating details about last transition.
+                      type: string
+
+
 
 
 

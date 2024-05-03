@@ -339,12 +339,14 @@ func RunRoutesReconcilerAgentController(
 						}
 						nrt.Annotations[lastAppliedConfigurationAnnotation] = string(newNRTLastAppliedConfiguration)
 					}
+					log.Debug(fmt.Sprintf("Update of NRT: %v", nrt.Name))
 					err = cl.Update(ctx, nrt)
 					if err != nil {
 						log.Error(err, fmt.Sprintf("unable to update CR NodeRoutingTable %v, err: %v", nrt.Name, err))
 					}
 				}
 				// Update status every time
+				log.Debug(fmt.Sprintf("Update status of NRT: %v", nrt.Name))
 				err = cl.Status().Update(ctx, nrt)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrt.Name, err))
