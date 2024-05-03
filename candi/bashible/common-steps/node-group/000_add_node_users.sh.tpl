@@ -128,7 +128,7 @@ function nodeuser_clear_error() {
             --arg pt "/status/errors/${machine_name}" \
             '[{op:$op,path:$pt}]' )
 
-  nodeuser_patch "${username}" "${datd}"
+  nodeuser_patch "${username}" "${data}"
 
 }
 
