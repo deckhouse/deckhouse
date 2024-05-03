@@ -39,11 +39,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - master
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -52,7 +51,7 @@ EOF
 <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -74,11 +73,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - worker
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -87,7 +85,7 @@ EOF
   <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -102,23 +100,82 @@ metadata:
   name: worker
 spec:
   nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
 EOF
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Deckhouse will generate the script needed to configure the prospective node and include it in the cluster. Print its contents in Base64 format (you will need them at the next step):</p>
+    <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>On the <strong>virtual machine you have started</strong>, run the following command by pasting the script code from the previous step:</p>
+    <p>Create an <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-echo <Base64-SCRIPT-CODE> | base64 -d | sudo bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the <strong>master node</strong>:</p>
+{% snippetcut %}
+```bash
+cat /dev/shm/caps-id.pub
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
+{% snippetcut %}
+```bash
+# Specify the public part of the user SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+{% snippetcut %}
+```bash
+# Specify the IP address of the node you want to connect to the cluster.
+export NODE=<NODE-IP-ADDRESS>
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: d8cluster-worker
+  labels:
+    role: worker
+spec:
+  address: "$NODE"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+EOF
 ```
 {% endsnippetcut %}
   </li>
