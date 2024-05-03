@@ -63,15 +63,7 @@ COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-essential libgrpc-devel  \
     libprotobuf-devel grpc-plugins openssl libpcre2-devel
-RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
-    # build pcre library with jit support due to lack of jit support in standard alt pcre library
-    cd pcre && \
-    ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
-    make && \
-    make install && \
-    cd / && \
-    patch build.sh < nginx-build.patch && \
-    /build.sh
+RUN patch build.sh < nginx-build.patch && /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.10.1":
@@ -158,7 +150,6 @@ RUN bash -eu -c ' \
   && cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates \
   && cp -a /usr/bin/curl /chroot/usr/bin/curl \
   && cp -a /lib64/* /chroot/lib64/ \
-  && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
@@ -181,17 +172,10 @@ RUN bash -eu -c ' \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
   && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
   && cp -a /usr/local/nginx /chroot/usr/local/ \
-  # replace pcre with version with jit support
-  && rm -f /chroot/lib64/libpcre*
 
-COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
-RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
-  # fix simlink to proper pcre jit version
-  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
-  && cd / \
-  && patch -p1 < /balancer-lua.patch \
+RUN patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch
 
