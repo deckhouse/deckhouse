@@ -34,7 +34,7 @@ function error_check() {
 # $1 - username $2 - request data
 function nodeuser_patch() {
   local username="$1"
-  local data="$2"
+  local data=$( echo "$2" )
 
   # Skip this step after multiple failures.
   # This step puts information "how to get bootstrap logs" into Instance resource.
