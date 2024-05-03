@@ -26,81 +26,6 @@ if bb-flag? disruption && bb-flag? reboot; then
   exit 0
 fi
 
-function error_check() {
-  error_code=$?
-  (( error_code != 0 ))
-}
-
-# $1 - username $2 - request data
-function nodeuser_patch() {
-  local username="$1"
-  local data="$2"
-
-  # Skip this step after multiple failures.
-  # This step puts information "how to get bootstrap logs" into Instance resource.
-  # It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
-  local failure_count=0
-  local failure_limit=3
-
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    json_file=$( mktemp -t patch_json.XXXXX )
-    echo "${data}" > $json_file
-
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
-      failure_count=$((failure_count + 1))
-      if [[ $failure_count -eq $failure_limit ]]; then
-        bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-        break
-      fi
-      bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
-      sleep 10
-    done
-    rm $json_file
-  elif [ -f /var/lib/bashible/bootstrap-token ]; then
-    local patch_pending=true
-    while [ "$patch_pending" = true ] ; do
-      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
-        local server_addr=$(echo $server | cut -f1 -d":")
-        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-          bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
-          sleep 1
-        done
-
-        if curl -sS --fail -x "" \
-          --max-time 10 \
-          -XPATCH \
-          -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-          -H "Accept: application/json" \
-          -H "Content-Type: application/json-patch+json" \
-          --cacert "$BOOTSTRAP_DIR/ca.crt" \
-          --data "${data}" \
-          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" ; then
-
-          bb-log-info "Successfully patched NodeUser."
-          patch_pending=false
-
-          break
-        else
-          failure_count=$((failure_count + 1))
-
-          if [[ $failure_count -eq $failure_limit ]]; then
-            bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
-            patch_pending=false
-            break
-          fi
-
-          bb-log-error "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
-          sleep 10
-          continue
-        fi
-      done
-    done
-  else
-    bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
-    exit 1
-  fi
-}
-
 # $1 - username $2 - error message
 function nodeuser_add_error() {
   local username="$1"
@@ -116,7 +41,7 @@ function nodeuser_add_error() {
             --arg msg "${message}" \
             '[{op:$op,path:$pt,value:$msg}]' )
 
-  nodeuser_patch "${username}" "${data}"
+  bb-nodeuser-patch "${username}" "${data}"
 }
 
 # $1 - username
@@ -132,8 +57,7 @@ function nodeuser_clear_error() {
             --arg pt "/status/errors/${machine_name}" \
             '[{op:$op,path:$pt}]' )
 
-  nodeuser_patch "${username}" "${data}"
-
+  bb-nodeuser-patch "${username}" "${data}"
 }
 
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
@@ -236,13 +160,13 @@ function main() {
       fi
       # All ok, modify user
       error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
-      if error_check
+      if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
         exit 0
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-      if error_check
+      if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
         exit 0
@@ -250,13 +174,13 @@ function main() {
     else
       # Adding user
       error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
-      if error_check
+      if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
         exit 0
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
-      if error_check
+      if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
         exit 0
