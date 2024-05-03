@@ -56,5 +56,9 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	return RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath)
+	if err := RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+		return err
+	}
+
+	return RebootMaster(sshClient)
 }
