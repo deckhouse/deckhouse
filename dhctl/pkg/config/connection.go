@@ -94,7 +94,7 @@ func ParseConnectionConfig(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}

@@ -214,6 +214,9 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
+			if errors.Is(err, ErrSchemaNotFound) {
+				return false, nil
+			}
 			return false, fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
@@ -223,6 +226,9 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
+			if errors.Is(err, ErrSchemaNotFound) {
+				return false, nil
+			}
 		return false, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
@@ -289,31 +295,4 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
-}
-
-// ValidateClusterSettings parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-func ValidateClusterSettings(configData string) error {
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		_, err := parseDocument(doc, &metaConfig, schemaStore)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

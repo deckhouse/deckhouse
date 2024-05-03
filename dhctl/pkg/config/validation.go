@@ -150,7 +150,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -230,7 +230,7 @@ func ValidateClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -339,7 +339,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}

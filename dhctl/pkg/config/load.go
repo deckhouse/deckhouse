@@ -219,7 +219,7 @@ func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaInde
 		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
-	err = s.ValidateWithIndexOpts(&index, doc, opts...)
+	err = s.ValidateWithIndex(&index, doc, opts...)
 	return &index, err
 }
 
@@ -234,20 +234,12 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
-func (s *SchemaStore) ValidateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
-	return s.validateWithIndexOpts(index, doc, opts...)
-}
-
 // ValidateWithIndex
 // validate one document with schema
 // two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
-func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
-	return s.validateWithIndexOpts(index, doc)
-}
-
-func (s *SchemaStore) validateWithIndexOpts(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
