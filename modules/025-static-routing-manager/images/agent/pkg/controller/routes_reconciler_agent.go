@@ -261,7 +261,11 @@ func RunRoutesReconcilerAgentController(
 						if err != nil {
 							log.Debug(fmt.Sprintf("err: %v", err))
 							status.IsSuccess = false
-							status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
+							if status.ErrorMessage == "" {
+								status.ErrorMessage = err.Error()
+							} else {
+								status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
+							}
 						} else {
 							actualRouteEntryMap.AppendRE(route)
 						}
@@ -470,7 +474,11 @@ func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconcili
 			if err != nil {
 				log.Debug(fmt.Sprintf("err: %v", err))
 				status.IsSuccess = false
-				status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
+				if status.ErrorMessage == "" {
+					status.ErrorMessage = err.Error()
+				} else {
+					status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
+				}
 			}
 		}
 	}
