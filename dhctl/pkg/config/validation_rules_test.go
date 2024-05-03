@@ -291,6 +291,17 @@ metadata:
 `,
 			schema: testSchemaStore(t),
 		},
+		"empty old config": {
+			phase:     phases.FinalizationPhase,
+			oldConfig: ``,
+			newConfig: `apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+zones: [ru-central1, ru-central2]
+masterNodeGroup:
+  replicas: 3`,
+			schema: testSchemaStore(t),
+		},
 		"empty new config": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `apiVersion: deckhouse.io/v1
@@ -300,6 +311,12 @@ zones: [ru-central1, ru-central2]
 masterNodeGroup:
   replicas: 3`,
 			newConfig: "",
+			schema:    testSchemaStore(t),
+		},
+		"empty configs": {
+			phase:     phases.FinalizationPhase,
+			oldConfig: ``,
+			newConfig: ``,
 			schema:    testSchemaStore(t),
 		},
 	}

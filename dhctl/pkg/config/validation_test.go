@@ -86,6 +86,7 @@ func TestValidateInitConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
 	newStore := newSchemaStore([]string{schemasDir})
 	newStore.moduleConfigsCache["deckhouse"] = &spec.Schema{}
+	newStore.modulesCache["deckhouse"] = struct{}{}
 
 	tests := map[string]struct {
 		config      string
@@ -264,7 +265,7 @@ clusterType: Static
 			expected: ClusterConfig{
 				ClusterType: "Static",
 			},
-			errContains: `ValidationFailed: [1] deckhouse.io/v1, Kind=SomeKind: schema not found: no schema for index SomeKind, deckhouse.io/v1; unknown kind, expected "ClusterConfiguration"`,
+			errContains: `ValidationFailed: [1] deckhouse.io/v1, Kind=SomeKind: schema not found; unknown kind, expected "ClusterConfiguration"`,
 		},
 	}
 
@@ -385,7 +386,7 @@ metadata:
 				}),
 			},
 			errContains: `ValidationFailed: unknown cloud provider '', check if 'ClusterConfiguration' is valid
-[0] deckhouse.io/v1, Kind=SuperOpenStackClusterConfiguration "emptyProvider": schema not found: no schema for index SuperOpenStackClusterConfiguration, deckhouse.io/v1`,
+[0] deckhouse.io/v1, Kind=SuperOpenStackClusterConfiguration "emptyProvider": schema not found`,
 		},
 		"no config": {
 			config: `

@@ -414,7 +414,7 @@ func ValidateStaticClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.validateWithIndexOpts(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
