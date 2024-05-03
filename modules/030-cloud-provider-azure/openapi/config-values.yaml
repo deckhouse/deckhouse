@@ -77,4 +77,4 @@ properties:
                   - key: key2
                     value: val2
               description: |
-                Azure disk [tags](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/)
+                Azure disk [tags](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/).
