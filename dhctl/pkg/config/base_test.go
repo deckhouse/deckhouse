@@ -15,9 +15,13 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func TestParseConfigFromData(t *testing.T) {
@@ -125,6 +129,66 @@ metadata:
 spec:
   enabled: false
 `
+	unknownModuleConfig := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: unknown
+spec:
+  enabled: true
+`
+
+	configMapAndInstanceClass := `
+---
+apiVersion: v1
+data:
+  isUpdating: "false"
+  notified: "false"
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-release-data
+  namespace: d8-system
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: system
+spec:
+  cores: 4
+  memory: 8192
+`
+
+	ngWithTemplating := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: system
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+    additionalSubnets:
+    - '{{ index .cloudDiscovery.zoneToSubnetIdMap "ru-central1-a" }}'
+  disruptions:
+    approvalMode: Automatic
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: system
+  nodeType: CloudEphemeral
+`
 
 	t.Run("Standard Static", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(clusterConfig + initConfig)
@@ -140,6 +204,8 @@ spec:
 
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
+
+		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
 	t.Run("Without init configuration", func(t *testing.T) {
@@ -162,6 +228,8 @@ spec:
 		require.Equal(t, metaConfig.Registry.Path, "/deckhouse/ce")
 		require.Equal(t, metaConfig.Registry.DockerCfg, "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=")
 		require.Equal(t, metaConfig.Registry.Scheme, "https")
+
+		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
 	t.Run("Static with StaticClusterConfig", func(t *testing.T) {
@@ -178,6 +246,8 @@ spec:
 
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
+
+		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
 	t.Run("Module config", func(t *testing.T) {
@@ -186,6 +256,8 @@ spec:
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 1)
+
+			require.Len(t, metaConfig.ResourcesYAML, 0)
 		})
 
 		t.Run("Global invalid", func(t *testing.T) {
@@ -199,6 +271,8 @@ spec:
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 1)
+
+			require.Len(t, metaConfig.ResourcesYAML, 0)
 		})
 
 		t.Run("Module invalid", func(t *testing.T) {
@@ -212,8 +286,70 @@ spec:
 		})
 
 		t.Run("Module without settings", func(t *testing.T) {
-			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutSettings)
+			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutSettings)
 			require.NoError(t, err)
+
+			require.Len(t, metaConfig.ResourcesYAML, 0)
+		})
+
+		t.Run("Unknown module should move into resources", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + unknownModuleConfig)
+			require.NoError(t, err)
+
+			require.Len(t, metaConfig.ModuleConfigs, 0)
+			require.True(t, len(metaConfig.ResourcesYAML) > 0)
+		})
+	})
+
+	t.Run("Config with another k8s resources eg configMap", func(t *testing.T) {
+		t.Run("Should move another resources into resourcesYAML", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + configMapAndInstanceClass)
+			require.NoError(t, err)
+
+			require.Len(t, metaConfig.ModuleConfigs, 0)
+			require.True(t, len(metaConfig.ResourcesYAML) > 0)
+
+			bigFileTmp := strings.TrimSpace(metaConfig.ResourcesYAML)
+			docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
+
+			configMapFound := false
+			instanceClassFound := false
+
+			for _, doc := range docs {
+				var index SchemaIndex
+				err := yaml.Unmarshal([]byte(doc), &index)
+
+				require.NoError(t, err)
+				require.True(t, index.IsValid())
+				switch index.Kind {
+				case "ConfigMap":
+					configMapFound = true
+				case "YandexInstanceClass":
+					instanceClassFound = true
+				}
+			}
+
+			require.True(t, configMapFound)
+			require.True(t, instanceClassFound)
+		})
+
+		t.Run("Should move resourcesYAML", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + ngWithTemplating)
+			require.NoError(t, err)
+
+			require.Len(t, metaConfig.ModuleConfigs, 0)
+			require.True(t, len(metaConfig.ResourcesYAML) > 0)
+
+			bigFileTmp := strings.TrimSpace(metaConfig.ResourcesYAML)
+
+			var index SchemaIndex
+			err = yaml.Unmarshal([]byte(bigFileTmp), &index)
+
+			require.NoError(t, err)
+			require.True(t, index.IsValid())
+
+			require.Equal(t, index.Kind, "NodeGroup")
+
 		})
 	})
 }

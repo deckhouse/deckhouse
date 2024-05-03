@@ -74,7 +74,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		metaConfig, err := config.ParseConfig(app.ConfigPaths)
 		if err != nil {
 			return err
 		}

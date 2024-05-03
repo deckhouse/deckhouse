@@ -37,6 +37,7 @@ import (
 type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
+	modulesCache       map[string]struct{}
 }
 
 var once sync.Once
@@ -61,6 +62,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
+		modulesCache:       make(map[string]struct{}),
 	}
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
@@ -122,6 +124,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 		name := e.Name()
 		moduleName := strings.TrimLeft(name, "01234567890-")
+		st.modulesCache[moduleName] = struct{}{}
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
 			// We don't expect panic here our logger does not support log.Fatal
@@ -192,6 +195,11 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
+// ValidateWithIndex
+// validate one document with schema
+// two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
+// if schema not fount then return ErrSchemaNotFound
+// if schema not found for ModuleConfig then return ErrSchemaNotFound also
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -211,15 +219,25 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		}
 		mcName := mc.GetName()
 		if mc.Spec.Enabled == nil && mcName != "global" {
+			// we need return error because on top level we want filter module configs from modulesources and move into resources
+			// global is special mc without module
 			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
 		}
+
+		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
+			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			return ErrSchemaNotFound
+		}
+
 		if len(mc.Spec.Settings) == 0 {
 			return nil
 		}
+
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for modules from sources", mc.GetName())
+			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {
@@ -236,7 +254,9 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	}
 
 	if schema == nil {
-		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
+		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		// we need return error because on top level we want filter documents without index and move into resources
+		return ErrSchemaNotFound
 	}
 
 	isValid, err := openAPIValidate(&docForValidate, schema)

@@ -39,7 +39,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderBundleFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func DefineRenderMasterBootstrap(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderBundleFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		templateData, err := config.ParseBashibleConfig(app.ConfigPath, kubeadmTemplateOpenAPI)
+		templateData, err := config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(app.ParseInputFile)
+			metaConfig, err = config.ParseConfig([]string{app.ParseInputFile})
 			if err != nil {
 				return err
 			}

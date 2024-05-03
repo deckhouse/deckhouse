@@ -32,17 +32,4 @@ metadata:
 spec:
   diskSizeGb: 40
   machineType: n2-standard-4
----
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: nginx
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-  enableIstioSidecar: true
-  nodeSelector:
-    node-role.kubernetes.io/master: ''
-  tolerations:
-    - effect: NoSchedule
-      operator: Exists
+# move ingres from resources yaml for testing dhctl configuration with 3-rd party resources

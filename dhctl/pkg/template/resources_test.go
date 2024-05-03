@@ -132,3 +132,12 @@ func TestResourcesNotExistsTemplateDataReturnError(t *testing.T) {
 		require.Nil(t, resources)
 	})
 }
+
+func TestResourcesWithEmptyDocs(t *testing.T) {
+	t.Run("returns only not empty resources", func(t *testing.T) {
+		resources, err := ParseResources("testdata/resources/empties_docs.yaml", make(map[string]interface{}))
+
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+	})
+}
