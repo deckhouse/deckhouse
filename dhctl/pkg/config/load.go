@@ -219,7 +219,7 @@ func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaInde
 		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
-	err = s.ValidateWithIndex(&index, doc, opts...)
+	err = s.ValidateWithIndexOpts(&index, doc, opts...)
 	return &index, err
 }
 

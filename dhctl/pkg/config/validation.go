@@ -29,7 +29,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -151,7 +150,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -231,7 +230,7 @@ func ValidateClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -340,7 +339,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndexOpts(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -452,7 +451,7 @@ func ValidateStaticClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.validateWithIndexOpts(&index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}

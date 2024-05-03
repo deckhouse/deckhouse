@@ -191,7 +191,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 //	    ModuleConfig
 //
 // if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOptions) (bool, error) {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) (bool, error) {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return false, nil
@@ -303,7 +303,7 @@ func ValidateClusterSettings(configData string) error {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		_, err := parseDocument(doc, &metaConfig, schemaStore, ValidateOptions{})
+		_, err := parseDocument(doc, &metaConfig, schemaStore)
 		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
 		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
 			return err
