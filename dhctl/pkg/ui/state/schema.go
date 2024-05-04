@@ -22,6 +22,17 @@ const (
 	RegistryHTTP  = "HTTP"
 )
 
+const (
+	FlannelHostGW = "HostGW"
+	FlannelVxLAN  = "VXLAN"
+)
+
+const (
+	CNIFlannel      = "Flannel"
+	CNICilium       = "Cilium"
+	CNISimpleBridge = "SimpleBridge"
+)
+
 type Schema struct {
 	store   *config.SchemaStore
 	edition string
@@ -54,7 +65,7 @@ func (s *Schema) CloudProviders() []string {
 			log.DebugF("Provider schema error: %v", err)
 			continue
 		}
-		res = append(res, e)
+		res = append(res, strings.TrimSpace(e))
 	}
 	return res
 }
@@ -121,4 +132,22 @@ func (s *Schema) DefaultRegistryUser() string {
 
 func (s *Schema) HasCreds() bool {
 	return s.edition != "ce"
+}
+
+func (s *Schema) GetCNIsForProvider(provider string) []string {
+	switch provider {
+	// static
+	case "":
+		return []string{CNICilium, CNIFlannel}
+	case "AWS":
+		fallthrough
+	case "GCP":
+		fallthrough
+	case "Yandex":
+		fallthrough
+	case "Azure":
+		return []string{CNISimpleBridge, CNICilium}
+	default:
+		return []string{CNICilium}
+	}
 }

@@ -90,6 +90,7 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 			st.SetClusterPrefix(prefix)
 		} else {
 			st.SetClusterPrefix("")
+			st.SetProvider("")
 		}
 
 		onNext()

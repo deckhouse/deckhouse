@@ -36,6 +36,11 @@ type ClusterState struct {
 	SubnetNodeCIDRPrefix string
 }
 
+type CNIState struct {
+	Type        string
+	FlannelMode string
+}
+
 type State struct {
 	ClusterType   string
 	Provider      string
@@ -45,6 +50,7 @@ type State struct {
 	RegistryState RegistryState
 	schema        *Schema
 	ClusterState  ClusterState
+	CNIState      CNIState
 }
 
 func NewState(s *Schema) *State {
@@ -210,4 +216,26 @@ func (b *State) PodSubnetNodeCIDRPrefix(v string) error {
 	}
 
 	return fmt.Errorf("Pod node suffix should be > 0 and <= 32")
+}
+
+func (b *State) SetFlannelMode(t string) error {
+	for _, tt := range []string{FlannelVxLAN, FlannelHostGW} {
+		if tt != t {
+			b.CNIState.FlannelMode = t
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Unknown CNI type %s", t)
+}
+
+func (b *State) SetCNIType(t string) error {
+	for _, tt := range []string{CNICilium, CNISimpleBridge, CNIFlannel} {
+		if tt != t {
+			b.CNIState.Type = t
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Unknown CNI type %s", t)
 }
