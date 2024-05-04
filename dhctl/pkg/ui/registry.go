@@ -40,20 +40,10 @@ func newRegistryPage(st registryState, schema registrySchema, onNext func(), onB
 	form.AddInputField(repoLabel, schema.DefaultRegistryRepo(), constInputsWidth, nil, nil)
 
 	if schema.HasCreds() {
-		form.AddInputField(userLabel, schema.DefaultRegistryUser(), constInputsWidth, nil, func(text string) {
-			st.SetRegistryUser(text)
-		})
-		form.AddPasswordField(passwordLabel, "", constInputsWidth, '*', func(text string) {
-			st.SetRegistryPassword(text)
-		})
-
-		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTP}, 0, func(option string, optionIndex int) {
-			st.SetRegistrySchema(option)
-		})
-
-		form.AddTextArea(caLabel, "", constInputsWidth, 2, 0, func(text string) {
-			st.SetRegistryCA(text)
-		})
+		form.AddInputField(userLabel, schema.DefaultRegistryUser(), constInputsWidth, nil, nil)
+		form.AddPasswordField(passwordLabel, "", constInputsWidth, '*', nil)
+		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTP}, 0, nil)
+		form.AddTextArea(caLabel, "", constInputsWidth, 2, 0, nil)
 	}
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)

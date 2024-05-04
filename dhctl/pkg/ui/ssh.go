@@ -39,12 +39,17 @@ func (c *sshPage) Show() (tview.Primitive, []tview.Primitive) {
 
 	// non-static cluster
 	if c.st.GetProvider() != "" {
-		outStr = `Save and use private key for access to control-plane node:
-%s` + c.st.PrivateSSHKey()
+		outStr = "Save and use private key for access to control-plane node:\n" + c.st.PrivateSSHKey()
 		glippy.Set(c.st.PrivateSSHKey())
 	}
 
-	view := tview.NewTextView().SetText(outStr).SetScrollable(true).SetRegions(true)
+	view := tview.NewTextArea().SetText(outStr, true).
+		SetClipboard(func(s string) {
+			glippy.Set(s)
+		}, func() string {
+			s, _ := glippy.Get()
+			return s
+		})
 
 	p, focusable := widget.OptionsPage("SSH key", view, c.onNext, c.onBack)
 
