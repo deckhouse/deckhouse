@@ -358,8 +358,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	registryPackagesProxyData := metaConfig.Registry
+	if metaConfig.RegistryMode != "Direct" {
+		registryPackagesProxyData = metaConfig.UpstreamRegistry
+	}
+
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(registryPackagesProxyData, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
