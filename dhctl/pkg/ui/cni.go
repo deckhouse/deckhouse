@@ -49,7 +49,9 @@ func (c *cniPage) Show() (tview.Primitive, []tview.Primitive) {
 	cnis := c.schema.GetCNIsForProvider(c.st.GetProvider())
 	form.AddDropDown(cniLabel, cnis, 0, func(option string, optionIndex int) {
 		if option == state.CNIFlannel {
-			form.AddDropDown(flannelModeLabel, []string{state.FlannelVxLAN, state.FlannelHostGW}, 0, nil)
+			if indx := form.GetFormItemIndex(flannelModeLabel); indx < 0 {
+				form.AddDropDown(flannelModeLabel, []string{state.FlannelVxLAN, state.FlannelHostGW}, 0, nil)
+			}
 			return
 		}
 

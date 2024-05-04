@@ -47,7 +47,7 @@ func newRegistryPage(st registryState, schema registrySchema, onNext func(), onB
 			st.SetRegistryPassword(text)
 		})
 
-		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTPS}, 0, func(option string, optionIndex int) {
+		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTP}, 0, func(option string, optionIndex int) {
 			st.SetRegistrySchema(option)
 		})
 

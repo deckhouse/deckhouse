@@ -4,20 +4,16 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
 )
 
 type StaticState struct {
-	SSHHost         string
-	SSHUser         string
-	AskSudoPassword bool
-
+	AskSudoPassword     bool
 	InternalNetworkCIDR string
-
-	BastionHost string
-	BastionUser string
 }
 
 type RegistryState struct {
@@ -47,6 +43,15 @@ type DeckhouseState struct {
 	EnablePublishK8sAPI  bool
 }
 
+type SSHState struct {
+	Public      string
+	Private     string
+	User        string
+	Host        string
+	BastionUser string
+	BastionHost string
+}
+
 type State struct {
 	ClusterType    string
 	Provider       string
@@ -58,10 +63,20 @@ type State struct {
 	ClusterState   ClusterState
 	CNIState       CNIState
 	DeckhouseState DeckhouseState
+	SSHState       SSHState
 }
 
 func NewState(s *Schema) *State {
+	public, private, err := utils.GenerateEd25519Keys()
+	if err != nil {
+		panic(err)
+	}
+
 	return &State{
+		SSHState: SSHState{
+			Public:  public,
+			Private: private,
+		},
 		schema: s,
 	}
 }
@@ -74,7 +89,7 @@ func (b *State) build() []string {
 
 func (b *State) SetSSHUser(s string) error {
 	if s != "" {
-		b.StaticState.SSHUser = s
+		b.SSHState.User = s
 		return nil
 	}
 
@@ -83,7 +98,7 @@ func (b *State) SetSSHUser(s string) error {
 
 func (b *State) SetSSHHost(s string) error {
 	if s != "" {
-		b.StaticState.SSHHost = s
+		b.SSHState.Host = s
 		return nil
 	}
 
@@ -104,11 +119,11 @@ func (b *State) SetUsePasswordForSudo(b2 bool) {
 }
 
 func (b *State) SetBastionSSHUser(s string) {
-	b.StaticState.BastionUser = s
+	b.SSHState.BastionUser = s
 }
 
 func (b *State) SetBastionSSHHost(s string) {
-	b.StaticState.BastionHost = s
+	b.SSHState.BastionHost = s
 }
 
 func (b *State) SetClusterType(t string) {
@@ -270,4 +285,16 @@ func (b *State) SetPublicDomainTemplate(p string) error {
 
 func (b *State) EnablePublishK8sAPI(f bool) {
 	b.DeckhouseState.EnablePublishK8sAPI = f
+}
+
+func (b *State) GetUser() string {
+	return b.SSHState.User
+}
+
+func (b *State) PublicSSHKey() string {
+	return b.SSHState.Public
+}
+
+func (b *State) PrivateSSHKey() string {
+	return b.SSHState.Private
 }

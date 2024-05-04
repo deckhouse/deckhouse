@@ -17,6 +17,7 @@ const (
 	pageCluster           = "pageCluster"
 	pageCNI               = "pageCNI"
 	pageDeckhouse         = "pageDeckhouse"
+	pageSSH               = "pageSSH"
 )
 
 type Schemas interface {
@@ -58,6 +59,7 @@ func buildPages(a *App) {
 	var clusterPage tview.Primitive
 	var deckhousePage tview.Primitive
 	var cniP *cniPage
+	var sshP *sshPage
 
 	cniP = newCNIPage(a.state, a.schemaStore, func() {
 		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
@@ -93,8 +95,18 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageSelectClusterType)
 	})
 
-	deckhousePage, deckhouseFocusable = newDeckhousePage(a.state, a.schemaStore, func() {
+	sshP = newSSHPage(a.state, func() {
 		a.app.Stop()
+	}, func() {
+		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
+		a.pages.SwitchToPage(pageDeckhouse)
+	})
+
+	deckhousePage, deckhouseFocusable = newDeckhousePage(a.state, a.schemaStore, func() {
+		p, focusable := sshP.Show()
+		a.pages.AddPage(pageSSH, p, true, false)
+		addSwitchFocusEvent(a.app, a.pages, focusable)
+		a.pages.SwitchToPage(pageSSH)
 	}, func() {
 		p, cniPageFocusable := cniP.Show()
 		addSwitchFocusEvent(a.app, a.pages, cniPageFocusable)
