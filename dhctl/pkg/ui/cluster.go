@@ -22,7 +22,7 @@ type clusterTypesSchema interface {
 
 func clusterPage(st clusterTypeState, schema clusterTypesSchema, onNext func()) (tview.Primitive, []tview.Primitive) {
 	const (
-		constInputsWidth = 20
+		constInputsWidth = 30
 		k8sVersionIndex  = 0
 		typeIndex        = 1
 		providerIndex    = 2

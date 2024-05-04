@@ -13,6 +13,7 @@ const (
 	pageSelectClusterType = "pageSelectClusterType"
 	pageProvider          = "pageProvider"
 	pageStaticMaster      = "pageStaticMaster"
+	pageRegistry          = "pageRegistry"
 )
 
 type Schemas interface {
@@ -43,13 +44,42 @@ func NewApp() *App {
 
 func buildPages(a *App) {
 	var selectFocusables []tview.Primitive
-	var selectStaticMaster []tview.Primitive
+	var registryFocusable []tview.Primitive
+	var staticMasterFocusable []tview.Primitive
 
-	providerCls := newProviderPage(a.state, a.schemaStore, func() {
-		a.app.Stop()
+	var providerCls *providerPage
+	var staticMaster tview.Primitive
+	var registryP tview.Primitive
+
+	providerCls = newProviderPage(a.state, a.schemaStore, func() {
+		addSwitchFocusEvent(a.app, a.pages, registryFocusable)
+		a.pages.SwitchToPage(pageRegistry)
 	}, func() {
 		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
 		a.pages.SwitchToPage(pageSelectClusterType)
+	})
+
+	staticMaster, staticMasterFocusable = newStaticMasterPage(a.state, func() {
+		addSwitchFocusEvent(a.app, a.pages, registryFocusable)
+		a.pages.SwitchToPage(pageRegistry)
+	}, func() {
+		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
+		a.pages.SwitchToPage(pageSelectClusterType)
+	})
+
+	registryP, registryFocusable = newRegistryPage(a.state, a.schemaStore, func() {
+		a.app.Stop()
+	}, func() {
+		if a.state.ClusterType == state.CloudCluster {
+			p, focusable := providerCls.Show()
+			a.pages.AddPage(pageProvider, p, true, false)
+			addSwitchFocusEvent(a.app, a.pages, focusable)
+			a.pages.SwitchToPage(pageProvider)
+			return
+		}
+
+		addSwitchFocusEvent(a.app, a.pages, staticMasterFocusable)
+		a.pages.SwitchToPage(pageStaticMaster)
 	})
 
 	selectCls, selectFocusables := clusterPage(a.state, a.schemaStore, func() {
@@ -61,16 +91,7 @@ func buildPages(a *App) {
 			return
 		}
 
-		var p tview.Primitive
-		p, selectStaticMaster = staticMasterPage(a.state, func() {
-			a.app.Stop()
-		}, func() {
-			addSwitchFocusEvent(a.app, a.pages, selectFocusables)
-			a.pages.SwitchToPage(pageSelectClusterType)
-		})
-
-		addSwitchFocusEvent(a.app, a.pages, selectStaticMaster)
-		a.pages.AddPage(pageStaticMaster, p, true, false)
+		addSwitchFocusEvent(a.app, a.pages, staticMasterFocusable)
 		a.pages.SwitchToPage(pageStaticMaster)
 
 	})
@@ -81,7 +102,9 @@ func buildPages(a *App) {
 	})
 
 	a.pages.AddPage(pageMain, mainForm, true, false).
-		AddPage(pageSelectClusterType, selectCls, true, false)
+		AddPage(pageSelectClusterType, selectCls, true, false).
+		AddPage(pageRegistry, registryP, true, false).
+		AddPage(pageStaticMaster, staticMaster, true, false)
 
 	addSwitchFocusEvent(a.app, a.pages, mainFocusables)
 	a.pages.SwitchToPage(pageMain)

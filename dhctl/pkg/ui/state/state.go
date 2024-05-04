@@ -15,14 +15,35 @@ type StaticState struct {
 	BastionUser string
 }
 
+type RegistryState struct {
+	Repo     string
+	User     string
+	Password string
+	Schema   string
+	CA       string
+}
+
 type State struct {
-	ClusterType  string
-	Provider     string
-	Prefix       string
-	K8sVersion   string
-	ProviderData map[string]interface{}
-	StaticState  StaticState
-	schema       *Schema
+	ClusterType   string
+	Provider      string
+	Prefix        string
+	K8sVersion    string
+	ProviderData  map[string]interface{}
+	StaticState   StaticState
+	RegistryState RegistryState
+	schema        *Schema
+}
+
+func NewState(s *Schema) *State {
+	return &State{
+		schema: s,
+	}
+}
+
+func (b *State) build() []string {
+	return []string{
+		b.ClusterType,
+	}
 }
 
 func (b *State) SetSSHUser(s string) {
@@ -47,18 +68,6 @@ func (b *State) SetBastionSSHUser(s string) {
 
 func (b *State) SetBastionSSHHost(s string) {
 	b.StaticState.BastionHost = s
-}
-
-func NewState(s *Schema) *State {
-	return &State{
-		schema: s,
-	}
-}
-
-func (b *State) build() []string {
-	return []string{
-		b.ClusterType,
-	}
 }
 
 func (b *State) SetClusterType(t string) {
@@ -88,4 +97,35 @@ func (b *State) SetProviderData(d map[string]interface{}) {
 
 func (b *State) GetProvider() string {
 	return b.Provider
+}
+
+func (b *State) SetRegistryRepo(r string) error {
+	err := b.schema.ValidateImagesRepo(r)
+	if err != nil {
+		return err
+	}
+
+	b.RegistryState.Repo = r
+	return nil
+}
+
+func (b *State) SetRegistryUser(u string) {
+	b.RegistryState.User = u
+}
+
+func (b *State) SetRegistryPassword(p string) {
+	b.RegistryState.Password = p
+}
+
+func (b *State) SetRegistrySchema(s string) {
+	if s == RegistryHTTPS || s == RegistryHTTP {
+		b.RegistryState.Schema = s
+		return
+	}
+
+	panic(fmt.Sprintf("unknown registry schema: %v", s))
+}
+
+func (b *State) SetRegistryCA(c string) {
+	b.RegistryState.CA = c
 }

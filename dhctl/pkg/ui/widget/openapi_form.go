@@ -4,11 +4,9 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/spec"
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/validate"
-	"github.com/go-openapi/validate/post"
-	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
 )
 
 type OpenAPIForm struct {
@@ -67,21 +65,14 @@ func NewOpenapiForm(schema *spec.Schema, fieldsWidth int) *OpenAPIForm {
 }
 
 func (f *OpenAPIForm) Validate() error {
-	validator := validate.NewSchemaValidator(f.schema, nil, "", strfmt.Default)
-
-	result := validator.Validate(f.data)
-	if result.IsValid() {
-		// Add default values from openAPISpec
-		post.ApplyDefaults(result)
-		f.data = result.Data().(map[string]interface{})
-
-		return nil
+	d, err := validate.OpenAPIValidate(f.schema, f.data)
+	if err != nil {
+		return err
 	}
 
-	var allErrs *multierror.Error
-	allErrs = multierror.Append(allErrs, result.Errors...)
+	f.data = d.(map[string]interface{})
 
-	return allErrs.ErrorOrNil()
+	return nil
 }
 
 func (f *OpenAPIForm) Data() map[string]interface{} {

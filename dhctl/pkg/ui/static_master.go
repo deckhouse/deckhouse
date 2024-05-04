@@ -21,14 +21,14 @@ type staticMasterState interface {
 	SetBastionSSHHost(string)
 }
 
-func staticMasterPage(st staticMasterState, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
-		constInputsWidth = 20
+		constInputsWidth = 30
 
 		sshHostLabel         = "SSH host"
 		sshUserLabel         = "SSH user name"
 		internalNetworkLabel = "Internal network CIDR"
-		askSudoPasswordLabel = "Ask sudo password before bootstrap"
+		askSudoPasswordLabel = "Ask sudo password"
 
 		useBastionHostLabel  = "Use bastion host"
 		bastionHostLabel     = "Bastion host"

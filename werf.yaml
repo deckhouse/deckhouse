@@ -680,6 +680,8 @@ shell:
 
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
 
+    echo '{{- .Env | default "FE" }}' > /deckhouse/edition
+
 ---
 image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE_DEV }}
