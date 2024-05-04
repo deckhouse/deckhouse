@@ -556,3 +556,6 @@ func Test_MergeStatusSeries(t *testing.T) {
 		})
 	}
 }
+
+// func Test_StatusSeries_AddI(t *testing.T)
+// }

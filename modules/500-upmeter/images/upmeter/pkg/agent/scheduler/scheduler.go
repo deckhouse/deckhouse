@@ -42,9 +42,9 @@ type Scheduler struct {
 	registry *registry.Registry
 
 	// to receive results from runners
-	recv    chan check.Result
-	series  seriesMap
-	results map[string]*check.ProbeResult
+	recv      chan check.Result
+	seriesMap seriesMap
+	results   map[string]*check.ProbeResult
 
 	// time configuration
 	exportPeriod time.Duration
@@ -65,9 +65,9 @@ func New(reg *registry.Registry, send chan []check.Episode) *Scheduler {
 	)
 
 	return &Scheduler{
-		recv:    make(chan check.Result),
-		series:  seriesMap{},
-		results: make(map[string]*check.ProbeResult),
+		recv:      make(chan check.Result),
+		seriesMap: seriesMap{},
+		results:   make(map[string]*check.ProbeResult),
 
 		exportPeriod: exportPeriod,
 		scrapePeriod: scrapePeriod,
@@ -122,21 +122,23 @@ func (e *Scheduler) scrapeTicker() {
 			// Is it time to export the data? Either the series is full so we need to export, or
 			// the time has come for current uptime episode even if it is not complete
 			// (e.g. agent started in the middle of an episode).
-			if e.series.full() || exportTime == scrapeTime {
+			if e.seriesMap.full() || exportTime == scrapeTime {
 				episodeStart := exportTime.Add(-e.exportPeriod)
 				episodes, err := e.convert(episodeStart)
 				if err != nil {
 					log.Fatalf("exporting results: %v", err)
 				}
+				go func() {
+					// Exporting to sender
+					e.send <- episodes
+				}()
 
 				// Cleaning allocated series space
 				for id := range e.results {
-					series := e.series[id]
+					series := e.seriesMap[id]
 					series.Clean()
 				}
 
-				// Exporting to sender
-				e.send <- episodes
 			}
 
 			// Add probe statuses to status series
@@ -183,18 +185,18 @@ func (e *Scheduler) collect(checkResult check.Result) {
 
 // scrape checks probe results, add them to their status series
 func (e *Scheduler) scrape(scrapeTime time.Time) error {
-	exportRemTime := scrapeTime.UnixNano() / int64(e.exportPeriod)
-	scrapeIndex := int(exportRemTime / int64(e.scrapePeriod))
+	exportTimeRemainder := scrapeTime.UnixNano() % int64(e.exportPeriod)
+	scrapeIndex := int(exportTimeRemainder / int64(e.scrapePeriod))
 
 	for id, probeResult := range e.results {
-		series, ok := e.series[id]
+		series, ok := e.seriesMap[id]
 		if !ok {
 			series = check.NewStatusSeries(e.seriesSize)
-			e.series[id] = series
+			e.seriesMap[id] = series
 		}
 		err := series.AddI(scrapeIndex, probeResult.Status())
 		if err != nil {
-			return fmt.Errorf("cannot add series for probe %q: %v", id, err)
+			return fmt.Errorf("adding series for probe %q: %v", id, err)
 		}
 	}
 	return nil
@@ -207,7 +209,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	for _, calc := range e.registry.Calculators() {
 		sss := make([]*check.StatusSeries, 0)
 		for _, id := range calc.MergeIds() {
-			if ss, ok := e.series[id]; ok {
+			if ss, ok := e.seriesMap[id]; ok {
 				sss = append(sss, ss)
 			}
 		}
@@ -229,7 +231,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 		if _, ok := byGroup[group]; !ok {
 			byGroup[group] = make([]*check.StatusSeries, 0)
 		}
-		series := e.series[id]
+		series := e.seriesMap[id]
 		byGroup[group] = append(byGroup[group], series)
 
 		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series.Stats())
