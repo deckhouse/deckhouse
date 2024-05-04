@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/hashicorp/go-multierror"
@@ -12,9 +11,9 @@ import (
 )
 
 type staticMasterState interface {
-	SetSSHUser(string)
-	SetSSHHost(string)
-	SetInternalNetworkCIDR(string)
+	SetSSHUser(string) error
+	SetSSHHost(string) error
+	SetInternalNetworkCIDR(string) error
 	SetUsePasswordForSudo(bool)
 
 	SetBastionSSHUser(string)
@@ -36,34 +35,21 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 	)
 
 	form := tview.NewForm()
-	form.AddInputField(sshHostLabel, "", constInputsWidth, nil, func(text string) {
-		st.SetSSHHost(text)
-	})
+	form.AddInputField(sshHostLabel, "", constInputsWidth, nil, nil)
+	form.AddInputField(sshUserLabel, "ubuntu", constInputsWidth, nil, nil)
 
-	form.AddInputField(sshUserLabel, "ubuntu", constInputsWidth, nil, func(text string) {
-		st.SetSSHUser(text)
-	})
+	form.AddInputField(internalNetworkLabel, "", constInputsWidth, nil, nil)
 
-	form.AddCheckbox(askSudoPasswordLabel, false, func(check bool) {
-		st.SetUsePasswordForSudo(check)
-	})
-
-	form.AddInputField(internalNetworkLabel, "", constInputsWidth, nil, func(text string) {
-		st.SetInternalNetworkCIDR(text)
-	})
+	form.AddCheckbox(askSudoPasswordLabel, false, nil)
 
 	form.AddCheckbox(useBastionHostLabel, false, func(check bool) {
 		if check {
 			if form.GetFormItemIndex(bastionHostLabel) < 0 {
-				form.AddInputField(bastionHostLabel, "", constInputsWidth, nil, func(text string) {
-					st.SetBastionSSHHost(text)
-				})
+				form.AddInputField(bastionHostLabel, "", constInputsWidth, nil, nil)
 			}
 
 			if form.GetFormItemIndex(bastionHostUserLabel) < 0 {
-				form.AddInputField(bastionHostUserLabel, "ubuntu", constInputsWidth, nil, func(text string) {
-					st.SetBastionSSHUser(text)
-				})
+				form.AddInputField(bastionHostUserLabel, "ubuntu", constInputsWidth, nil, nil)
 			}
 
 			return
@@ -81,7 +67,6 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 
 	optionsGrid := tview.NewGrid().
-		//SetBorders(true).
 		SetColumns(0).SetRows(0, 2).
 		AddItem(form, 0, 0, 1, 1, 0, 0, true).
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
@@ -90,28 +75,18 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 		var allErrs *multierror.Error
 
 		sshHost := form.GetFormItemByLabel(sshHostLabel).(*tview.InputField).GetText()
-		if sshHost != "" {
-			st.SetSSHHost(sshHost)
-		} else {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("SSH host cannot be empty"))
+		if err := st.SetSSHHost(sshHost); err != nil {
+			allErrs = multierror.Append(allErrs, err)
 		}
 
 		sshUser := form.GetFormItemByLabel(sshUserLabel).(*tview.InputField).GetText()
-		if sshUser != "" {
-			st.SetSSHUser(sshUser)
-		} else {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("SSH user cannot be empty"))
+		if err := st.SetSSHUser(sshUser); err != nil {
+			allErrs = multierror.Append(allErrs, err)
 		}
 
 		sshInternalNetwork := form.GetFormItemByLabel(internalNetworkLabel).(*tview.InputField).GetText()
-		if sshInternalNetwork != "" {
-			if _, _, err := net.ParseCIDR(sshInternalNetwork); err != nil {
-				allErrs = multierror.Append(allErrs, fmt.Errorf("Incorrect network CIDR"))
-			} else {
-				st.SetInternalNetworkCIDR(sshUser)
-			}
-		} else {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("Internal network CIDR user cannot be empty"))
+		if err := st.SetInternalNetworkCIDR(sshInternalNetwork); err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("Internal network CIDR %s", err))
 		}
 
 		askSudoPassword := form.GetFormItemByLabel(askSudoPasswordLabel).(*tview.Checkbox).IsChecked()
@@ -132,6 +107,9 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 			} else {
 				allErrs = multierror.Append(allErrs, fmt.Errorf("Bastion SSH user cannot be empty"))
 			}
+		} else {
+			st.SetBastionSSHHost("")
+			st.SetBastionSSHUser("")
 		}
 
 		if err := allErrs.ErrorOrNil(); err != nil {

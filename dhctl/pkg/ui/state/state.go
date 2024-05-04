@@ -59,16 +59,31 @@ func (b *State) build() []string {
 	}
 }
 
-func (b *State) SetSSHUser(s string) {
-	b.StaticState.SSHUser = s
+func (b *State) SetSSHUser(s string) error {
+	if s != "" {
+		b.StaticState.SSHUser = s
+		return nil
+	}
+
+	return fmt.Errorf("SSH user cannot be empty")
 }
 
-func (b *State) SetSSHHost(s string) {
-	b.StaticState.SSHHost = s
+func (b *State) SetSSHHost(s string) error {
+	if s != "" {
+		b.StaticState.SSHHost = s
+		return nil
+	}
+
+	return fmt.Errorf("SSH host cannot be empty")
 }
 
-func (b *State) SetInternalNetworkCIDR(s string) {
+func (b *State) SetInternalNetworkCIDR(s string) error {
+	if err := validate.CIDR(s); err != nil {
+		return err
+	}
+
 	b.StaticState.InternalNetworkCIDR = s
+	return nil
 }
 
 func (b *State) SetUsePasswordForSudo(b2 bool) {
@@ -126,13 +141,13 @@ func (b *State) SetRegistryPassword(p string) {
 	b.RegistryState.Password = p
 }
 
-func (b *State) SetRegistrySchema(s string) {
+func (b *State) SetRegistrySchema(s string) error {
 	if s == RegistryHTTPS || s == RegistryHTTP {
 		b.RegistryState.Schema = s
-		return
+		return nil
 	}
 
-	panic(fmt.Sprintf("unknown registry schema: %v", s))
+	return fmt.Errorf("unknown registry schema: %v", s)
 }
 
 func (b *State) SetRegistryCA(c string) {

@@ -13,7 +13,7 @@ type registryState interface {
 	SetRegistryRepo(string) error
 	SetRegistryUser(string)
 	SetRegistryPassword(string)
-	SetRegistrySchema(string)
+	SetRegistrySchema(string) error
 	SetRegistryCA(string)
 }
 
@@ -78,7 +78,10 @@ func newRegistryPage(st registryState, schema registrySchema, onNext func(), onB
 			st.SetRegistryPassword(passwd)
 
 			_, s := form.GetFormItem(form.GetFormItemIndex(schemaLabel)).(*tview.DropDown).GetCurrentOption()
-			st.SetRegistrySchema(s)
+			if err := st.SetRegistrySchema(s); err != nil {
+				errorLbl.SetText(err.Error())
+				return
+			}
 
 			ca := form.GetFormItemByLabel(caLabel).(*tview.TextArea).GetText()
 			st.SetRegistryCA(ca)

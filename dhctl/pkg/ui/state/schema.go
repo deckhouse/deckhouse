@@ -47,9 +47,14 @@ func NewSchema(store *config.SchemaStore) *Schema {
 func (s *Schema) CloudProviders() []string {
 	cl := s.getClusterSchema()
 	enum := cl.SchemaProps.Properties["cloud"].SchemaProps.Properties["provider"].SchemaProps.Enum
-	res := make([]string, len(enum))
+	res := make([]string, 0, len(enum))
 	for i := range enum {
-		res[i] = enum[i].(string)
+		e := enum[i].(string)
+		if _, err := s.ProviderSchema(e); err != nil {
+			log.DebugF("Provider schema error: %v", err)
+			continue
+		}
+		res = append(res, e)
 	}
 	return res
 }
@@ -64,15 +69,18 @@ func (s *Schema) K8sVersions() []string {
 	return res
 }
 
-func (s *Schema) ProviderSchema(p string) *spec.Schema {
-	ss := s.store.Get(&config.SchemaIndex{
+func (s *Schema) ProviderSchema(p string) (*spec.Schema, error) {
+	ss, err := s.store.GetOrError(&config.SchemaIndex{
 		Kind:    p + "ClusterConfiguration",
 		Version: "deckhouse.io/v1",
 	})
 
-	pp := ss.SchemaProps.Properties["provider"]
+	if err != nil {
+		return nil, err
+	}
 
-	return &pp
+	pp := ss.SchemaProps.Properties["provider"]
+	return &pp, nil
 }
 
 func (s *Schema) getClusterSchema() *spec.Schema {

@@ -9,7 +9,7 @@ import (
 )
 
 type providerSchema interface {
-	ProviderSchema(string) *spec.Schema
+	ProviderSchema(string) (*spec.Schema, error)
 }
 
 type providerState interface {
@@ -38,7 +38,7 @@ func (p *providerPage) Show() (tview.Primitive, []tview.Primitive) {
 	const inputsWidth = 30
 
 	providerName := p.st.GetProvider()
-	providerS := p.schema.ProviderSchema(providerName)
+	providerS, _ := p.schema.ProviderSchema(providerName)
 
 	form := widget.NewOpenapiForm(providerS, inputsWidth)
 

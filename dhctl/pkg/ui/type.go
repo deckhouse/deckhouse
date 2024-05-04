@@ -22,10 +22,9 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 	const (
 		constInputsWidth = 30
 
-		providerLabel   = "Provider"
-		prefixLabel     = "Prefix"
-		k8sVersionLabel = "Kubernetes Version"
-		typeLabel       = "Type"
+		providerLabel = "Provider"
+		prefixLabel   = "Prefix"
+		typeLabel     = "Type"
 	)
 
 	form := tview.NewForm()
@@ -89,6 +88,8 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 				return
 			}
 			st.SetClusterPrefix(prefix)
+		} else {
+			st.SetClusterPrefix("")
 		}
 
 		onNext()
