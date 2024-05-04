@@ -2,6 +2,11 @@ package state
 
 import (
 	"fmt"
+	"strconv"
+
+	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
 )
 
 type StaticState struct {
@@ -23,15 +28,23 @@ type RegistryState struct {
 	CA       string
 }
 
+type ClusterState struct {
+	K8sVersion           string
+	ClusterDomain        string
+	PodSubnetCIDR        string
+	ServiceSubnetCIDR    string
+	SubnetNodeCIDRPrefix string
+}
+
 type State struct {
 	ClusterType   string
 	Provider      string
 	Prefix        string
-	K8sVersion    string
 	ProviderData  map[string]interface{}
 	StaticState   StaticState
 	RegistryState RegistryState
 	schema        *Schema
+	ClusterState  ClusterState
 }
 
 func NewState(s *Schema) *State {
@@ -87,10 +100,6 @@ func (b *State) SetClusterPrefix(p string) {
 	b.Prefix = p
 }
 
-func (b *State) SetK8sVersion(v string) {
-	b.K8sVersion = v
-}
-
 func (b *State) SetProviderData(d map[string]interface{}) {
 	b.ProviderData = d
 }
@@ -128,4 +137,62 @@ func (b *State) SetRegistrySchema(s string) {
 
 func (b *State) SetRegistryCA(c string) {
 	b.RegistryState.CA = c
+}
+
+func (b *State) SetK8sVersion(v string) error {
+	found := false
+	for _, vv := range b.schema.K8sVersions() {
+		if vv == v {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("Incorrect k8s version")
+	}
+
+	b.ClusterState.K8sVersion = v
+
+	return nil
+}
+
+func (b *State) SetClusterDomain(v string) error {
+	if v == "" {
+		return fmt.Errorf("Cluster domain should not be empty")
+	}
+
+	b.ClusterState.ClusterDomain = v
+	return nil
+}
+
+func (b *State) SetPodSubnetCIDR(v string) error {
+	if err := validate.CIDR(v); err != nil {
+		return err
+	}
+
+	b.ClusterState.PodSubnetCIDR = v
+	return nil
+}
+func (b *State) SetServiceSubnetCIDR(v string) error {
+	if err := validate.CIDR(v); err != nil {
+		return err
+	}
+
+	b.ClusterState.ServiceSubnetCIDR = v
+	return nil
+}
+
+func (b *State) PodSubnetNodeCIDRPrefix(v string) error {
+	suf, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Wrap(err, "Pod node suffix should be an integer")
+	}
+
+	if suf > 0 && suf <= 32 {
+		b.ClusterState.SubnetNodeCIDRPrefix = v
+		return nil
+	}
+
+	return fmt.Errorf("Pod node suffix should be > 0 and <= 32")
 }
