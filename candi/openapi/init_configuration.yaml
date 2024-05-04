@@ -18,6 +18,7 @@ apiVersions:
           -----BEGIN CERTIFICATE-----
           ...
           -----END CERTIFICATE-----
+        registryMode: Direct
     properties:
       apiVersion:
         type: string
@@ -58,6 +59,16 @@ apiVersions:
             description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
             default: HTTPS
+          registryMode:
+            type: string
+            description: |
+              Specifies the mode of accessing the container registry for Deckhouse. This setting affects how container images are fetched and stored during the deployment process:
+
+              - `Direct` — Deckhouse will directly access the specified registry without any intermediaries.
+              - `Proxy` — Deckhouse will set up the internal-registry module, which will act as a caching proxy for the specified registry. This mode helps reduce network traffic and improve image pull speed by caching images locally.
+              - `Detached` — Deckhouse will establish a standalone registry using the internal-registry module and initially copy the installation images for the current release. Manual updates of the registry with new images are necessary. Refer to the documentation for detailed setup and maintenance instructions.
+            enum: [Direct, Proxy, Detached]
+            default: Direct
           releaseChannel:
             type: string
             deprecated: true
