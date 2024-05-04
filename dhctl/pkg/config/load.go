@@ -162,6 +162,10 @@ func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
 	return ok
 }
 
+func (s *SchemaStore) ModuleConfigSchema(name string) *spec.Schema {
+	return s.moduleConfigsCache[name]
+}
+
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	schema, ok := s.moduleConfigsCache[name]
 	if ok {

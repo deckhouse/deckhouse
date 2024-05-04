@@ -41,16 +41,23 @@ type CNIState struct {
 	FlannelMode string
 }
 
+type DeckhouseState struct {
+	ReleaseChannel       string
+	PublicDomainTemplate string
+	EnablePublishK8sAPI  bool
+}
+
 type State struct {
-	ClusterType   string
-	Provider      string
-	Prefix        string
-	ProviderData  map[string]interface{}
-	StaticState   StaticState
-	RegistryState RegistryState
-	schema        *Schema
-	ClusterState  ClusterState
-	CNIState      CNIState
+	ClusterType    string
+	Provider       string
+	Prefix         string
+	ProviderData   map[string]interface{}
+	StaticState    StaticState
+	RegistryState  RegistryState
+	schema         *Schema
+	ClusterState   ClusterState
+	CNIState       CNIState
+	DeckhouseState DeckhouseState
 }
 
 func NewState(s *Schema) *State {
@@ -238,4 +245,29 @@ func (b *State) SetCNIType(t string) error {
 	}
 
 	return fmt.Errorf("Unknown CNI type %s", t)
+}
+
+func (b *State) SetReleaseChannel(ch string) error {
+	channels := b.schema.ReleaseChannels()
+	for _, c := range channels {
+		if c == ch {
+			b.DeckhouseState.ReleaseChannel = ch
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Unknown release channel %s", ch)
+}
+
+func (b *State) SetPublicDomainTemplate(p string) error {
+	if err := b.schema.ValidatePublicDomainTemplate(p); err != nil {
+		return fmt.Errorf("Public domain template invalid", err)
+	}
+
+	b.DeckhouseState.PublicDomainTemplate = p
+	return nil
+}
+
+func (b *State) EnablePublishK8sAPI(f bool) {
+	b.DeckhouseState.EnablePublishK8sAPI = f
 }

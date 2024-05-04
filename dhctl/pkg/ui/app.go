@@ -16,6 +16,7 @@ const (
 	pageRegistry          = "pageRegistry"
 	pageCluster           = "pageCluster"
 	pageCNI               = "pageCNI"
+	pageDeckhouse         = "pageDeckhouse"
 )
 
 type Schemas interface {
@@ -49,16 +50,18 @@ func buildPages(a *App) {
 	var registryFocusable []tview.Primitive
 	var staticMasterFocusable []tview.Primitive
 	var clusterPageFocusable []tview.Primitive
-	//var cniPageFocusable []tview.Primitive
+	var deckhouseFocusable []tview.Primitive
 
 	var providerCls *providerPage
 	var staticMasterPage tview.Primitive
 	var registryPage tview.Primitive
 	var clusterPage tview.Primitive
+	var deckhousePage tview.Primitive
 	var cniP *cniPage
 
 	cniP = newCNIPage(a.state, a.schemaStore, func() {
-		a.app.Stop()
+		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
+		a.pages.SwitchToPage(pageDeckhouse)
 	}, func() {
 		addSwitchFocusEvent(a.app, a.pages, clusterPageFocusable)
 		a.pages.SwitchToPage(pageCluster)
@@ -88,6 +91,15 @@ func buildPages(a *App) {
 	}, func() {
 		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
 		a.pages.SwitchToPage(pageSelectClusterType)
+	})
+
+	deckhousePage, deckhouseFocusable = newDeckhousePage(a.state, a.schemaStore, func() {
+		a.app.Stop()
+	}, func() {
+		p, cniPageFocusable := cniP.Show()
+		addSwitchFocusEvent(a.app, a.pages, cniPageFocusable)
+		a.pages.AddPage(pageCNI, p, true, false)
+		a.pages.SwitchToPage(pageCNI)
 	})
 
 	registryPage, registryFocusable = newRegistryPage(a.state, a.schemaStore, func() {
@@ -129,6 +141,7 @@ func buildPages(a *App) {
 		AddPage(pageSelectClusterType, selectCls, true, false).
 		AddPage(pageRegistry, registryPage, true, false).
 		AddPage(pageCluster, clusterPage, true, false).
+		AddPage(pageDeckhouse, deckhousePage, true, false).
 		AddPage(pageStaticMaster, staticMasterPage, true, false)
 
 	addSwitchFocusEvent(a.app, a.pages, mainFocusables)

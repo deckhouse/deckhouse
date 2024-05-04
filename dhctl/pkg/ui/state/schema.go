@@ -151,3 +151,30 @@ func (s *Schema) GetCNIsForProvider(provider string) []string {
 		return []string{CNICilium}
 	}
 }
+
+func (s *Schema) ReleaseChannels() []string {
+	schema := s.store.ModuleConfigSchema("deckhouse")
+	if schema == nil {
+		panic("Cannot load module config deckhouse")
+	}
+
+	channels := schema.SchemaProps.Properties["releaseChannel"].SchemaProps.Enum
+	res := make([]string, 0, len(channels))
+	for i := range channels {
+		res = append(res, channels[i].(string))
+	}
+
+	return res
+}
+
+func (s *Schema) ValidatePublicDomainTemplate(p string) error {
+	schema := s.store.ModuleConfigSchema("global")
+	if schema == nil {
+		panic("Cannot load module config global")
+	}
+
+	ss := schema.SchemaProps.Properties["modules"].SchemaProps.Properties["publicDomainTemplate"]
+	_, err := validate.OpenAPIValidate(&ss, p)
+
+	return err
+}
