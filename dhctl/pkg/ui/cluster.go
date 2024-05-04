@@ -23,10 +23,11 @@ type clusterTypesSchema interface {
 func clusterPage(st clusterTypeState, schema clusterTypesSchema, onNext func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
-		k8sVersionIndex  = 0
-		typeIndex        = 1
-		providerIndex    = 2
-		prefixIndex      = 3
+
+		providerLabel   = "Provider"
+		prefixLabel     = "Prefix"
+		k8sVersionLabel = "Kubernetes Version"
+		typeLabel       = "Type"
 	)
 
 	form := tview.NewForm()
@@ -34,26 +35,32 @@ func clusterPage(st clusterTypeState, schema clusterTypesSchema, onNext func()) 
 	initAddProvider := false
 
 	addProviderPrefixItems := func() {
-		form.AddDropDown("Provider", schema.CloudProviders(), 0, func(option string, optionIndex int) {
-			st.SetProvider(option)
-		})
+		if form.GetFormItemIndex(providerLabel) < 0 {
+			form.AddDropDown(providerLabel, schema.CloudProviders(), 0, func(option string, optionIndex int) {
+				st.SetProvider(option)
+			})
+		}
 
-		form.AddInputField("Prefix", "", constInputsWidth, nil, func(text string) {
-			st.SetClusterPrefix(text)
-		})
+		if form.GetFormItemIndex(prefixLabel) < 0 {
+			form.AddInputField(prefixLabel, "", constInputsWidth, nil, func(text string) {
+				st.SetClusterPrefix(text)
+			})
+		}
 	}
 
 	versions := schema.K8sVersions()
-	form.AddDropDown("Kubernetes version", versions, len(versions)-1, func(option string, optionIndex int) {
+	form.AddDropDown(k8sVersionLabel, versions, len(versions)-1, func(option string, optionIndex int) {
 		st.SetK8sVersion(option)
 	})
 
-	form.AddDropDown("Type", []string{state.CloudCluster, state.StaticCluster}, 0, func(option string, optionIndex int) {
+	form.AddDropDown(typeLabel, []string{state.CloudCluster, state.StaticCluster}, 0, func(option string, optionIndex int) {
 		switch option {
 		case state.StaticCluster:
-			if form.GetFormItemCount() > 2 {
-				form.RemoveFormItem(2)
-				form.RemoveFormItem(2)
+			if indx := form.GetFormItemIndex(prefixLabel); indx >= 0 {
+				form.RemoveFormItem(indx)
+			}
+			if indx := form.GetFormItemIndex(providerLabel); indx >= 0 {
+				form.RemoveFormItem(indx)
 			}
 		case state.CloudCluster:
 			if initAddProvider && form.GetFormItemCount() < 4 {
@@ -76,17 +83,17 @@ func clusterPage(st clusterTypeState, schema clusterTypesSchema, onNext func()) 
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
 
 	p, focusable := widget.OptionsPage("Cluster settings", optionsGrid, func() {
-		_, clType := form.GetFormItem(typeIndex).(*tview.DropDown).GetCurrentOption()
+		_, clType := form.GetFormItemByLabel(typeLabel).(*tview.DropDown).GetCurrentOption()
 		st.SetClusterType(clType)
 
-		_, k8sVersion := form.GetFormItem(k8sVersionIndex).(*tview.DropDown).GetCurrentOption()
+		_, k8sVersion := form.GetFormItemByLabel(k8sVersionLabel).(*tview.DropDown).GetCurrentOption()
 		st.SetK8sVersion(k8sVersion)
 
-		if form.GetFormItemCount() > 2 {
-			_, provider := form.GetFormItem(providerIndex).(*tview.DropDown).GetCurrentOption()
+		if clType == state.CloudCluster {
+			_, provider := form.GetFormItemByLabel(providerLabel).(*tview.DropDown).GetCurrentOption()
 			st.SetProvider(provider)
 
-			prefix := form.GetFormItem(prefixIndex).(*tview.InputField).GetText()
+			prefix := form.GetFormItemByLabel(prefixLabel).(*tview.InputField).GetText()
 			if len(prefix) < 1 {
 				errorLbl.SetText("Prefix is required")
 				return
