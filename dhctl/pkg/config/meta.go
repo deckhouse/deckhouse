@@ -52,9 +52,11 @@ type MetaConfig struct {
 	VersionMap       map[string]interface{} `json:"-"`
 	Images           imagesDigests          `json:"-"`
 	Registry         RegistryData           `json:"-"`
+	RegistryMode     string                 `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
 	ResourcesYAML    string                 `json:"-"`
+	UpstreamRegistry RegistryData
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -100,6 +102,22 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.Address = parts[0]
 		if len(parts) == 2 {
 			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		m.RegistryMode = m.DeckhouseConfig.RegistryMode
+
+		if m.RegistryMode != "Direct" {
+			internalRegistryData := RegistryData{
+				Address:   "localhost:5000",
+				Path:      "/sys/deckhouse-oss",
+				Scheme:    "http",
+				DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMCI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
+				CA:        "",
+			}
+			if m.RegistryMode == "Proxy" {
+				m.UpstreamRegistry = m.Registry
+			}
+			m.Registry = internalRegistryData
 		}
 	}
 
@@ -343,11 +361,20 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
 
+	if m.RegistryMode != "Direct" {
+		upstreamRegistryData, err := m.ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+		result["upstreamRegistry"] = upstreamRegistryData
+	}
+
+	result["registryMode"] = m.RegistryMode
 	result["registry"] = registryData
 
 	images := m.Images
@@ -396,7 +423,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
@@ -427,6 +454,17 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
+
+	if m.RegistryMode != "Direct" {
+		upstreamRegistryData, err := m.ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+
+		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
+	}
+
+	configForBashibleBundleTemplate["registryMode"] = m.RegistryMode
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
@@ -543,13 +581,13 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
+func (m *MetaConfig) ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
+	log.DebugF("registry data: %v\n", data)
 
-	ret := m.Registry.ConvertToMap()
+	ret := data.ConvertToMap()
 
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
+	if data.DockerCfg != "" {
+		auth, err := data.Auth()
 		if err != nil {
 			return nil, err
 		}
