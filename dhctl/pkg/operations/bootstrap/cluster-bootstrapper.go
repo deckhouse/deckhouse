@@ -91,6 +91,8 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
+	DoNotWriteDebugLog bool
+
 	*client.KubernetesInitParams
 }
 
@@ -415,7 +417,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 			return err
 		}
-
 
 		return nil
 	}

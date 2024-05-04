@@ -53,6 +53,18 @@ func InitLogger(loggerType string) {
 	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
 }
 
+func WrapLoggerWithTeeLogger(pathToTeeFile string, bufSize int) error {
+	previousLogger := defaultLogger
+	var err error
+	defaultLogger, err = NewTeeLogger(defaultLogger, pathToTeeFile, bufSize)
+	if err != nil {
+		defaultLogger = previousLogger
+		return err
+	}
+
+	return nil
+}
+
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	switch loggerType {
 	case "pretty":

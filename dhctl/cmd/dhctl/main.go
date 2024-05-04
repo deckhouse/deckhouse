@@ -146,6 +146,10 @@ func runApplication(kpApp *kingpin.Application) {
 		return nil
 	})
 
+	defer func() {
+		log.FlushAndClose()
+	}()
+
 	kpApp.Version(app.AppVersion).Author("Flant")
 
 	go func() {

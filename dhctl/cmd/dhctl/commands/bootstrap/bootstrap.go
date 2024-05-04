@@ -33,9 +33,12 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 	app.DefinePreflight(cmd)
+	app.DefineSkipDebugFile(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			DoNotWriteDebugLog: app.DoNotWriteDebugLog,
+		})
 		return bootstraper.Bootstrap()
 	})
 
