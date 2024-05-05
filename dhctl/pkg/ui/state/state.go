@@ -1,69 +1,71 @@
 package state
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/utils"
-
 	"github.com/pkg/errors"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
 )
 
 type StaticState struct {
-	AskSudoPassword     bool
-	InternalNetworkCIDR string
+	AskSudoPassword     bool   `json:"-"`
+	InternalNetworkCIDR string `json:"internal_network_cidr"`
 }
 
 type RegistryState struct {
-	Repo     string
-	User     string
-	Password string
-	Schema   string
-	CA       string
+	Repo     string `json:"repo"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Schema   string `json:"schema"`
+	CA       string `json:"ca"`
 }
 
 type ClusterState struct {
-	K8sVersion           string
-	ClusterDomain        string
-	PodSubnetCIDR        string
-	ServiceSubnetCIDR    string
-	SubnetNodeCIDRPrefix string
+	K8sVersion           string `json:"k8s_version"`
+	ClusterDomain        string `json:"cluster_domain"`
+	PodSubnetCIDR        string `json:"pod_subnet_cidr"`
+	ServiceSubnetCIDR    string `json:"service_subnet_cidr"`
+	SubnetNodeCIDRPrefix string `json:"subnet_node_cidr_prefix"`
 }
 
 type CNIState struct {
-	Type        string
-	FlannelMode string
+	Type        string `json:"type"`
+	FlannelMode string `json:"flannel_mode"`
 }
 
 type DeckhouseState struct {
-	ReleaseChannel       string
-	PublicDomainTemplate string
-	EnablePublishK8sAPI  bool
+	ReleaseChannel       string `json:"release_channel"`
+	PublicDomainTemplate string `json:"public_domain_template"`
+	EnablePublishK8sAPI  bool   `json:"enable_publish_k8s_api"`
 }
 
 type SSHState struct {
-	Public      string
-	Private     string
-	User        string
-	Host        string
-	BastionUser string
-	BastionHost string
+	Public      string `json:"public"`
+	Private     string `json:"-"`
+	User        string `json:"-"`
+	Host        string `json:"-"`
+	BastionUser string `json:"-"`
+	BastionHost string `json:"-"`
 }
 
 type State struct {
-	ClusterType    string
-	Provider       string
-	Prefix         string
-	ProviderData   map[string]interface{}
-	StaticState    StaticState
-	RegistryState  RegistryState
-	schema         *Schema
-	ClusterState   ClusterState
-	CNIState       CNIState
-	DeckhouseState DeckhouseState
-	SSHState       SSHState
+	ClusterType    string                 `json:"cluster_type"`
+	Provider       string                 `json:"provider"`
+	Prefix         string                 `json:"prefix"`
+	ProviderData   map[string]interface{} `json:"provider_data"`
+	StaticState    StaticState            `json:"static_state"`
+	RegistryState  RegistryState          `json:"registry_state"`
+	schema         *Schema                `json:"-"`
+	ConfigYAML     string                 `json:"-"`
+	ClusterState   ClusterState           `json:"cluster_state"`
+	CNIState       CNIState               `json:"cni_state"`
+	DeckhouseState DeckhouseState         `json:"deckhouse_state"`
+	SSHState       SSHState               `json:"ssh_state"`
 }
 
 func NewState(s *Schema) *State {
@@ -81,10 +83,33 @@ func NewState(s *Schema) *State {
 	}
 }
 
-func (b *State) build() []string {
-	return []string{
-		b.ClusterType,
+func (b *State) SetConfigYAML(data string) error {
+	// validate config.yaml
+	if _, err := config.ParseConfigFromData(data); err != nil {
+		return err
 	}
+
+	b.ConfigYAML = data
+	return nil
+}
+
+func (b *State) ConvertToMap() (map[string]interface{}, error) {
+	raw, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[string]interface{})
+	err = json.Unmarshal(raw, &m)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+func (b *State) GetClusterType() string {
+	return b.ClusterType
 }
 
 func (b *State) SetSSHUser(s string) error {

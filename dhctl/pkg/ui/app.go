@@ -18,6 +18,7 @@ const (
 	pageCNI               = "pageCNI"
 	pageDeckhouse         = "pageDeckhouse"
 	pageSSH               = "pageSSH"
+	pageConfig            = "pageConfig"
 )
 
 type Schemas interface {
@@ -60,6 +61,7 @@ func buildPages(a *App) {
 	var deckhousePage tview.Primitive
 	var cniP *cniPage
 	var sshP *sshPage
+	var configP *configPage
 
 	cniP = newCNIPage(a.state, a.schemaStore, func() {
 		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
@@ -96,10 +98,22 @@ func buildPages(a *App) {
 	})
 
 	sshP = newSSHPage(a.state, func() {
-		a.app.Stop()
+		p, cniPageFocusable := configP.Show()
+		addSwitchFocusEvent(a.app, a.pages, cniPageFocusable)
+		a.pages.AddPage(pageConfig, p, true, false)
+		a.pages.SwitchToPage(pageConfig)
 	}, func() {
 		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
 		a.pages.SwitchToPage(pageDeckhouse)
+	})
+
+	configP = newConfigPage(a.state, func() {
+		a.app.Stop()
+	}, func() {
+		p, focusable := sshP.Show()
+		a.pages.AddPage(pageSSH, p, true, false)
+		addSwitchFocusEvent(a.app, a.pages, focusable)
+		a.pages.SwitchToPage(pageSSH)
 	})
 
 	deckhousePage, deckhouseFocusable = newDeckhousePage(a.state, a.schemaStore, func() {
