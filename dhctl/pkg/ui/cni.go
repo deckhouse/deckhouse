@@ -1,12 +1,11 @@
 package ui
 
 import (
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
 )
 
@@ -76,7 +75,7 @@ func (c *cniPage) Show() (tview.Primitive, []tview.Primitive) {
 		}
 
 		if cni == state.CNIFlannel {
-			_, mode := form.GetFormItemByLabel(cniLabel).(*tview.DropDown).GetCurrentOption()
+			_, mode := form.GetFormItemByLabel(flannelModeLabel).(*tview.DropDown).GetCurrentOption()
 
 			if err := c.st.SetFlannelMode(mode); err != nil {
 				allErrs = multierror.Append(allErrs, err)

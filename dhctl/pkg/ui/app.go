@@ -174,11 +174,11 @@ func buildPages(a *App) {
 	a.pages.SwitchToPage(pageMain)
 }
 
-func (a *App) Start() error {
+func (a *App) Start() (*state.State, error) {
 	if err := a.app.SetRoot(a.pages, true).EnableMouse(true).EnablePaste(true).Run(); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return a.state, nil
 }
 
 func (a *App) State() *state.State {

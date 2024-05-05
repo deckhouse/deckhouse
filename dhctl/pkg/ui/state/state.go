@@ -34,7 +34,7 @@ type ClusterState struct {
 }
 
 type CNIState struct {
-	Type        string `json:"type"`
+	Type        string `json:"cni_type"`
 	FlannelMode string `json:"flannel_mode"`
 }
 
@@ -91,6 +91,10 @@ func (b *State) SetConfigYAML(data string) error {
 
 	b.ConfigYAML = data
 	return nil
+}
+
+func (b *State) GetRegistryState() RegistryState {
+	return b.RegistryState
 }
 
 func (b *State) ConvertToMap() (map[string]interface{}, error) {
@@ -267,7 +271,7 @@ func (b *State) PodSubnetNodeCIDRPrefix(v string) error {
 
 func (b *State) SetFlannelMode(t string) error {
 	for _, tt := range []string{FlannelVxLAN, FlannelHostGW} {
-		if tt != t {
+		if tt == t {
 			b.CNIState.FlannelMode = t
 			return nil
 		}
@@ -278,7 +282,7 @@ func (b *State) SetFlannelMode(t string) error {
 
 func (b *State) SetCNIType(t string) error {
 	for _, tt := range []string{CNICilium, CNISimpleBridge, CNIFlannel} {
-		if tt != t {
+		if tt == t {
 			b.CNIState.Type = t
 			return nil
 		}
