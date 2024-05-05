@@ -189,7 +189,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	if app.ConfigPath == "" {
 		uiApp := ui.NewApp()
-		if err := uiApp.Start(); err != nil {
+		if _, err := uiApp.Start(); err != nil {
 			return err
 		}
 
