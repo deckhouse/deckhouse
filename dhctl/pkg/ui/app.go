@@ -180,7 +180,3 @@ func (a *App) Start() (*state.State, error) {
 	}
 	return a.state, nil
 }
-
-func (a *App) State() *state.State {
-	return a.state
-}

@@ -17,7 +17,10 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
+	"math/rand"
+	"os"
+	"path"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +41,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
+	uistate "github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -180,6 +185,33 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func initSSHFromUIState(state uistate.SSHState) error {
+	app.SSHUser = state.User
+
+	if state.BastionUser != "" {
+		app.SSHBastionUser = state.BastionUser
+	}
+
+	if state.BastionHost != "" {
+		app.SSHBastionHost = state.BastionHost
+	}
+
+	if state.Host != "" {
+		app.SSHHosts = []string{state.Host}
+	}
+
+	privKeyPrefix := strconv.Itoa(rand.Int())
+	privKeyPath := path.Join(app.TmpDirName, privKeyPrefix+".private.key")
+
+	if err := os.WriteFile(privKeyPath, []byte(state.Private), 0600); err != nil {
+		return err
+	}
+
+	app.SSHPrivateKeys = append(app.SSHPrivateKeys, privKeyPath)
+
+	return nil
+}
+
 func (b *ClusterBootstrapper) Bootstrap() error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -187,14 +219,18 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		defer restore()
 	}
 
+	configYAML := ""
+
 	if app.ConfigPath == "" {
 		uiApp := ui.NewApp()
-		if _, err := uiApp.Start(); err != nil {
+		s, err := uiApp.Start()
+		if err != nil {
 			return err
 		}
-
-		s := uiApp.State()
-		log.InfoF("%s %s %s\n", s.ClusterType, s.Provider, s.Prefix)
+		configYAML = s.ConfigYAML
+		if err := initSSHFromUIState(s.SSHState); err != nil {
+			return err
+		}
 	}
 
 	masterAddressesForSSH := make(map[string]string)
@@ -206,9 +242,18 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
-	if err != nil {
-		return err
+	var metaConfig *config.MetaConfig
+	var err error
+	if configYAML == "" {
+		metaConfig, err = config.LoadConfigFromFile(app.ConfigPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		metaConfig, err = config.ParseConfigFromData(configYAML)
+		if err != nil {
+			return err
+		}
 	}
 
 	if app.ResourcesPath != "" {
