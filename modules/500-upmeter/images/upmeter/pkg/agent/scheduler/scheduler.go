@@ -120,8 +120,7 @@ func (e *Scheduler) scrapeTicker() {
 				}()
 
 				// Cleaning allocated series space
-				for id := range e.resultsMap {
-					series := e.seriesMap[id]
+				for _, series := range e.seriesMap {
 					series.Clean()
 				}
 
@@ -168,6 +167,11 @@ func (e *Scheduler) collect(checkResult check.Result) {
 		e.resultsMap[id] = probeResult
 	}
 	probeResult.Add(checkResult)
+
+	// Init series for the same ID
+	if _, ok := e.seriesMap[id]; !ok {
+		e.seriesMap[id] = check.NewStatusSeries(e.seriesSize)
+	}
 }
 
 // scrape checks probe results, add them to their status series
@@ -178,11 +182,7 @@ func (e *Scheduler) scrape(scrapeTime time.Time) error {
 	scrapeIndex := int(exportTimeRemainder / int64(e.scrapePeriod))
 
 	for id, probeResult := range e.resultsMap {
-		series, ok := e.seriesMap[id]
-		if !ok {
-			series = check.NewStatusSeries(e.seriesSize)
-			e.seriesMap[id] = series
-		}
+		series := e.seriesMap[id]
 		err := series.AddI(scrapeIndex, probeResult.Status())
 		if err != nil {
 			return fmt.Errorf("adding series for probe %q: %v", id, err)
@@ -215,10 +215,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	// Collect episodes for real probes and sort series by group.
 	byGroup := make(map[string][]*check.StatusSeries)
 	for id, probeResult := range e.resultsMap {
-		series, ok := e.seriesMap[id]
-		if !ok {
-			continue
-		}
+		series := e.seriesMap[id]
 		// Calculated probe series contain no new data, so they are skipped.
 		group := probeResult.ProbeRef().Group
 		if _, ok := byGroup[group]; !ok {
