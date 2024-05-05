@@ -106,6 +106,9 @@ func (e *Scheduler) runTicker() {
 func (e *Scheduler) scrapeTicker() {
 	ticker := time.NewTicker(e.scrapePeriod)
 
+	// Export time in future
+	exportTime := time.Now().Truncate(e.exportPeriod).Add(e.exportPeriod)
+
 	for {
 		select {
 		case result := <-e.recv:
@@ -113,22 +116,10 @@ func (e *Scheduler) scrapeTicker() {
 			e.collect(result)
 
 		case <-ticker.C:
-			var (
-				now        = time.Now()
-				exportTime = now.Round(e.exportPeriod)
-				scrapeTime = now.Truncate(e.scrapePeriod)
-			)
+			scrapeTime := time.Now().Truncate(e.scrapePeriod)
 
-			// Add probe statuses to status series
-			err := e.scrape(scrapeTime)
-			if err != nil {
-				log.Fatalf("cannot scrape results: %v", err)
-			}
-
-			// Is it time to export the data? Either the series is full so we need to export, or
-			// the time has come for current uptime episode even if it is not complete
-			// (e.g. agent started in the middle of an episode).
-			if e.seriesMap.full() || exportTime == scrapeTime {
+			// Is it time to export the data?
+			if scrapeTime.Equal(exportTime) || scrapeTime.After(exportTime) {
 				episodeStart := exportTime.Add(-e.exportPeriod)
 				episodes, err := e.convert(episodeStart)
 				if err != nil {
@@ -145,6 +136,13 @@ func (e *Scheduler) scrapeTicker() {
 					series.Clean()
 				}
 
+				exportTime = exportTime.Add(e.exportPeriod)
+			}
+
+			// Add probe statuses to status series
+			err := e.scrape(scrapeTime)
+			if err != nil {
+				log.Fatalf("cannot scrape results: %v", err)
 			}
 
 		case <-e.stop:
@@ -228,12 +226,15 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	// Collect episodes for real probes and sort series by group.
 	byGroup := make(map[string][]*check.StatusSeries)
 	for id, probeResult := range e.resultsMap {
+		series, ok := e.seriesMap[id]
+		if !ok {
+			continue
+		}
 		// Calculated probe series contain no new data, so they are skipped.
 		group := probeResult.ProbeRef().Group
 		if _, ok := byGroup[group]; !ok {
 			byGroup[group] = make([]*check.StatusSeries, 0)
 		}
-		series := e.seriesMap[id]
 		byGroup[group] = append(byGroup[group], series)
 
 		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series.Stats())
