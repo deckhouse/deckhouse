@@ -557,5 +557,69 @@ func Test_MergeStatusSeries(t *testing.T) {
 	}
 }
 
-// func Test_StatusSeries_AddI(t *testing.T)
-// }
+func Test_StatusSeries_AddI(t *testing.T) {
+	{
+		s := NewStatusSeries(4)
+		s.AddI(3, Up)
+		assert.Equal(t, s.series, []Status{nodata, nodata, nodata, Up})
+	}
+
+	{
+		s := NewStatusSeries(4)
+		s.AddI(1, Up)
+		assert.Equal(t, s.series, []Status{nodata, Up, nodata, nodata})
+	}
+
+	{
+		s := NewStatusSeries(4)
+		err := s.AddI(4, Up)
+		assert.Equal(t, s.series, []Status{nodata, nodata, nodata, nodata})
+		assert.ErrorIs(t, err, ErrIndexTooBig)
+	}
+}
+
+func Test_StatusSeries_Full(t *testing.T) {
+	{
+		s := NewStatusSeries(4)
+		s.Add(Up)
+		s.Add(Up)
+		s.Add(Up)
+		assert.False(t, s.Full())
+	}
+
+	{
+		s := NewStatusSeries(4)
+		s.Add(Up)
+		s.Add(Up)
+		s.Add(Up)
+		s.Add(Up)
+		assert.True(t, s.Full())
+	}
+
+	{
+		var err error
+		s := NewStatusSeries(4)
+		err = s.Add(Up)
+		assert.NoError(t, err)
+		err = s.Add(Up)
+		assert.NoError(t, err)
+		err = s.Add(Up)
+		assert.NoError(t, err)
+		err = s.Add(Up)
+		assert.NoError(t, err)
+		err = s.Add(Up)
+		assert.ErrorIs(t, err, ErrLimitReached)
+	}
+	{
+		s := NewStatusSeries(4)
+		s.AddI(3, Up)
+		assert.True(t, s.Full())
+	}
+	{
+		s := NewStatusSeries(4)
+		s.AddI(3, Up)
+		assert.True(t, s.Full())
+		s.Clean()
+		assert.False(t, s.Full())
+	}
+}
