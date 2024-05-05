@@ -1145,14 +1145,6 @@ type moduleValidator interface {
 	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error
 }
 
-func (c *Controller) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
-	release.Status.Size = ds.Size
-	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
-
-	return c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
-}
-
 func (c *Controller) registerMetrics() error {
 	releases, err := c.moduleReleasesLister.List(labels.Everything())
 	if err != nil {

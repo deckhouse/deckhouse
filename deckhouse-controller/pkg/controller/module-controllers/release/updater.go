@@ -90,6 +90,7 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 		return fmt.Errorf("get release %s: %w", release.Name, err)
 	}
 
+	r = r.DeepCopy()
 	r.Status.Phase = phase
 	r.Status.Message = msg
 
@@ -136,9 +137,14 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	}
 
 	md := downloader.NewModuleDownloader(k.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	_, err = md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
+	}
+
+	release, err = k.updateModuleReleaseDownloadStatistic(context.Background(), release, ds)
+	if err != nil {
+		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
 	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
@@ -202,6 +208,20 @@ func (k *kubeAPI) SaveReleaseData(releaseName string, data updater.DeckhouseRele
 		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
 		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
 	})
+}
+
+func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
+	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
+	r, err := k.moduleReleaseLister.Get(release.Name)
+	if err != nil {
+		return nil, fmt.Errorf("get release %s: %w", release.Name, err)
+	}
+
+	r = r.DeepCopy()
+	r.Status.Size = ds.Size
+	r.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
+
+	return k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
 }
 
 type metricsUpdater struct{}
