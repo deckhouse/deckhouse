@@ -38,16 +38,6 @@ func NewStatusSeries(size int) *StatusSeries {
 	}
 }
 
-// Add adds a status to the series
-func (ss *StatusSeries) Add(status Status) error {
-	if len(ss.series) == ss.nextIndex {
-		return ErrLimitReached
-	}
-	ss.series[ss.nextIndex] = status
-	ss.nextIndex++
-	return nil
-}
-
 // Add adds a status to the series at specified position
 func (ss *StatusSeries) AddI(i int, status Status) error {
 	if len(ss.series) <= i {
@@ -59,7 +49,7 @@ func (ss *StatusSeries) AddI(i int, status Status) error {
 }
 
 func (ss *StatusSeries) Full() bool {
-	return ss.nextIndex >= len(ss.series)
+	return ss.nextIndex > len(ss.series)
 }
 
 // Merge updates current series with the source series according to the merging strategy: least non-zero status rule,
