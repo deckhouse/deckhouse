@@ -68,6 +68,20 @@ func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 }
 
 func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
+	for _, channel := range channels {
+		path := filepath.Join(u.baseDir, "content/modules", moduleName, channel)
+		err := os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove %s: %w", path, err)
+		}
+
+		path = filepath.Join(u.baseDir, "data/modules", moduleName, channel)
+		err = os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove %s: %w", path, err)
+		}
+	}
+
 	reader := tar.NewReader(body)
 
 	for {
