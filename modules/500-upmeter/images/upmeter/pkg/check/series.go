@@ -48,10 +48,6 @@ func (ss *StatusSeries) AddI(i int, status Status) error {
 	return nil
 }
 
-func (ss *StatusSeries) Full() bool {
-	return ss.nextIndex > len(ss.series)
-}
-
 // Merge updates current series with the source series according to the merging strategy: least non-zero status rule,
 // i.e.: Down < Up < Unknown.
 func (ss *StatusSeries) Merge(src *StatusSeries) error {

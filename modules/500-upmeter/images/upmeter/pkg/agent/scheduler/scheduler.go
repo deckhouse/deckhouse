@@ -27,23 +27,12 @@ import (
 	"d8.io/upmeter/pkg/registry"
 )
 
-type seriesMap map[string]*check.StatusSeries
-
-func (sm seriesMap) full() bool {
-	for _, ss := range sm {
-		if ss.Full() {
-			return true
-		}
-	}
-	return false
-}
-
 type Scheduler struct {
 	registry *registry.Registry
 
 	// to receive results from runners
 	recv       chan check.Result
-	seriesMap  seriesMap
+	seriesMap  map[string]*check.StatusSeries
 	resultsMap map[string]*check.ProbeResult
 
 	// time configuration
@@ -66,7 +55,7 @@ func New(reg *registry.Registry, send chan []check.Episode) *Scheduler {
 
 	return &Scheduler{
 		recv:       make(chan check.Result),
-		seriesMap:  seriesMap{},
+		seriesMap:  make(map[string]*check.StatusSeries),
 		resultsMap: make(map[string]*check.ProbeResult),
 
 		exportPeriod: exportPeriod,

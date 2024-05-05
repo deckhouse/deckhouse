@@ -549,25 +549,3 @@ func Test_StatusSeries_AddI(t *testing.T) {
 		assert.ErrorIs(t, err, ErrIndexTooBig)
 	}
 }
-
-func Test_StatusSeries_Full(t *testing.T) {
-	{
-		s := NewStatusSeries(4)
-		s.AddI(2, Up)
-		assert.False(t, s.Full())
-	}
-
-	{
-		s := NewStatusSeries(4)
-		s.AddI(3, Up)
-		assert.True(t, s.Full())
-	}
-
-	{
-		s := NewStatusSeries(4)
-		s.AddI(3, Up)
-		assert.True(t, s.Full())
-		s.Clean()
-		assert.False(t, s.Full())
-	}
-}
