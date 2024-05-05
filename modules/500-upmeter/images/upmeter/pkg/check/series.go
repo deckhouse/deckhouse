@@ -20,10 +20,7 @@ import (
 	"fmt"
 )
 
-var (
-	ErrLimitReached = fmt.Errorf("limit reached")
-	ErrIndexTooBig  = fmt.Errorf("index is too big")
-)
+var ErrIndexTooBig = fmt.Errorf("index is too big")
 
 // StatusSeries contains the list of statuses of a check for current episode (30s).
 // The series slice is to be merged with other checks using the series of the statuses.
