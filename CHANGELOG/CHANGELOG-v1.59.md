@@ -100,6 +100,7 @@
  - **[dhctl]** Fix `dhctl mirror` producing bundles with unexpected components versions. [#8161](https://github.com/deckhouse/deckhouse/pull/8161)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
+ - **[flant-integration]** Fix resources counting. [#8291](https://github.com/deckhouse/deckhouse/pull/8291)
  - **[global-hooks]** Fix K8s upgrade migration. [#8148](https://github.com/deckhouse/deckhouse/pull/8148)
  - **[global-hooks]** Fix ability to downgrade Kubernetes by more than 1 minor version. [#7279](https://github.com/deckhouse/deckhouse/pull/7279)
  - **[ingress-nginx]** Preventing istio-proxy from terminating before the ingress-controller is stopped during grace period. [#8064](https://github.com/deckhouse/deckhouse/pull/8064)
@@ -128,7 +129,9 @@
  - **[node-manager]** Fix a race in instance controller if NodeGroup has been deleted. [#7454](https://github.com/deckhouse/deckhouse/pull/7454)
  - **[node-manager]** Add the ability to disable StaticInstance bootstrapping by adding the `"node.deckhouse.io/allow-bootstrap": "false"` label. [#7244](https://github.com/deckhouse/deckhouse/pull/7244)
  - **[node-manager]** Add the alert about an impossible node drain. [#6190](https://github.com/deckhouse/deckhouse/pull/6190)
+ - **[operator-prometheus]** Add TLS-assets for email and webhook receivers into secret which mount into alertmanager. [#8302](https://github.com/deckhouse/deckhouse/pull/8302)
  - **[operator-prometheus]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
+ - **[prometheus]** Switch Alertmanager configuration selector from `alertmanagerConfigSelector` to `alertmanagerConfiguration`. [#8302](https://github.com/deckhouse/deckhouse/pull/8302)
  - **[prometheus]** Fix grafana-v10 podAntiAffinity and environment variables. [#8166](https://github.com/deckhouse/deckhouse/pull/8166)
     Grafana v10 deployment rolling restart.
  - **[prometheus]** Switch Alertmanager configuration selector from `alertmanagerConfiguration` to `alertmanagerConfigSelector`. [#8158](https://github.com/deckhouse/deckhouse/pull/8158)
@@ -151,6 +154,7 @@
     `cilium-agent` pods will restart.
  - **[deckhouse]** Add a validating webhook to prevent the `sds-drbd` module from being enabled. [#7918](https://github.com/deckhouse/deckhouse/pull/7918)
     `sds-drbd` module is renamed. Please switch to [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume) module ASAP. `sds-drbd` module cannot be enabled but will continue to work if it was already enabled before.
+ - **[deckhouse-controller]** Enable Deckhouse high availability mode only after the bootstrap process is complete. [#8275](https://github.com/deckhouse/deckhouse/pull/8275)
  - **[deckhouse-controller]** Remove linstor module [#7091](https://github.com/deckhouse/deckhouse/pull/7091)
     Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - **[dhctl]** Support Deckhouse controller high availability mode during bootstrap. [#7919](https://github.com/deckhouse/deckhouse/pull/7919)
