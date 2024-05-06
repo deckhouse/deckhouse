@@ -5,9 +5,8 @@ memory: 50Mi
 
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ if hasKey $ng "fencing" }}
-    {{ $mode := dig "fencing" "mode" "" $ng }}
-    {{ if eq $mode "Watchdog" }}
+  {{ $mode := dig "fencing" "mode" "" $ng }}
+  {{ if eq $mode "Watchdog" }}
       {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -104,6 +103,5 @@ spec:
           hostPath:
             path: /dev/watchdog
             type: CharDevice
-    {{- end }}
   {{- end }}
 {{- end }}
