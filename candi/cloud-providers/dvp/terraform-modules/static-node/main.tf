@@ -27,7 +27,7 @@ locals {
 
   root_disk_destructive_params = {
     "rootDisk" = {
-      "storageClassName" = local.root_disk_storage_class_name
+      "storageClass" = local.root_disk_storage_class_name
       "image" = {
         "type" = local.root_disk_image_type
         "name" = local.root_disk_image_name
@@ -44,12 +44,12 @@ locals {
       "memory" = {
         "size" = local.vm_memory_size
       }
-      "nodeSelector"      = local.vm_merged_node_selector
-      "tolerations"       = local.vm_tolerations
-      "priorityClassName" = local.vm_priority_class_name
-      "ipAddress"         = local.vm_ip_address
-      "sshPublicKeyHash"  = sha256(jsonencode(local.ssh_public_key))
-      "cloudConfigHash"   = sha256(jsonencode(var.cloudConfig))
+      "nodeSelector"     = local.vm_merged_node_selector
+      "tolerations"      = local.vm_tolerations
+      "priorityClass"    = local.vm_priority_class_name
+      "ipAddress"        = local.vm_ip_address
+      "sshPublicKeyHash" = sha256(jsonencode(local.ssh_public_key))
+      "cloudConfigHash"  = sha256(jsonencode(var.cloudConfig))
     }
     },
     {
@@ -95,22 +95,24 @@ locals {
 resource "kubernetes_manifest" "nodegroup-root-disk" {
   manifest = {
     "apiVersion" = local.apiVersion
-    "kind"       = "VirtualMachineDisk"
+    "kind"       = "VirtualDisk"
     "metadata" = {
       "name"        = local.root_disk_name
       "namespace"   = local.namespace
       "annotations" = local.root_disk_annotations
     }
     "spec" = {
-      "dataSource" = merge(
-        { "type" = local.root_disk_image_type },
-        local.root_disk_image_type == "ClusterVirtualMachineImage" ? { "clusterVirtualMachineImage" = { "name" = local.root_disk_image_name } } : {},
-        local.root_disk_image_type == "VirtualMachineImage" ? { "virtualMachineImage" = { "name" = local.root_disk_image_name } } : {}
-      )
+      "dataSource" = {
+        type = "ObjectRef"
+        objectRef = {
+          "kind" = local.root_disk_image_type
+          "name" = local.root_disk_image_name
+        }
+      }
       "persistentVolumeClaim" = merge({
         "size" = local.root_disk_size
         },
-        local.root_disk_storage_class_name != null ? { "storageClassName" = local.root_disk_storage_class_name } : null
+        local.root_disk_storage_class_name != null ? { "storageClass" = local.root_disk_storage_class_name } : null
       )
     }
   }
@@ -126,7 +128,7 @@ resource "kubernetes_manifest" "nodegroup-root-disk" {
   }
   lifecycle {
     ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
+      object.spec.persistentVolumeClaim.storageClass
     ]
   }
 }
@@ -209,24 +211,23 @@ resource "kubernetes_manifest" "vm" {
           "size" = local.vm_memory_size
         }
 
-        "blockDevices" = [
+        "blockDeviceRefs" = [
           {
-            "type" = "VirtualMachineDisk"
-            "virtualMachineDisk" = {
-              "name" = kubernetes_manifest.nodegroup-root-disk.manifest.metadata.name
-            }
+            "kind" = "VirtualDisk"
+            "name" = kubernetes_manifest.nodegroup-root-disk.manifest.metadata.name
           },
         ]
 
         "provisioning" = {
-          "type" = "UserDataSecret"
-          "userDataSecretRef" = {
+          "type" = "UserDataRef"
+          "userDataRef" = {
+            "kind" = "Secret"
             "name" = local.cloudinit_secret_name
           }
         }
 
       },
-      local.vm_ip_address != "" ? { "virtualMachineIPAddressClaimName" = kubernetes_manifest.vmip[0].manifest.metadata.name } : null,
+      local.vm_ip_address != "" ? { "virtualMachineIPAddressClaim" = kubernetes_manifest.vmip[0].manifest.metadata.name } : null,
       local.vm_priority_class_name != null ? { "priorityClassName" = local.vm_priority_class_name } : null,
       local.vm_tolerations != null ? { "tolerations" = local.vm_tolerations } : null,
       length(local.vm_merged_node_selector) != 0 ? { "nodeSelector" = local.vm_merged_node_selector } : null,
