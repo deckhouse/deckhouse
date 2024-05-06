@@ -80,6 +80,11 @@ properties:
             x-examples:
             - "mytoken"
             default: ""
+      registryMode:
+        # See registryType in candi/openapi/init_configuration.yaml
+        type: string
+        enum: [ Direct, Proxy, Detached ]
+        default: Direct
       kubernetesCA:
         type: string
         x-examples:

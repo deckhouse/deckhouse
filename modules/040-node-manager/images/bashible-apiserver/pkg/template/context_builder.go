@@ -158,6 +158,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:        cb.imagesDigests,
 		Proxy:         cb.clusterInputData.Proxy,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		RegistryMode:  cb.clusterInputData.RegistryMode,
 	}
 
 	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
@@ -223,6 +224,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		Proxy:             cb.clusterInputData.Proxy,
 		CloudProviderType: cb.getCloudProvider(),
 		PackagesProxy:     cb.clusterInputData.PackagesProxy,
+		RegistryMode:      cb.clusterInputData.RegistryMode,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -451,6 +453,7 @@ type bashibleContext struct {
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	RegistryMode      string                       `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -497,6 +500,7 @@ type tplContextCommon struct {
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	RegistryMode  string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -564,6 +568,7 @@ type inputData struct {
 	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	BootstrapTokens           map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
 	PackagesProxy             map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	RegistryMode              string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`
