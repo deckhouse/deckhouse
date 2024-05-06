@@ -9,6 +9,8 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
+  excludePaths:
+    - '*_test.*'
   stageDependencies:
     install:
       - '**/*'
