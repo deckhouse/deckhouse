@@ -328,13 +328,13 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData(m.Registry)
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
 
 	if m.RegistryMode != "Direct" {
-		upstreamRegistryData, err := m.ParseRegistryData(m.UpstreamRegistry)
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
 		if err != nil {
 			return nil, err
 		}
@@ -390,7 +390,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData(m.Registry)
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +418,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	}
 
 	if m.RegistryMode != "Direct" {
-		upstreamRegistryData, err := m.ParseRegistryData(m.UpstreamRegistry)
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
 		if err != nil {
 			return nil, err
 		}
@@ -541,23 +541,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	m.VersionMap = versionMap
 
 	return nil
-}
-
-func (m *MetaConfig) ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", data)
-
-	ret := data.ConvertToMap()
-
-	if data.DockerCfg != "" {
-		auth, err := data.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
 }
 
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
@@ -687,6 +670,23 @@ func (r *RegistryData) Auth() (string, error) {
 	}
 
 	return registryAuth, nil
+}
+
+func ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
+	log.DebugF("registry data: %v\n", data)
+
+	ret := data.ConvertToMap()
+
+	if data.DockerCfg != "" {
+		auth, err := data.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
+
+	return ret, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
