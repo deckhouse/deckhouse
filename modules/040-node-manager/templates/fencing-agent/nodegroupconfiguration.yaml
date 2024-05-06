@@ -1,19 +1,21 @@
 {{ $ctx := . }}
+{{- $nodeGroupsList := list }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ if hasKey $ng "fencing" }}
-    {{ $mode := dig "fencing" "mode" "" $ng  }}
-    {{ if eq $mode "Watchdog" }}
-
+  {{ $mode := dig "fencing" "mode" "" $ng }}
+  {{ if eq $mode "Watchdog" }}
+    {{- $nodeGroupsList = append $nodeGroupsList $ng.name }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: enable-watchdog-for-{{ $ng.name }}-nodegroup.sh
+  name: enable-watchdog-for-nodegroup.sh
   labels:
     app: fencing-agent
 spec:
   weight: 99
-  nodeGroups: ["{{ $ng.name }}"]
+  nodeGroups: {{ $nodeGroupsList | toJson }}
   bundles: ["*"]
   content: |
     bb-sync-file /etc/udev/rules.d/60-watchdog.rules - <<"EOF"
