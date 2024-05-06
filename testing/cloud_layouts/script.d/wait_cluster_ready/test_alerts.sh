@@ -20,7 +20,7 @@ attempts=20
 
 allow_alerts=(
 "D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
-"DeadMansSwitch" # Always active in system. Tells that monitoring works.
+"MissingDeadMansSwitch" # Always active in system. Tells that monitoring works.
 "CertmanagerCertificateExpired" # On some system do not have DNS
 "CertmanagerCertificateExpiredSoon" # Same as above
 "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
