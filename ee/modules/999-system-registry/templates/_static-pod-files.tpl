@@ -1,21 +1,32 @@
+{{- define "template-files-values"  }}
+files:
+ - templateName: static-pod-internal-registry.yaml
+   filePath: /static-pods/internal-registry.yaml
+ - templateName: docker-auth-config.yaml
+   filePath: /docker-auth/config.yaml
+ - templateName: distribution-config.yaml
+   filePath: /distribution/distribution-config.yaml
+ - templateName: seaweedfs-filer.toml
+   filePath: /seaweedfs/filer.toml
+ - templateName: seaweedfs-master.toml
+   filePath: /seaweedfs/master.toml
+{{- end }}
+
 {{- define "docker-auth-config.yaml" }}
 server:
   addr: "${discovered_node_ip}:5051"
   #addr: "0.0.0.0:5051"
-
 token:
   issuer: "Registry server"
   expiration: 900
   certificate: "/config/token.crt"
   key: "/config/token.key"
-
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
   "pusher":
     password: "\$2y\$05\$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne"  # pusher
   "puller":
     password: "\$2y\$05\$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq"  # puller
-
 acl:
   - match: { account: "pusher" }
     actions: [ "*" ]
@@ -26,35 +37,33 @@ acl:
   # Access is denied by default.
 {{- end }}
 
+
 {{- define "seaweedfs-filer.toml" }}
-[filer.options]
-recursive_delete = false # do we really need for registry?
-
-[etcd]
-enabled = true
-servers = "{{ $.Values.systemRegistry.internal.etcd.addresses | join "," }}"
-
-key_prefix = "seaweedfs_meta."
-tls_ca_file="/pki/etcd/ca.crt"
-tls_client_crt_file="/pki/apiserver-etcd-client.crt"
-tls_client_key_file="/pki/apiserver-etcd-client.key"
+filer.options:
+  recursive_delete: false # do we really need for registry?
+etcd:
+  enabled: true
+  servers: "{{ $.Values.systemRegistry.internal.etcd.addresses | join "," }}"
+  key_prefix: "seaweedfs_meta."
+  tls_ca_file: "/pki/etcd/ca.crt"
+  tls_client_crt_file: "/pki/apiserver-etcd-client.crt"
+  tls_client_key_file: "/pki/apiserver-etcd-client.key"
 {{- end }}
-
 
 
 {{- define "seaweedfs-master.toml" }}
-[master.volume_growth]
-copy_1 = 1
-copy_2 = 2
-copy_3 = 3
-copy_other = 1
+master.volume_growth:
+  copy_1: 1
+  copy_2: 2
+  copy_3: 3
+  copy_other: 1
 {{- end }}
+
 
 {{- define "distribution-config.yaml" }}
 version: 0.1
 log:
   level: info
-
 storage:
   s3:
     accesskey: awsaccesskey
@@ -77,7 +86,6 @@ storage:
     disable: true
   cache:
     blobdescriptor: inmemory
-
 http:
   addr: ${discovered_node_ip}:5000
   #addr: 0.0.0.0:5000
@@ -92,7 +100,6 @@ proxy:
   username: "$UPSTREAM_REGISTRY_LOGIN"
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   ttl: 72h
-
 auth:
   token:
     realm: http://${discovered_node_ip}:5051/auth
@@ -101,6 +108,7 @@ auth:
     rootcertbundle: /config/token.crt
     autoredirect: false
 {{- end }}
+
 
 {{- define "static-pod-internal-registry.yaml" }}
 apiVersion: v1
