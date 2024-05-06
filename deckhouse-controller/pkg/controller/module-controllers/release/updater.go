@@ -100,8 +100,7 @@ func (k *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.ModuleRelease, annot
 			"annotations": annotations,
 		},
 	})
-	data, _ := json.Marshal(patch)
-	p := client.RawPatch(types.MergePatchType, data)
+	p := client.RawPatch(types.MergePatchType, patch)
 
 	return k.client.Patch(k.ctx, release, p)
 }
