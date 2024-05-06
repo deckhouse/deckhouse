@@ -221,7 +221,7 @@ RUN  chmod 1777 /tmp \
   && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
   && mknod -m 0666 /chroot/dev/zero c 1 5 \
   && mknod -m 0666 /chroot/dev/tty c 5 0 \
-  && echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules/otel_ngx_module.so" > /etc/ld.so.conf.d/local.conf \
+  && echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
   # Create ld.so.cache inside chroot
   && cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
