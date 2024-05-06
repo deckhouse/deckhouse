@@ -101,12 +101,28 @@ func (fa *FencingAgent) startWatchdog(ctx context.Context) error {
 	return nil
 }
 
-func (fa *FencingAgent) startLiveness() {
+func (fa *FencingAgent) startLiveness(ctx context.Context) {
 	fa.logger.Info("Starting the healthz server")
+	srv := &http.Server{Addr: fa.config.HealthProbeBindAddress, Handler: nil}
+
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	_ = http.ListenAndServe(fa.config.HealthProbeBindAddress, nil)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			fa.logger.Fatal("HTTP server ListenAndServe:", zap.Error(err))
+		}
+	}()
+
+	// Graceful shutdown
+	go func() {
+		<-ctx.Done() // Assuming the context is cancelled when you want to stop the server
+		fa.logger.Info("Shutting down the healthz server")
+		if err := srv.Shutdown(context.Background()); err != nil {
+			fa.logger.Fatal("HTTP server Shutdown:", zap.Error(err))
+		}
+	}()
 }
 
 func (fa *FencingAgent) stopWatchdog() error {
@@ -130,7 +146,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	var err error
 	// for parallel tests
 	if fa.config.HealthProbeBindAddress != "" {
-		go fa.startLiveness()
+		fa.startLiveness(ctx)
 	}
 
 	for {
