@@ -17,7 +17,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/system-registry/pki",
+	Queue:        "/modules/system-registry/pki",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
