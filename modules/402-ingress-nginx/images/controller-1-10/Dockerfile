@@ -42,8 +42,6 @@ COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
-    # jaegertracing hunter deps
-    git clone --branch controller-v1.9.5 --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -62,7 +60,7 @@ COPY --from=controller-builder /src/images/nginx-1.25/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-essential libgrpc-devel  \
-    libprotobuf-devel grpc-plugins openssl libpcre2-devel
+    libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
 RUN patch build.sh < nginx-build.patch && /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
@@ -71,10 +69,6 @@ RUN patch build.sh < nginx-build.patch && /build.sh
 # - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/Dockerfile-chroot
 # - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/chroot.sh
 FROM $BASE_ALT_DEV as chroot
-
-ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
-ENV LUA_PATH="/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
-ENV LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
 
 COPY --from=nginx-builder /usr/local /usr/local
 COPY --from=nginx-builder /opt /opt
@@ -140,7 +134,7 @@ RUN bash -eu -c ' \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
-  && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share \
+  && mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share \
   && cp /etc/passwd /etc/group /etc/hosts /chroot/etc/ \
   # Create opentelemetry.toml file as it doesn't present in controller_image
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
@@ -175,9 +169,7 @@ RUN bash -eu -c ' \
 
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
-RUN patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tmpl.patch \
-  && patch -p1 < /auth-cookie-always.patch
+RUN patch -p1 < /balancer-lua.patch && patch -p1 < /nginx-tmpl.patch && patch -p1 < /auth-cookie-always.patch
 
 # Final image
 # Based on tag "controller-v1.10.1":
@@ -185,10 +177,8 @@ RUN patch -p1 < /balancer-lua.patch \
 FROM $BASE_ALT
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
-ENV LUA_PATH="/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
+ENV LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
 ENV LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
-
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64/:/modules_mount/etc/nginx/modules/otel
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
@@ -231,10 +221,7 @@ RUN  chmod 1777 /tmp \
   && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
   && mknod -m 0666 /chroot/dev/zero c 1 5 \
   && mknod -m 0666 /chroot/dev/tty c 5 0 \
-  && mkdir -p /chroot/modules_mount \
-  && mkdir -p modules_mount \
-  && ln -s /modules_mount /chroot/modules_mount \
-  && echo -e "/usr/local/lib\n/usr/local/lib64\n/modules_mount/etc/nginx/modules/otel" > /etc/ld.so.conf.d/local.conf \
+  && echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules/otel_ngx_module.so" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
   # Create ld.so.cache inside chroot
   && cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
