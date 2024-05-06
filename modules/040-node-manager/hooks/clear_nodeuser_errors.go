@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -70,6 +71,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   applyNodeUsersForClearFilter,
 		},
 	},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "clear_nodeuser_errors",
+			Crontab: "0 4 * * *",
+		},
+	},
 }, discoverNodeUsersForClear)
 
 func applyNodesForClearFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -98,23 +105,17 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 func discoverNodeUsersForClear(input *go_hook.HookInput) error {
-	noSnap := input.Snapshots[nodeForClearSnapName]
-	nodes := make(map[string]struct{})
-
-	for _, item := range noSnap {
-		node := item.(string)
-		nodes[node] = struct{}{}
-	}
-
 	nodeUserSnap := input.Snapshots[nodeUserForClearSnapName]
 	if len(nodeUserSnap) == 0 {
 		return nil
 	}
 
+	nodes := golibset.NewFromSnapshot(input.Snapshots[nodeForClearSnapName])
+
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
 		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
-		if incorrectNodes, ok := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); ok {
+		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(incorrectNodes) > 0 {
 			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
@@ -126,16 +127,17 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	return nil
 }
 
-func hasIncorrectNodeUserErrors(nodeUserStatusError map[string]string, nodes map[string]struct{}) ([]string, bool) {
-	result := make([]string, 0, 0)
-	has := false
+func hasIncorrectNodeUserErrors(
+	nodeUserStatusError map[string]string,
+	nodes golibset.Set,
+) []string {
+	result := make([]string, 0)
 	for k := range nodeUserStatusError {
-		if _, ok := nodes[k]; !ok {
+		if nodes.Has(k) {
 			result = append(result, k)
-			has = true
 		}
 	}
-	return result, has
+	return result
 }
 
 func clearNodeUserIncorrectErrors(nodeUserName string, incorrectNodes []string, input *go_hook.HookInput) error {
