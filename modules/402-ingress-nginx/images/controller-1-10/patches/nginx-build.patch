@@ -1,8 +1,22 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index 3fe610945..440e39094 100755
+index 3fe610945..e7ffcdf42 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
-@@ -113,174 +113,12 @@ export BUILD_PATH=/tmp/build
+@@ -14,6 +14,9 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++SOURCE_REPO="${SOURCE_REPO}"
++CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
++
+ set -o errexit
+ set -o nounset
+ set -o pipefail
+@@ -110,177 +113,16 @@ export OPENTELEMETRY_CPP_VERSION="v1.11.0"
+ export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
+ 
+ export BUILD_PATH=/tmp/build
++export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
  
  ARCH=$(uname -m)
  
@@ -178,7 +192,16 @@ index 3fe610945..440e39094 100755
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -327,15 +165,16 @@ git config --global --add core.compression -1
+@@ -304,7 +146,7 @@ cd "$BUILD_PATH/opentelemetry-cpp"
+ export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
+ cmake -B build -G Ninja -Wno-dev \
+         -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/" \
+-        -DCMAKE_INSTALL_PREFIX=/usr \
++        -DCMAKE_INSTALL_PREFIX=/usr/local \
+         -DBUILD_SHARED_LIBS=ON \
+         -DBUILD_TESTING="OFF" \
+         -DBUILD_W3CTRACECONTEXT_TEST="OFF" \
+@@ -327,15 +169,16 @@ git config --global --add core.compression -1
  
  # Get Brotli source and deps
  cd "$BUILD_PATH"
@@ -197,7 +220,7 @@ index 3fe610945..440e39094 100755
  cd ssdeep/
  
  ./bootstrap
-@@ -346,10 +185,13 @@ make install
+@@ -346,10 +189,13 @@ make install
  
  # build modsecurity library
  cd "$BUILD_PATH"
@@ -212,7 +235,7 @@ index 3fe610945..440e39094 100755
  git submodule update
  
  sh build.sh
-@@ -379,7 +221,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
+@@ -379,7 +225,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
  
@@ -221,7 +244,7 @@ index 3fe610945..440e39094 100755
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
-@@ -447,6 +289,7 @@ WITH_FLAGS="--with-debug \
+@@ -447,6 +293,7 @@ WITH_FLAGS="--with-debug \
    --with-http_gzip_static_module \
    --with-http_sub_module \
    --with-http_v2_module \
@@ -229,7 +252,16 @@ index 3fe610945..440e39094 100755
    --with-stream \
    --with-stream_ssl_module \
    --with-stream_realip_module \
-@@ -616,7 +459,7 @@ writeDirs=( \
+@@ -523,7 +370,7 @@ make install
+ export OPENTELEMETRY_CONTRIB_COMMIT=aaa51e2297bcb34297f3c7aa44fa790497d2f7f3
+ cd "$BUILD_PATH"
+ 
+-git clone https://github.com/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
++git clone "${SOURCE_REPO}/open-telemetry/opentelemetry-cpp-contrib.git" opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
+ 
+ cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
+ git reset --hard ${OPENTELEMETRY_CONTRIB_COMMIT}
+@@ -616,7 +463,7 @@ writeDirs=( \
    /var/log/nginx \
  );
  
