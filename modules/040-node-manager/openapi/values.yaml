@@ -9,7 +9,7 @@ properties:
 
       capiControllerManagerWebhookCert:
         type: object
-        default: { }
+        default: {}
         x-required-for-helm:
           - crt
           - key
