@@ -133,7 +133,7 @@ func hasIncorrectNodeUserErrors(
 ) []string {
 	result := make([]string, 0)
 	for k := range nodeUserStatusError {
-		if nodes.Has(k) {
+		if !nodes.Has(k) {
 			result = append(result, k)
 		}
 	}
