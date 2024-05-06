@@ -72,12 +72,14 @@ type NodeRoutingTableList struct {
 }
 
 type NodeRoutingTableSpec struct {
+	NodeName       string  `json:"nodeName"`
 	IPRouteTableID int     `json:"ipRouteTableID"`
 	Routes         []Route `json:"routes"`
 }
 
 type NodeRoutingTableStatus struct {
 	ObservedGeneration int64                       `json:"observedGeneration,omitempty"`
+	AppliedRoutes      []Route                     `json:"appliedRoutes,omitempty"`
 	Conditions         []NodeRoutingTableCondition `json:"conditions,omitempty"`
 }
 
@@ -98,4 +100,5 @@ const (
 	// Reasons
 	NRTReconciliationSucceed = "NRTReconciliationSucceed"
 	NRTReconciliationFailed  = "NRTReconciliationFailed"
+	NRTReconciliationPending = "Pending"
 )

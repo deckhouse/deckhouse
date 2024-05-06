@@ -19,6 +19,16 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+      - jsonPath: .spec.nodeName
+        name: nodeName
+        type: string
+      - jsonPath: .spec.ipRouteTableID
+        name: ipRouteTableID
+        type: integer
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
     schema: &schema
       openAPIV3Schema:
         type: object
@@ -33,8 +43,18 @@ spec:
             - ipRouteTableID
             - routes
             properties:
+              nodeName:
+                type: string
+                x-kubernetes-validations:
+                  - message: nodeName is immutable field
+                    rule: self == oldSelf
+                description: |
+                  The name of the node for which this CR is intended.
               ipRouteTableID:
                 type: integer
+                x-kubernetes-validations:
+                - message: ipRouteTableID is immutable field
+                  rule: self == oldSelf
                 minimum: 1
                 maximum: 4294967295
                 description: |
@@ -70,6 +90,26 @@ spec:
                     by the controller.
                 format: int64
                 type: integer
+              appliedRoutes:
+                type: array
+                items:
+                  type: object
+                  description: |
+                    Desired routes.
+                  required:
+                    - destination
+                    - gateway
+                  properties:
+                    destination:
+                      type: string
+                      format: cidr
+                      description: |
+                        Description network.
+                    gateway:
+                      type: string
+                      format: ipv4
+                      description: |
+                        Nexthop.
               conditions:
                 type: array
                 items:
@@ -100,8 +140,3 @@ spec:
                     message:
                       description: Human readable message indicating details about last transition.
                       type: string
-
-
-
-
-

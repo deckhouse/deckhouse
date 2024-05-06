@@ -18,13 +18,12 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"static-routing-manager-agent/api/v1alpha1"
 	"static-routing-manager-agent/pkg/config"
 	"static-routing-manager-agent/pkg/logger"
-	"strings"
+	"syscall"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,11 +42,10 @@ import (
 )
 
 const (
-	CtrlName                           = "static-routing-manager-agent"
-	d8Realm                            = 216
-	nodeNameLabel                      = "routing-manager.network.deckhouse.io/node-name"
-	lastAppliedConfigurationAnnotation = "routing-manager.network.deckhouse.io/last-applied-configuration"
-	finalizer                          = "routing-tables-manager.network.deckhouse.io"
+	CtrlName      = "static-routing-manager-agent"
+	d8Realm       = 216
+	nodeNameLabel = "routing-manager.network.deckhouse.io/node-name"
+	finalizer     = "routing-tables-manager.network.deckhouse.io"
 )
 
 // ============
@@ -63,7 +61,6 @@ type workingSubstance struct {
 type nrtMap map[string]workingSubstance
 
 func (nrtMap *nrtMap) gatheringFacts() {
-
 }
 
 var (
@@ -121,10 +118,6 @@ func RunRoutesReconcilerAgentController(
 	c, err := controller.New(CtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Debug(fmt.Sprintf("[NRTReconciler] Received a reconcile.Request for CR %v", request.Name))
-			if !strings.Contains(request.Name, cfg.NodeName) {
-				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended(by name) for our node (%v)", cfg.NodeName))
-				return reconcile.Result{}, nil
-			}
 
 			log.Info("[NRTReconciler] starts Reconcile")
 			nrt := &v1alpha1.NodeRoutingTable{}
@@ -143,6 +136,27 @@ func RunRoutesReconcilerAgentController(
 			if !validatedSelector.Matches(labels.Set(nrt.Labels)) {
 				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended(by label) for our node (%v)", cfg.NodeName))
 				return reconcile.Result{}, nil
+			}
+
+			if nrt.Spec.NodeName != cfg.NodeName {
+				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended(by spec.nodeName) for our node (%v)", cfg.NodeName))
+				return reconcile.Result{}, nil
+			}
+
+			if nrt.Generation == nrt.Status.ObservedGeneration && nrt.DeletionTimestamp == nil {
+				cond := FindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceed)
+				if cond.Status == metav1.ConditionTrue {
+					log.Debug(fmt.Sprintf("[NRTReconciler] There's nothing to do"))
+					return reconcile.Result{}, nil
+				}
+			} else {
+				log.Debug(fmt.Sprintf("[NRTReconciler] NodeRoutingTable %v needs to be reconciled", nrt.Name))
+				tmpNRT := new(v1alpha1.NodeRoutingTable)
+				*tmpNRT = *nrt
+				err := SetStatusConditionPending(ctx, cl, log, tmpNRT)
+				if err != nil {
+					log.Error(err, fmt.Sprintf("[NRTReconciler] error"))
+				}
 			}
 
 			// ============================= main logic start =============================
@@ -214,16 +228,10 @@ func RunRoutesReconcilerAgentController(
 				// Filling nrtLastAppliedRouteEntryMap
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: LastAppliedRoute"))
 				nrtLastAppliedRouteEntryMap := make(RouteEntryMap)
-				nrtLastAppliedConfiguration := &v1alpha1.NodeRoutingTableSpec{}
-				if _, ok := nrt.Annotations[lastAppliedConfigurationAnnotation]; ok && nrt.Annotations[lastAppliedConfigurationAnnotation] != "" {
-					err = json.Unmarshal([]byte(nrt.Annotations[lastAppliedConfigurationAnnotation]), nrtLastAppliedConfiguration)
-					if err != nil {
-						log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get lastAppliedConfiguration from NodeRoutingTable %s", nrt.Name))
-						return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
+				if nrt.Status.AppliedRoutes != nil && len(nrt.Status.AppliedRoutes) > 0 {
+					for _, route := range nrt.Status.AppliedRoutes {
+						nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
 					}
-				}
-				for _, route := range nrtLastAppliedConfiguration.Routes {
-					nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
 				}
 
 				// Filling routesToAdd
@@ -271,10 +279,6 @@ func RunRoutesReconcilerAgentController(
 						}
 					}
 					nrtReconciliationStatusMap[nrt.Name] = status
-					if nrtReconciliationStatusMap[nrt.Name].IsSuccess {
-						specNeedToUpdate[nrt.Name] = true
-					}
-
 				}
 			}
 
@@ -304,9 +308,6 @@ func RunRoutesReconcilerAgentController(
 					status,
 					log,
 				)
-				if nrtReconciliationStatusMap[nrtName].IsSuccess {
-					specNeedToUpdate[nrt.Name] = true
-				}
 			}
 
 			// Generate new condition for each processed nrt
@@ -327,6 +328,7 @@ func RunRoutesReconcilerAgentController(
 						Reason:            v1alpha1.NRTReconciliationSucceed,
 						Message:           "",
 					}
+					nrtK8sResourcesMap[nrtName].Status.AppliedRoutes = nrtK8sResourcesMap[nrtName].Spec.Routes
 				} else {
 					newCond = v1alpha1.NodeRoutingTableCondition{
 						Type:              v1alpha1.ReconciliationSucceed,
@@ -343,15 +345,8 @@ func RunRoutesReconcilerAgentController(
 			// Update state in k8s
 			log.Debug(fmt.Sprintf("[NRTReconciler] Starting updating resourses in k8s"))
 			for _, nrt := range nrtK8sResourcesMap {
-				if specNeedToUpdate[nrt.Name] {
-					// Update spec
-					if nrt.DeletionTimestamp == nil {
-						newNRTLastAppliedConfiguration, err := json.Marshal(nrt.Spec)
-						if err != nil {
-							log.Error(err, fmt.Sprintf("unable to generate LastAppliedConfiguration for CR NodeRoutingTable %v, err: %v", nrt.Name, err))
-						}
-						nrt.Annotations[lastAppliedConfigurationAnnotation] = string(newNRTLastAppliedConfiguration)
-					}
+				if specNeedToUpdate[nrt.Name] && nrt.DeletionTimestamp != nil {
+					// Update spec if we need to remove the finalizer
 					log.Debug(fmt.Sprintf("Update of NRT: %v", nrt.Name))
 					err = cl.Update(ctx, nrt)
 					if err != nil {
@@ -428,7 +423,7 @@ func addRouteToNode(route RouteEntry) error {
 		Dst:   dstnetIPNet,
 		Gw:    gwNetIP,
 	})
-	if err != nil {
+	if err != nil && err.Error() != syscall.EEXIST.Error() {
 		return fmt.Errorf("unable to add route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
@@ -548,6 +543,31 @@ func FindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, condit
 		if conditions[i].Type == conditionType {
 			return &conditions[i]
 		}
+	}
+	return nil
+}
+
+func SetStatusConditionPending(
+	ctx context.Context,
+	cl client.Client,
+	log logger.Logger,
+	nrt *v1alpha1.NodeRoutingTable,
+) error {
+	t := metav1.NewTime(time.Now())
+	nrt.Status.ObservedGeneration = nrt.Generation
+	newCond := v1alpha1.NodeRoutingTableCondition{
+		Type:              v1alpha1.ReconciliationSucceed,
+		LastHeartbeatTime: t,
+		Status:            metav1.ConditionFalse,
+		Reason:            v1alpha1.NRTReconciliationPending,
+		Message:           "",
+	}
+	_ = SetStatusCondition(&nrt.Status.Conditions, newCond)
+
+	err := cl.Status().Update(ctx, nrt)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrt.Name, err))
+		return err
 	}
 	return nil
 }

@@ -17,6 +17,8 @@ limitations under the License.
 package lib
 
 import (
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
@@ -24,6 +26,7 @@ import (
 
 type RoutingTableInfo struct {
 	Name           string
+	UID            types.UID
 	IPRouteTableID int
 	Routes         []v1alpha1.Route
 	NodeSelector   map[string]string

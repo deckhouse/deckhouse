@@ -47,14 +47,6 @@ spec:
 status:
   ipRouteTableID: 500
 `
-		desiredRT1SpecYAML = `
-ipRouteTableID: 500
-routes:
-- destination: 0.0.0.0/0
-  gateway: 1.2.3.4
-- destination: 192.168.0.0/24
-  gateway: 192.168.0.1
-`
 		rt1upYAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
@@ -73,14 +65,6 @@ spec:
 status:
   ipRouteTableID: 500
 `
-		desiredRT1upSpecYAML = `
-ipRouteTableID: 500
-routes:
-- destination: 0.0.0.0/0
-  gateway: 1.2.3.4
-- destination: 192.168.1.0/24
-  gateway: 192.168.2.1
-`
 		rt2YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
@@ -95,12 +79,6 @@ spec:
     node-role: testrole1
 status:
   ipRouteTableID: 300
-`
-		desiredRT2SpecYAML = `
-ipRouteTableID: 300
-routes:
-- destination: 0.0.0.0/0
-  gateway: 2.2.2.1
 `
 		rt3YAML = `
 ---
@@ -121,14 +99,56 @@ spec:
 apiVersion: network.deckhouse.io/v1alpha1
 kind: NodeRoutingTable
 metadata:
-  name: kube-worker-1-testrt1
+  name: testrt1-29c8b10d14
 spec:
+  nodeName: kube-worker-1
   ipRouteTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
   - destination: 192.168.0.0/24
     gateway: 192.168.0.1
+`
+		desiredNRT11SpecYAML = `
+nodeName: kube-worker-1
+ipRouteTableID: 500
+routes:
+- destination: 0.0.0.0/0
+  gateway: 1.2.3.4
+- destination: 192.168.0.0/24
+  gateway: 192.168.0.1
+`
+		desiredNRT11upSpecYAML = `
+nodeName: kube-worker-1
+ipRouteTableID: 500
+routes:
+- destination: 0.0.0.0/0
+  gateway: 1.2.3.4
+- destination: 192.168.1.0/24
+  gateway: 192.168.2.1
+`
+		desiredNRT12SpecYAML = `
+nodeName: kube-worker-1
+ipRouteTableID: 300
+routes:
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`
+		desiredNRT21SpecYAML = `
+nodeName: kube-worker-2
+ipRouteTableID: 500
+routes:
+- destination: 0.0.0.0/0
+  gateway: 1.2.3.4
+- destination: 192.168.0.0/24
+  gateway: 192.168.0.1
+`
+		desiredNRT22SpecYAML = `
+nodeName: kube-worker-2
+ipRouteTableID: 300
+routes:
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
 `
 		node1YAML = `
 ---
@@ -201,18 +221,22 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt1").Exists()).To(BeTrue())
-			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt1").Field("spec").String()
-			Expect(nrt11spec).To(MatchYAML(desiredRT1SpecYAML))
-			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt2").Exists()).To(BeTrue())
-			nrt12spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt2").Field("spec").String()
-			Expect(nrt12spec).To(MatchYAML(desiredRT2SpecYAML))
-			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2-testrt1").Exists()).To(BeTrue())
-			nrt21spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2-testrt1").Field("spec").String()
-			Expect(nrt21spec).To(MatchYAML(desiredRT1SpecYAML))
-			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2-testrt2").Exists()).To(BeTrue())
-			nrt22spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-2-testrt2").Field("spec").String()
-			Expect(nrt22spec).To(MatchYAML(desiredRT2SpecYAML))
+			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", nrt11Name).Exists()).To(BeTrue())
+			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", nrt11Name).Field("spec").String()
+			Expect(nrt11spec).To(MatchYAML(desiredNRT11SpecYAML))
+			nrt12Name := "testrt2" + "-" + generateShortHash("testrt2"+"#"+"kube-worker-1")
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", nrt12Name).Exists()).To(BeTrue())
+			nrt12spec := f.KubernetesGlobalResource("NodeRoutingTable", nrt12Name).Field("spec").String()
+			Expect(nrt12spec).To(MatchYAML(desiredNRT12SpecYAML))
+			nrt21Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-2")
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", nrt21Name).Exists()).To(BeTrue())
+			nrt21spec := f.KubernetesGlobalResource("NodeRoutingTable", nrt21Name).Field("spec").String()
+			Expect(nrt21spec).To(MatchYAML(desiredNRT21SpecYAML))
+			nrt22Name := "testrt2" + "-" + generateShortHash("testrt2"+"#"+"kube-worker-2")
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", nrt22Name).Exists()).To(BeTrue())
+			nrt22spec := f.KubernetesGlobalResource("NodeRoutingTable", nrt22Name).Field("spec").String()
+			Expect(nrt22spec).To(MatchYAML(desiredNRT22SpecYAML))
 		})
 	})
 
@@ -260,9 +284,10 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt1").Exists()).To(BeTrue())
-			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", "kube-worker-1-testrt1").Field("spec").String()
-			Expect(nrt11spec).To(MatchYAML(desiredRT1upSpecYAML))
+			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			Expect(f.KubernetesGlobalResource("NodeRoutingTable", nrt11Name).Exists()).To(BeTrue())
+			nrt11spec := f.KubernetesGlobalResource("NodeRoutingTable", nrt11Name).Field("spec").String()
+			Expect(nrt11spec).To(MatchYAML(desiredNRT11upSpecYAML))
 		})
 	})
 

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"reflect"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
@@ -38,9 +42,9 @@ const (
 )
 
 type nrtsPlus struct {
-	nodeName string
-	rtName   string
-	spec     v1alpha1.NodeRoutingTableSpec
+	rtName string
+	rtUID  types.UID
+	spec   v1alpha1.NodeRoutingTableSpec
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -78,6 +82,7 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 	}
 
 	result.Name = rt.Name
+	result.UID = rt.UID
 	result.IPRouteTableID = rt.Status.IPRouteTableID
 	result.Routes = rt.Spec.Routes
 	result.NodeSelector = rt.Spec.NodeSelector
@@ -120,10 +125,6 @@ func applyMainHandlerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	// prepare
 	var (
-		// affectedNodes             map[string][]RoutingTableInfo
-		// nodeRoutingTablesCache map[string]v1alpha1.NodeRoutingTableSpec
-		// desiredNodeRoutingTable map[string]v1alpha1.NodeRoutingTableSpec
-		// actualNodeRoutingTable   map[string]v1alpha1.NodeRoutingTableSpec
 		nodeRoutingTablesToCreate []*v1alpha1.NodeRoutingTable
 		nodeRoutingTablesToUpdate []*v1alpha1.NodeRoutingTable
 		nodeRoutingTablesToDelete []string
@@ -157,13 +158,15 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	// Filling desiredNodeRoutingTables
 	desiredNodeRoutingTables := make(map[string]nrtsPlus)
 	for nodeName, rtis := range affectedNodes {
-		// var nrts v1alpha1.NodeRoutingTableSpec
 		for _, rti := range rtis {
 			var tmpNRTS nrtsPlus
-			tmpNRTS.nodeName = nodeName
 			tmpNRTS.rtName = rti.Name
-			lib.NRTSAppend(&tmpNRTS.spec, rti)
-			desiredNodeRoutingTables[nodeName+"-"+rti.Name] = tmpNRTS
+			tmpNRTS.rtUID = rti.UID
+			tmpNRTS.spec.NodeName = nodeName
+			tmpNRTS.spec.IPRouteTableID = rti.IPRouteTableID
+			tmpNRTS.spec.Routes = rti.Routes
+			tmpNRTName := rti.Name + "-" + generateShortHash(rti.Name+"#"+nodeName)
+			desiredNodeRoutingTables[tmpNRTName] = tmpNRTS
 		}
 	}
 
@@ -187,11 +190,9 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 	}
 
 	for _, nrt := range nodeRoutingTablesToUpdate {
-		// unnrt, _ := json.Marshal(nrt)
 		input.PatchCollector.Create(nrt, object_patch.UpdateIfExists())
 	}
 	for _, nrt := range nodeRoutingTablesToCreate {
-		// unnrt, _ := json.Marshal(nrt)
 		input.PatchCollector.Create(nrt, object_patch.IgnoreIfExists())
 	}
 	for _, nrtName := range nodeRoutingTablesToDelete {
@@ -214,15 +215,33 @@ func generateNRT(name string, nrtps nrtsPlus) *v1alpha1.NodeRoutingTable {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				nodeNameLabel: nrtps.nodeName,
+				nodeNameLabel: nrtps.spec.NodeName,
 				ownerRTLabel:  nrtps.rtName,
 			},
 			Finalizers: []string{
 				finalizer,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         lib.NRTKind,
+					Kind:               lib.RTKind,
+					Name:               nrtps.rtName,
+					UID:                nrtps.rtUID,
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(true),
+				},
 			},
 		},
 		Spec: nrtps.spec,
 	}
 
 	return nrt
+}
+
+func generateShortHash(input string) string {
+	fullHash := fmt.Sprintf("%x", sha256.Sum256([]byte(input)))
+	if len(fullHash) > 10 {
+		return fullHash[:10]
+	}
+	return fullHash
 }

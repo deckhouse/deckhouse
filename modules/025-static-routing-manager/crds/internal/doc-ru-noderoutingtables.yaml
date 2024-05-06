@@ -8,6 +8,9 @@ spec:
         properties:
           spec:
             properties:
+              nodeName:
+                description: |
+                  Имя узла, для которого предназначен данный CR.
               ipRouteTableID:
                 description: |
                   ID желаемой таблицы маршрутизации.
