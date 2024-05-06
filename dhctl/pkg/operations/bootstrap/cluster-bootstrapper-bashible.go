@@ -19,7 +19,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -35,30 +34,21 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	sshClient, err := ssh.NewClientFromFlagsWithHosts()
-	if err != nil {
-		return err
-	}
-	sshClient.InitializeNewAgent = b.initializeNewAgent
-	if _, err := sshClient.Start(); err != nil {
+	if _, err := b.SSHClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
-	if b.initializeNewAgent {
-		defer sshClient.Stop()
-	}
-
 	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
 	}
 
-	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
+	if err := WaitForSSHConnectionOnMaster(b.SSHClient); err != nil {
 		return err
 	}
 
-	if err := RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
 		return err
 	}
 
-	return RebootMaster(sshClient)
+	return RebootMaster(b.SSHClient)
 }

@@ -44,6 +44,10 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
+	if _, err := b.SSHClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+
 	if len(b.SSHClient.Settings.AvailableHosts()) == 0 {
 		mastersIPs, err := GetMasterHostsIPs()
 		if err != nil {

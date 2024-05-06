@@ -15,10 +15,12 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse() error {
@@ -46,12 +48,17 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
 	installConfig.MasterNodeSelector = app.MasterNodeSelector
 
-	sshClient, err := ssh.NewInitClientFromFlags(true)
-	if err != nil {
-		return err
+	if b.SSHClient != nil {
+		if _, err := b.SSHClient.Start(); err != nil {
+			return fmt.Errorf("unable to start ssh-client: %w", err)
+		}
+		err = terminal.AskBecomePassword()
+		if err != nil {
+			return err
+		}
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+	kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,8 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -38,9 +40,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefinePreflight(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
-		if err != nil {
-			return err
+		sshClient := ssh.NewClientFromFlags()
+		if _, err := sshClient.Start(); err != nil {
+			return fmt.Errorf("unable to start ssh client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
