@@ -16,8 +16,7 @@
 if bb-flag? containerd-need-restart; then
   bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
   {{- if ne .runType "ImageBuilding" }}
-  out=$(containerd config dump 2>&1);
-  if [ $? -eq 0 ]; then
+  if out=$(containerd config dump 2>&1); then
       systemctl restart containerd-deckhouse.service
   else
       bb-log-error "'containerd config dump' return error: $out"
