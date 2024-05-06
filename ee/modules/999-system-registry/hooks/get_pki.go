@@ -18,6 +18,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/system-registry/pki",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "pki",
@@ -34,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterPkiSecret,
 		},
 	},
-}, handlePKIChecksum)
+}, handlePKIData)
 
 type secretData map[string][]byte
 
@@ -54,7 +55,7 @@ func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return secretData(sec.Data), nil
 }
 
-func handlePKIChecksum(input *go_hook.HookInput) error {
+func handlePKIData(input *go_hook.HookInput) error {
 	snap := input.Snapshots["pki"]
 
 	if len(snap) == 0 {
