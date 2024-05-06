@@ -81,7 +81,7 @@ properties:
             - "mytoken"
             default: ""
       registryMode:
-        # See registryType in candi/openapi/init_configuration.yaml
+        # See registryMode in candi/openapi/init_configuration.yaml
         type: string
         enum: [ Direct, Proxy, Detached ]
         default: Direct
