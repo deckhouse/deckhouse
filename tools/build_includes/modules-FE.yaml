@@ -239,8 +239,13 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/500-okmeter
-  to: /deckhouse/modules/500-okmeter
+- add: /ee/fe/modules/500-okmeter/hooks/update_agent_image.go
+  to: /deckhouse/modules/500-okmeter/hooks/update_agent_image.go
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
+  to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
   stageDependencies:
     setup:
         - '**/*.go'
