@@ -36,9 +36,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSkipDebugFile(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			DoNotWriteDebugLog: app.DoNotWriteDebugLog,
-		})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
 		return bootstraper.Bootstrap()
 	})
 

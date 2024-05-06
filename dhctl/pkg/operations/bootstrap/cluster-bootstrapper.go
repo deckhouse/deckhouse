@@ -91,8 +91,6 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
-	DoNotWriteDebugLog bool
-
 	*client.KubernetesInitParams
 }
 
@@ -216,7 +214,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	stateCache := cache.Global()
-
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)

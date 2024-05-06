@@ -36,8 +36,6 @@ var (
 
 	KubeadmBootstrap   = false
 	MasterNodeSelector = false
-
-	DoNotWriteDebugLog = false
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -113,12 +111,4 @@ func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("MASTER_NODE_SELECTOR")).
 		Default("false").
 		BoolVar(&MasterNodeSelector)
-}
-
-func DefineSkipDebugFile(cmd *kingpin.CmdClause) {
-	const help = `Skip write debug log into file`
-	cmd.Flag("do-not-write-debug-log", help).
-		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
-		Default("false").
-		BoolVar(&DoNotWriteDebugLog)
 }
