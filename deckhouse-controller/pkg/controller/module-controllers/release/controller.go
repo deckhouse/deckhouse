@@ -189,9 +189,8 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
-		// TODO: enable later. It panics in addon-operator@v1.3.12/pkg/module_manager/models/modules/basic.go:96
-		// addon-operator@v1.3.12/pkg/module_manager/module_manager.go:921
-		//c.modulesValidator.DisableModuleHooks(mr.GetModuleName())
+		// TODO(yalosev): we have to disable module here somehow.
+		// otherwise, hooks from file system will fail
 	}
 
 	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
