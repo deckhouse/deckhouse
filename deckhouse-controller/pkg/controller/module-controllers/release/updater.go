@@ -59,14 +59,14 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseA
 }
 
 func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, externalModulesDir string, symlinksDir string,
-	modulesValidator moduleValidator, dc dependency.Container) *kubeAPI {
+	moduleManager moduleManager, dc dependency.Container) *kubeAPI {
 	return &kubeAPI{
 		ctx:                ctx,
 		logger:             logger,
 		client:             client,
 		externalModulesDir: externalModulesDir,
 		symlinksDir:        symlinksDir,
-		modulesValidator:   modulesValidator,
+		moduleManager:      moduleManager,
 		dc:                 dc,
 	}
 }
@@ -78,7 +78,7 @@ type kubeAPI struct {
 	client             client.Client
 	externalModulesDir string
 	symlinksDir        string
-	modulesValidator   moduleValidator
+	moduleManager      moduleManager
 	dc                 dependency.Container
 }
 
@@ -170,8 +170,8 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	}
 
 	// disable target module hooks so as not to invoke them before restart
-	if k.modulesValidator.GetModule(moduleName) != nil {
-		k.modulesValidator.DisableModuleHooks(moduleName)
+	if k.moduleManager.GetModule(moduleName) != nil {
+		k.moduleManager.DisableModuleHooks(moduleName)
 	}
 
 	return nil

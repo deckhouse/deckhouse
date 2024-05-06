@@ -50,7 +50,7 @@ type modulePullOverrideReconciler struct {
 
 	logger logger.Logger
 
-	modulesValidator   moduleValidator
+	moduleManager      moduleManager
 	externalModulesDir string
 	symlinksDir        string
 }
@@ -59,7 +59,7 @@ type modulePullOverrideReconciler struct {
 func NewModulePullOverrideController(
 	mgr manager.Manager,
 	dc dependency.Container,
-	modulesValidator moduleValidator,
+	moduleManager moduleManager,
 ) error {
 	lg := log.WithField("component", "ModulePullOverrideController")
 
@@ -68,7 +68,7 @@ func NewModulePullOverrideController(
 		dc:     dc,
 		logger: lg,
 
-		modulesValidator:   modulesValidator,
+		moduleManager:      moduleManager,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 	}
@@ -93,7 +93,7 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) error
 	// Check if controller's dependencies have been initialized
 	return wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
 			return deckhouseconfig.IsServiceInited(), nil
 		})
 }
@@ -119,7 +119,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
-		err := c.modulesValidator.RunModuleWithNewStaticValues(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, "dev"))
+		err := c.moduleManager.RunModuleWithNewStaticValues(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, "dev"))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -204,8 +204,8 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	// disable target module hooks so as not to invoke them before restart
-	if c.modulesValidator.GetModule(mo.Name) != nil {
-		c.modulesValidator.DisableModuleHooks(mo.Name)
+	if c.moduleManager.GetModule(mo.Name) != nil {
+		c.moduleManager.DisableModuleHooks(mo.Name)
 	}
 
 	defer func() {

@@ -67,7 +67,7 @@ type moduleReleaseReconciler struct {
 	metricStorage *metric_storage.MetricStorage
 	logger        logger.Logger
 
-	modulesValidator   moduleValidator
+	moduleManager      moduleManager
 	externalModulesDir string
 	symlinksDir        string
 
@@ -92,7 +92,7 @@ func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
-	mv moduleValidator,
+	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
@@ -104,7 +104,7 @@ func NewModuleReleaseController(
 		logger:             lg,
 
 		metricStorage:           metricStorage,
-		modulesValidator:        mv,
+		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
@@ -253,7 +253,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-		err := c.modulesValidator.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		err := c.moduleManager.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -377,7 +377,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.modulesValidator, c.dc)
+	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.moduleManager, c.dc)
 	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI)
 
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
@@ -592,7 +592,7 @@ func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
 			return deckhouseconfig.IsServiceInited(), nil
 		})
 
@@ -988,7 +988,7 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 	return os.Symlink(moduleRelativePath, symlinkPath)
 }
 
-type moduleValidator interface {
+type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error
