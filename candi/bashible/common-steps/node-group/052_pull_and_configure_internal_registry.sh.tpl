@@ -36,8 +36,8 @@ discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/internal-registry/auth_config/auth_config.yaml - << EOF
 server:
-  #addr: "${discovered_node_ip}:5051"
-  addr: "0.0.0.0:5051"
+  addr: "${discovered_node_ip}:5051"
+  #addr: "0.0.0.0:5051"
 
 token:
   issuer: "Registry server"
@@ -117,8 +117,8 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  #addr: ${discovered_node_ip}:5000
-  addr: 0.0.0.0:5000
+  addr: ${discovered_node_ip}:5000
+  #addr: 0.0.0.0:5000
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
@@ -173,9 +173,6 @@ spec:
     args:
       - serve
       - /config/config.yaml
-    ports:
-#      - containerPort: 5000
-#        hostPort: 5000
     volumeMounts:
       - mountPath: /config/
         name: distribution-config-volume
@@ -187,9 +184,6 @@ spec:
     args:
       - -logtostderr
       - /config/auth_config.yaml
-    ports:
-#      - containerPort: 5051
-#        hostPort: 5051
     volumeMounts:
       - mountPath: /config/
         name: auth-config-volume
@@ -212,9 +206,8 @@ spec:
       - -master.defaultReplication=000
       - -volume.pprof
       - -filer.maxMB=16
-      - -ip=localhost
-      - -ip.bind=0.0.0.0
-      - -master.peers=localhost:9333
+      - -ip=${discovered_node_ip}
+      - -master.peers=${discovered_node_ip}:9333
     env:
       - name: GOGC
         value: "20"
