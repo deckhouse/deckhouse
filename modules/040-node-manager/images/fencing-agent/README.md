@@ -25,8 +25,8 @@ LOG_LEVEL=DEBUG
 ```
 
 3. `go run cmd/main.go`
-4. Disable fecning `kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable=""`
-5. Enable fecning `kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable-`
+4. Disable fencing `kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable=""`
+5. Enable fencing `kubectl annotate node ${NODE_NAME} node-manager.deckhouse.io/fencing-disable-`
 
 Example output:
 

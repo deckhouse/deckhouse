@@ -21,9 +21,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"fecning-controller/internal/agent"
-	"fecning-controller/internal/common"
-	"fecning-controller/internal/watchdog/softdog"
+	"fencing-controller/internal/agent"
+	"fencing-controller/internal/common"
+	"fencing-controller/internal/watchdog/softdog"
 
 	_ "github.com/jpfuentes2/go-env/autoload"
 	"go.uber.org/zap"

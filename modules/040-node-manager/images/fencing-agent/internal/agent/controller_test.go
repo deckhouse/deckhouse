@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"fecning-controller/internal/agent"
-	"fecning-controller/internal/watchdog/fakedog"
+	"fencing-controller/internal/agent"
+	"fencing-controller/internal/watchdog/fakedog"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"

@@ -1,4 +1,4 @@
-module fecning-controller
+module fencing-controller
 
 go 1.20
 

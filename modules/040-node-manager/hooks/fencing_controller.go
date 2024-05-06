@@ -46,7 +46,7 @@ var maintanenceAnnotations = []string{
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager/fecning",
+	Queue: "/modules/node-manager/fencing",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       nodesSnapshot,
