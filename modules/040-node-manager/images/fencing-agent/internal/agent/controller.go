@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"time"
 
-	"fecning-controller/internal/watchdog"
+	"fencing-controller/internal/watchdog"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	FecningNodeLabel = "node-manager.deckhouse.io/fencing-enabled"
+	fencingNodeLabel = "node-manager.deckhouse.io/fencing-enabled"
 )
 
 var maintanenceAnnotations = [...]string{
@@ -59,7 +59,7 @@ func (fa *FencingAgent) setNodeLabel(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	node.Labels[FecningNodeLabel] = ""
+	node.Labels[fencingNodeLabel] = ""
 	_, err = fa.kubeClient.CoreV1().Nodes().Update(ctx, node, v1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (fa *FencingAgent) removeNodeLabel() error {
 	if err != nil {
 		return err
 	}
-	delete(node.Labels, FecningNodeLabel)
+	delete(node.Labels, fencingNodeLabel)
 	_, err = fa.kubeClient.CoreV1().Nodes().Update(context.TODO(), node, v1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (fa *FencingAgent) startWatchdog(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fa.logger.Info("Set fencing node label", zap.String("label", FecningNodeLabel))
+	fa.logger.Info("Set fencing node label", zap.String("label", fencingNodeLabel))
 	err = fa.setNodeLabel(ctx)
 	if err != nil {
 		// We must stop watchdog if we can't set nodelabel
@@ -108,7 +108,7 @@ func (fa *FencingAgent) startLiveness() {
 
 func (fa *FencingAgent) stopWatchdog() error {
 	var err error
-	fa.logger.Info("Remove fencing node label", zap.String("label", FecningNodeLabel))
+	fa.logger.Info("Remove fencing node label", zap.String("label", fencingNodeLabel))
 	err = fa.removeNodeLabel()
 	if err != nil {
 		return err
