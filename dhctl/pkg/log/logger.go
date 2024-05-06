@@ -687,7 +687,7 @@ func (d *TeeLogger) LogWarnLn(a ...interface{}) {
 }
 
 func (d *TeeLogger) LogWarnF(format string, a ...interface{}) {
-	d.l.LogDebugF(format, a...)
+	d.l.LogWarnF(format, a...)
 
 	d.writeToFile(fmt.Sprintf(format, a...))
 }

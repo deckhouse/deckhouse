@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"runtime/trace"
+	"strings"
 	"time"
 
 	terminal "golang.org/x/term"
@@ -150,7 +151,13 @@ func runApplication(kpApp *kingpin.Application) {
 			return nil
 		}
 
-		logFile := c.SelectedCommand.FullCommand() + "-" + time.Now().Format("20060102150405") + ".log"
+		if c.SelectedCommand == nil {
+			return nil
+		}
+
+		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+
+		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 
 		logPath := path.Join(app.TmpDirName, logFile)
 		err := log.WrapWithTeeLogger(logPath, 1024)
