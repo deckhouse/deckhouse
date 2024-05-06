@@ -78,6 +78,8 @@ spec:
       - name: system-registry-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
+        args:
+          - start
         volumeMounts:
         # - mountPath: /pki
         #   name: pki
