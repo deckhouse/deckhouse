@@ -16,7 +16,12 @@
 if bb-flag? containerd-need-restart; then
   bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
   {{- if ne .runType "ImageBuilding" }}
-  systemctl restart containerd-deckhouse.service
+  out=$(containerd config dump 2>&1);
+  if [ $? -eq 0 ]; then
+      systemctl restart containerd-deckhouse.service
+  else
+      bb-log-error "'containerd config dump' return error: $out"
+  fi
   {{- end }}
   bb-flag-set kubelet-need-restart
   bb-flag-unset containerd-need-restart
