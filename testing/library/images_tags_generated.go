@@ -408,9 +408,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
 	},
 	"systemRegistry": map[string]interface{}{
-		"dockerAuth":         "imageHash-systemRegistry-dockerAuth",
-		"dockerDistribution": "imageHash-systemRegistry-dockerDistribution",
-		"seaweedfs":          "imageHash-systemRegistry-seaweedfs",
+		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
+		"seaweedfs":             "imageHash-systemRegistry-seaweedfs",
+		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"baseTerraformManager":      "imageHash-terraformManager-baseTerraformManager",
