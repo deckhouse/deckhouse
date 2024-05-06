@@ -28,6 +28,8 @@ function bb-nodeuser-patch() {
     json_file=$( mktemp -t patch_json.XXXXX )
     echo "${data}" > $json_file
 
+    echo "kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io ${username} --type=json --patch-file=${json_file} --subresource=status"
+
     until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
@@ -37,7 +39,7 @@ function bb-nodeuser-patch() {
       bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
-    rm $json_file
+    # rm $json_file
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
     while [ "$patch_pending" = true ] ; do
