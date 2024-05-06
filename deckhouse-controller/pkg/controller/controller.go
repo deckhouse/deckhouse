@@ -28,6 +28,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
 
@@ -122,6 +124,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 			return nil, err
 		}
 	}
+
+	// Setting the controller-runtime logger to a no-op logger by default,
+	// unless debug mode is enabled. This is because the controller-runtime
+	// logger is *very* verbose even at info level. This is not really needed,
+	// but otherwise we get a warning from the controller-runtime.
+	controllerruntime.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
 	mgr, err := controllerruntime.NewManager(config, controllerruntime.Options{
 		Scheme: scheme,
