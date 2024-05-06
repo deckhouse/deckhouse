@@ -6,6 +6,8 @@
     {{- $nodeGroupsList = append $nodeGroupsList $ng.name }}
   {{- end }}
 {{- end }}
+
+{{ if not (eq (len $nodeGroupsList) 0) }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -81,7 +83,4 @@ spec:
     EOF
 
     chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
-
-    {{- end }}
-  {{- end }}
-{{- end }}
+{{ end }}

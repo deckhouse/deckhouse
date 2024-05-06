@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -89,7 +90,7 @@ type fencingControllerLeaseResult struct {
 func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var res fencingControllerNodeResult
 
-	for _, annotation := range maintanenceAnnotations {
+	for _, annotation := range maintenanceAnnotations {
 		_, annotationExists := obj.GetAnnotations()[annotation]
 		if annotationExists {
 			return nil, nil
@@ -119,28 +120,27 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	// make map with nodes
-	nodesMap := make(map[string]struct{})
+	nodesMap := set.New()
 	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
 		if nodeRaw != nil {
 			node := nodeRaw.(fencingControllerNodeResult)
-			nodesMap[node.Name] = struct{}{}
+			nodesMap.Add(node.Name)
 		}
 	}
 
 	// make map with nodes to kill
-	nodesToKill := make(map[string]struct{})
+	nodesToKill := set.New()
 	for _, nodeLeaseRaw := range input.Snapshots[leasesSnapshot] {
 		nodeLease := nodeLeaseRaw.(fencingControllerLeaseResult)
-
-		if _, ok := nodesMap[nodeLease.NodeName]; !ok {
+		if !nodesMap.Has(nodeLease.NodeName) {
 			continue
 		}
 		if time.Since(nodeLease.RenewTime) > fencingControllerTimeout {
-			nodesToKill[nodeLease.NodeName] = struct{}{}
+			nodesToKill.Add(nodeLease.NodeName)
 		}
 	}
 
-	nodeToKillCount := len(nodesToKill)
+	nodeToKillCount := nodesToKill.Size()
 	if nodeToKillCount == 0 {
 		// nothing to kill -> skip
 		return nil
@@ -156,7 +156,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	// kill nodes
-	for node := range nodesToKill {
+	for _, node := range nodesToKill.Slice() {
 		input.LogEntry.Warnf("Delete all pods from node %s", node)
 		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
 			context.TODO(),
