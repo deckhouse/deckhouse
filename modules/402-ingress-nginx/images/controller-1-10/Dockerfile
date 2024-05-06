@@ -73,6 +73,7 @@ FROM $BASE_ALT_DEV as chroot
 COPY --from=nginx-builder /usr/local /usr/local
 COPY --from=nginx-builder /opt /opt
 COPY --from=nginx-builder /etc/nginx /etc/nginx
+COPY --from=nginx-builder /usr/lib64 /chroot/usr/lib64
 
 COPY --from=dumb-init-builder /dumb-init/dumb-init /usr/bin/dumb-init
 
@@ -84,8 +85,6 @@ COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
 
-# copy complete set of libs
-COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
 COPY --from=base-alt /lib64 /chroot/lib64
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
