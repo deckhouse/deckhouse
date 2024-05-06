@@ -39,9 +39,9 @@ apiVersions:
               memory:
                 size: 4Gi
               ipAddresses:
-              - 10.10.10.10
-              - 10.10.10.11
-              - 10.10.10.12
+              - 10.66.30.100
+              - 10.66.30.101
+              - 10.66.30.102
               additionalLabels:
                 additional-vm-label: label-value
               additionalAnnotations:
@@ -51,16 +51,16 @@ apiVersions:
                 operator: "Equal"
                 value: "system"
               nodeSelector:
-                subzone: subzone-1
+                beta.kubernetes.io/os: linux
             rootDisk:
               size: 10Gi
-              storageClassName: sc1
+              storageClassName: linstor-thin-r1
               image:
-                type: ClusterVirtualMachineImage
-                name: ubuntu
+                type: ClusterVirtualImage
+                name: ubuntu-2204
             etcdDisk:
               size: 10Gi
-              storageClassName: sc1
+              storageClassName: linstor-thin-r1
         nodeGroups:
           - name: worker
             zones:
@@ -78,8 +78,8 @@ apiVersions:
               rootDisk:
                 size: 10Gi
                 image:
-                  type: "ClusterVirtualMachineImage"
-                  name: "ubuntu"
+                  type: ClusterVirtualImage"
+                  name: ubuntu-224
         provider:
           kubeconfigDataBase64: ZXhhbXBsZQo=
           namespace: default
@@ -283,8 +283,8 @@ apiVersions:
                         description: |
                           The type of the image source.
                         enum:
-                        - "ClusterVirtualMachineImage"
-                        - "VirtualMachineImage"
+                        - "ClusterVirtualImage"
+                        - "VirtualImage"
                       name:
                         type: string
                         description: |
