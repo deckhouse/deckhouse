@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
+// DeckhouseReleaseListerExpansion allows custom methods to be added to
+// DeckhouseReleaseLister.
+type DeckhouseReleaseListerExpansion interface{}
+
 // ModuleListerExpansion allows custom methods to be added to
 // ModuleLister.
 type ModuleListerExpansion interface{}

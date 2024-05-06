@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// DeckhouseReleases returns a DeckhouseReleaseInformer.
+	DeckhouseReleases() DeckhouseReleaseInformer
 	// Modules returns a ModuleInformer.
 	Modules() ModuleInformer
 	// ModuleConfigs returns a ModuleConfigInformer.
@@ -47,6 +49,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// DeckhouseReleases returns a DeckhouseReleaseInformer.
+func (v *version) DeckhouseReleases() DeckhouseReleaseInformer {
+	return &deckhouseReleaseInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Modules returns a ModuleInformer.
