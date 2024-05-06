@@ -83,7 +83,6 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_EXTRA_ARGS")).
 		StringVar(&SSHExtraArgs)
 	cmd.Flag("connection-config", "SSH connection config file path").
-		Required().
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
 
