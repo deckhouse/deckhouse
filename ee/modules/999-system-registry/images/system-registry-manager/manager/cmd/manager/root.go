@@ -1,3 +1,8 @@
+/*
+Copyright 2024 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package main
 
 import (
@@ -22,7 +27,7 @@ func newRootCmd(args []string) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Short: globalShortHelp,
 		Long:  globalLongHelp,
-		Args:  common.NoArgs,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			common.SetDefaultFlagsVars(&defaultFlagVars)
 			return fmt.Errorf("Unknown command")
