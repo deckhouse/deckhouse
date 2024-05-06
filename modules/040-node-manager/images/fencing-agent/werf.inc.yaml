@@ -1,6 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
 git:
   - add: /{{ $.ModulePath }}modules/040-node-manager/images/fencing-agent
     to: /src
