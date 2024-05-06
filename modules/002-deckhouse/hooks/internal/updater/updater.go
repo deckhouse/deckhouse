@@ -69,7 +69,7 @@ func (ru *kubeAPI) UpdateReleaseStatus(release *DeckhouseRelease, msg, phase str
 		Phase:          phase,
 		Message:        msg,
 		Approved:       release.Status.Approved,
-		TransitionTime: metav1.Now(), // TODO: UTC?
+		TransitionTime: metav1.NewTime(time.Now().UTC()),
 	}
 	ru.patchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 

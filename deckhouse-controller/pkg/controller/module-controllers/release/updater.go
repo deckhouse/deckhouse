@@ -85,6 +85,7 @@ type kubeAPI struct {
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
 	release.Status.Phase = phase
 	release.Status.Message = msg
+	release.Status.TransitionTime = metav1.NewTime(k.dc.GetClock().Now().UTC())
 
 	err := k.client.Status().Update(k.ctx, release)
 	if err != nil {
