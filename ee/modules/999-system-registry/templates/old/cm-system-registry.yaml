@@ -1,0 +1,108 @@
+# ---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: system-registry-config-files
+#   namespace: d8-{{ $.Chart.Name }}
+#   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+# data:
+#   seaweedfs_filer.toml: |
+#     [filer.options]
+#     recursive_delete = true
+
+#     [leveldb2]
+#     enabled = false
+
+#     [redis2]
+#     enabled = false
+
+#     [etcd]
+#     enabled = true
+#     servers = "{{ .Values.systemRegistry.internal.etcd.addresses | join "," }}"
+#     key_prefix = "seaweedfmeta."
+#     tls_ca_file="/etc/kubernetes/pki/etcd/ca.crt"
+#     tls_client_crt_file="/etc/kubernetes/pki/apiserver-etcd-client.crt"
+#     tls_client_key_file="/etc/kubernetes/pki/apiserver-etcd-client.key"
+#   distribution_config.yaml: |
+#     # empty config.yaml
+#     version: 0.1
+#   auth_config.yaml: |
+#     server:
+#       addr: ":5051"
+
+#     token:
+#       issuer: "Registry test server"
+#       expiration: 900
+#       certificate: "/etc/kubernetes/pki/apiserver-etcd-client.crt"
+#       key: "/etc/kubernetes/pki/apiserver-etcd-client.key"
+
+#     users:
+#       # Password is specified as a BCrypt hash. Use `htpasswd -nB USERNAME` to generate.
+#       "pusher":
+#         password: "$2y$05$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne"  # pusher
+#       "puller":
+#         password: "$2y$05$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq"  # puller
+
+#     acl:
+#       - match: { account: "pusher" }
+#         actions: [ "*" ]
+#         comment: "Pusher has full access to everything."
+#       - match: {account: "/.+/"}  # Match all accounts.
+#         actions: ["pull"]
+#         comment: "readonly access to all accounts"
+#       # Access is denied by default.
+# ---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: system-registry-seaweedfs-envs
+#   namespace: d8-{{ $.Chart.Name }}
+#   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+# data:
+#   GOGC: "20"
+
+# ---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: system-registry-distribution-envs
+#   namespace: d8-{{ $.Chart.Name }}
+#   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+# data:
+#   REGISTRY_AUTH_TOKEN_AUTOREDIRECT: "false"
+#   REGISTRY_AUTH_TOKEN_ISSUER: "Registry test server"
+#   REGISTRY_AUTH_TOKEN_REALM: http://system-registry.d8-{{ $.Chart.Name }}.svc.{{ $.Values.global.discovery.clusterDomain }}:5051/auth
+#   REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/kubernetes/pki/apiserver-etcd-client.crt
+#   REGISTRY_AUTH_TOKEN_SERVICE: "Docker registry"
+#   REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "false"
+#   REGISTRY_HEALTH_STORAGEDRIVER_INTERVAL: 10s
+#   REGISTRY_HEALTH_STORAGEDRIVER_THRESHOLD: "3"
+#   REGISTRY_HTTP_ADDR: 0.0.0.0:5000
+#   REGISTRY_HTTP_DEBUG_ADDR: 0.0.0.0:5001
+#   REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED: "true"
+#   REGISTRY_HTTP_DEBUG_PROMETHEUS_PATH: /metrics
+#   REGISTRY_HTTP_PREFIX: /
+#   REGISTRY_HTTP_SECRET: testsecret
+#   # REGISTRY_HTTP_TLS_CERTIFICATE: /certs/distribution-1/server.pem
+#   # REGISTRY_HTTP_TLS_KEY: /certs/distribution-1/server.key
+#   REGISTRY_LOG_LEVEL: info
+#   REGISTRY_STORAGE: s3
+#   REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: inmemory
+#   REGISTRY_STORAGE_CACHE_BLOBDESCRIPTORSIZE: "100000"
+#   REGISTRY_STORAGE_DELETE_ENABLED: "true"
+#   REGISTRY_STORAGE_REDIRECT_DISABLE: "true"
+#   REGISTRY_STORAGE_S3_ACCESSKEY: awsaccesskey
+#   REGISTRY_STORAGE_S3_BUCKET: registry
+#   REGISTRY_STORAGE_S3_CHUNKSIZE: "5242880"
+#   REGISTRY_STORAGE_S3_ENCRYPT: "false"
+#   REGISTRY_STORAGE_S3_LOGLEVEL: info
+#   REGISTRY_STORAGE_S3_MULTIPARTCOPYCHUNKSIZE: "33554432"
+#   REGISTRY_STORAGE_S3_MULTIPARTCOPYMAXCONCURRENCY: "100"
+#   REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE: "33554432"
+#   REGISTRY_STORAGE_S3_REGION: us-west-1
+#   REGISTRY_STORAGE_S3_REGIONENDPOINT: http://localhost:8333
+#   REGISTRY_STORAGE_S3_ROOTDIRECTORY: /
+#   REGISTRY_STORAGE_S3_SECRETKEY: awssecret
+#   REGISTRY_STORAGE_S3_SECURE: "true"
+#   REGISTRY_STORAGE_S3_USEDUALSTACK: "false"
+#   REGISTRY_STORAGE_S3_V4AUTH: "true"
