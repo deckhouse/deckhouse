@@ -21,6 +21,7 @@ if bb-flag? containerd-need-restart; then
       systemctl restart containerd-deckhouse.service
   else
       bb-log-error "'containerd config dump' return error: $out"
+      exit 1
   fi
   {{- end }}
   bb-flag-set kubelet-need-restart
