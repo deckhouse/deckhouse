@@ -125,7 +125,7 @@ EOF
 
 function abort_bootstrap_from_cache() {
   >&2 echo "Run abort_bootstrap_from_cache"
-  dhctl bootstrap-phase abort \
+  dhctl --do-not-write-debug-log-file bootstrap-phase abort \
     --force-abort-from-cache \
     --config "$cwd/configuration.yaml" \
     --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -135,7 +135,7 @@ function abort_bootstrap_from_cache() {
 
 function abort_bootstrap() {
   >&2 echo "Run abort_bootstrap"
-  dhctl bootstrap-phase abort \
+  dhctl --do-not-write-debug-log-file bootstrap-phase abort \
     --ssh-user "$ssh_user" \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --config "$cwd/configuration.yaml" \
@@ -146,7 +146,7 @@ function abort_bootstrap() {
 
 function destroy_cluster() {
   >&2 echo "Run destroy_cluster"
-  dhctl destroy \
+  dhctl --do-not-write-debug-log-file destroy \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --ssh-user "$ssh_user" \
     --ssh-host "$master_ip" \
@@ -572,7 +572,7 @@ ENDSSH
 
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
   --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
 
   >&2 echo "==============================================================
@@ -639,7 +639,7 @@ ENDSSH
 
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
   --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
 
   dhctl_exit_code=$?
