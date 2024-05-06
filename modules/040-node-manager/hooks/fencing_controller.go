@@ -39,7 +39,7 @@ const (
 	fencingControllerTimeout = time.Duration(60) * time.Second
 )
 
-var maintanenceAnnotations = []string{
+var maintenanceAnnotations = []string{
 	`update.node.deckhouse.io/disruption-approved`,
 	`update.node.deckhouse.io/approved`,
 	`node-manager.deckhouse.io/fencing-disable`,

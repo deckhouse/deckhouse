@@ -31,7 +31,7 @@ const (
 	fencingNodeLabel = "node-manager.deckhouse.io/fencing-enabled"
 )
 
-var maintanenceAnnotations = [...]string{
+var maintenanceAnnotations = [...]string{
 	`update.node.deckhouse.io/disruption-approved`,
 	`update.node.deckhouse.io/approved`,
 	`node-manager.deckhouse.io/fencing-disable`,
@@ -164,7 +164,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 
 			// check if node is in maintenance mode
 			MaintenanceMode := false
-			for _, annotation := range maintanenceAnnotations {
+			for _, annotation := range maintenanceAnnotations {
 				_, annotationExists := node.Annotations[annotation]
 				if annotationExists {
 					fa.logger.Info("Maintenance annotation found", zap.String("annotation", annotation))
