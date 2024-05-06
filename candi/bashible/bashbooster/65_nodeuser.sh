@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# $1 - username $2 - request data
+# $1 - username $2 - request data $3 - apiserver endpoints
 function bb-nodeuser-patch() {
   local username="$1"
   local data="$2"
+  local apiserver_endpoints="$3"
 
   # Skip this step after multiple failures.
   # This step puts information "how to get bootstrap logs" into Instance resource.
@@ -40,7 +41,7 @@ function bb-nodeuser-patch() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
     while [ "$patch_pending" = true ] ; do
-      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+      for server in "${apiserver_endpoints}" ; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
           bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."

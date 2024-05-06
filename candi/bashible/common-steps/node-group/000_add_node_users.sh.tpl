@@ -41,7 +41,7 @@ function nodeuser_add_error() {
             --arg msg "${message}" \
             '[{op:$op,path:$pt,value:$msg}]' )
 
-  bb-nodeuser-patch "${username}" "${data}"
+  bb-nodeuser-patch "${username}" "${data}" "{{ .normal.apiserverEndpoints | join " " }}"
 }
 
 # $1 - username
@@ -57,7 +57,7 @@ function nodeuser_clear_error() {
             --arg pt "/status/errors/${machine_name}" \
             '[{op:$op,path:$pt}]' )
 
-  bb-nodeuser-patch "${username}" "${data}"
+  bb-nodeuser-patch "${username}" "${data}" "{{ .normal.apiserverEndpoints | join " " }}"
 }
 
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
