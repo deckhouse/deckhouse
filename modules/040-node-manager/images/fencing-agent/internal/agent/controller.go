@@ -59,6 +59,9 @@ func (fa *FencingAgent) setNodeLabel(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
 	node.Labels[fencingNodeLabel] = ""
 	_, err = fa.kubeClient.CoreV1().Nodes().Update(ctx, node, v1.UpdateOptions{})
 	if err != nil {
