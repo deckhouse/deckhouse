@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+<<<<<<< HEAD:dhctl/pkg/apis/v1alpha1/deckhouse_release.go
+	"encoding/json"
+	"time"
+
+	"github.com/pkg/errors"
+=======
+>>>>>>> generated:deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1/deckhouse_release.go
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -26,6 +33,30 @@ import (
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+<<<<<<< HEAD:dhctl/pkg/apis/v1alpha1/deckhouse_release.go
+const (
+	PhasePending    = "Pending"
+	PhaseDeployed   = "Deployed"
+	PhaseSuperseded = "Superseded"
+	PhaseSuspended  = "Suspended"
+	PhaseSkipped    = "Skipped"
+	// TODO: deprecated: remove after release 1.46
+	PhaseOutdated = "Outdated"
+)
+
+var (
+	// ModuleConfigGVR GroupVersionResource
+	DeckhouseReleaseGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "deckhousereleases",
+	}
+)
+
+// +k8s:deepcopy-gen=false
+
+=======
+>>>>>>> generated:deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1/deckhouse_release.go
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
 	metav1.TypeMeta `json:",inline"`
@@ -68,6 +99,38 @@ func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DeckhouseRelease"}
 }
 
+<<<<<<< HEAD:dhctl/pkg/apis/v1alpha1/deckhouse_release.go
+// +k8s:deepcopy-gen=false
+
+// Duration custom type for appropriate json marshalling / unmarshalling (like "15m")
+type Duration struct {
+	time.Duration
+}
+
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case float64:
+		d.Duration = time.Duration(value)
+		return nil
+	case string:
+		var err error
+		d.Duration, err = time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.New("invalid duration")
+	}
+=======
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -77,4 +140,5 @@ type DeckhouseReleaseList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []DeckhouseRelease `json:"items"`
+>>>>>>> generated:deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1/deckhouse_release.go
 }
