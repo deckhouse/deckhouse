@@ -69,7 +69,7 @@ func (ru *kubeAPI) UpdateReleaseStatus(release *DeckhouseRelease, msg, phase str
 		Phase:          phase,
 		Message:        msg,
 		Approved:       release.Status.Approved,
-		TransitionTime: time.Now().UTC(),
+		TransitionTime: metav1.Now(), // TODO: UTC?
 	}
 	ru.patchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 
@@ -78,18 +78,18 @@ func (ru *kubeAPI) UpdateReleaseStatus(release *DeckhouseRelease, msg, phase str
 	return nil
 }
 
-func (ru *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) error {
+func (ru *kubeAPI) PatchReleaseAnnotations(release *DeckhouseRelease, annotations map[string]any) error {
 	annotationsPatch := map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
 		},
 	}
 
-	ru.patchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", name)
+	ru.patchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
 	return nil
 }
 
-func (ru *kubeAPI) PatchReleaseApplyAfter(name string, applyTime time.Time) error {
+func (ru *kubeAPI) PatchReleaseApplyAfter(release *DeckhouseRelease, applyTime time.Time) error {
 	patch := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"applyAfter": applyTime,
@@ -100,7 +100,7 @@ func (ru *kubeAPI) PatchReleaseApplyAfter(name string, applyTime time.Time) erro
 			},
 		},
 	}
-	ru.patchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", name)
+	ru.patchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
 	return nil
 }
 
@@ -124,7 +124,7 @@ func (ru *kubeAPI) DeployRelease(release *DeckhouseRelease) error {
 	return nil
 }
 
-func (ru *kubeAPI) SaveReleaseData(_ string, data updater.DeckhouseReleaseData) error {
+func (ru *kubeAPI) SaveReleaseData(_ *DeckhouseRelease, data updater.DeckhouseReleaseData) error {
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

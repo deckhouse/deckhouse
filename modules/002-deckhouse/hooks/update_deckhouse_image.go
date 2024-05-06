@@ -35,12 +35,12 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
@@ -281,11 +281,12 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		releaseApproved = release.Approved
 	}
 
-	var cooldown *time.Time
+	var cooldown *v1.Time
 	if v, ok := release.Annotations["release.deckhouse.io/cooldown"]; ok {
 		cd, err := time.Parse(time.RFC3339, v)
 		if err == nil {
-			cooldown = &cd
+			cdv := v1.NewTime(cd)
+			cooldown = &cdv
 		}
 	}
 

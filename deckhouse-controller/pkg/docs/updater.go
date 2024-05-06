@@ -32,6 +32,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coordination_informers_v1 "k8s.io/client-go/informers/coordination/v1"
@@ -39,13 +40,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8informers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/deckhouse.io/v1alpha1"
-	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
@@ -62,19 +62,14 @@ type Updater struct {
 	leasesLister   coordination_listers_v1.LeaseLister
 	leasesSynced   cache.InformerSynced
 
-	moduleReleasesLister      d8listers.ModuleReleaseLister
-	moduleReleasesSynced      cache.InformerSynced
-	moduleSourcesLister       d8listers.ModuleSourceLister
-	moduleSourcesSynced       cache.InformerSynced
-	modulePullOverridesLister d8listers.ModulePullOverrideLister
-	modulePullOverridesSynced cache.InformerSynced
-
 	leaseWorkqueue workqueue.RateLimitingInterface
+
+	client client.Client
 
 	externalModulesDir string
 
 	docsBuilder *docs_builder.Client
-	httpClient  d8http.Client
+	dc          dependency.Container
 
 	logger    logger.Logger
 	apiCallMu sync.Mutex
@@ -82,10 +77,8 @@ type Updater struct {
 
 func NewUpdater(
 	leasesInformer coordination_informers_v1.LeaseInformer,
-	moduleReleasesInformer d8informers.ModuleReleaseInformer,
-	moduleSourcesInformer d8informers.ModuleSourceInformer,
-	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
-	httpClient d8http.Client,
+	client client.Client,
+	dc dependency.Container,
 ) *Updater {
 	ratelimiter := workqueue.NewMaxOfRateLimiter(
 		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
@@ -95,22 +88,17 @@ func NewUpdater(
 	lg := log.WithField("component", "ModuleDocumentationUpdater")
 
 	updater := &Updater{
-		leasesInformer:            leasesInformer.Informer(),
-		leasesLister:              leasesInformer.Lister(),
-		leasesSynced:              leasesInformer.Informer().HasSynced,
-		moduleSourcesLister:       moduleSourcesInformer.Lister(),
-		moduleSourcesSynced:       moduleSourcesInformer.Informer().HasSynced,
-		moduleReleasesLister:      moduleReleasesInformer.Lister(),
-		moduleReleasesSynced:      moduleReleasesInformer.Informer().HasSynced,
-		modulePullOverridesLister: modulePullOverridesInformer.Lister(),
-		modulePullOverridesSynced: modulePullOverridesInformer.Informer().HasSynced,
+		leasesInformer: leasesInformer.Informer(),
+		leasesLister:   leasesInformer.Lister(),
+		leasesSynced:   leasesInformer.Informer().HasSynced,
+		client:         client,
 
 		leaseWorkqueue: workqueue.NewRateLimitingQueue(ratelimiter),
 
 		logger:             lg,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 
-		docsBuilder: docs_builder.NewClient(httpClient),
+		docsBuilder: docs_builder.NewClient(dc.GetHTTPClient()),
 	}
 
 	_, err := updater.leasesInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -140,7 +128,7 @@ func (d *Updater) RunPreflightCheck(ctx context.Context) error {
 		return nil
 	}
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), d.leasesSynced, d.moduleSourcesSynced, d.moduleReleasesSynced, d.modulePullOverridesSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), d.leasesSynced); !ok {
 		d.logger.Fatal("failed to wait for caches to sync")
 	}
 	d.logger.Info("Documentation builder's object cache synced")
@@ -164,28 +152,35 @@ func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) 
 		return nil
 	}
 
-	ms, err := d.moduleSourcesLister.Get(m.GetModuleSource())
+	ms := new(v1alpha1.ModuleSource)
+	err = d.client.Get(ctx, types.NamespacedName{Name: m.GetModuleSource()}, ms)
 	if err != nil {
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(d.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(d.dc, d.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
-		// Trying to get the documentation from the module's dir
-		d.logger.Debugf("Getting the %s module's documentation locally", moduleName)
-		docsArchive, err := d.getDocumentationFromModuleDir(m)
-		if err != nil {
-			d.logger.Infof("Failed to get %s module documentation from local directory with error: %v", moduleName, err)
-
-			// Trying to get the documentation from the registry
-			docsArchive, err = md.GetDocumentationArchive(moduleName, moduleVersion)
+		err = func() error {
+			// Trying to get the documentation from the module's dir
+			d.logger.Debugf("Getting the %s module's documentation locally", moduleName)
+			docsArchive, err := d.getDocumentationFromModuleDir(m)
 			if err != nil {
-				return fmt.Errorf("get documentation archive: %w", err)
-			}
-		}
-		defer docsArchive.Close()
+				d.logger.Infof("Failed to get %s module documentation from local directory with error: %v", moduleName, err)
 
-		err = d.buildDocumentation(docsArchive, addr, moduleName, moduleVersion)
+				// Trying to get the documentation from the registry
+				docsArchive, err = md.GetDocumentationArchive(moduleName, moduleVersion)
+				if err != nil {
+					return fmt.Errorf("get documentation archive: %w", err)
+				}
+			}
+			defer docsArchive.Close()
+
+			err = d.buildDocumentation(docsArchive, addr, moduleName, moduleVersion)
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
 		if err != nil {
 			return err
 		}
@@ -350,14 +345,15 @@ func (d *Updater) processNextLease(ctx context.Context) bool {
 
 func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	d.logger.Infof("Rebuilding documentation for all deployed modules")
-	releases, err := d.moduleReleasesLister.List(labels.Everything())
+	var releasesList v1alpha1.ModuleReleaseList
+	err := d.client.List(ctx, &releasesList)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModuleReleases failed: %w", err)
 	}
 
-	for _, release := range releases {
+	for _, release := range releasesList.Items {
 		// check if ModulePullOverride exists
-		exists, err := d.isModulePullOverrideExists(release.GetModuleSource(), release.Spec.ModuleName)
+		exists, err := d.isModulePullOverrideExists(ctx, release.GetModuleSource(), release.Spec.ModuleName)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModulePullOverride for %s failed: %w", release.Spec.ModuleName, err)
 		}
@@ -370,19 +366,20 @@ func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctr
 			continue
 		}
 
-		err = d.SendDocumentation(ctx, release)
+		err = d.SendDocumentation(ctx, &release)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
 	}
 
-	mpos, err := d.modulePullOverridesLister.List(labels.Everything())
+	var mposList v1alpha1.ModulePullOverrideList
+	err = d.client.List(ctx, &mposList)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModulePullOverrides failed: %w", err)
 	}
 
-	for _, mpo := range mpos {
-		err := d.SendDocumentation(ctx, mpo)
+	for _, mpo := range mposList.Items {
+		err := d.SendDocumentation(ctx, &mpo)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -391,11 +388,12 @@ func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (d *Updater) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
-	res, err := d.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
+func (d *Updater) isModulePullOverrideExists(ctx context.Context, sourceName, moduleName string) (bool, error) {
+	var res v1alpha1.ModulePullOverrideList
+	err := d.client.List(ctx, &res, client.MatchingLabels{"source": sourceName, "module": moduleName})
 	if err != nil {
 		return false, err
 	}
 
-	return len(res) > 0, nil
+	return len(res.Items) > 0, nil
 }
