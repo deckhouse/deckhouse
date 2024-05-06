@@ -42,7 +42,8 @@ discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
   #addr: "${discovered_node_ip}:5051"
-  addr: "0.0.0.0:5051"
+  #addr: "0.0.0.0:5051"
+  addr: "localhost:5051"
 
 token:
   issuer: "Registry server"
@@ -116,7 +117,8 @@ storage:
 
 http:
   #addr: ${discovered_node_ip}:5000
-  addr: 0.0.0.0:5000
+  #addr: 0.0.0.0:5000
+  addr: localhost:5000
   prefix: /
   secret: asecretforlocaldevelopment
   #tls:
@@ -134,7 +136,7 @@ proxy:
 
 auth:
   token:
-    realm: http://${discovered_node_ip}:5051/auth
+    realm: http://localhost:5051/auth
     service: Docker registry
     issuer: Registry server
     rootcertbundle: "$IGNITER_DIR/cert.crt"
