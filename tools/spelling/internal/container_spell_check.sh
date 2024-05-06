@@ -2,72 +2,109 @@
 
 set -e
 
-str=$'\n'
+SKIP_MISSING_FILES=0
+DICTIONARIES="/app/dictionaries/ru_RU,/app/dictionaries/en_US,/app/dictionaries/dev_OPS"
 ex_result=0
 
-language="/temp/dictionaries/ru_RU,/temp/dictionaries/en_US,/temp/dictionaries/dev_OPS"
+function file_check_spell() {
+  if [[ ! -f ${1} ]]; then
+    if [ "$SKIP_MISSING_FILES" -eq 1 ]; then
+      echo "Skip missing file ${1}..." >&2
+      return 0
+    fi
+    echo "Error: file ${1} not found..." >&2
+    return 1
+  else
+    python3 /app/internal/clean-files.py ${1} | sed '/^\s*$/d' | hunspell -d ${DICTIONARIES} -l
+  fi
+}
 
-if [ -n "$1" ]; then
-  arg_target_page=$1
-fi
 
-#cp /usr/share/hunspell/en_US.aff  /usr/share/hunspell/en_US.aff.orig
-#cp /usr/share/hunspell/en_US.dic  /usr/share/hunspell/en_US.dic.orig
-#iconv --from ISO8859-1 /usr/share/hunspell/en_US.aff.orig > /usr/share/hunspell/en_US.aff
-#iconv --from ISO8859-1 /usr/share/hunspell/en_US.dic.orig > /usr/share/hunspell/en_US.dic
-#rm /usr/share/hunspell/en_US.aff.orig
-#rm /usr/share/hunspell/en_US.dic.orig
-#sed -i 's/SET ISO8859-1/SET UTF-8/' /usr/share/hunspell/en_US.aff
+HELP_STRING=$(cat <<EOF
+Usage: spell_check.sh [OPTION]
+
+Optional arguments:
+  -f PATH, --file PATH         the name of the file with a path (relative from the Deckhouse repo)
+  -l PATH, --list PATH         the name of the file with a list of files to check (relative from the Deckhouse repo)
+  --skipmissing                skip missing files
+  -h, --help         output this message
+EOF
+)
+
+while true; do
+  case "$1" in
+    -f | --file )
+      if [ -n "$2" ]; then
+        if [ -f "$2" ]; then
+          FILENAME=$2; shift 2
+        else
+          echo "File $2 not found" >&2
+          exit 1
+        fi
+      else
+        shift 1
+      fi
+      ;;
+    -l | --list )
+      FILELIST=$2; shift 2;;
+    --skipmissing )
+      SKIP_MISSING_FILES=1; shift 1;;
+    -h | --help )
+      echo "$HELP_STRING"; exit 0 ;;
+    * )
+      break ;;
+  esac
+done
 
 echo "Checking docs..."
 
-if [ -n "$1" ]; then
-  if [ -n "$2" ]; then
-    python3 clean-files.py $arg_target_page | sed '/^$/d' | hunspell -d $language -l
-  else
+if [ -n "${FILENAME}" ]; then
     check=1
-    if test -f "filesignore"; then
-      while read y; do
-        if [[ "$arg_target_page" =~ "$y" ]]; then
+    if test -f "/app/internal/filesignore"; then
+      while read file_name_to_ignore; do
+        if [[ "${FILENAME}" =~ ${file_name_to_ignore} ]]; then
           unset check
           check=0
         fi
       done <<-__EOF__
-  $(cat ./filesignore)
+  $(cat /app/internal/filesignore | grep -vE '^#\s*|^\s*$')
 __EOF__
       if [ "$check" -eq 1 ]; then
-        echo "Checking $arg_target_page..."
-        result=$(python3 clean-files.py $arg_target_page | sed '/^$/d' | hunspell -d $language -l)
+        echo "Possible typos in $(echo ${FILENAME} | sed '#^\./#d'):"
+        result="$(file_check_spell ${FILENAME})"
         if [ -n "$result" ]; then
           echo $result | sed 's/\s\+/\n/g'
         fi
       else
-        echo "Ignoring $arg_target_page..."
+        echo "Ignoring ${FILENAME}..."
       fi
     fi
-  fi
 else
-  for file in `find ./ -type f`
+  if [ -n "${FILELIST}" ]; then
+      LIST="$(cat ${FILELIST})"
+  else
+      LIST="$(find ./ -type f)"
+  fi
+  for file in $LIST;
   do
     check=1
-    if test -f "/temp/internal/filesignore"; then
-      while read y; do
-        if [[ "$file" =~ "$y" ]]; then
+    if test -f "/app/internal/filesignore"; then
+      while read file_name_to_ignore; do
+        if [[ "$file" =~ ${file_name_to_ignore} ]]; then
           unset check
           check=0
         fi
       done <<-__EOF__
-  $(cat /temp/internal/filesignore)
+  $(cat /app/internal/filesignore | grep -vE '^#\s*|^\s*$')
 __EOF__
       if [ "$check" -eq 1 ]; then
-        result=$(python3 /temp/internal/clean-files.py $file | sed '/^$/d' | hunspell -d $language -l)
-        #python3 /temp/internal/clean-files.py $file
+        result="$(file_check_spell ${file})"
         if [ -n "$result" ]; then
           unset ex_result
           ex_result=1
-          echo $str
-          echo "Checking $file..."
+          echo "Possible typos in $(echo ${file} | sed '#^\./#d'):"
           echo $result | sed 's/\s\+/\n/g'
+          echo
         fi
       else
         echo "Ignoring $file..."

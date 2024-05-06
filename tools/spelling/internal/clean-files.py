@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys
 import re
-import os
+import sys
 import yaml
 from pathlib import Path
 
@@ -61,7 +60,7 @@ if len (sys.argv) > 1:
             text = clean_html(text)
             text = clean_liquid(text)
             text = delete_nbsp(text)
-            #print(text)
+            print(text)
     elif file_extension == 'yml' or file_extension == 'yaml':
         if 'openapi' in sys.argv[1]:
             with open(sys.argv[1], 'r') as f:

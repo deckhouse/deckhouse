@@ -225,7 +225,7 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 .PHONY: docs
-docs: ## Run containers with the documentation (werf is required to build the containers).
+docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
 	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
@@ -243,27 +243,24 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
 
 .PHONY: docs-spellcheck
-docs-spellcheck: ## Check the spelling in the main site part (werf is required to build the containers)
-  ##~ Options: filename="target-file" (Specify the path to a specific file)
-  ##~ Options: type="plain_text" (Displays HTML stripped of tags. Use only with filename option!)
-	sh ./tools/spelling/spell_check.sh $(filename) $(type)
+docs-spellcheck: ## Check the spelling in the documentation.
+  ##~ Options: file="path/to/file" (Specify a path to a specific file)
+	cd tools/spelling && sh spell_check.sh -f $(filename)
 
-##@ Spell checking services
+.PHONY: docs-spellcheck-generate-dictionary
+docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/spelling/wordlist file).
+	@echo "Sorting wordlist..."
+	@sort ./tools/spelling/wordlist -o ./tools/spelling/wordlist
+	@echo "Generating dictionary..."
+	@test -f ./tools/spelling/dictionaries/dev_OPS.dic && rm ./tools/spelling/dictionaries/dev_OPS.dic
+	@touch ./tools/spelling/dictionaries/dev_OPS.dic
+	@cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
+	@sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
+	@echo "Don't forget to commit changes and push it!"
 
-.PHONY: sort-custom-dict
-sort-custom-dict: ## Sorts the list of words for a custom dictionary before pushing into the Git.
-	sort -o ./tools/spelling/wordlist{,}
-
-.PHONY: generate-special-dictionary
-generate-special-dictionary: ## Generate a dictionary of special terms.
-	test -f ./tools/spelling/dictionaries/dev_OPS.dic && rm ./tools/spelling/dictionaries/dev_OPS.dic
-	touch ./tools/spelling/dictionaries/dev_OPS.dic
-	cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
-	sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
-
-.PHONY: get-words-with-typos
-get-words-with-typos: ## Pulls out a list of all the terms in all pages that were considered a typo
-	sh ./tools/spelling/spell_check.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u > spell_log_site
+.PHONY: docs-spellcheck-get-typos-list
+docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
+	cd tools/spelling && sh spell_check.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u
 
 ##@ Update kubernetes control-plane patchversions
 

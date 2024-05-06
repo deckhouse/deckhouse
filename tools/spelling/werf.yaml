@@ -1,0 +1,84 @@
+project: spell-checker
+configVersion: 1
+
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Env "development") (eq $.Env "module") (eq $.Env "local") }}
+      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- end }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
+---
+image: docs-spell-checker
+#from: {{ .Images.BASE_UBUNTU }}
+from: {{ .Images.BASE_PYTHON_ALPINE }}
+git:
+  - add: /tools/spelling/dictionaries/
+    to: /app/dictionaries
+    stageDependencies:
+      setup: '**/*'
+  - add: /tools/spelling/internal/
+    to: /app/internal
+    stageDependencies:
+      setup: '**/*'
+  - add: /docs
+    to: /spelling/docs
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.md'
+      - '**/*.html'
+      - '**/*.liquid'
+  - add: /candi
+    to: /spelling/candi
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+    excludePaths:
+      - '**/werf*.yaml'
+      - '**/docker-compose.yml'
+  - add: /modules
+    to: /spelling/modules
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.md'
+    excludePaths:
+      - '**/image'
+      - '**/werf*.yaml'
+      - '**/docker-compose.yml'
+  - add: /ee
+    to: /spelling/ee
+    stageDependencies:
+      setup: '**/*'
+    includePaths:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.md'
+    excludePaths:
+      - '**/werf*.yaml'
+      - '**/docker-compose.yml'
+docker:
+  ENV:
+    LANG: ru_RU.UTF-8
+    LANGUAGE: ru_RU:ru
+    LC_LANG: ru_RU.UTF-8
+    LC_ALL: ru_RU.UTF-8
+    LC_MESSAGES: ru_RU.UTF-8
+    TZ: Europe/Moscow
+    PIP_ROOT_USER_ACTION: ignore
+  WORKDIR: /spelling
+shell:
+  beforeInstall:
+    - apk add hunspell
+    - pip3 install pyyaml

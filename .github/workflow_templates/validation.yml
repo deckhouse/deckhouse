@@ -127,13 +127,9 @@ jobs:
     name: Documentation Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
-  doc_spellcheck_site:
-    name: Site Spellcheck
-{!{ tmpl.Exec "spellsheck_template" (slice $ctx "doc_changes" "site") | strings.Indent 4 }!}
-
-  doc_spellcheck_documentation:
-    name: Documentation Spellcheck
-{!{ tmpl.Exec "spellsheck_template" (slice $ctx "doc_changes" "documentation") | strings.Indent 4 }!}
+  doc_spell_check:
+    name: Documentation spell checking
+{!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
 
   copyright_validation:
     name: Copyright Validation
@@ -201,24 +197,32 @@ steps:
       make lint-{!{ $type }!}
 {!{- end -}!}
 
-{!{/* Template for spellcheck jobs. */}!}
-{!{ define "spellsheck_template" }!}
+{!{/* Template for spellcheck steps. */}!}
+{!{ define "spellcheck_template" }!}
 {!{- $ctx := index . 0 -}!}
-{!{- $type := index . 1 }!}
-{!{- $target := index . 2 }!}
 needs:
   - discover
-if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest-4-cores
-timeout-minutes: 60
+  - pull_request_info
+if: needs.discover.outputs.run_doc_changes == 'true'
+runs-on: ubuntu-latest
 steps:
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+   # <template: spellcheck_template>
   - name: Install werf
     uses: werf/actions/install@v1.2
 
-  - name: Checkout code
-    uses: actions/checkout@v3
-
   - name: Spell check
     run: |
-      make docs-spellcheck-{!{ $target }!}
+      cat ./pr.diff | grep -E "^(---|\+\+\+) [ab]" | cut -d \/ -f 2- | sort -u > tools/spelling/internal/pr.diff.files
+      cd tools/spelling
+      pwd
+      ls -la
+      werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/internal/container_spell_check.sh --list /app/internal/pr.diff.files --skipmissing
+   # </template: spellcheck_template>
 {!{- end -}!}

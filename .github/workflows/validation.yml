@@ -414,43 +414,39 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
-  doc_spellcheck_site:
-    name: Site Spellcheck
-
+  doc_spell_check:
+    name: Documentation spell checking
     needs:
       - discover
+      - pull_request_info
     if: needs.discover.outputs.run_doc_changes == 'true'
-    runs-on: ubuntu-latest-4-cores
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
     steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
       - name: Install werf
         uses: werf/actions/install@v1.2
 
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Spell check
         run: |
-          make docs-spellcheck-site
-
-  doc_spellcheck_documentation:
-    name: Documentation Spellcheck
-
-    needs:
-      - discover
-    if: needs.discover.outputs.run_doc_changes == 'true'
-    runs-on: ubuntu-latest-4-cores
-    timeout-minutes: 60
-    steps:
-      - name: Install werf
-        uses: werf/actions/install@v1.2
-
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Spell check
-        run: |
-          make docs-spellcheck-documentation
+          cat ./pr.diff | grep -E "^(---|\+\+\+) [ab]" | cut -d \/ -f 2- | sort -u > tools/spelling/internal/pr.diff.files
+          cd tools/spelling
+          pwd
+          ls -la
+          werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/internal/container_spell_check.sh --list /app/internal/pr.diff.files --skipmissing
+       # </template: spellcheck_template>
 
   copyright_validation:
     name: Copyright Validation
@@ -567,4 +563,5 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
 
