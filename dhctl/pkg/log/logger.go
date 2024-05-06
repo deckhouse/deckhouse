@@ -619,7 +619,7 @@ func (d *TeeLogger) FlushAndClose() error {
 }
 
 func (d *TeeLogger) ProcessLogger() ProcessLogger {
-	return newWrappedProcessLogger(d)
+	return d.l.ProcessLogger()
 }
 
 func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
