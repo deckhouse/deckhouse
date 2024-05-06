@@ -14,7 +14,6 @@ memory: 10Mi
 {{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 
 
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -81,6 +80,9 @@ spec:
         args:
           - start
         volumeMounts:
+        - mountPath: /static-pod-files
+          name: static-pod-files
+          readOnly: true
         # - mountPath: /pki
         #   name: pki
         #   readOnly: true
@@ -142,6 +144,9 @@ spec:
       # - secret:
       #     secretName: d8-system-registry-manager-config
       #   name: config
+      - name: static-pod-files
+        secret:
+          secretName: d8-static-pod-files
       - name: etc-kubernetes
         hostPath:
           path: /etc/kubernetes/
