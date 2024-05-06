@@ -101,10 +101,6 @@ func DefineSanityFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&SanityCheck)
 }
 
-func DefineSkipDebugFile(cmd *kingpin.CmdClause) {
-
-}
-
 func configEnvName(name string) string {
 	return "DHCTL_CLI_" + name
 }
