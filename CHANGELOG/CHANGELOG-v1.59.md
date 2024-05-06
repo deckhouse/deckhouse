@@ -100,6 +100,7 @@
  - **[dhctl]** Fix `dhctl mirror` producing bundles with unexpected components versions. [#8161](https://github.com/deckhouse/deckhouse/pull/8161)
  - **[dhctl]** Fix meta config deep copy method does not return the copy. [#7854](https://github.com/deckhouse/deckhouse/pull/7854)
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
+ - **[flant-integration]** Remove python tests from the image. [#8321](https://github.com/deckhouse/deckhouse/pull/8321)
  - **[flant-integration]** Fix resources counting. [#8291](https://github.com/deckhouse/deckhouse/pull/8291)
  - **[global-hooks]** Fix K8s upgrade migration. [#8148](https://github.com/deckhouse/deckhouse/pull/8148)
  - **[global-hooks]** Fix ability to downgrade Kubernetes by more than 1 minor version. [#7279](https://github.com/deckhouse/deckhouse/pull/7279)
