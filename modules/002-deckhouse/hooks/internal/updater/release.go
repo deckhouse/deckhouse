@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 type DeckhouseRelease struct {
@@ -35,8 +36,8 @@ type DeckhouseRelease struct {
 	Requirements  map[string]string
 	ChangelogLink string
 	Disruptions   []string
-	ApplyAfter    *time.Time
-	CooldownUntil *time.Time
+	ApplyAfter    *metav1.Time
+	CooldownUntil *metav1.Time
 
 	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
 }
@@ -46,7 +47,10 @@ func (d *DeckhouseRelease) GetName() string {
 }
 
 func (d *DeckhouseRelease) GetApplyAfter() *time.Time {
-	return d.ApplyAfter
+	if d.ApplyAfter == nil {
+		return nil
+	}
+	return &d.ApplyAfter.Time
 }
 
 func (d *DeckhouseRelease) GetVersion() *semver.Version {
@@ -62,7 +66,10 @@ func (d *DeckhouseRelease) GetChangelogLink() string {
 }
 
 func (d *DeckhouseRelease) GetCooldownUntil() *time.Time {
-	return d.CooldownUntil
+	if d.CooldownUntil == nil {
+		return nil
+	}
+	return &d.CooldownUntil.Time
 }
 
 func (d *DeckhouseRelease) GetDisruptions() []string {
