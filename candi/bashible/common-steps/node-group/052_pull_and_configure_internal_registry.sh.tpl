@@ -69,7 +69,7 @@ recursive_delete = false # do we really need for registry?
 [etcd]
 enabled = true
 {{- if eq .runType "Normal" }}
-servers = "{{- range $key, $value := .normal.apiserverEndpoints}}{{if $key}},{{end}}{{$value}}:2379{{- end}}"
+servers = "{{- range $key, $value := .normal.apiserverEndpoints }}{{ $parts := splitList ":" $value }}{{ $ip := index $parts 0 }}{{ $ip }}:2379;{{- end }}"
 {{- else if eq .runType "ClusterBootstrap" }}
 servers = "${discovered_node_ip}:2379"
 {{- end }}
