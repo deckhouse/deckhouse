@@ -80,8 +80,25 @@ spec:
         args:
           - start
         volumeMounts:
-        - mountPath: /static-pod-files
-          name: static-pod-files
+        - name: static-pod-files
+          mountPath: "/static-pods/internal-registry.yaml"
+          subPath: "static-pod-internal-registry.yaml"
+          readOnly: true
+        - name: static-pod-files
+          mountPath: "/docker-auth/config.yaml"
+          subPath: "docker-auth-config.yaml"
+          readOnly: true
+        - name: static-pod-files
+          mountPath: "/distribution/config.yaml"
+          subPath: "distribution-config.yaml"
+          readOnly: true
+        - name: static-pod-files
+          mountPath: "/seaweedfs/filer.toml"
+          subPath: "seaweedfs-config-filer.toml"
+          readOnly: true
+        - name: static-pod-files
+          mountPath: "/seaweedfs/master.toml"
+          subPath: "seaweedfs-master.toml"
           readOnly: true
         # - mountPath: /pki
         #   name: pki

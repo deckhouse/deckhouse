@@ -1,4 +1,4 @@
-{{- define "docker_auth/auth_config.yaml" }}
+{{- define "docker-auth-config.yaml" }}
 server:
   addr: "${discovered_node_ip}:5051"
   #addr: "0.0.0.0:5051"
@@ -26,7 +26,7 @@ acl:
   # Access is denied by default.
 {{- end }}
 
-{{- define "seaweedfs/filer.toml" }}
+{{- define "seaweedfs-filer.toml" }}
 [filer.options]
 recursive_delete = false # do we really need for registry?
 
@@ -42,7 +42,7 @@ tls_client_key_file="/pki/apiserver-etcd-client.key"
 
 
 
-{{- define "seaweedfs/master.toml" }}
+{{- define "seaweedfs-master.toml" }}
 [master.volume_growth]
 copy_1 = 1
 copy_2 = 2
@@ -50,7 +50,7 @@ copy_3 = 3
 copy_other = 1
 {{- end }}
 
-{{- define "distribution/config.yaml" }}
+{{- define "distribution-config.yaml" }}
 version: 0.1
 log:
   level: info
@@ -102,7 +102,7 @@ auth:
     autoredirect: false
 {{- end }}
 
-{{- define "static_pod/internal-registry.yaml" }}
+{{- define "static-pod-internal-registry.yaml" }}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -184,11 +184,11 @@ spec:
       type: File
   - name: seaweedfs-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/seaweedfs/
+      path: /etc/kubernetes/internal-registry/seaweedfs_config/
       type: DirectoryOrCreate
   - name: distribution-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/distribution/
+      path: /etc/kubernetes/internal-registry/distribution_config/
       type: DirectoryOrCreate
   - name: seaweedfs-data-volume
     hostPath:
