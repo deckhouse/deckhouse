@@ -6,10 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package start
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"system-registry-manager/cmd/manager/common"
-	"system-registry-manager/internal/config"
 )
 
 var (
@@ -35,9 +33,4 @@ func NewStartCmd() *cobra.Command {
 	}
 	common.AddDefaultFlags(cmd.Flags(), &defaultFlagVars)
 	return cmd
-}
-
-func Start() {
-	log.Info("start")
-	log.Info(config.GetConfigFilePath())
 }
