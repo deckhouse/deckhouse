@@ -39,9 +39,13 @@ import:
     add: "{{ $GIT_CLONE_DEST_PATH }}/auth_server/auth_server"
     to: /auth_server
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
     to: /
+    before: setup
+  - image: common/pause
+    add: /pause
+    to: /pause
     before: setup
 
 docker:
