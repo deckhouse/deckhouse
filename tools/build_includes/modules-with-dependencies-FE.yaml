@@ -1103,3 +1103,26 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/fe/modules/500-okmeter
+  to: /deckhouse/modules/500-okmeter
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
