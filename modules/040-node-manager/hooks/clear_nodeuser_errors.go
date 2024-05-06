@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         nodeForClearSnapName,
 			WaitForSynchronization:       pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -74,7 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "clear_nodeuser_errors",
-			Crontab: "0 4 * * *",
+			Crontab: "*/30 * * * *",
 		},
 	},
 }, discoverNodeUsersForClear)
