@@ -90,9 +90,9 @@ spec:
           subPath: {{ $templateName }}
           readOnly: true
       {{- end }}
-        # - mountPath: /pki
-        #   name: pki
-        #   readOnly: true
+        - mountPath: /pki
+          name: pki
+          readOnly: true
         # - mountPath: /config
         #   name: config
         #   readOnly: true
@@ -145,12 +145,12 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
-      # - secret:
-      #     secretName: d8-pki
-      #   name: pki
-      # - secret:
+      - name: pki
+        secret:
+          secretName: d8-pki
+      # - name: config
+      #   secret:
       #     secretName: d8-system-registry-manager-config
-      #   name: config
       - name: static-pod-files
         secret:
           secretName: d8-static-pod-files
