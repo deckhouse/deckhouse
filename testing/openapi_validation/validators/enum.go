@@ -45,6 +45,12 @@ var (
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.withNAT.properties.bastionInstance.properties.instanceClass.properties.diskType",
 		},
+		// coreFreactions - 10% 25%.,..
+		"candi/cloud-providers/dvp/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
+
 		// disk types: pd-standard, pd-ssd, ...
 		"candi/cloud-providers/gcp/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
