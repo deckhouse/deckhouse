@@ -1,0 +1,152 @@
+kind: VCDClusterConfiguration
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      description: |
+        Описывает конфигурацию облачного кластера в VCD.
+
+        Используется поставщиком облачных услуг, если уровень управления кластера размещен в облаке.
+
+        Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
+
+        ```shell
+        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        ```
+      properties:
+        masterNodeGroup:
+          description: |
+            Определение NodeGroup master-узлов.
+
+            > **Внимание!** После изменения параметров раздела необходимо запустить `dhctl converge`, чтобы изменения вступили в силу.
+          properties:
+            replicas:
+              description: |
+                Количество создаваемых master-узлов. Важно, чтобы число master-узлов было нечетным для обеспечения кворума.
+            instanceClass:
+              description: |
+                Частичное содержимое полей [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Размер корневого диска в гигабайтах.
+                etcdDiskSizeGb:
+                  description: |
+                    Размер диска etcd в гигабайтах.
+                placementPolicy:
+                  description: |
+                    PlacementPolicy, которая будет использоваться на данном компьютере.
+
+                    Если PlacementPolicy не указана, для создания узлов будет использоваться PlacementPolicy по умолчанию.
+                sizingPolicy:
+                  description: |
+                    SizingPolicy, которая будет использоваться на данном компьютере.
+
+                    Если SizingPolicy не указана, для создания узлов будет использоваться SizingPolicy по умолчанию.
+                storageProfile:
+                  description: |
+                    StorageProfile, который будет использоваться на данном компьютере.
+                template:
+                  description: |
+                    Путь к шаблону OVA, который будет использоваться. Состоит из каталога и пути к шаблону.
+                mainNetworkIPAddresses:
+                  description: |
+                    Список статических IP-адресов (с префиксом CIDR), последовательно распределенных по узлам в `mainNetwork`.
+
+                    По умолчанию DHCP-клиент включен.
+                  items:
+                    description: IP-адрес с префиксом CIDR.
+        nodeGroups:
+          description: |
+            Массив дополнительных NodeGroups для создания статических узлов (например, для выделенных интерфейсных узлов или шлюзов).
+          items:
+            properties:
+              name:
+                description: |
+                  Имя NodeGroup, используемой для генерации имен узлов.
+              replicas:
+                description: |
+                  Количество создаваемых узлов.
+              nodeTemplate:
+                description: |
+                  Параметры объектов узла в Kubernetes для добавления после регистрации узла.
+                properties:
+                  labels:
+                    description: |
+                      Список лейблов для прикрепления к ресурсам кластера.
+
+                      То же, что и в [полях](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) стандарта `metadata.labels`.
+                  annotations:
+                    description: |
+                      То же, что и в [полях](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) стандарта `metadata.annotations`.
+                  taints:
+                    description: |
+                      То же, что и поле `.spec.taints` в [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                      > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+              instanceClass:
+                description: |
+                  Частичное содержимое полей [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                properties:
+                  rootDiskSizeGb:
+                    description: |
+                      Размер корневого диска в гигабайтах.
+                  placementPolicy:
+                    description: |
+                      PlacementPolicy, которая будет использоваться на данном компьютере.
+
+                      Если PlacementPolicy не указана, для создания узлов будет использоваться PlacementPolicy по умолчанию.
+                  sizingPolicy:
+                    description: |
+                      SizingPolicy, которая будет использоваться на данном компьютере.
+
+                      Если SizingPolicy не указана, для создания узлов будет использоваться SizingPolicy по умолчанию.
+                  storageProfile:
+                    description: |
+                      StorageProfile, который будет использоваться на данном компьютере.
+                  template:
+                    description: |
+                      Путь к шаблону OVA, который будет использоваться. Состоит из каталога и пути к шаблону.
+                  mainNetworkIPAddresses:
+                    description: |
+                      Список статических IP-адресов (с префиксом CIDR), последовательно распределенных по узлам в `mainNetwork`.
+
+                      По умолчанию DHCP-клиент включен.
+                    items:
+                      description: IP-адрес с префиксом CIDR.
+        sshPublicKey:
+          description: |
+            Публичный ключ для доступа к узлам.
+        organization:
+          description: |
+            Имя Vcloud Director Organization.
+        virtualDataCenter:
+          description: |
+            Имя Vcloud Director Virtual Data Center (принадлежащее Organization).
+        virtualApplicationName:
+          description: |
+            Имя Vcloud Director Virtual Application (принадлежащее Virtual Data Center).
+        mainNetwork:
+          description: |
+            Путь к сети, к которой будут подключаться основные сетевые адаптеры виртуальных машин (шлюз по умолчанию).
+        internalNetworkCIDR:
+          description: |
+            Подсеть для master-узлов во внутренней сети.
+
+            Адреса распределяются, начиная с десятого адреса. Например, если у вас подсеть `192.168.199.0/24`, адреса будут распределяться, начиная с `192.168.199.10`.
+        layout:
+          description: |
+            Способ размещения ресурсов в облаке.
+
+            [Подробнее](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) о возможных вариантах размещения.
+        provider:
+          description: Параметры для подключения к VCD.
+          properties:
+            server:
+              description: Хост или IP-адрес VCD-сервера.
+            username:
+              type: string
+              description: Идентификатор для входа в систему.
+            password:
+              description: Пароль пользователя.
+            insecure:
+              description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.
