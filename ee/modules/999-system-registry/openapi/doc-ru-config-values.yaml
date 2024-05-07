@@ -1,2 +1,5 @@
 type: object
-properties: {}
+properties:
+  environment:
+    description: |
+      Название окружения

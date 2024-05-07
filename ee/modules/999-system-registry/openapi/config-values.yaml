@@ -1,2 +1,12 @@
 type: object
-properties: {}
+properties:
+  environment:
+    type: string
+    enum:
+      - vadim
+      - nikita
+    description: |
+      Environment name
+    x-example:
+      - environment: vadim
+      - environment: nikita

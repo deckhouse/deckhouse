@@ -1,3 +1,4 @@
+##### For all envs
 ---
 apiVersion: v1
 kind: Namespace

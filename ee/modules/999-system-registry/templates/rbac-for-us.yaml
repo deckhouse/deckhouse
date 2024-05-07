@@ -1,3 +1,7 @@
+##### For specific env
+{{- if (eq $.Values.systemRegistry.environment "vadim")  }}
+#####
+
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -56,3 +60,7 @@ roleRef:
   kind: ClusterRole
   name: d8:system-registry-manager
   apiGroup: rbac.authorization.k8s.io
+
+##### For specific env
+{{- end }}
+#####

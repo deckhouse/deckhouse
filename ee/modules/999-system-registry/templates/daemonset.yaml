@@ -1,3 +1,7 @@
+##### For specific env
+{{- if (eq $.Values.systemRegistry.environment "vadim")  }}
+#####
+
 {{- define "system_registry_manager_resources" }}
 cpu: 25m
 memory: 40Mi
@@ -164,3 +168,7 @@ spec:
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
+
+##### For specific env
+{{- end }}
+#####
