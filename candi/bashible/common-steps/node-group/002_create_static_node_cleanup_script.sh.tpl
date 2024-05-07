@@ -71,7 +71,6 @@ rm -rf /var/log/pods
 rm -rf /var/log/containers
 rm -rf /var/lib/deckhouse
 rm -rf /var/lib/upmeter
-rm -rf /mnt/kubernetes-data
 
 # run reboot in the background to normally ends cleanup script and ssh session from client
 (sleep 5 && shutdown -r now) &
