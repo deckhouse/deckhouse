@@ -49,6 +49,17 @@ def find_all_keys(input_dict: dict) -> list:
     return result
 
 if len (sys.argv) > 1:
+  if sys.argv[1] == '-':
+    text = sys.stdin.read()
+    text = clean_preamble(text)
+    text = delete_code_blocks(text)
+    text = delete_md_links(text)
+    text = clean_scripts(text)
+    text = clean_html(text)
+    text = clean_liquid(text)
+    text = delete_nbsp(text)
+    print(text)
+  else:
     file_extension = sys.argv[1].split('.')[-1]
     if file_extension == 'html' or file_extension == 'md' or file_extension == 'liquid':
         with open(sys.argv[1], 'r') as f:

@@ -245,7 +245,10 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)
-	cd tools/spelling && sh spell_check.sh -f $(filename)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+
+lint-doc-spellcheck-pr:
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
 
 .PHONY: docs-spellcheck-generate-dictionary
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/spelling/wordlist file).
@@ -257,10 +260,11 @@ docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after addi
 	@cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
 	@sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
 	@echo "Don't forget to commit changes and push it!"
+	@git diff --stat
 
 .PHONY: docs-spellcheck-get-typos-list
 docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
-	cd tools/spelling && sh spell_check.sh | sed "1,/Checking/ d" | sed "/Checking/d" | sort -u
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell check the documentation/ d; /^Possible typos/d" | sort -u
 
 ##@ Update kubernetes control-plane patchversions
 

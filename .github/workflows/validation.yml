@@ -386,7 +386,7 @@ jobs:
           ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 
     needs:
       - discover
@@ -415,11 +415,11 @@ jobs:
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
   doc_spell_check:
-    name: Documentation spell checking
+    name: Docs Validation (spellcheck)
     needs:
       - discover
       - pull_request_info
-    if: needs.discover.outputs.run_doc_changes == 'true'
+    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: ubuntu-latest
     steps:
 
@@ -441,11 +441,7 @@ jobs:
 
       - name: Spell check
         run: |
-          cat ./pr.diff | grep -E "^(---|\+\+\+) [ab]" | cut -d \/ -f 2- | sort -u > tools/spelling/internal/pr.diff.files
-          cd tools/spelling
-          pwd
-          ls -la
-          werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/internal/container_spell_check.sh --list /app/internal/pr.diff.files --skipmissing
+          make lint-doc-spellcheck-pr
        # </template: spellcheck_template>
 
   copyright_validation:

@@ -18,14 +18,22 @@ image: docs-spell-checker
 #from: {{ .Images.BASE_UBUNTU }}
 from: {{ .Images.BASE_PYTHON_ALPINE }}
 git:
-  - add: /tools/spelling/dictionaries/
-    to: /app/dictionaries
+  - add: /
+    to: /spelling
     stageDependencies:
       setup: '**/*'
-  - add: /tools/spelling/internal/
-    to: /app/internal
+    includePaths:
+      - 'pr.diff'
+      - '*.md'
+    excludePaths:
+      - MAINTAINERS.md
+  - add: /tools/spelling
+    to: /app
     stageDependencies:
       setup: '**/*'
+    excludePaths:
+      - werf.yaml
+      - wordlist
   - add: /docs
     to: /spelling/docs
     stageDependencies:
@@ -80,5 +88,5 @@ docker:
   WORKDIR: /spelling
 shell:
   beforeInstall:
-    - apk add hunspell
+    - apk add hunspell bash
     - pip3 install pyyaml

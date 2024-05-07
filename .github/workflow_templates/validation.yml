@@ -124,11 +124,11 @@ jobs:
 {!{ tmpl.Exec "validation_template" (slice $ctx "no_cyrillic") | strings.Indent 4 }!}
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
   doc_spell_check:
-    name: Documentation spell checking
+    name: Docs Validation (spellcheck)
 {!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
 
   copyright_validation:
@@ -203,7 +203,7 @@ steps:
 needs:
   - discover
   - pull_request_info
-if: needs.discover.outputs.run_doc_changes == 'true'
+if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
 runs-on: ubuntu-latest
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
@@ -219,10 +219,6 @@ steps:
 
   - name: Spell check
     run: |
-      cat ./pr.diff | grep -E "^(---|\+\+\+) [ab]" | cut -d \/ -f 2- | sort -u > tools/spelling/internal/pr.diff.files
-      cd tools/spelling
-      pwd
-      ls -la
-      werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/internal/container_spell_check.sh --list /app/internal/pr.diff.files --skipmissing
+      make lint-doc-spellcheck-pr
    # </template: spellcheck_template>
 {!{- end -}!}
