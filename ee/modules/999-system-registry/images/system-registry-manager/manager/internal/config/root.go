@@ -5,38 +5,47 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package config
 
+import (
+	"time"
+)
+
 const (
 	AnnotationFromMe      = `system-registry-manager.deckhouse.io/manager`
 	AnnotationFromHandler = `system-registry-manager.deckhouse.io/handler`
 	MaxRetries            = 120
-	defaultConfigFilePath = "config.yaml"
+	CertExparationTime    = 30 * 24 * time.Hour
 )
 
 var (
 	config         *Config
-	configFilePath string = ""
+	configFilePath string = "./config.yaml"
 )
 
 type Config struct {
-	SystemRegistry        SystemRegistryConfig
-	SystemRegistryManager SystemRegistryManagerConfig
+	FileConfig
+	RuntimeConfig
+	ManifestsSpec
 }
 
-func InitConfig() (*Config, error) {
-	systemRegistryConfig, err := NewSystemRegistryConfig()
+func InitConfig() error {
+	fileConfig, err := NewFileConfig()
 	if err != nil {
-		return nil, err
-	}
-	systemRegistryManagerConfig, err := NewSystemRegistryManagerConfig()
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	newConfig := Config{
-		SystemRegistry:        *systemRegistryConfig,
-		SystemRegistryManager: *systemRegistryManagerConfig,
+	runtimeConfig, err := NewRuntimeConfig()
+	if err != nil {
+		return err
 	}
-	return &newConfig, nil
+
+	manifestsConfig := NewManifestsSpec()
+
+	config = &Config{
+		*fileConfig,
+		*runtimeConfig,
+		*manifestsConfig,
+	}
+	return nil
 }
 
 func GetConfig() *Config {
@@ -44,10 +53,7 @@ func GetConfig() *Config {
 }
 
 func GetConfigFilePath() string {
-	if configFilePath != "" {
-		return configFilePath
-	}
-	return defaultConfigFilePath
+	return configFilePath
 }
 
 func SetConfigFilePath(newConfigFilePath string) {

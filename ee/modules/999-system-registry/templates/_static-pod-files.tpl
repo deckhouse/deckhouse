@@ -1,15 +1,15 @@
 {{- define "template-files-values"  }}
 files:
  - templateName: static-pod-system-registry.yaml
-   filePath: /static-pods/system-registry.yaml
+   filePath: /manifests/static-pods/system-registry.yaml
  - templateName: docker-auth-config.yaml
-   filePath: /docker-auth/config.yaml
+   filePath: /manifests/docker-auth/config.yaml
  - templateName: distribution-config.yaml
-   filePath: /distribution/distribution-config.yaml
+   filePath: /manifests/distribution/distribution-config.yaml
  - templateName: seaweedfs-filer.toml
-   filePath: /seaweedfs/filer.toml
+   filePath: /manifests/seaweedfs/filer.toml
  - templateName: seaweedfs-master.toml
-   filePath: /seaweedfs/master.toml
+   filePath: /manifests/seaweedfs/master.toml
 {{- end }}
 
 {{- define "docker-auth-config.yaml" }}
