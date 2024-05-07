@@ -211,19 +211,19 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
-		return fmt.Errorf("failed to generate TLS certificate: %v", err)
+		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
 	}
 
 	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
 		Certificates: []tls.Certificate{*cert},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
+		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
 	clientConfigGetter, err := newRegistryClientConfigGetter(config)
 	if err != nil {
-		return fmt.Errorf("failed to create registry client config getter: %v", err)
+		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 	}
 
 	proxy := proxy.NewProxy(&http.Server{}, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
@@ -313,10 +313,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	}
 
 	templateController := template.NewTemplateController("")
-	_ = log.Process("bootstrap", "Rendered templates directory", func() error {
-		log.InfoLn(templateController.TmpDir)
-		return nil
-	})
+	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	if err := BootstrapMaster(sshClient, bundleName, nodeIP, cfg, templateController); err != nil {
 		return err
@@ -346,6 +343,7 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 			"mkdir", "cp", "join"}
 
 		for _, args := range dependencyArgs {
+			log.InfoF("Check dependency %s\n", args)
 			output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
 			if err != nil {
 				return fmt.Errorf("bashible dependency error: %s",

@@ -149,7 +149,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
-			log.DebugF("openapi spec not found for module %s\n", moduleName)
+			log.DebugF("Openapi spec not found for module %s\n", moduleName)
 		} else {
 			return err
 		}
@@ -216,7 +216,7 @@ func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaInde
 
 	err := yaml.Unmarshal(*doc, &index)
 	if err != nil {
-		return nil, fmt.Errorf("yaml unmarshal: %w", err)
+		return nil, fmt.Errorf("Schema index unmarshal failed: %w", err)
 	}
 
 	err = s.ValidateWithIndex(&index, doc, opts...)

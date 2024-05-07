@@ -148,17 +148,17 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal cluster config: %v", err)
+		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
 	}
 
 	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal provider config: %v", err)
+		return nil, fmt.Errorf("Marshal provider config failed: %v", err)
 	}
 
 	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal static config: %v", err)
+		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
 	bundle := DefaultBundle
