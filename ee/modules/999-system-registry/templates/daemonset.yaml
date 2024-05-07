@@ -83,7 +83,7 @@ spec:
           - start
         volumeMounts:
       {{- range $templateFilesValues.files }}
-        {{- $filePath := .filePath | dir }}
+        {{- $filePath := .filePath }}
         {{- $templateName := .templateName  }}
         - name: static-pod-files
           mountPath: {{ $filePath }}
