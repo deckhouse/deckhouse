@@ -8,7 +8,7 @@ package hooks
 import (
 	"fmt"
 	"sort"
-
+	"encoding/base64"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -75,7 +75,7 @@ func handlePKIData(input *go_hook.HookInput) error {
 
 	// create kv sData
 	for _, key := range keys {
-		kvSData = append(kvSData, secretDataKV{Key: key, Value: string(sData[key])})
+		kvSData = append(kvSData, secretDataKV{Key: key, Value: base64.StdEncoding.EncodeToString(sData[key])})
 	}
 
 	input.Values.Set("systemRegistry.internal.pki.data", kvSData)
