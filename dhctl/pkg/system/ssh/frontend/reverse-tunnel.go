@@ -17,6 +17,7 @@ package frontend
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
@@ -57,7 +58,13 @@ func (t *ReverseTunnel) Up() error {
 	go func() {
 		err = t.sshCmd.Wait()
 		if err != nil {
-			log.ErrorF("cannot open tunnel '%s': %v", t.String(), err)
+			f := log.InfoF
+			// signal: killed is normal signal for stopping tunnel process
+			// because we kill it
+			if strings.Contains(err.Error(), "signal: killed") {
+				f = log.DebugF
+			}
+			f("cannot gracefully stop tunnel '%s': %v\n", t.String(), err)
 		}
 	}()
 

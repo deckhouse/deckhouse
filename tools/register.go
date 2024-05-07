@@ -17,5 +17,3 @@ limitations under the License.
 package main
 
 //go:generate go run register/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
-
-//go:generate go run settings_conversions/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-settings-conversions.go

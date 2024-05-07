@@ -17,6 +17,10 @@
 {!{ $layout }!}
 {!{ end -}!}
 
+{!{- define "e2e_kubernetes_default_version" -}!}
+1.25
+{!{- end -}!}
+
 # job for set e2e requirement status
 # $1 - name of function to set status. see ../scripts/e2e-commit-status.js
 {!{ define "set_e2e_requirement_status" }!}
@@ -268,9 +272,10 @@ check_e2e_labels:
       with:
         script: |
           const provider = '{!{ $ctx.provider }!}';
+          const kubernetesDefaultVersion = '{!{ $ctx.kubernetesDefaultVersion }!}';
 
           const ci = require('./.github/scripts/js/ci');
-          return await ci.checkE2ELabels({github, context, core, provider});
+          return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
 
@@ -307,7 +312,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -338,7 +347,12 @@ check_e2e_labels:
         # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
         # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
         # CRI and PROVIDER values are trimmed to reduce prefix length.
-        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+        if [[ "${KUBERNETES_VERSION}" == "Automatic" ]] ; then
+          KUBERNETES_VERSION_SUF="auto"
+        else
+          KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
+        fi
+        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
         if [[ "${MANUAL_RUN}" == "false" ]] ; then
           # for jobs which run multiple providers concurrency (daily e2e, for example)
           # add provider suffix to prevent "directory already exists" error
@@ -450,7 +464,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -494,7 +512,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -582,7 +604,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -659,7 +685,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}

@@ -640,7 +640,7 @@ ENDSSH
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
+  --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
 
   dhctl_exit_code=$?
 

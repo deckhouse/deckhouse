@@ -25,6 +25,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -75,7 +76,8 @@ type Updater struct {
 	docsBuilder *docs_builder.Client
 	httpClient  d8http.Client
 
-	logger logger.Logger
+	logger    logger.Logger
+	apiCallMu sync.Mutex
 }
 
 func NewUpdater(
@@ -147,6 +149,9 @@ func (d *Updater) RunPreflightCheck(ctx context.Context) error {
 }
 
 func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) error {
+	d.apiCallMu.Lock()
+	defer d.apiCallMu.Unlock()
+
 	moduleName := m.GetModuleName()
 	moduleVersion := m.GetReleaseVersion()
 	d.logger.Infof("Updating documentation for %s module", moduleName)
@@ -167,10 +172,10 @@ func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) 
 	md := downloader.NewModuleDownloader(d.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	for _, addr := range addrs {
 		// Trying to get the documentation from the module's dir
-		d.logger.Infof("Getting the %s module's documentation locally", moduleName)
+		d.logger.Debugf("Getting the %s module's documentation locally", moduleName)
 		docsArchive, err := d.getDocumentationFromModuleDir(m)
 		if err != nil {
-			d.logger.Infof("Failed to get %s module documentation from local directory with error: %w", moduleName, err)
+			d.logger.Infof("Failed to get %s module documentation from local directory with error: %v", moduleName, err)
 
 			// Trying to get the documentation from the registry
 			docsArchive, err = md.GetDocumentationArchive(moduleName, moduleVersion)
@@ -190,16 +195,9 @@ func (d *Updater) SendDocumentation(ctx context.Context, m moduleReleaseGetter) 
 }
 
 func (d *Updater) getDocumentationFromModuleDir(m moduleReleaseGetter) (io.ReadCloser, error) {
-	var moduleDir string
 	moduleName := m.GetModuleName()
 	weight := m.GetWeight()
-	if weight > 0 {
-		// module release
-		moduleDir = path.Join(d.externalModulesDir, "/modules/", fmt.Sprintf("%d-%s", weight, moduleName)) + "/"
-	} else {
-		// module pull override (doesn't contain the module's weight)
-		moduleDir = path.Join(d.externalModulesDir, moduleName, "/dev") + "/"
-	}
+	moduleDir := path.Join(d.externalModulesDir, "/modules/", fmt.Sprintf("%d-%s", weight, moduleName)) + "/"
 
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
@@ -265,6 +263,11 @@ func (d *Updater) getDocsBuilderAddresses(_ context.Context) (addresses []string
 
 	for _, lease := range list {
 		if lease.Spec.HolderIdentity == nil {
+			continue
+		}
+
+		// a stale lease found
+		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(time.Now()) {
 			continue
 		}
 
@@ -354,12 +357,12 @@ func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctr
 
 	for _, release := range releases {
 		// check if ModulePullOverride exists
-		mpo, err := d.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": release.GetModuleSource(), "module": release.Spec.ModuleName}))
+		exists, err := d.isModulePullOverrideExists(release.GetModuleSource(), release.Spec.ModuleName)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModulePullOverride for %s failed: %w", release.Spec.ModuleName, err)
 		}
 
-		if len(mpo) > 0 {
+		if exists {
 			continue
 		}
 
@@ -386,4 +389,13 @@ func (d *Updater) leaseCreateReconcile(ctx context.Context, _ ctrl.Request) (ctr
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (d *Updater) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
+	res, err := d.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
+	if err != nil {
+		return false, err
+	}
+
+	return len(res) > 0, nil
 }

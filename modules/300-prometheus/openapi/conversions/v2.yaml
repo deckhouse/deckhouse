@@ -1,0 +1,3 @@
+version: 2
+conversions:
+  - del(.auth.password) | if .auth == {} then del(.auth) end

@@ -73,13 +73,13 @@ func getSSHClient(initializeNewAgent bool) (*ssh.Client, error) {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
 
 	cachePath := metaConfig.CachePath()
-	log.InfoF("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath)
+	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}

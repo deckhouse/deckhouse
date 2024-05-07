@@ -30,9 +30,10 @@ import (
 )
 
 type Discoverer struct {
-	logger   *log.Entry
-	folderID string
-	sdk      *ycsdk.SDK
+	logger      *log.Entry
+	folderID    string
+	clusterUUID string
+	sdk         *ycsdk.SDK
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -44,6 +45,11 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	saKeyJSON := os.Getenv("YC_SA_KEY_JSON")
 	if saKeyJSON == "" {
 		logger.Fatal("Cannot get YC_SA_KEY_JSON env")
+	}
+
+	clusterUUID := os.Getenv("CLUSTER_UUID")
+	if clusterUUID == "" {
+		logger.Fatal("Cannot get CLUSTER_UUID env")
 	}
 
 	saKeyJSONBytes := []byte(saKeyJSON)
@@ -65,9 +71,10 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	}
 
 	return &Discoverer{
-		logger:   logger,
-		folderID: folderID,
-		sdk:      sdk,
+		logger:      logger,
+		folderID:    folderID,
+		clusterUUID: clusterUUID,
+		sdk:         sdk,
 	}
 }
 
@@ -82,9 +89,6 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	// TemporaryDisable, until CSI starts placing cluster labels that solve the problem of discovery orphan disks from different clusters in one folder.
-	return []v1alpha1.DiskMeta{}, nil
-
 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disks: %v", err)
@@ -93,6 +97,11 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
 
 	for _, disk := range disks {
+		// skip disks created from another clusters
+		clusterUUID, ok := disk.Labels["clusterUUID"]
+		if ok && clusterUUID != d.clusterUUID {
+			continue
+		}
 		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
 	}
 

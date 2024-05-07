@@ -175,6 +175,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
 func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep *string, failsCounter *int) func(string) {
+	stepLogs := make([]string, 0)
 	return func(l string) {
 		if l == "===" {
 			return
@@ -184,6 +185,7 @@ func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep
 			stepName := match[1]
 
 			if *lastStep == stepName {
+				log.ErrorF(strings.Join(stepLogs, "\n"))
 				*failsCounter++
 				if *failsCounter > 10 {
 					if cmd != nil {
@@ -196,6 +198,7 @@ func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep
 				processLogger.LogProcessFail()
 				stepName = fmt.Sprintf("%s, retry attempt #%d of 10", stepName, *failsCounter)
 			} else if *lastStep != "" {
+				stepLogs = make([]string, 0)
 				processLogger.LogProcessEnd()
 				*failsCounter = 0
 			}
@@ -204,6 +207,8 @@ func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep
 			*lastStep = match[1]
 			return
 		}
-		log.InfoLn(l)
+
+		stepLogs = append(stepLogs, l)
+		log.DebugLn(l)
 	}
 }

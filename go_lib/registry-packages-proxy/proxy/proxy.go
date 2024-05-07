@@ -79,9 +79,9 @@ func (p *Proxy) Serve() {
 
 		repository := r.URL.Query().Get("repository")
 		if repository == registry.DefaultRepository {
-			p.logger.Infof("%s digest from main repository request received", digest)
+			p.logger.Infof("%s digest from main repository request received\n", digest)
 		} else {
-			p.logger.Infof("%s digest from repository %s request received", digest, repository)
+			p.logger.Infof("%s digest from repository %s request received\n", digest, repository)
 		}
 
 		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
@@ -116,7 +116,8 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Infof("starting listener: %s", p.listener.Addr())
+	p.logger.Debugf("Starting packages proxy listener: %s\n\n", p.listener.Addr())
+
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
 	}

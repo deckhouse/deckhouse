@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -78,7 +79,7 @@ type Params struct {
 	OnPhaseFunc                phases.OnPhaseFunc
 	CommanderMode              bool
 
-	ConfigPath              string
+	ConfigPaths             []string
 	ResourcesPath           string
 	ResourcesTimeout        string
 	DeckhouseTimeout        time.Duration
@@ -123,8 +124,8 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		}
 	}
 
-	if b.ConfigPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPath, b.ConfigPath))
+	if len(b.ConfigPaths) > 0 {
+		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
 	}
 	if b.ResourcesPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
@@ -194,17 +195,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
-	if err != nil {
-		return err
+	if app.ResourcesPath != "" {
+		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
 	}
 
-	if app.ResourcesPath != "" {
-		err := template.OnlyModulesFromSourcesConfigsInResources(app.ResourcesPath)
-		if err != nil {
-			return err
-		}
+	// first, parse and check cluster config
+	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	if err != nil {
+		return err
 	}
 
 	// next init cache
@@ -363,8 +362,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
 	var resourcesToCreate template.Resources
-	if app.ResourcesPath != "" {
-		parsedResources, err := template.ParseResources(app.ResourcesPath, resourcesTemplateData)
+	if metaConfig.ResourcesYAML != "" {
+		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}
@@ -394,19 +393,38 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
 
-	tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
-	if err != nil {
-		return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-	}
-	defer tun.Stop()
+	// need closure for registry packages tunnel
+	runBashible := func() error {
+		tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+		}
+		defer func() {
+			err := tun.Stop()
+			if err != nil {
+				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+			}
+		}()
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
-		return err
-	} else if shouldStop {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+
+		if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
+			return err
+		}
+
+
 		return nil
 	}
 
-	if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
+	if err := runBashible(); err != nil {
+		return err
+	}
+
+	if err := RebootMaster(sshClient); err != nil {
 		return err
 	}
 
@@ -443,6 +461,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	} else if shouldStop {
 		return nil
+	}
+
+	if err := controlplane.NewManagerReadinessChecker(kubeCl).IsReadyAll(); err != nil {
+		return err
 	}
 
 	err = createResources(kubeCl, resourcesToCreate, metaConfig)

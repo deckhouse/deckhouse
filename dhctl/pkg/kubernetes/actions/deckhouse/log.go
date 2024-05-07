@@ -141,6 +141,44 @@ func parseLogByLine(content []byte, action func(line *logLine) bool) {
 	}
 }
 
+type LogPrinter struct {
+	kubeCl *client.KubernetesClient
+
+	deckhousePod            *corev1.Pod
+	waitPodBecomeReady      bool
+	leaderElectionLeaseName types.NamespacedName
+
+	lastErrorTime time.Time
+
+	stopOutputNoMoreConvergeTasks bool
+
+	excludeNodeName string
+
+	deckhouseErrors []string
+}
+
+func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
+	return &LogPrinter{
+		kubeCl:          kubeCl,
+		deckhouseErrors: make([]string, 0),
+	}
+}
+
+func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
+	d.waitPodBecomeReady = true
+	return d
+}
+
+func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
+	d.excludeNodeName = nodeName
+	return d
+}
+
+func (d *LogPrinter) WithLeaderElectionAwarenessMode(leaderElectionLease types.NamespacedName) *LogPrinter {
+	d.leaderElectionLeaseName = leaderElectionLease
+	return d
+}
+
 func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) {
 	if taskID == "" {
 		return
@@ -195,7 +233,8 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		}
 
 		if line.Level == "error" || line.Output == "stderr" {
-			log.InfoF("Warning during Deckhouse converge: %s", line.String())
+			d.deckhouseErrors = append(d.deckhouseErrors, line.String())
+			log.DebugF("Error during Deckhouse converge: %s", line.String())
 		}
 		return true
 	})
@@ -225,39 +264,6 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 		log.DebugF(line.StringWithLogLevel())
 		return true
 	})
-}
-
-type LogPrinter struct {
-	kubeCl *client.KubernetesClient
-
-	deckhousePod            *corev1.Pod
-	waitPodBecomeReady      bool
-	leaderElectionLeaseName types.NamespacedName
-
-	lastErrorTime time.Time
-
-	stopOutputNoMoreConvergeTasks bool
-
-	excludeNodeName string
-}
-
-func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
-	return &LogPrinter{kubeCl: kubeCl}
-}
-
-func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
-	d.waitPodBecomeReady = true
-	return d
-}
-
-func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
-	d.excludeNodeName = nodeName
-	return d
-}
-
-func (d *LogPrinter) WithLeaderElectionAwarenessMode(leaderElectionLease types.NamespacedName) *LogPrinter {
-	d.leaderElectionLeaseName = leaderElectionLease
-	return d
 }
 
 func (d *LogPrinter) GetPod() error {
@@ -312,7 +318,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 
 	logOptions := corev1.PodLogOptions{
 		Container: "deckhouse",
-		TailLines: int64Pointer(5),
+		TailLines: int64Pointer(10),
 
 		// kubelet certificate on master can be changed before finish Deckhouse installation
 		// and dhctl can not get logs from Deckhouse pod
@@ -324,6 +330,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 	for {
 		select {
 		case <-ctx.Done():
+			log.ErrorLn(strings.Join(d.deckhouseErrors, "\n"))
 			return false, ErrTimedOut
 		default:
 			ready, err := d.checkDeckhousePodReady()

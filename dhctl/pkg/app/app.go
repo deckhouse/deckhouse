@@ -41,9 +41,11 @@ const (
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 
 var (
+	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
+	// "local" is kept for manual builds only
 	AppVersion = "local"
 
-	ConfigPath  = ""
+	ConfigPaths = make([]string, 0)
 	SanityCheck = false
 	LoggerType  = "pretty"
 	IsDebug     = false
@@ -78,10 +80,13 @@ func GlobalFlags(cmd *kingpin.Application) {
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("config", "Config file path").
+	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
+It can be go-template file (for only string keys!). Passed data contains next keys:
+  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+`).
 		Required().
 		Envar(configEnvName("CONFIG")).
-		StringVar(&ConfigPath)
+		StringsVar(&ConfigPaths)
 }
 
 func DefineSanityFlags(cmd *kingpin.CmdClause) {

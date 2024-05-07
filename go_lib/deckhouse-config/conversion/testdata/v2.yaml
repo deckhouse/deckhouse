@@ -1,0 +1,7 @@
+version: 2
+conversions:
+  - del(.arrayField)
+  - .simpleField="value"
+  - .newField="value"
+  - del(.objectField.mapFieldInObjectValue.key2)
+  - .tempField={"tempField":{"tempKey":{"tempKey":"tempVal"}}}

@@ -20,11 +20,13 @@ import (
 	"fmt"
 )
 
-var ErrLimitReached = fmt.Errorf("limit reached")
+var ErrIndexTooBig = fmt.Errorf("index is too big")
 
+// StatusSeries contains the list of statuses of a check for current episode (30s).
+// The series slice is to be merged with other checks using the series of the statuses.
 type StatusSeries struct {
-	index  int
-	series []Status
+	nextIndex int
+	series    []Status
 }
 
 func NewStatusSeries(size int) *StatusSeries {
@@ -33,13 +35,13 @@ func NewStatusSeries(size int) *StatusSeries {
 	}
 }
 
-// Add adds a status to the series
-func (ss *StatusSeries) Add(status Status) error {
-	if len(ss.series) == ss.index {
-		return ErrLimitReached
+// Add adds a status to the series at specified position
+func (ss *StatusSeries) AddI(i int, status Status) error {
+	if len(ss.series) <= i {
+		return ErrIndexTooBig
 	}
-	ss.series[ss.index] = status
-	ss.index++
+	ss.series[i] = status
+	ss.nextIndex = i + i
 	return nil
 }
 
@@ -77,7 +79,7 @@ func (ss *StatusSeries) Stats() Stats {
 }
 
 func (ss *StatusSeries) Clean() {
-	ss.index = 0
+	ss.nextIndex = 0
 	ss.series = make([]Status, len(ss.series))
 }
 
@@ -109,7 +111,7 @@ func MergeStatusSeries(size int, sss []*StatusSeries) (*StatusSeries, error) {
 	for _, ss := range sss {
 		err := acc.Merge(ss)
 		if err != nil {
-			return nil, fmt.Errorf("cannot merge status series: %v", err)
+			return nil, fmt.Errorf("merging status series: %v", err)
 		}
 	}
 

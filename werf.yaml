@@ -488,8 +488,8 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
-    - go_lib/cloud-data/go.mod
-    - go_lib/cloud-data/go.sum
+    - go_lib/**/go.mod
+    - go_lib/**/go.sum
     - go.mod
     - go.sum
     - tools
@@ -513,8 +513,8 @@ git:
       - deckhouse-controller/go-build.sh
       - global-hooks/**/*.go
       - go_lib/**/*.go
-      - go_lib/cloud-data/go.mod
-      - go_lib/cloud-data/go.sum
+      - go_lib/**/go.mod
+      - go_lib/**/go.sum
       - modules/**/*.go
       - editions.yaml
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
@@ -567,17 +567,11 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
+shell:
   install:
-  - shell: go mod download
-    args:
-      chdir: /dhctl
-
+    - cd /dhctl && go mod download
   setup:
-  - command: make build
-    args:
-      chdir: /dhctl
-
+    - cd /dhctl && D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
 ---
 image: dev/install
 from: {{ .Images.BASE_ALT }}

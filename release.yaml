@@ -26,7 +26,7 @@ requirements:
   "k8s": "1.25.0" # modules/040-control-plane-manager/requirements/check.go
   "ingressNginx": "1.6" # modules/402-ingress-nginx/requirements/check.go
   "nodesMinimalOSVersionUbuntu": "18.04" # modules/040-node-manager/requirements/check.go
-#  "nodesMinimalOSVersionDebian": "10" # modules/040-node-manager/requirements/check.go
+  "nodesMinimalOSVersionDebian": "10" # modules/040-node-manager/requirements/check.go
   "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go
   "istioMinimalVersion": "1.16" # modules/110-istio/requirements/check.go
 

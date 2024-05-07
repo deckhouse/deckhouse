@@ -39,11 +39,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - master
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -53,7 +52,7 @@ EOF
 </p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -75,11 +74,10 @@ sudo /opt/deckhouse/bin/kubectl create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
-  name: localpath-deckhouse
+  name: localpath
 spec:
-  nodeGroups:
-  - worker
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
 EOF
 ```
 {% endsnippetcut %}
@@ -88,7 +86,7 @@ EOF
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath-deckhouse storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -103,23 +101,82 @@ metadata:
   name: worker
 spec:
   nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
 EOF
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Deckhouse подготовит скрипт, необходимый для настройки будущего узла и включения его в кластер. Выведите его содержимое в формате Base64 (оно понадобится на следующем шаге):</p>
+    <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p><strong> На подготовленной виртуальной машине</strong> выполните следующую команду, вставив код скрипта, полученный на предыдущем шаге:</p>
+    <p>Создайте в кластере ресурс <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-echo <Base64-КОД-СКРИПТА> | base64 -d | sudo bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```bash
+cat /dev/shm/caps-id.pub
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
+{% snippetcut %}
+```bash
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
+{% snippetcut %}
+```bash
+# Укажите IP-адрес узла, который необходимо подключить к кластеру.
+export NODE=<NODE-IP-ADDRESS>
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: d8cluster-worker
+  labels:
+    role: worker
+spec:
+  address: "$NODE"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+EOF
 ```
 {% endsnippetcut %}
   </li>

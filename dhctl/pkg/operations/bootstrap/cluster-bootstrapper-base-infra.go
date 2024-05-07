@@ -33,7 +33,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 		defer restore()
 	}
 
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
 	}

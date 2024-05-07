@@ -16,7 +16,7 @@ package bootstrap
 
 import (
 	"fmt"
-	
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -30,7 +30,7 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		defer restore()
 	}
 
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
@@ -56,5 +56,9 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	return RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath)
+	if err := RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+		return err
+	}
+
+	return RebootMaster(sshClient)
 }
