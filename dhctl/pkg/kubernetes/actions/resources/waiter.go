@@ -43,19 +43,45 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 	checkers := make([]Checker, 0)
 
-	for _, r := range resources {
-		check, err := tryToGetClusterIsBootstrappedChecker(kubeCl, r)
+	var resourceIsReadyCheckerFactory *resourceIsReadyCheckerFactory
+
+	if kubeCl != nil {
+		var err error
+
+		resourceIsReadyCheckerFactory, err = newKubedogResourceIsReadyCheckerFactory(kubeCl)
 		if err != nil {
-			errRes = multierror.Append(errRes, err)
-			continue
+			return nil, err
+		}
+	}
+
+	var hasClusterIsBootstrappedChecker bool
+
+	for _, r := range resources {
+		if !hasClusterIsBootstrappedChecker {
+			check, err := tryToGetClusterIsBootstrappedChecker(kubeCl, r)
+			if err != nil {
+				errRes = multierror.Append(errRes, err)
+				continue
+			}
+
+			if check != nil {
+				checkers = append(checkers, check)
+				// cluster is bootstrap checker should be in single instance
+				// and should be single checker
+				hasClusterIsBootstrappedChecker = true
+			}
 		}
 
-		if check != nil {
-			checkers = append(checkers, check)
-			// while we use one checker, we should break because
-			// cluster is bootstrap checker should be in single instance
-			// and should be single checker
-			break
+		if resourceIsReadyCheckerFactory != nil {
+			check, err := resourceIsReadyCheckerFactory.getChecker(r)
+			if err != nil {
+				errRes = multierror.Append(errRes, err)
+				continue
+			}
+
+			if check != nil {
+				checkers = append(checkers, check)
+			}
 		}
 	}
 

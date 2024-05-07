@@ -114,7 +114,6 @@ func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentSt
 func (i *InstanceScope) Patch(ctx context.Context) error {
 	conditions.SetSummary(i.Instance,
 		conditions.WithConditions(
-			infrav1.StaticInstanceAddedToNodeGroupCondition,
 			infrav1.StaticInstanceBootstrapSucceededCondition,
 		),
 		conditions.WithStepCounterIf(i.Instance.ObjectMeta.DeletionTimestamp.IsZero()),
