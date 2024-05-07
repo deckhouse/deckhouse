@@ -1,0 +1,115 @@
+{{- define "okagent_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: okmeter
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "okmeter" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: okmeter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "okagent"
+      minAllowed:
+        {{- include "okagent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: okmeter
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "okmeter")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      name: okmeter
+  template:
+    metadata:
+      labels:
+        name: okmeter
+    spec:
+      serviceAccountName: okmeter
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+{{- with .Values.okmeter.nodeSelector }}
+      nodeSelector:
+{{ . | toYaml | nindent 8 }}
+{{- end }}
+      containers:
+      - name: okagent
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $.Values.okmeter.internal.currentReleaseImage }}
+        env:
+        - name: OKMETER_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: okmeter
+              key: api-token
+        - name: OKMETER_STATSD_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: AGENT_BASE_DOMAIN
+          value: "dop.flant.com"
+        - name: AGENT_PRODUCT_NAME
+          value: "okagent"
+        - name: AGENT_UPDATE_DOMAIN
+          value: "https://update.dop.flant.com"
+        - name: AGENT_COLLECTOR__HOST
+          value: "collector.dop.flant.com"
+        - name: AGENT_COLLECTOR__TLS_HOST
+          value: "collector.dop.flant.com"
+        - name: AGENT_COLLECTOR__PORT
+          value: "443"
+{{- if .Values.okmeter.disableAutoDiscovery }}
+        - name: DISABLE_AUTO_DISCOVER
+          value: "1"
+{{- end }}
+        volumeMounts:
+        - name: containerdsocket
+          mountPath: /run/containerd/containerd.sock
+          readOnly: true
+        - name: hostproc
+          mountPath: /host/proc
+          readOnly: true
+        - name: okagentdir
+          mountPath: /usr/local/okagent
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 200 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "okagent_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      - name: containerdsocket
+        hostPath:
+          path: /run/containerd/containerd.sock
+      - name: hostproc
+        hostPath:
+          path: /proc
+      - name: okagentdir
+        hostPath:
+          path: /usr/local/okagent
+          type: DirectoryOrCreate

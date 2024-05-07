@@ -532,3 +532,16 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
+  to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
