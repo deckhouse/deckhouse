@@ -6,6 +6,7 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 spec:
+  publishNotReadyAddresses: true
   ports:
     - name: self
       port: 8080
@@ -15,3 +16,5 @@ spec:
       port: 9651
       targetPort: 9651
       protocol: TCP
+  selector:
+    app: deckhouse
