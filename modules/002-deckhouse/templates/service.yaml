@@ -10,11 +10,11 @@ spec:
   ports:
     - name: self
       port: 8080
-      targetPort: 9650
+      targetPort: self
       protocol: TCP
     - name: webhook
       port: 9651
-      targetPort: 9651
+      targetPort: webhook
       protocol: TCP
   selector:
     app: deckhouse
