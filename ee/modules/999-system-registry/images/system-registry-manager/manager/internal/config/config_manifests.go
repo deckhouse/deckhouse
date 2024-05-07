@@ -21,7 +21,7 @@ var (
 
 	TmpWorkspaceCertsDir                  = filepath.Join(TmpWorkspaceDir, "pki")
 	TmpWorkspaceManifestsDir              = filepath.Join(TmpWorkspaceDir, "manifests")
-	TmpWorkspaceStaticPodsDir             = filepath.Join(TmpWorkspaceDir, "static-pods")
+	TmpWorkspaceStaticPodsDir             = filepath.Join(TmpWorkspaceManifestsDir, "static-pods")
 	TmpWorkspaceSeaweedManifestsDir       = filepath.Join(TmpWorkspaceManifestsDir, "seaweedfs")
 	TmpWorkspaceDockerAuthManifestsDir    = filepath.Join(TmpWorkspaceManifestsDir, "docker-auth")
 	TmpWorkspaceDockerDistribManifestsDir = filepath.Join(TmpWorkspaceManifestsDir, "distribution")
