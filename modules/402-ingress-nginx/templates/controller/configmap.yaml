@@ -215,7 +215,6 @@ data:
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{ include "configmap" (list $context $crd (printf "%s-failover" $crd.name) true) }}
   {{- end }}
-
 ---
 apiVersion: v1
 kind: ConfigMap
