@@ -16,7 +16,7 @@
   valueFrom:
       secretKeyRef:
         name: csi-credentials
-        key: kubeconfigBase64
+        key: kubeconfigDataBase64
 - name: NODE_NAME
   valueFrom:
     fieldRef:
@@ -53,7 +53,7 @@
   valueFrom:
       secretKeyRef:
         name: csi-credentials
-        key: kubeconfigBase64
+        key: kubeconfigDataBase64
 - name: NODE_NAME
   valueFrom:
     fieldRef:
