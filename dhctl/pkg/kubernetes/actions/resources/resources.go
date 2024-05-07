@@ -18,8 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -238,36 +241,69 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker) error {
-	endChannel := time.After(app.ResourcesTimeout)
-
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+func CreateResourcesLoop(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, resources template.Resources, checkers []Checker) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), app.ResourcesTimeout)
+	defer cancel()
 
 	resourceCreator := NewCreator(kubeCl, resources)
 
-	waiter := NewWaiter(checkers)
-	for {
-		err := resourceCreator.TryToCreate()
-		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
-			return err
-		}
-
-		ready, errWaiter := waiter.ReadyAll()
-		if errWaiter != nil {
-			return errWaiter
-		}
-
-		if ready && err == nil {
-			return nil
-		}
-
-		select {
-		case <-endChannel:
-			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
-		case <-ticker.C:
-		}
+	clusterIsBootstrappedChecker, err := tryToGetClusterIsBootstrappedChecker(kubeCl, resources, metaConfig)
+	if err != nil {
+		return err
 	}
+
+	isBootstrapped := false
+
+	err = retry.NewSilentLoop("Wait for resources creation", math.MaxInt, 10*time.Second).
+		WithContext(ctx).
+		Run(func() error {
+			err := resourceCreator.TryToCreate()
+			if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
+				return err
+			}
+
+			if clusterIsBootstrappedChecker != nil && !isBootstrapped {
+				var err error
+
+				isBootstrapped, err = clusterIsBootstrappedChecker.IsBootstrapped()
+				if err != nil {
+					return err
+				}
+			}
+
+			if isBootstrapped && err == nil {
+				return nil
+			}
+
+			clusterIsBootstrappedChecker.outputProgressInfo()
+
+			return ErrNotAllResourcesCreated
+		})
+	if err != nil {
+		return err
+	}
+
+	waiter := NewWaiter(checkers)
+
+	err = retry.NewSilentLoop("Wait for resources readiness", math.MaxInt, 5*time.Second).
+		WithContext(ctx).
+		Run(func() error {
+			ready, err := waiter.ReadyAll(ctx)
+			if err != nil {
+				return err
+			}
+
+			if !ready {
+				return fmt.Errorf("not all resources are ready")
+			}
+
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {
