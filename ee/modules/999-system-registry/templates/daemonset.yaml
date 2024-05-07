@@ -1,7 +1,3 @@
-##### For specific env
-{{- if (eq $.Values.systemRegistry.environment "vadim")  }}
-#####
-
 {{- define "system_registry_manager_resources" }}
 cpu: 25m
 memory: 40Mi
@@ -11,6 +7,10 @@ memory: 40Mi
 cpu: 10m
 memory: 10Mi
 {{- end }}
+
+##### For specific env
+{{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
+#####
 
 {{- $templateFilesValues := (include "template-files-values" $ ) | fromYaml }}
 

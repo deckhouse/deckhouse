@@ -3,10 +3,10 @@ properties:
   environment:
     type: string
     enum:
-      - vadim
-      - nikita
+      - Vadim
+      - Nikita
     description: |
       Environment name
     x-example:
-      - environment: vadim
-      - environment: nikita
+      - environment: Vadim
+      - environment: Nikita
