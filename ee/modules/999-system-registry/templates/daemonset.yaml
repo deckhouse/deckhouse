@@ -13,6 +13,7 @@ memory: 10Mi
 #####
 
 {{- $templateFilesValues := (include "template-files-values" $ ) | fromYaml }}
+{{- $templateConfigFilesValues := (include "template-config-files-values" $ ) | fromYaml }}
 
 {{- $images := dict }}
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
@@ -85,6 +86,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
         args:
           - start
+          - --config /config/config.yaml
         volumeMounts:
       {{- range $templateFilesValues.files }}
         {{- $filePath := .filePath }}
@@ -97,9 +99,14 @@ spec:
         - mountPath: /pki
           name: pki
           readOnly: true
-        # - mountPath: /config
-        #   name: config
-        #   readOnly: true
+      {{- range $templateConfigFilesValues.files }}
+        {{- $filePath := .filePath }}
+        {{- $templateName := .templateName  }}
+        - name: configs-files
+          mountPath: {{ $filePath }}
+          subPath: {{ $templateName }}
+          readOnly: true
+      {{- end }}
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
         - mountPath: /root/.kube/
@@ -152,9 +159,9 @@ spec:
       - name: pki
         secret:
           secretName: d8-pki
-      # - name: config
-      #   secret:
-      #     secretName: d8-system-registry-manager-config
+      - name: configs-files
+        secret:
+          secretName: d8-system-registry-manager-configs
       - name: static-pod-files
         secret:
           secretName: d8-static-pod-files
