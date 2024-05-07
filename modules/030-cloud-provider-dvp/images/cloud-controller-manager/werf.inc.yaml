@@ -1,0 +1,30 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /go/bin/dvp-cloud-controller-manager
+  to: /bin/dvp-cloud-controller-manager
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+docker:
+  ENTRYPOINT: ["/bin/dvp-cloud-controller-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export VERSION="feat/init-ccm"
+  - mkdir -p /go/src/app
+  - git clone --depth 1 --branch "${VERSION}" {{ $.SOURCE_REPO }}/deckhouse/dvp-cloud-controller-manager.git /go/src/app
+  - cd /go/src/app
+  - |
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+    -ldflags "-s -w -X github.com/deckhouse/dvp-cloud-controller-manager/version.Version=${VERSION}" \
+    -o /go/bin/dvp-cloud-controller-manager \
+    github.com/deckhouse/dvp-cloud-controller-manager/cmd/dvp-cloud-controller-manager
