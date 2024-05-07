@@ -60,9 +60,9 @@ locals {
   vm_ip_address = length(local.ip_addresses) > 0 ? local.ip_addresses[var.nodeIndex] : ""
 
   root_disk_size               = lookup(local.instance_class.rootDisk, "size", "20Gb")
-  root_disk_storage_class_name = lookup(local.instance_class.rootDisk, "storageClassName", null)
+  root_disk_storage_class = lookup(local.instance_class.rootDisk, "storageClass", null)
   root_disk_image_name         = local.instance_class.rootDisk.image.name
-  root_disk_image_type         = local.instance_class.rootDisk.image.type
+  root_disk_image_kind         = local.instance_class.rootDisk.image.kind
 
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 

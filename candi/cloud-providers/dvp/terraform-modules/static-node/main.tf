@@ -27,9 +27,9 @@ locals {
 
   root_disk_destructive_params = {
     "rootDisk" = {
-      "storageClass" = local.root_disk_storage_class_name
+      "storageClass" = local.root_disk_storage_class
       "image" = {
-        "type" = local.root_disk_image_type
+        "type" = local.root_disk_image_kind
         "name" = local.root_disk_image_name
       }
     }
@@ -105,14 +105,14 @@ resource "kubernetes_manifest" "nodegroup-root-disk" {
       "dataSource" = {
         type = "ObjectRef"
         objectRef = {
-          "kind" = local.root_disk_image_type
+          "kind" = local.root_disk_image_kind
           "name" = local.root_disk_image_name
         }
       }
       "persistentVolumeClaim" = merge({
         "size" = local.root_disk_size
         },
-        local.root_disk_storage_class_name != null ? { "storageClass" = local.root_disk_storage_class_name } : null
+        local.root_disk_storage_class != null ? { "storageClass" = local.root_disk_storage_class } : null
       )
     }
   }
@@ -159,7 +159,7 @@ resource "kubernetes_manifest" "vmip" {
   }
 }
 
-resource "kubernetes_secret" "master-cloudinit-secret" {
+resource "kubernetes_secret" "cloudinit-secret" {
   metadata {
     name      = local.cloudinit_secret_name
     namespace = local.namespace

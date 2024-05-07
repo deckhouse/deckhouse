@@ -54,13 +54,13 @@ apiVersions:
                 beta.kubernetes.io/os: linux
             rootDisk:
               size: 10Gi
-              storageClassName: linstor-thin-r1
+              storageClass: linstor-thin-r1
               image:
-                type: ClusterVirtualImage
+                kind: ClusterVirtualImage
                 name: ubuntu-2204
             etcdDisk:
               size: 10Gi
-              storageClassName: linstor-thin-r1
+              storageClass: linstor-thin-r1
         nodeGroups:
           - name: worker
             zones:
@@ -78,8 +78,8 @@ apiVersions:
               rootDisk:
                 size: 10Gi
                 image:
-                  type: ClusterVirtualImage"
-                  name: ubuntu-224
+                  kind: ClusterVirtualImage
+                  name: ubuntu-2204
         provider:
           kubeconfigDataBase64: ZXhhbXBsZQo=
           namespace: default
@@ -266,7 +266,7 @@ apiVersions:
                     description: |
                       Root disk size.
                     example: 10Gi
-                  storageClassName:
+                  storageClass:
                     type: string
                     description: |
                       The name of the existing StorageClass will be used to create the VM's root disk.
@@ -275,13 +275,13 @@ apiVersions:
                     description: |
                       Image parameters that will be used to create the VM's root disk.
                     required:
-                      - type
+                      - kind
                       - name
                     properties:
-                      type:
+                      kind:
                         type: string
                         description: |
-                          The type of the image source.
+                          The kind of the image source.
                         enum:
                         - "ClusterVirtualImage"
                         - "VirtualImage"
@@ -304,7 +304,7 @@ apiVersions:
                     description: |
                       ETCD disk size.
                     example: 10Gi
-                  storageClassName:
+                  storageClass:
                     type: string
                     description: |
                       The name of the existing StorageClass will be used to create the ETCD data disk.
