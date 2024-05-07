@@ -118,13 +118,13 @@ apiVersions:
             Публичный ключ для доступа на узлы.
         organization:
           description: |
-            Имя Vcloud Director Organization.
+            Имя VMware Cloud Director Organization.
         virtualDataCenter:
           description: |
-            Имя Vcloud Director Virtual Data Center (принадлежащее Organization).
+            Имя VMware Cloud Director Virtual Data Center (принадлежащее Organization).
         virtualApplicationName:
           description: |
-            Имя Vcloud Director Virtual Application (принадлежащее Virtual Data Center).
+            Имя VMware Cloud Director Virtual Application (принадлежащее Virtual Data Center).
         mainNetwork:
           description: |
             Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
@@ -132,7 +132,7 @@ apiVersions:
           description: |
             Адресация для внутренней сети узлов кластера.
 
-            Адреса распределяются, начиная с десятого адреса. Например, если у вас подсеть `192.168.199.0/24`, адреса будут распределяться, начиная с `192.168.199.10`.
+            Адреса распределяются начиная с десятого адреса. Например, если у вас подсеть `192.168.199.0/24`, адреса будут распределяться, начиная с `192.168.199.10`.
         layout:
           description: |
             Способ размещения ресурсов в облаке.
