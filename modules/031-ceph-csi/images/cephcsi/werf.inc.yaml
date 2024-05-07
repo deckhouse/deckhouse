@@ -6,7 +6,7 @@ shell:
   install:
     - mkdir -p /src
     - cd /src
-    - git clone --branch v3.7.2 --depth 1 {{ $.SOURCE_REPO }}/ceph/ceph-csi.git .
+    - git clone --branch v3.11.0 --depth 1 {{ $.SOURCE_REPO }}/ceph/ceph-csi.git .
     - export GOPROXY={{ $.GOPROXY }}
     - export CGO_ENABLED=1
     - make cephcsi
