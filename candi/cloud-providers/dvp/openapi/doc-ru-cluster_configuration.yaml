@@ -110,16 +110,16 @@ apiVersions:
                   size:
                     description: |
                       Размер диска.
-                  storageClassName:
+                  storageClass:
                     description: |
                       Имя существующего StorageClass будет использоваться для создания диска ВМ.
                   image:
                     description: |
                       Параметры образа, который будет использоваться для создания диска ВМ.
                     properties:
-                      type:
+                      kind:
                         description: |
-                          Тип источника образа.
+                          Kind источника образа.
                       name:
                         description: |
                           Имя образа, который будет использоваться для создания диска.
@@ -132,7 +132,7 @@ apiVersions:
                   size:
                     description: |
                       Размер диска.
-                  storageClassName:
+                  storageClass:
                     description: |
                       Имя существующего StorageClass будет использоваться для создания диска ВМ.
 

@@ -67,7 +67,7 @@ masterNodeGroup:
     rootDisk:
       size: 10Gi
       image:
-        type: ClusterVirtualMachineImage
+        kind: ClusterVirtualImage
         name: image-name
     etcdDisk:
       size: 10Gi
