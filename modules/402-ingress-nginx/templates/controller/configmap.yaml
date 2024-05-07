@@ -197,6 +197,10 @@ data:
   custom-http-errors: {{ $crd.spec.customErrors.codes | join "," | quote }}
   {{- end }}
 
+  {{- if $crd.spec.underscoresInHeaders }}
+  enable-underscores-in-headers: {{ $crd.spec.underscoresInHeaders  | quote }}
+  {{- end }}
+
   {{- if $crd.spec.config }}
     {{- range $key, $additionalConfig := $crd.spec.config }}
   {{ $key }}: {{ $additionalConfig | quote }}
