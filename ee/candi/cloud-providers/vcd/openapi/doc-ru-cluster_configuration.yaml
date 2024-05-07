@@ -5,7 +5,7 @@ apiVersions:
       description: |
         Описывает конфигурацию облачного кластера в VCD.
 
-        Используется поставщиком облачных услуг, если уровень управления кластера размещен в облаке.
+        Используется поставщиком облачных услуг, если управляющий слой кластера размещен в облаке.
 
         Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
 
@@ -15,23 +15,23 @@ apiVersions:
       properties:
         masterNodeGroup:
           description: |
-            Определение NodeGroup master-узлов.
+            Спецификация для описания NodeGroup master-узлов.
 
-            > **Внимание!** После изменения параметров раздела необходимо запустить `dhctl converge`, чтобы изменения вступили в силу.
+            > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
           properties:
             replicas:
               description: |
-                Количество создаваемых master-узлов. Важно, чтобы число master-узлов было нечетным для обеспечения кворума.
+                Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
             instanceClass:
               description: |
                 Частичное содержимое полей [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
-                    Размер корневого диска в гигабайтах.
+                    Размер root-диска. Значение указывается в гигабайтах.
                 etcdDiskSizeGb:
                   description: |
-                    Размер диска etcd в гигабайтах.
+                    Размер диска etcd. Значение указывается в гигабайтах.
                 placementPolicy:
                   description: |
                     PlacementPolicy, которая будет использоваться на данном компьютере.
@@ -57,30 +57,30 @@ apiVersions:
                     description: IP-адрес с префиксом CIDR.
         nodeGroups:
           description: |
-            Массив дополнительных NodeGroups для создания статических узлов (например, для выделенных интерфейсных узлов или шлюзов).
+            Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
           items:
             properties:
               name:
                 description: |
-                  Имя NodeGroup, используемой для генерации имен узлов.
+                  Имя NodeGroup, которое будет использоваться для генерации имен узлов.
               replicas:
                 description: |
-                  Количество создаваемых узлов.
+                  Количество узлов.
               nodeTemplate:
                 description: |
-                  Параметры объектов узла в Kubernetes для добавления после регистрации узла.
+                  Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
                 properties:
                   labels:
                     description: |
-                      Список лейблов для прикрепления к ресурсам кластера.
+                      Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                      То же, что и в [полях](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) стандарта `metadata.labels`.
+                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
                   annotations:
                     description: |
-                      То же, что и в [полях](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) стандарта `metadata.annotations`.
+                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
                   taints:
                     description: |
-                      То же, что и поле `.spec.taints` в [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                      Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
                       > **Внимание!** Доступны только поля `effect`, `key`, `values`.
               instanceClass:
@@ -89,7 +89,7 @@ apiVersions:
                 properties:
                   rootDiskSizeGb:
                     description: |
-                      Размер корневого диска в гигабайтах.
+                      Размер root-диска. Значение указывается в гигабайтах.
                   placementPolicy:
                     description: |
                       PlacementPolicy, которая будет использоваться на данном компьютере.
@@ -115,7 +115,7 @@ apiVersions:
                       description: IP-адрес с префиксом CIDR.
         sshPublicKey:
           description: |
-            Публичный ключ для доступа к узлам.
+            Публичный ключ для доступа на узлы.
         organization:
           description: |
             Имя Vcloud Director Organization.
@@ -127,10 +127,10 @@ apiVersions:
             Имя Vcloud Director Virtual Application (принадлежащее Virtual Data Center).
         mainNetwork:
           description: |
-            Путь к сети, к которой будут подключаться основные сетевые адаптеры виртуальных машин (шлюз по умолчанию).
+            Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
         internalNetworkCIDR:
           description: |
-            Подсеть для master-узлов во внутренней сети.
+            Адресация для внутренней сети узлов кластера.
 
             Адреса распределяются, начиная с десятого адреса. Например, если у вас подсеть `192.168.199.0/24`, адреса будут распределяться, начиная с `192.168.199.10`.
         layout:
@@ -144,8 +144,7 @@ apiVersions:
             server:
               description: Хост или IP-адрес VCD-сервера.
             username:
-              type: string
-              description: Идентификатор для входа в систему.
+              description: Имя пользователя с полными правами на проект.
             password:
               description: Пароль пользователя.
             insecure:
