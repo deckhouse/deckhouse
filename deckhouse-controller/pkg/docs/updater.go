@@ -92,6 +92,7 @@ func NewUpdater(
 		leasesLister:   leasesInformer.Lister(),
 		leasesSynced:   leasesInformer.Informer().HasSynced,
 		client:         client,
+		dc:             dc,
 
 		leaseWorkqueue: workqueue.NewRateLimitingQueue(ratelimiter),
 
