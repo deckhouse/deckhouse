@@ -28,11 +28,7 @@ fi
 bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
 bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
 
-# Need to be run after 004_integrate_kubernetes_data_device?
-mkdir -p /mnt/kubernetes-data/internal-registry/seaweedfs_data/
-
-# mkdir -p /mnt/kubernetes-data/var-lib-etcd
-# chmod 700 /mnt/kubernetes-data/var-lib-etcd
+mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
 IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 mkdir -p $IGNITER_DIR
@@ -179,7 +175,7 @@ GOGC=20 check_and_run "weed" "/opt/deckhouse/bin/weed -logtostderr=true \
       server \
       -filer \
       -s3 \
-      -dir=/mnt/kubernetes-data/internal-registry/seaweedfs_data/ \
+      -dir=/opt/deckhouse/system-registry/seaweedfs_data/ \
       -volume.max=0 \
       -master.volumeSizeLimitMB=1024 \
       -s3.allowDeleteBucketNotEmpty=true \

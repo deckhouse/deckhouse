@@ -26,15 +26,15 @@ fi
 
 {{- if ne .registryMode "Direct" }}
 # Create a directories for the system registry configuration
-mkdir -p /etc/kubernetes/internal-registry/{auth_config,seaweedfs_config,distribution_config}
+mkdir -p /etc/kubernetes/system-registry/{auth_config,seaweedfs_config,distribution_config}
 
 # Create a directories for the system registry data if it does not exist
-mkdir -p /mnt/kubernetes-data/internal-registry/seaweedfs_data/
+mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
 # Read previously discovered IP address of the node
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
-bb-sync-file /etc/kubernetes/internal-registry/auth_config/auth_config.yaml - << EOF
+bb-sync-file /etc/kubernetes/system-registry/auth_config/auth_config.yaml - << EOF
 server:
   addr: "${discovered_node_ip}:5051"
   #addr: "0.0.0.0:5051"
@@ -62,7 +62,7 @@ acl:
   # Access is denied by default.
 EOF
 
-bb-sync-file /etc/kubernetes/internal-registry/seaweedfs_config/filer.toml - << EOF
+bb-sync-file /etc/kubernetes/system-registry/seaweedfs_config/filer.toml - << EOF
 [filer.options]
 recursive_delete = false # do we really need for registry?
 
@@ -80,7 +80,7 @@ tls_client_crt_file="/pki/apiserver-etcd-client.crt"
 tls_client_key_file="/pki/apiserver-etcd-client.key"
 EOF
 
-bb-sync-file /etc/kubernetes/internal-registry/seaweedfs_config/master.toml - << EOF
+bb-sync-file /etc/kubernetes/system-registry/seaweedfs_config/master.toml - << EOF
 [master.volume_growth]
 copy_1 = 1
 copy_2 = 2
@@ -88,7 +88,7 @@ copy_3 = 3
 copy_other = 1
 EOF
 
-bb-sync-file /etc/kubernetes/internal-registry/distribution_config/config.yaml - << EOF
+bb-sync-file /etc/kubernetes/system-registry/distribution_config/config.yaml - << EOF
 version: 0.1
 log:
   level: info
@@ -146,22 +146,22 @@ auth:
 EOF
 
 # TEMPORARY: generate self-signed certificates
-if [ ! -f "/etc/kubernetes/internal-registry/auth_config/token.key" ]; then
-openssl genrsa -out /etc/kubernetes/internal-registry/auth_config/token.key 4096
+if [ ! -f "/etc/kubernetes/system-registry/auth_config/token.key" ]; then
+openssl genrsa -out /etc/kubernetes/system-registry/auth_config/token.key 4096
 fi
 
-if [ ! -f "/etc/kubernetes/internal-registry/auth_config/token.crt" ]; then
-openssl req -new -x509 -days 365 -key /etc/kubernetes/internal-registry/auth_config/token.key -subj "/CN=localhost" -out /etc/kubernetes/internal-registry/auth_config/token.crt
+if [ ! -f "/etc/kubernetes/system-registry/auth_config/token.crt" ]; then
+openssl req -new -x509 -days 365 -key /etc/kubernetes/system-registry/auth_config/token.key -subj "/CN=localhost" -out /etc/kubernetes/system-registry/auth_config/token.crt
 fi
 
-bb-sync-file /etc/kubernetes/manifests/internal-registry.yaml - << EOF
+bb-sync-file /etc/kubernetes/manifests/system-registry.yaml - << EOF
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    component: internal-registry
+    component: system-registry
     tier: control-plane
-  name: internal-registry
+  name: system-registry
   namespace: d8-system
 spec:
   dnsPolicy: ClusterFirst
@@ -230,23 +230,23 @@ spec:
       type: Directory
   - name: auth-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/auth_config/
+      path: /etc/kubernetes/system-registry/auth_config/
       type: DirectoryOrCreate
   - name: distribution-auth-token-crt-file
     hostPath:
-      path: /etc/kubernetes/internal-registry/auth_config/token.crt
+      path: /etc/kubernetes/system-registry/auth_config/token.crt
       type: File
   - name: seaweedfs-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/seaweedfs_config/
+      path: /etc/kubernetes/system-registry/seaweedfs_config/
       type: DirectoryOrCreate
   - name: distribution-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/distribution_config/
+      path: /etc/kubernetes/system-registry/distribution_config/
       type: DirectoryOrCreate
   - name: seaweedfs-data-volume
     hostPath:
-      path: /mnt/kubernetes-data/internal-registry/seaweedfs_data/
+      path: /opt/deckhouse/system-registry/seaweedfs_data/
       type: DirectoryOrCreate
   - name: tmp
     emptyDir: {}

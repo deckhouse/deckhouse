@@ -1,7 +1,7 @@
 {{- define "template-files-values"  }}
 files:
- - templateName: static-pod-internal-registry.yaml
-   filePath: /static-pods/internal-registry.yaml
+ - templateName: static-pod-system-registry.yaml
+   filePath: /static-pods/system-registry.yaml
  - templateName: docker-auth-config.yaml
    filePath: /docker-auth/config.yaml
  - templateName: distribution-config.yaml
@@ -110,14 +110,14 @@ auth:
 {{- end }}
 
 
-{{- define "static-pod-internal-registry.yaml" }}
+{{- define "static-pod-system-registry.yaml" }}
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    component: internal-registry
+    component: system-registry
     tier: control-plane
-  name: internal-registry
+  name: system-registry
   namespace: d8-system
 spec:
   dnsPolicy: ClusterFirst
@@ -184,23 +184,23 @@ spec:
       type: Directory
   - name: auth-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/auth_config/
+      path: /etc/kubernetes/system-registry/auth_config/
       type: DirectoryOrCreate
   - name: distribution-auth-token-crt-file
     hostPath:
-      path: /etc/kubernetes/internal-registry/auth_config/token.crt
+      path: /etc/kubernetes/system-registry/auth_config/token.crt
       type: File
   - name: seaweedfs-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/seaweedfs_config/
+      path: /etc/kubernetes/system-registry/seaweedfs_config/
       type: DirectoryOrCreate
   - name: distribution-config-volume
     hostPath:
-      path: /etc/kubernetes/internal-registry/distribution_config/
+      path: /etc/kubernetes/system-registry/distribution_config/
       type: DirectoryOrCreate
   - name: seaweedfs-data-volume
     hostPath:
-      path: /mnt/kubernetes-data/internal-registry/seaweedfs_data/
+      path: /opt/deckhouse/system-registry/seaweedfs_data/
       type: DirectoryOrCreate
   - name: tmp
     emptyDir: {}

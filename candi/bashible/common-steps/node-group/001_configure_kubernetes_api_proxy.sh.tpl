@@ -47,7 +47,7 @@ stream {
 
 {{- if eq .runType "Normal" }}
   {{- if and .registryMode (ne .registryMode "Direct") }}
-  upstream internal-registry {
+  upstream system-registry {
     least_conn;
     {{- range $key, $value := .normal.apiserverEndpoints }}
     {{ $parts := splitList ":" $value -}}
@@ -58,7 +58,7 @@ stream {
    {{- end }}
  {{- else if eq .runType "ClusterBootstrap" }}
   {{- if ne .registryMode "Direct" }}
-  upstream internal-registry {
+  upstream system-registry {
     least_conn;
     server ${discovered_node_ip}:5000;
   }
@@ -75,7 +75,7 @@ stream {
  {{- if and .registryMode (ne .registryMode "Direct") }}
   server {
     listen 127.0.0.1:5000;
-    proxy_pass internal-registry;
+    proxy_pass system-registry;
     # 1h timeout for very log pull/push operations
     proxy_timeout 1h;
     proxy_connect_timeout 1s;
