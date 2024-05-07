@@ -33,10 +33,12 @@ properties:
             type: array
             description: |
               Pki secret data
-            x-doc-example: |
-              data:
-              - key: ca.crt
-                value: "<base64>"
+            x-doc-example:
+              - |
+                data:
+                  - key: ca.crt
+                    value: "<base64 encode>"
+            default: []
             items:
               type: object
               properties:
