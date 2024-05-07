@@ -21,7 +21,7 @@ type NodeStatus struct {
 
 func GetNodeStatus() (NodeStatus, error) {
 	cfg := config.GetConfig()
-	node, err := cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.SystemRegistry.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return NodeStatus{}, err
 	}
@@ -75,7 +75,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 
 	// Get current status
 	cfg := config.GetConfig()
-	node, err := cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.SystemRegistry.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 		return err
 	}
 
-	_, err = cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 func SetMyStatusDone() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.SystemRegistry.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func SetMyStatusDone() error {
 		return err
 	}
 
-	_, err = cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func SetMyStatusDone() error {
 func ClearMyStatus() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.SystemRegistry.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func ClearMyStatus() error {
 
 	// else - clear
 	node.Annotations[config.AnnotationFromMe] = ""
-	_, err = cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func ClearMyStatus() error {
 func ApproveHandlerStatus() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.SystemRegistry.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func ApproveHandlerStatus() error {
 		return err
 	}
 
-	_, err = cfg.SystemRegistryManager.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
