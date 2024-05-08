@@ -1,5 +1,5 @@
-diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
-index 4c0da2eb9..c219d1685 100644
+diff --git a/chroot/etc/nginx/template/nginx.tmpl b/chroot/etc/nginx/template/nginx.tmpl
+index 4c0da2eb9..8f7004689 100644
 --- a/chroot/etc/nginx/template/nginx.tmpl
 +++ b/chroot/etc/nginx/template/nginx.tmpl
 @@ -12,6 +12,9 @@
@@ -52,7 +52,17 @@ index 4c0da2eb9..c219d1685 100644
  
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
-@@ -960,9 +967,7 @@ stream {
+@@ -616,6 +623,9 @@ http {
+ 
+         {{ buildHTTPListener  $all $redirect.From }}
+         {{ buildHTTPSListener $all $redirect.From }}
++        {{ if $cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $redirect.From }}
++        {{ end }}
+ 
+         ssl_certificate_by_lua_block {
+             certificate.call()
+@@ -960,9 +970,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -63,7 +73,17 @@ index 4c0da2eb9..c219d1685 100644
              }
          }
          {{ end }}
-@@ -1255,6 +1260,8 @@ stream {
+@@ -1008,6 +1016,9 @@ stream {
+ 
+         {{ buildHTTPListener  $all $server.Hostname }}
+         {{ buildHTTPSListener $all $server.Hostname }}
++        {{ if $cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $server.Hostname }}
++        {{ end }}
+ 
+         set $proxy_upstream_name "-";
+ 
+@@ -1255,6 +1266,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -72,7 +92,7 @@ index 4c0da2eb9..c219d1685 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1285,11 +1292,9 @@ stream {
+@@ -1285,11 +1298,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -85,7 +105,7 @@ index 4c0da2eb9..c219d1685 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1570,14 +1575,15 @@ stream {
+@@ -1570,14 +1581,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}

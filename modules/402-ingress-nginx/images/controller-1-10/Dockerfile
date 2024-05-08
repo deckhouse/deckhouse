@@ -40,6 +40,7 @@ COPY patches/healthcheck.patch /
 COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
+COPY patches/add-http3.patch /
 COPY patches/debug-maxmind.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
@@ -50,6 +51,7 @@ RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/in
     patch -p1 < /util.patch && \
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /debug-maxmind.patch && \
+    patch -p1 < /add-http3.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
@@ -155,7 +157,7 @@ RUN bash -eu -c ' \
 
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
-RUN patch -p1 < /balancer-lua.patch patch -p1 < /nginx-tmpl.patch patch -p1 < /auth-cookie-always.patch
+RUN patch -p1 < /balancer-lua.patch && patch -p1 < /nginx-tmpl.patch && patch -p1 < /auth-cookie-always.patch
 
 # Final image
 # Based on tag "controller-v1.10.1":

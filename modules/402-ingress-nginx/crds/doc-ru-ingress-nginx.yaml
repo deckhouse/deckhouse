@@ -535,6 +535,11 @@ spec:
                 disableHTTP2:
                   description: |
                     Выключить ли HTTP/2.
+                disableHTTP3:
+                  description: |
+                    Выключить ли HTTP/3
+                    
+                    **HTTP/3 доступен только в контролере версии 1.10.**
                 config:
                   description: |
                     Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
