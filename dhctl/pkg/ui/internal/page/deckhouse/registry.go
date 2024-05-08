@@ -15,12 +15,15 @@ type registryState interface {
 	SetRegistryPassword(string)
 	SetRegistrySchema(string) error
 	SetRegistryCA(string)
+
+	GetRegistryRepo() string
+	GetRegistryUser() string
+	GetRegistryPassword() string
+	GetRegistrySchema() string
+	GetRegistryCA() string
 }
 
 type registrySchema interface {
-	DefaultRegistryRepo() string
-	DefaultRegistryUser() string
-
 	HasCreds() bool
 }
 
@@ -49,13 +52,23 @@ func (p *RegistryPage) Show(onNext func(), onBack func()) (tview.Primitive, []tv
 
 	form := tview.NewForm()
 
-	form.AddInputField(repoLabel, p.schema.DefaultRegistryRepo(), constInputsWidth, nil, nil)
+	form.AddInputField(repoLabel, p.st.GetRegistryRepo(), constInputsWidth, nil, nil)
 
 	if p.schema.HasCreds() {
-		form.AddInputField(userLabel, p.schema.DefaultRegistryUser(), constInputsWidth, nil, nil)
-		form.AddPasswordField(passwordLabel, "", constInputsWidth, '*', nil)
-		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTP}, 0, nil)
-		form.AddTextArea(caLabel, "", constInputsWidth, 2, 0, nil)
+		form.AddInputField(userLabel, p.st.GetRegistryUser(), constInputsWidth, nil, nil)
+		form.AddPasswordField(passwordLabel, p.st.GetRegistryPassword(), constInputsWidth, '*', nil)
+
+		schemas := []string{state.RegistryHTTPS, state.RegistryHTTP}
+		i := 0
+		for indx, schema := range schemas {
+			if schema == p.st.GetRegistrySchema() {
+				i = indx
+				break
+			}
+		}
+
+		form.AddDropDown(schemaLabel, schemas, i, nil)
+		form.AddTextArea(caLabel, p.st.GetRegistryCA(), constInputsWidth, 2, 0, nil)
 	}
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)

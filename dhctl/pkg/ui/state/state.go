@@ -77,6 +77,10 @@ func NewState(s *Schema) *State {
 			Public:  public,
 			Private: private,
 		},
+		RegistryState: RegistryState{
+			Repo: s.DefaultRegistryRepo(),
+			User: s.DefaultRegistryUser(),
+		},
 		schema: s,
 	}
 }
@@ -180,6 +184,26 @@ func (b *State) GetProvider() string {
 
 func (b *State) GetClusterPrefix() string {
 	return b.Prefix
+}
+
+func (b *State) GetRegistryRepo() string {
+	return b.RegistryState.Repo
+}
+
+func (b *State) GetRegistryUser() string {
+	return b.RegistryState.User
+}
+
+func (b *State) GetRegistryPassword() string {
+	return b.RegistryState.Password
+}
+
+func (b *State) GetRegistrySchema() string {
+	return b.RegistryState.Schema
+}
+
+func (b *State) GetRegistryCA() string {
+	return b.RegistryState.CA
 }
 
 func (b *State) SetRegistryRepo(r string) error {
