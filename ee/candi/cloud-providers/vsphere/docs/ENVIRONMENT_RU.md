@@ -125,6 +125,11 @@ Deckhouse использует `cloud-init` для настройки вирту
 
 Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
 
+{% alert %}
+Deckhouse создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
+Подробнее можно прочитать в [документации](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+{% endalert %}
+
 ## Инфраструктура
 
 ### Сети
