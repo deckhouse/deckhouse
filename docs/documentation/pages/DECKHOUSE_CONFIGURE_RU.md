@@ -47,16 +47,16 @@ spec:
   enabled: false
 ```
 
-Посмотреть список custom resource'ов `ModuleConfig`, состояние модуля (включен/выключен) и его статус можно с помощью команды `kubectl get moduleconfigs`:
+Посмотреть список custom resource'ов `ModuleConfig`, состояние модулей (включен/выключен) и их статус можно с помощью команды `kubectl get moduleconfigs`:
 
 ```shell
 $ kubectl get moduleconfigs
-NAME                STATE      VERSION    STATUS    AGE
-deckhouse           Enabled    1                    12h
-documentation       Enabled    2                    12h
-global              Enabled    1                    12h
-prometheus          Enabled    2                    12h
-upmeter             Disabled   2                    12h
+NAME            ENABLED   VERSION   AGE     MESSAGE
+deckhouse       true      1         12h
+documentation   true      1         12h
+global                    1         12h
+prometheus      true      2         12h
+upmeter         false     2         12h
 ```
 
 Чтобы изменить глобальную конфигурацию Deckhouse или конфигурацию модуля, нужно создать или отредактировать соответствующий ресурс `ModuleConfig`.
@@ -64,7 +64,7 @@ upmeter             Disabled   2                    12h
 Например, чтобы отредактировать конфигурацию модуля `upmeter`, выполните следующую команду:
 
 ```shell
-kubectl -n d8-system edit moduleconfig/upmeter
+kubectl edit moduleconfig/upmeter
 ```
 
 После завершения редактирования изменения применяются автоматически.
@@ -128,8 +128,8 @@ spec:
 
 ```shell
 $ kubectl get moduleconfig user-authn
-NAME                STATE      VERSION    STATUS    AGE
-user-authn          Disabled   1                    12h
+NAME         ENABLED   VERSION   AGE   MESSAGE
+user-authn   false     1         12h
 ```
 
 ## Наборы модулей
