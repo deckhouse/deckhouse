@@ -18,6 +18,14 @@ type staticMasterState interface {
 
 	SetBastionSSHUser(string)
 	SetBastionSSHHost(string)
+
+	GetSSHUser() string
+	GetSSHHost() string
+	GetInternalNetworkCIDR() string
+	IsUsePasswordForSudo() bool
+
+	GetBastionSSHUser() string
+	GetBastionSSHHost() string
 }
 
 type MasterPage struct {
@@ -45,21 +53,22 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 	)
 
 	form := tview.NewForm()
-	form.AddInputField(sshHostLabel, "", constInputsWidth, nil, nil)
-	form.AddInputField(sshUserLabel, "ubuntu", constInputsWidth, nil, nil)
+	form.AddInputField(sshHostLabel, p.st.GetSSHHost(), constInputsWidth, nil, nil)
+	form.AddInputField(sshUserLabel, p.st.GetSSHUser(), constInputsWidth, nil, nil)
 
-	form.AddInputField(internalNetworkLabel, "", constInputsWidth, nil, nil)
+	form.AddInputField(internalNetworkLabel, p.st.GetInternalNetworkCIDR(), constInputsWidth, nil, nil)
 
-	form.AddCheckbox(askSudoPasswordLabel, false, nil)
+	form.AddCheckbox(askSudoPasswordLabel, p.st.IsUsePasswordForSudo(), nil)
 
-	form.AddCheckbox(useBastionHostLabel, false, func(check bool) {
+	checked := p.st.GetBastionSSHHost() != ""
+	form.AddCheckbox(useBastionHostLabel, checked, func(check bool) {
 		if check {
 			if form.GetFormItemIndex(bastionHostLabel) < 0 {
-				form.AddInputField(bastionHostLabel, "", constInputsWidth, nil, nil)
+				form.AddInputField(bastionHostLabel, p.st.GetBastionSSHHost(), constInputsWidth, nil, nil)
 			}
 
 			if form.GetFormItemIndex(bastionHostUserLabel) < 0 {
-				form.AddInputField(bastionHostUserLabel, "ubuntu", constInputsWidth, nil, nil)
+				form.AddInputField(bastionHostUserLabel, p.st.GetBastionSSHUser(), constInputsWidth, nil, nil)
 			}
 
 			return

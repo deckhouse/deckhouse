@@ -74,8 +74,10 @@ func NewState(s *Schema) *State {
 
 	return &State{
 		SSHState: SSHState{
-			Public:  public,
-			Private: private,
+			Public:      public,
+			Private:     private,
+			User:        "ubuntu",
+			BastionUser: "ubuntu",
 		},
 		RegistryState: RegistryState{
 			Repo: s.DefaultRegistryRepo(),
@@ -92,6 +94,10 @@ func NewState(s *Schema) *State {
 			PublicDomainTemplate: "%s.example.com",
 			EnablePublishK8sAPI:  true,
 			ReleaseChannel:       s.ReleaseChannels()[len(s.ReleaseChannels())-2],
+		},
+		StaticState: StaticState{
+			AskSudoPassword:     false,
+			InternalNetworkCIDR: "",
 		},
 		schema: s,
 	}
@@ -128,6 +134,29 @@ func (b *State) ConvertToMap() (map[string]interface{}, error) {
 
 func (b *State) GetClusterType() string {
 	return b.ClusterType
+}
+
+func (b *State) GetSSHUser() string {
+	return b.SSHState.User
+}
+
+func (b *State) GetSSHHost() string {
+	return b.SSHState.Host
+}
+
+func (b *State) GetInternalNetworkCIDR() string {
+	return b.StaticState.InternalNetworkCIDR
+}
+func (b *State) IsUsePasswordForSudo() bool {
+	return b.StaticState.AskSudoPassword
+}
+
+func (b *State) GetBastionSSHUser() string {
+	return b.SSHState.BastionUser
+}
+
+func (b *State) GetBastionSSHHost() string {
+	return b.SSHState.BastionHost
 }
 
 func (b *State) SetSSHUser(s string) error {
