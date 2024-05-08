@@ -155,8 +155,13 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			// check kubernets API
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
-				fa.logger.Error("Unable to reach the API", zap.Error(err))
-				APIIsAvailable = false
+				if err == context.DeadlineExceeded {
+					fa.logger.Error("API request timed out", zap.Error(err))
+					APIIsAvailable = false
+				} else {
+					fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
+					APIIsAvailable = true
+				}
 			} else {
 				fa.logger.Debug("The API is available")
 				APIIsAvailable = true
