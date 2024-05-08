@@ -17,12 +17,13 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                   = false
-	PreflightSkipSSHForword            = false
-	PreflightSkipAvailabilityPorts     = false
-	PreflightSkipResolvingLocalhost    = false
-	PreflightSkipDeckhouseVersionCheck = false
-	PreflightSkipRegistryThroughProxy  = false
+	PreflightSkipAll                       = false
+	PreflightSkipSSHForword                = false
+	PreflightSkipAvailabilityPorts         = false
+	PreflightSkipResolvingLocalhost        = false
+	PreflightSkipDeckhouseVersionCheck     = false
+	PreflightSkipRegistryThroughProxy      = false
+	PreflightSkipPublicDomainTemplateCheck = false
 )
 
 const (
@@ -31,6 +32,7 @@ const (
 	ResolvingLocalhostArgName        = "preflight-skip-resolving-localhost-check"
 	DeckhouseVersionCheckArgName     = "preflight-skip-deckhouse-version-check"
 	RegistryThroughProxyCheckArgName = "preflight-skip-registry-through-proxy"
+	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -52,4 +54,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(RegistryThroughProxyCheckArgName, "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_THROUGH_PROXY")).
 		BoolVar(&PreflightSkipRegistryThroughProxy)
+	cmd.Flag(PublicDomainTemplateCheckArgName, "Skip verifying PublicDomainTemplate check").
+		Envar(configEnvName("PREFLIGHT_SKIP_PUBLIC_DOMAIN_TEMPLATE")).
+		BoolVar(&PreflightSkipPublicDomainTemplateCheck)
 }

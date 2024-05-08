@@ -79,7 +79,13 @@ func (pc *Checker) Cloud() error {
 }
 
 func (pc *Checker) Global() error {
-	return nil
+	return pc.do("Global preflight checks", []checkStep{
+		{
+			fun:            pc.CheckPublicDomainTemplate,
+			successMessage: "PublicDomainTemplate is correctly",
+			skipFlag:       app.PublicDomainTemplateCheckArgName,
+		},
+	})
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {
