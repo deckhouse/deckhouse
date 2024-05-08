@@ -509,7 +509,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    После завершения установки примените сгенерированные во время загрузки манифесты DeckhouseReleases к вашему кластеру используя `kubectl`:
 
    ```shell
-   kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
+   kubectl apply -f $(pwd)/d8-images/deckhousereleases.yaml
    ```
 
 ### Ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry
@@ -519,7 +519,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 1. Запустите установщик Deckhouse версии 1.56.0 или выше.
 
    ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ce/install:v1.58.4 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.ru/deckhouse/ee/install:v1.58.6 bash
    ```
 
    Обратите внимание, что в контейнер установщика монтируется директория с файловой системы хоста, в которую будут загружены образы модулей и YAML-манифест [ModuleSource](cr.html#modulesource), описывающий источник модулей.
