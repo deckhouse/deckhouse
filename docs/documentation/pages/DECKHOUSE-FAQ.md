@@ -508,17 +508,17 @@ This feature is available in Enterprise Edition only.
    After installation, apply DeckhouseReleases manifests that were generated during pull operation to your cluster via `kubectl` as follows:
 
    ```shell
-   kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
+   kubectl apply -f $(pwd)/d8-images/deckhousereleases.yaml
    ```
 
-### Manually uploading images of Deckhouse modules into an isolated private registry
+### Manually uploading images of Deckhouse modules into an air-gapped registry
 
 The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
 1. Run Deckhouse installer version 1.58.6 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.6 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
    ```
 
    Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
