@@ -268,7 +268,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		Ports: []apiv1.ContainerPort{
 			{Name: "self", ContainerPort: 9650},
-			{Name: "custom", ContainerPort: 9651},
+			{Name: "webhook", ContainerPort: 9651},
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{

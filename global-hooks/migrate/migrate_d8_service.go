@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+// TODO: Remove after release 1.63
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(migrateService))
