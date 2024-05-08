@@ -8,8 +8,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
 )
 
 type StaticState struct {
@@ -69,7 +67,7 @@ type State struct {
 }
 
 func NewState(s *Schema) *State {
-	public, private, err := utils.GenerateEd25519Keys()
+	public, private, err := generateEd25519Keys()
 	if err != nil {
 		panic(err)
 	}
@@ -135,7 +133,7 @@ func (b *State) SetSSHHost(s string) error {
 }
 
 func (b *State) SetInternalNetworkCIDR(s string) error {
-	if err := validate.CIDR(s); err != nil {
+	if err := validateCIDR(s); err != nil {
 		return err
 	}
 
@@ -239,7 +237,7 @@ func (b *State) SetClusterDomain(v string) error {
 }
 
 func (b *State) SetPodSubnetCIDR(v string) error {
-	if err := validate.CIDR(v); err != nil {
+	if err := validateCIDR(v); err != nil {
 		return err
 	}
 
@@ -247,7 +245,7 @@ func (b *State) SetPodSubnetCIDR(v string) error {
 	return nil
 }
 func (b *State) SetServiceSubnetCIDR(v string) error {
-	if err := validate.CIDR(v); err != nil {
+	if err := validateCIDR(v); err != nil {
 		return err
 	}
 
@@ -255,7 +253,7 @@ func (b *State) SetServiceSubnetCIDR(v string) error {
 	return nil
 }
 
-func (b *State) PodSubnetNodeCIDRPrefix(v string) error {
+func (b *State) SetPodSubnetNodeCIDRPrefix(v string) error {
 	suf, err := strconv.Atoi(v)
 	if err != nil {
 		return errors.Wrap(err, "Pod node suffix should be an integer")

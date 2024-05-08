@@ -1,11 +1,11 @@
-package validate
+package state
 
 import (
 	"fmt"
 	"net"
 )
 
-func CIDR(cidr string) error {
+func validateCIDR(cidr string) error {
 	if cidr == "" {
 		return fmt.Errorf("CIDR is empty")
 	}

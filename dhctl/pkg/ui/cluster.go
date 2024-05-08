@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type clusterState interface {
@@ -15,14 +15,26 @@ type clusterState interface {
 	SetClusterDomain(string) error
 	SetPodSubnetCIDR(string) error
 	SetServiceSubnetCIDR(string) error
-	PodSubnetNodeCIDRPrefix(string) error
+	SetPodSubnetNodeCIDRPrefix(string) error
 }
 
 type clusterSchema interface {
 	K8sVersions() []string
 }
 
-func newClusterPage(st clusterState, schema clusterSchema, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+type ClusterPage struct {
+	st     clusterState
+	schema clusterSchema
+}
+
+func NewClusterPage(st clusterState, schema clusterSchema) *ClusterPage {
+	return &ClusterPage{
+		st:     st,
+		schema: schema,
+	}
+}
+
+func (c *ClusterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 
@@ -35,7 +47,7 @@ func newClusterPage(st clusterState, schema clusterSchema, onNext func(), onBack
 
 	form := tview.NewForm()
 
-	versions := schema.K8sVersions()
+	versions := c.schema.K8sVersions()
 	form.AddDropDown(k8sVersionLabel, versions, len(versions)-1, nil)
 	form.AddInputField(clusterDomainLabel, "cluster.local", constInputsWidth, nil, nil)
 	form.AddInputField(podSubnetCIDRLabel, "10.111.0.0/16", constInputsWidth, nil, nil)
@@ -53,27 +65,27 @@ func newClusterPage(st clusterState, schema clusterSchema, onNext func(), onBack
 		var allErrs *multierror.Error
 
 		_, k8sVersion := form.GetFormItemByLabel(k8sVersionLabel).(*tview.DropDown).GetCurrentOption()
-		if err := st.SetK8sVersion(k8sVersion); err != nil {
+		if err := c.st.SetK8sVersion(k8sVersion); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		domain := form.GetFormItemByLabel(clusterDomainLabel).(*tview.InputField).GetText()
-		if err := st.SetClusterDomain(domain); err != nil {
+		if err := c.st.SetClusterDomain(domain); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		podSubnet := form.GetFormItemByLabel(podSubnetCIDRLabel).(*tview.InputField).GetText()
-		if err := st.SetPodSubnetCIDR(podSubnet); err != nil {
+		if err := c.st.SetPodSubnetCIDR(podSubnet); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("Pod subnet %s", err))
 		}
 
 		serviceSubnet := form.GetFormItemByLabel(serviceSubnetCIDRLabel).(*tview.InputField).GetText()
-		if err := st.SetServiceSubnetCIDR(serviceSubnet); err != nil {
+		if err := c.st.SetServiceSubnetCIDR(serviceSubnet); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("Service subnet %s", err))
 		}
 
 		podNodeSuffix := form.GetFormItemByLabel(podSubnetNodeCIDRPrefixLabel).(*tview.InputField).GetText()
-		if err := st.PodSubnetNodeCIDRPrefix(podNodeSuffix); err != nil {
+		if err := c.st.SetPodSubnetNodeCIDRPrefix(podNodeSuffix); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 

@@ -6,7 +6,7 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/utils"
 )
 
 type OpenAPIForm struct {
@@ -65,7 +65,7 @@ func NewOpenapiForm(schema *spec.Schema, fieldsWidth int) *OpenAPIForm {
 }
 
 func (f *OpenAPIForm) Validate() error {
-	d, err := validate.OpenAPIValidate(f.schema, f.data)
+	d, err := utils.OpenAPIValidate(f.schema, f.data)
 	if err != nil {
 		return err
 	}

@@ -3,12 +3,12 @@ package ui
 import (
 	"github.com/gdamore/tcell/v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/template"
 
 	"github.com/f1bonacc1/glippy"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type configState interface {
@@ -16,21 +16,17 @@ type configState interface {
 	SetConfigYAML(data string) error
 }
 
-type configPage struct {
-	st     configState
-	onNext func()
-	onBack func()
+type ConfigPage struct {
+	st configState
 }
 
-func newConfigPage(st configState, onNext func(), onBack func()) *configPage {
-	return &configPage{
-		st:     st,
-		onBack: onBack,
-		onNext: onNext,
+func NewConfigPage(st configState) *ConfigPage {
+	return &ConfigPage{
+		st: st,
 	}
 }
 
-func (c *configPage) Show() (tview.Primitive, []tview.Primitive) {
+func (c *ConfigPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	configYAML, err := template.RenderTemplate(c.st)
 	if err != nil {
 		panic(err)
@@ -60,9 +56,9 @@ func (c *configPage) Show() (tview.Primitive, []tview.Primitive) {
 		}
 
 		errorLbl.SetText("")
-		c.onNext()
+		onNext()
 
-	}, c.onBack)
+	}, onBack)
 
 	return p, append([]tview.Primitive{view}, focusable...)
 }

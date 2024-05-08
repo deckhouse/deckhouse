@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type deckhouseState interface {
@@ -18,7 +18,19 @@ type deckhouseSchema interface {
 	ReleaseChannels() []string
 }
 
-func newDeckhousePage(st deckhouseState, schema deckhouseSchema, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+type DeckhousePage struct {
+	st     deckhouseState
+	schema deckhouseSchema
+}
+
+func NewDeckhousePage(st deckhouseState, schema deckhouseSchema) *DeckhousePage {
+	return &DeckhousePage{
+		st:     st,
+		schema: schema,
+	}
+}
+
+func (p *DeckhousePage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 
@@ -29,7 +41,7 @@ func newDeckhousePage(st deckhouseState, schema deckhouseSchema, onNext func(), 
 
 	form := tview.NewForm()
 
-	channels := schema.ReleaseChannels()
+	channels := p.schema.ReleaseChannels()
 	form.AddDropDown(releaseChannelLabel, channels, len(channels)-1, nil)
 
 	form.AddInputField(publicDomainTemplateLabel, "%s.example.com", constInputsWidth, nil, nil)
@@ -42,21 +54,21 @@ func newDeckhousePage(st deckhouseState, schema deckhouseSchema, onNext func(), 
 		AddItem(form, 0, 0, 1, 1, 0, 0, true).
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
 
-	p, focusable := widget.OptionsPage("Deckhouse settings", optionsGrid, func() {
+	page, focusable := widget.OptionsPage("Deckhouse settings", optionsGrid, func() {
 		_, s := form.GetFormItem(form.GetFormItemIndex(releaseChannelLabel)).(*tview.DropDown).GetCurrentOption()
 		var allErrs *multierror.Error
 
-		if err := st.SetReleaseChannel(s); err != nil {
+		if err := p.st.SetReleaseChannel(s); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		publicDomain := form.GetFormItemByLabel(publicDomainTemplateLabel).(*tview.InputField).GetText()
-		if err := st.SetPublicDomainTemplate(publicDomain); err != nil {
+		if err := p.st.SetPublicDomainTemplate(publicDomain); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		enablePublishAPI := form.GetFormItemByLabel(enablePublishAPILabel).(*tview.Checkbox).IsChecked()
-		st.EnablePublishK8sAPI(enablePublishAPI)
+		p.st.EnablePublishK8sAPI(enablePublishAPI)
 
 		if err := allErrs.ErrorOrNil(); err != nil {
 			errorLbl.SetText(err.Error())
@@ -68,5 +80,5 @@ func newDeckhousePage(st deckhouseState, schema deckhouseSchema, onNext func(), 
 		onNext()
 	}, onBack)
 
-	return p, append([]tview.Primitive{optionsGrid}, focusable...)
+	return page, append([]tview.Primitive{optionsGrid}, focusable...)
 }

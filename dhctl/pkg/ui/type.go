@@ -4,8 +4,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
 )
 
 type clusterTypeState interface {
@@ -18,7 +18,19 @@ type clusterTypesSchema interface {
 	CloudProviders() []string
 }
 
-func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext func()) (tview.Primitive, []tview.Primitive) {
+type ClusterTypePage struct {
+	st     clusterTypeState
+	schema clusterTypesSchema
+}
+
+func NewClusterTypePage(st clusterTypeState, schema clusterTypesSchema) *ClusterTypePage {
+	return &ClusterTypePage{
+		st:     st,
+		schema: schema,
+	}
+}
+
+func (p *ClusterTypePage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 
@@ -33,14 +45,14 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 
 	addProviderPrefixItems := func() {
 		if form.GetFormItemIndex(providerLabel) < 0 {
-			form.AddDropDown(providerLabel, schema.CloudProviders(), 0, func(option string, optionIndex int) {
-				st.SetProvider(option)
+			form.AddDropDown(providerLabel, p.schema.CloudProviders(), 0, func(option string, optionIndex int) {
+				p.st.SetProvider(option)
 			})
 		}
 
 		if form.GetFormItemIndex(prefixLabel) < 0 {
 			form.AddInputField(prefixLabel, "", constInputsWidth, nil, func(text string) {
-				st.SetClusterPrefix(text)
+				p.st.SetClusterPrefix(text)
 			})
 		}
 	}
@@ -62,7 +74,7 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 			initAddProvider = true
 		}
 
-		st.SetClusterType(option)
+		p.st.SetClusterType(option)
 	})
 
 	addProviderPrefixItems()
@@ -74,27 +86,27 @@ func newClusterTypePage(st clusterTypeState, schema clusterTypesSchema, onNext f
 		AddItem(form, 0, 0, 1, 1, 0, 0, true).
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
 
-	p, focusable := widget.OptionsPage("Cluster settings", optionsGrid, func() {
+	pp, focusable := widget.OptionsPage("Cluster settings", optionsGrid, func() {
 		_, clType := form.GetFormItemByLabel(typeLabel).(*tview.DropDown).GetCurrentOption()
-		st.SetClusterType(clType)
+		p.st.SetClusterType(clType)
 
 		if clType == state.CloudCluster {
 			_, provider := form.GetFormItemByLabel(providerLabel).(*tview.DropDown).GetCurrentOption()
-			st.SetProvider(provider)
+			p.st.SetProvider(provider)
 
 			prefix := form.GetFormItemByLabel(prefixLabel).(*tview.InputField).GetText()
 			if len(prefix) < 1 {
 				errorLbl.SetText("Prefix is required")
 				return
 			}
-			st.SetClusterPrefix(prefix)
+			p.st.SetClusterPrefix(prefix)
 		} else {
-			st.SetClusterPrefix("")
-			st.SetProvider("")
+			p.st.SetClusterPrefix("")
+			p.st.SetProvider("")
 		}
 
 		onNext()
 	}, nil)
 
-	return p, append([]tview.Primitive{optionsGrid}, focusable...)
+	return pp, append([]tview.Primitive{optionsGrid}, focusable...)
 }

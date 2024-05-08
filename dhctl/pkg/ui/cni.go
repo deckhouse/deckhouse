@@ -5,8 +5,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
 )
 
 type cniState interface {
@@ -20,24 +20,19 @@ type cniSchema interface {
 	GetCNIsForProvider(string) []string
 }
 
-type cniPage struct {
+type CniPage struct {
 	st     cniState
 	schema cniSchema
-	onNext func()
-	onBack func()
 }
 
-func newCNIPage(st cniState, schema cniSchema, onNext func(), onBack func()) *cniPage {
-	return &cniPage{
+func NewCNIPage(st cniState, schema cniSchema, onNext func(), onBack func()) *CniPage {
+	return &CniPage{
 		st:     st,
 		schema: schema,
-		onBack: onBack,
-		onNext: onNext,
 	}
-
 }
 
-func (c *cniPage) Show() (tview.Primitive, []tview.Primitive) {
+func (c *CniPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		cniLabel         = "CNI"
 		flannelModeLabel = "Flannel mode"
@@ -88,8 +83,8 @@ func (c *cniPage) Show() (tview.Primitive, []tview.Primitive) {
 		}
 
 		errorLbl.SetText("")
-		c.onNext()
-	}, c.onBack)
+		onNext()
+	}, onBack)
 
 	return p, append([]tview.Primitive{optionsGrid}, focusable...)
 }

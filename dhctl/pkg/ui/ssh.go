@@ -7,7 +7,7 @@ import (
 
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type sshState interface {
@@ -17,21 +17,17 @@ type sshState interface {
 	PrivateSSHKey() string
 }
 
-type sshPage struct {
-	st     sshState
-	onNext func()
-	onBack func()
+type SshPage struct {
+	st sshState
 }
 
-func newSSHPage(st sshState, onNext func(), onBack func()) *sshPage {
-	return &sshPage{
-		st:     st,
-		onBack: onBack,
-		onNext: onNext,
+func NewSSHPage(st sshState) *SshPage {
+	return &SshPage{
+		st: st,
 	}
 }
 
-func (c *sshPage) Show() (tview.Primitive, []tview.Primitive) {
+func (c *SshPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	outStr := fmt.Sprintf(`Please add public key to /home/%s/.ssh/authorized_keys Public key already added to clipboard:
 %s`, c.st.GetUser(), c.st.PublicSSHKey())
 
@@ -51,7 +47,7 @@ func (c *sshPage) Show() (tview.Primitive, []tview.Primitive) {
 			return s
 		})
 
-	p, focusable := widget.OptionsPage("SSH key", view, c.onNext, c.onBack)
+	p, focusable := widget.OptionsPage("SSH key", view, onNext, onBack)
 
 	return p, append([]tview.Primitive{view}, focusable...)
 }

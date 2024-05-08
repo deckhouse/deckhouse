@@ -6,7 +6,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type registryState interface {
@@ -24,7 +24,19 @@ type registrySchema interface {
 	HasCreds() bool
 }
 
-func newRegistryPage(st registryState, schema registrySchema, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+type RegistryPage struct {
+	st     registryState
+	schema registrySchema
+}
+
+func NewRegistryPage(st registryState, schema registrySchema) *RegistryPage {
+	return &RegistryPage{
+		st:     st,
+		schema: schema,
+	}
+}
+
+func (p *RegistryPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 
@@ -37,10 +49,10 @@ func newRegistryPage(st registryState, schema registrySchema, onNext func(), onB
 
 	form := tview.NewForm()
 
-	form.AddInputField(repoLabel, schema.DefaultRegistryRepo(), constInputsWidth, nil, nil)
+	form.AddInputField(repoLabel, p.schema.DefaultRegistryRepo(), constInputsWidth, nil, nil)
 
-	if schema.HasCreds() {
-		form.AddInputField(userLabel, schema.DefaultRegistryUser(), constInputsWidth, nil, nil)
+	if p.schema.HasCreds() {
+		form.AddInputField(userLabel, p.schema.DefaultRegistryUser(), constInputsWidth, nil, nil)
 		form.AddPasswordField(passwordLabel, "", constInputsWidth, '*', nil)
 		form.AddDropDown(schemaLabel, []string{state.RegistryHTTPS, state.RegistryHTTP}, 0, nil)
 		form.AddTextArea(caLabel, "", constInputsWidth, 2, 0, nil)
@@ -53,32 +65,32 @@ func newRegistryPage(st registryState, schema registrySchema, onNext func(), onB
 		AddItem(form, 0, 0, 1, 1, 0, 0, true).
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
 
-	p, focusable := widget.OptionsPage("Registry settings", optionsGrid, func() {
+	pp, focusable := widget.OptionsPage("Registry settings", optionsGrid, func() {
 		repo := form.GetFormItemByLabel(repoLabel).(*tview.InputField).GetText()
-		if err := st.SetRegistryRepo(repo); err != nil {
+		if err := p.st.SetRegistryRepo(repo); err != nil {
 			errorLbl.SetText(err.Error())
 			return
 		}
 
-		if schema.HasCreds() {
+		if p.schema.HasCreds() {
 			user := form.GetFormItemByLabel(userLabel).(*tview.InputField).GetText()
-			st.SetRegistryUser(user)
+			p.st.SetRegistryUser(user)
 
 			passwd := form.GetFormItemByLabel(passwordLabel).(*tview.InputField).GetText()
-			st.SetRegistryPassword(passwd)
+			p.st.SetRegistryPassword(passwd)
 
 			_, s := form.GetFormItem(form.GetFormItemIndex(schemaLabel)).(*tview.DropDown).GetCurrentOption()
-			if err := st.SetRegistrySchema(s); err != nil {
+			if err := p.st.SetRegistrySchema(s); err != nil {
 				errorLbl.SetText(err.Error())
 				return
 			}
 
 			ca := form.GetFormItemByLabel(caLabel).(*tview.TextArea).GetText()
-			st.SetRegistryCA(ca)
+			p.st.SetRegistryCA(ca)
 		}
 
 		onNext()
 	}, onBack)
 
-	return p, append([]tview.Primitive{optionsGrid}, focusable...)
+	return pp, append([]tview.Primitive{optionsGrid}, focusable...)
 }

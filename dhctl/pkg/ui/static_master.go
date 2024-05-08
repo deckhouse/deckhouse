@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type staticMasterState interface {
@@ -20,7 +20,17 @@ type staticMasterState interface {
 	SetBastionSSHHost(string)
 }
 
-func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+type StaticMasterPage struct {
+	st staticMasterState
+}
+
+func NewStaticMasterPage(st staticMasterState) *StaticMasterPage {
+	return &StaticMasterPage{
+		st: st,
+	}
+}
+
+func (p *StaticMasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 
@@ -71,45 +81,45 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 		AddItem(form, 0, 0, 1, 1, 0, 0, true).
 		AddItem(errorLbl, 1, 0, 1, 1, 0, 0, false)
 
-	p, focusable := widget.OptionsPage("First control-plane node settings", optionsGrid, func() {
+	pp, focusable := widget.OptionsPage("First control-plane node settings", optionsGrid, func() {
 		var allErrs *multierror.Error
 
 		sshHost := form.GetFormItemByLabel(sshHostLabel).(*tview.InputField).GetText()
-		if err := st.SetSSHHost(sshHost); err != nil {
+		if err := p.st.SetSSHHost(sshHost); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		sshUser := form.GetFormItemByLabel(sshUserLabel).(*tview.InputField).GetText()
-		if err := st.SetSSHUser(sshUser); err != nil {
+		if err := p.st.SetSSHUser(sshUser); err != nil {
 			allErrs = multierror.Append(allErrs, err)
 		}
 
 		sshInternalNetwork := form.GetFormItemByLabel(internalNetworkLabel).(*tview.InputField).GetText()
-		if err := st.SetInternalNetworkCIDR(sshInternalNetwork); err != nil {
+		if err := p.st.SetInternalNetworkCIDR(sshInternalNetwork); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("Internal network CIDR %s", err))
 		}
 
 		askSudoPassword := form.GetFormItemByLabel(askSudoPasswordLabel).(*tview.Checkbox).IsChecked()
-		st.SetUsePasswordForSudo(askSudoPassword)
+		p.st.SetUsePasswordForSudo(askSudoPassword)
 
 		useBastion := form.GetFormItemByLabel(useBastionHostLabel).(*tview.Checkbox).IsChecked()
 		if useBastion {
 			sshHost := form.GetFormItemByLabel(bastionHostLabel).(*tview.InputField).GetText()
 			if sshHost != "" {
-				st.SetBastionSSHHost(sshHost)
+				p.st.SetBastionSSHHost(sshHost)
 			} else {
 				allErrs = multierror.Append(allErrs, fmt.Errorf("Bastion SSH host cannot be empty"))
 			}
 
 			sshUser := form.GetFormItemByLabel(bastionHostUserLabel).(*tview.InputField).GetText()
 			if sshUser != "" {
-				st.SetBastionSSHUser(sshUser)
+				p.st.SetBastionSSHUser(sshUser)
 			} else {
 				allErrs = multierror.Append(allErrs, fmt.Errorf("Bastion SSH user cannot be empty"))
 			}
 		} else {
-			st.SetBastionSSHHost("")
-			st.SetBastionSSHUser("")
+			p.st.SetBastionSSHHost("")
+			p.st.SetBastionSSHUser("")
 		}
 
 		if err := allErrs.ErrorOrNil(); err != nil {
@@ -121,5 +131,5 @@ func newStaticMasterPage(st staticMasterState, onNext func(), onBack func()) (tv
 		onNext()
 	}, onBack)
 
-	return p, append([]tview.Primitive{optionsGrid}, focusable...)
+	return pp, append([]tview.Primitive{optionsGrid}, focusable...)
 }

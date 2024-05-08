@@ -8,19 +8,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 )
 
-const (
-	pageMain              = "pageMain"
-	pageSelectClusterType = "pageSelectClusterType"
-	pageProvider          = "pageProvider"
-	pageStaticMaster      = "pageStaticMaster"
-	pageRegistry          = "pageRegistry"
-	pageCluster           = "pageCluster"
-	pageCNI               = "pageCNI"
-	pageDeckhouse         = "pageDeckhouse"
-	pageSSH               = "pageSSH"
-	pageConfig            = "pageConfig"
-)
-
 type Schemas interface {
 	ClusterConfig() *spec.Schema
 }
@@ -54,16 +41,16 @@ func buildPages(a *App) {
 	var clusterPageFocusable []tview.Primitive
 	var deckhouseFocusable []tview.Primitive
 
-	var providerCls *providerPage
+	var providerCls *ProviderPage
 	var staticMasterPage tview.Primitive
 	var registryPage tview.Primitive
 	var clusterPage tview.Primitive
 	var deckhousePage tview.Primitive
-	var cniP *cniPage
-	var sshP *sshPage
-	var configP *configPage
+	var cniP *CniPage
+	var sshP *SshPage
+	var configP *ConfigPage
 
-	cniP = newCNIPage(a.state, a.schemaStore, func() {
+	cniP = NewCNIPage(a.state, a.schemaStore, func() {
 		addSwitchFocusEvent(a.app, a.pages, deckhouseFocusable)
 		a.pages.SwitchToPage(pageDeckhouse)
 	}, func() {
@@ -71,7 +58,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageCluster)
 	})
 
-	clusterPage, clusterPageFocusable = newClusterPage(a.state, a.schemaStore, func() {
+	clusterPage, clusterPageFocusable = NewClusterPage(a.state, a.schemaStore, func() {
 		p, cniPageFocusable := cniP.Show()
 		addSwitchFocusEvent(a.app, a.pages, cniPageFocusable)
 		a.pages.AddPage(pageCNI, p, true, false)
@@ -81,7 +68,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageRegistry)
 	})
 
-	providerCls = newProviderPage(a.state, a.schemaStore, func() {
+	providerCls = NewProviderPage(a.state, a.schemaStore, func() {
 		addSwitchFocusEvent(a.app, a.pages, registryFocusable)
 		a.pages.SwitchToPage(pageRegistry)
 	}, func() {
@@ -89,7 +76,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageSelectClusterType)
 	})
 
-	staticMasterPage, staticMasterFocusable = newStaticMasterPage(a.state, func() {
+	staticMasterPage, staticMasterFocusable = NewStaticMasterPage(a.state, func() {
 		addSwitchFocusEvent(a.app, a.pages, registryFocusable)
 		a.pages.SwitchToPage(pageRegistry)
 	}, func() {
@@ -97,7 +84,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageSelectClusterType)
 	})
 
-	sshP = newSSHPage(a.state, func() {
+	sshP = NewSSHPage(a.state, func() {
 		p, cniPageFocusable := configP.Show()
 		addSwitchFocusEvent(a.app, a.pages, cniPageFocusable)
 		a.pages.AddPage(pageConfig, p, true, false)
@@ -107,7 +94,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageDeckhouse)
 	})
 
-	configP = newConfigPage(a.state, func() {
+	configP = NewConfigPage(a.state, func() {
 		a.app.Stop()
 	}, func() {
 		p, focusable := sshP.Show()
@@ -116,7 +103,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageSSH)
 	})
 
-	deckhousePage, deckhouseFocusable = newDeckhousePage(a.state, a.schemaStore, func() {
+	deckhousePage, deckhouseFocusable = NewDeckhousePage(a.state, a.schemaStore, func() {
 		p, focusable := sshP.Show()
 		a.pages.AddPage(pageSSH, p, true, false)
 		addSwitchFocusEvent(a.app, a.pages, focusable)
@@ -128,7 +115,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageCNI)
 	})
 
-	registryPage, registryFocusable = newRegistryPage(a.state, a.schemaStore, func() {
+	registryPage, registryFocusable = NewRegistryPage(a.state, a.schemaStore, func() {
 		addSwitchFocusEvent(a.app, a.pages, clusterPageFocusable)
 		a.pages.SwitchToPage(pageCluster)
 	}, func() {
@@ -144,7 +131,7 @@ func buildPages(a *App) {
 		a.pages.SwitchToPage(pageStaticMaster)
 	})
 
-	selectCls, selectFocusables := newClusterTypePage(a.state, a.schemaStore, func() {
+	selectCls, selectFocusables := NewClusterTypePage(a.state, a.schemaStore, func() {
 		if a.state.ClusterType == state.CloudCluster {
 			p, focusable := providerCls.Show()
 			a.pages.AddPage(pageProvider, p, true, false)
@@ -158,7 +145,7 @@ func buildPages(a *App) {
 
 	})
 
-	mainForm, mainFocusables := welcomePage(func() {
+	mainForm, mainFocusables := WelcomePage(func() {
 		addSwitchFocusEvent(a.app, a.pages, selectFocusables)
 		a.pages.SwitchToPage(pageSelectClusterType)
 	})

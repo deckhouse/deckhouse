@@ -9,7 +9,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/validate"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/utils"
 )
 
 const (
@@ -109,7 +109,7 @@ func (s *Schema) ValidateImagesRepo(r string) error {
 
 	ss := schema.SchemaProps.Properties["deckhouse"].SchemaProps.Properties["imagesRepo"]
 
-	_, err := validate.OpenAPIValidate(&ss, r)
+	_, err := utils.OpenAPIValidate(&ss, r)
 
 	return err
 }
@@ -174,7 +174,7 @@ func (s *Schema) ValidatePublicDomainTemplate(p string) error {
 	}
 
 	ss := schema.SchemaProps.Properties["modules"].SchemaProps.Properties["publicDomainTemplate"]
-	_, err := validate.OpenAPIValidate(&ss, p)
+	_, err := utils.OpenAPIValidate(&ss, p)
 
 	return err
 }

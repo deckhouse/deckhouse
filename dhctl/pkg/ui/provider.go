@@ -5,7 +5,7 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/rivo/tview"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/widget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
 type providerSchema interface {
@@ -17,24 +17,19 @@ type providerState interface {
 	GetProvider() string
 }
 
-type providerPage struct {
+type ProviderPage struct {
 	st     providerState
 	schema providerSchema
-	onNext func()
-	onBack func()
 }
 
-func newProviderPage(st providerState, schema providerSchema, onNext func(), onBack func()) *providerPage {
-	return &providerPage{
+func NewProviderPage(st providerState, schema providerSchema) *ProviderPage {
+	return &ProviderPage{
 		st:     st,
 		schema: schema,
-		onBack: onBack,
-		onNext: onNext,
 	}
-
 }
 
-func (p *providerPage) Show() (tview.Primitive, []tview.Primitive) {
+func (p *ProviderPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const inputsWidth = 30
 
 	providerName := p.st.GetProvider()
@@ -58,8 +53,8 @@ func (p *providerPage) Show() (tview.Primitive, []tview.Primitive) {
 		errorLbl.SetText("")
 		p.st.SetProviderData(form.Data())
 
-		p.onNext()
-	}, p.onBack)
+		onNext()
+	}, onBack)
 
 	return pp, append([]tview.Primitive{form}, focusable...)
 }

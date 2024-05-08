@@ -1,4 +1,4 @@
-package validate
+package utils
 
 import (
 	"github.com/go-openapi/spec"

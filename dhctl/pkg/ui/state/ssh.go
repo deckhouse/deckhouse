@@ -1,4 +1,4 @@
-package utils
+package state
 
 import (
 	"crypto/ed25519"
@@ -14,7 +14,7 @@ import (
 I have no idea why this isn't implemented anywhere yet, you can do seemingly
 everything except write it to disk in the OpenSSH private key format.
 */
-func MarshalED25519PrivateKey(key ed25519.PrivateKey) []byte {
+func marshalED25519PrivateKey(key ed25519.PrivateKey) []byte {
 	// Add our key header (followed by a null byte)
 	magic := append([]byte("openssh-key-v1"), 0)
 
@@ -91,13 +91,13 @@ func MarshalED25519PrivateKey(key ed25519.PrivateKey) []byte {
 	return magic
 }
 
-func GenerateEd25519Keys() (string, string, error) {
+func generateEd25519Keys() (string, string, error) {
 	pubKey, privKey, _ := ed25519.GenerateKey(nil)
 	publicKey, _ := ssh.NewPublicKey(pubKey)
 
 	pemKey := &pem.Block{
 		Type:  "OPENSSH PRIVATE KEY",
-		Bytes: MarshalED25519PrivateKey(privKey), // <- marshals ed25519 correctly
+		Bytes: marshalED25519PrivateKey(privKey), // <- marshals ed25519 correctly
 	}
 	privateKey := pem.EncodeToMemory(pemKey)
 	authorizedKey := ssh.MarshalAuthorizedKey(publicKey)
