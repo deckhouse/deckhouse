@@ -167,7 +167,7 @@ func (s *Schema) ReleaseChannels() []string {
 	return res
 }
 
-func (s *Schema) ValidatePublicDomainTemplate(p string) error {
+func (s *Schema) validatePublicDomainTemplate(p string) error {
 	schema := s.store.ModuleConfigSchema("global")
 	if schema == nil {
 		panic("Cannot load module config global")

@@ -302,7 +302,7 @@ func (b *State) SetReleaseChannel(ch string) error {
 }
 
 func (b *State) SetPublicDomainTemplate(p string) error {
-	if err := b.schema.ValidatePublicDomainTemplate(p); err != nil {
+	if err := b.schema.validatePublicDomainTemplate(p); err != nil {
 		return fmt.Errorf("Public domain template invalid", err)
 	}
 
