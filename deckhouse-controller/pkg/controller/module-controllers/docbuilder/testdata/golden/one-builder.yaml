@@ -1,0 +1,18 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  creationTimestamp: null
+  name: testmodule
+  resourceVersion: "1000"
+spec:
+  path: /testmodule/v1.0.0
+  version: v1.0.0
+status:
+  conditions:
+  - address: http://10-111-2-176.d8-system.pod.cluster.local:8081
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    type: Rendered
+    version: v1.0.0
+  result: Rendered

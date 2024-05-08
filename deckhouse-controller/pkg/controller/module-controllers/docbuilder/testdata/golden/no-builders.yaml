@@ -1,0 +1,11 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  creationTimestamp: null
+  name: testmodule
+  resourceVersion: "999"
+spec:
+  path: /testmodule/v1.0.0
+  version: v1.0.0
+status: {}
