@@ -88,7 +88,7 @@ index 4c0da2eb9..8f7004689 100644
  
          location {{ $path }} {
 +            {{ if $all.Cfg.UseHTTP3 }}
-+            add_header Alt-Svc 'h3=":$all.ListenPorts.HTTPS"; ma=86400';
++            add_header Alt-Svc 'h3=":{{ $all.ListenPorts.HTTPS }}"; ma=86400';
 +            {{ end }}
              {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
              set $namespace      {{ $ing.Namespace | quote}};
