@@ -31,7 +31,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer source.Close()
 
-	if err := os.MkdirAll(filepath.Dir(dst), os.ModePerm); err != nil {
+	if err := MkdirAllForFile(dst, os.ModePerm); err != nil {
 		return err
 	}
 
@@ -46,5 +46,12 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
+	return nil
+}
+
+func MkdirAllForFile(filePath string, dirPerm os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(filePath), dirPerm); err != nil {
+		return err
+	}
 	return nil
 }
