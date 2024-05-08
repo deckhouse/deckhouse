@@ -135,27 +135,27 @@ func NewManifestsSpec() *ManifestsSpec {
 		GeneratedCertificates: generatedCertificates,
 		Manifests: []ManifestSpec{
 			{
-				InputPath: filepath.Join(InputManifestsDir, "distribution-config.yaml"),
+				InputPath: filepath.Join(InputDockerDistribManifestsDir, "config.yaml"),
 				TmpPath:   filepath.Join(TmpWorkspaceDockerDistribManifestsDir, "config.yaml"),
 				DestPath:  filepath.Join(DestionationDockerDistribManifestsDir, "config.yaml"),
 			},
 			{
-				InputPath: filepath.Join(InputManifestsDir, "docker-auth-config.yaml"),
+				InputPath: filepath.Join(InputDockerAuthManifestsDir, "config.yaml"),
 				TmpPath:   filepath.Join(TmpWorkspaceDockerAuthManifestsDir, "config.yaml"),
 				DestPath:  filepath.Join(DestionationDockerAuthManifestsDir, "config.yaml"),
 			},
 			{
-				InputPath: filepath.Join(InputManifestsDir, "seaweedfs-filer.toml"),
+				InputPath: filepath.Join(InputSeaweedManifestsDir, "filer.toml"),
 				TmpPath:   filepath.Join(TmpWorkspaceSeaweedManifestsDir, "filer.toml"),
 				DestPath:  filepath.Join(DestionationSeaweedManifestsDir, "filer.toml"),
 			},
 			{
-				InputPath: filepath.Join(InputManifestsDir, "seaweedfs-master.toml"),
+				InputPath: filepath.Join(InputSeaweedManifestsDir, "master.toml"),
 				TmpPath:   filepath.Join(TmpWorkspaceSeaweedManifestsDir, "master.toml"),
 				DestPath:  filepath.Join(DestionationSeaweedManifestsDir, "master.toml"),
 			},
 			{
-				InputPath: filepath.Join(InputManifestsDir, "static-pod-system-registry.yaml"),
+				InputPath: filepath.Join(InputStaticPodsDir, "system-registry.yaml"),
 				TmpPath:   filepath.Join(TmpWorkspaceStaticPodsDir, "system-registry.yaml"),
 				DestPath:  filepath.Join(DestionationDirStaticPodsDir, "system-registry.yaml"),
 			},

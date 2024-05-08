@@ -22,7 +22,6 @@ import (
 
 func GenerateCerts() error {
 	log.Info("Generating certificates...")
-	defer log.Info("Certificates generation completed.")
 
 	if err := generateSeaweedEtcdClientCert(); err != nil {
 		log.Errorf("Error generating SeaweedEtcdClient certificate: %v", err)
@@ -32,6 +31,7 @@ func GenerateCerts() error {
 		log.Errorf("Error generating DockerAuthToken certificate: %v", err)
 		return err
 	}
+	log.Info("Certificates generation completed.")
 	return nil
 }
 
