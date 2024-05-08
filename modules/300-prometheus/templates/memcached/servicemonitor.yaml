@@ -15,7 +15,7 @@ spec:
       metricRelabelings:
         - action: drop
           regex: (memcached_slab_.*)
-          sourceLabels:
+          sourceLabels: [__name__]
       relabelings:
         - targetLabel: tier
           replacement: cluster
