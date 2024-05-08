@@ -12,6 +12,10 @@ type clusterTypeState interface {
 	SetClusterType(string)
 	SetProvider(string)
 	SetClusterPrefix(string)
+
+	GetClusterType() string
+	GetProvider() string
+	GetClusterPrefix() string
 }
 
 type clusterTypesSchema interface {
@@ -45,19 +49,35 @@ func (p *ClusterTypePage) Show(onNext func(), onBack func()) (tview.Primitive, [
 
 	addProviderPrefixItems := func() {
 		if form.GetFormItemIndex(providerLabel) < 0 {
-			form.AddDropDown(providerLabel, p.schema.CloudProviders(), 0, func(option string, optionIndex int) {
+			providers := p.schema.CloudProviders()
+			i := 0
+			for indx, provider := range providers {
+				if provider == p.st.GetProvider() {
+					i = indx
+					break
+				}
+			}
+			form.AddDropDown(providerLabel, providers, i, func(option string, optionIndex int) {
 				p.st.SetProvider(option)
 			})
 		}
 
 		if form.GetFormItemIndex(prefixLabel) < 0 {
-			form.AddInputField(prefixLabel, "", constInputsWidth, nil, func(text string) {
+			form.AddInputField(prefixLabel, p.st.GetClusterPrefix(), constInputsWidth, nil, func(text string) {
 				p.st.SetClusterPrefix(text)
 			})
 		}
 	}
 
-	form.AddDropDown(typeLabel, []string{state.CloudCluster, state.StaticCluster}, 0, func(option string, optionIndex int) {
+	types := []string{state.CloudCluster, state.StaticCluster}
+	i := 0
+	for indx, tp := range types {
+		if tp == p.st.GetClusterType() {
+			i = indx
+			break
+		}
+	}
+	form.AddDropDown(typeLabel, types, i, func(option string, optionIndex int) {
 		switch option {
 		case state.StaticCluster:
 			if indx := form.GetFormItemIndex(prefixLabel); indx >= 0 {
@@ -77,7 +97,9 @@ func (p *ClusterTypePage) Show(onNext func(), onBack func()) (tview.Primitive, [
 		p.st.SetClusterType(option)
 	})
 
-	addProviderPrefixItems()
+	if p.st.GetClusterType() == state.CloudCluster {
+		addProviderPrefixItems()
+	}
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 
@@ -101,7 +123,6 @@ func (p *ClusterTypePage) Show(onNext func(), onBack func()) (tview.Primitive, [
 			}
 			p.st.SetClusterPrefix(prefix)
 		} else {
-			p.st.SetClusterPrefix("")
 			p.st.SetProvider("")
 		}
 

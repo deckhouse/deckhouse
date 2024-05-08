@@ -178,6 +178,10 @@ func (b *State) GetProvider() string {
 	return b.Provider
 }
 
+func (b *State) GetClusterPrefix() string {
+	return b.Prefix
+}
+
 func (b *State) SetRegistryRepo(r string) error {
 	err := b.schema.ValidateImagesRepo(r)
 	if err != nil {

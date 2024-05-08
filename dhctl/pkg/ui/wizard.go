@@ -44,11 +44,31 @@ var (
 		pageStaticMaster,
 	}
 
+	providerGenericPages = []string{
+		pageProvider,
+	}
+
 	staticPagesOrder = append(append(append([]string{}, preClusterTypeSteps...), staticPages...), postClusterTypeSteps...)
+	awsOrder         = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	gcpOrder         = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	azureOrder       = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	yandexOrder      = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	openstackOrder   = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	vsphereOrder     = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	vcdOrder         = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
+	zvirtOrder       = append(append(append([]string{}, preClusterTypeSteps...), providerGenericPages...), postClusterTypeSteps...)
 
 	orders = map[string][]string{
 		// static
-		"": staticPagesOrder,
+		"":          staticPagesOrder,
+		"AWS":       awsOrder,
+		"GCP":       gcpOrder,
+		"Azure":     azureOrder,
+		"Yandex":    yandexOrder,
+		"Openstack": openstackOrder,
+		"VSphere":   vsphereOrder,
+		"VCD":       vcdOrder,
+		"ZVirt":     zvirtOrder,
 	}
 )
 
