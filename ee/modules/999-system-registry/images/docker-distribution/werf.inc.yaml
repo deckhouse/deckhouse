@@ -49,8 +49,8 @@ import:
     to: /registry
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "/entrypoint"
-    to: /
+    add: /entrypoint
+    to: /entrypoint
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
