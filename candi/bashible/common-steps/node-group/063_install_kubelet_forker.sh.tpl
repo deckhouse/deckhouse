@@ -45,11 +45,8 @@ until ss -nltp4 | grep -qE "127.0.0.1:10248.*pid=$CHILDREN_PID" && curl -s -f ht
 done
 
 
-{{- if hasKey .nodeGroup "fencing" }}
-  {{ if eq .nodeGroup.fencing.mode "Watchdog" }}
-# fencing settings
-sysctl -w kernel.panic=0
-  {{- end }}
+{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  sysctl -w kernel.panic=0
 {{- end }}
 
 EOF
