@@ -90,22 +90,7 @@ COPY patches/auth-cookie-always.patch /
 COPY --from=base-alt /lib64 /chroot/lib64
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
-  && adduser -r -U -u 101 -d /usr/local/nginx \
-    -s /sbin/nologin -c www-data www-data \
-  && bash -eu -c ' \
-  writeDirs=( \
-  /var/log/nginx \
-  /var/lib/nginx/body \
-  /var/lib/nginx/fastcgi \
-  /var/lib/nginx/proxy \
-  /var/lib/nginx/scgi \
-  /var/lib/nginx/uwsgi \
-  /var/log/audit \
-  ); \
-  for dir in "${writeDirs[@]}"; do \
-  mkdir -p ${dir}; \
-  chown -R www-data.www-data ${dir}; \
-  done'
+  && adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
 
 # chroot.sh
 RUN bash -eu -c ' \
@@ -118,6 +103,7 @@ RUN bash -eu -c ' \
     /chroot/etc/ingress-controller/ssl \
     /chroot/etc/ingress-controller/auth \
     /chroot/etc/ingress-controller/telemetry \
+    /chroot/etc/ingress-controller/geoip \
     /chroot/opt/modsecurity/var/log \
     /chroot/opt/modsecurity/var/upload \
     /chroot/opt/modsecurity/var/audit \
@@ -140,7 +126,6 @@ RUN bash -eu -c ' \
   # Create opentelemetry.toml file as it doesn't present in controller_image
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
-  && mkdir -p /chroot/etc/nginx/geoip \
   && cp -a /etc/pki /chroot/etc/pki \
   && cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates \
   && cp -a /usr/bin/curl /chroot/usr/bin/curl \
@@ -170,10 +155,7 @@ RUN bash -eu -c ' \
 
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
 
-RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
-  && patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tmpl.patch \
-  && patch -p1 < /auth-cookie-always.patch
+RUN patch -p1 < /balancer-lua.patch patch -p1 < /nginx-tmpl.patch patch -p1 < /auth-cookie-always.patch
 
 # Final image
 # Based on tag "controller-v1.10.1":
