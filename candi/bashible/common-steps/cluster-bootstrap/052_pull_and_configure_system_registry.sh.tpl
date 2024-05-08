@@ -23,7 +23,7 @@ else
 fi
 {{- end -}}
 
-{{- if ne .registryMode "Direct" }}
+{{- if and .registryMode (ne .registryMode "Direct") }}
 # Create a directories for the system registry configuration
 mkdir -p /etc/kubernetes/system-registry/{auth_config,seaweedfs_config,distribution_config}
 

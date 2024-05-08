@@ -23,7 +23,7 @@ else
 fi
 {{- end }}
 
-{{- if ne .registryMode "Direct" }}
+{{- if and .registryMode (ne .registryMode "Direct") }}
 
 bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
 bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
