@@ -34,7 +34,8 @@ shell:
     - GO111MODULE=on script/setup/install-dev-tools
     - GO111MODULE=off make build
     - GO111MODULE=off make binaries
-    - go build -ldflags="-s -w" -o /entrypoint /s3_healthcheck/main.go
+    - cd /s3_healthcheck
+    - go build -ldflags="-s -w" -o /entrypoint ./main.go
 
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
