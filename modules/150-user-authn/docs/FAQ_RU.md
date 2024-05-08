@@ -110,6 +110,7 @@ title: "Модуль user-authn: FAQ"
   ```
 
 Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
+{% endraw %}
 
 ### Настройка kube-apiserver
 
@@ -125,11 +126,13 @@ title: "Модуль user-authn: FAQ"
 В случае использования самоподписанных сертификатов для Dex будет добавлен еще один аргумент, а также в под с apiserver будет смонтирован файл с CA:
 
 * `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
-  {% endofftopic %}
+{% endofftopic %}
+
+{% raw %}
 
 ### Как работает подключение к Kubernetes API с помощью сгенерированного kubeconfig
 
-<img src="../../images/150-user-authn/kubeconfig_dex.svg">
+![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](../../images/150-user-authn/kubeconfig_dex.svg)
 
 1. До начала работы kube-apiserver необходимо запросить конфигурационный endpoint OIDC провайдера (в нашем случае — Dex), чтобы получить issuer и настройки JWKS endpoint.
 
