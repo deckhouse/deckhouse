@@ -13,6 +13,12 @@ git:
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/999-{{ $.ModuleName }}/images/{{ $.ImageName }}/s3_healthcheck
+    to: /s3_healthcheck
+    stageDependencies:
+      install:
+        - '**/*'
+
 shell:
   beforeInstall:
   - mkdir -m 1777 /tmp-tmp
@@ -28,6 +34,7 @@ shell:
     - GO111MODULE=on script/setup/install-dev-tools
     - GO111MODULE=off make build
     - GO111MODULE=off make binaries
+    - go build -ldflags="-s -w" -o /entrypoint /s3_healthcheck/main.go
 
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
@@ -38,8 +45,12 @@ import:
     to: /tmp
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "{{ $GIT_CLONE_DEST_PATH }}//bin/registry"
+    add: "{{ $GIT_CLONE_DEST_PATH }}/bin/registry"
     to: /registry
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "/entrypoint"
+    to: /
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
@@ -51,5 +62,5 @@ import:
     before: setup
 
 docker:
-  ENTRYPOINT: ["/registry"]
+  ENTRYPOINT: ["/entrypoint"]
 
