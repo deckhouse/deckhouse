@@ -83,7 +83,7 @@ index 7cd6a0604..2247127b4 100644
  	return out
  }
  
-+func http3Listener(addresses []string, _ string, tc *config.TemplateConfig) []string {
++func http3Listener(addresses []string, co string, tc *config.TemplateConfig) []string {
 +	out := make([]string, 0)
 +	for _, address := range addresses {
 +		lo := []string{"listen"}
@@ -94,7 +94,7 @@ index 7cd6a0604..2247127b4 100644
 +			lo = append(lo, fmt.Sprintf("%v:%v", address, tc.ListenPorts.HTTPS))
 +		}
 +
-+		lo = append(lo, "quic", "reuseport;")
++		lo = append(lo, "quic", co, ";")
 +		out = append(out, strings.Join(lo, " "))
 +	}
 +
