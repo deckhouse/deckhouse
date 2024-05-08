@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .runType "ClusterBootstrap" }}
 {{- if eq .registryMode "Proxy" }}
 UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
@@ -260,5 +259,4 @@ crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.imag
 
 IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
-{{- end -}}
 {{- end -}}
