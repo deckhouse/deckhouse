@@ -14,15 +14,22 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"system-registry-manager/internal/config"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"system-registry-manager/internal/config"
 )
 
 func GenerateCerts() error {
+	log.Info("Generating certificates...")
+	defer log.Info("Certificates generation completed.")
+
 	if err := generateSeaweedEtcdClientCert(); err != nil {
+		log.Errorf("Error generating SeaweedEtcdClient certificate: %v", err)
 		return err
 	}
 	if err := generateDockerAuthTokenCert(); err != nil {
+		log.Errorf("Error generating DockerAuthToken certificate: %v", err)
 		return err
 	}
 	return nil
@@ -47,6 +54,8 @@ func generateDockerAuthTokenCert() error {
 }
 
 func createEtcdClientCert(caCertPath, caKeyPath, certPath, keyPath string) error {
+	log.Info("Creating etcd client certificate...")
+
 	// Load the CA certificate content from file
 	caCertPEM, err := os.ReadFile(caCertPath)
 	if err != nil {
@@ -127,10 +136,13 @@ func createEtcdClientCert(caCertPath, caKeyPath, certPath, keyPath string) error
 		return fmt.Errorf("error writing private key: %v", err)
 	}
 
+	log.Info("Etcd client certificate created successfully.")
 	return nil
 }
 
 func createSelfSignedCert(certPath, keyPath string) error {
+	log.Info("Creating self-signed certificate...")
+
 	// Generate a private key
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -182,5 +194,6 @@ func createSelfSignedCert(certPath, keyPath string) error {
 		return fmt.Errorf("failed to write private key to file: %v", err)
 	}
 
+	log.Info("Self-signed certificate created successfully.")
 	return nil
 }
