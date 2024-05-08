@@ -69,14 +69,14 @@ werf compose up --config werf-debug.yaml --follow --docker-compose-command-optio
 
 Connect to localhost:2345
 
-
 ## Working with spellcheck
 
 Use the following commands:
 - `make docs-spellcheck` — to check all the documentation for spelling errors.
 - `file=<PATH_TO_FILE> make docs-spellcheck` — to check the specified file for spelling errors.
 
-  Example: 
+  Example:
+
   ```shell
   file=ee/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
   ```
