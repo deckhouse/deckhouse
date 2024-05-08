@@ -42,7 +42,7 @@
     fieldRef:
       fieldPath: spec.nodeName
 - name: CSI_ENDPOINT
-  value: "unix://tmp/csi.sock"
+  value: "unix:///csi/csi.sock"
 {{- end }}
 
 
@@ -149,7 +149,7 @@
     fieldRef:
       fieldPath: spec.nodeName
 - name: CSI_ENDPOINT
-  value: "unix://tmp/csi.sock"
+  value: "unix:///csi/csi.sock"
 {{- end }}
 
 
