@@ -164,6 +164,7 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 	err = os.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform state for runner %s: %s\n", r.step, err)
+		os.Remove(tmpFile.Name())
 		return r
 	}
 
@@ -181,6 +182,7 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 	err = os.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform variables for runner %s: %s\n", r.step, err)
+		os.Remove(tmpFile.Name())
 		return r
 	}
 
@@ -454,7 +456,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 			r.changesInPlan = PlanHasChanges
 			destructiveChanges, err := r.getPlanDestructiveChanges(tmpFile.Name())
 			if err != nil {
-				r.CleanupPlanPath()
+				os.Remove(tmpFile.Name())
 				return err
 			}
 			if destructiveChanges != nil {
@@ -462,7 +464,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 				r.planDestructiveChanges = destructiveChanges
 			}
 		} else if err != nil {
-			r.CleanupPlanPath()
+			os.Remove(tmpFile.Name())
 			return err
 		}
 
@@ -470,19 +472,6 @@ func (r *Runner) Plan(opts PlanOptions) error {
 
 		return nil
 	})
-}
-
-func (r *Runner) CleanupPlanPath() error {
-	if r.planPath == "" {
-		return nil
-	}
-
-	err := os.Remove(r.planPath)
-	if err != nil {
-		log.WarnF("Can't remove terraform plan file: %v", err)
-	}
-
-	return err
 }
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {

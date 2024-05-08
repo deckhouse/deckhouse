@@ -123,8 +123,6 @@ type BaseInfrastructureDestructiveChanges struct {
 }
 
 func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, TerraformPlan, *BaseInfrastructureDestructiveChanges, error) {
-	defer r.CleanupPlanPath()
-
 	isChange := PlanHasNoChanges
 
 	var destructiveChanges *BaseInfrastructureDestructiveChanges
