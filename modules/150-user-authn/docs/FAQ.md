@@ -130,7 +130,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 {% endofftopic %}
 
 {% raw %}
-   
+
 ### The flow of accessing Kubernetes API with generated kubeconfig
 
 ![Interaction scheme when accessing Kubernetes API using generated kubeconfig](../../images/150-user-authn/kubeconfig_dex.svg)
