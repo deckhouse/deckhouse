@@ -21,7 +21,7 @@ spec:
     kind: Daemonset
     name: fencing-agent-{{ $ng.name }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
       - containerName: "fencing-agent"
