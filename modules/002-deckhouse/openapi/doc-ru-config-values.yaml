@@ -29,7 +29,7 @@ properties:
         description: |
           Режим обновления версий Deckhouse, имеющих disruptions (потенциально опасные изменения):
           - `Auto` — автоматический режим обновления.
-          - `Manual` — ручной режим обновления (установка аннотации `release.deckhouse.io/disruption-approved=true`).
+          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](cr.html#deckhouserelease).
       windows:
         description: |
           Список окон обновлений в течение суток.
