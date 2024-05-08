@@ -47,6 +47,7 @@ spec:
                   type: string
                 conditions:
                   type: array
+                  x-kubernetes-patch-strategy: "retainKeys"
                   items:
                     type: object
                     properties:

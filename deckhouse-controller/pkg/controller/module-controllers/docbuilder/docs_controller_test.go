@@ -74,7 +74,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
-	suite.Run("ModuleDocumentation with no builder endpoints", func() {
+	suite.Run("with no builder endpoints", func() {
 		suite.setupController(string(suite.fetchTestFileData("no-builders.yaml")))
 
 		md := suite.getModuleDocumentation("testmodule")
@@ -82,7 +82,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("ModuleDocumentation with only one builder", func() {
+	suite.Run("with only one builder", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
@@ -105,7 +105,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("ModuleDocumentation with two builders", func() {
+	suite.Run("with two builders", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
@@ -128,7 +128,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("ModuleDocumentation one builder cannot render", func() {
+	suite.Run("one builder cannot render", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
@@ -156,7 +156,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Render new version", func() {
+	suite.Run("render new version", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
@@ -179,7 +179,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Keep up-to-date rendered documentation", func() {
+	suite.Run("keep up-to-date rendered documentation", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 		dependency.TestDC.GetClock().(clockwork.FakeClock).Advance(1 * time.Hour)

@@ -222,7 +222,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	}
 
 	fmt.Println("MDD PATCH")
-	err = mdr.client.Status().Patch(ctx, mdCopy, client.StrategicMergeFrom(md))
+	err = mdr.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md))
 	if err != nil {
 		fmt.Println("MDD PATCH ERR", err)
 		return ctrl.Result{Requeue: true}, err
