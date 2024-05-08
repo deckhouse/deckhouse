@@ -83,6 +83,7 @@ spec:
           - --allocate-node-cidrs=true
           - --configure-cloud-routes=false
           - --cloud-provider=dvp
+          - --cloud-config=/etc/dvp/config.yaml
           - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
           - --bind-address=$(HOST_IP)
           - --secure-port=10471
@@ -115,29 +116,16 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
-          - name: YANDEX_CLUSTER_NAME
-            value: a{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
-          - name: YANDEX_CLOUD_SERVICE_ACCOUNT_JSON
-            valueFrom:
-              secretKeyRef:
-                name: cloud-controller-manager
-                key: service-acount-json
-          - name: YANDEX_CLOUD_FOLDER_ID
-            value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | quote }}
-          - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
-            value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
-          - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
-            value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
-          - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
-            value: {{ join "," .Values.cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs | quote }}
-          - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
-            value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
-          - name: YANDEX_CLOUD_ROUTE_TABLE_ID
-            value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /etc/dvp/
+            name: cloud-config
+            readOnly: true
+          - mountPath: /etc/kubernetes/
+            name: kubeconfig
+            readOnly: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
@@ -147,4 +135,11 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {}
+      - name: cloud-config
+        configMap:
+          name: "dvp-cloud-controller-manager-config"
+      - name: kubeconfig
+        secret:
+          secretName: "cloud-controller-manager"
+
 {{- end }}
