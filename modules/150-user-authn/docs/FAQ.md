@@ -111,6 +111,7 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
   ```
 
 The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
+{% endraw %}
 
 ### Configuring kube-apiserver
 
@@ -126,11 +127,13 @@ With the functional of the [control-plane-manager](../../modules/040-control-pla
 If self-signed certificates are used, Dex will get one more argument. At the same time, the CA file will be mounted to the apiserver's Pod:
 
 * `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
-  {% endofftopic %}
-  
+{% endofftopic %}
+
+{% raw %}
+   
 ### The flow of accessing Kubernetes API with generated kubeconfig
 
-<img src="../../images/150-user-authn/kubeconfig_dex.svg">
+![Interaction scheme when accessing Kubernetes API using generated kubeconfig](../../images/150-user-authn/kubeconfig_dex.svg)
 
 1. Before the start, kube-apiserver needs to request the configuration endpoint of the OIDC provider (Dex in our case) to get the issuer and JWKS endpoint settings.
 
