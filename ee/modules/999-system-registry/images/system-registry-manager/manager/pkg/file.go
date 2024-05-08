@@ -42,3 +42,10 @@ func GetChecksum(filePath string) (string, error) {
 	checksum := hex.EncodeToString(sum)
 	return checksum, nil
 }
+
+func OsWriteFile(name string, data []byte, perm os.FileMode) error {
+	if err := MkdirAllForFile(name, os.ModePerm); err != nil {
+		return err
+	}
+	return os.WriteFile(name, data, perm)
+}
