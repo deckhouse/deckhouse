@@ -337,7 +337,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	if md.Spec.Version != moduleVersion {
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != checksum {
 		// update CR
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion

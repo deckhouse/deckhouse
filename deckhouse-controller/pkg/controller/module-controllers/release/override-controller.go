@@ -274,7 +274,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	if mdd.Spec.Version != moduleVersion {
+	if mdd.Spec.Version != moduleVersion || mdd.Spec.Checksum != checksum {
 		// update CR
 		mdd.Spec.Path = modulePath
 		mdd.Spec.Version = moduleVersion
