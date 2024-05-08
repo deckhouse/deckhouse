@@ -175,6 +175,8 @@ import:
   - en/includes/
   - ru/includes/
 ---
+{{ tpl (.Files.Get "werf-docs-builder.inc.yaml") (dict "ctx" . "mode" "default") }}
+---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}

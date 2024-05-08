@@ -15,7 +15,6 @@ configVersion: 1
   {{- end }}
 ---
 image: docs-spell-checker
-#from: {{ .Images.BASE_UBUNTU }}
 from: {{ .Images.BASE_PYTHON_ALPINE }}
 git:
   - add: /
