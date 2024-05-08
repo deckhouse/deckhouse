@@ -276,6 +276,7 @@ type mockedDependencyContainer struct {
 	K8sClient     k8s.Client
 	CRClient      *cr.ClientMock
 	VsphereClient *vsphere.ClientMock
+	clock         clockwork.FakeClock
 }
 
 func (mdc *mockedDependencyContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
@@ -341,8 +342,14 @@ func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) 
 }
 
 func (mdc *mockedDependencyContainer) GetClock() clockwork.Clock {
+	if mdc.clock != nil {
+		return mdc.clock
+	}
+
 	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, time.UTC)
-	return clockwork.NewFakeClockAt(t)
+	cc := clockwork.NewFakeClockAt(t)
+	mdc.clock = cc
+	return cc
 }
 
 func newMockedContainer() *mockedDependencyContainer {

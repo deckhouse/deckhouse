@@ -1,0 +1,28 @@
+# Builder backend and module version were changed
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  name: testmodule
+spec:
+  version: v1.1.1
+  path: /testmodule/v1.1.1
+status:
+  conditions:
+    - address: http://10-222-222-22.d8-system.pod.cluster.local:8081
+      lastTransitionTime: "2019-10-17T15:33:00Z"
+      message: ""
+      type: Rendered
+      version: v1.0.0
+  result: Rendered
+---
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  labels:
+    deckhouse.io/documentation-builder-sync: ""
+  name: module-docs-builder-ldq7x
+  namespace: d8-system
+spec:
+  holderIdentity: 10-111-111-11.d8-system.pod.cluster.local:8081
+  leaseDurationSeconds: 35
+  renewTime: "2024-05-08T12:11:04.160683Z"

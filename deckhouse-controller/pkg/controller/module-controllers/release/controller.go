@@ -53,7 +53,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -77,8 +76,6 @@ type moduleReleaseReconciler struct {
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
-
-	documentationUpdater *docs.Updater
 }
 
 const (
@@ -89,9 +86,6 @@ const (
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
-	waitingForWindow       = "Release is waiting for the update window: %s"
-	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
-	namespace              = "d8-system"
 )
 
 func NewModuleReleaseController(
@@ -100,7 +94,6 @@ func NewModuleReleaseController(
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 	mv moduleValidator,
 	metricStorage *metric_storage.MetricStorage,
-	documentationUpdater *docs.Updater,
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
@@ -116,8 +109,6 @@ func NewModuleReleaseController(
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
-
-		documentationUpdater: documentationUpdater,
 	}
 
 	// Add Preflight Check
@@ -229,53 +220,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 		return ctrl.Result{}, nil
 
 	case v1alpha1.PhaseDeployed:
-		// check if RegistrySpecChangedAnnotation annotation is set and processes it
-		if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
-			// if module is enabled - push runModule task in the main queue
-			c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-			err := c.modulesValidator.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-			// delete annotation and requeue
-			delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
-			return ctrl.Result{Requeue: true}, c.client.Update(ctx, mr)
-		}
-
-		// add finalizer and status label
-		if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-			controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
-		}
-
-		if mr.Labels["status"] != strings.ToLower(v1alpha1.PhaseDeployed) {
-			addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
-			if e := c.client.Update(ctx, mr); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		}
-
-		// at least one release for module source is deployed, add finalizer to prevent module source deletion
-		ms := new(v1alpha1.ModuleSource)
-		err := c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleSource()}, ms)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-
-		if !controllerutil.ContainsFinalizer(ms, sourceReleaseFinalizer) {
-			controllerutil.AddFinalizer(ms, sourceReleaseFinalizer)
-			err = c.client.Update(ctx, ms)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-		}
-
-		// updating documentation is last step so as not to update it in at each requeue
-		err = c.documentationUpdater.SendDocumentation(ctx, mr)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
-		}
-
-		return ctrl.Result{}, nil
+		return c.reconcileDeployedRelease(ctx, mr)
 	}
 
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
@@ -301,6 +246,112 @@ func (c *moduleReleaseReconciler) isModulePullOverrideExists(ctx context.Context
 	}
 
 	return len(res.Items) > 0, nil
+}
+
+func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	// check if RegistrySpecChangedAnnotation annotation is set and processes it
+	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+		// if module is enabled - push runModule task in the main queue
+		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
+		err := c.modulesValidator.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		// delete annotation and requeue
+		delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		return ctrl.Result{Requeue: true}, c.client.Update(ctx, mr)
+	}
+
+	// add finalizer and status label
+	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
+		controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
+	}
+
+	if mr.Labels["status"] != strings.ToLower(v1alpha1.PhaseDeployed) {
+		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
+		if e := c.client.Update(ctx, mr); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+	}
+
+	// at least one release for module source is deployed, add finalizer to prevent module source deletion
+	ms := new(v1alpha1.ModuleSource)
+	err := c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleSource()}, ms)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	if !controllerutil.ContainsFinalizer(ms, sourceReleaseFinalizer) {
+		controllerutil.AddFinalizer(ms, sourceReleaseFinalizer)
+		err = c.client.Update(ctx, ms)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	modulePath := fmt.Sprintf("/%s/v%s", mr.GetModuleName(), mr.Spec.Version.String())
+	moduleVersion := "v" + mr.Spec.Version.String()
+	var md v1alpha1.ModuleDocumentation
+	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, &md)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// just create
+			md = v1alpha1.ModuleDocumentation{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ModuleDocumentation",
+					APIVersion: "deckhouse.io/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: mr.GetModuleName(),
+					Labels: map[string]string{
+						"module": mr.GetModuleName(),
+						"source": mr.GetModuleSource(),
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+							Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+							Name:       mr.GetName(),
+							UID:        mr.GetUID(),
+							Controller: pointer.Bool(true),
+						},
+					},
+				},
+				Spec: v1alpha1.ModuleDocumentationSpec{
+					Version: moduleVersion,
+					Path:    modulePath,
+				},
+			}
+			// NOTICE: probable we also want to add the "release-checksum" label from MR here
+			err = c.client.Create(ctx, &md)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, err
+			}
+		}
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	if md.Spec.Version != moduleVersion {
+		// update CR
+		md.Spec.Path = modulePath
+		md.Spec.Version = moduleVersion
+		md.SetOwnerReferences([]metav1.OwnerReference{
+			{
+				APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+				Name:       mr.GetName(),
+				UID:        mr.GetUID(),
+				Controller: pointer.Bool(true),
+			},
+		})
+
+		err = c.client.Update(ctx, &md)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
@@ -513,7 +564,7 @@ func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 	var symlinkPath string
 
 	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	walkDir := func(path string, d os.DirEntry, err error) error {
+	walkDir := func(path string, d os.DirEntry, _ error) error {
 		if !moduleRegexp.MatchString(d.Name()) {
 			return nil
 		}

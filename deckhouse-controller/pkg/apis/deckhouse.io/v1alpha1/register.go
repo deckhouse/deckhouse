@@ -59,6 +59,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleUpdatePolicyList{},
 		&ModulePullOverride{},
 		&ModulePullOverrideList{},
+		&ModuleDocumentation{},
+		&ModuleDocumentationList{},
 		&DeckhouseRelease{},
 		&DeckhouseReleaseList{},
 	)
