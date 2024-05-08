@@ -71,7 +71,6 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 		For(&v1alpha1.ModuleDocumentation{}).
 		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(c.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(event event.CreateEvent) bool {
-				fmt.Println("CREATES LEASE", event.Object.GetNamespace(), event.Object.GetName())
 				ns := event.Object.GetNamespace()
 				if ns != "d8-system" {
 					return false
@@ -84,8 +83,6 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 						break
 					}
 				}
-
-				fmt.Println("LEASE has label")
 
 				return hasLabel
 			},
@@ -115,8 +112,6 @@ func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Contex
 	if err != nil {
 		log.Errorf("create mapping for lease failed: %s", err.Error())
 	}
-
-	fmt.Println("CREATED LEASE MAP", res)
 
 	return res
 }
@@ -151,8 +146,6 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return ctrl.Result{Requeue: true}, fmt.Errorf("get docs builder addresses: %w", err)
 	}
 
-	fmt.Println("ADDRS", addrs)
-
 	if len(addrs) == 0 {
 		// no endpoints for doc builder
 		return ctrl.Result{}, nil
@@ -174,10 +167,8 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	for _, addr := range addrs {
-		fmt.Println("MDD SEND FOR ADDR", addr)
 		cond, found := md.GetConditionByAddress(addr)
 		if found && cond.Version == md.Spec.Version && cond.Checksum == md.Spec.Checksum && cond.Type == v1alpha1.TypeRendered {
-			fmt.Println("MDD RENDERED")
 			// documentation is rendered for this builder
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			rendered++
@@ -191,14 +182,11 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			LastTransitionTime: now,
 		}
 
-		fmt.Println("MDD BUILDING")
 		err = mdr.buildDocumentation(pr, addr, moduleName, md.Spec.Version)
 		if err != nil {
-			fmt.Println("MDD ERROR", err)
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
 		} else {
-			fmt.Println("MDD HURAI")
 			rendered++
 			cond.Type = v1alpha1.TypeRendered
 			cond.Message = ""
@@ -209,31 +197,24 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	switch {
 	case rendered == 0:
-		fmt.Println("MDD RESULT1")
 		mdCopy.Status.RenderResult = v1alpha1.ResultError
 
 	case rendered == len(addrs):
-		fmt.Println("MDD RESULT2")
 		mdCopy.Status.RenderResult = v1alpha1.ResultRendered
 
 	default:
-		fmt.Println("MDD RESULT3")
 		mdCopy.Status.RenderResult = v1alpha1.ResultPartially
 	}
 
-	fmt.Println("MDD PATCH")
 	err = mdr.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md))
 	if err != nil {
-		fmt.Println("MDD PATCH ERR", err)
 		return ctrl.Result{Requeue: true}, err
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
-		fmt.Println("MDD REQUEUE")
 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
 
-	fmt.Println("MDD DONE")
 	return ctrl.Result{}, nil
 }
 
@@ -244,17 +225,13 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 
-	fmt.Println("FOUND LEASES", leasesList.Items)
-
 	for _, lease := range leasesList.Items {
 		if lease.Spec.HolderIdentity == nil {
-			fmt.Println("LEASE NO IDENT")
 			continue
 		}
 
 		// a stale lease found
 		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(mdr.dc.GetClock().Now()) {
-			fmt.Println("LEASE IS OLD")
 			continue
 		}
 

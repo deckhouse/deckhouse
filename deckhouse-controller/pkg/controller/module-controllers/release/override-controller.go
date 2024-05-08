@@ -233,66 +233,16 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	modulePath := fmt.Sprintf("/%s/dev", mo.GetModuleName())
 	moduleVersion := mo.Spec.ImageTag
 	checksum := mo.Status.ImageDigest
-	var mdd v1alpha1.ModuleDocumentation
-	err = c.client.Get(ctx, types.NamespacedName{Name: mo.GetModuleName()}, &mdd)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// just create
-			mdd = v1alpha1.ModuleDocumentation{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ModuleDocumentation",
-					APIVersion: "deckhouse.io/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: mo.GetModuleName(),
-					Labels: map[string]string{
-						"module": mo.GetModuleName(),
-						"source": mo.GetModuleSource(),
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: v1alpha1.ModulePullOverrideGVK.GroupVersion().String(),
-							Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
-							Name:       mo.GetName(),
-							UID:        mo.GetUID(),
-							Controller: pointer.Bool(true),
-						},
-					},
-				},
-				Spec: v1alpha1.ModuleDocumentationSpec{
-					Version:  moduleVersion,
-					Path:     modulePath,
-					Checksum: checksum,
-				},
-			}
-			// NOTICE: probable we also want to add the "release-checksum" label from MR here
-			err = c.client.Create(ctx, &mdd)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-		}
-		return ctrl.Result{Requeue: true}, err
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModulePullOverrideGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
+		Name:       mo.GetName(),
+		UID:        mo.GetUID(),
+		Controller: pointer.Bool(true),
 	}
-
-	if mdd.Spec.Version != moduleVersion || mdd.Spec.Checksum != checksum {
-		// update CR
-		mdd.Spec.Path = modulePath
-		mdd.Spec.Version = moduleVersion
-		mdd.Spec.Checksum = checksum
-		mdd.SetOwnerReferences([]metav1.OwnerReference{
-			{
-				APIVersion: v1alpha1.ModulePullOverrideGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
-				Name:       mo.GetName(),
-				UID:        mo.GetUID(),
-				Controller: pointer.Bool(true),
-			},
-		})
-
-		err = c.client.Update(ctx, &mdd)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
+	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mo.GetModuleName(), moduleVersion, checksum, modulePath, mo.GetModuleSource(), ownerRef)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil

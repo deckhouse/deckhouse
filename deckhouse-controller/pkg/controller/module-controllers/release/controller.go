@@ -296,66 +296,16 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	if checksum == "" {
 		checksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
 	}
-	var md v1alpha1.ModuleDocumentation
-	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, &md)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// just create
-			md = v1alpha1.ModuleDocumentation{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ModuleDocumentation",
-					APIVersion: "deckhouse.io/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: mr.GetModuleName(),
-					Labels: map[string]string{
-						"module": mr.GetModuleName(),
-						"source": mr.GetModuleSource(),
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
-							Kind:       v1alpha1.ModuleReleaseGVK.Kind,
-							Name:       mr.GetName(),
-							UID:        mr.GetUID(),
-							Controller: pointer.Bool(true),
-						},
-					},
-				},
-				Spec: v1alpha1.ModuleDocumentationSpec{
-					Version:  moduleVersion,
-					Path:     modulePath,
-					Checksum: checksum,
-				},
-			}
-			// NOTICE: probable we also want to add the "release-checksum" label from MR here
-			err = c.client.Create(ctx, &md)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-		}
-		return ctrl.Result{Requeue: true}, err
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+		Name:       mr.GetName(),
+		UID:        mr.GetUID(),
+		Controller: pointer.Bool(true),
 	}
-
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != checksum {
-		// update CR
-		md.Spec.Path = modulePath
-		md.Spec.Version = moduleVersion
-		md.Spec.Checksum = checksum
-		md.SetOwnerReferences([]metav1.OwnerReference{
-			{
-				APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ModuleReleaseGVK.Kind,
-				Name:       mr.GetName(),
-				UID:        mr.GetUID(),
-				Controller: pointer.Bool(true),
-			},
-		})
-
-		err = c.client.Update(ctx, &md)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
+	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mr.GetModuleName(), moduleVersion, checksum, modulePath, mr.GetModuleSource(), ownerRef)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -1066,6 +1016,60 @@ func (c *moduleReleaseReconciler) registerMetrics(ctx context.Context) error {
 
 		c.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
 		c.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
+	}
+
+	return nil
+}
+
+func createOrUpdateModuleDocumentationCR(
+	ctx context.Context,
+	client client.Client,
+	moduleName, moduleVersion, moduleChecksum, modulePath, moduleSource string,
+	ownerRef metav1.OwnerReference,
+) error {
+	var md v1alpha1.ModuleDocumentation
+	err := client.Get(ctx, types.NamespacedName{Name: moduleName}, &md)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// just create
+			md = v1alpha1.ModuleDocumentation{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleDocumentationGVK.Kind,
+					APIVersion: v1alpha1.ModuleDocumentationGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: moduleName,
+					Labels: map[string]string{
+						"module": moduleName,
+						"source": moduleSource,
+					},
+					OwnerReferences: []metav1.OwnerReference{ownerRef},
+				},
+				Spec: v1alpha1.ModuleDocumentationSpec{
+					Version:  moduleVersion,
+					Path:     modulePath,
+					Checksum: moduleChecksum,
+				},
+			}
+			err = client.Create(ctx, &md)
+			if err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+		// update CR
+		md.Spec.Path = modulePath
+		md.Spec.Version = moduleVersion
+		md.Spec.Checksum = moduleChecksum
+		md.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
+		err = client.Update(ctx, &md)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
