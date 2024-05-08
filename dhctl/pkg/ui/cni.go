@@ -25,7 +25,7 @@ type CniPage struct {
 	schema cniSchema
 }
 
-func NewCNIPage(st cniState, schema cniSchema, onNext func(), onBack func()) *CniPage {
+func NewCNIPage(st cniState, schema cniSchema) *CniPage {
 	return &CniPage{
 		st:     st,
 		schema: schema,
