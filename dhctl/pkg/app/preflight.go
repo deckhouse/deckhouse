@@ -25,6 +25,7 @@ var (
 	PreflightSkipRegistryThroughProxy      = false
 	PreflightSkipPublicDomainTemplateCheck = false
 	PreflightSkipSSHCredentialsCheck       = false
+	PreflightSkipRegistryCredentials   = false
 )
 
 const (
@@ -35,6 +36,7 @@ const (
 	RegistryThroughProxyCheckArgName = "preflight-skip-registry-through-proxy"
 	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
 	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
+	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -62,4 +64,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(SSHCredentialsCheckArgName, "Skip verifying PublicDomainTemplate check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_CREDENTIAL_CHECK")).
 		BoolVar(&PreflightSkipSSHCredentialsCheck)
+	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying regestry credentials").
+		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
+		BoolVar(&PreflightSkipRegistryCredentials)
 }

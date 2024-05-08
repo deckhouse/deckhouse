@@ -16,6 +16,8 @@ package preflight
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
@@ -200,4 +202,63 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 		return nil, err
 	}
 	return tun, nil
+}
+
+func (pc *Checker) CheckRegistryCredentials() error {
+	if app.PreflightSkipRegistryCredentials {
+		log.InfoLn("Checking registry credentials was skipped")
+		return nil
+	}
+
+	log.DebugLn("Checking registry credentials")
+
+	req, err := prepareAuthRequest(pc.metaConfig)
+	if err != nil {
+		return err
+	}
+
+	client, err := prepareAuthHTTPClient(pc.metaConfig)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot auth in regestry. %w", err)
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func prepareAuthRequest(metaConfig *config.MetaConfig) (*http.Request, error) {
+	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: "/auth/"}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registryURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("prepare auth request: %w", err)
+	}
+
+	return req, nil
+}
+
+func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+	client := &http.Client{}
+	if len(metaConfig.Registry.CA) > 0 {
+		certPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("system cert pool: %w", err)
+		}
+		if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
+			return nil, fmt.Errorf("invalid cert in CA PEM")
+		}
+		tlsConfig := &tls.Config{
+			RootCAs: certPool,
+		}
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	}
+	return client, nil
 }

@@ -74,7 +74,7 @@ func (pc *Checker) Static() error {
 		{
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
-			skipFlag:       app.ResolvingLocalhostArgName,
+			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})
 }
@@ -89,6 +89,11 @@ func (pc *Checker) Global() error {
 			fun:            pc.CheckPublicDomainTemplate,
 			successMessage: "PublicDomainTemplate is correctly",
 			skipFlag:       app.PublicDomainTemplateCheckArgName,
+		},
+		{
+			fun:            pc.CheckRegistryCredentials,
+			successMessage: "regestry credentials are correct",
+			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})
 }
