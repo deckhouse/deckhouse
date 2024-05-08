@@ -57,7 +57,7 @@ stream {
    {{- end -}}
    {{- end }}
  {{- else if eq .runType "ClusterBootstrap" }}
-  {{- if ne .registryMode "Direct" }}
+  {{- if and .registryMode (ne .registryMode "Direct") }}
   upstream system-registry {
     least_conn;
     server ${discovered_node_ip}:5000;
