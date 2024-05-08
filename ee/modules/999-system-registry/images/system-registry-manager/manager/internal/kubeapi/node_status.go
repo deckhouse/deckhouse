@@ -21,7 +21,7 @@ type NodeStatus struct {
 
 func GetNodeStatus() (NodeStatus, error) {
 	cfg := config.GetConfig()
-	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return NodeStatus{}, err
 	}
@@ -75,7 +75,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 
 	// Get current status
 	cfg := config.GetConfig()
-	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 func SetMyStatusDone() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func SetMyStatusDone() error {
 func ClearMyStatus() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func ClearMyStatus() error {
 func ApproveHandlerStatus() error {
 	// Get annotations
 	cfg := config.GetConfig()
-	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.NodeName, metav1.GetOptions{})
+	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
