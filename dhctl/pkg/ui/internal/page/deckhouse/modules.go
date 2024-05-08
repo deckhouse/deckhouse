@@ -12,6 +12,10 @@ type modulesState interface {
 	SetReleaseChannel(string) error
 	SetPublicDomainTemplate(string) error
 	EnablePublishK8sAPI(bool)
+
+	GetReleaseChannel() string
+	GetPublicDomainTemplate() string
+	IsEnablePublishK8sAPI() bool
 }
 
 type modulesSchema interface {
@@ -42,10 +46,17 @@ func (p *ModulesPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvi
 	form := tview.NewForm()
 
 	channels := p.schema.ReleaseChannels()
-	form.AddDropDown(releaseChannelLabel, channels, len(channels)-1, nil)
+	i := 0
+	for indx, channel := range channels {
+		if channel == p.st.GetReleaseChannel() {
+			i = indx
+			break
+		}
+	}
+	form.AddDropDown(releaseChannelLabel, channels, i, nil)
 
-	form.AddInputField(publicDomainTemplateLabel, "%s.example.com", constInputsWidth, nil, nil)
-	form.AddCheckbox(enablePublishAPILabel, true, nil)
+	form.AddInputField(publicDomainTemplateLabel, p.st.GetPublicDomainTemplate(), constInputsWidth, nil, nil)
+	form.AddCheckbox(enablePublishAPILabel, p.st.IsEnablePublishK8sAPI(), nil)
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 

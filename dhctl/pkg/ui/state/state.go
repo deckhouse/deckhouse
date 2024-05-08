@@ -88,6 +88,11 @@ func NewState(s *Schema) *State {
 			ServiceSubnetCIDR:    "10.222.0.0/16",
 			SubnetNodeCIDRPrefix: "24",
 		},
+		DeckhouseState: DeckhouseState{
+			PublicDomainTemplate: "%s.example.com",
+			EnablePublishK8sAPI:  true,
+			ReleaseChannel:       s.ReleaseChannels()[len(s.ReleaseChannels())-2],
+		},
 		schema: s,
 	}
 }
@@ -350,6 +355,17 @@ func (b *State) SetCNIType(t string) error {
 	}
 
 	return fmt.Errorf("Unknown CNI type %s", t)
+}
+
+func (b *State) GetReleaseChannel() string {
+	return b.DeckhouseState.ReleaseChannel
+}
+func (b *State) GetPublicDomainTemplate() string {
+	return b.DeckhouseState.PublicDomainTemplate
+}
+
+func (b *State) IsEnablePublishK8sAPI() bool {
+	return b.DeckhouseState.EnablePublishK8sAPI
 }
 
 func (b *State) SetReleaseChannel(ch string) error {
