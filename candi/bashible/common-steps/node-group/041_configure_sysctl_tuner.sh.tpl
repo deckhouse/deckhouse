@@ -73,17 +73,11 @@ sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount whe
 sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic_on_oops=1
 
-{{- if hasKey .nodeGroup "fencing" }}
-  {{- if eq .nodeGroup.fencing.mode "Watchdog" }}
-# fencing settings
-sysctl -w kernel.panic=0
-  {{- else }}
-sysctl -w kernel.panic=10
-  {{- end }}
-{{- else }}
-sysctl -w kernel.panic=10
+{{- $fencingTime := 10 }} 
+{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  {{- $fencingTime = 0 }}
 {{- end }}
-
+sysctl -w kernel.panic={{ $fencingTime }}
 # we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
