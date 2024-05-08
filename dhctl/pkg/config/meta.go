@@ -52,11 +52,11 @@ type MetaConfig struct {
 	VersionMap       map[string]interface{} `json:"-"`
 	Images           imagesDigests          `json:"-"`
 	Registry         RegistryData           `json:"-"`
+	UpstreamRegistry RegistryData           `json:"-"`
 	RegistryMode     string                 `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
 	ResourcesYAML    string                 `json:"-"`
-	UpstreamRegistry RegistryData
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -114,9 +114,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 				DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMCI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
 				CA:        "",
 			}
-			if m.RegistryMode == "Proxy" {
-				m.UpstreamRegistry = m.Registry
-			}
+			m.UpstreamRegistry = m.Registry
 			m.Registry = internalRegistryData
 		}
 	}
@@ -374,7 +372,6 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["upstreamRegistry"] = upstreamRegistryData
 	}
 
-	result["registryMode"] = m.RegistryMode
 	result["registry"] = registryData
 
 	images := m.Images
@@ -461,10 +458,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			return nil, err
 		}
 
+		configForBashibleBundleTemplate["registryMode"] = m.RegistryMode
 		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
 	}
 
-	configForBashibleBundleTemplate["registryMode"] = m.RegistryMode
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
