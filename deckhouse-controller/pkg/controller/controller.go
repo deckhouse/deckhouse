@@ -125,15 +125,19 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {
-					Namespaces: map[string]cache.Config{namespace: {
-						LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
-					}},
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+						},
+					},
 				},
 				// for ModuleRelease controller
 				&corev1.Secret{}: {
-					Namespaces: map[string]cache.Config{namespace: {
-						LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
-					}},
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+						},
+					},
 				},
 			},
 		},

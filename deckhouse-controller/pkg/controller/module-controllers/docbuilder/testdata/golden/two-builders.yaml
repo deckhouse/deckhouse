@@ -17,8 +17,7 @@ status:
     version: v1.0.0
   - address: http://10-111-111-11.d8-system.pod.cluster.local:8081
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'send documentation: POST "http://10-111-111-11.d8-system.pod.cluster.local:8081/loadDocArchive/testmodule/v1.0.0":
-      [500] "I''m broken"'
-    type: Error
+    message: ""
+    type: Rendered
     version: v1.0.0
-  result: Partially
+  result: Rendered

@@ -175,9 +175,10 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	for _, addr := range addrs {
-		fmt.Println("SEND FOR ADDR", addr)
+		fmt.Println("MDD SEND FOR ADDR", addr)
 		cond, found := md.GetConditionByAddress(addr)
 		if found && cond.Type == v1alpha1.TypeRendered {
+			fmt.Println("MDD RENDERED")
 			// documentation is rendered for this builder
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			rendered++
@@ -190,11 +191,14 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			LastTransitionTime: now,
 		}
 
+		fmt.Println("MDD BUILDING")
 		err = mdr.buildDocumentation(pr, addr, moduleName, moduleVersion)
 		if err != nil {
+			fmt.Println("MDD ERROR", err)
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
 		} else {
+			fmt.Println("MDD HURAI")
 			rendered++
 			cond.Type = v1alpha1.TypeRendered
 			cond.Message = ""
@@ -205,24 +209,31 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	switch {
 	case rendered == 0:
+		fmt.Println("MDD RESULT1")
 		mdCopy.Status.RenderResult = v1alpha1.ResultError
 
 	case rendered == len(addrs):
+		fmt.Println("MDD RESULT2")
 		mdCopy.Status.RenderResult = v1alpha1.ResultRendered
 
 	default:
+		fmt.Println("MDD RESULT3")
 		mdCopy.Status.RenderResult = v1alpha1.ResultPartially
 	}
 
+	fmt.Println("MDD PATCH")
 	err = mdr.client.Status().Patch(ctx, mdCopy, client.StrategicMergeFrom(md))
 	if err != nil {
-		return ctrl.Result{Requeue: true}, nil
+		fmt.Println("MDD PATCH ERR", err)
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
+		fmt.Println("MDD REQUEUE")
 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
 
+	fmt.Println("MDD DONE")
 	return ctrl.Result{}, nil
 }
 
