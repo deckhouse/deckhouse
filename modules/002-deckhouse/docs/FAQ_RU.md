@@ -46,7 +46,7 @@ kubectl logs job.batch/kube-bench
 
 Данные, которые будут собраны:
 * состояние очереди Deckhouse;
-* Deckhouse values (без каких-либо конфиденциальных данных);
+* Deckhouse values;
 * список включенных модулей;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;

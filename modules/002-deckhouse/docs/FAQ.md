@@ -46,7 +46,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 
 Data that will be collected:
 * Deckhouse queue state
-* global Deckhouse values (without any sensitive data)
+* global Deckhouse values
 * enabled modules list
 * `events` from all namespaces
 * controllers and pods manifests from namespaces owned by Deckhouse
