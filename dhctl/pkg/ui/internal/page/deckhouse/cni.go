@@ -13,11 +13,15 @@ type cniState interface {
 	SetCNIType(string) error
 	SetFlannelMode(string) error
 
+	GetCNIType() string
+	GetFlannelMode() string
+
 	GetProvider() string
 }
 
 type cniSchema interface {
 	GetCNIsForProvider(string) []string
+	GetFlannelModes() []string
 }
 
 type CniPage struct {
@@ -40,12 +44,34 @@ func (c *CniPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.P
 
 	form := tview.NewForm()
 
-	cnis := c.schema.GetCNIsForProvider(c.st.GetProvider())
-	form.AddDropDown(cniLabel, cnis, 0, func(option string, optionIndex int) {
-		if option == state.CNIFlannel {
-			if indx := form.GetFormItemIndex(flannelModeLabel); indx < 0 {
-				form.AddDropDown(flannelModeLabel, []string{state.FlannelVxLAN, state.FlannelHostGW}, 0, nil)
+	initFlannelMode := false
+
+	addFlannelMode := func() {
+		if indx := form.GetFormItemIndex(flannelModeLabel); indx < 0 {
+			flannelModes := c.schema.GetFlannelModes()
+			i := 0
+			for indx, flannelMode := range flannelModes {
+				if flannelMode == c.st.GetFlannelMode() {
+					i = indx
+					break
+				}
 			}
+			form.AddDropDown(flannelModeLabel, flannelModes, i, nil)
+		}
+	}
+
+	cnis := c.schema.GetCNIsForProvider(c.st.GetProvider())
+	i := 0
+	for indx, cni := range cnis {
+		if cni == c.st.GetCNIType() {
+			i = indx
+			break
+		}
+	}
+
+	form.AddDropDown(cniLabel, cnis, i, func(option string, optionIndex int) {
+		if initFlannelMode && option == state.CNIFlannel {
+			addFlannelMode()
 			return
 		}
 
@@ -53,6 +79,12 @@ func (c *CniPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.P
 			form.RemoveFormItem(indx)
 		}
 	})
+
+	if c.st.GetCNIType() == state.CNIFlannel {
+		addFlannelMode()
+	}
+
+	initFlannelMode = true
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 

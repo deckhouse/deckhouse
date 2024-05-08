@@ -322,6 +322,14 @@ func (b *State) SetPodSubnetNodeCIDRPrefix(v string) error {
 	return fmt.Errorf("Pod node suffix should be > 0 and <= 32")
 }
 
+func (b *State) GetCNIType() string {
+	return b.CNIState.Type
+}
+
+func (b *State) GetFlannelMode() string {
+	return b.CNIState.FlannelMode
+}
+
 func (b *State) SetFlannelMode(t string) error {
 	for _, tt := range []string{FlannelVxLAN, FlannelHostGW} {
 		if tt == t {

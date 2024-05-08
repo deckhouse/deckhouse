@@ -178,3 +178,7 @@ func (s *Schema) validatePublicDomainTemplate(p string) error {
 
 	return err
 }
+
+func (s *Schema) GetFlannelModes() []string {
+	return []string{FlannelVxLAN, FlannelHostGW}
+}
