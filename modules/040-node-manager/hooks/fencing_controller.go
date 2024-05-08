@@ -23,8 +23,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -35,8 +33,6 @@ import (
 
 const (
 	nodesSnapshot            = "nodes"
-	leasesSnapshot           = "leases"
-	podsSnapshot             = "pods"
 	fencingControllerTimeout = time.Duration(60) * time.Second
 )
 
@@ -62,17 +58,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			FilterFunc: fencingControllerNodeFilter,
-		},
-		{
-			Name:       leasesSnapshot,
-			ApiVersion: "coordination.k8s.io/v1",
-			Kind:       "Lease",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-node-lease"},
-				},
-			},
-			FilterFunc: fencingControllerLeaseFilter,
 		},
 	},
 }, dependency.WithExternalDependencies(fencingControllerHandler))
@@ -101,42 +86,36 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return res, nil
 }
 
-func fencingControllerLeaseFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var lease coordinationv1.Lease
-	err := sdk.FromUnstructured(obj, &lease)
-	if err != nil {
-		return nil, err
-	}
-	return fencingControllerLeaseResult{
-		NodeName:  *lease.Spec.HolderIdentity,
-		RenewTime: lease.Spec.RenewTime.Time,
-	}, nil
-}
-
 func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	if len(input.Snapshots[nodesSnapshot]) == 0 {
 		// No nodes with enabled fencing -> nothing to do
 		return nil
 	}
 
-	// make map with nodes
-	nodesMap := set.New()
-	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
-		if nodeRaw != nil {
-			node := nodeRaw.(fencingControllerNodeResult)
-			nodesMap.Add(node.Name)
-		}
+	// kubeclient to get node leases and get and delete pods
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		input.LogEntry.Errorf("%v", err)
+		return err
 	}
 
 	// make map with nodes to kill
 	nodesToKill := set.New()
-	for _, nodeLeaseRaw := range input.Snapshots[leasesSnapshot] {
-		nodeLease := nodeLeaseRaw.(fencingControllerLeaseResult)
-		if !nodesMap.Has(nodeLease.NodeName) {
+	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
+
+		if nodeRaw == nil {
 			continue
 		}
-		if time.Since(nodeLease.RenewTime) > fencingControllerTimeout {
-			nodesToKill.Add(nodeLease.NodeName)
+
+		node := nodeRaw.(fencingControllerNodeResult)
+		nodeLease, err := kubeClient.CoordinationV1().Leases("kube-node-lease").Get(context.TODO(), node.Name, metav1.GetOptions{})
+		if err != nil {
+			input.LogEntry.Errorf("Can't get node lease: %v", err)
+			continue
+		}
+
+		if time.Since(nodeLease.Spec.RenewTime.Time) > fencingControllerTimeout {
+			nodesToKill.Add(node.Name)
 		}
 	}
 
@@ -147,13 +126,6 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	input.LogEntry.Warnf("Going to kill %d nodes", nodeToKillCount)
-
-	// create k8s client to delete pods
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		input.LogEntry.Errorf("%v", err)
-		return err
-	}
 
 	// kill nodes
 	for _, node := range nodesToKill.Slice() {

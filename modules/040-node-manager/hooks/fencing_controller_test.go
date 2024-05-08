@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v1coord "k8s.io/api/coordination/v1"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -50,7 +51,7 @@ nodeGroups:
     mode: Watchdog
 `
 
-const nodeAndLeaseTemplate = `
+const nodeStateTemplate = `
 ---
 apiVersion: v1
 kind: Node
@@ -62,15 +63,6 @@ metadata:
     {{ if .FencingEnabled }}node-manager.deckhouse.io/fencing-enabled: "true"{{ end }}
   name: {{ .Name }}
 spec: {}
----
-apiVersion: coordination.k8s.io/v1
-kind: Lease
-metadata:
-  name: {{ .Name }}
-  namespace: kube-node-lease
-spec:
-  holderIdentity: {{ .Name }}
-  renewTime: {{ .RenewTime.Format "2006-01-02T15:04:05.000000Z07:00" }}
 `
 
 func TemplateToYAML(tmpl string, params interface{}) string {
@@ -101,11 +93,34 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		f.ValuesSetFromYaml(`nodeManager.internal`, []byte(ngValues))
 
 		// add node and lease state
-		nodeAndLeaseState := TemplateToYAML(nodeAndLeaseTemplate, testCase)
-		f.BindingContexts.Set(f.KubeStateSet(nodeAndLeaseState))
+		nodeState := TemplateToYAML(nodeStateTemplate, testCase)
+		f.BindingContexts.Set(f.KubeStateSet(nodeState))
+
+		// add test lease
+		testLease := v1coord.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testCase.Name,
+				Namespace: "kube-node-lease",
+			},
+			Spec: v1coord.LeaseSpec{
+				HolderIdentity: &testCase.Name,
+				RenewTime:      &metav1.MicroTime{Time: testCase.RenewTime},
+			}}
+
+		var err error
+		_, err = f.KubeClient().CoordinationV1().Leases("kube-node-lease").Create(context.TODO(), &testLease, metav1.CreateOptions{})
+		Expect(err).Should(BeNil())
+
+		// add test pod
+		testPod := v1core.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testCase.Name,
+			},
+		}
 
 		// add pod on node
-		_, _ = f.KubeClient().CoreV1().Pods(testCase.Name).Create(context.TODO(), &v1core.Pod{ObjectMeta: metav1.ObjectMeta{Name: testCase.Name}}, metav1.CreateOptions{})
+		_, err = f.KubeClient().CoreV1().Pods(testCase.Name).Create(context.TODO(), &testPod, metav1.CreateOptions{})
+		Expect(err).Should(BeNil())
 
 		By("Check hook executed successfully")
 		f.RunHook()
@@ -120,6 +135,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		podExists := pod != nil
 		Expect(podExists).To(BeEquivalentTo(want.podExists))
 	},
+
 		Entry("Node with enabled fencing and lease updated in time", testCaseParams{
 			Name:               "everything-ok",
 			FencingEnabled:     true,
