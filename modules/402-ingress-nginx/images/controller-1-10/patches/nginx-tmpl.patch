@@ -77,7 +77,7 @@ index 4c0da2eb9..8f7004689 100644
  
          {{ buildHTTPListener  $all $server.Hostname }}
          {{ buildHTTPSListener $all $server.Hostname }}
-+        {{ if $cfg.UseHTTP3 }}
++        {{ if $all.Cfg.UseHTTP3 }}
 +        {{ buildHTTP3Listener $all $server.Hostname }}
 +        {{ end }}
  
