@@ -11,11 +11,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/internal/kubeapi"
 	"system-registry-manager/internal/steps"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -66,6 +68,8 @@ func Start() {
 	for {
 		if err := StartManager(); err != nil {
 			log.Errorf("Manager error: %v", err)
+			// TODO
+			time.Sleep(10 * time.Second)
 		}
 	}
 }

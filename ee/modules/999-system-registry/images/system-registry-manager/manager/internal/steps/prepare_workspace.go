@@ -14,7 +14,6 @@ import (
 
 func PrepareWorkspace() error {
 	log.Info("Preparing workspace...")
-	defer log.Info("Workspace preparation completed.")
 
 	if err := checkInputFilesExist(); err != nil {
 		log.Errorf("Error checking input files: %v", err)
@@ -24,6 +23,7 @@ func PrepareWorkspace() error {
 		log.Errorf("Error copying files to workspace: %v", err)
 		return err
 	}
+	log.Info("Workspace preparation completed.")
 	return nil
 }
 
