@@ -11,10 +11,9 @@ import (
 )
 
 type FileConfig struct {
-	NodeName  string `mapstructure:"nodeName"`
+	HostName  string `mapstructure:"hostName"`
 	MyIP      string `mapstructure:"myIP"`
 	MyPodName string `mapstructure:"myPodName"`
-	HostName  string `mapstructure:"hostName"`
 }
 
 func NewFileConfig() (*FileConfig, error) {
@@ -25,16 +24,15 @@ func NewFileConfig() (*FileConfig, error) {
 		log.WithError(err).Fatal("Error reading config file")
 	}
 
-	bindEnv("NodeName", "NODE_NAME")
+	bindEnv("HostName", "HOSTNAME")
 	bindEnv("MyIP", "MY_IP")
 	bindEnv("MyPodName", "MY_POD_NAME")
-	bindEnv("HostName", "HOSTNAME")
 
 	validateConfigEntry(
-		"NodeName",
-		"NodeName",
-		"NodeName",
-		"NODE_NAME",
+		"HostName",
+		"HostName",
+		"HostName",
+		"HOSTNAME",
 	)
 
 	validateConfigEntry(
@@ -49,13 +47,6 @@ func NewFileConfig() (*FileConfig, error) {
 		"MyPodName",
 		"MyPodName",
 		"MY_POD_NAME",
-	)
-
-	validateConfigEntry(
-		"HostName",
-		"HostName",
-		"HostName",
-		"HOSTNAME",
 	)
 
 	viper.AutomaticEnv()

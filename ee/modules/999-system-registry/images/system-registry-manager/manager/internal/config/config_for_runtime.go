@@ -30,6 +30,7 @@ func NewRuntimeConfig() (*RuntimeConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	config := RuntimeConfig{
 		K8sClient:      k8sClient,
 		ShouldUpdateBy: ShouldUpdateBy{},
