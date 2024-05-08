@@ -5,7 +5,7 @@ files:
  - templateName: docker-auth-config.yaml
    filePath: /manifests/docker-auth/config.yaml
  - templateName: distribution-config.yaml
-   filePath: /manifests/distribution/distribution-config.yaml
+   filePath: /manifests/distribution/config.yaml
  - templateName: seaweedfs-filer.toml
    filePath: /manifests/seaweedfs/filer.toml
  - templateName: seaweedfs-master.toml
