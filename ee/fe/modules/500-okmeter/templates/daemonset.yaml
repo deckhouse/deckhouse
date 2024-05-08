@@ -42,6 +42,8 @@ spec:
     metadata:
       labels:
         name: okmeter
+      annotations:
+        apiTokenChecksum: {{ .Values.okmeter.apiKey | sha256sum }}
     spec:
       serviceAccountName: okmeter
       hostNetwork: true
