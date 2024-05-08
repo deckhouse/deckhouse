@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	checkInterval      = 3 * time.Second
+	checkInterval      = 5 * time.Second
 	checkTimeout       = 5 * time.Second
 	maxConnectionTries = 30
 	appPath            = "/registry"
