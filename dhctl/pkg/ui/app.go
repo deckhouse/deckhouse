@@ -14,7 +14,7 @@ type Schemas interface {
 
 type App struct {
 	app    *tview.Application
-	wizard *Wizard
+	wizard *wizard
 
 	state       *state.State
 	schemaStore *state.Schema
@@ -29,7 +29,7 @@ func NewApp() *App {
 		app:         app,
 		state:       st,
 		schemaStore: schemaStore,
-		wizard:      NewWizard(app, st, schemaStore),
+		wizard:      newWizard(app, st, schemaStore),
 	}
 }
 

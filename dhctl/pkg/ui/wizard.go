@@ -56,7 +56,7 @@ type Page interface {
 	Show(onNext, onBack func()) (tview.Primitive, []tview.Primitive)
 }
 
-type Wizard struct {
+type wizard struct {
 	order            []string
 	currentPageIndex int
 	pagesView        *tview.Pages
@@ -67,7 +67,7 @@ type Wizard struct {
 	schemaStore *state.Schema
 }
 
-func NewWizard(app *tview.Application, st *state.State, schema *state.Schema) *Wizard {
+func newWizard(app *tview.Application, st *state.State, schema *state.Schema) *wizard {
 	allPages := map[string]Page{
 		pageWelcome:           welcome.NewWelcomePage(),
 		pageSelectClusterType: welcome.NewClusterTypePage(st, schema),
@@ -82,7 +82,7 @@ func NewWizard(app *tview.Application, st *state.State, schema *state.Schema) *W
 	}
 
 	// by default
-	return &Wizard{
+	return &wizard{
 		order:            staticPagesOrder,
 		currentPageIndex: 0,
 		state:            st,
@@ -93,7 +93,7 @@ func NewWizard(app *tview.Application, st *state.State, schema *state.Schema) *W
 	}
 }
 
-func (w *Wizard) Start() error {
+func (w *wizard) Start() error {
 	var onNext, onBack func()
 
 	switchPage := func() {
@@ -143,7 +143,7 @@ func (w *Wizard) Start() error {
 
 }
 
-func (w *Wizard) addSwitchFocusEvent(forFocus []tview.Primitive) {
+func (w *wizard) addSwitchFocusEvent(forFocus []tview.Primitive) {
 	curIndex := 0
 
 	w.pagesView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
