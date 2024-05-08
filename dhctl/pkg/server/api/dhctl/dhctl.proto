@@ -18,48 +18,10 @@ option go_package = "pb/dhctl";
 
 package dhctl;
 
-import "google/protobuf/duration.proto";
+import "check.proto";
+import "bootstrap.proto";
 
 service DHCTL {
   rpc Check (stream CheckRequest) returns (stream CheckResponse) {}
-}
-
-message CheckRequest {
-  oneof message {
-    CheckStart start = 1;
-    CheckStop stop = 2;
-  }
-}
-
-message CheckResponse {
-  oneof message {
-    CheckResult result = 1;
-    Logs logs = 2;
-  }
-}
-
-message CheckStart {
-  string connection_config = 1;
-  string cluster_config = 2;
-  string provider_specific_cluster_config = 3;
-  string state = 4;
-  CheckStartOptions options = 5;
-}
-
-message CheckStop {}
-
-message CheckStartOptions {
-  bool commander_mode = 1;
-  bool sanity_check = 2;
-  int32 log_width = 3;
-  google.protobuf.Duration resources_timeout = 4;
-  google.protobuf.Duration deckhouse_timeout = 5;
-}
-
-message CheckResult {
-  string result = 1;
-}
-
-message Logs {
-  bytes logs = 1;
+  rpc Bootstrap (stream BootstrapRequest) returns (stream BootstrapResponse) {}
 }

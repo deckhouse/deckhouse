@@ -37,6 +37,7 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -137,7 +138,7 @@ func (s *Service) check(
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
 
-	log.InfoF("Task has been started by DHCTL Server pod/%s\n", s.podName)
+	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 
 	// parse connection config
 	connectionConfig, err := config.ParseConnectionConfig(
@@ -153,7 +154,7 @@ func (s *Service) check(
 
 	// parse meta config
 	metaConfig, err := config.ParseConfigFromData(
-		combineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+		input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
 		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
 		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
@@ -234,11 +235,11 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 		{
 			Event:       "start",
 			Sources:     []fsm.State{"initial"},
-			Destination: "started",
+			Destination: "running",
 		},
 		{
 			Event:       "stop",
-			Sources:     []fsm.State{"started"},
+			Sources:     []fsm.State{"running"},
 			Destination: "stopped",
 		},
 	}
