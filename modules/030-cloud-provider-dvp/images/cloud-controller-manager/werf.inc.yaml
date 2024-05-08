@@ -6,7 +6,6 @@ import:
   add: /go/bin/dvp-cloud-controller-manager
   to: /bin/dvp-cloud-controller-manager
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 docker:
   ENTRYPOINT: ["/bin/dvp-cloud-controller-manager"]
 ---
