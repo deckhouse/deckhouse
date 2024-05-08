@@ -263,6 +263,12 @@ spec:
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
     {{- end }}
+      - containerPort: 443
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+          protocol: UDP
+    {{- end }}
   {{- end }}
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
     {{- if $hostPortWithProxyProtocol.httpsPort }}
