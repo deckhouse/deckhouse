@@ -1,4 +1,4 @@
-package ui
+package static
 
 import (
 	"fmt"
@@ -20,17 +20,17 @@ type staticMasterState interface {
 	SetBastionSSHHost(string)
 }
 
-type StaticMasterPage struct {
+type MasterPage struct {
 	st staticMasterState
 }
 
-func NewStaticMasterPage(st staticMasterState) *StaticMasterPage {
-	return &StaticMasterPage{
+func NewStaticMasterPage(st staticMasterState) *MasterPage {
+	return &MasterPage{
 		st: st,
 	}
 }
 
-func (p *StaticMasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 

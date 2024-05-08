@@ -4,6 +4,11 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/page/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/page/final"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/page/provider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/page/static"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/page/welcome"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 )
 
@@ -64,16 +69,16 @@ type Wizard struct {
 
 func NewWizard(app *tview.Application, st *state.State, schema *state.Schema) *Wizard {
 	allPages := map[string]Page{
-		pageWelcome:           NewWelcomePage(),
-		pageSelectClusterType: NewClusterTypePage(st, schema),
-		pageProvider:          NewProviderPage(st, schema),
-		pageStaticMaster:      NewStaticMasterPage(st),
-		pageRegistry:          NewRegistryPage(st, schema),
-		pageCluster:           NewClusterPage(st, schema),
-		pageCNI:               NewCNIPage(st, schema),
-		pageDeckhouse:         NewDeckhousePage(st, schema),
-		pageSSH:               NewSSHPage(st),
-		pageConfig:            NewConfigPage(st),
+		pageWelcome:           welcome.NewWelcomePage(),
+		pageSelectClusterType: welcome.NewClusterTypePage(st, schema),
+		pageProvider:          provider.NewProviderPage(st, schema),
+		pageStaticMaster:      static.NewStaticMasterPage(st),
+		pageRegistry:          deckhouse.NewRegistryPage(st, schema),
+		pageCluster:           deckhouse.NewClusterPage(st, schema),
+		pageCNI:               deckhouse.NewCNIPage(st, schema),
+		pageDeckhouse:         deckhouse.NewDeckhousePage(st, schema),
+		pageSSH:               final.NewSSHPage(st),
+		pageConfig:            final.NewConfigPage(st),
 	}
 
 	// by default

@@ -1,4 +1,4 @@
-package ui
+package deckhouse
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -8,29 +8,29 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/ui/internal/widget"
 )
 
-type deckhouseState interface {
+type modulesState interface {
 	SetReleaseChannel(string) error
 	SetPublicDomainTemplate(string) error
 	EnablePublishK8sAPI(bool)
 }
 
-type deckhouseSchema interface {
+type modulesSchema interface {
 	ReleaseChannels() []string
 }
 
-type DeckhousePage struct {
-	st     deckhouseState
-	schema deckhouseSchema
+type ModulesPage struct {
+	st     modulesState
+	schema modulesSchema
 }
 
-func NewDeckhousePage(st deckhouseState, schema deckhouseSchema) *DeckhousePage {
-	return &DeckhousePage{
+func NewDeckhousePage(st modulesState, schema modulesSchema) *ModulesPage {
+	return &ModulesPage{
 		st:     st,
 		schema: schema,
 	}
 }
 
-func (p *DeckhousePage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
+func (p *ModulesPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30
 

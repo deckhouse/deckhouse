@@ -1,4 +1,4 @@
-package ui
+package deckhouse
 
 import (
 	"github.com/gdamore/tcell/v2"

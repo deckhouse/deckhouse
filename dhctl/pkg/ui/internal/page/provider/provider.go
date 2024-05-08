@@ -1,4 +1,4 @@
-package ui
+package provider
 
 import (
 	"github.com/gdamore/tcell/v2"
