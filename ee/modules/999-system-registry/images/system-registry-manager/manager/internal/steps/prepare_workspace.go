@@ -7,21 +7,28 @@ package steps
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/pkg"
 )
 
 func PrepareWorkspace() error {
+	log.Info("Preparing workspace...")
+	defer log.Info("Workspace preparation completed.")
+
 	if err := checkInputFilesExist(); err != nil {
+		log.Errorf("Error checking input files: %v", err)
 		return err
 	}
 	if err := copyFilesToWorkspace(); err != nil {
+		log.Errorf("Error copying files to workspace: %v", err)
 		return err
 	}
 	return nil
 }
 
 func checkInputFilesExist() error {
+	log.Info("Checking input files...")
 	cfg := config.GetConfig()
 
 	inputFiles := []string{
@@ -37,13 +44,16 @@ func checkInputFilesExist() error {
 
 	for _, inputFile := range inputFiles {
 		if !pkg.IsPathExists(inputFile) {
-			return fmt.Errorf("Can't find file '%s'", inputFile)
+			return fmt.Errorf("can't find file '%s'", inputFile)
 		}
 	}
+	log.Info("Input files check completed.")
 	return nil
 }
 
 func copyFilesToWorkspace() error {
+	log.Info("Copying files to workspace...")
+
 	cfg := config.GetConfig()
 
 	copyFiles := []FileMV{
@@ -81,5 +91,6 @@ func copyFilesToWorkspace() error {
 			return err
 		}
 	}
+	log.Info("File copying to workspace completed.")
 	return nil
 }

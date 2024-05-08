@@ -6,8 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package start
 
 import (
-	log "github.com/sirupsen/logrus"
+	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/internal/kubeapi"
 	"system-registry-manager/internal/steps"
@@ -19,38 +24,55 @@ var (
 )
 
 func Start() {
+	// Initialize logger
+	initLogger()
+
 	log.Info("Start service")
 	log.Infof("Config file: %s", config.GetConfigFilePath())
-	err := config.InitConfig()
-	if err != nil {
-		log.Fatal(err)
+
+	// Initialize configuration
+	if err := config.InitConfig(); err != nil {
+		log.Fatalf("Error initializing config: %v", err)
 	}
 
+	// Create HTTP server
 	server = &http.Server{
 		Addr: "127.0.0.1:8097",
 	}
+
+	// Define HTTP routes
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
-	defer httpServerClose()
 
-	controlPlaneManagerIsReady = true
+	// Graceful shutdown
 	go func() {
-		err := server.ListenAndServe()
-		if err == nil || err == http.ErrServerClosed {
-			return
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+		<-stop
+		log.Info("Shutting down server...")
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Errorf("Error shutting down server: %v", err)
 		}
-		log.Error(err)
 	}()
 
+	// Start HTTP server
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Errorf("Error starting server: %v", err)
+		}
+	}()
+
+	// Start manager
 	for {
-		StartManager()
+		if err := StartManager(); err != nil {
+			log.Errorf("Manager error: %v", err)
+		}
 	}
 }
 
-func httpServerClose() {
-	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
-	}
+func initLogger() {
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.JSONFormatter{})
 }
 
 func healthzHandler(w http.ResponseWriter, _ *http.Request) {
