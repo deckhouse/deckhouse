@@ -5,6 +5,7 @@ metadata:
   name: testmodule
 spec:
   version: v1.1.1
+  checksum: abc
   path: /testmodule/v1.1.1
 status:
   conditions:
@@ -13,6 +14,7 @@ status:
       message: ""
       type: Rendered
       version: v1.1.1
+      checksum: abc
   result: Rendered
 ---
 apiVersion: coordination.k8s.io/v1

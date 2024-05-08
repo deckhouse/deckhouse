@@ -16,6 +16,7 @@ package release
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -291,6 +292,10 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 
 	modulePath := fmt.Sprintf("/%s/v%s", mr.GetModuleName(), mr.Spec.Version.String())
 	moduleVersion := "v" + mr.Spec.Version.String()
+	checksum := mr.Labels["release-checksum"]
+	if checksum == "" {
+		checksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
+	}
 	var md v1alpha1.ModuleDocumentation
 	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, &md)
 	if err != nil {
@@ -318,8 +323,9 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 					},
 				},
 				Spec: v1alpha1.ModuleDocumentationSpec{
-					Version: moduleVersion,
-					Path:    modulePath,
+					Version:  moduleVersion,
+					Path:     modulePath,
+					Checksum: checksum,
 				},
 			}
 			// NOTICE: probable we also want to add the "release-checksum" label from MR here
@@ -335,6 +341,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		// update CR
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion
+		md.Spec.Checksum = checksum
 		md.SetOwnerReferences([]metav1.OwnerReference{
 			{
 				APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),

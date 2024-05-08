@@ -1,10 +1,11 @@
-# Builder backend and module version were changed
+# module version was changed
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
 metadata:
   name: testmodule
 spec:
   version: v1.1.1
+  checksum: dfg
   path: /testmodule/v1.1.1
 status:
   conditions:
@@ -13,6 +14,7 @@ status:
       message: ""
       type: Rendered
       version: v1.0.0
+      checksum: abc
   result: Rendered
 ---
 apiVersion: coordination.k8s.io/v1
@@ -23,6 +25,6 @@ metadata:
   name: module-docs-builder-ldq7x
   namespace: d8-system
 spec:
-  holderIdentity: 10-111-111-11.d8-system.pod.cluster.local:8081
+  holderIdentity: 10-222-222-22.d8-system.pod.cluster.local:8081
   leaseDurationSeconds: 35
   renewTime: "2024-05-08T12:11:04.160683Z"

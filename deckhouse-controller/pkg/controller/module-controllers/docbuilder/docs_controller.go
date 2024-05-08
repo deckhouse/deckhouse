@@ -145,7 +145,6 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 
 func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
 	moduleName := md.Name
-	moduleVersion := md.Spec.Version
 	mdr.logger.Infof("Updating documentation for %s module", moduleName)
 	addrs, err := mdr.getDocsBuilderAddresses(ctx)
 	if err != nil {
@@ -177,7 +176,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	for _, addr := range addrs {
 		fmt.Println("MDD SEND FOR ADDR", addr)
 		cond, found := md.GetConditionByAddress(addr)
-		if found && cond.Type == v1alpha1.TypeRendered {
+		if found && cond.Version == md.Spec.Version && cond.Checksum == md.Spec.Checksum && cond.Type == v1alpha1.TypeRendered {
 			fmt.Println("MDD RENDERED")
 			// documentation is rendered for this builder
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
@@ -188,11 +187,12 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		cond = v1alpha1.ModuleDocumentationCondition{
 			Address:            addr,
 			Version:            md.Spec.Version,
+			Checksum:           md.Spec.Checksum,
 			LastTransitionTime: now,
 		}
 
 		fmt.Println("MDD BUILDING")
-		err = mdr.buildDocumentation(pr, addr, moduleName, moduleVersion)
+		err = mdr.buildDocumentation(pr, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			fmt.Println("MDD ERROR", err)
 			cond.Type = v1alpha1.TypeError

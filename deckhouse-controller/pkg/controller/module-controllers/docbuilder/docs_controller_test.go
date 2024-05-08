@@ -34,7 +34,7 @@ import (
 var golden bool
 
 func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	flag.BoolVar(&golden, "true", false, "generate golden files")
 }
 
 func TestControllerTestSuite(t *testing.T) {
@@ -172,6 +172,52 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.setupController(string(suite.fetchTestFileData("render-new-version.yaml")))
+
+		md := suite.getModuleDocumentation("testmodule")
+		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
+		assert.False(suite.T(), res.Requeue)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("render new lease", func() {
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+			switch req.URL.Path {
+			case "/loadDocArchive/testmodule/v1.1.1":
+				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
+
+			case "/build":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+			}
+			return &http.Response{StatusCode: http.StatusBadRequest}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("render-new-lease.yaml")))
+
+		md := suite.getModuleDocumentation("testmodule")
+		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
+		assert.False(suite.T(), res.Requeue)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("render new checksum", func() {
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+			switch req.URL.Path {
+			case "/loadDocArchive/testmodule/mpo-tag":
+				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
+
+			case "/build":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+			}
+			return &http.Response{StatusCode: http.StatusBadRequest}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("render-new-checksum.yaml")))
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)

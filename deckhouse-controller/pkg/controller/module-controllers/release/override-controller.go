@@ -231,7 +231,8 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 
 	// update module's documentation
 	modulePath := fmt.Sprintf("/%s/dev", mo.GetModuleName())
-	moduleVersion := "dev@" + newChecksum
+	moduleVersion := mo.Spec.ImageTag
+	checksum := mo.Status.ImageDigest
 	var mdd v1alpha1.ModuleDocumentation
 	err = c.client.Get(ctx, types.NamespacedName{Name: mo.GetModuleName()}, &mdd)
 	if err != nil {
@@ -259,8 +260,9 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 					},
 				},
 				Spec: v1alpha1.ModuleDocumentationSpec{
-					Version: moduleVersion,
-					Path:    modulePath,
+					Version:  moduleVersion,
+					Path:     modulePath,
+					Checksum: checksum,
 				},
 			}
 			// NOTICE: probable we also want to add the "release-checksum" label from MR here
@@ -276,6 +278,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		// update CR
 		mdd.Spec.Path = modulePath
 		mdd.Spec.Version = moduleVersion
+		mdd.Spec.Checksum = checksum
 		mdd.SetOwnerReferences([]metav1.OwnerReference{
 			{
 				APIVersion: v1alpha1.ModulePullOverrideGVK.GroupVersion().String(),

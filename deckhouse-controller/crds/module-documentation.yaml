@@ -37,6 +37,9 @@ spec:
                   type: string
                   description: Module version.
                   x-doc-examples: ['v1.0.0']
+                checksum:
+                  type: string
+                  description: Checksum
                 path:
                   type: string
                   description: Path to a module.
@@ -54,6 +57,8 @@ spec:
                       type:
                         type: string
                       version:
+                        type: string
+                      checksum:
                         type: string
                       address:
                         type: string

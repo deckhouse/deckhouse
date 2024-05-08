@@ -4,6 +4,7 @@ metadata:
   name: testmodule
 spec:
   version: v1.0.0
+  checksum: abc
   path: /testmodule/v1.0.0
 ---
 apiVersion: coordination.k8s.io/v1

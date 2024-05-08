@@ -63,8 +63,9 @@ func (md *ModuleDocumentation) GetConditionByAddress(addr string) (ModuleDocumen
 }
 
 type ModuleDocumentationSpec struct {
-	Version string `json:"version,omitempty"`
-	Path    string `json:"path,omitempty"`
+	Version  string `json:"version,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Checksum string `json:"checksum,omitempty"`
 }
 
 type ModuleDocumentationStatus struct {
@@ -78,8 +79,9 @@ type ModuleDocumentationStatus struct {
 type ModuleDocumentationCondition struct {
 	// Type is the type of the condition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Type    ModuleDocumentationConditionType `json:"type"`
-	Version string                           `json:"version"`
+	Type     ModuleDocumentationConditionType `json:"type"`
+	Version  string                           `json:"version"`
+	Checksum string                           `json:"checksum"`
 	// Status is the status of the condition.
 	// Can be True, False, Unknown.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
