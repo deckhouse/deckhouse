@@ -8,10 +8,11 @@ package kubeapi
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
-	"system-registry-manager/internal/config"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"system-registry-manager/internal/config"
 )
 
 type NodeStatus struct {
@@ -65,6 +66,8 @@ func WaitNodeStatus(cmpFunc func(nodeStatus *NodeStatus) bool) error {
 }
 
 func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
+	cfg := config.GetConfig()
+
 	// Prepare new status
 	newStatus := ActionStatus{
 		Name:      actionName,
@@ -74,7 +77,6 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 	}
 
 	// Get current status
-	cfg := config.GetConfig()
 	node, err := cfg.K8sClient.CoreV1().Nodes().Get(context.TODO(), cfg.HostName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -85,12 +87,12 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 		return err
 	}
 
-	// If the same and not completed - nofing to do
+	// If the same and not completed - nothing to do
 	if ActionStatusEqual(&newStatus, &nodeStatus.FromMe) && !nodeStatus.FromMe.Completed {
 		return nil
 	}
 
-	// Else - update status
+	// Update status
 	node.Annotations[config.AnnotationFromMe], err = newStatus.toString()
 	if err != nil {
 		return err
@@ -101,16 +103,24 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 		return err
 	}
 
-	// Wait approve
+	// Wait for approval
 	cmpFunc := func(nodeStatus *NodeStatus) bool {
 		if nodeStatus == nil {
 			return false
 		}
 		return nodeStatus.FromMe.Approved
 	}
-	return WaitNodeStatus(cmpFunc)
-}
 
+	// Add logging
+	fmt.Println("Waiting for approval...")
+	err = WaitNodeStatus(cmpFunc)
+	if err != nil {
+		fmt.Println("Error waiting for approval:", err)
+		return err
+	}
+	fmt.Println("Approval received.")
+	return nil
+}
 func SetMyStatusDone() error {
 	// Get annotations
 	cfg := config.GetConfig()

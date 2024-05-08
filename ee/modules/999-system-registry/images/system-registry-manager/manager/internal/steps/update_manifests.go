@@ -6,26 +6,32 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/pkg"
 )
 
 func UpdateManifests() error {
+	log.Info("Starting UpdateManifests")
+
 	if err := copyCertsToDets(); err != nil {
 		return err
 	}
 	if err := copyManifestsToDets(); err != nil {
 		return err
 	}
+	log.Info("UpdateManifests completed")
 	return nil
 }
 
 func copyCertsToDets() error {
 	cfg := config.GetConfig()
-	copyFiles := []FileMV{}
+	copyFilesCerts := []FileMV{}
 
 	if cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts {
-		copyFiles = append(copyFiles,
+		copyFilesCerts = append(copyFilesCerts,
 			[]FileMV{
 				{
 					From: cfg.GeneratedCertificates.SeaweedEtcdClientCert.Cert.TmpGeneratePath,
@@ -40,7 +46,7 @@ func copyCertsToDets() error {
 	}
 
 	if cfg.ShouldUpdateBy.NeedChangeDockerAuthTokenCerts {
-		copyFiles = append(copyFiles,
+		copyFilesCerts = append(copyFilesCerts,
 			[]FileMV{
 				{
 					From: cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.TmpGeneratePath,
@@ -54,10 +60,10 @@ func copyCertsToDets() error {
 		)
 	}
 
-	for _, copyFile := range copyFiles {
+	for _, copyFile := range copyFilesCerts {
 		err := pkg.CopyFile(copyFile.From, copyFile.To)
 		if err != nil {
-			return err
+			return fmt.Errorf("error copying cert from '%s' to '%s': %v", copyFile.From, copyFile.To, err)
 		}
 	}
 	return nil
@@ -73,7 +79,7 @@ func copyManifestsToDets() error {
 	for _, manifest := range cfg.Manifests {
 		err := pkg.CopyFile(manifest.TmpPath, manifest.DestPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("error copying manifests from '%s' to '%s': %v", manifest.TmpPath, manifest.DestPath, err)
 		}
 	}
 	return nil
