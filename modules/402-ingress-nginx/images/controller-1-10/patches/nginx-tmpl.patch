@@ -83,7 +83,17 @@ index 4c0da2eb9..8f7004689 100644
  
          set $proxy_upstream_name "-";
  
-@@ -1255,6 +1266,8 @@ stream {
+@@ -1247,6 +1258,9 @@ stream {
+         {{ end }}
+ 
+         location {{ $path }} {
++            {{ if %all.Cfg.EnableHTTP3 }}
++            add_header Alt-Svc 'h3=":$all.ListenPorts.HTTPS"; ma=86400';
++            {{ end }}
+             {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
+             set $namespace      {{ $ing.Namespace | quote}};
+             set $ingress_name   {{ $ing.Rule | quote }};
+@@ -1255,6 +1269,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -92,7 +102,7 @@ index 4c0da2eb9..8f7004689 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1285,11 +1298,9 @@ stream {
+@@ -1285,11 +1301,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -105,7 +115,7 @@ index 4c0da2eb9..8f7004689 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1570,14 +1581,15 @@ stream {
+@@ -1570,14 +1584,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}

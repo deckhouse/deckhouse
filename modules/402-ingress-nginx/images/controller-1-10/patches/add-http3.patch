@@ -94,7 +94,7 @@ index 7cd6a0604..2247127b4 100644
 +			lo = append(lo, fmt.Sprintf("%v:%v", address, tc.ListenPorts.HTTPS))
 +		}
 +
-+		lo = append(lo, "quic", ";")
++		lo = append(lo, "quic", "reuseport;")
 +		out = append(out, strings.Join(lo, " "))
 +	}
 +
