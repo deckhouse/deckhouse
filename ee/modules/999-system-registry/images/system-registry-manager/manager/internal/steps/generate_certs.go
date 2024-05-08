@@ -16,8 +16,10 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
+	"system-registry-manager/pkg"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GenerateCerts() error {
@@ -126,13 +128,13 @@ func createEtcdClientCert(caCertPath, caKeyPath, certPath, keyPath string) error
 	}
 
 	// Write the certificate to file
-	if err := os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}), 0644); err != nil {
+	if err := pkg.OsWriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}), 0644); err != nil {
 		return fmt.Errorf("error writing certificate: %v", err)
 	}
 
 	// Write the private key to file
 	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	if err := os.WriteFile(keyPath, pem.EncodeToMemory(privateKeyPEM), 0600); err != nil {
+	if err := pkg.OsWriteFile(keyPath, pem.EncodeToMemory(privateKeyPEM), 0600); err != nil {
 		return fmt.Errorf("error writing private key: %v", err)
 	}
 
@@ -170,28 +172,14 @@ func createSelfSignedCert(certPath, keyPath string) error {
 	}
 
 	// Write the certificate to file
-	certFile, err := os.Create(certPath)
-	if err != nil {
-		return fmt.Errorf("failed to create certificate file: %v", err)
-	}
-	defer certFile.Close()
-
-	err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	if err != nil {
-		return fmt.Errorf("failed to write certificate to file: %v", err)
+	if err := pkg.OsWriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}), 0644); err != nil {
+		return fmt.Errorf("error writing certificate: %v", err)
 	}
 
 	// Write the private key to file
-	keyFile, err := os.Create(keyPath)
-	if err != nil {
-		return fmt.Errorf("failed to create private key file: %v", err)
-	}
-	defer keyFile.Close()
-
 	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	err = pem.Encode(keyFile, privateKeyPEM)
-	if err != nil {
-		return fmt.Errorf("failed to write private key to file: %v", err)
+	if err := pkg.OsWriteFile(keyPath, pem.EncodeToMemory(privateKeyPEM), 0600); err != nil {
+		return fmt.Errorf("error writing private key: %v", err)
 	}
 
 	log.Info("Self-signed certificate created successfully.")
