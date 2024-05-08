@@ -94,7 +94,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 		Complete(ctr)
 }
 
-func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Context, obj client.Object) []reconcile.Request {
+func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
 	res := make([]reconcile.Request, 0)
 
 	err := retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
@@ -152,6 +152,8 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return ctrl.Result{Requeue: true}, fmt.Errorf("get docs builder addresses: %w", err)
 	}
 
+	fmt.Println("ADDRS", addrs)
+
 	if len(addrs) == 0 {
 		// no endpoints for doc builder
 		return ctrl.Result{}, nil
@@ -173,6 +175,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	for _, addr := range addrs {
+		fmt.Println("SEND FOR ADDR", addr)
 		cond, found := md.GetConditionByAddress(addr)
 		if found && cond.Type == v1alpha1.TypeRendered {
 			// documentation is rendered for this builder
@@ -230,13 +233,17 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 
+	fmt.Println("FOUND LEASES", leasesList.Items)
+
 	for _, lease := range leasesList.Items {
 		if lease.Spec.HolderIdentity == nil {
+			fmt.Println("LEASE NO IDENT")
 			continue
 		}
 
 		// a stale lease found
 		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(mdr.dc.GetClock().Now()) {
+			fmt.Println("LEASE IS OLD")
 			continue
 		}
 

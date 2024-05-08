@@ -74,9 +74,6 @@ func (suite *ControllerTestSuite) SetupSuite() {
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
-	// entries, err := os.ReadDir("./testdata")
-	//require.NoError(suite.T(), err)
-
 	suite.Run("ModuleDocumentation with no builder endpoints", func() {
 		suite.setupController(string(suite.fetchTestFileData("no-builders.yaml")))
 
