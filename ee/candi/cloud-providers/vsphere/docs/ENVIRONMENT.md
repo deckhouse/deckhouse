@@ -119,6 +119,11 @@ Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do 
 
 To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
 
+{% alert level="warning" %}
+Deckhouse creates virtual machine disks with the `eagerZeroedThick` type, but the disk type of the created VMs will be changed without notification according to the `VM Storage Policy` configured in vSphere.
+You can read more in [documentation](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+{% endalert %}
+
 ## Infrastructure
 
 ### Networking
