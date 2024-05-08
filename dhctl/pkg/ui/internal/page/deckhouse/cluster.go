@@ -16,6 +16,12 @@ type clusterState interface {
 	SetPodSubnetCIDR(string) error
 	SetServiceSubnetCIDR(string) error
 	SetPodSubnetNodeCIDRPrefix(string) error
+
+	GetK8sVersion() string
+	GetClusterDomain() string
+	GetPodSubnetCIDR() string
+	GetServiceSubnetCIDR() string
+	GetPodSubnetNodeCIDRPrefix() string
 }
 
 type clusterSchema interface {
@@ -48,11 +54,18 @@ func (c *ClusterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvi
 	form := tview.NewForm()
 
 	versions := c.schema.K8sVersions()
-	form.AddDropDown(k8sVersionLabel, versions, len(versions)-1, nil)
-	form.AddInputField(clusterDomainLabel, "cluster.local", constInputsWidth, nil, nil)
-	form.AddInputField(podSubnetCIDRLabel, "10.111.0.0/16", constInputsWidth, nil, nil)
-	form.AddInputField(serviceSubnetCIDRLabel, "10.222.0.0/16", constInputsWidth, nil, nil)
-	form.AddInputField(podSubnetNodeCIDRPrefixLabel, "24", constInputsWidth, nil, nil)
+	i := 0
+	for indx, v := range versions {
+		if v == c.st.GetK8sVersion() {
+			i = indx
+			break
+		}
+	}
+	form.AddDropDown(k8sVersionLabel, versions, i, nil)
+	form.AddInputField(clusterDomainLabel, c.st.GetClusterDomain(), constInputsWidth, nil, nil)
+	form.AddInputField(podSubnetCIDRLabel, c.st.GetPodSubnetCIDR(), constInputsWidth, nil, nil)
+	form.AddInputField(serviceSubnetCIDRLabel, c.st.GetServiceSubnetCIDR(), constInputsWidth, nil, nil)
+	form.AddInputField(podSubnetNodeCIDRPrefixLabel, c.st.GetPodSubnetNodeCIDRPrefix(), constInputsWidth, nil, nil)
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 

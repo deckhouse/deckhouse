@@ -81,6 +81,13 @@ func NewState(s *Schema) *State {
 			Repo: s.DefaultRegistryRepo(),
 			User: s.DefaultRegistryUser(),
 		},
+		ClusterState: ClusterState{
+			K8sVersion:           s.K8sVersions()[len(s.K8sVersions())-1],
+			ClusterDomain:        "cluster.local",
+			PodSubnetCIDR:        "10.111.0.0/16",
+			ServiceSubnetCIDR:    "10.222.0.0/16",
+			SubnetNodeCIDRPrefix: "24",
+		},
 		schema: s,
 	}
 }
@@ -235,6 +242,26 @@ func (b *State) SetRegistrySchema(s string) error {
 
 func (b *State) SetRegistryCA(c string) {
 	b.RegistryState.CA = c
+}
+
+func (b *State) GetK8sVersion() string {
+	return b.ClusterState.K8sVersion
+}
+
+func (b *State) GetClusterDomain() string {
+	return b.ClusterState.ClusterDomain
+}
+
+func (b *State) GetPodSubnetCIDR() string {
+	return b.ClusterState.PodSubnetCIDR
+}
+
+func (b *State) GetServiceSubnetCIDR() string {
+	return b.ClusterState.ServiceSubnetCIDR
+}
+
+func (b *State) GetPodSubnetNodeCIDRPrefix() string {
+	return b.ClusterState.SubnetNodeCIDRPrefix
 }
 
 func (b *State) SetK8sVersion(v string) error {
