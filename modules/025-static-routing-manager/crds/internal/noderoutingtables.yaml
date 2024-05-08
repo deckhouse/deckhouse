@@ -20,11 +20,17 @@ spec:
     subresources:
       status: {}
     additionalPrinterColumns:
+      - jsonPath: .status.conditions[?(@.type=="Ready")].status
+        name: Ready
+        type: string
       - jsonPath: .spec.nodeName
         name: nodeName
         type: string
-      - jsonPath: .spec.ipRouteTableID
-        name: ipRouteTableID
+      - jsonPath: .metadata.ownerReferences[?(@.kind=="RoutingTable")].name
+        name: routingTableName
+        type: string
+      - jsonPath: .spec.ipRoutingTableID
+        name: routingTableID
         type: integer
       - jsonPath: .metadata.creationTimestamp
         name: Age
@@ -40,7 +46,8 @@ spec:
           spec:
             type: object
             required:
-            - ipRouteTableID
+            - nodeName
+            - ipRoutingTableID
             - routes
             properties:
               nodeName:
@@ -50,10 +57,10 @@ spec:
                     rule: self == oldSelf
                 description: |
                   The name of the node for which this CR is intended.
-              ipRouteTableID:
+              ipRoutingTableID:
                 type: integer
                 x-kubernetes-validations:
-                - message: ipRouteTableID is immutable field
+                - message: ipRoutingTableID is immutable field
                   rule: self == oldSelf
                 minimum: 1
                 maximum: 4294967295
@@ -64,6 +71,7 @@ spec:
                   If necessary, you need to recreate the resource.
               routes:
                 type: array
+                minItems: 1
                 items:
                   type: object
                   description: |

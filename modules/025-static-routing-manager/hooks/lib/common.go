@@ -25,11 +25,11 @@ import (
 // Common types
 
 type RoutingTableInfo struct {
-	Name           string
-	UID            types.UID
-	IPRouteTableID int
-	Routes         []v1alpha1.Route
-	NodeSelector   map[string]string
+	Name             string
+	UID              types.UID
+	IPRoutingTableID int
+	Routes           []v1alpha1.Route
+	NodeSelector     map[string]string
 }
 
 type NodeRoutingTableInfo struct {
@@ -56,8 +56,3 @@ const (
 // Common var
 
 // Common func
-
-func NRTSAppend(nrts *v1alpha1.NodeRoutingTableSpec, rti RoutingTableInfo) {
-	nrts.IPRouteTableID = rti.IPRouteTableID
-	nrts.Routes = rti.Routes
-}

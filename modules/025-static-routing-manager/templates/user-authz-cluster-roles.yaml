@@ -12,6 +12,7 @@ rules:
   resources:
   - iprulesets
   - routingtables
+  - noderoutingtables
   verbs:
   - get
   - list
@@ -30,6 +31,7 @@ rules:
   resources:
   - iprulesets
   - routingtables
+  - noderoutingtables
   verbs:
   - create
   - delete

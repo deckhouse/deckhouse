@@ -27,9 +27,7 @@ const (
 	ProbeAddressPortENV    = "PROBE_ADDRESS_PORT"
 	ControllerNamespaceEnv = "CONTROLLER_NAMESPACE"
 	NodeNameENV            = "NODE_NAME"
-	ConfigmapENV           = "CONFIGMAP_NAME"
 	ControllerName         = "static-routing-manager-agent"
-	ConfigmapName          = "static-routes"
 	defaultRequeueInterval = 10
 )
 
@@ -39,7 +37,6 @@ type Options struct {
 	ControllerNamespace string
 	RequeueInterval     time.Duration
 	NodeName            string
-	ConfigmapName       string
 }
 
 func NewConfig() (*Options, error) {
@@ -86,13 +83,6 @@ func NewConfig() (*Options, error) {
 		opts.NodeName = nodeName
 	} else {
 		return nil, fmt.Errorf("%s environment variable not set", NodeNameENV)
-	}
-
-	configmapName := os.Getenv(ConfigmapENV)
-	if configmapName == "" {
-		opts.ConfigmapName = ConfigmapName
-	} else {
-		opts.ConfigmapName = configmapName
 	}
 
 	return &opts, nil

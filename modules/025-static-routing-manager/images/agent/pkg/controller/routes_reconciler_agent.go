@@ -43,7 +43,7 @@ import (
 
 const (
 	CtrlName      = "static-routing-manager-agent"
-	d8Realm       = 216
+	d8Realm       = 216 // d8 hex = 216 dec
 	nodeNameLabel = "routing-manager.network.deckhouse.io/node-name"
 	finalizer     = "routing-tables-manager.network.deckhouse.io"
 )
@@ -106,6 +106,15 @@ type NRTReconciliationStatus struct {
 	ErrorMessage string
 }
 
+func (s *NRTReconciliationStatus) AppendError(err error) {
+	s.IsSuccess = false
+	if s.ErrorMessage == "" {
+		s.ErrorMessage = err.Error()
+	} else {
+		s.ErrorMessage = s.ErrorMessage + "\n" + err.Error()
+	}
+}
+
 // Main
 
 func RunRoutesReconcilerAgentController(
@@ -144,7 +153,7 @@ func RunRoutesReconcilerAgentController(
 			}
 
 			if nrt.Generation == nrt.Status.ObservedGeneration && nrt.DeletionTimestamp == nil {
-				cond := FindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceed)
+				cond := FindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
 				if cond.Status == metav1.ConditionTrue {
 					log.Debug(fmt.Sprintf("[NRTReconciler] There's nothing to do"))
 					return reconcile.Result{}, nil
@@ -197,21 +206,9 @@ func RunRoutesReconcilerAgentController(
 
 				if nrt.DeletionTimestamp != nil {
 					log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
-					var tmpREM RouteEntryMap
-					if len(deletedNRTRouteEntryMaps[nrt.Name]) == 0 {
-						tmpREM = make(RouteEntryMap)
-					} else {
-						tmpREM = deletedNRTRouteEntryMaps[nrt.Name]
-					}
+					tmpREM := make(RouteEntryMap)
 					for _, route := range nrt.Spec.Routes {
-						hash := fmt.Sprintf("%d#%s#%s",
-							nrt.Spec.IPRouteTableID,
-							route.Destination,
-							route.Gateway,
-						)
-						if _, ok := actualRouteEntryMap[hash]; ok {
-							tmpREM.AppendR(route, nrt.Spec.IPRouteTableID)
-						}
+						tmpREM.AppendR(route, nrt.Spec.IPRoutingTableID)
 					}
 					deletedNRTRouteEntryMaps[nrt.Name] = tmpREM
 					continue
@@ -221,8 +218,8 @@ func RunRoutesReconcilerAgentController(
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: DesiredRoute and globalDesiredRoute"))
 				nrtDesiredRouteEntryMap := make(RouteEntryMap)
 				for _, route := range nrt.Spec.Routes {
-					nrtDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
-					globalDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
+					nrtDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
+					globalDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
 				}
 
 				// Filling nrtLastAppliedRouteEntryMap
@@ -230,7 +227,7 @@ func RunRoutesReconcilerAgentController(
 				nrtLastAppliedRouteEntryMap := make(RouteEntryMap)
 				if nrt.Status.AppliedRoutes != nil && len(nrt.Status.AppliedRoutes) > 0 {
 					for _, route := range nrt.Status.AppliedRoutes {
-						nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRouteTableID)
+						nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
 					}
 				}
 
@@ -245,17 +242,10 @@ func RunRoutesReconcilerAgentController(
 
 				// Filling erasedNRTRouteEntryMaps[nrt.Name]
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: erasedRoute"))
-				var tmpREM RouteEntryMap
-				if len(erasedNRTRouteEntryMaps[nrt.Name]) == 0 {
-					tmpREM = make(RouteEntryMap)
-				} else {
-					tmpREM = erasedNRTRouteEntryMaps[nrt.Name]
-				}
+				tmpREM := make(RouteEntryMap)
 				for hash, route := range nrtLastAppliedRouteEntryMap {
 					if _, ok := nrtDesiredRouteEntryMap[hash]; !ok {
-						if _, ok := actualRouteEntryMap[hash]; ok {
-							tmpREM.AppendRE(route)
-						}
+						tmpREM.AppendRE(route)
 					}
 				}
 				erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
@@ -266,16 +256,11 @@ func RunRoutesReconcilerAgentController(
 					status := nrtReconciliationStatusMap[nrt.Name]
 					for _, route := range routesToAdd {
 						err := addRouteToNode(route)
-						if err != nil {
-							log.Debug(fmt.Sprintf("err: %v", err))
-							status.IsSuccess = false
-							if status.ErrorMessage == "" {
-								status.ErrorMessage = err.Error()
-							} else {
-								status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
-							}
-						} else {
+						if err == nil {
 							actualRouteEntryMap.AppendRE(route)
+						} else {
+							log.Debug(fmt.Sprintf("err: %v", err))
+							status.AppendError(err)
 						}
 					}
 					nrtReconciliationStatusMap[nrt.Name] = status
@@ -289,6 +274,7 @@ func RunRoutesReconcilerAgentController(
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
+					actualRouteEntryMap,
 					status,
 					log,
 				)
@@ -305,6 +291,7 @@ func RunRoutesReconcilerAgentController(
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
 					globalDesiredRouteEntryMap,
+					actualRouteEntryMap,
 					status,
 					log,
 				)
@@ -321,22 +308,20 @@ func RunRoutesReconcilerAgentController(
 				}
 
 				if nrtReconciliationStatus.IsSuccess {
-					newCond = v1alpha1.NodeRoutingTableCondition{
-						Type:              v1alpha1.ReconciliationSucceed,
-						LastHeartbeatTime: t,
-						Status:            metav1.ConditionTrue,
-						Reason:            v1alpha1.NRTReconciliationSucceed,
-						Message:           "",
-					}
 					nrtK8sResourcesMap[nrtName].Status.AppliedRoutes = nrtK8sResourcesMap[nrtName].Spec.Routes
+
+					newCond.Type = v1alpha1.ReconciliationSucceedType
+					newCond.LastHeartbeatTime = t
+					newCond.Status = metav1.ConditionTrue
+					newCond.Reason = v1alpha1.ReconciliationReasonSucceed
+					newCond.Message = ""
 				} else {
-					newCond = v1alpha1.NodeRoutingTableCondition{
-						Type:              v1alpha1.ReconciliationSucceed,
-						LastHeartbeatTime: t,
-						Status:            metav1.ConditionFalse,
-						Reason:            v1alpha1.NRTReconciliationFailed,
-						Message:           nrtReconciliationStatus.ErrorMessage,
-					}
+					newCond.Type = v1alpha1.ReconciliationSucceedType
+					newCond.LastHeartbeatTime = t
+					newCond.Status = metav1.ConditionFalse
+					newCond.Reason = v1alpha1.ReconciliationReasonFailed
+					newCond.Message = nrtReconciliationStatus.ErrorMessage
+
 					shouldRequeue = true
 				}
 				_ = SetStatusCondition(&nrtK8sResourcesMap[nrtName].Status.Conditions, newCond)
@@ -462,19 +447,18 @@ func delRouteFromNode(route RouteEntry) error {
 	return nil
 }
 
-func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, status NRTReconciliationStatus, log logger.Logger) NRTReconciliationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status NRTReconciliationStatus, log logger.Logger) NRTReconciliationStatus {
 	for hash, route := range delREM {
-		if _, ok := gdREM[hash]; !ok {
-			err := delRouteFromNode(route)
-			if err != nil {
-				log.Debug(fmt.Sprintf("err: %v", err))
-				status.IsSuccess = false
-				if status.ErrorMessage == "" {
-					status.ErrorMessage = err.Error()
-				} else {
-					status.ErrorMessage = status.ErrorMessage + "\n" + err.Error()
-				}
-			}
+		if _, ok := gdREM[hash]; ok {
+			continue
+		}
+		if _, ok := actREM[hash]; !ok {
+			continue
+		}
+		err := delRouteFromNode(route)
+		if err != nil {
+			log.Debug(fmt.Sprintf("err: %v", err))
+			status.AppendError(err)
 		}
 	}
 	return status
@@ -538,7 +522,7 @@ func SetStatusCondition(conditions *[]v1alpha1.NodeRoutingTableCondition, newCon
 	return changed
 }
 
-func FindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType v1alpha1.NodeRoutingTableConditionType) *v1alpha1.NodeRoutingTableCondition {
+func FindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType string) *v1alpha1.NodeRoutingTableCondition {
 	for i := range conditions {
 		if conditions[i].Type == conditionType {
 			return &conditions[i]
@@ -555,13 +539,14 @@ func SetStatusConditionPending(
 ) error {
 	t := metav1.NewTime(time.Now())
 	nrt.Status.ObservedGeneration = nrt.Generation
-	newCond := v1alpha1.NodeRoutingTableCondition{
-		Type:              v1alpha1.ReconciliationSucceed,
-		LastHeartbeatTime: t,
-		Status:            metav1.ConditionFalse,
-		Reason:            v1alpha1.NRTReconciliationPending,
-		Message:           "",
-	}
+
+	newCond := v1alpha1.NodeRoutingTableCondition{}
+	newCond.Type = v1alpha1.ReconciliationSucceedType
+	newCond.LastHeartbeatTime = t
+	newCond.Status = metav1.ConditionFalse
+	newCond.Reason = v1alpha1.ReconciliationReasonPending
+	newCond.Message = ""
+
 	_ = SetStatusCondition(&nrt.Status.Conditions, newCond)
 
 	err := cl.Status().Update(ctx, nrt)

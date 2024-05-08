@@ -26,12 +26,12 @@ spec:
                         description: |
                           In which table find route
                         properties:
-                          ipRouteTableID:
+                          ipRoutingTableID:
                             description: |
-                              ID of route table on node
-                          routeTableName:
+                              ID of routing table on node
+                          routingTableName:
                             description: |
-                              Name of CR routeTable
+                              Name of CR RoutingTable
                 nodeSelector:
                   description: |
                     nodeSelector of node on which inject iprule

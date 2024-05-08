@@ -47,13 +47,13 @@ type RoutingTableList struct {
 }
 
 type RoutingTableSpec struct {
-	IPRouteTableID int               `json:"ipRouteTableID"`
-	Routes         []Route           `json:"routes"`
-	NodeSelector   map[string]string `json:"nodeSelector"`
+	IPRoutingTableID int               `json:"ipRoutingTableID"`
+	Routes           []Route           `json:"routes"`
+	NodeSelector     map[string]string `json:"nodeSelector"`
 }
 
 type RoutingTableStatus struct {
-	IPRouteTableID int `json:"ipRouteTableID,omitempty"`
+	IPRoutingTableID int `json:"ipRoutingTableID,omitempty"`
 }
 
 // CR NodeRoutingTable
@@ -72,9 +72,9 @@ type NodeRoutingTableList struct {
 }
 
 type NodeRoutingTableSpec struct {
-	NodeName       string  `json:"nodeName"`
-	IPRouteTableID int     `json:"ipRouteTableID"`
-	Routes         []Route `json:"routes"`
+	NodeName         string  `json:"nodeName"`
+	IPRoutingTableID int     `json:"ipRoutingTableID"`
+	Routes           []Route `json:"routes"`
 }
 
 type NodeRoutingTableStatus struct {
@@ -84,20 +84,17 @@ type NodeRoutingTableStatus struct {
 }
 
 type NodeRoutingTableCondition struct {
-	LastHeartbeatTime  metav1.Time                   `json:"lastHeartbeatTime,omitempty"`
-	Type               NodeRoutingTableConditionType `json:"type"`
-	Status             metav1.ConditionStatus        `json:"status"`
-	LastTransitionTime metav1.Time                   `json:"lastTransitionTime,omitempty"`
-	Reason             string                        `json:"reason,omitempty"`
-	Message            string                        `json:"message,omitempty"`
+	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
+	metav1.Condition
 }
 
 type NodeRoutingTableConditionType string
 
 const (
 	// Types
-	ReconciliationSucceed NodeRoutingTableConditionType = "ReconciliationSucceed"
+	ReconciliationSucceedType = "Ready"
 	// Reasons
-	NRTReconciliationSucceed = "NRTReconciliationSucceed"
-	NRTReconciliationFailed  = "NRTReconciliationFailed"
+	ReconciliationReasonSucceed = "NRTReconciliationSucceed"
+	ReconciliationReasonFailed  = "NRTReconciliationFailed"
+	ReconciliationReasonPending = "Pending"
 )

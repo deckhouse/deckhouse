@@ -31,30 +31,44 @@ import (
 )
 
 const (
-	RouteTableIDMin int = 10000
-	RouteTableIDMax int = 11000
+	RoutingTableIDMin int = 10000
+	RoutingTableIDMax int = 11000
 )
 
 type routingTableInfo struct {
-	Name                    string
-	DeletionTimestampExists bool
-	SpecIPRouteTableID      int
-	StatusIPRouteTableID    int
+	Name                   string
+	IsDeleted              bool
+	SpecIPRoutingTableID   int
+	StatusIPRoutingTableID int
+}
+
+type idIterator struct {
+	UtilizedIDs       map[int]struct{}
+	LastFreeIDByOrder int
+}
+
+func (i *idIterator) pickNextFreeID() (int, error) {
+	if _, ok := i.UtilizedIDs[i.LastFreeIDByOrder]; ok {
+		i.LastFreeIDByOrder++
+		return i.pickNextFreeID()
+	}
+	i.UtilizedIDs[i.LastFreeIDByOrder] = struct{}{}
+	return i.LastFreeIDByOrder, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/static-routing-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "routetables",
+			Name:       "routingtables",
 			ApiVersion: "network.deckhouse.io/v1alpha1",
 			Kind:       "RoutingTable",
-			FilterFunc: applyRouteTablesFilter,
+			FilterFunc: applyRoutingTablesFilter,
 		},
 	},
 }, routingTableStatusIDHandler)
 
-func applyRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		rt     v1alpha1.RoutingTable
 		result routingTableInfo
@@ -65,19 +79,9 @@ func applyRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	result.Name = rt.Name
-	result.DeletionTimestampExists = rt.DeletionTimestamp != nil
-
-	if rt.Spec.IPRouteTableID == 0 {
-		result.SpecIPRouteTableID = 0
-	} else {
-		result.SpecIPRouteTableID = rt.Spec.IPRouteTableID
-	}
-
-	if rt.Status.IPRouteTableID == 0 {
-		result.StatusIPRouteTableID = 0
-	} else {
-		result.StatusIPRouteTableID = rt.Status.IPRouteTableID
-	}
+	result.IsDeleted = rt.DeletionTimestamp != nil
+	result.SpecIPRoutingTableID = rt.Spec.IPRoutingTableID
+	result.StatusIPRoutingTableID = rt.Status.IPRoutingTableID
 
 	return result, nil
 }
@@ -85,31 +89,31 @@ func applyRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 	var newRTId int
 
-	busyIDs := make(map[int]struct{})
-	for _, rtiRaw := range input.Snapshots["routetables"] {
+	utilizedIDs := make(map[int]struct{})
+	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(routingTableInfo)
-		busyIDs[rti.StatusIPRouteTableID] = struct{}{}
+		utilizedIDs[rti.StatusIPRoutingTableID] = struct{}{}
 	}
 
-	for _, rtiRaw := range input.Snapshots["routetables"] {
+	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(routingTableInfo)
 
-		if !shouldUpdateStatusRouteTableID(rti, input.LogEntry) {
+		if !shouldUpdateStatusRoutingTableID(rti, input.LogEntry) {
 			continue
 		}
 		input.LogEntry.Infof("RoutingTable %v needs to be updated", rti.Name)
 
-		if rti.SpecIPRouteTableID != 0 {
-			newRTId = rti.SpecIPRouteTableID
+		if rti.SpecIPRoutingTableID != 0 {
+			newRTId = rti.SpecIPRoutingTableID
 		} else {
-			newRTId = generateFreeRoutingTableID(busyIDs)
+			newRTId = pickFreeRoutingTableID(utilizedIDs)
 
-			busyIDs[newRTId] = struct{}{}
+			utilizedIDs[newRTId] = struct{}{}
 		}
 
 		statusPatch := map[string]interface{}{
 			"status": v1alpha1.RoutingTableStatus{
-				IPRouteTableID: newRTId,
+				IPRoutingTableID: newRTId,
 			},
 		}
 		input.PatchCollector.MergePatch(
@@ -126,33 +130,33 @@ func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 
 // service functions
 
-func shouldUpdateStatusRouteTableID(rti routingTableInfo, log *logrus.Entry) bool {
-	if rti.DeletionTimestampExists {
+func shouldUpdateStatusRoutingTableID(rti routingTableInfo, log *logrus.Entry) bool {
+	if rti.IsDeleted {
 		return false
 	}
 
-	if rti.StatusIPRouteTableID == 0 {
-		log.Infof("In RoutingTable %v status.IPRouteTableID is empty", rti.Name)
+	if rti.StatusIPRoutingTableID == 0 {
+		log.Infof("In RoutingTable %v status.IPRoutingTableID is empty", rti.Name)
 		return true
 	}
 
-	if rti.StatusIPRouteTableID != 0 && rti.SpecIPRouteTableID == 0 {
+	if rti.StatusIPRoutingTableID != 0 && rti.SpecIPRoutingTableID == 0 {
 		return false
 	}
 
-	if rti.SpecIPRouteTableID != 0 && rti.SpecIPRouteTableID == rti.StatusIPRouteTableID {
+	if rti.SpecIPRoutingTableID != 0 && rti.SpecIPRoutingTableID == rti.StatusIPRoutingTableID {
 		return false
 	}
 
-	log.Infof("RoutingTable %v is not in the deletion status, status.IPRouteTableID and spec.IPRouteTableID are not empty, but not are equal", rti.Name)
+	log.Infof("RoutingTable %v is not in the deletion status, status.IPRoutingTableID and spec.IPRoutingTableID are not empty, but not are equal", rti.Name)
 	return true
 }
 
-func generateFreeRoutingTableID(busyIDs map[int]struct{}) int {
+func pickFreeRoutingTableID(utilizedIDs map[int]struct{}) int {
 	for {
 		randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-		newRTId := randomizer.Intn(RouteTableIDMax-RouteTableIDMin) + RouteTableIDMin
-		if _, ok := busyIDs[newRTId]; ok {
+		newRTId := randomizer.Intn(RoutingTableIDMax-RoutingTableIDMin) + RoutingTableIDMin
+		if _, ok := utilizedIDs[newRTId]; ok {
 			continue
 		}
 		return newRTId

@@ -36,7 +36,7 @@ kind: RoutingTable
 metadata:
   name: testrt1
 spec:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
@@ -45,7 +45,7 @@ spec:
   nodeSelector:
     node-role: testrole1
 status:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
 `
 		rt1upYAML = `
 ---
@@ -54,7 +54,7 @@ kind: RoutingTable
 metadata:
   name: testrt1
 spec:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
@@ -63,7 +63,7 @@ spec:
   nodeSelector:
     node-role: testrole1
 status:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
 `
 		rt2YAML = `
 ---
@@ -78,7 +78,7 @@ spec:
   nodeSelector:
     node-role: testrole1
 status:
-  ipRouteTableID: 300
+  ipRoutingTableID: 300
 `
 		rt3YAML = `
 ---
@@ -87,7 +87,7 @@ kind: RoutingTable
 metadata:
   name: testrt3
 spec:
-  ipRouteTableID: 300
+  ipRoutingTableID: 300
   routes:
   - destination: 0.0.0.0/0
     gateway: 2.2.2.1
@@ -102,7 +102,7 @@ metadata:
   name: testrt1-29c8b10d14
 spec:
   nodeName: kube-worker-1
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
@@ -111,7 +111,7 @@ spec:
 `
 		desiredNRT11SpecYAML = `
 nodeName: kube-worker-1
-ipRouteTableID: 500
+ipRoutingTableID: 500
 routes:
 - destination: 0.0.0.0/0
   gateway: 1.2.3.4
@@ -120,7 +120,7 @@ routes:
 `
 		desiredNRT11upSpecYAML = `
 nodeName: kube-worker-1
-ipRouteTableID: 500
+ipRoutingTableID: 500
 routes:
 - destination: 0.0.0.0/0
   gateway: 1.2.3.4
@@ -129,14 +129,14 @@ routes:
 `
 		desiredNRT12SpecYAML = `
 nodeName: kube-worker-1
-ipRouteTableID: 300
+ipRoutingTableID: 300
 routes:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `
 		desiredNRT21SpecYAML = `
 nodeName: kube-worker-2
-ipRouteTableID: 500
+ipRoutingTableID: 500
 routes:
 - destination: 0.0.0.0/0
   gateway: 1.2.3.4
@@ -145,7 +145,7 @@ routes:
 `
 		desiredNRT22SpecYAML = `
 nodeName: kube-worker-2
-ipRouteTableID: 300
+ipRoutingTableID: 300
 routes:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
@@ -240,7 +240,7 @@ metadata:
 		})
 	})
 
-	Context("Checking the creation operation of a CR NodeRoutingTable from CR RoutingTable without ipRouteTableID in status", func() {
+	Context("Checking the creation operation of a CR NodeRoutingTable from CR RoutingTable without ipRoutingTableID in status", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt3YAML))
 			f.RunHook()

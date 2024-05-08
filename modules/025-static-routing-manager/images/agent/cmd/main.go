@@ -67,7 +67,6 @@ func main() {
 	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ConfigmapENV, cfgParams.ConfigmapName))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {

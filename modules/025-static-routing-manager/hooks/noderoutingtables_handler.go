@@ -37,7 +37,6 @@ import (
 
 const (
 	nodeNameLabel = "routing-manager.network.deckhouse.io/node-name"
-	ownerRTLabel  = "routing-manager.network.deckhouse.io/owner-routing-table-claim-name"
 	finalizer     = "routing-tables-manager.network.deckhouse.io"
 )
 
@@ -51,16 +50,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/static-routing-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "routetables",
+			Name:       "routingtables",
 			ApiVersion: "network.deckhouse.io/v1alpha1",
 			Kind:       "RoutingTable",
-			FilterFunc: applyMainHandlerRouteTablesFilter,
+			FilterFunc: applyMainHandlerRoutingTablesFilter,
 		},
 		{
-			Name:       "noderoutetables",
+			Name:       "noderoutingtables",
 			ApiVersion: "network.deckhouse.io/v1alpha1",
 			Kind:       "NodeRoutingTable",
-			FilterFunc: applyMainHandlerNodeRouteTablesFilter,
+			FilterFunc: applyMainHandlerNodeRoutingTablesFilter,
 		},
 		{
 			Name:       "nodes",
@@ -71,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, nodeRoutingTablesHandler)
 
-func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyMainHandlerRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		rt     v1alpha1.RoutingTable
 		result lib.RoutingTableInfo
@@ -83,14 +82,14 @@ func applyMainHandlerRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.
 
 	result.Name = rt.Name
 	result.UID = rt.UID
-	result.IPRouteTableID = rt.Status.IPRouteTableID
+	result.IPRoutingTableID = rt.Status.IPRoutingTableID
 	result.Routes = rt.Spec.Routes
 	result.NodeSelector = rt.Spec.NodeSelector
 
 	return result, nil
 }
 
-func applyMainHandlerNodeRouteTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyMainHandlerNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		nrt    v1alpha1.NodeRoutingTable
 		result lib.NodeRoutingTableInfo
@@ -134,9 +133,10 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 	// Filling affectedNodes
 	affectedNodes := make(map[string][]lib.RoutingTableInfo)
-	for _, rtiRaw := range input.Snapshots["routetables"] {
+	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(lib.RoutingTableInfo)
-		if rti.IPRouteTableID == 0 {
+		if rti.IPRoutingTableID == 0 {
+			// status.ipRouteTableID isn't set yet
 			continue
 		}
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
@@ -150,7 +150,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 	// Filling actualNodeRoutingTables
 	actualNodeRoutingTables := make(map[string]v1alpha1.NodeRoutingTableSpec)
-	for _, nrtRaw := range input.Snapshots["noderoutetables"] {
+	for _, nrtRaw := range input.Snapshots["noderoutingtables"] {
 		nrtis := nrtRaw.(lib.NodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis.NodeRoutingTable
 	}
@@ -163,7 +163,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 			tmpNRTS.rtName = rti.Name
 			tmpNRTS.rtUID = rti.UID
 			tmpNRTS.spec.NodeName = nodeName
-			tmpNRTS.spec.IPRouteTableID = rti.IPRouteTableID
+			tmpNRTS.spec.IPRoutingTableID = rti.IPRoutingTableID
 			tmpNRTS.spec.Routes = rti.Routes
 			tmpNRTName := rti.Name + "-" + generateShortHash(rti.Name+"#"+nodeName)
 			desiredNodeRoutingTables[tmpNRTName] = tmpNRTS
@@ -216,7 +216,6 @@ func generateNRT(name string, nrtps nrtsPlus) *v1alpha1.NodeRoutingTable {
 			Name: name,
 			Labels: map[string]string{
 				nodeNameLabel: nrtps.spec.NodeName,
-				ownerRTLabel:  nrtps.rtName,
 			},
 			Finalizers: []string{
 				finalizer,

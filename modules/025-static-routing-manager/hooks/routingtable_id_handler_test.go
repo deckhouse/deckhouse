@@ -35,7 +35,7 @@ kind: RoutingTable
 metadata:
   name: test1
 spec:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
@@ -66,7 +66,7 @@ kind: RoutingTable
 metadata:
   name: test3
 spec:
-  ipRouteTableID: 500
+  ipRoutingTableID: 500
   routes:
   - destination: 0.0.0.0/0
     gateway: 1.2.3.4
@@ -75,7 +75,7 @@ spec:
   nodeSelector:
     node-role: testrole1
 status:
-  ipRouteTableID: 300
+  ipRoutingTableID: 300
 `
 	)
 
@@ -120,9 +120,9 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("RoutingTable", "test1").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "test1").Field("status.ipRouteTableID").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "test1").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
 			rtstatus := f.KubernetesGlobalResource("RoutingTable", "test1").Field("status").String()
-			Expect(rtstatus).To(MatchYAML(`ipRouteTableID: 500`))
+			Expect(rtstatus).To(MatchYAML(`ipRoutingTableID: 500`))
 		})
 	})
 
@@ -135,9 +135,9 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("RoutingTable", "test2").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "test2").Field("status.ipRouteTableID").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "test2").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
 			rtstatus := f.KubernetesGlobalResource("RoutingTable", "test2").Field("status").String()
-			Expect(rtstatus).NotTo(MatchYAML(`ipRouteTableID: 500`))
+			Expect(rtstatus).NotTo(MatchYAML(`ipRoutingTableID: 500`))
 		})
 	})
 
@@ -150,9 +150,9 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("RoutingTable", "test3").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "test3").Field("status.ipRouteTableID").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "test3").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
 			rtstatus := f.KubernetesGlobalResource("RoutingTable", "test3").Field("status").String()
-			Expect(rtstatus).To(MatchYAML(`ipRouteTableID: 500`))
+			Expect(rtstatus).To(MatchYAML(`ipRoutingTableID: 500`))
 		})
 	})
 

@@ -65,19 +65,19 @@ spec:
                       description: |
                         In which table find route
                       oneOf:
-                      - required: [ipRouteTableID]
-                      - required: [routeTableName]
+                      - required: [ipRoutingTableID]
+                      - required: [routingTableName]
                       properties:
-                        ipRouteTableID:
+                        ipRoutingTableID:
                           type: integer
                           minimum: 1
                           maximum: 4294967295
                           description: |
-                            ID of route table on node
-                        routeTableName:
+                            ID of routing table on node
+                        routingTableName:
                           type: string
                           description: |
-                            Name of CR routeTable
+                            Name of CR RoutingTable
               nodeSelector:
                 type: object
                 description: |
@@ -87,9 +87,9 @@ spec:
           status:
             type: object
             properties:
-              ipRouteTableID:
+              ipRoutingTableID:
                 type: integer
                 minimum: 1
                 maximum: 4294967295
-              routeTableName:
+              routingTableName:
                 type: string

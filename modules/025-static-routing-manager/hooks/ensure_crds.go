@@ -20,4 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/025-static-routing-manager/crds/*.yaml")
+var (
+	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/025-static-routing-manager/crds/*.yaml")
+	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/025-static-routing-manager/crds/internal/*.yaml")
+)

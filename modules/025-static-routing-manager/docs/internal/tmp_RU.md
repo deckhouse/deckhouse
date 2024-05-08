@@ -8,12 +8,12 @@
 ## Контроллер
 
 1. Подписываемся
-   - на routeTable
+   - на routingTable
    - на ipRule
    - на cm
    - на nodes
 2. Если в cm есть DeletionTimestamp и для всех нод в status == "successfully cleared", то снимаем финалайзер с cm.
-3. Если в routeTable нет ipRouteTableID генерируем его и дописываем в status
+3. Если в routingTable нет ipRoutingTableID генерируем его и дописываем в status
 
 ## Логика агента
 
