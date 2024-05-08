@@ -102,7 +102,6 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	// make map with nodes to kill
 	nodesToKill := set.New()
 	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
-
 		if nodeRaw == nil {
 			continue
 		}
