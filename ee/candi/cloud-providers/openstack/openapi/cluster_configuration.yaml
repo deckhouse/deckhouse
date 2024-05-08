@@ -438,6 +438,7 @@ apiVersions:
 
                       This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                     type: integer
+                    default: 50
                   additionalTags:
                     description: |
                       The additional tags to attach to the instance created (in addition to those specified in the cloud provider configuration).

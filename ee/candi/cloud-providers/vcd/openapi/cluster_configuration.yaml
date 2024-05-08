@@ -90,12 +90,14 @@ apiVersions:
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
+                    
                     If no placement policy is specified, default placement policy will be used to create the nodes.
                   type: string
                   example: Hypervisor1
                 sizingPolicy:
                   description: |
                     SizingPolicy is the sizing policy to be used on this machine.
+                    
                     If no sizing policy is specified, default sizing policy will be used to create the nodes.
                   type: string
                   example: 4Cpu8Memory
@@ -196,12 +198,14 @@ apiVersions:
                   placementPolicy:
                     description: |
                       PlacementPolicy is the placement policy to be used on this machine.
+                      
                       If no placement policy is specified, default placement policy will be used to create the nodes.
                     type: string
                     example: Hypervisor1
                   sizingPolicy:
                     description: |
                       SizingPolicy is the sizing policy to be used on this machine.
+                      
                       If no sizing policy is specified, default sizing policy will be used to create the nodes.
                     type: string
                     example: 4Cpu8Memory
@@ -234,18 +238,18 @@ apiVersions:
         organization:
           type: string
           description: |
-            Vcloud Director Organization name.
+            VMware Cloud Director Organization name.
         virtualDataCenter:
           type: string
           description: |
-            Vcloud Director Virtual Data Center name (belongs to Organization).
+            VMware Cloud Director Virtual Data Center name (belongs to Organization).
         virtualApplicationName:
           type: string
           # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
           # base on this answer https://stackoverflow.com/a/67387967
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
           description: |
-            Vcloud Director Virtual Application name (belongs to Virtual Data Center).
+            VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).

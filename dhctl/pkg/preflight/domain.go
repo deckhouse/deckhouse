@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -48,5 +49,48 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	}
 
 	log.DebugLn(string(out))
+	return nil
+}
+
+func (pc *Checker) CheckPublicDomainTemplate() error {
+	if app.PreflightSkipPublicDomainTemplateCheck {
+		log.InfoLn("PublicDomainTemplate preflight check was skipped")
+		return nil
+	}
+
+	log.DebugLn("Checking if publicDomainTemplate was set correctly")
+
+	for _, mc := range pc.metaConfig.ModuleConfigs {
+		if mc.GetName() != "global" {
+			continue
+		}
+
+		type SettingsModules struct {
+			PublicDomainTemplate string `json:"publicDomainTemplate,omitempty"`
+		}
+
+		var (
+			clusterDomain   string
+			settingsModules SettingsModules
+		)
+
+		stringData, err := json.Marshal(mc.Spec.Settings["modules"])
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(stringData, &settingsModules)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(pc.metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
+		if err != nil {
+			return err
+		}
+
+		if strings.Contains(settingsModules.PublicDomainTemplate, clusterDomain) {
+			return fmt.Errorf("The publicDomainTemplate \"%s\" MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource: \"%s\".", settingsModules.PublicDomainTemplate, clusterDomain)
+		}
+	}
 	return nil
 }

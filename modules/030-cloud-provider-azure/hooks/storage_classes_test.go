@@ -34,6 +34,11 @@ cloudProviderAzure:
       type: UltraSSD_LRS
       diskIOPSReadWrite: 600
       diskMBpsReadWrite: 150
+      tags:
+      - key: key1
+        value: value1
+      - key: key2
+        value: value2
     exclude:
     - sc\d+
     - bar
@@ -87,7 +92,8 @@ cloudProviderAzure:
     "name": "managed-ultra-ssd",
     "type": "UltraSSD_LRS",
     "diskIOPSReadWrite": 600,
-    "diskMBpsReadWrite": 150
+    "diskMBpsReadWrite": 150,
+    "tags": "key1=value1,key2=value2"
   }
 ]
 `))
