@@ -65,11 +65,10 @@ func attemptConnection(client http.Client, url string) (bool, error) {
 }
 
 func main() {
-	startArgs := os.Args[1:]
 	configPath := ""
 	endpoint := ""
 
-	for _, arg := range startArgs {
+	for _, arg := range os.Args {
 		if strings.HasSuffix(arg, ".yaml") {
 			configPath = arg
 			break
@@ -99,9 +98,9 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Starting Docker Distribution: %s %s\n", appPath, startArgs)
+	fmt.Printf("Starting Docker Distribution: %s %s\n", appPath, os.Args)
 	env := os.Environ()
-	if err := syscall.Exec(appPath, startArgs, env); err != nil {
+	if err := syscall.Exec(appPath, os.Args, env); err != nil {
 		fmt.Printf("Failed to execute Docker Distribution due to the following error: %v\n", err)
 		return
 	}
