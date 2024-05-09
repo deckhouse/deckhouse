@@ -10,3 +10,49 @@ properties:
     x-example:
       - environment: Vadim
       - environment: Nikita
+  registryMode:
+    type: string
+    enum:
+      - Direct
+      - Proxy
+      - Detached
+    default: Direct
+    description: |
+      Registry mode
+    x-example:
+      - registryMode: Proxy
+      - registryMode: Direct
+      - registryMode: Detached
+  upstreamRegistry:
+    type: object
+    properties:
+      upstreamRegistryHost:
+        type: string
+        description: |
+          Host of upstream registry
+        x-example: dev-registry.deckhouse.io
+      upstreamRegistryScheme:
+        type: string
+        description: |
+          Scheme of upstream registry
+        x-example: https
+      upstreamRegistryCa:
+        type: string
+        description: |
+          CA of upstream registry
+        x-example: ""
+      upstreamRegistryPath:
+        type: string
+        description: |
+          Path of upstream registry
+        x-example: sys/deckhouse-oss
+      upstreamRegistryUser:
+        type: string
+        description: |
+          User of upstream registry
+        x-example: license-token
+      upstreamRegistryPassword:
+        type: string
+        description: |
+          Password of upstream registry
+        x-example: 123456
