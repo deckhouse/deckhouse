@@ -453,7 +453,7 @@ type bashibleContext struct {
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
-	RegistryMode      string                       `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
+	RegistryMode      string                       `json:"registryMode" yaml:"registryMode"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
