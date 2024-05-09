@@ -34,7 +34,7 @@ import (
 var golden bool
 
 func init() {
-	flag.BoolVar(&golden, "true", false, "generate golden files")
+	flag.BoolVar(&golden, "false", false, "generate golden files")
 }
 
 func TestControllerTestSuite(t *testing.T) {
