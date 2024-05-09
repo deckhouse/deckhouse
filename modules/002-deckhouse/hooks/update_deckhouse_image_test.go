@@ -298,7 +298,7 @@ spec:
 
 	Context("DEV: No new deckhouse image", func() {
 		BeforeEach(func() {
-			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (s1 string, err error) {
+			dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 				return "sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil
 			})
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
@@ -313,7 +313,7 @@ spec:
 
 	Context("DEV: Have new deckhouse image", func() {
 		BeforeEach(func() {
-			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (s1 string, err error) {
+			dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 				return "sha256:123456", nil
 			})
 			f.KubeStateSet(deckhousePodYaml)
@@ -580,7 +580,7 @@ status:
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 
-			var df requirements.DisruptionFunc = func(getter requirements.ValueGetter) (bool, string) {
+			var df requirements.DisruptionFunc = func(_ requirements.ValueGetter) (bool, string) {
 				return true, "some test reason"
 			}
 			requirements.RegisterDisruption("testme", df)
@@ -615,7 +615,7 @@ status:
 
 	Context("Notification: release with notification settings", func() {
 		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			data, _ := io.ReadAll(r.Body)
 			httpBody = string(data)
 		}))
@@ -731,7 +731,7 @@ metadata:
 
 	Context("Notification: release applyAfter time is after notification period", func() {
 		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			data, _ := io.ReadAll(r.Body)
 			httpBody = string(data)
 		}))
@@ -767,7 +767,7 @@ metadata:
 			username string
 			password string
 		)
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			username, password, _ = r.BasicAuth()
 		}))
 		AfterEach(func() {
@@ -795,7 +795,7 @@ metadata:
 		var (
 			headerValue string
 		)
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))
 		AfterEach(func() {
@@ -819,7 +819,7 @@ metadata:
 	})
 
 	Context("Update minimal notification time without configuring notification webhook", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 		AfterEach(func() {
 			defer svr.Close()
 		})

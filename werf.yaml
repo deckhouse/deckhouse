@@ -237,6 +237,9 @@ import:
   {{- include "base components imports" . }}
 ansible:
   beforeInstall:
+  - name: "Install golang for deckhouse-controller,dhctl and testing image build"
+    shell: |
+      curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
   {{- include "base components" . | nindent 2 }}
 
 ---
@@ -268,11 +271,11 @@ shell:
 
 ---
 artifact: golangci-lint-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
-  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.55.2
+  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.58.0
   - cd golangci-lint/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
 
@@ -762,6 +765,7 @@ args:
   BASE_GOLANG_21_ALPINE_DEV: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
   BASE_GOLANG_21_BULLSEYE: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
   BASE_GOLANG_21_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+  BASE_GOLANG_22_ALPINE: {{ .Images.BASE_GOLANG_22_ALPINE }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NGINX_ALPINE_DEV:  {{ .Images.BASE_NGINX_ALPINE_DEV }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}

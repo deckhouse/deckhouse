@@ -33,7 +33,7 @@ func TestModuleRegexp(t *testing.T) {
 }
 
 func TestCheckRequirements(t *testing.T) {
-	f := func(requirementValue string, getter ValueGetter) (bool, error) {
+	f := func(_ string, _ ValueGetter) (bool, error) {
 		return false, errors.New("mock error")
 	}
 

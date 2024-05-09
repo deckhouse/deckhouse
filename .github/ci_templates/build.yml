@@ -7,10 +7,10 @@ steps:
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
 
-  - name: Set up Go 1.21
+  - name: Set up Go 1.22
     uses: actions/setup-go@v3
     with:
-      go-version: '1.21'
+      go-version: '1.22'
 
   - name: Run go generate
     run: |

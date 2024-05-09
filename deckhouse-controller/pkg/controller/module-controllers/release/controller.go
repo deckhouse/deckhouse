@@ -664,7 +664,7 @@ func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 	var symlinkPath string
 
 	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	walkDir := func(path string, d os.DirEntry, err error) error {
+	walkDir := func(path string, d os.DirEntry, _ error) error {
 		if !moduleRegexp.MatchString(d.Name()) {
 			return nil
 		}
