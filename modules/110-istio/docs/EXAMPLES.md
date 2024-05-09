@@ -627,11 +627,7 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
-## Ограничения режима перенаправления прикладного трафика для передачи под управление Istio `CNIPlugin`
-
-В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это зн
-ачит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в сайдкар `istio-proxy`,
- который ещё не запущен. Обходные пути:
+## `CNIPlugin` Application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar, which is not yet running. Workarounds:
 
