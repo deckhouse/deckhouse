@@ -630,6 +630,13 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
+## Ограничения режима перенаправления прикладного трафика для передачи под управление Istio `CNIPlugin`
+
+В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это значит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в сайдкар `istio-proxy`, который ещё не запущен. Обходные пути:
+
+* Запустить прикладной init-контейнер от пользователя с uid `1337`. Запросы данного пользователя не перехватываются под управление Istio.
+* Исключить IP-адрес или порт сервиса из-под контроля Istio с помощью аннотаций `traffic.sidecar.istio.io/excludeOutboundIPRanges` или `traffic.sidecar.istio.io/excludeOutboundPorts`.
+
 ## Обновление Istio
 
 ## Обновление control plane Istio
