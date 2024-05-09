@@ -60,9 +60,8 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 
 	form.AddCheckbox(askSudoPasswordLabel, p.st.IsUsePasswordForSudo(), nil)
 
-	checked := p.st.GetBastionSSHHost() != ""
-	form.AddCheckbox(useBastionHostLabel, checked, func(check bool) {
-		if check {
+	addBastion := func(checked bool) {
+		if checked {
 			if form.GetFormItemIndex(bastionHostLabel) < 0 {
 				form.AddInputField(bastionHostLabel, p.st.GetBastionSSHHost(), constInputsWidth, nil, nil)
 			}
@@ -70,7 +69,14 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 			if form.GetFormItemIndex(bastionHostUserLabel) < 0 {
 				form.AddInputField(bastionHostUserLabel, p.st.GetBastionSSHUser(), constInputsWidth, nil, nil)
 			}
+		}
 
+	}
+
+	checked := p.st.GetBastionSSHHost() != ""
+	form.AddCheckbox(useBastionHostLabel, checked, func(check bool) {
+		if check {
+			addBastion(check)
 			return
 		}
 
@@ -82,6 +88,8 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 			form.RemoveFormItem(indx)
 		}
 	})
+
+	addBastion(checked)
 
 	errorLbl := tview.NewTextView().SetTextColor(tcell.ColorRed)
 
