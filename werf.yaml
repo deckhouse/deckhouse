@@ -239,6 +239,7 @@ ansible:
   beforeInstall:
   - name: "Install golang for deckhouse-controller,dhctl and testing image build"
     shell: |
+      rm -rf /usr/local/go
       curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
   {{- include "base components" . | nindent 2 }}
 
