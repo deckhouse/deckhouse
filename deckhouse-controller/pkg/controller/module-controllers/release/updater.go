@@ -27,13 +27,13 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
-	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
@@ -58,43 +58,36 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseA
 		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(logger logger.Logger, d8ClientSet versioned.Interface, moduleSourcesLister d8listers.ModuleSourceLister,
-	moduleReleaseLister d8listers.ModuleReleaseLister, externalModulesDir string, symlinksDir string,
-	modulesValidator moduleValidator) *kubeAPI {
+func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, externalModulesDir string, symlinksDir string,
+	modulesValidator moduleValidator, dc dependency.Container) *kubeAPI {
 	return &kubeAPI{
-		logger:              logger,
-		d8ClientSet:         d8ClientSet,
-		moduleSourcesLister: moduleSourcesLister,
-		moduleReleaseLister: moduleReleaseLister,
-		externalModulesDir:  externalModulesDir,
-		symlinksDir:         symlinksDir,
-		modulesValidator:    modulesValidator,
+		ctx:                ctx,
+		logger:             logger,
+		client:             client,
+		externalModulesDir: externalModulesDir,
+		symlinksDir:        symlinksDir,
+		modulesValidator:   modulesValidator,
+		dc:                 dc,
 	}
 }
 
 type kubeAPI struct {
-	logger              logger.Logger
-	d8ClientSet         versioned.Interface
-	moduleSourcesLister d8listers.ModuleSourceLister
-	moduleReleaseLister d8listers.ModuleReleaseLister
-	externalModulesDir  string
-	symlinksDir         string
-	modulesValidator    moduleValidator
+	ctx context.Context
+	// d8ClientSet        versioned.Interface
+	logger             logger.Logger
+	client             client.Client
+	externalModulesDir string
+	symlinksDir        string
+	modulesValidator   moduleValidator
+	dc                 dependency.Container
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
-	ctx := context.Background()
+	release.Status.Phase = phase
+	release.Status.Message = msg
+	release.Status.TransitionTime = metav1.NewTime(k.dc.GetClock().Now().UTC())
 
-	r, err := k.moduleReleaseLister.Get(release.Name)
-	if err != nil {
-		return fmt.Errorf("get release %s: %w", release.Name, err)
-	}
-
-	r = r.DeepCopy()
-	r.Status.Phase = phase
-	r.Status.Message = msg
-
-	_, err = k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
+	err := k.client.Status().Update(k.ctx, release)
 	if err != nil {
 		return fmt.Errorf("update release %s status: %w", release.Name, err)
 	}
@@ -102,26 +95,19 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 	return nil
 }
 
-func (k *kubeAPI) PatchReleaseAnnotations(name string, annotations map[string]any) error {
+func (k *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.ModuleRelease, annotations map[string]any) error {
 	patch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
 		},
 	})
+	p := client.RawPatch(types.MergePatchType, patch)
 
-	_, err := k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Patch(
-		context.Background(),
-		name,
-		types.MergePatchType,
-		patch,
-		metav1.PatchOptions{},
-	)
-
-	return err
+	return k.client.Patch(k.ctx, release, p)
 }
 
-func (k *kubeAPI) PatchReleaseApplyAfter(releaseName string, applyTime time.Time) error {
-	return k.PatchReleaseAnnotations(releaseName, map[string]any{
+func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyTime time.Time) error {
+	return k.PatchReleaseAnnotations(release, map[string]any{
 		"release.deckhouse.io/notification-time-shift": "true",
 		"release.deckhouse.io/applyAfter":              applyTime.Format(time.RFC3339),
 	})
@@ -131,18 +117,19 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	moduleName := release.Spec.ModuleName
 
 	// download desired module version
-	ms, err := k.moduleSourcesLister.Get(release.GetModuleSource())
+	var ms v1alpha1.ModuleSource
+	err := k.client.Get(k.ctx, types.NamespacedName{Name: release.GetModuleSource()}, &ms)
 	if err != nil {
-		return fmt.Errorf("list module sources: %w", err)
+		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(k.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(k.dc, k.externalModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
 	}
 
-	release, err = k.updateModuleReleaseDownloadStatistic(context.Background(), release, ds)
+	err = k.updateModuleReleaseDownloadStatistic(context.Background(), release, ds)
 	if err != nil {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
@@ -199,29 +186,23 @@ func (k *kubeAPI) suspendModuleVersionForRelease(release *v1alpha1.ModuleRelease
 	return k.UpdateReleaseStatus(release, updater.PhaseSuspended, message)
 }
 
-func (k *kubeAPI) SaveReleaseData(releaseName string, data updater.DeckhouseReleaseData) error {
-	if releaseName == "" {
-		return fmt.Errorf("empty release name")
+func (k *kubeAPI) SaveReleaseData(release *v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
+	if release == nil {
+		return fmt.Errorf("empty release")
 	}
 
-	return k.PatchReleaseAnnotations(releaseName, map[string]interface{}{
-		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
-		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
+	return k.PatchReleaseAnnotations(release, map[string]interface{}{
+		// "release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating), // I don't think we need this flag for ModuleReleases
+		"release.deckhouse.io/notified": strconv.FormatBool(data.Notified),
 	})
 }
 
 func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
-	r, err := k.moduleReleaseLister.Get(release.Name)
-	if err != nil {
-		return nil, fmt.Errorf("get release %s: %w", release.Name, err)
-	}
+	ds *downloader.DownloadStatistic) error {
+	release.Status.Size = ds.Size
+	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
-	r = r.DeepCopy()
-	r.Status.Size = ds.Size
-	r.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
-
-	return k.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, r, metav1.UpdateOptions{})
+	return k.client.Status().Update(ctx, release)
 }
 
 type metricsUpdater struct{}

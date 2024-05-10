@@ -28,6 +28,7 @@ import (
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
 	ModulePullOverridesGetter
@@ -39,6 +40,10 @@ type DeckhouseV1alpha1Interface interface {
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
 type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
+	return newDeckhouseReleases(c)
 }
 
 func (c *DeckhouseV1alpha1Client) Modules() ModuleInterface {

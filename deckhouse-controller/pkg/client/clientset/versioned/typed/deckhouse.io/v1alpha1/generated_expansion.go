@@ -18,6 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
+type DeckhouseReleaseExpansion interface{}
+
 type ModuleExpansion interface{}
 
 type ModuleConfigExpansion interface{}

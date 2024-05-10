@@ -17,27 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
 // +genclient:nonNamespaced
+// +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-const (
-	PhasePending    = "Pending"
-	PhaseDeployed   = "Deployed"
-	PhaseSuperseded = "Superseded"
-	PhaseSuspended  = "Suspended"
-	PhaseSkipped    = "Skipped"
-	// TODO: deprecated: remove after release 1.46
-	PhaseOutdated = "Outdated"
-)
-
-// +k8s:deepcopy-gen=false
 
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
@@ -54,24 +41,20 @@ type DeckhouseRelease struct {
 	Status DeckhouseReleaseStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen=false
-
 type DeckhouseReleaseSpec struct {
-	Version       string                 `json:"version,omitempty"`
-	ApplyAfter    *time.Time             `json:"applyAfter,omitempty"`
-	Requirements  map[string]string      `json:"requirements,omitempty"`
-	Disruptions   []string               `json:"disruptions,omitempty"`
-	Changelog     map[string]interface{} `json:"changelog,omitempty"`
-	ChangelogLink string                 `json:"changelogLink,omitempty"`
+	Version       string            `json:"version,omitempty"`
+	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
+	Requirements  map[string]string `json:"requirements,omitempty"`
+	Disruptions   []string          `json:"disruptions,omitempty"`
+	Changelog     Changelog         `json:"changelog,omitempty"`
+	ChangelogLink string            `json:"changelogLink,omitempty"`
 }
 
-// +k8s:deepcopy-gen=false
-
 type DeckhouseReleaseStatus struct {
-	Phase          string    `json:"phase,omitempty"`
-	Approved       bool      `json:"approved"`
-	TransitionTime time.Time `json:"transitionTime,omitempty"`
-	Message        string    `json:"message"`
+	Phase          string      `json:"phase,omitempty"`
+	Approved       bool        `json:"approved"`
+	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
+	Message        string      `json:"message"`
 }
 
 type deckhouseReleaseKind struct{}
@@ -83,4 +66,15 @@ func (in *DeckhouseReleaseStatus) GetObjectKind() schema.ObjectKind {
 func (f *deckhouseReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DeckhouseRelease"}
+}
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// DeckhouseReleaseList is a list of DeckhouseRelease resources
+type DeckhouseReleaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []DeckhouseRelease `json:"items"`
 }

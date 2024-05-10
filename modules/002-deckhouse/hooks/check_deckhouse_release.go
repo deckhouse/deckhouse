@@ -41,11 +41,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
@@ -112,7 +112,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// run only if it's a canary release
 	var (
-		applyAfter, cooldownUntil, notificationShiftTime *time.Time
+		applyAfter, cooldownUntil, notificationShiftTime *metav1.Time
 	)
 	if releaseChecker.releaseMetadata.Cooldown != nil {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
@@ -191,18 +191,18 @@ releaseLoop:
 		}
 	}
 
-	ts := time.Now()
+	ts := metav1.Now()
 	if releaseChecker.IsCanaryRelease() {
 		// if cooldown is set, calculate canary delay from cooldown time, not current
-		if cooldownUntil != nil && cooldownUntil.After(ts) {
+		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
 			ts = *cooldownUntil
 		}
 		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
-		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
+		applyAfter = releaseChecker.CalculateReleaseDelay(ts, clusterUUID)
 	}
 
 	// inherit applyAfter from notified release
-	if notificationShiftTime != nil && notificationShiftTime.After(ts) {
+	if notificationShiftTime != nil && notificationShiftTime.After(ts.Time) {
 		applyAfter = notificationShiftTime
 	}
 
@@ -376,7 +376,7 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 	return meta, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
+func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *metav1.Time {
 	cfg, err := image.ConfigFile()
 	if err != nil {
 		dcr.logger.Warnf("image config error: %s", err)
@@ -397,8 +397,9 @@ func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
 			dcr.logger.Errorf("parse cooldown(%s) error: %s", v, err)
 			return nil
 		}
+		mt := metav1.NewTime(t)
 
-		return &t
+		return &mt
 	}
 
 	return nil
@@ -427,7 +428,7 @@ type releaseMetadata struct {
 
 	Changelog map[string]interface{}
 
-	Cooldown *time.Time `json:"-"`
+	Cooldown *metav1.Time `json:"-"`
 }
 
 type canarySettings struct {
@@ -490,13 +491,13 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 	return imageDigest.String(), nil
 }
 
-func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterUUID string) *time.Time {
+func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, clusterUUID string) *metav1.Time {
 	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
 	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
 
 	if wave != 0 {
 		delay := time.Duration(wave) * dcr.releaseCanarySettings().Interval.Duration
-		applyAfter := ts.Add(delay)
+		applyAfter := metav1.NewTime(ts.Add(delay))
 		return &applyAfter
 	}
 

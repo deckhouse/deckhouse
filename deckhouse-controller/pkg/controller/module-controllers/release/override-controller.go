@@ -25,41 +25,29 @@ import (
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
-	d8informers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/deckhouse.io/v1alpha1"
-	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// ModulePullOverrideController is the controller implementation for ModulePullOverride resources
-type ModulePullOverrideController struct {
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
-
-	// d8ClientSet is a clientset for our own API group
-	d8ClientSet versioned.Interface
-
-	moduleSourcesLister d8listers.ModuleSourceLister
-	moduleSourcesSynced cache.InformerSynced
-
-	modulePullOverridesLister d8listers.ModulePullOverrideLister
-	modulePullOverridesSynced cache.InformerSynced
-
-	workqueue workqueue.RateLimitingInterface
+// modulePullOverrideReconciler is the controller implementation for ModulePullOverride resources
+type modulePullOverrideReconciler struct {
+	client client.Client
+	dc     dependency.Container
 
 	logger logger.Logger
 
@@ -71,30 +59,17 @@ type ModulePullOverrideController struct {
 }
 
 // NewModulePullOverrideController returns a new sample controller
-func NewModulePullOverrideController(ks kubernetes.Interface,
-	d8ClientSet versioned.Interface,
-	moduleSourceInformer d8informers.ModuleSourceInformer,
-	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
+func NewModulePullOverrideController(
+	mgr manager.Manager,
+	dc dependency.Container,
 	modulesValidator moduleValidator,
 	documentationUpdater *docs.Updater,
-) *ModulePullOverrideController {
-	ratelimiter := workqueue.NewMaxOfRateLimiter(
-		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
-		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
-	)
-
+) error {
 	lg := log.WithField("component", "ModulePullOverrideController")
 
-	controller := &ModulePullOverrideController{
-		kubeclientset:             ks,
-		d8ClientSet:               d8ClientSet,
-		moduleSourcesLister:       moduleSourceInformer.Lister(),
-		moduleSourcesSynced:       moduleSourceInformer.Informer().HasSynced,
-		modulePullOverridesLister: modulePullOverridesInformer.Lister(),
-		modulePullOverridesSynced: modulePullOverridesInformer.Informer().HasSynced,
-
-		workqueue: workqueue.NewRateLimitingQueue(ratelimiter),
-
+	rc := &modulePullOverrideReconciler{
+		client: mgr.GetClient(),
+		dc:     dc,
 		logger: lg,
 
 		modulesValidator:   modulesValidator,
@@ -104,124 +79,34 @@ func NewModulePullOverrideController(ks kubernetes.Interface,
 		documentationUpdater: documentationUpdater,
 	}
 
-	_, err := modulePullOverridesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueModuleOverride,
-		UpdateFunc: func(old, new interface{}) {
-			newM := new.(*v1alpha1.ModulePullOverride)
-			oldM := old.(*v1alpha1.ModulePullOverride)
-
-			if newM.Spec == oldM.Spec {
-				if _, ok := newM.Labels["renew"]; ok {
-					controller.enqueueModuleOverride(newM)
-				}
-				return
-			}
-
-			controller.enqueueModuleOverride(newM)
-		},
+	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
+		MaxConcurrentReconciles: 1,
+		CacheSyncTimeout:        30 * time.Minute,
+		NeedLeaderElection:      pointer.Bool(false),
+		Reconciler:              rc,
 	})
 	if err != nil {
-		log.Fatalf("add event handler failed: %s", err)
+		return err
 	}
 
-	return controller
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.ModulePullOverride{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Complete(ctr)
 }
 
-func (c *ModulePullOverrideController) Run(ctx context.Context, workers int) {
-	if c.externalModulesDir == "" {
-		c.logger.Info("env: 'EXTERNAL_MODULES_DIR' is empty, we are not going to work with source modules")
-		return
-	}
-
-	defer utilruntime.HandleCrash()
-	defer c.workqueue.ShutDown()
-
+func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) error {
 	// Check if controller's dependencies have been initialized
-	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+	return wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
 			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
 			return deckhouseconfig.IsServiceInited(), nil
 		})
-
-	// Start the informer factories to begin populating the informer caches
-	c.logger.Info("Starting controller")
-
-	// Wait for the caches to be synced before starting workers
-	c.logger.Debug("Waiting for caches to sync")
-
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.modulePullOverridesSynced); !ok {
-		c.logger.Fatal("failed to wait for caches to sync")
-	}
-
-	c.logger.Infof("Starting workers count: %d", workers)
-	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
-	}
-
-	<-ctx.Done()
-	c.logger.Info("Shutting down workers")
 }
 
-func (c *ModulePullOverrideController) enqueueModuleOverride(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		utilruntime.HandleError(err)
-		return
-	}
-	c.logger.Debugf("enqueue ModuleOverride: %s", key)
-	c.workqueue.Add(key)
-}
-
-func (c *ModulePullOverrideController) runWorker(ctx context.Context) {
-	for c.processNextModuleOverride(ctx) {
-	}
-}
-
-func (c *ModulePullOverrideController) processNextModuleOverride(ctx context.Context) bool {
-	obj, shutdown := c.workqueue.Get()
-	if shutdown {
-		return false
-	}
-
-	err := func(obj interface{}) error {
-		defer c.workqueue.Done(obj)
-		var key string
-		var ok bool
-
-		if key, ok = obj.(string); !ok {
-			c.workqueue.Forget(obj)
-			c.logger.Errorf("expected string in workqueue but got %#v", obj)
-			return nil
-		}
-
-		// run reconcile loop
-		result, err := c.OverrideReconcile(ctx, key)
-		switch {
-		case result.RequeueAfter != 0:
-			c.workqueue.AddAfter(key, result.RequeueAfter)
-
-		case result.Requeue:
-			// Put the item back on the workqueue to handle any transient errors.
-			c.workqueue.AddRateLimited(key)
-
-		default:
-			c.workqueue.Forget(key)
-		}
-
-		return err
-	}(obj)
-
-	if err != nil {
-		c.logger.Errorf("ModulePullOverride reconcile error: %s", err.Error())
-		return true
-	}
-
-	return true
-}
-
-func (c *ModulePullOverrideController) OverrideReconcile(ctx context.Context, key string) (ctrl.Result, error) {
-	mo, err := c.modulePullOverridesLister.Get(key)
+func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	mpo := new(v1alpha1.ModulePullOverride)
+	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mpo)
 	if err != nil {
 		// The ModulePullOverride resource may no longer exist, in which case we stop
 		// processing.
@@ -232,14 +117,10 @@ func (c *ModulePullOverrideController) OverrideReconcile(ctx context.Context, ke
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	return c.moduleOverrideReconcile(ctx, mo)
+	return c.moduleOverrideReconcile(ctx, mpo)
 }
 
-func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Context, moRO *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	mo := moRO.DeepCopy()
-
+func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
 	// check if RegistrySpecChangedAnnotation annotation is set and processes it
 	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
@@ -248,9 +129,9 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
-		// delete annotation and reque
+		// delete annotation and requeue
 		delete(mo.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
-		_, err = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+		err = c.client.Update(ctx, mo)
 		return ctrl.Result{Requeue: true}, err
 	}
 
@@ -263,11 +144,12 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		} else {
 			mo.SetLabels(map[string]string{"module": mo.Name, "source": mo.Spec.Source})
 		}
-		_, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+		err := c.client.Update(ctx, mo)
 		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, err
 	}
 
-	ms, err := c.moduleSourcesLister.Get(mo.Spec.Source)
+	ms := new(v1alpha1.ModuleSource)
+	err := c.client.Get(ctx, types.NamespacedName{Name: mo.Spec.Source}, ms)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			mo.Status.Message = fmt.Sprintf("ModuleSource %q not found", mo.Spec.Source)
@@ -280,7 +162,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -303,7 +185,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	if moduleDef == nil {
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("Got an empty module definition for %s module pull override", mo.Name)
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
 	err = validateModule(c.modulesValidator, *moduleDef)
@@ -348,9 +230,9 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, e
 	}
 
-	if _, ok := mo.Labels["renew"]; ok {
-		delete(mo.Labels, "renew")
-		_, _ = c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().Update(ctx, mo, metav1.UpdateOptions{})
+	if _, ok := mo.Annotations["renew"]; ok {
+		delete(mo.Annotations, "renew")
+		_ = c.client.Update(ctx, mo)
 	}
 
 	// update module's documentation
@@ -362,7 +244,7 @@ func (c *ModulePullOverrideController) moduleOverrideReconcile(ctx context.Conte
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 }
 
-func (c *ModulePullOverrideController) enableModule(moduleName, symlinkPath string) error {
+func (c *modulePullOverrideReconciler) enableModule(moduleName, symlinkPath string) error {
 	currentModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
@@ -371,9 +253,7 @@ func (c *ModulePullOverrideController) enableModule(moduleName, symlinkPath stri
 	return enableModule(c.externalModulesDir, currentModuleSymlink, symlinkPath, path.Join("../", moduleName, "dev"))
 }
 
-func (c *ModulePullOverrideController) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
+func (c *modulePullOverrideReconciler) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
 	mo.Status.UpdatedAt = metav1.Now()
-	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().UpdateStatus(ctx, mo, metav1.UpdateOptions{})
-
-	return err
+	return c.client.Status().Update(ctx, mo)
 }

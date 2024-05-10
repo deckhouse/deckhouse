@@ -1,0 +1,59 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: deckhouse-prod
+  resourceVersion: "999"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: prod.deckhouse.io/modules
+    scheme: HTTPS
+  releaseChannel: ""
+status:
+  message: ""
+  moduleErrors: null
+  modules: null
+  modulesCount: 0
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    a: b
+    release.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: deckhouse-commander
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 4c1c3c9b6c7ce02e499ac832931c7dc5
+    source: deckhouse-prod
+    status: deployed
+  name: deckhouse-commander-v1.3.10
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse-prod
+    uid: 2a376b24-f3ee-4d0a-8188-a6b09671bff7
+  resourceVersion: "1003"
+spec:
+  moduleName: deckhouse-commander
+  version: 1.3.10
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 659.916µs
+  size: 3
+  transitionTime: "2024-05-05T10:41:06Z"

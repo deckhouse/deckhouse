@@ -22,10 +22,12 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/kube-client/fake"
 	"github.com/gojuno/minimock/v3"
+	"github.com/jonboulle/clockwork"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 
@@ -48,6 +50,7 @@ type Container interface {
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
 	GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error)
 	GetClientConfig() (*rest.Config, error)
+	GetClock() clockwork.Clock
 }
 
 var (
@@ -248,6 +251,14 @@ func (dc *dependencyContainer) GetClientConfig() (*rest.Config, error) {
 	return config, nil
 }
 
+func (dc *dependencyContainer) GetClock() clockwork.Clock {
+	if dc.isTestEnvironment() {
+		return TestDC.GetClock()
+	}
+
+	return clockwork.NewRealClock()
+}
+
 // WithExternalDependencies decorate function with external dependencies
 func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) error) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
@@ -295,7 +306,7 @@ func (mdc *mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8
 	return k
 }
 
-func (mdc *mockedDependencyContainer) GetRegistryClient(string, ...cr.Option) (cr.Client, error) {
+func (mdc *mockedDependencyContainer) GetRegistryClient(_ string, _ ...cr.Option) (cr.Client, error) {
 	if mdc.CRClient != nil {
 		return mdc.CRClient, nil
 	}
@@ -327,6 +338,11 @@ hvcNAQEBBQADggEPADCC
 func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 	cli := fake.NewFakeCluster(ver).Client
 	mdc.K8sClient = cli
+}
+
+func (mdc *mockedDependencyContainer) GetClock() clockwork.Clock {
+	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, time.UTC)
+	return clockwork.NewFakeClockAt(t)
 }
 
 func newMockedContainer() *mockedDependencyContainer {

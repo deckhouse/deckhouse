@@ -23,10 +23,11 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
@@ -89,7 +90,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		// cleanup releases stacked in Deployed status
 		sp := d8updater.StatusPatch{
 			Phase:          v1alpha1.PhaseSuperseded,
-			TransitionTime: now,
+			TransitionTime: metav1.NewTime(now),
 		}
 		// everything except the last Deployed release
 		for i := 1; i < len(deployedReleasesIndexes); i++ {
@@ -115,7 +116,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		sp := d8updater.StatusPatch{
 			Phase:          v1alpha1.PhaseSkipped,
 			Message:        "Skipped by cleanup hook",
-			TransitionTime: now,
+			TransitionTime: metav1.NewTime(now),
 		}
 
 		for _, index := range pendingReleasesIndexes {
