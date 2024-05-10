@@ -237,6 +237,7 @@ import:
   {{- include "base components imports" . }}
 ansible:
   beforeInstall:
+{{/*  TODO: Move it to the dev image */}}
   - name: "Install golang for deckhouse-controller,dhctl and testing image build"
     shell: |
       rm -rf /usr/local/go
