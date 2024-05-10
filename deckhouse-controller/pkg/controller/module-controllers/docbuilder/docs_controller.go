@@ -100,7 +100,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 
 				return hasLabel
 			},
-		}, predicate.GenerationChangedPredicate{})).
+		})).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(ctr)
 }
