@@ -30,7 +30,7 @@ docker:
   ENTRYPOINT: ["/shell-operator"]
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   install:
     - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
