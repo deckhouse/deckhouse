@@ -1,0 +1,50 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию для рендеринга документации модуля Deckhouse..
+
+            **Ресурсы ModuleDocumentation создает Deckhouse.**
+          properties:
+            spec:
+              properties:
+                version:
+                  description: Версия модуля.
+                checksum:
+                  description: Чексумма версии модуля.
+                path:
+                  description: Путь к версии модуля.
+            status:
+              properties:
+                result:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      version:
+                        type: string
+                      checksum:
+                        type: string
+                      address:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: result
+          jsonPath: .status.result
+          type: string
+          description: 'Статус рендеринга.'
+

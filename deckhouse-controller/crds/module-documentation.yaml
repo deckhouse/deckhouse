@@ -24,7 +24,7 @@ spec:
           description: |
             Defines the configuration for rendering a Deckhouse module release documentation.
 
-            **Deckhouse creates ModuleRelease resources by itself.**
+            **Deckhouse creates ModuleDocumentation resources by itself.**
           required:
             - spec
           properties:
@@ -39,10 +39,10 @@ spec:
                   x-doc-examples: ['v1.0.0']
                 checksum:
                   type: string
-                  description: Checksum
+                  description: Module version checksum.
                 path:
                   type: string
-                  description: Path to a module.
+                  description: Path to a module release.
             status:
               type: object
               properties:
