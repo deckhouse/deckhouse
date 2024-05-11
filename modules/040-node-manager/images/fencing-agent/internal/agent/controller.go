@@ -170,8 +170,8 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 					APIIsAvailable = true
 				}
 			} else {
-				// show message just one time in a minute
-				if time.Since(lastMessageTime) > time.Minute {
+				// show message just one time in an interval
+				if time.Since(lastMessageTime) > fa.config.KubernetesAPICheckInterval {
 					fa.logger.Info("The API is available")
 					lastMessageTime = time.Now()
 				}

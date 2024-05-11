@@ -27,6 +27,7 @@ type Config struct {
 	WatchdogFeedInterval       time.Duration `env:"WATCHDOG_FEED_INTERVAL" env-default:"5s"`
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
 	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
+	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`
 	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName                   string        `env:"NODE_NAME"`
 }
