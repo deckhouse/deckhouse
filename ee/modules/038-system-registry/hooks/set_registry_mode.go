@@ -15,7 +15,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSetRegistryMode)
 
 func handleSetRegistryMode(input *go_hook.HookInput) error {
-
 	mode, exists := input.Values.GetOk("systemRegistry.registryMode")
 
 	// TODO, some preparations before setting registry mode
