@@ -255,6 +255,7 @@ crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.imag
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.systemRegistry "dockerAuth") }}
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.systemRegistry "seaweedfs") }}
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "etcd") }}
+crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
 IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
