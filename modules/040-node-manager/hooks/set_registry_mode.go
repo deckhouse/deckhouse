@@ -49,7 +49,7 @@ func systemRegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 
 	addressBytes, exists := secret.Data["address"]
 
-	if !exists {
+	if exists {
 		address := string(addressBytes)
 		if address == "localhost:5000" {
 			return "Indirect", nil
