@@ -151,6 +151,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 		fa.startLiveness(ctx)
 	}
 
+	var lastMessageTime time.Time
 	for {
 		select {
 		case <-ticker.C:
@@ -167,14 +168,13 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 				}
 			} else {
 				// show message just time in a minute
-				var lastMessageTime time.Time
-				if time.Since(lastMessageTime) >= time.Minute {
+
+				if time.Since(lastMessageTime) > time.Minute {
 					fa.logger.Info("The API is available")
 					lastMessageTime = time.Now()
 				}
 				APIIsAvailable = true
 			}
-
 			// check if node is in maintenance mode
 			MaintenanceMode := false
 			for _, annotation := range maintenanceAnnotations {
