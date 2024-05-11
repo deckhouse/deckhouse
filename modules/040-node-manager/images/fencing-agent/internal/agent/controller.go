@@ -119,7 +119,7 @@ func (fa *FencingAgent) startLiveness(ctx context.Context) {
 
 	// Graceful shutdown
 	go func() {
-		<-ctx.Done() // Assuming the context is cancelled when you want to stop the server
+		<-ctx.Done()
 		fa.logger.Info("Shutting down the healthz server")
 		if err := srv.Shutdown(context.Background()); err != nil {
 			fa.logger.Fatal("HTTP server Shutdown:", zap.Error(err))
@@ -145,13 +145,13 @@ func (fa *FencingAgent) stopWatchdog() error {
 func (fa *FencingAgent) Run(ctx context.Context) error {
 	ticker := time.NewTicker(fa.config.KubernetesAPICheckInterval)
 	var APIIsAvailable bool
+	var lastMessageTime time.Time
 	var err error
-	// for parallel tests
+
 	if fa.config.HealthProbeBindAddress != "" {
 		fa.startLiveness(ctx)
 	}
 
-	var lastMessageTime time.Time
 	for {
 		select {
 		case <-ticker.C:
@@ -159,16 +159,18 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
 				var netErr net.Error
+
 				if errors.As(err, &netErr) && netErr.Timeout() {
+					// only API timeout is reasonable error
 					fa.logger.Error("API request timed out", zap.Error(err))
 					APIIsAvailable = false
 				} else {
+					// API is available but some error happened
 					fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
 					APIIsAvailable = true
 				}
 			} else {
-				// show message just time in a minute
-
+				// show message just one time in a minute
 				if time.Since(lastMessageTime) > time.Minute {
 					fa.logger.Info("The API is available")
 					lastMessageTime = time.Now()
@@ -187,12 +189,14 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 
 			// Watchdog activation lifecycle
 			if MaintenanceMode && fa.watchDog.IsArmed() {
+				// disarm the watchdog if maintenance mode is on and the watchdog is armed
 				err = fa.stopWatchdog()
 				if err != nil {
 					fa.logger.Error("Unable to disarm the watchdog", zap.Error(err))
 				}
 			}
 			if !MaintenanceMode && !fa.watchDog.IsArmed() {
+				// arm the watchdog if maintenance mode is off and the watchdog is not armed
 				err = fa.startWatchdog(ctx)
 				if err != nil {
 					fa.logger.Error("Unable to arm the watchdog", zap.Error(err))
@@ -204,6 +208,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 
 			// Checking API
 			if APIIsAvailable && !MaintenanceMode {
+				// API is available and not in maintenance mode, so feed the watchdog
 				fa.logger.Debug("Feeding the watchdog")
 				err = fa.watchDog.Feed()
 				if err != nil {
