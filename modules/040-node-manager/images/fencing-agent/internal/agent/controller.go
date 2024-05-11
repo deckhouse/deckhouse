@@ -166,7 +166,12 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 					APIIsAvailable = true
 				}
 			} else {
-				fa.logger.Debug("The API is available")
+				// show message just time in a minute
+				var lastMessageTime time.Time
+				if time.Since(lastMessageTime) >= time.Minute {
+					fa.logger.Info("The API is available")
+					lastMessageTime = time.Now()
+				}
 				APIIsAvailable = true
 			}
 
