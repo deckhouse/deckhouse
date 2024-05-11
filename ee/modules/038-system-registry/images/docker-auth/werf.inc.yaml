@@ -8,7 +8,7 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 git:
-  - add: /{{ $.ModulePath }}modules/999-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /scripts
     stageDependencies:
       install:

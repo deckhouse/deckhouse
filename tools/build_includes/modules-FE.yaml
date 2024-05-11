@@ -129,6 +129,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/038-system-registry
+  to: /deckhouse/modules/038-system-registry
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
@@ -266,11 +271,6 @@
         - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/999-system-registry
-  to: /deckhouse/modules/999-system-registry
   stageDependencies:
     setup:
         - '**/*.go'

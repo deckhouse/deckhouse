@@ -1,6 +1,6 @@
-{{- $REPO := "https://github.com/sample/seaweedfs"}}
-{{- $BRANCH := "feature/logs"}}
-{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/seaweedfs/seaweedfs"}}
+{{- $REPO := "https://github.com/distribution/distribution"}}
+{{- $BRANCH := "v2.8.3"}}
+{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/docker/distribution"}}
 ---
 artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
@@ -8,24 +8,34 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 git:
-  - add: /{{ $.ModulePath }}modules/999-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /scripts
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/s3_healthcheck
+    to: /s3_healthcheck
+    stageDependencies:
+      install:
+        - '**/*'
+
 shell:
   beforeInstall:
   - mkdir -m 1777 /tmp-tmp
-  - apk add --no-cache git
+  - apk add --no-cache git make bash gnupg
   install:
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
-    - cd {{ $GIT_CLONE_DEST_PATH }}/weed
+    - cd {{ $GIT_CLONE_DEST_PATH }}
     - export GOPROXY={{ .GOPROXY }}
     - export GOOS=linux
     - export GOARCH=amd64
     - export CGO_ENABLED=0
-    - go build -ldflags="-s -w" -o weed
+    - GO111MODULE=on script/setup/install-dev-tools
+    - GO111MODULE=off make build
+    - GO111MODULE=off make binaries
+    - cd /s3_healthcheck
+    - go build -ldflags="-s -w" -o /entrypoint ./main.go
 
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
@@ -36,8 +46,12 @@ import:
     to: /tmp
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "{{ $GIT_CLONE_DEST_PATH }}/weed/weed"
-    to: /weed
+    add: "{{ $GIT_CLONE_DEST_PATH }}/bin/registry"
+    to: /registry
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /entrypoint
+    to: /entrypoint
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
@@ -47,6 +61,7 @@ import:
     add: /pause
     to: /pause
     before: setup
+
 docker:
-  ENTRYPOINT: ["/weed"]
+  ENTRYPOINT: ["/entrypoint"]
 

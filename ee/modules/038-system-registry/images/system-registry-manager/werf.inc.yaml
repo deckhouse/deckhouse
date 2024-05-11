@@ -5,7 +5,7 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 git:
-  - add: /{{ $.ModulePath }}modules/999-{{ $.ModuleName }}/images/{{ $.ImageName }}/manager
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/manager
     to: /
     stageDependencies:
       install:

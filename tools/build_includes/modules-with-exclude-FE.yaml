@@ -324,6 +324,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/038-system-registry
+  to: /deckhouse/modules/038-system-registry
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:
@@ -586,19 +599,6 @@
     - .build.yaml
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/999-system-registry
-  to: /deckhouse/modules/999-system-registry
   excludePaths:
     - docs
     - README.md
