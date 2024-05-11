@@ -44,6 +44,12 @@ var maintenanceAnnotations = []string{
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/fencing",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "run_node_fencing_every_minute",
+			Crontab: "* * * * *",
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       nodesSnapshot,
@@ -114,6 +120,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 		}
 
 		if time.Since(nodeLease.Spec.RenewTime.Time) > fencingControllerTimeout {
+			input.LogEntry.Warnf("Node lease %s is expired. Current time: %v, node lease time %v", node.Name, time.Now(), nodeLease.Spec.RenewTime.Time)
 			nodesToKill.Add(node.Name)
 		}
 	}
