@@ -17,6 +17,8 @@ package agent
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"time"
 
@@ -155,7 +157,8 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			// check kubernets API
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
-				if err == context.DeadlineExceeded {
+				var netErr net.Error
+				if errors.As(err, &netErr) && netErr.Timeout() {
 					fa.logger.Error("API request timed out", zap.Error(err))
 					APIIsAvailable = false
 				} else {
