@@ -30,7 +30,6 @@ bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
 
 mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
-IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 mkdir -p $IGNITER_DIR
 # Read previously discovered IP address of the node
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"

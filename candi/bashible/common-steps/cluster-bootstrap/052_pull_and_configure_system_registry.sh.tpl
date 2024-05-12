@@ -258,6 +258,5 @@ crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.imag
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
-IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
 {{- end -}}
