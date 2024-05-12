@@ -195,6 +195,11 @@ function main() {
 {{- else }}
   export D8_NODE_HOSTNAME=$(hostname)
 {{- end }}
+{{- if and ( eq .runType "ClusterBootstrap") }}
+{{- if and .registryMode (ne .registryMode "Direct") }}
+  export IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
+{{- end }}
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(kubectl_exec get node ${D8_NODE_HOSTNAME} -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
