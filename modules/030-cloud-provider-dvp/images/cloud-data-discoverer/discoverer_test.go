@@ -73,7 +73,7 @@ var _ = Describe("DVP Cloud discovery data tests", func() {
 	})
 })
 
-func TestFencingAgent(t *testing.T) {
+func TestDiscoverer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "FencingAgent Suite")
+	RunSpecs(t, "DVP Discoverer Test Suite")
 }

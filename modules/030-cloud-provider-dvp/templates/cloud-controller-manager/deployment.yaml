@@ -24,7 +24,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: "yandex-cloud-controller-manager"
+    - containerName: "dvp-cloud-controller-manager"
       minAllowed:
         {{- include "dvp_cloud_controller_manager_resources" . | nindent 8 }}
       maxAllowed:
@@ -74,7 +74,7 @@ spec:
       dnsPolicy: Default
       serviceAccountName: cloud-controller-manager
       containers:
-        - name: yandex-cloud-controller-manager
+        - name: dvp-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ $ccmImage }}
           args:
