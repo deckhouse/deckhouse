@@ -17,6 +17,7 @@ bb-package-remove kubeadm
 
 {{- if and .registryMode (ne .registryMode "Direct") }}
 bb-package-remove seaweedfs dockerAuth dockerDistribution etcd
+rm -rf $IGNITER_DIR
 {{- end }}
 
 rm -f /tmp/bootstrap.sh
