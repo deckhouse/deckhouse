@@ -193,7 +193,7 @@ func FillLayoutsImages(
 	layouts.ReleaseChannelImages[mirrorCtx.DeckhouseRegistryRepo+"/release-channel:rock-solid"] = struct{}{}
 }
 
-var digestRegex = regexp.MustCompile(`@sha256:([a-f0-9]{64})`)
+var digestRegex = regexp.MustCompile(`sha256:([a-f0-9]{64})`)
 
 func FindDeckhouseModulesImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 	modulesNames := maputil.Keys(layouts.Modules)
