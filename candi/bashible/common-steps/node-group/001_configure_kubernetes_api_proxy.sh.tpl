@@ -33,6 +33,14 @@ events {
   worker_connections 16384;
 }
 
+
+# DEBUG
+{{- range $key, $value := .registry }}
+# registry {{ $key }}: {{ $value }}
+{{- end }}
+# registryMode: {{- .registryMode }}
+
+
 stream {
   upstream kubernetes {
     least_conn;
