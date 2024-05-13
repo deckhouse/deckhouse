@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .registryMode "Proxy" }}
+{{- if eq .registry.registryMode "Proxy" }}
 UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
     export UPSTREAM_REGISTRY_LOGIN="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f1)"
@@ -23,7 +23,7 @@ else
 fi
 {{- end }}
 
-{{- if and .registryMode (ne .registryMode "Direct") }}
+{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 
 bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
 bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
@@ -119,7 +119,7 @@ http:
   #tls:
   #  key: $IGNITER_DIR/cert.key
   #  certificate: $IGNITER_DIR/cert.crt
-{{- if eq .registryMode "Proxy" -}}
+{{- if eq .registry.registryMode "Proxy" -}}
 {{- $scheme := .upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
 {{- $address := .upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
 proxy:

@@ -46,7 +46,7 @@ stream {
   }
 
 {{- if eq .runType "Normal" }}
-  {{- if and .registryMode (ne .registryMode "Direct") }}
+  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   upstream system-registry {
     least_conn;
     {{- range $key, $value := .normal.apiserverEndpoints }}
@@ -57,7 +57,7 @@ stream {
    {{- end -}}
    {{- end }}
  {{- else if eq .runType "ClusterBootstrap" }}
-  {{- if and .registryMode (ne .registryMode "Direct") }}
+  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   upstream system-registry {
     least_conn;
     server ${discovered_node_ip}:5000;
@@ -72,7 +72,7 @@ stream {
     proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
- {{- if and .registryMode (ne .registryMode "Direct") }}
+ {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   server {
     listen 127.0.0.1:5000;
     proxy_pass system-registry;
