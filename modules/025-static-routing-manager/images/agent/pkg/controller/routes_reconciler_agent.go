@@ -154,7 +154,7 @@ func RunRoutesReconcilerAgentController(
 
 			if nrt.Generation == nrt.Status.ObservedGeneration && nrt.DeletionTimestamp == nil {
 				cond := FindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
-				if cond.Status == metav1.ConditionTrue {
+				if cond != nil && cond.Status == metav1.ConditionTrue {
 					log.Debug(fmt.Sprintf("[NRTReconciler] There's nothing to do"))
 					return reconcile.Result{}, nil
 				}

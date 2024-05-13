@@ -17,8 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"math/rand"
-	"time"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -43,17 +42,20 @@ type routingTableInfo struct {
 }
 
 type idIterator struct {
-	UtilizedIDs       map[int]struct{}
-	LastFreeIDByOrder int
+	UtilizedIDs map[int]struct{}
+	IDSlider    int
 }
 
 func (i *idIterator) pickNextFreeID() (int, error) {
-	if _, ok := i.UtilizedIDs[i.LastFreeIDByOrder]; ok {
-		i.LastFreeIDByOrder++
+	if _, ok := i.UtilizedIDs[i.IDSlider]; ok {
+		if i.IDSlider == RoutingTableIDMax {
+			return 11001, fmt.Errorf("ID pool for RoutingTable is over. Too many RoutingTables")
+		}
+		i.IDSlider++
 		return i.pickNextFreeID()
 	}
-	i.UtilizedIDs[i.LastFreeIDByOrder] = struct{}{}
-	return i.LastFreeIDByOrder, nil
+	i.UtilizedIDs[i.IDSlider] = struct{}{}
+	return i.IDSlider, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -88,11 +90,22 @@ func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 	var newRTId int
+	var err error
 
-	utilizedIDs := make(map[int]struct{})
+	// Filling utilizedIDs
+	var idi = idIterator{
+		UtilizedIDs: make(map[int]struct{}),
+		IDSlider:    RoutingTableIDMin,
+	}
 	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(routingTableInfo)
-		utilizedIDs[rti.StatusIPRoutingTableID] = struct{}{}
+		if rti.StatusIPRoutingTableID != 0 {
+			idi.UtilizedIDs[rti.StatusIPRoutingTableID] = struct{}{}
+		} else {
+			if rti.SpecIPRoutingTableID != 0 {
+				idi.UtilizedIDs[rti.SpecIPRoutingTableID] = struct{}{}
+			}
+		}
 	}
 
 	for _, rtiRaw := range input.Snapshots["routingtables"] {
@@ -106,9 +119,11 @@ func routingTableStatusIDHandler(input *go_hook.HookInput) error {
 		if rti.SpecIPRoutingTableID != 0 {
 			newRTId = rti.SpecIPRoutingTableID
 		} else {
-			newRTId = pickFreeRoutingTableID(utilizedIDs)
-
-			utilizedIDs[newRTId] = struct{}{}
+			newRTId, err = idi.pickNextFreeID()
+			if err != nil {
+				input.LogEntry.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
+				continue
+			}
 		}
 
 		statusPatch := map[string]interface{}{
@@ -150,15 +165,4 @@ func shouldUpdateStatusRoutingTableID(rti routingTableInfo, log *logrus.Entry) b
 
 	log.Infof("RoutingTable %v is not in the deletion status, status.IPRoutingTableID and spec.IPRoutingTableID are not empty, but not are equal", rti.Name)
 	return true
-}
-
-func pickFreeRoutingTableID(utilizedIDs map[int]struct{}) int {
-	for {
-		randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-		newRTId := randomizer.Intn(RoutingTableIDMax-RoutingTableIDMin) + RoutingTableIDMin
-		if _, ok := utilizedIDs[newRTId]; ok {
-			continue
-		}
-		return newRTId
-	}
 }

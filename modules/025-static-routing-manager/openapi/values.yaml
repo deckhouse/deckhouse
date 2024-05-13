@@ -5,3 +5,34 @@ properties:
   internal:
     type: object
     default: {}
+    properties:
+      nodeRoutingTables:
+        type: array
+        default: []
+        items:
+          type: object
+          default: {}
+          properties:
+            name:
+              type: string
+            nodeName:
+              type: string
+            ownerRTName:
+              type: string
+            ownerRTUID:
+              type: string
+            ipRoutingTableID:
+              type: integer
+            routes:
+              type: array
+              default: []
+              items:
+                type: object
+                default: {}
+                properties:
+                  destination:
+                    type: string
+                    format: cidr
+                  gateway:
+                    type: string
+                    format: ipv4
