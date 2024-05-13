@@ -176,6 +176,7 @@ GOGC=20 check_and_run "weed" "/opt/deckhouse/bin/weed -logtostderr=true \
       -s3 \
       -dir=/opt/deckhouse/system-registry/seaweedfs_data/ \
       -volume.max=0 \
+      -volume.port=8081
       -master.volumeSizeLimitMB=1024 \
       -s3.allowDeleteBucketNotEmpty=true \
       -master.defaultReplication=000 \
