@@ -407,32 +407,20 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 ### Manually uploading images to an air-gapped registry
 
 {% alert level="warning" %}
-This feature is available in Enterprise Edition only.
+This feature is only available in Standard Edition (SE), Enterprise Edition (EE) and Certified Security Edition (CSE).
 {% endalert %}
 
-1. If necessary, log in to the container registry `registry.deckhouse.io` using your license key.
+1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
-   ```shell
-   docker login -u license-token registry.deckhouse.io
-   ```
+1. Pull Deckhouse images using the `d8 mirror pull` command.
 
-1. Run the Deckhouse installer version 1.58.6 or higher.
-
-   ```shell
-   docker run -ti --pull=always -v $(pwd)/d8-images:/tmp/d8-images registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
-   ```
-
-   Note that the directory on the host will be mounted in the installer container. This directory will contain the pulled Deckhouse tarball and generated [DeckhouseReleases](modules/002-deckhouse/cr.html#deckhouserelease) manifests.
-
-1. Pull Deckhouse images using the `dhctl mirror` command.
-
-   By default, `dhctl mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
+   By default, `d8 mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
    For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
 
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
    ```shell
-   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar
+   d8 mirror pull --license "<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
    ```
 
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
@@ -445,10 +433,10 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull all Deckhouse version images starting from version 1.45:
 
    ```shell
-   DHCTL_CLI_MIRROR_LICENSE="<DECKHOUSE_LICENSE_KEY>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --min-version=1.45
+   d8 mirror pull --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
    ```
 
-   > Note that `--min-version` parameter will be ignored if you specify version above current rock-solid channel.
+   > Note that `--min-version` parameter will be ignored if you specify version above the current rock-solid channel.
 
    You can also pull a single specific Deckhouse release by using the `--release=X.Y.Z` flag.
    In this case, no release channels will be used and only one specific release will be pulled.
@@ -462,42 +450,36 @@ This feature is available in Enterprise Edition only.
    For example, here is how you can pull images from a third-party registry:
 
    ```shell
-    DHCTL_CLI_MIRROR_SOURCE_LOGIN="user" DHCTL_CLI_MIRROR_SOURCE_PASSWORD="password" dhctl mirror --source="corp.company.com/sys/deckhouse" --images-bundle-path /tmp/d8-images/d8.tar
+   d8 mirror pull --source="corp.company.com/sys/deckhouse" --source-login="<USER>" --source-password="<PASSWORD>" $(pwd)/d8.tar
    ```
 
-   > Note: `--license` flag acts as a shortcut for `--source-login ($DHCTL_CLI_MIRROR_SOURCE_LOGIN` and `--source-password ($DHCTL_CLI_MIRROR_SOURCE_PASSWORD)` flags for the Deckhouse registry.
+   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
    > If you specify both license and login+password pair for source registry, the latter will be used.
 
-   `dhctl mirror` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Stribog) hash function (the `--gost-digest` parameter).
+   `d8 mirror pull` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Streebog) hash function (the `--gost-digest` parameter).
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
-   Starting from version 1.59.0, `dhctl mirror` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
-   To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag or set the `$DHCTL_CLI_MIRROR_IMAGES_BUNDLE_CHUNK_SIZE` environment variable when pulling the bundle.
+   Also, `d8 mirror pull` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
+   To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag.
    This will create a series of smaller `.chunk` files instead of a single tar bundle.
-   To upload such a chunked bundle into your private registry, use `dhctl mirror` as specified below, passing the `--images-bundle-path` flag as if you were pushing from a single-file bundle.
-   That is, point it to the `.tar` file as if it were in the bundle directory rather than any of the chunk files. `dhctl mirror` will then detect the chunked bundle automatically.
+   To upload such a chunked bundle into your private registry, use `d8 mirror push` as specified below, passing the tar bundle path parameter as if you were pushing from a single-file bundle.
+   That is, point it to the `.tar` file as if it were in the bundle directory rather than any of the chunk files. `d8 mirror push` will then detect the chunked bundle automatically.
 
-1. Optional: Copy the `dhctl` binary from the container to the directory where Deckhouse images were pulled.
+1. Upload the bundle with the pulled Deckhouse images to a host with access to the air-gapped registry.
+   To continue, install and use the Deckhouse CLI tool on that host further on.
 
-   ```shell
-   cp /usr/bin/dhctl /tmp/d8-images/dhctl
-   ```
-
-1. Upload the directory with the pulled Deckhouse images to a host with access to the air-gapped registry.
-
-1. To continue with installation, use the `dhctl` binary you copied before OR repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled Deckhouse images is mounted into the container.
-   Push the images to the air-gapped registry using the `dhctl mirror` command.
+1. Push the images to the air-gapped registry using the `d8 mirror push` command.
 
    Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
 
    ```shell
-   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror --images-bundle-path /tmp/d8-images/d8.tar --registry="your.private.registry.com:5000/deckhouse/ee"
+   d8 mirror push /tmp/d8-images/d8.tar "your.private.registry.com:5000/deckhouse/ee" --registry-login="<USER>" --registry-password="<PASSWORD>"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
 
-   If your registry does not require authentication, you may omit both `--registry-login` and `--registry-password` flags as well as `DHCTL_CLI_MIRROR_USER`/`DHCTL_CLI_MIRROR_PASS` variables.
+   If your registry does not require authentication, you may omit both `--registry-login` and `--registry-password` flags.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
@@ -505,55 +487,44 @@ This feature is available in Enterprise Edition only.
 
    During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
 
-   After installation, apply DeckhouseReleases manifests that were generated during pull operation to your cluster via `kubectl` as follows:
+   After installation, apply DeckhouseReleases manifests that were generated by the `d8 mirror pull` command to your cluster via Deckhouse CLI as follows:
 
    ```shell
-   kubectl apply -f $(pwd)/d8-images/deckhousereleases.yaml
+   d8 k apply -f ./deckhousereleases.yaml
    ```
 
 ### Manually uploading images of Deckhouse modules into an air-gapped registry
 
 The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
-1. Run Deckhouse installer version 1.58.6 or higher:
+1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
-  ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
-   ```
+   1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `d8 mirror modules pull`.
 
-   Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.
+      `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
 
-1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `dhctl mirror-modules`.
+      The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
-   `dhctl mirror-modules` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
+      ```shell
+      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml
+      ```
 
-   The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
+      To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
+      For example:
 
-   ```shell
-   dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml
-   ```
+      ```shell
+      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
+      ```
 
-   To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
-   For example:
+1. Upload the directory with the pulled Deckhouse modules images to a host with access to the air-gapped registry.
+   To continue, install and use the Deckhouse CLI tool on that host further on.
 
-   ```shell
-   dhctl mirror-modules -d /tmp/d8-modules -m /tmp/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
-   ```
+1. Upload module images to the isolated registry using the `d8 mirror modules push` command.
 
-1. Optional: Copy the `dhctl` binary from the container to the directory to which Deckhouse images were pulled.
-
-   ```shell
-   cp /usr/bin/dhctl /tmp/d8-images/dhctl
-   ```
-
-1. To continue with installation, use the `dhctl` binary you copied earlier OR repeat steps 1 and 2 for the Deckhouse installer on the host with access to the air-gapped registry. Make sure the directory with the pulled modules images is mounted into the container.
-
-1. Upload module images to the isolated registry using the `dhctl mirror-modules` command.
-
-   Below is an example of a command for pulling images from the `/tmp/d8-modules` directory:
+   Below is an example of a command for pushing images from the `/tmp/d8-modules` directory:
 
    ```shell
-   DHCTL_CLI_MIRROR_USER="<USERNAME>" DHCTL_CLI_MIRROR_PASS="<PASSWORD>" dhctl mirror-modules -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules"
+   d8 mirror modules push -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USER>" --registry-password="<PASSWORD>"
    ```
 
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
@@ -569,7 +540,7 @@ The steps below are necessary for manually loading images of modules connected f
 1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 
    ```shell
-   kubectl apply -f $HOME/module_source.yml
+   d8 k apply -f $HOME/module_source.yml
    ```
 
    Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the module developer's documentation.
