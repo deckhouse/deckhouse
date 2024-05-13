@@ -473,6 +473,7 @@ jobs:
   doc_web_build:
     name: Doc web build
     # Wait for success build of modules.
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
     # <template: web_build_template>
@@ -558,6 +559,7 @@ jobs:
 
   main_web_build:
     name: Main web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -1058,7 +1060,7 @@ jobs:
 
   web_links_test:
     name: Web links test
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build

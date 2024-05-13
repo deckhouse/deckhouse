@@ -143,6 +143,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "doc_web_build" "Doc web build") }!}
   doc_web_build:
     name: {!{ $jobNames.doc_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -152,6 +153,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "main_web_build" "Main web build") }!}
   main_web_build:
     name: {!{ $jobNames.main_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -204,7 +206,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
   web_links_test:
     name: {!{ $jobNames.web_links_test }!}
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -278,7 +280,6 @@ jobs:
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases
-      - web_links_test
       - validators
     if: ${{ always() }}
     runs-on: ubuntu-latest
