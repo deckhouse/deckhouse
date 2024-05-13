@@ -7,6 +7,8 @@
  - Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
  - `sds-drbd` module is renamed. Please switch to [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume) module ASAP. `sds-drbd` module cannot be enabled but will continue to work if it was already enabled before.
+ - **The way of how application traffic is captured by Istio has been revised.** The CNI plugin is now used instead of the init container. This, for example, removes restrictions that prevented _istio_ from being used together with the _admission-policy-engine_ module in some configurations. The new routing method is used by default, a switchover will be performed when DKP is updated. **Possible regressions** for applications that do network requests in their init containers. The solutions are described in the [PR](https://github.com/deckhouse/deckhouse/pull/8353).
+
 
 ## Features
 
