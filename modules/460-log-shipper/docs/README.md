@@ -60,7 +60,6 @@ The pipline of log processing consists of the following stages:
 ![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
 <!-- Source: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 
-
 ### Sources
 
 On collecting, all sources enrich logs with metadata. The enrichment takes place at the `Source` stage.
