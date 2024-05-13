@@ -36,9 +36,14 @@ import (
 var (
 	ErrBadProxyConfig      = errors.New("Bad proxy config")
 	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
+	ErrAuthFailed          = errors.New("authentication failed")
 )
 
-const ProxyTunnelPort = "22323"
+const (
+	ProxyTunnelPort      = "22323"
+	authPath             = "/auth/"
+	httpClientTimeoutSec = 20
+)
 
 func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 	if app.PreflightSkipRegistryThroughProxy {
@@ -212,10 +217,26 @@ func (pc *Checker) CheckRegistryCredentials() error {
 
 	image := pc.installConfig.GetImage(false)
 	log.DebugF("Image: %s", image)
+	// skip for CE edition
+	if image == "registry.deckhouse.ru/deckhouse/ce" {
+		log.InfoLn("Checking registry credentials was skipped for CE edition")
+		return nil
+	}
 
 	log.DebugLn("Checking registry credentials")
+	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
+	defer cancel()
 
-	req, err := prepareAuthRequest(pc.metaConfig)
+	authData, err := pc.metaConfig.Registry.Auth()
+	if err != nil {
+		return err
+	}
+
+	if authData == "" {
+		return fmt.Errorf("%w, credentials are not specified", ErrAuthFailed)
+	}
+
+	req, err := prepareAuthRequest(ctx, pc.metaConfig, authData)
 	if err != nil {
 		return err
 	}
@@ -234,34 +255,44 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	return nil
 }
 
-func prepareAuthRequest(metaConfig *config.MetaConfig) (*http.Request, error) {
-	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: "/auth/"}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+func prepareAuthRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
+	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: authPath}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registryURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare auth request: %w", err)
 	}
+
+	req.Header.Add("Authorization", "Basic "+authData)
 
 	return req, nil
 }
 
 func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
 	client := &http.Client{}
-	if len(metaConfig.Registry.CA) > 0 {
-		certPool, err := x509.SystemCertPool()
-		if err != nil {
-			return nil, fmt.Errorf("system cert pool: %w", err)
-		}
-		if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
-			return nil, fmt.Errorf("invalid cert in CA PEM")
-		}
-		tlsConfig := &tls.Config{
-			RootCAs: certPool,
-		}
-		client.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if strings.ToLower(metaConfig.Registry.Scheme) == "http" {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
 		}
 	}
+
+	if len(metaConfig.Registry.CA) == 0 {
+		client.Transport = httpTransport
+		return client, nil
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
+		return nil, fmt.Errorf("invalid cert in CA PEM")
+	}
+
+	httpTransport.TLSClientConfig = &tls.Config{
+		RootCAs: certPool,
+	}
+
+	client.Transport = httpTransport
+
 	return client, nil
 }
