@@ -43,6 +43,7 @@
  - **[ingress-nginx]** Add the IP address and hostname to the `status` field of the `IngressNginxController` resource. [#7785](https://github.com/deckhouse/deckhouse/pull/7785)
  - **[ingress-nginx]** Add VPA support to OpenKruise advance daemonsets. [#7557](https://github.com/deckhouse/deckhouse/pull/7557)
     Vpa-admission-controller/recommender/updater pods will be recreated. OpenKruise controller manager pod will restart.
+ - **[istio]** The `trafficRedirectionSetupMode` module parameter. [#8353](https://github.com/deckhouse/deckhouse/pull/8353)
  - **[istio]** The new traffic redirection mode "IstioCNI" for the Istio module is to replace the old one, "InitContainer". [#7488](https://github.com/deckhouse/deckhouse/pull/7488)
     Application traffic redirection setup method in the istio module deligated to a special CNI plugin. Cilium agent pods will restart, and L7-based policies will flap.
  - **[l2-load-balancer]** Show public IP in the status field of the `L2LoadBalancer` CustomResource. [#7937](https://github.com/deckhouse/deckhouse/pull/7937)
