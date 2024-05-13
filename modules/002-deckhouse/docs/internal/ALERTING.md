@@ -23,4 +23,4 @@ This annotations will mutate the rule expression inside Prometheus:
 expr: ($expr) and on() ((max(d8_is_updating) != 1) or on() absent(d8_is_updating))
 ```
 
-`d8_is_updating` metric set inside update_deckhouse_image hook also become absent when Deckhous pod is ready.
+`d8_is_updating` metric set inside update_deckhouse_image hook also become absent when Deckhouse pod is ready.

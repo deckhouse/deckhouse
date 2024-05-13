@@ -9,7 +9,7 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 
 * _Organization_
 * _VirtualDataCenter_
-* _VApp_
+* _vApp_
 * _StoragePolicy_
 * _SizingPolicy_
 * _Network_

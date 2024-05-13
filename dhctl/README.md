@@ -102,7 +102,7 @@ provider:
   tenantName: xxx
   username: xxx
   password: xxx
-  region: HetznerFinland
+  region: SomeRegion
 ```
 
 ### Bootstrap Kubernetes cluster
@@ -130,7 +130,7 @@ For example, use a docker image from the Flant docker registry:
        bash
      ```
 
-     > MacOS users do not need to mount the .ssh folder to the `/tmp`.
+     > macOS users do not need to mount the .ssh folder to the `/tmp`.
      > Because of Docker for MAc specific features it is more convenient to mount it to the `/root`.
 3. Execute cluster bootstrap:
 

@@ -35,6 +35,6 @@ kubectl -n d8-monitoring delete secret/basic-auth
     * `pvc_size * 0.85` — если PVC существует;
     * `10 GiB` — если PVC нет и StorageClass поддерживает ресайз;
     * `25 GiB` — если PVC нет и StorageClass не поддерживает ресайз.
-  * Если используется `local-storage` и требуется изменить `retentionSize`, необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает рельный размер PV в случае ручного ресайза.
+  * Если используется `local-storage` и требуется изменить `retentionSize`, необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает реальный размер PV в случае ручного ресайза.
 * `40 GiB` — размер PersistentVolumeClaim создаваемого по умолчанию.
 * Размер дисков Prometheus можно изменить стандартным для Kubernetes способом (если в StorageClass это разрешено), отредактировав в PersistentVolumeClaim поле `.spec.resources.requests.storage`.

@@ -304,7 +304,7 @@ Warning! The last parameter in the output table shows etcd member is in [**learn
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. The fith parameter in the output table will be `true` for the leader.
+Use the `etcdctl endpoint status` command. The fifth parameter in the output table will be `true` for the leader.
 
 Example:
 

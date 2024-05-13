@@ -13,5 +13,5 @@ properties:
 
           Если параметр не задан, фактическим StorageClass'ом по умолчанию будет:
             * присутствующий в кластере произвольный StorageClass с default-аннотацией;
-            * storagaClass для которого используется default StorageProfile;
+            * storageClass для которого используется default StorageProfile;
             * первый StorageClass из создаваемых модулем.

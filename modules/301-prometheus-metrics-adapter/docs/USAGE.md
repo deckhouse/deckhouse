@@ -200,7 +200,7 @@ spec:
 
 This example improves on the previous one.
 
-In the example below, scaling is based on the `send_forum_message` queue in RabbitMQ, for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling takes place. The MQL function `avg_over_time()` smoothes (averages the metric) to avoid over-scaling due to short-term spikes in the number of messages.
+In the example below, scaling is based on the `send_forum_message` queue in RabbitMQ, for which the `rmq` service is registered. If the number of messages in this queue exceeds 42, scaling takes place. The MQL function `avg_over_time()` smooths (averages the metric) to avoid over-scaling due to short-term spikes in the number of messages.
 
 ```yaml
 apiVersion: deckhouse.io/v1beta1

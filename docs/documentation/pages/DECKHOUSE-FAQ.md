@@ -343,7 +343,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   * `Allow anonymous docker pull` must be enabled. This option enables Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access*, and the `anonymous` user is not granted access rights to the created repository.
   * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
-  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
+  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the following permissions:
     * `nx-repository-view-docker-<repo>-browse`
     * `nx-repository-view-docker-<repo>-read`
   * The user (*Administration* -> *Security* -> *Users*) must be created with the above role granted.
