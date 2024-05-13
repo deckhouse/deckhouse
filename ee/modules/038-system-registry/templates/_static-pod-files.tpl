@@ -23,9 +23,9 @@ token:
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
   "pusher":
-    password: "\$2y\$05\$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne"  # pusher
+    password: "\\$2y\\$05\\$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne"  # pusher
   "puller":
-    password: "\$2y\$05\$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq"  # puller
+    password: "\\$2y\\$05\\$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq"  # puller
 acl:
   - match: { account: "pusher" }
     actions: [ "*" ]
