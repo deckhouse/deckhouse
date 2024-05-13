@@ -166,13 +166,10 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	}
 
 	pr, pw := io.Pipe()
+	defer pr.Close()
 
 	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
-	err = mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
-	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to get %s module documentation from local directory with error: %w", moduleName, err)
-	}
-	defer pr.Close()
+	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
 
 	var rendered int
 	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
@@ -194,6 +191,13 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			Version:            md.Spec.Version,
 			Checksum:           md.Spec.Checksum,
 			LastTransitionTime: now,
+		}
+
+		if fetchModuleErr != nil {
+			cond.Type = v1alpha1.TypeError
+			cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. Please fix the module's docs or restart the Deckhouse to restore the module", fetchModuleErr)
+			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
+			continue
 		}
 
 		err = mdr.buildDocumentation(pr, addr, moduleName, md.Spec.Version)

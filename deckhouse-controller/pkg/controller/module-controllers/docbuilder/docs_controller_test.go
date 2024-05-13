@@ -251,6 +251,26 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		assert.False(suite.T(), res.Requeue)
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("with empty dir", func() {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+			switch req.URL.Path {
+			case "/loadDocArchive/testmodule/mpo-tag":
+				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
+
+			case "/build":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+			}
+			return &http.Response{StatusCode: http.StatusBadRequest}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("empty-dir.yaml")))
+
+		md := suite.getModuleDocumentation("testmodule")
+		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
+		assert.True(suite.T(), res.Requeue)
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) setupController(yamlDoc string) {
@@ -326,6 +346,10 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range mdlist.Items {
+		for i, cond := range item.Status.Conditions {
+			cond.Message = strings.ReplaceAll(cond.Message, suite.tmpDir, "/testdir")
+			item.Status.Conditions[i] = cond
+		}
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
