@@ -210,6 +210,9 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return nil
 	}
 
+	image := pc.installConfig.GetImage(false)
+	log.DebugF("Image: %s", image)
+
 	log.DebugLn("Checking registry credentials")
 
 	req, err := prepareAuthRequest(pc.metaConfig)
