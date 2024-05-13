@@ -1,0 +1,10 @@
+# The list of filename patterns to ignore
+
+documentation/_includes/revision_comparison_detail_table.liquid$
+documentation/_layouts/.+$
+site/LOCAL_DEV.md$
+site/_includes/getting_started/global/partials/getting-started-setup.js.liquid$
+site/_includes/header.html$
+site/_layouts/.+$
+cloud-controller-manager/patches/
+modules/[^/]+/images/

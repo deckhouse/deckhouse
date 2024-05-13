@@ -386,7 +386,7 @@ jobs:
           ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 
     needs:
       - discover
@@ -413,6 +413,36 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_changes }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
+
+  doc_spell_check:
+    name: Docs Validation (spellcheck)
+    needs:
+      - discover
+      - pull_request_info
+    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: ubuntu-latest
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
+      - name: Install werf
+        uses: werf/actions/install@v1.2
+
+      - name: Spell check
+        run: |
+          make lint-doc-spellcheck-pr
+       # </template: spellcheck_template>
 
   copyright_validation:
     name: Copyright Validation
@@ -529,4 +559,5 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
 
