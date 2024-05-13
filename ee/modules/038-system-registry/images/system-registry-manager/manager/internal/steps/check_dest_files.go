@@ -62,11 +62,11 @@ func validateDockerAuthTokenCert(shouldUpdateBy *ShouldUpdateBy) {
 	cfg := config.GetConfig()
 
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.DestPath) {
-		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeDockerAuthTokenCerts = true
 		return
 	}
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Key.DestPath) {
-		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeDockerAuthTokenCerts = true
 		return
 	}
 }

@@ -14,7 +14,7 @@ files:
 
 {{- define "docker-auth-config.yaml" }}
 server:
-  addr: "${discovered_node_ip}:5051"
+  addr: "{{ printf "{{ .DiscoveredNodeIP }}" }}:5051"
 token:
   issuer: "Registry server"
   expiration: 900
@@ -86,7 +86,7 @@ storage:
   cache:
     blobdescriptor: inmemory
 http:
-  addr: ${discovered_node_ip}:5000
+  addr: "{{ printf "{{ .DiscoveredNodeIP }}" }}:5000"
   #addr: 0.0.0.0:5000
   prefix: /
   secret: asecretforlocaldevelopment
@@ -101,7 +101,7 @@ proxy:
   ttl: 72h
 auth:
   token:
-    realm: http://${discovered_node_ip}:5051/auth
+    realm: "http://{{ printf "{{ .DiscoveredNodeIP }}" }}:5051/auth"
     service: Docker registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
@@ -163,8 +163,8 @@ spec:
       - -master.defaultReplication=000
       - -volume.pprof
       - -filer.maxMB=16
-      - -ip=${discovered_node_ip}
-      - -master.peers=${discovered_node_ip}:9333
+      - -ip={{ printf "{{ .DiscoveredNodeIP }}" }}
+      - -master.peers={{ printf "{{ .DiscoveredNodeIP }}" }}:9333
     env:
       - name: GOGC
         value: "20"
