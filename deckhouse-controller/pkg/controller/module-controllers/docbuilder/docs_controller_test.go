@@ -253,20 +253,9 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with empty dir", func() {
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
-			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/mpo-tag":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
 		suite.setupController(string(suite.fetchTestFileData("empty-dir.yaml")))
 
-		md := suite.getModuleDocumentation("testmodule")
+		md := suite.getModuleDocumentation("absentmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
 		assert.True(suite.T(), res.Requeue)
 		require.NoError(suite.T(), err)

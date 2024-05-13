@@ -3,18 +3,18 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
 metadata:
   creationTimestamp: null
-  name: testmodule
+  name: absentmodule
   resourceVersion: "1000"
 spec:
   checksum: abc
-  path: /testmodule/v1.0.0
+  path: /absentmodule/v1.0.0
   version: v1.0.0
 status:
   conditions:
   - address: http://10-222-222-22.d8-system.pod.cluster.local:8081
     checksum: abc
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Error occurred while fetching the documentation: stat /testdir/testmodule/v1.0.0/:
+    lastTransitionTime: "2019-10-17T16:33:00Z"
+    message: 'Error occurred while fetching the documentation: stat /testdir/absentmodule/v1.0.0/:
       no such file or directory. Please fix the module''s docs or restart the Deckhouse
       to restore the module'
     type: Error
