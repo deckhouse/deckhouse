@@ -77,9 +77,11 @@ type GeneratedCertificatesSpec struct {
 }
 
 type ManifestsSpec struct {
-	// BaseCertificates      BaseCertificatesSpec
 	GeneratedCertificates GeneratedCertificatesSpec
 	Manifests             []ManifestSpec
+}
+type DataForManifestRendering struct {
+	DiscoveredNodeIP string
 }
 
 func NewManifestsSpec() *ManifestsSpec {
@@ -107,11 +109,11 @@ func NewManifestsSpec() *ManifestsSpec {
 			CAKey:  baseCertificates.EtcdCAKey,
 			CACert: baseCertificates.EtcdCACrt,
 			Key: CertificateSpec{
-				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.key"),
+				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.key"),
 				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.key"),
 			},
 			Cert: CertificateSpec{
-				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.crt"),
+				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.crt"),
 				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.crt"),
 			},
 		},
@@ -119,11 +121,11 @@ func NewManifestsSpec() *ManifestsSpec {
 			CAKey:  baseCertificates.EtcdCAKey,
 			CACert: baseCertificates.EtcdCACrt,
 			Key: CertificateSpec{
-				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "token.key"),
+				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.key"),
 				DestPath:        filepath.Join(DestinationCertsDir, "token.key"),
 			},
 			Cert: CertificateSpec{
-				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "token.crt"),
+				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.crt"),
 				DestPath:        filepath.Join(DestinationCertsDir, "token.crt"),
 			},
 		},
@@ -161,4 +163,11 @@ func NewManifestsSpec() *ManifestsSpec {
 		},
 	}
 	return &manifestsSpec
+}
+
+func GetDataForManifestRendering() DataForManifestRendering {
+	cfg := GetConfig()
+	return DataForManifestRendering{
+		DiscoveredNodeIP: cfg.MyIP,
+	}
 }

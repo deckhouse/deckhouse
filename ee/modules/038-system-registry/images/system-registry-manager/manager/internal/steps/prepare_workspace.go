@@ -19,8 +19,12 @@ func PrepareWorkspace() error {
 		log.Errorf("Error checking input files: %v", err)
 		return err
 	}
-	if err := copyFilesToWorkspace(); err != nil {
-		log.Errorf("Error copying files to workspace: %v", err)
+	if err := copyCertFilesToWorkspace(); err != nil {
+		log.Errorf("Error copying cert files to workspace: %v", err)
+		return err
+	}
+	if err := copyManifestFilesToWorkspace(); err != nil {
+		log.Errorf("Error manifest cert files to workspace: %v", err)
 		return err
 	}
 	log.Info("Workspace preparation completed.")
@@ -51,12 +55,12 @@ func checkInputFilesExist() error {
 	return nil
 }
 
-func copyFilesToWorkspace() error {
-	log.Info("Copying files to workspace...")
+func copyCertFilesToWorkspace() error {
+	log.Info("Copying cert files to workspace...")
 
 	cfg := config.GetConfig()
 
-	copyFiles := []FileMV{
+	copyCertFiles := []FileMV{
 		{
 			From: cfg.GeneratedCertificates.SeaweedEtcdClientCert.CAKey.InputPath,
 			To:   cfg.GeneratedCertificates.SeaweedEtcdClientCert.CAKey.TmpPath,
@@ -74,23 +78,32 @@ func copyFilesToWorkspace() error {
 			To:   cfg.GeneratedCertificates.DockerAuthTokenCert.CACert.TmpPath,
 		},
 	}
-
-	for _, manifest := range cfg.Manifests {
-		copyFiles = append(
-			copyFiles,
-			FileMV{
-				From: manifest.InputPath,
-				To:   manifest.TmpPath,
-			},
-		)
-	}
-
-	for _, copyFile := range copyFiles {
+	for _, copyFile := range copyCertFiles {
 		err := pkg.CopyFile(copyFile.From, copyFile.To)
 		if err != nil {
 			return err
 		}
 	}
-	log.Info("File copying to workspace completed.")
+	log.Info("Cert file copying to workspace completed.")
+	return nil
+}
+
+func copyManifestFilesToWorkspace() error {
+	log.Info("Copying manifest files to workspace...")
+
+	cfg := config.GetConfig()
+	renderData := config.GetDataForManifestRendering()
+
+	for _, manifest := range cfg.Manifests {
+		err := pkg.CopyFile(manifest.InputPath, manifest.TmpPath)
+		if err != nil {
+			return err
+		}
+		err = pkg.RenderTemplateFiles(manifest.TmpPath, renderData)
+		if err != nil {
+			return err
+		}
+	}
+	log.Info("Manifest file copying to workspace completed.")
 	return nil
 }
