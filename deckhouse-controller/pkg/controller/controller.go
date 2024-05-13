@@ -34,14 +34,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
@@ -49,10 +50,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -83,9 +84,6 @@ type DeckhouseController struct {
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
 	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
-
-	// documentation
-	documentationUpdater *docs.Updater
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -93,20 +91,6 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	if err != nil {
 		return nil, err
 	}
-
-	cs, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	leaseInformer := informers.NewSharedInformerFactoryWithOptions(
-		cs,
-		15*time.Minute,
-		informers.WithNamespace(namespace),
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = docsLeaseLabel
-		}),
-	).Coordination().V1().Leases()
 
 	dc := dependency.NewDependencyContainer()
 	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
@@ -137,24 +121,47 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 			return ctx
 		},
 		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				// for ModuleDocumentation controller
+				&coordv1.Lease{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+						},
+					},
+				},
+				// for ModuleRelease controller
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+						},
+					},
+				},
+			},
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	documentationUpdater := docs.NewUpdater(leaseInformer, mgr.GetClient(), dc)
 
 	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, documentationUpdater)
+	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage)
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModulePullOverrideController(mgr, dc, mm, documentationUpdater)
+	err = release.NewModulePullOverrideController(mgr, dc, mm)
+	if err != nil {
+		return nil, err
+	}
+
+	err = docbuilder.NewModuleDocumentationController(mgr, dc)
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +177,6 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		sourceModules:           make(map[string]string),
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 		metricStorage:           metricStorage,
-
-		documentationUpdater: documentationUpdater,
 	}, nil
 }
 
@@ -191,7 +196,6 @@ func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan e
 
 	go dml.runEventLoop(moduleEventC)
 	go dml.runDeckhouseConfigObserver(deckhouseConfigC)
-	go dml.documentationUpdater.RunLeaseInformer(dml.ctx.Done())
 
 	// Init modules' and modules configs' statuses as soon as Module Manager's moduleset gets Inited flag (all modules are registered)
 	go func() {
@@ -206,11 +210,6 @@ func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan e
 			log.Errorf("Error occurred when setting modules and module configs' initial statuses: %s", err)
 		}
 	}()
-
-	err = dml.documentationUpdater.RunPreflightCheck(dml.ctx)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -240,7 +239,6 @@ func (dml *DeckhouseController) Start(ctx context.Context) {
 	if os.Getenv("EXTERNAL_MODULES_DIR") == "" {
 		return
 	}
-	go dml.documentationUpdater.Run(dml.ctx)
 	go func() {
 		err := dml.mgr.Start(ctx)
 		if err != nil {

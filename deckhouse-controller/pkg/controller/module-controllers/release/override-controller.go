@@ -39,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -54,8 +53,6 @@ type modulePullOverrideReconciler struct {
 	modulesValidator   moduleValidator
 	externalModulesDir string
 	symlinksDir        string
-
-	documentationUpdater *docs.Updater
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -63,7 +60,6 @@ func NewModulePullOverrideController(
 	mgr manager.Manager,
 	dc dependency.Container,
 	modulesValidator moduleValidator,
-	documentationUpdater *docs.Updater,
 ) error {
 	lg := log.WithField("component", "ModulePullOverrideController")
 
@@ -75,8 +71,6 @@ func NewModulePullOverrideController(
 		modulesValidator:   modulesValidator,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-
-		documentationUpdater: documentationUpdater,
 	}
 
 	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
@@ -236,9 +230,19 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	// update module's documentation
-	err = c.documentationUpdater.SendDocumentation(ctx, mo)
+	modulePath := fmt.Sprintf("/%s/dev", mo.GetModuleName())
+	moduleVersion := mo.Spec.ImageTag
+	checksum := mo.Status.ImageDigest
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModulePullOverrideGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
+		Name:       mo.GetName(),
+		UID:        mo.GetUID(),
+		Controller: pointer.Bool(true),
+	}
+	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mo.GetModuleName(), moduleVersion, checksum, modulePath, mo.GetModuleSource(), ownerRef)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil

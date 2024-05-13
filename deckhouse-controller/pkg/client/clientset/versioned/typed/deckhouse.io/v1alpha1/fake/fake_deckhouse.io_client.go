@@ -40,6 +40,10 @@ func (c *FakeDeckhouseV1alpha1) ModuleConfigs() v1alpha1.ModuleConfigInterface {
 	return &FakeModuleConfigs{c}
 }
 
+func (c *FakeDeckhouseV1alpha1) ModuleDocumentations() v1alpha1.ModuleDocumentationInterface {
+	return &FakeModuleDocumentations{c}
+}
+
 func (c *FakeDeckhouseV1alpha1) ModulePullOverrides() v1alpha1.ModulePullOverrideInterface {
 	return &FakeModulePullOverrides{c}
 }

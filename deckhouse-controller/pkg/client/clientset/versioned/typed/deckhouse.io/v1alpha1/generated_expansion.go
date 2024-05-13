@@ -24,6 +24,8 @@ type ModuleExpansion interface{}
 
 type ModuleConfigExpansion interface{}
 
+type ModuleDocumentationExpansion interface{}
+
 type ModulePullOverrideExpansion interface{}
 
 type ModuleReleaseExpansion interface{}

@@ -30,6 +30,10 @@ type ModuleListerExpansion interface{}
 // ModuleConfigLister.
 type ModuleConfigListerExpansion interface{}
 
+// ModuleDocumentationListerExpansion allows custom methods to be added to
+// ModuleDocumentationLister.
+type ModuleDocumentationListerExpansion interface{}
+
 // ModulePullOverrideListerExpansion allows custom methods to be added to
 // ModulePullOverrideLister.
 type ModulePullOverrideListerExpansion interface{}
