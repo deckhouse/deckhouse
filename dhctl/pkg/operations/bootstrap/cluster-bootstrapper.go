@@ -359,7 +359,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	registryPackagesProxyData := metaConfig.Registry
-	if metaConfig.RegistryMode != "Direct" {
+	if metaConfig.Registry.RegistryMode != "Direct" {
 		registryPackagesProxyData = metaConfig.UpstreamRegistry
 	}
 
