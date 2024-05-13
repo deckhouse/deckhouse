@@ -92,7 +92,7 @@ func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func StartManager() error {
-	cfg := config.GetConfig()
+	shouldUpdateBy := steps.ShouldUpdateBy{}
 
 	if err := steps.PrepareWorkspace(); err != nil {
 		return err
@@ -100,20 +100,20 @@ func StartManager() error {
 	if err := steps.GenerateCerts(); err != nil {
 		return err
 	}
-	if err := steps.CheckDestFiles(); err != nil {
+	if err := steps.CheckDestFiles(&shouldUpdateBy); err != nil {
 		return err
 	}
-	if !((cfg.ShouldUpdateBy.NeedChangeFileByExist ||
-		cfg.ShouldUpdateBy.NeedChangeFileByCheckSum) ||
-		(cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts ||
-			cfg.ShouldUpdateBy.NeedChangeDockerAuthTokenCerts)) {
+	if !((shouldUpdateBy.NeedChangeFileByExist ||
+		shouldUpdateBy.NeedChangeFileByCheckSum) ||
+		(shouldUpdateBy.NeedChangeSeaweedfsCerts ||
+			shouldUpdateBy.NeedChangeDockerAuthTokenCerts)) {
 		return nil
 	}
 
 	if err := kubeapi.SetMyStatusAndWaitApprove("update", 0); err != nil {
 		return err
 	}
-	if err := steps.UpdateManifests(); err != nil {
+	if err := steps.UpdateManifests(&shouldUpdateBy); err != nil {
 		return err
 	}
 	if err := kubeapi.SetMyStatusDone(); err != nil {

@@ -14,15 +14,7 @@ import (
 )
 
 type RuntimeConfig struct {
-	K8sClient      *kubernetes.Clientset
-	ShouldUpdateBy ShouldUpdateBy
-}
-
-type ShouldUpdateBy struct {
-	NeedChangeFileByExist          bool
-	NeedChangeFileByCheckSum       bool
-	NeedChangeSeaweedfsCerts       bool
-	NeedChangeDockerAuthTokenCerts bool
+	K8sClient *kubernetes.Clientset
 }
 
 func NewRuntimeConfig() (*RuntimeConfig, error) {
@@ -32,8 +24,7 @@ func NewRuntimeConfig() (*RuntimeConfig, error) {
 	}
 
 	config := RuntimeConfig{
-		K8sClient:      k8sClient,
-		ShouldUpdateBy: ShouldUpdateBy{},
+		K8sClient: k8sClient,
 	}
 	return &config, nil
 }
