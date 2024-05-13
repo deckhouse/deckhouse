@@ -536,12 +536,13 @@ type normal struct {
 }
 
 type registry struct {
-	Address   string `json:"address" yaml:"address"`
-	Path      string `json:"path" yaml:"path"`
-	Scheme    string `json:"scheme" yaml:"scheme"`
-	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth" yaml:"auth"`
+	Address      string `json:"address" yaml:"address"`
+	Path         string `json:"path" yaml:"path"`
+	Scheme       string `json:"scheme" yaml:"scheme"`
+	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	DockerCFG    []byte `json:"dockerCfg" yaml:"dockerCfg"`
+	Auth         string `json:"auth" yaml:"auth"`
+	RegistryMode string `json:"registryMode" yaml:"registryMode"`
 }
 
 // input from secret
@@ -551,6 +552,7 @@ type registryInputData struct {
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
+	RegistryMode string `json:"registryMode" yaml:"registryMode"`
 }
 
 type dockerCfg struct {
