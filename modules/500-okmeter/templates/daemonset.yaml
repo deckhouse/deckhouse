@@ -48,13 +48,18 @@ spec:
       serviceAccountName: okmeter
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-{{- with .Values.okmeter.nodeSelector }}
+      {{- with .Values.okmeter.nodeSelector }}
       nodeSelector:
-{{ . | toYaml | nindent 8 }}
-{{- end }}
+      {{ . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.okmeter.tolerations }}
+      tolerations:
+      {{- . | toYaml | nindent 6 }}
+      {{- else }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- end }}
       containers:
       - name: okagent
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
