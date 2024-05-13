@@ -669,7 +669,7 @@ properties:
         type: string
         description: |
           Managing the redirection mode of application traffic to be forwarded under Istio control in the Pod's network namespace.
-          - `CNIPlugin` — in this mode, the configuration is performed by cni plugin when creating a Pod on a node. This mode does not require additional permissions for Pods and is recommended. This mode has [limitations](./examples.html#cniplugin-application-traffic-redirection-mode-restrictions) when using application init-containers that perform network communication with other services.
+          - `CNIPlugin` — in this mode, the configuration is performed by a CNI plugin when creating a Pod on a node. This mode does not require additional permissions for Pods and is recommended. This mode has [limitations](./examples.html#cniplugin-application-traffic-redirection-mode-restrictions) when using application init-containers that perform network communication with other services.
           - `InitContainer` — classic mode, each application Pod is automatically injected with a special init-container that configures the network environment of the Pod. In order to perform this configuration, the init-container is given additional permissions, which may not meet the security requirements of individual installations.
         default: "CNIPlugin"
         enum: ["CNIPlugin", "InitContainer"]
