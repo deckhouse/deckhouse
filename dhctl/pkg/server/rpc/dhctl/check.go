@@ -60,22 +60,26 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
+				log.WarnF("[multiversion-debug] process CheckRequest_Start...\n")
 				err = f.Event("start")
 				if err != nil {
 					s.log.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue
 				}
-				err = s.startCheck(ctx, gr, server, message.Start)
+				s.startCheck(ctx, gr, server, message.Start)
+				log.WarnF("[multiversion-debug] process CheckRequest_Start OK\n")
 
 			case *pb.CheckRequest_Stop:
+				log.WarnF("[multiversion-debug] process CheckRequest_Stop...\n")
 				err = f.Event("stop")
 				if err != nil {
 					s.log.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue
 				}
-				err = s.stopCheck(cancel, message.Stop)
+				s.stopCheck(cancel, message.Stop)
+				log.WarnF("[multiversion-debug] process CheckRequest_Stop OK\n")
 
 			default:
 				s.log.Error("got unprocessable message",
@@ -93,33 +97,38 @@ func (s *Service) startCheck(
 	gr *errgroup.Group,
 	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
-) error {
+) {
+	log.WarnF("[multiversion-debug] starting check in new goroutine...\n")
 	gr.Go(func() error {
+		log.WarnF("[multiversion-debug] check...\n")
 		result, err := s.check(ctx, request, &checkLogWriter{server: server})
 		if err != nil {
+			log.WarnF("[multiversion-debug] check NOT OK: %v\n", err)
 			return err
 		}
+		log.WarnF("[multiversion-debug] check OK\n")
 
+		log.WarnF("[multiversion-debug] send check result...\n")
 		err = server.Send(&pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
 		})
 		if err != nil {
+			log.WarnF("[multiversion-debug] send check result NOT OK: %v\n", err)
 			return status.Errorf(codes.Internal, "sending message: %s", err)
 		}
+		log.WarnF("[multiversion-debug] send check result OK\n")
 		return nil
 	})
-
-	return nil
+	log.WarnF("[multiversion-debug] starting check in new goroutine OK\n")
 }
 
 func (s *Service) stopCheck(
 	cancel context.CancelFunc,
 	_ *pb.CheckStop,
-) error {
+) {
 	cancel()
-	return nil
 }
 
 func (s *Service) check(
@@ -127,6 +136,8 @@ func (s *Service) check(
 	request *pb.CheckStart,
 	logWriter io.Writer,
 ) (*pb.CheckResult, error) {
+	var err error
+
 	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -139,6 +150,9 @@ func (s *Service) check(
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	defer func() {
+		log.WarnF("[multiversion-debug] Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+	}()
 
 	// parse connection config
 	connectionConfig, err := config.ParseConnectionConfig(
@@ -217,6 +231,7 @@ type checkLogWriter struct {
 }
 
 func (w *checkLogWriter) Write(p []byte) (int, error) {
+	log.WarnF("[multiversion-debug] send logs...\n")
 	err := w.server.Send(&pb.CheckResponse{
 		Message: &pb.CheckResponse_Logs{
 			Logs: &pb.Logs{
@@ -225,8 +240,10 @@ func (w *checkLogWriter) Write(p []byte) (int, error) {
 		},
 	})
 	if err != nil {
+		log.WarnF("[multiversion-debug] send logs NOT OK, err: %v\n", err)
 		return 0, fmt.Errorf("writing check logs: %w", err)
 	}
+	log.WarnF("[multiversion-debug] send logs OK\n")
 	return len(p), nil
 }
 
