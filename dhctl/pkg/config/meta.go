@@ -453,7 +453,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		}
 	}
 
-	if m.RegistryMode != "Direct" {
+	if m.Registry.RegistryMode == "Proxy" {
 		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
 		if err != nil {
 			return nil, err
