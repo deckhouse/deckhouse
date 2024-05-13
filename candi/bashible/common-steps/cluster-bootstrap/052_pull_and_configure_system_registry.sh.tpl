@@ -204,6 +204,7 @@ spec:
       - -s3.allowDeleteBucketNotEmpty=true
       - -master.defaultReplication=000
       - -volume.pprof
+      - -volume.port=8081
       - -filer.maxMB=16
       - -ip=${discovered_node_ip}
       - -master.peers=${discovered_node_ip}:9333
