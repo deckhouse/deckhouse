@@ -16,17 +16,17 @@ import (
 func UpdateManifests(shouldUpdateBy *ShouldUpdateBy) error {
 	log.Info("Starting UpdateManifests")
 
-	if err := copyCertsToDets(shouldUpdateBy); err != nil {
+	if err := copyCertsToDest(shouldUpdateBy); err != nil {
 		return err
 	}
-	if err := copyManifestsToDets(shouldUpdateBy); err != nil {
+	if err := copyManifestsToDest(shouldUpdateBy); err != nil {
 		return err
 	}
 	log.Info("UpdateManifests completed")
 	return nil
 }
 
-func copyCertsToDets(shouldUpdateBy *ShouldUpdateBy) error {
+func copyCertsToDest(shouldUpdateBy *ShouldUpdateBy) error {
 	cfg := config.GetConfig()
 	copyFilesCerts := []FileMV{}
 
@@ -69,7 +69,7 @@ func copyCertsToDets(shouldUpdateBy *ShouldUpdateBy) error {
 	return nil
 }
 
-func copyManifestsToDets(shouldUpdateBy *ShouldUpdateBy) error {
+func copyManifestsToDest(shouldUpdateBy *ShouldUpdateBy) error {
 	cfg := config.GetConfig()
 
 	if !(shouldUpdateBy.NeedChangeFileByCheckSum || shouldUpdateBy.NeedChangeFileByExist) {
