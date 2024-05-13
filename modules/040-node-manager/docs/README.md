@@ -304,3 +304,24 @@ The script progress can be seen on the node in the bashible service log (`journa
 ## Chaos Monkey
 
 The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.
+
+## Monitoring 
+
+Our `NodeGroup` implementation exports an availability metrics collected by Prometheus.
+
+### What information does Prometheus collect, and in what form?
+
+Metrics have the prefix `d8_node_group_`.
+
+All the collected metrics have a label that allow you to identify the node group: `node_group_name`.
+
+* Metrics collected for each node group:
+  * `d8_node_group_ready` — the number of ready Kubernetes nodes in the group.
+  * `d8_node_group_nodes` — the number of Kubernetes nodes (in any state) in the group.
+  * `d8_node_group_instances` — the number of instances (in any state) in the group.
+  * `d8_node_group_desired` — the number of desired machines in the group.
+  * `d8_node_group_min` — the minimal amount of instances in the group.
+  * `d8_node_group_max` — the maximum amount of instances in the group.
+  * `d8_node_group_up_to_date` — the number of up-to-date nodes in the group.
+  * `d8_node_group_standby` — the number of over provisioned instances in the group.
+  * `d8_node_group_has_errors` — the boolean value equal to 1 if there are errors in the group.
