@@ -9,7 +9,7 @@ description: "Подготовка окружения VMware Cloud Director дл
 
 * _Organization_
 * _VirtualDataCenter_
-* _VApp_
+* _vApp_
 * _StoragePolicy_
 * _SizingPolicy_
 * _Network_
@@ -26,7 +26,7 @@ Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Cata
 * _disk.enableUUID_
 * _guestinfo.hostname_
 
-Network (внутренная сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. Далее рассматривается настройка внутренней сети самостоятельно.
+Network (внутренняя сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. Далее рассматривается настройка внутренней сети самостоятельно.
 
 ### Добавление сети
 
@@ -133,7 +133,7 @@ _Network type_ должен быть _Routed_:
 
 Первые два правила используются для входящего трафика, а третье — для доступа по SSH к узлу с control plane (без этого правила установка будет невозможна).
 
-### Настрока firewall
+### Настройка firewall
 
 После настройки DNAT необходимо настроить firewall. Сначала необходимо настроить наборы IP-адресов (IP sets).
 

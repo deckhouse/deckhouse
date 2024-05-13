@@ -121,7 +121,7 @@ apiVersions:
               storageDomainID:
                 type: string
                 description: |
-                  Storage domain id which contains the shared resources that must be available to all datacentre hosts.
+                  Storage domain id which contains the shared resources that must be available to all datacenter hosts.
                 pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
       nodeGroups:

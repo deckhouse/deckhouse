@@ -57,7 +57,7 @@ spec:
                 type: array
               autoAssign:
                 default: true
-                description: AutoAssign flag used to prevent MetallB from automatic
+                description: AutoAssign flag used to prevent MetalLB from automatic
                   allocation for a pool.
                 type: boolean
               avoidBuggyIPs:

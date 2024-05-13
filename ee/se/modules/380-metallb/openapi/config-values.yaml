@@ -196,7 +196,7 @@ properties:
           type: boolean
           default: true
           description: |
-            Auto-assign flag used to prevent MetallB from automatic allocation for a pool.
+            Auto-assign flag used to prevent MetalLB from automatic allocation for a pool.
         avoid-buggy-ips:
           type: boolean
           default: false

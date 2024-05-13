@@ -48,7 +48,7 @@ properties:
                 - ReadOnly
                 - ReadWrite
               description: |
-                String value that corresponds to destired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
+                String value that corresponds to the desired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
 
                 Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
             diskIOPSReadWrite:

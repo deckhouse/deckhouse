@@ -8,3 +8,4 @@ site/_includes/header.html$
 site/_layouts/.+$
 cloud-controller-manager/patches/
 modules/[^/]+/images/
+openapi/values.yaml$

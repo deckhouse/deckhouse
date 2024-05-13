@@ -31,7 +31,7 @@ properties:
         type: array
         description: |
           List of CIDRs used to allocate static IP addresses for Virtual Machines from virtualization module.
-          These CIDRs will be pased to ip-masq-agent to not masquerade trafic to them.
+          These CIDRs will be passed to ip-masq-agent to not masquerade trafic to them.
         x-examples:
         - ["10.10.10.0/24", "10.10.20.0/24"]
         items:

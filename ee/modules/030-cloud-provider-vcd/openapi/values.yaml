@@ -241,15 +241,15 @@ properties:
           organization:
             type: string
             description: |
-              Vcloud Director Organization name.
+              vCloud Director Organization name.
           virtualDataCenter:
             type: string
             description: |
-              Vcloud Director Virtual Data Center name (belongs to Organization).
+              vCloud Director Virtual Data Center name (belongs to Organization).
           virtualApplicationName:
             type: string
             description: |
-              Vcloud Director Virtual Application name (belongs to Virtual Data Center).
+              vCloud Director Virtual Application name (belongs to Virtual Data Center).
           mainNetwork:
             description: |
               Path to the network that VirtualMachines' primary NICs will connect to (default gateway).

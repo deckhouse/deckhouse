@@ -2936,7 +2936,7 @@ spec:
                 x-kubernetes-list-type: map
               image:
                 description: Image if specified has precedence over baseImage, tag
-                  and sha combinations. Specifying the version is still necessary
+                  and SHA combinations. Specifying the version is still necessary
                   to ensure the Prometheus Operator knows what version of Alertmanager
                   is being configured.
                 type: string
