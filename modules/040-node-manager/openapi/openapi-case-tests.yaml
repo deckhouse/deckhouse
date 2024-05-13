@@ -36,7 +36,6 @@ positive:
                 zoneb: mysubnetidb
             tags:
               aaa: aaa
-        registryMode: Direct
 
 negative:
   configValues:
