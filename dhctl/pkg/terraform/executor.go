@@ -21,12 +21,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+// based on https://stackoverflow.com/a/43931246
+// https://regex101.com/r/qtIrSj/1
+var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
 
 type Executor interface {
 	Output(...string) ([]byte, error)
@@ -40,10 +45,9 @@ func terraformCmd(args ...string) *exec.Cmd {
 		cmd.Env,
 		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
 	)
-	if app.IsDebug {
-		// Debug mode is deprecated, however trace produces more useless information
-		cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
-	}
+
+	// always use dug log for write its to debug log file
+	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
 	cmd.Env = append(
 		cmd.Env,
@@ -101,10 +105,13 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {
-			if app.IsDebug {
-				log.DebugLn(e.Text())
-			} else {
-				errBuf.WriteString(e.Text() + "\n")
+			txt := e.Text()
+			log.DebugLn(txt)
+
+			if !app.IsDebug {
+				if !terraformLogsMatcher.MatchString(txt) {
+					errBuf.WriteString(txt + "\n")
+				}
 			}
 		}
 	}()

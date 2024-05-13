@@ -190,7 +190,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	stateCache := cache.Global()
-
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)

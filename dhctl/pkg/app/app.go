@@ -49,6 +49,8 @@ var (
 	SanityCheck = false
 	LoggerType  = "pretty"
 	IsDebug     = false
+
+	DoNotWriteDebugLogFile = false
 )
 
 func init() {
@@ -77,6 +79,10 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("TMP_DIR")).
 		Default(TmpDirName).
 		StringVar(&TmpDirName)
+	cmd.Flag("do-not-write-debug-log-file", `Skip write debug log into file in tmp-dir`).
+		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
+		Default("false").
+		BoolVar(&DoNotWriteDebugLogFile)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {

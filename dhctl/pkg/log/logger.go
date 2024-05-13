@@ -15,12 +15,14 @@
 package log
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
@@ -49,6 +51,18 @@ type LoggerOptions struct {
 
 func InitLogger(loggerType string) {
 	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+}
+
+func WrapLoggerWithTeeLogger(pathToTeeFile string, bufSize int) error {
+	previousLogger := defaultLogger
+	var err error
+	defaultLogger, err = NewTeeLogger(defaultLogger, pathToTeeFile, bufSize)
+	if err != nil {
+		defaultLogger = previousLogger
+		return err
+	}
+
+	return nil
 }
 
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
@@ -84,6 +98,16 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	}
 }
 
+func WrapWithTeeLogger(outFile string, bufSize int) error {
+	l, err := NewTeeLogger(defaultLogger, outFile, bufSize)
+	if err != nil {
+		return err
+	}
+
+	defaultLogger = l
+	return nil
+}
+
 type ProcessLogger interface {
 	LogProcessStart(name string)
 	LogProcessFail()
@@ -91,6 +115,8 @@ type ProcessLogger interface {
 }
 
 type Logger interface {
+	FlushAndClose() error
+
 	LogProcess(string, string, func() error) error
 
 	LogInfoF(format string, a ...interface{})
@@ -116,6 +142,7 @@ type Logger interface {
 }
 
 var (
+	_ Logger    = &TeeLogger{}
 	_ Logger    = &PrettyLogger{}
 	_ Logger    = &SimpleLogger{}
 	_ Logger    = &DummyLogger{}
@@ -124,6 +151,7 @@ var (
 	_ io.Writer = &SimpleLogger{}
 	_ io.Writer = &DummyLogger{}
 	_ io.Writer = &SilentLogger{}
+	_ io.Writer = &TeeLogger{}
 )
 
 type styleEntry struct {
@@ -172,6 +200,10 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	}
 
 	return res
+}
+
+func (d *PrettyLogger) FlushAndClose() error {
+	return nil
 }
 
 func (d *PrettyLogger) ProcessLogger() ProcessLogger {
@@ -289,6 +321,10 @@ func (d *SimpleLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }
 
+func (d *SimpleLogger) FlushAndClose() error {
+	return nil
+}
+
 func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
 	d.logger.WithField("action", "start").WithField("process", p).Infoln(t)
 	err := run()
@@ -355,6 +391,10 @@ func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }
 
+func (d *DummyLogger) FlushAndClose() error {
+	return nil
+}
+
 func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
 	fmt.Println(t)
 	err := run()
@@ -413,6 +453,10 @@ func (d *DummyLogger) LogJSON(content []byte) {
 func (d *DummyLogger) Write(content []byte) (int, error) {
 	fmt.Print(string(content))
 	return len(content), nil
+}
+
+func FlushAndClose() error {
+	return defaultLogger.FlushAndClose()
 }
 
 func Process(p, t string, run func() error) error {
@@ -490,6 +534,10 @@ func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	return err
 }
 
+func (d *SilentLogger) FlushAndClose() error {
+	return nil
+}
+
 func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
 }
 
@@ -525,4 +573,154 @@ func (d *SilentLogger) LogJSON(content []byte) {
 
 func (d *SilentLogger) Write(content []byte) (int, error) {
 	return len(content), nil
+}
+
+type TeeLogger struct {
+	l      Logger
+	closed bool
+
+	bufMutex sync.Mutex
+	buf      *bufio.Writer
+	out      *os.File
+}
+
+func NewTeeLogger(l Logger, outFile string, bufferSize int) (*TeeLogger, error) {
+	out, err := os.Create(outFile)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bufio.NewWriterSize(out, bufferSize)
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: out,
+	}, nil
+}
+
+func (d *TeeLogger) FlushAndClose() error {
+	if d.closed {
+		return nil
+	}
+
+	err := d.buf.Flush()
+	if err != nil {
+		d.l.LogWarnF("Cannot flush TeeLogger: %v \n", err)
+		return err
+	}
+
+	err = d.out.Close()
+	if err != nil {
+		d.l.LogWarnF("Cannot close TeeLogger file: %v \n", err)
+		return err
+	}
+
+	d.closed = true
+	return nil
+}
+
+func (d *TeeLogger) ProcessLogger() ProcessLogger {
+	return d.l.ProcessLogger()
+}
+
+func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
+	d.writeToFile(fmt.Sprintf("Start process %s", t))
+
+	err := d.l.LogProcess(msg, t, run)
+
+	d.writeToFile(fmt.Sprintf("End process %s", t))
+
+	return err
+}
+
+func (d *TeeLogger) LogInfoF(format string, a ...interface{}) {
+	d.l.LogInfoF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogInfoLn(a ...interface{}) {
+	d.l.LogInfoLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogErrorF(format string, a ...interface{}) {
+	d.l.LogErrorF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogErrorLn(a ...interface{}) {
+	d.l.LogErrorLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogDebugF(format string, a ...interface{}) {
+	d.l.LogDebugF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogDebugLn(a ...interface{}) {
+	d.l.LogDebugLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogSuccess(l string) {
+	d.l.LogSuccess(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogFail(l string) {
+	d.l.LogFail(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogWarnLn(a ...interface{}) {
+	d.l.LogWarnLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogWarnF(format string, a ...interface{}) {
+	d.l.LogWarnF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogJSON(content []byte) {
+	d.l.LogJSON(content)
+
+	d.writeToFile(string(content))
+}
+
+func (d *TeeLogger) Write(content []byte) (int, error) {
+	ln, err := d.l.Write(content)
+	if err != nil {
+		d.l.LogDebugF("Cannot write to log: %v", err)
+	}
+
+	d.writeToFile(string(content))
+
+	return ln, err
+}
+
+func (d *TeeLogger) writeToFile(content string) {
+	if d.closed {
+		return
+	}
+
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
+	if _, err := d.buf.Write([]byte(content)); err != nil {
+		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
+	}
+
 }

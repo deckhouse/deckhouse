@@ -172,6 +172,9 @@ func (s *StateCache) LoadStruct(name string, v interface{}) error {
 }
 
 func (s *StateCache) GetPath(name string) string {
+	if s == nil {
+		return ""
+	}
 	return filepath.Join(s.dir, name)
 }
 
