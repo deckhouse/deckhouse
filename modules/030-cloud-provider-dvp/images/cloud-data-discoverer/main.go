@@ -35,7 +35,10 @@ func main() {
 		logger := app.InitLogger()
 		client := app.InitClient(logger)
 		dynamicClient := app.InitDynamicClient(logger)
-		discoverer := NewDiscoverer(logger)
+		discoverer, err := NewDiscoverer(logger)
+		if err != nil {
+			return err
+		}
 
 		r := cloud_data.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client, dynamicClient)
 		r.Start()

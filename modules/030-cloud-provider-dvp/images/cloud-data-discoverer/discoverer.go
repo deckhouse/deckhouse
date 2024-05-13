@@ -25,20 +25,50 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
+var storageProfileGVR = schema.GroupVersionResource{
+	Group:    "internal.virtualization.deckhouse.io",
+	Version:  "v1beta1",
+	Resource: "dvpinternalstorageprofiles",
+}
+
 type Discoverer struct {
-	logger *log.Entry
-	client kubernetes.Interface
+	logger        *log.Entry
+	client        kubernetes.Interface
+	dynamicClient dynamic.Interface
 }
 
 type Config struct {
 	KubeconfigDataBase64 string `json:"kubeconfigDataBase64"`
 	Namespace            string `json:"namespace"`
+}
+
+type StorageProfile struct {
+	Status struct {
+		ClaimPropertySets []struct {
+			AccessModes []string `json:"accessModes"`
+			VolumeMode  string   `json:"volumeMode"`
+		} `json:"claimPropertySets"`
+		StorageClass string `json:"storageClass"`
+	} `json:"status"`
+}
+
+func isRWX(am []string) bool {
+	var RWX bool
+	for _, mode := range am {
+		if mode == "ReadWriteMany" {
+			RWX = true
+		}
+	}
+	return RWX
 }
 
 func parseEnvToConfig() (*Config, error) {
@@ -57,45 +87,44 @@ func parseEnvToConfig() (*Config, error) {
 	return c, nil
 }
 
-// Client Creates kubeclient
-func getClient(KubeconfigDataBase64 string) (*kubernetes.Clientset, error) {
-	kubeconfigData, err := base64.StdEncoding.DecodeString(KubeconfigDataBase64)
+func NewDiscoverer(logger *log.Entry) (*Discoverer, error) {
+	config, err := parseEnvToConfig()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get opts from env: %v", err)
+	}
+
+	kubeconfigData, err := base64.StdEncoding.DecodeString(config.KubeconfigDataBase64)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode kubeconfig data: %v", err.Error())
 	}
 
-	config, err := clientcmd.NewClientConfigFromBytes(kubeconfigData)
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfigData)
 	if err != nil {
 		return nil, fmt.Errorf("building kube client config: %v", err.Error())
 	}
 
-	restConfig, err := config.ClientConfig()
+	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("building rest config: %v", err.Error())
 	}
 
+	// client for storage classes
 	client, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("building kubernetes client: %v", err.Error())
 	}
-	return client, err
-}
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
-	config, err := parseEnvToConfig()
+	// client for dvpinternal storage profiles
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
-	}
-
-	client, err := getClient(config.KubeconfigDataBase64)
-	if err != nil {
-		logger.Fatalf("Failed to create kubernetes client: %v", err)
+		return nil, fmt.Errorf("building dynamic client: %v", err.Error())
 	}
 
 	return &Discoverer{
-		logger: logger,
-		client: client,
-	}
+		logger:        logger,
+		client:        client,
+		dynamicClient: dynamicClient,
+	}, nil
 }
 
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
@@ -107,21 +136,39 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		}
 	}
 
-	storageClasses := make([]v1alpha1.DVPStorageClass, 0)
-	scList, err := d.client.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{})
+	storageProfiles, err := d.dynamicClient.Resource(storageProfileGVR).Namespace("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list storage classes: %v", err)
+		return nil, err
 	}
-	for _, sc := range scList.Items {
-		scdata := &v1alpha1.DVPStorageClass{}
-		scdata.Name = sc.GetName()
 
-		scAnnotations := sc.GetAnnotations()
-		if scAnnotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-			scdata.IsDefault = true
+	storageClasses := make([]v1alpha1.DVPStorageClass, 0)
+
+	for _, spRaw := range storageProfiles.Items {
+		var sp StorageProfile
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(spRaw.UnstructuredContent(), &sp)
+
+		if err != nil {
+			d.logger.Errorf("failed to unmarshal storage profile: %v", err)
+			continue
 		}
 
-		storageClasses = append(storageClasses, *scdata)
+		for _, ClaimPropertySet := range sp.Status.ClaimPropertySets {
+			if !(ClaimPropertySet.VolumeMode == "Block" && isRWX(ClaimPropertySet.AccessModes)) {
+				continue
+			}
+			sc, err := d.client.StorageV1().StorageClasses().Get(context.Background(), sp.Status.StorageClass, metav1.GetOptions{})
+			if err != nil {
+				d.logger.Errorf("failed to get storage class: %v", err)
+				continue
+			}
+			scData := &v1alpha1.DVPStorageClass{}
+			scData.Name = sc.GetName()
+			scAnnotations := sc.GetAnnotations()
+			if scAnnotations["storageclass.kubernetes.io/is-default-class"] == "true" {
+				scData.IsDefault = true
+			}
+			storageClasses = append(storageClasses, *scData)
+		}
 	}
 
 	discoveryData.StorageClasses = storageClasses
