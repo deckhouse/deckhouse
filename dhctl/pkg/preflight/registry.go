@@ -233,7 +233,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	}
 
 	if authData == "" {
-		return fmt.Errorf("%w, credentials are not specified", ErrAuthFailed)
+		return fmt.Errorf("%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag", ErrAuthFailed)
 	}
 
 	req, err := prepareAuthRequest(ctx, pc.metaConfig, authData)
