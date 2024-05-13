@@ -145,7 +145,7 @@ spec:
         {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
       token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
     {{- end }}
-    registryMode: {{ $.Values.nodeManager.internal.registryMode | toYaml }}
+    registryMode: {{ $.Values.global.modulesImages.registry.registryMode | toYaml }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}
     kubernetesCA: |
       {{- $.Values.nodeManager.internal.kubernetesCA | nindent 6 }}
