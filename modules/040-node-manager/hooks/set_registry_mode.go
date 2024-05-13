@@ -28,7 +28,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/system-registry",
+	Queue: "/modules/node-manager/set_registry_mode",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "deckhouse-registry",
