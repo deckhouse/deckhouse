@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for rendering a Deckhouse module release documentation.
+            Defines the rendering configuration of the Deckhouse module documentation.
 
             **Deckhouse creates ModuleDocumentation resources by itself.**
           required:
@@ -42,7 +42,7 @@ spec:
                   description: Module version checksum.
                 path:
                   type: string
-                  description: Path to a module release.
+                  description: Path to the module version.
             status:
               type: object
               properties:

@@ -6,7 +6,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяет конфигурацию для рендеринга документации модуля Deckhouse..
+            Определяет конфигурацию рендеринга документации модуля Deckhouse.
 
             **Ресурсы ModuleDocumentation создает Deckhouse.**
           properties:
@@ -15,7 +15,7 @@ spec:
                 version:
                   description: Версия модуля.
                 checksum:
-                  description: Чексумма версии модуля.
+                  description: Контрольная сумма версии модуля.
                 path:
                   description: Путь к версии модуля.
             status:
