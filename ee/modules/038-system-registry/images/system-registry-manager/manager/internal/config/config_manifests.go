@@ -17,29 +17,28 @@ const (
 )
 
 var (
-	TmpWorkspaceDir = filepath.Join(os.TempDir(), "system-registry-manager/workspace")
-
+	TmpWorkspaceDir                       = filepath.Join(os.TempDir(), "system-registry-manager/workspace")
 	TmpWorkspaceCertsDir                  = filepath.Join(TmpWorkspaceDir, "pki")
 	TmpWorkspaceManifestsDir              = filepath.Join(TmpWorkspaceDir, "manifests")
-	TmpWorkspaceStaticPodsDir             = filepath.Join(TmpWorkspaceManifestsDir, "static-pods")
-	TmpWorkspaceSeaweedManifestsDir       = filepath.Join(TmpWorkspaceManifestsDir, "seaweedfs")
-	TmpWorkspaceDockerAuthManifestsDir    = filepath.Join(TmpWorkspaceManifestsDir, "docker-auth")
-	TmpWorkspaceDockerDistribManifestsDir = filepath.Join(TmpWorkspaceManifestsDir, "distribution")
+	TmpWorkspaceStaticPodsDir             = filepath.Join(TmpWorkspaceManifestsDir, "static_pods")
+	TmpWorkspaceSeaweedManifestsDir       = filepath.Join(TmpWorkspaceManifestsDir, "seaweedfs_config")
+	TmpWorkspaceDockerAuthManifestsDir    = filepath.Join(TmpWorkspaceManifestsDir, "auth_config")
+	TmpWorkspaceDockerDistribManifestsDir = filepath.Join(TmpWorkspaceManifestsDir, "distribution_config")
 
 	InputCertsDir                  = "/pki"
 	InputManifestsDir              = "/manifests"
-	InputStaticPodsDir             = filepath.Join(InputManifestsDir, "static-pods")
-	InputSeaweedManifestsDir       = filepath.Join(InputManifestsDir, "seaweedfs")
-	InputDockerAuthManifestsDir    = filepath.Join(InputManifestsDir, "docker-auth")
-	InputDockerDistribManifestsDir = filepath.Join(InputManifestsDir, "distribution")
+	InputStaticPodsDir             = filepath.Join(InputManifestsDir, "static_pods")
+	InputSeaweedManifestsDir       = filepath.Join(InputManifestsDir, "seaweedfs_config")
+	InputDockerAuthManifestsDir    = filepath.Join(InputManifestsDir, "auth_config")
+	InputDockerDistribManifestsDir = filepath.Join(InputManifestsDir, "distribution_config")
 
-	DestionationDir              = "/etc/kubernetes"
-	DestinationSystemRegistryDir = filepath.Join(DestionationDir, "system-registry")
-	DestionationDirStaticPodsDir = filepath.Join(DestionationDir, "manifests")
-
-	DestionationSeaweedManifestsDir       = filepath.Join(DestinationSystemRegistryDir, "seaweedfs")
-	DestionationDockerAuthManifestsDir    = filepath.Join(DestinationSystemRegistryDir, "docker-auth")
-	DestionationDockerDistribManifestsDir = filepath.Join(DestinationSystemRegistryDir, "distribution")
+	DestionationDir                       = "/etc/kubernetes"
+	DestinationSystemRegistryDir          = filepath.Join(DestionationDir, "system-registry")
+	DestinationCertsDir                   = filepath.Join(DestinationSystemRegistryDir, "pki")
+	DestionationDirStaticPodsDir          = filepath.Join(DestionationDir, "manifests")
+	DestionationSeaweedManifestsDir       = filepath.Join(DestinationSystemRegistryDir, "seaweedfs_config")
+	DestionationDockerAuthManifestsDir    = filepath.Join(DestinationSystemRegistryDir, "auth_config")
+	DestionationDockerDistribManifestsDir = filepath.Join(DestinationSystemRegistryDir, "distribution_config")
 )
 
 type ManifestSpec struct {
@@ -109,11 +108,11 @@ func NewManifestsSpec() *ManifestsSpec {
 			CACert: baseCertificates.EtcdCACrt,
 			Key: CertificateSpec{
 				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.key"),
-				DestPath:        filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.key"),
+				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.key"),
 			},
 			Cert: CertificateSpec{
 				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.crt"),
-				DestPath:        filepath.Join(DestionationSeaweedManifestsDir, "seaweedfs-etcd-client.crt"),
+				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.crt"),
 			},
 		},
 		DockerAuthTokenCert: GeneratedCertificateSpec{
@@ -121,11 +120,11 @@ func NewManifestsSpec() *ManifestsSpec {
 			CACert: baseCertificates.EtcdCACrt,
 			Key: CertificateSpec{
 				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "token.key"),
-				DestPath:        filepath.Join(DestionationDockerAuthManifestsDir, "token.key"),
+				DestPath:        filepath.Join(DestinationCertsDir, "token.key"),
 			},
 			Cert: CertificateSpec{
 				TmpGeneratePath: filepath.Join(DestionationSeaweedManifestsDir, "token.crt"),
-				DestPath:        filepath.Join(DestionationDockerAuthManifestsDir, "token.crt"),
+				DestPath:        filepath.Join(DestinationCertsDir, "token.crt"),
 			},
 		},
 	}

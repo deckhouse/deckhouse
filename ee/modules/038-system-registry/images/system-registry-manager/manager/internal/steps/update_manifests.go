@@ -13,24 +13,24 @@ import (
 	"system-registry-manager/pkg"
 )
 
-func UpdateManifests() error {
+func UpdateManifests(shouldUpdateBy *ShouldUpdateBy) error {
 	log.Info("Starting UpdateManifests")
 
-	if err := copyCertsToDets(); err != nil {
+	if err := copyCertsToDets(shouldUpdateBy); err != nil {
 		return err
 	}
-	if err := copyManifestsToDets(); err != nil {
+	if err := copyManifestsToDets(shouldUpdateBy); err != nil {
 		return err
 	}
 	log.Info("UpdateManifests completed")
 	return nil
 }
 
-func copyCertsToDets() error {
+func copyCertsToDets(shouldUpdateBy *ShouldUpdateBy) error {
 	cfg := config.GetConfig()
 	copyFilesCerts := []FileMV{}
 
-	if cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts {
+	if shouldUpdateBy.NeedChangeSeaweedfsCerts {
 		copyFilesCerts = append(copyFilesCerts,
 			[]FileMV{
 				{
@@ -45,7 +45,7 @@ func copyCertsToDets() error {
 		)
 	}
 
-	if cfg.ShouldUpdateBy.NeedChangeDockerAuthTokenCerts {
+	if shouldUpdateBy.NeedChangeDockerAuthTokenCerts {
 		copyFilesCerts = append(copyFilesCerts,
 			[]FileMV{
 				{
@@ -69,10 +69,10 @@ func copyCertsToDets() error {
 	return nil
 }
 
-func copyManifestsToDets() error {
+func copyManifestsToDets(shouldUpdateBy *ShouldUpdateBy) error {
 	cfg := config.GetConfig()
 
-	if !(cfg.ShouldUpdateBy.NeedChangeFileByCheckSum || cfg.ShouldUpdateBy.NeedChangeFileByExist) {
+	if !(shouldUpdateBy.NeedChangeFileByCheckSum || shouldUpdateBy.NeedChangeFileByExist) {
 		return nil
 	}
 

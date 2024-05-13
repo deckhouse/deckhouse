@@ -1,26 +1,25 @@
 {{- define "template-files-values"  }}
 files:
  - templateName: static-pod-system-registry.yaml
-   filePath: /manifests/static-pods/system-registry.yaml
+   filePath: /manifests/static_pods/system-registry.yaml
  - templateName: docker-auth-config.yaml
-   filePath: /manifests/docker-auth/config.yaml
+   filePath: /manifests/auth_config/config.yaml
  - templateName: distribution-config.yaml
-   filePath: /manifests/distribution/config.yaml
+   filePath: /manifests/distribution_config/config.yaml
  - templateName: seaweedfs-filer.toml
-   filePath: /manifests/seaweedfs/filer.toml
+   filePath: /manifests/seaweedfs_config/filer.toml
  - templateName: seaweedfs-master.toml
-   filePath: /manifests/seaweedfs/master.toml
+   filePath: /manifests/seaweedfs_config/master.toml
 {{- end }}
 
 {{- define "docker-auth-config.yaml" }}
 server:
   addr: "${discovered_node_ip}:5051"
-  #addr: "0.0.0.0:5051"
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "/config/token.crt"
-  key: "/config/token.key"
+  certificate: "/system_registry_pki/token.crt"
+  key: "/system_registry_pki/token.key"
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
   "pusher":
@@ -45,9 +44,9 @@ etcd:
   enabled: true
   servers: "{{ $.Values.systemRegistry.internal.etcd.addresses | join "," }}"
   key_prefix: "seaweedfs_meta."
-  tls_ca_file: "/pki/etcd/ca.crt"
-  tls_client_crt_file: "/pki/apiserver-etcd-client.crt"
-  tls_client_key_file: "/pki/apiserver-etcd-client.key"
+  tls_ca_file: "/kubernetes_pki/etcd/ca.crt"
+  tls_client_crt_file: "/system_registry_pki/seaweedfs-etcd-client.crt"
+  tls_client_key_file: "/system_registry_pki/seaweedfs-etcd-client.key"
 {{- end }}
 
 
@@ -105,7 +104,7 @@ auth:
     realm: http://${discovered_node_ip}:5051/auth
     service: Docker registry
     issuer: Registry server
-    rootcertbundle: /config/token.crt
+    rootcertbundle: /system_registry_pki/token.crt
     autoredirect: false
 {{- end }}
 
@@ -130,30 +129,32 @@ spec:
       - serve
       - /config/config.yaml
     volumeMounts:
-      - mountPath: /config/
+      - mountPath: /config
         name: distribution-config-volume
-      - mountPath: /config/token.crt
-        name: distribution-auth-token-crt-file
+      - mountPath: /system_registry_pki
+        name: system-registry-pki-volume
   - name: auth
     image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
     imagePullPolicy: IfNotPresent
     args:
       - -logtostderr
-      - /config/auth_config.yaml
+      - /config/config.yaml
     volumeMounts:
-      - mountPath: /config/
+      - mountPath: /config
         name: auth-config-volume
+      - mountPath: /system_registry_pki
+        name: system-registry-pki-volume
   - name: seaweedfs
     image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
     imagePullPolicy: IfNotPresent
     args:
-      - -config_dir="/etc/seaweedfs"
+      - -config_dir="/config"
       - -logtostderr=true
       - -v=0
       - server
       - -filer
       - -s3
-      - -dir=/seaweedfs_data
+      - -dir=/data
       - -volume.max=0
       - -master.volumeSizeLimitMB=1024
       - -metricsPort=9324
@@ -170,38 +171,43 @@ spec:
       - name: GOMEMLIMIT
         value: "500MiB"
     volumeMounts:
-      - mountPath: /seaweedfs_data
+      - mountPath: /data
         name: seaweedfs-data-volume
-      - mountPath: /etc/seaweedfs
+      - mountPath: /config
         name: seaweedfs-config-volume
-      - mountPath: /pki
+      - mountPath: /kubernetes_pki
         name: kubernetes-pki-volume
+      - mountPath: /system_registry_pki
+        name: system-registry-pki-volume
   priorityClassName: system-node-critical
   volumes:
+  # PKI
   - name: kubernetes-pki-volume
     hostPath:
-      path: /etc/kubernetes/pki/
+      path: /etc/kubernetes/pki
       type: Directory
+  - name: system-registry-pki-volume
+    hostPath:
+      path: /etc/kubernetes/system-registry/pki
+      type: Directory
+  # Configs
   - name: auth-config-volume
     hostPath:
-      path: /etc/kubernetes/system-registry/auth_config/
+      path: /etc/kubernetes/system-registry/auth_config
       type: DirectoryOrCreate
-  - name: distribution-auth-token-crt-file
-    hostPath:
-      path: /etc/kubernetes/system-registry/auth_config/token.crt
-      type: File
   - name: seaweedfs-config-volume
     hostPath:
-      path: /etc/kubernetes/system-registry/seaweedfs_config/
+      path: /etc/kubernetes/system-registry/seaweedfs_config
       type: DirectoryOrCreate
   - name: distribution-config-volume
     hostPath:
-      path: /etc/kubernetes/system-registry/distribution_config/
+      path: /etc/kubernetes/system-registry/distribution_config
       type: DirectoryOrCreate
+  # Data
   - name: seaweedfs-data-volume
     hostPath:
-      path: /opt/deckhouse/system-registry/seaweedfs_data/
+      path: /opt/deckhouse/system-registry/seaweedfs_data
       type: DirectoryOrCreate
-  - name: tmp
-    emptyDir: {}
+  # - name: tmp
+  #   emptyDir: {}
 {{- end }}
