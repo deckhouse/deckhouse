@@ -12,26 +12,26 @@ import (
 	"system-registry-manager/pkg"
 )
 
-func CheckDestFiles() error {
+func CheckDestFiles(shouldUpdateBy *ShouldUpdateBy) error {
 	log.Info("Checking destination files...")
 
-	if err := checkDestFileCheckSumAndExist(); err != nil {
+	if err := checkDestFileCheckSumAndExist(shouldUpdateBy); err != nil {
 		log.Errorf("Error checking destination files: %v", err)
 		return err
 	}
-	validateSeaweedEtcdClientCert()
-	validateDockerAuthTokenCert()
+	validateSeaweedEtcdClientCert(shouldUpdateBy)
+	validateDockerAuthTokenCert(shouldUpdateBy)
 
 	log.Info("Destination files check completed.")
 	return nil
 }
 
-func checkDestFileCheckSumAndExist() error {
+func checkDestFileCheckSumAndExist(shouldUpdateBy *ShouldUpdateBy) error {
 	cfg := config.GetConfig()
 
 	for _, manifest := range cfg.Manifests {
 		if !pkg.IsPathExists(manifest.DestPath) {
-			cfg.ShouldUpdateBy.NeedChangeFileByExist = true
+			shouldUpdateBy.NeedChangeFileByExist = true
 			continue
 		}
 		isSumEq, err := pkg.CompareChecksum(manifest.TmpPath, manifest.DestPath)
@@ -39,34 +39,34 @@ func checkDestFileCheckSumAndExist() error {
 			return fmt.Errorf("error comparing checksums for files '%s' and '%s': %v", manifest.TmpPath, manifest.DestPath, err)
 		}
 		if !isSumEq {
-			cfg.ShouldUpdateBy.NeedChangeFileByExist = true
+			shouldUpdateBy.NeedChangeFileByExist = true
 		}
 	}
 	return nil
 }
 
-func validateSeaweedEtcdClientCert() {
+func validateSeaweedEtcdClientCert(shouldUpdateBy *ShouldUpdateBy) {
 	cfg := config.GetConfig()
 
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.SeaweedEtcdClientCert.Cert.DestPath) {
-		cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
 		return
 	}
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.SeaweedEtcdClientCert.Key.DestPath) {
-		cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
 		return
 	}
 }
 
-func validateDockerAuthTokenCert() {
+func validateDockerAuthTokenCert(shouldUpdateBy *ShouldUpdateBy) {
 	cfg := config.GetConfig()
 
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.DestPath) {
-		cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
 		return
 	}
 	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Key.DestPath) {
-		cfg.ShouldUpdateBy.NeedChangeSeaweedfsCerts = true
+		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
 		return
 	}
 }
