@@ -22,13 +22,12 @@ import (
 	"io"
 	"os"
 
-	"k8s.io/klog"
-
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
+	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -60,6 +59,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		defaultLogger = NewSimpleLogger(opts)
 	case "json":
 		defaultLogger = NewJSONLogger(opts)
+	case "silent":
+		defaultLogger = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
@@ -144,6 +145,7 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
+			"import":    {"📦 ~ Import: %s", ImportOptions},
 			"default":   {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,

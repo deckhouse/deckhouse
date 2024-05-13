@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -40,13 +41,15 @@ type Destroyer interface {
 type Params struct {
 	SSHClient              *ssh.Client
 	StateCache             dhctlstate.Cache
-	OnPhaseFunc            phases.OnPhaseFunc
-	PhasedExecutionContext *phases.PhasedExecutionContext
+	OnPhaseFunc            phases.DefaultOnPhaseFunc
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	SkipResources bool
 
 	CommanderMode bool
 	*commander.CommanderModeParams
+
+	TerraformContext *tf.TerraformContext
 }
 
 type ClusterDestroyer struct {
@@ -61,20 +64,20 @@ type ClusterDestroyer struct {
 
 	staticDestroyer *StaticMastersDestroyer
 
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
-	var pec *phases.PhasedExecutionContext
+	var pec phases.DefaultPhasedExecutionContext
 	if params.PhasedExecutionContext != nil {
 		pec = params.PhasedExecutionContext
 	} else {
-		pec = phases.NewPhasedExecutionContext(params.OnPhaseFunc)
+		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
 	}
 
-	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state)
+	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader terraform.StateLoader
 	if params.CommanderMode {
@@ -87,7 +90,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		terraStateLoader = terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	}
 
-	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
 	staticDestroyer := NewStaticMastersDestroyer(params.SSHClient)
 
@@ -141,7 +144,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
 			return err
 		}
-		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache); err != nil {
+		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
 			return err
 		}
 	}

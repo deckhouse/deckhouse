@@ -17,311 +17,528 @@ package config
 import (
 	"testing"
 
+	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-func TestValidateClusterSettingsFormat(t *testing.T) {
-	once.Do(func() {
-		store = newSchemaStore([]string{"./../../../candi/openapi"})
-	})
+func TestValidateResources(t *testing.T) {
+	t.Parallel()
 
-	t.Run("ok", func(t *testing.T) {
-		t.Run("cluster configuration", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigFormat, validateOpts)
-			require.NoError(t, err)
-		})
-		t.Run("resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(resourceFormat, validateOpts)
-			require.NoError(t, err)
-		})
-		t.Run("cluster configuration with resource", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(clusterConfigWithResourcesFormat, validateOpts)
-			require.NoError(t, err)
-		})
-	})
+	tests := map[string]struct {
+		config      string
+		errContains string
+	}{
+		"ok": {
+			config: `
+---
+apiVersion: vendor.k8s.io/v1
+kind: SomeKind
+metadata:
+  name: ok
+---
+apiVersion: vendor.k8s.io/v2
+kind: AnotherKind
+metadata:
+  name: ok
+---`,
+		},
+		"empty kind": {
+			config: `
+apiVersion: vendor.k8s.io/v1
+metadata:
+  name: empty kind`,
+			errContains: `InvalidYAML: [0]: unmarshal: Object 'Kind' is missing in '{"apiVersion":"vendor.k8s.io/v1","metadata":{"name":"empty kind"}}'`,
+		},
+		"empty version": {
+			config: `
+kind: SomeKind
+metadata:
+  name: empty version`,
+			errContains: `ValidationFailed: [0] "empty version": .apiVersion is required`,
+		},
+		"crd": {
+			config: `
+apiVersion: vendor.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: crd`,
+			errContains: `ValidationFailed: [0] vendor.k8s.io/v1, Kind=CustomResourceDefinition "crd": got unacceptable resource kind: CustomResourceDefinition`,
+		},
+	}
 
-	t.Run("not ok", func(t *testing.T) {
-		t.Run("unexpected field", func(t *testing.T) {
-			err := ValidateClusterSettingsFormat(unknownFieldFormat, validateOpts)
-			require.Error(t, err)
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateResources(tt.config, validateOpts...)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
 		})
-	})
+	}
 }
 
-func TestValidateClusterSettingsChanges(t *testing.T) {
-	err := loadTestSchemaStore()
-	require.NoError(t, err)
+func TestValidateInitConfiguration(t *testing.T) {
+	t.Parallel()
 
-	t.Run("ok", func(t *testing.T) {
-		t.Run("cluster configuration", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, newSettings, validateOpts)
-			require.NoError(t, err)
-		})
+	const schemasDir = "./../../../candi/openapi"
+	newStore := newSchemaStore([]string{schemasDir})
+	newStore.moduleConfigsCache["deckhouse"] = &spec.Schema{}
+	newStore.modulesCache["deckhouse"] = struct{}{}
 
-		t.Run("base infra phase", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.BaseInfraPhase, oldSettings, unsafeNewSettings, validateOpts)
-			require.NoError(t, err)
-		})
-
-		t.Run("non-config resources without changes", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, oldResourceSettings, validateOpts)
-			require.NoError(t, err)
-		})
-
-		t.Run("non-config resources with changes", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldResourceSettings, newResourceSettings, validateOpts)
-			require.NoError(t, err)
-		})
-	})
-
-	t.Run("not ok", func(t *testing.T) {
-		t.Run("unsafe field changed", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, unsafeNewSettings, validateOpts)
-			require.ErrorIs(t, err, ErrUnsafeFieldChanged)
-		})
-
-		t.Run("without expected config", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, oldResourceSettings, validateOpts)
-			require.ErrorIs(t, err, ErrConfigAmountChanged)
-		})
-
-		t.Run("invalid document format", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(phases.FinalizationPhase, oldSettings, invalidSchemaSettings, validateOpts)
-			require.Error(t, err)
-		})
-	})
-}
-
-func TestValidateRulesClusterSettingsChanges(t *testing.T) {
-	err := loadTestRulesSchemaStore()
-	require.NoError(t, err)
-
-	t.Run("ok", func(t *testing.T) {
-		t.Run("x-unsafe-rules validation", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(
-				phases.FinalizationPhase,
-				validateRuleSettingsOK,
-				validateRuleSettingsOK1,
-				validateOpts,
-			)
-			require.NoError(t, err)
-		})
-	})
-
-	t.Run("not ok", func(t *testing.T) {
-		t.Run("x-unsafe-rules updateReplicas validation failed, 0 replicas", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(
-				phases.FinalizationPhase,
-				validateRuleSettingsOK1,
-				validateRuleSettingsUpdateReplicasInvalid1,
-				validateOpts,
-			)
-			require.ErrorIs(t, err, ErrValidationRuleFailed)
-		})
-
-		t.Run("x-unsafe-rules updateReplicas validation failed, less than 2 replicas", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(
-				phases.FinalizationPhase,
-				validateRuleSettingsOK1,
-				validateRuleSettingsUpdateReplicasInvalid2,
-				validateOpts,
-			)
-			require.ErrorIs(t, err, ErrValidationRuleFailed)
-		})
-
-		t.Run("x-unsafe-rules deleteZones validation failed", func(t *testing.T) {
-			err = ValidateClusterSettingsChanges(
-				phases.FinalizationPhase,
-				validateRuleSettingsOK,
-				validateRuleSettingsDeleteZonesInvalid,
-				validateOpts,
-			)
-			require.ErrorIs(t, err, ErrValidationRuleFailed)
-		})
-	})
-}
-
-var validateOpts = ValidateOptions{CommanderMode: true}
-
-var (
-	clusterConfigFormat = `---
+	tests := map[string]struct {
+		config      string
+		errContains string
+	}{
+		"ok": {
+			config: `
+---
+---
+# https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: Yandex
-  prefix: "cmdr-test-03051973"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
-clusterDomain: "cluster.local"`
-	resourceFormat = `---
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+  releaseChannel: Alpha
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: deckhouse-admin
+  name: deckhouse
 spec:
-  enabled: true`
-	clusterConfigWithResourcesFormat = clusterConfigFormat + "\n" + resourceFormat
-	unknownFieldFormat               = `---
+  enabled: true
+  settings:
+    bundle: Default
+    logLevel: Info
+    releaseChannel: Alpha
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+---
+`,
+		},
+		"no init config": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true`,
+			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
+		},
+		"multiple init configs": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+  releaseChannel: Alpha
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+  releaseChannel: Stable`,
+			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
+		},
+		"extra kinds": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+  releaseChannel: Alpha
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+metadata:
+  name: deckhouse
+`,
+			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+	* .metadata is a forbidden property
+	* .clusterType is required
+	* .kubernetesVersion is required
+	* .podSubnetCIDR is required
+	* .serviceSubnetCIDR is required
+
+; unknown kind, expected one of ("InitConfiguration", "ModuleConfig")`,
+		},
+	}
+
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateInitConfiguration(tt.config, newStore, validateOpts...)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestValidateClusterConfiguration(t *testing.T) {
+	t.Parallel()
+
+	const schemasDir = "./../../../candi/openapi"
+	newStore := newSchemaStore([]string{schemasDir})
+
+	tests := map[string]struct {
+		config      string
+		expected    ClusterConfig
+		errContains string
+	}{
+		"ok, Static": {
+			config: `
+# https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: Yandex
-  prefix: "cmdr-test-03051973"
+clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
-unexpected: "fail"`
-)
-
-var (
-	oldSettings = `---
+`,
+			expected: ClusterConfig{
+				ClusterType: "Static",
+			},
+		},
+		"ok, Cloud": {
+			config: `
+# https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-clusterType: Static
-clusterDomain: old-domain
+clusterType: Cloud
 cloud:
-  prefix: safe`
-	newSettings = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-clusterDomain: new-domain
-cloud:
-  prefix: safe`
-	unsafeNewSettings = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-cloud:
-  prefix: unsafe`
-	invalidSchemaSettings = `---
-apiVersion: deckhouse.io/v1
-cloud:
-prefix: bar`
-	oldResourceSettings = `---
+  provider: Yandex
+  # PARAMETER
+  prefix: cmdr-test
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+clusterDomain: "cluster.local"
+`,
+			expected: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "Yandex",
+				}),
+			},
+		},
+		"no cluster config": {
+			config: `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: foo
+  name: global
 spec:
-  enabled: true`
-	newResourceSettings = `---
+  enabled: true`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=ModuleConfig "global": unknown kind, expected "ClusterConfiguration"
+exactly one "ClusterConfiguration" required`,
+		},
+		"extra kinds": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1
+kind: SomeKind
+clusterType: Static
+`,
+			expected: ClusterConfig{
+				ClusterType: "Static",
+			},
+			errContains: `ValidationFailed: [1] deckhouse.io/v1, Kind=SomeKind: schema not found; unknown kind, expected "ClusterConfiguration"`,
+		},
+	}
+
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			clusterConfig, err := ValidateClusterConfiguration(tt.config, newStore, validateOpts...)
+			require.Equal(t, tt.expected, clusterConfig)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
+	t.Parallel()
+
+	const schemasDir = "./../../../candi/cloud-providers"
+	newStore := newSchemaStore([]string{schemasDir})
+
+	tests := map[string]struct {
+		config        string
+		clusterConfig ClusterConfig
+		errContains   string
+	}{
+		"ok": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: 'YjFnYnA2bHVybDBzbXA2Y2kzanMK'
+  folderID: 'b1gsqe7ct9jtss0mlmid'
+  serviceAccountJSON: |
+    {"id": "ajeqlssun75pno7f46t7"}
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    cores: 8
+    memory: 8192
+    # https://cloud.yandex.ru/marketplace/products/yc/ubuntu-22-04-lts
+    imageID: fd8li2lvvfc6bdj4c787
+    externalIPAddresses:
+    - "Auto"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: ssh-key
+`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "Yandex",
+				}),
+			},
+		},
+		"ok, empty for static": {
+			config: ``,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Static",
+			},
+		},
+		"another provider": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: OpenStackClusterConfiguration
+metadata:
+    name: anotherProvider`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "vSphere",
+				}),
+			},
+			errContains: `exactly one "VsphereClusterConfiguration" required`,
+		},
+		"bad provider": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+metadata:
+    name: badProvider`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "badProvider",
+				}),
+			},
+			errContains: `ValidationFailed: unknown cloud provider 'badProvider', check if 'ClusterConfiguration' is valid
+[0] deckhouse.io/v1, Kind=YandexClusterConfiguration "badProvider": "YandexClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+	* .metadata is a forbidden property
+	* .masterNodeGroup is required
+	* .nodeNetworkCIDR is required
+	* .sshPublicKey is required
+	* .provider is required`,
+		},
+		"empty provider": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: SuperOpenStackClusterConfiguration
+metadata:
+    name: emptyProvider`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "",
+				}),
+			},
+			errContains: `ValidationFailed: unknown cloud provider '', check if 'ClusterConfiguration' is valid
+[0] deckhouse.io/v1, Kind=SuperOpenStackClusterConfiguration "emptyProvider": schema not found`,
+		},
+		"no config": {
+			config: `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: bar
+  name: global
 spec:
-  enabled: true`
-	validateRuleSettingsOK = `---
+  enabled: true`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "vSphere",
+				}),
+			},
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=ModuleConfig "global": unknown kind, expected "VsphereClusterConfiguration"
+exactly one "VsphereClusterConfiguration" required`,
+		},
+		"extra provider": {
+			config: `
 apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-zones: [ru-central1, ru-central2]
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: 'YjFnYnA2bHVybDBzbXA2Y2kzanMK'
+  folderID: 'b1gsqe7ct9jtss0mlmid'
+  serviceAccountJSON: |
+    {"id": "ajeqlssun75pno7f46t7"}
 masterNodeGroup:
-  replicas: 1`
-	validateRuleSettingsOK1 = `---
+  replicas: 1
+  instanceClass:
+    cores: 8
+    memory: 8192
+    # https://cloud.yandex.ru/marketplace/products/yc/ubuntu-22-04-lts
+    imageID: fd8li2lvvfc6bdj4c787
+    externalIPAddresses:
+    - "Auto"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: ssh-key
+---
 apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-zones: [ru-central1, ru-central2, ru-central3]
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: 'YjFnYnA2bHVybDBzbXA2Y2kzanMK'
+  folderID: 'b1gsqe7ct9jtss0mlmid'
+  serviceAccountJSON: |
+    {"id": "ajeqlssun75pno7f46t7"}
 masterNodeGroup:
-  replicas: 3`
-	validateRuleSettingsUpdateReplicasInvalid1 = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-zones: [ru-central1, ru-central2]
-masterNodeGroup:
-  replicas: 0`
-	validateRuleSettingsUpdateReplicasInvalid2 = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-zones: [ru-central1, ru-central2]
-masterNodeGroup:
-  replicas: 1`
-	validateRuleSettingsDeleteZonesInvalid = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-zones: [ru-central2]
-masterNodeGroup:
-  replicas: 1`
-)
+  replicas: 1
+  instanceClass:
+    cores: 8
+    memory: 8192
+    # https://cloud.yandex.ru/marketplace/products/yc/ubuntu-22-04-lts
+    imageID: fd8li2lvvfc6bdj4c787
+    externalIPAddresses:
+    - "Auto"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: ssh-key`,
+			clusterConfig: ClusterConfig{
+				ClusterType: "Cloud",
+				Cloud: struct {
+					Provider string `json:"provider"`
+				}(struct{ Provider string }{
+					Provider: "Yandex",
+				}),
+			},
+			errContains: `ValidationFailed: exactly one "YandexClusterConfiguration" required`,
+		},
+	}
 
-func loadTestSchemaStore() error {
-	once.Do(func() {
-		store = newSchemaStore([]string{"/tmp"})
-	})
-
-	schema := []byte(`
-kind: ClusterConfiguration
-apiVersions:
-- apiVersion: deckhouse.io/v1
-  openAPISpec:
-    type: object
-    additionalProperties: false
-    properties:
-      apiVersion:
-        type: string
-        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
-      kind:
-        type: string
-        enum: [ClusterConfiguration]
-      clusterType:
-        type: string
-        x-unsafe: true
-        enum: [Cloud, Static]
-      clusterDomain:
-        type: string
-      cloud:
-        type: object
-        x-unsafe: true
-        additionalProperties: false
-        properties:
-          prefix:
-            type: string
-            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-`)
-
-	return store.upload(schema)
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateProviderSpecificClusterConfiguration(tt.config, tt.clusterConfig, newStore, validateOpts...)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
 }
 
-func loadTestRulesSchemaStore() error {
-	once.Do(func() {
-		store = newSchemaStore([]string{"/tmp"})
-	})
+func TestValidateStaticClusterConfiguration(t *testing.T) {
+	t.Parallel()
 
-	schema := []byte(`
-kind: ClusterConfiguration
-apiVersions:
-- apiVersion: deckhouse.io/v1
-  openAPISpec:
-    type: object
-    additionalProperties: false
-    x-unsafe-rules: [deleteZones]
-    properties:
-      apiVersion:
-        type: string
-        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
-      kind:
-        type: string
-        enum: [ClusterConfiguration]
-      zones:
-        type: array
-        items:
-          type: string
-        minItems: 1
-        uniqueItems: true
-      masterNodeGroup:
-        type: object
-        additionalProperties: false
-        properties:
-          replicas:
-            type: integer
-            x-unsafe-rules: [updateReplicas]
-`)
+	const schemasDir = "./../../../candi/openapi"
+	newStore := newSchemaStore([]string{schemasDir})
 
-	return store.upload(schema)
+	tests := map[string]struct {
+		config      string
+		errContains string
+	}{
+		"ok": {
+			config: `
+---
+apiVersion: deckhouse.io/v1alpha1
+# type of the configuration section
+kind: StaticClusterConfiguration
+# address space for the cluster's internal network
+internalNetworkCIDRs:
+- 192.168.199.0/24
+---
+`,
+		},
+		"ok, empty": {
+			config: ``,
+		},
+		"empty StaticClusterConfiguration": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration`,
+		},
+		"bad config": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+someKey: someValue`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
+	* .someKey is a forbidden property
+
+`,
+		},
+		"bad internalNetworkCIDRs": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.199.0/24test`,
+			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
+	* internalNetworkCIDRs should match '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+
+`,
+		},
+	}
+
+	for name, tt := range tests {
+		tt := tt
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateStaticClusterConfiguration(tt.config, newStore, validateOpts...)
+			if tt.errContains == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
 }
+
+var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}

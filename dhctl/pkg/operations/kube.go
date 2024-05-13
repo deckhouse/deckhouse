@@ -16,12 +16,13 @@ package operations
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"time"
 )
 
 func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, error) {

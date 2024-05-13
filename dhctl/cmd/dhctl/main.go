@@ -67,6 +67,9 @@ func main() {
 		return
 	}
 
+	commands.DefineServerCommand(kpApp)
+	commands.DefineSingleThreadedServerCommand(kpApp)
+
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
 	{
