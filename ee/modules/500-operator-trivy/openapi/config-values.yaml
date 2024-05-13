@@ -1,5 +1,12 @@
 type: object
 properties:
+  storageClass:
+    type: string
+    x-examples: [ "ceph-ssd", "false" ]
+    description: |
+      The name of the StorageClass to use.
+
+      `false` — forces the `emptyDir` usage. Manually delete the old PVC and restart Pod, after setting the parameter.
   severities:
     type: array
     description: |

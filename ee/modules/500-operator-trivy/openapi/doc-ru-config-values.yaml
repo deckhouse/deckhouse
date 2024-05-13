@@ -1,5 +1,11 @@
 type: object
 properties:
+  storageClass:
+    description: |
+      Имя StorageClass.
+
+      `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
+
   severities:
     description: |
       Фильтрация отчетов уязвимостей по их уровню критичности.
