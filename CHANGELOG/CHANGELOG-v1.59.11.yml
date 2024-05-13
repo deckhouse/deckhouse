@@ -1,0 +1,5 @@
+istio:
+  features:
+    - summary: The `trafficRedirectionSetupMode` module parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8353
+
