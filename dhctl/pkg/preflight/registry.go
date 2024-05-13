@@ -216,7 +216,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	}
 
 	image := pc.installConfig.GetImage(false)
-	log.DebugF("Image: %s", image)
+	log.DebugF("Image: %s\n", image)
 	// skip for CE edition
 	if image == "registry.deckhouse.ru/deckhouse/ce" {
 		log.InfoLn("Checking registry credentials was skipped for CE edition")
@@ -235,6 +235,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	if authData == "" {
 		return fmt.Errorf("%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag", ErrAuthFailed)
 	}
+	log.DebugF("Auth data: %s\n", authData)
 
 	req, err := prepareAuthRequest(ctx, pc.metaConfig, authData)
 	if err != nil {
@@ -251,6 +252,16 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return fmt.Errorf("cannot auth in regestry. %w", err)
 	}
 	defer resp.Body.Close()
+
+	log.DebugF("Status Code: %d", resp.StatusCode)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrAuthFailed
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
+	}
 
 	return nil
 }
