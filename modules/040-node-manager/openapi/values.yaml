@@ -80,10 +80,6 @@ properties:
             x-examples:
             - "mytoken"
             default: ""
-      registryMode:
-        type: string
-        enum: [ Direct, Indirect ]
-        default: Direct
       kubernetesCA:
         type: string
         x-examples:
