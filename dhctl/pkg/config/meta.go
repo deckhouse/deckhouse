@@ -53,7 +53,6 @@ type MetaConfig struct {
 	Images           imagesDigests          `json:"-"`
 	Registry         RegistryData           `json:"-"`
 	UpstreamRegistry RegistryData           `json:"-"`
-	RegistryMode     string                 `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
 	ResourcesYAML    string                 `json:"-"`
@@ -62,11 +61,12 @@ type MetaConfig struct {
 type imagesDigests map[string]map[string]interface{}
 
 type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
+	Address      string `json:"address"`
+	Path         string `json:"path"`
+	Scheme       string `json:"scheme"`
+	CA           string `json:"ca"`
+	DockerCfg    string `json:"dockerCfg"`
+	RegistryMode string `json:"registryMode"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -104,9 +104,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
 		}
 
-		m.RegistryMode = m.DeckhouseConfig.RegistryMode
+		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
-		if m.RegistryMode != "Direct" {
+		if m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryData := RegistryData{
 				Address:   "localhost:5000",
 				Path:      "/sys/deckhouse-oss",
@@ -364,7 +364,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		return nil, err
 	}
 
-	if m.RegistryMode != "Direct" {
+	if m.Registry.RegistryMode != "Direct" {
 		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
 		if err != nil {
 			return nil, err
@@ -457,8 +457,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		if err != nil {
 			return nil, err
 		}
-
-		configForBashibleBundleTemplate["registryMode"] = m.RegistryMode
 		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
 	}
 
@@ -659,11 +657,12 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
+		"address":      r.Address,
+		"path":         r.Path,
+		"scheme":       r.Scheme,
+		"ca":           r.CA,
+		"dockerCfg":    r.DockerCfg,
+		"registryMode": r.RegistryMode,
 	}
 }
 
