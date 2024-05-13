@@ -38,6 +38,7 @@ events {
 {{- range $key, $value := .registry }}
 # registry {{ $key }}: {{ $value }}
 {{- end }}
+
 # registryMode: {{- .registryMode }}
 
 
@@ -54,7 +55,7 @@ stream {
   }
 
 {{- if eq .runType "Normal" }}
-  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+  {{- if and registryMode (ne registryMode "Direct") }}
   upstream system-registry {
     least_conn;
     {{- range $key, $value := .normal.apiserverEndpoints }}
