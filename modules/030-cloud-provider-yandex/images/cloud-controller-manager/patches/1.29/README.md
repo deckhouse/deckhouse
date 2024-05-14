@@ -8,6 +8,6 @@ Upstream [PR](https://github.com/deckhouse/yandex-cloud-controller-manager/pull/
 
 ### 002-internal-lb.patch
 
-Added the ability to create an internal load balancer using the annotation yandex.cloud/load-balancer-type: Internal.
+Added the ability to create an internal load balancer using the annotation yandex.cpi.flant.com/loadbalancer-internal: "".
 
 Upstream [PR](https://github.com/deckhouse/yandex-cloud-controller-manager/pull/61)
