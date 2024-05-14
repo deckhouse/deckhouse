@@ -103,20 +103,19 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 	// If the same and not completed - nothing to do
 	if ActionStatusEqual(&newStatus, &nodeStatus.FromMe) && !nodeStatus.FromMe.Completed {
 		log.Info("Status is the same and not completed, no approve action needed")
-		return nil
-	}
-
-	// Update status
-	node.Annotations[config.AnnotationFromMe], err = newStatus.toString()
-	if err != nil {
-		log.Errorf("Error converting new status to string: %v", err)
-		return err
-	}
-
-	_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
-	if err != nil {
-		log.Errorf("Error updating node status: %v", err)
-		return err
+	} else {
+		// Update status
+		node.Annotations[config.AnnotationFromMe], err = newStatus.toString()
+		if err != nil {
+			log.Errorf("Error converting new status to string: %v", err)
+			return err
+		}
+	
+		_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+		if err != nil {
+			log.Errorf("Error updating node status: %v", err)
+			return err
+		}
 	}
 
 	// Wait for approval
