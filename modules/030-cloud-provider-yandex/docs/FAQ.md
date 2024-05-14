@@ -6,19 +6,8 @@ title: "Cloud provider — Yandex Cloud: FAQ"
 
 Attach one of the following annotations to the service:
 
-1.
-   ```yaml
-   yandex.cpi.flant.com/listener-subnet-id: SubnetID
-   ```
-
-   The annotation links the LoadBalancer with the appropriate Subnet.
-
-2.
-   ```yaml
-   yandex.cpi.flant.com/loadbalancer-internal: ""
-   ```
-
-   LoadBalancer will listen to the first available subnet.
+- `yandex.cpi.flant.com/listener-subnet-id: SubnetID` - the annotation links the LoadBalancer with the appropriate subnet.
+- `yandex.cpi.flant.com/loadbalancer-internal: ""` - LoadBalancer will listen to the first available subnet.
 
 ## How to reserve a public IP address?
 
