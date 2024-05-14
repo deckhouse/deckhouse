@@ -68,9 +68,10 @@ func Start() {
 	for {
 		if err := startManager(); err != nil {
 			log.Errorf("Manager error: %v", err)
-			// TODO
-			time.Sleep(10 * time.Second)
 		}
+		// TODO
+		time.Sleep(10 * time.Second)
+		log.Info("Wait for 10 seconds...")
 	}
 }
 
@@ -104,6 +105,7 @@ func startManager() error {
 		return err
 	}
 	if !manifestsSpec.NeedChange() {
+		log.Info("No changes")
 		return nil
 	}
 

@@ -16,12 +16,11 @@ import (
 func CompareChecksum(lFilePath, rFilePath string) (bool, error) {
 	lSum, err := GetChecksum(lFilePath)
 	if err != nil {
-
-		return false, fmt.Errorf("Error calculating checksum for %s: %v", lFilePath, err)
+		return false, fmt.Errorf("error calculating checksum for %s: %v", lFilePath, err)
 	}
 	rSum, err := GetChecksum(rFilePath)
 	if err != nil {
-		return false, fmt.Errorf("Error calculating checksum for %s: %v", rFilePath, err)
+		return false, fmt.Errorf("error calculating checksum for %s: %v", rFilePath, err)
 	}
 	return lSum == rSum, nil
 }
