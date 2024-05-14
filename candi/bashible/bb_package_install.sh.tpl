@@ -90,7 +90,7 @@ bb-package-fetch-blobs() {
     mkdir -p "${PACKAGE_DIR}"
 
     retries=0
-    while [ "$retries" -lt 3 ]
+    while [ "$retries" -lt 30 ]
     do
       retries=$(( retries+1 ))
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break

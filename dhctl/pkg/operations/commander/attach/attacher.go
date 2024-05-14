@@ -24,10 +24,10 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -163,7 +163,7 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 	err := log.Process("attach", "Prepare cluster attach", func() error {
 		var err error
 
-		kubeClient, err = operations.ConnectToKubernetesAPI(i.Params.SSHClient)
+		kubeClient, err = kubernetes.ConnectToKubernetesAPI(i.Params.SSHClient)
 		if err != nil {
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}

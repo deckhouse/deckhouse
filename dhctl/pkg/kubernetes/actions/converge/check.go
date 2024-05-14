@@ -152,7 +152,7 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 		}
 	}
 
-	pipelineForMaster := nodeGroup.Step == "master-node"
+	pipelineForMaster := nodeGroup.LayoutStep == "master-node"
 	nodeGroupName := nodeGroup.Name
 	if pipelineForMaster {
 		nodeGroupName = MasterNodeGroupName
@@ -167,7 +167,7 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 		AutoApprove:                      true,
 		NodeName:                         nodeName,
 		NodeGroupName:                    nodeGroup.Name,
-		NodeGroupStep:                    nodeGroup.Step,
+		LayoutStep:                       nodeGroup.LayoutStep,
 		NodeIndex:                        nodeIndex,
 		NodeState:                        nodeGroup.State[nodeName],
 		NodeCloudConfig:                  nodeGroup.CloudConfig,
@@ -185,7 +185,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
 	}
 
-	pipelineForMaster := nodeGroup.Step == "master-node"
+	pipelineForMaster := nodeGroup.LayoutStep == "master-node"
 
 	nodeGroupName := nodeGroup.Name
 	var nodeGroupSettingsFromConfig []byte
@@ -207,7 +207,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 
 		NodeName:        nodeName,
 		NodeGroupName:   nodeGroup.Name,
-		NodeGroupStep:   nodeGroup.Step,
+		NodeGroupStep:   nodeGroup.LayoutStep,
 		NodeIndex:       nodeIndex,
 		NodeState:       nodeGroup.State[nodeName],
 		NodeCloudConfig: nodeGroup.CloudConfig,
@@ -301,7 +301,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		nodeGroupState := nodesState[nodeGroupName]
 		replicas := getReplicasByNodeGroupName(metaConfig, nodeGroupName)
-		step := getStepByNodeGroupName(nodeGroupName)
+		layoutStep := getStepByNodeGroupName(nodeGroupName)
 
 		if replicas > len(nodeGroupState.State) {
 			insufficientQuantity := len(nodeGroupState.State)
@@ -334,7 +334,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 
 			nodeGroup := NodeGroupGroupOptions{
 				Name:            nodeGroupName,
-				Step:            step,
+				LayoutStep:      layoutStep,
 				DesiredReplicas: replicas,
 				State:           nodeGroupState.State,
 			}
@@ -371,7 +371,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 
 		nodeGroup := NodeGroupGroupOptions{
 			Name:            nodeGroupName,
-			Step:            step,
+			LayoutStep:      layoutStep,
 			DesiredReplicas: replicas,
 			State:           nodeGroupState.State,
 		}
