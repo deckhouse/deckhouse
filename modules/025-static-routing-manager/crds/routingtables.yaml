@@ -52,9 +52,10 @@ spec:
                 maximum: 4294967295
                 description: |
                   ID of the desired routing table.
+                  
                   If the value is not explicitly specified, it will be generated automatically.
-                  This field cannot be changed after the resource is created.
-                  If necessary, you need to recreate the resource.
+                  
+                  Once a resource is created, you can only change the routing table ID by recreating the resource.
               routes:
                 type: array
                 minItems: 1
