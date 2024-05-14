@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,6 +38,9 @@ var (
 	ErrBadProxyConfig      = errors.New("Bad proxy config")
 	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
 	ErrAuthFailed          = errors.New("authentication failed")
+
+	realmRe   = regexp.MustCompile(`realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"`)
+	serviceRe = regexp.MustCompile(`service="(.*?)"`)
 )
 
 const (
@@ -250,7 +254,18 @@ func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig) 
 	return req, nil
 }
 
-func prepareAuthRequest(ctx context.Context, authURL string, authData string) (*http.Request, error) {
+func prepareAuthRequest(
+	ctx context.Context,
+	authURL string,
+	registryService string,
+	authData string,
+	metaConfig *config.MetaConfig,
+) (*http.Request, error) {
+	authURLValues := url.Values{}
+	authURLValues.Add("service", registryService)
+	authURLValues.Add("scope", fmt.Sprintf("repository:%s:pull", strings.TrimLeft(metaConfig.Registry.Path, "/")))
+
+	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare auth request: %w", err)
@@ -290,25 +305,43 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 	return client, nil
 }
 
-func getAuthURL(ctx context.Context, metaConfig *config.MetaConfig, client *http.Client) (string, error) {
+func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, client *http.Client) (string, string, error) {
 	authURL := ""
+	registryService := ""
 
 	req, err := prepareRegistryRequest(ctx, metaConfig)
 	if err != nil {
-		return authURL, err
+		return authURL, registryService, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return authURL, fmt.Errorf("cannot auth in regestry. %w", err)
+		return authURL, registryService, fmt.Errorf("cannot auth in regestry. %w", err)
 	}
 	defer resp.Body.Close()
 
 	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
 
+	if len(wwwAuthHeader) == 0 {
+		return authURL, registryService, fmt.Errorf("WWW-Authenticate header not found. %w", ErrAuthFailed)
+	}
 	// Bearer realm="https://registry.local:5001/auth",service="Docker registry"
 	log.DebugF("WWW-Authenticate: %s\n", wwwAuthHeader)
-	return authURL, ErrAuthFailed
+
+	// realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"
+	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
+	if len(realmMatches) == 0 {
+		return authURL, registryService, fmt.Errorf("couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w", wwwAuthHeader, ErrAuthFailed)
+	}
+	authURL = realmMatches[1]
+
+	// service="(.*?)"
+	serviceMatches := serviceRe.FindStringSubmatch(wwwAuthHeader)
+	if len(serviceMatches) > 0 {
+		registryService = serviceMatches[1]
+	}
+
+	return authURL, registryService, nil
 }
 
 func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
@@ -317,12 +350,12 @@ func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authD
 		return err
 	}
 
-	authURL, err := getAuthURL(ctx, metaConfig, client)
+	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
 	if err != nil {
 		return err
 	}
 
-	req, err := prepareAuthRequest(ctx, authURL, authData)
+	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, metaConfig)
 	if err != nil {
 		return err
 	}
