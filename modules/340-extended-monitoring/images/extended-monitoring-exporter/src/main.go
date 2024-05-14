@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	kube "github.com/flant/kube-client/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func recordMetrics() {
