@@ -82,7 +82,6 @@ spec:
                   - "network-ssd"
                   - "network-hdd"
                   - "network-ssd-nonreplicated"
-                  - "network-ssd-io-m3"
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gibibytes.
@@ -193,6 +192,8 @@ spec:
                 diskType:
                   description: |
                     Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+
+                    Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
                   x-doc-examples: ["network-hdd"]
                   x-doc-default: "network-hdd"
                   type: string
