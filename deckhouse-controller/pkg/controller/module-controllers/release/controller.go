@@ -32,7 +32,6 @@ import (
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -68,7 +67,7 @@ type moduleReleaseReconciler struct {
 	metricStorage *metric_storage.MetricStorage
 	logger        logger.Logger
 
-	modulesValidator   moduleValidator
+	moduleManager      moduleManager
 	externalModulesDir string
 	symlinksDir        string
 
@@ -93,7 +92,7 @@ func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
-	mv moduleValidator,
+	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
@@ -105,7 +104,7 @@ func NewModuleReleaseController(
 		logger:             lg,
 
 		metricStorage:           metricStorage,
-		modulesValidator:        mv,
+		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
@@ -254,7 +253,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-		err := c.modulesValidator.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		err := c.moduleManager.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -378,7 +377,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.modulesValidator, c.dc)
+	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.moduleManager, c.dc)
 	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI)
 
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
@@ -593,7 +592,7 @@ func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
 			return deckhouseconfig.IsServiceInited(), nil
 		})
 
@@ -956,7 +955,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinition) error {
+func validateModule(def models.DeckhouseModuleDefinition) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -965,10 +964,14 @@ func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinit
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	dm := models.NewDeckhouseModule(def, addonutils.Values{}, validator.GetValuesValidator())
-	err := validator.ValidateModule(dm.GetBasicModule())
+	dm, err := models.NewDeckhouseModule(def, addonutils.Values{}, nil, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("new deckhouse module: %w", err)
+	}
+
+	err = dm.GetBasicModule().Validate()
+	if err != nil {
+		return fmt.Errorf("validate module: %w", err)
 	}
 
 	return nil
@@ -985,9 +988,7 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 	return os.Symlink(moduleRelativePath, symlinkPath)
 }
 
-type moduleValidator interface {
-	ValidateModule(m *addonmodules.BasicModule) error
-	GetValuesValidator() *validation.ValuesValidator
+type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error

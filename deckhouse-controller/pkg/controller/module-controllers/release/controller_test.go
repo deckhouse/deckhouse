@@ -24,7 +24,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -156,7 +155,7 @@ type: Opaque
 		dc:                 dependency.NewDependencyContainer(),
 		logger:             log.New(),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		modulesValidator:   stubModulesValidator{},
+		moduleManager:      stubModulesManager{},
 		delayTimer:         time.NewTimer(3 * time.Second),
 
 		deckhouseEmbeddedPolicy: &v1alpha1.ModuleUpdatePolicySpec{
@@ -253,20 +252,16 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesValidator struct{}
+type stubModulesManager struct{}
 
-func (s stubModulesValidator) ValidateModule(_ *addonmodules.BasicModule) error {
-	return nil
-}
-func (s stubModulesValidator) GetValuesValidator() *validation.ValuesValidator {
-	return validation.NewValuesValidator()
-}
-func (s stubModulesValidator) DisableModuleHooks(_ string) {
+func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 }
-func (s stubModulesValidator) GetModule(_ string) *addonmodules.BasicModule {
+
+func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
 	return nil
 }
-func (s stubModulesValidator) RunModuleWithNewStaticValues(_, _, _ string) error {
+
+func (s stubModulesManager) RunModuleWithNewStaticValues(_, _, _ string) error {
 	return nil
 }

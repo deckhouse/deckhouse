@@ -101,14 +101,6 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		return nil, err
 	}
 
-	if cb != nil && vb != nil {
-		log.Debugf("Add openapi schema for %q module", valuesModuleName)
-		err = dml.mm.GetValuesValidator().SchemaStorage.AddModuleValuesSchemas(valuesModuleName, cb, vb)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
 		log.Debugf("conversions for %q module found", valuesModuleName)
@@ -124,7 +116,10 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	dm := models.NewDeckhouseModule(def, moduleStaticValues, dml.mm.GetValuesValidator())
+	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
+	if err != nil {
+		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	}
 
 	if _, ok := dml.deckhouseModules[def.Name]; ok {
 		return dm, ErrModuleAlreadyExists

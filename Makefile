@@ -131,7 +131,7 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus tests-controller
+.PHONY: tests-modules tests-matrix tests-openapi tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}

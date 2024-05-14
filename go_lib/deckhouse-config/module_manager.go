@@ -18,16 +18,14 @@ package deckhouse_config
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/values/validation"
 )
 
 // ModuleManager interface is a part of addon-operator's ModuleManager interface
 // with methods needed for deckhouse-config package.
 type ModuleManager interface {
 	IsModuleEnabled(modName string) bool
+	GetGlobal() *modules.GlobalModule
 	GetModule(modName string) *modules.BasicModule
 	GetModuleNames() []string
 	GetEnabledModuleNames() []string
-	GetValuesValidator() *validation.ValuesValidator
-	ValidateModule(module *modules.BasicModule) error
 }

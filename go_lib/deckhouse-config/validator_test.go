@@ -17,15 +17,15 @@ limitations under the License.
 package deckhouse_config
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/flant/addon-operator/pkg/module_manager"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
 )
 
 const (
@@ -257,14 +257,18 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			vv := validation.NewValuesValidator()
-			err := mock.AddOpenAPISchemas(vv, "global", "testdata/validator/global")
-			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
+			mmc := &module_manager.ModuleManagerConfig{
+				DirectoryConfig: module_manager.DirectoryConfig{
+					ModulesDir:     "testdata/validator",
+					GlobalHooksDir: "testdata/validator/global",
+				},
+			}
+			mm := module_manager.NewModuleManager(context.Background(), mmc)
 
-			err = mock.AddOpenAPISchemas(vv, "flant-integration", "testdata/validator/flant-integration")
-			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
+			err := mm.Init()
+			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
 
-			v := NewConfigValidator(vv)
+			v := NewConfigValidator(mm)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 

@@ -80,8 +80,7 @@ func ExecuteTestCases(testCases *TestCases) {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Parse openAPI schemas")
-	validator := validation.NewValuesValidator()
-	err = validator.SchemaStorage.AddModuleValuesSchemas(moduleName, configBytes, valuesBytes)
+	schemaStorage, err := validation.NewSchemaStorage(configBytes, valuesBytes)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Check if test cases for config values are present and openapi/config-values.yaml is loaded")
@@ -95,29 +94,29 @@ func ExecuteTestCases(testCases *TestCases) {
 	}
 
 	By("Test schema with positive test cases")
-	err = PositiveCasesTest(validator, moduleName, testCases)
+	err = PositiveCasesTest(schemaStorage, moduleName, testCases)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Test schema with negative test cases")
-	err = NegativeCasesTest(validator, moduleName, testCases)
+	err = NegativeCasesTest(schemaStorage, moduleName, testCases)
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
+func PositiveCasesTest(schemaStorage *validation.SchemaStorage, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Positive.ConfigValues {
-		err := ValidatePositiveCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
+		err := ValidatePositiveCase(schemaStorage, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
 	}
 	for _, testCase := range testCases.Positive.Values {
-		err := ValidatePositiveCase(validator, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
+		err := ValidatePositiveCase(schemaStorage, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
 	}
 	for _, testCase := range testCases.Positive.HelmValues {
-		err := ValidatePositiveCase(validator, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
+		err := ValidatePositiveCase(schemaStorage, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
@@ -125,21 +124,21 @@ func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string,
 	return nil
 }
 
-func NegativeCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
+func NegativeCasesTest(schemaStorage *validation.SchemaStorage, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Negative.ConfigValues {
-		err := ValidateNegativeCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
+		err := ValidateNegativeCase(schemaStorage, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
 	}
 	for _, testCase := range testCases.Negative.Values {
-		err := ValidateNegativeCase(validator, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
+		err := ValidateNegativeCase(schemaStorage, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
 	}
 	for _, testCase := range testCases.Negative.HelmValues {
-		err := ValidateNegativeCase(validator, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
+		err := ValidateNegativeCase(schemaStorage, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
