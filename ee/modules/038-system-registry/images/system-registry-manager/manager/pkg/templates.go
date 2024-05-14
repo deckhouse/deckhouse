@@ -19,7 +19,7 @@ func RenderTemplateFiles(filePath string, data interface{}) error {
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	strContent, err := RenderTemplate(string(content), data)

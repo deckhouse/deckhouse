@@ -17,23 +17,20 @@ import (
 )
 
 func GenerateCerts(manifestsSpec *config.ManifestsSpec) error {
-	log.Info("Generating certificates...")
+	log.Info("Starting certificate generation...")
 
 	for _, certSpec := range manifestsSpec.GeneratedCertificates {
 		err := generateCertToWorkspace(&certSpec)
 		if err != nil {
-			log.Errorf("Error generating certificate: %v", err)
-			return err
+			return fmt.Errorf("Error generating certificate: %v", err)
 		}
 	}
 
-	log.Info("Certificates generation completed.")
+	log.Info("Certificate generation completed successfully.")
 	return nil
 }
 
 func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error {
-	log.Info("Creating etcd client certificate...")
-
 	// Load the CA cert and key content from file
 	caCert, err := os.ReadFile(genCertSpec.CACert.TmpPath)
 	if err != nil {
@@ -50,7 +47,7 @@ func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error
 		Cert: string(caCert),
 	}
 
-	// Generate cert for etcd
+	// Generate cert
 	clientCert, err := certificate.GenerateSelfSignedCert(
 		log.NewEntry(log.New()),
 		genCertSpec.CN,
@@ -58,20 +55,18 @@ func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error
 		genCertSpec.Options...,
 	)
 	if err != nil {
-		log.Fatalf("Error generating client certificate: %v", err)
+		return fmt.Errorf("error generating client certificate: %v", err)
 	}
 
 	// Save cert and key
-	err = pkg.OsWriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Key), 0600)
+	err = pkg.OsWriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Cert), 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("error writing certificate to %s: %v", genCertSpec.Cert.TmpGeneratePath, err)
 	}
 
-	err = pkg.OsWriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Cert), 0600)
+	err = pkg.OsWriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Key), 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("error writing private key to %s: %v", genCertSpec.Key.TmpGeneratePath, err)
 	}
-
-	log.Info("Etcd client certificate created successfully.")
 	return nil
 }

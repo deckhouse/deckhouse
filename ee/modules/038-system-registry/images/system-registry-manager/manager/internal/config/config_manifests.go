@@ -78,11 +78,6 @@ type GeneratedCertificateSpec struct {
 	Options          []interface{}
 }
 
-type GeneratedCertificatesSpec struct {
-	SeaweedEtcdClientCert GeneratedCertificateSpec
-	DockerAuthTokenCert   GeneratedCertificateSpec
-}
-
 type ManifestsSpec struct {
 	GeneratedCertificates []GeneratedCertificateSpec
 	Manifests             []ManifestSpec

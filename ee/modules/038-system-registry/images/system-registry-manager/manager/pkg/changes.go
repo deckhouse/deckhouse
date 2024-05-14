@@ -15,10 +15,10 @@ func (n *NeedChangeFileBy) NeedChange() bool {
 	if n.NeedChangeFileByExist {
 		return true
 	}
-	if n.NeedChangeFileByCheckSum != nil && *(n.NeedChangeFileByCheckSum) {
+	if n.NeedChangeFileByCheckSum != nil && *n.NeedChangeFileByCheckSum {
 		return true
 	}
-	if n.NeedChangeFileByDataInconsistency != nil && *(n.NeedChangeFileByDataInconsistency) {
+	if n.NeedChangeFileByDataInconsistency != nil && *n.NeedChangeFileByDataInconsistency {
 		return true
 	}
 	return false
