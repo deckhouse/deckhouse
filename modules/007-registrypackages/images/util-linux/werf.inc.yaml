@@ -35,5 +35,5 @@ shell:
     - ./autogen.sh 
     - ./configure  --enable-static-programs=mount,umount --disable-shared --disable-liblastlog2
     - make mount.static umount.static
-    - mv ./mount.static /mount && mv ./umount
+    - mv ./mount.static /mount && mv ./umount.static ./umount
     - chmod +x /mount /umount /install /uninstall
