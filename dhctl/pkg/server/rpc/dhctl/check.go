@@ -22,7 +22,6 @@ import (
 	"io"
 	"log/slog"
 
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -44,39 +43,60 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	gr, ctx := errgroup.WithContext(ctx)
-
+	fmt.Printf("Check processing started!\n")
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	gr.Go(func() error {
-		for {
-			request, err := server.Recv()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return nil
-				}
-				return status.Errorf(codes.Internal, "receiving message: %s", err)
+	userErrCh := make(chan error, 0)
+	internalErrCh := make(chan error, 0)
+	doneCh := make(chan struct{}, 0)
+	requestsCh := make(chan *pb.CheckRequest, 0)
+
+	s.startReceiver(ctx, server, requestsCh, internalErrCh)
+
+connectionProcessor:
+	for {
+		select {
+		case <-doneCh:
+			fmt.Printf("Done check processing!\n")
+			return nil
+
+		case err := <-internalErrCh:
+			return status.Errorf(codes.Internal, "%s", err)
+
+		case err := <-userErrCh:
+			sendErr := server.Send(&pb.CheckResponse{
+				Message: &pb.CheckResponse_Err{
+					Err: err.Error(),
+				},
+			})
+			if sendErr != nil {
+				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
 			}
+			fmt.Printf("Sent error to server: done check processing!\n")
+			return nil
+
+		case request := <-requestsCh:
+			fmt.Printf("Check request received!\n")
 
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
-				log.WarnF("[multiversion-debug] process CheckRequest_Start...\n")
-				err = f.Event("start")
+				err := f.Event("start")
 				if err != nil {
 					s.log.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
+					continue connectionProcessor
 				}
-				s.startCheck(ctx, gr, server, message.Start)
-				log.WarnF("[multiversion-debug] process CheckRequest_Start OK\n")
+				fmt.Printf("CheckRequest_Start ...\n")
+				s.startChecker(ctx, server, message.Start, userErrCh, internalErrCh, doneCh)
+				fmt.Printf("CheckRequest_Start DONE\n")
 
 			case *pb.CheckRequest_Stop:
 				log.WarnF("[multiversion-debug] process CheckRequest_Stop...\n")
-				err = f.Event("stop")
+				err := f.Event("stop")
 				if err != nil {
 					s.log.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
+					continue connectionProcessor
 				}
 				s.stopCheck(cancel, message.Stop)
 				log.WarnF("[multiversion-debug] process CheckRequest_Stop OK\n")
@@ -84,44 +104,57 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 			default:
 				s.log.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
-				continue
+				continue connectionProcessor
 			}
 		}
-	})
-
-	return gr.Wait()
+	}
 }
 
-func (s *Service) startCheck(
+func (s *Service) startReceiver(_ context.Context, server pb.DHCTL_CheckServer, requestsCh chan *pb.CheckRequest, internalErrCh chan error) {
+	go func() {
+		for {
+			fmt.Printf("Awaiting for request from check stream...\n")
+			request, err := server.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return
+				}
+				internalErrCh <- status.Errorf(codes.Internal, "receiving message: %w", err)
+				return
+			}
+			fmt.Printf("Got request form check stream: %#v", request)
+			requestsCh <- request
+		}
+	}()
+}
+
+func (s *Service) startChecker(
 	ctx context.Context,
-	gr *errgroup.Group,
 	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
+	userErrCh chan error,
+	internalErrCh chan error,
+	doneCh chan struct{},
 ) {
-	log.WarnF("[multiversion-debug] starting check in new goroutine...\n")
-	gr.Go(func() error {
-		log.WarnF("[multiversion-debug] check...\n")
+	go func() {
 		result, err := s.check(ctx, request, &checkLogWriter{server: server})
 		if err != nil {
-			log.WarnF("[multiversion-debug] check NOT OK: %v\n", err)
-			return err
+			userErrCh <- err
+			return
 		}
-		log.WarnF("[multiversion-debug] check OK\n")
 
-		log.WarnF("[multiversion-debug] send check result...\n")
 		err = server.Send(&pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
 		})
 		if err != nil {
-			log.WarnF("[multiversion-debug] send check result NOT OK: %v\n", err)
-			return status.Errorf(codes.Internal, "sending message: %s", err)
+			internalErrCh <- fmt.Errorf("sending message: %w", err)
+			return
 		}
-		log.WarnF("[multiversion-debug] send check result OK\n")
-		return nil
-	})
-	log.WarnF("[multiversion-debug] starting check in new goroutine OK\n")
+
+		doneCh <- struct{}{}
+	}()
 }
 
 func (s *Service) stopCheck(
@@ -138,6 +171,8 @@ func (s *Service) check(
 ) (*pb.CheckResult, error) {
 	var err error
 
+	fmt.Printf("Service::check BEGIN\n")
+
 	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -150,6 +185,7 @@ func (s *Service) check(
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	fmt.Printf("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
 		log.WarnF("[multiversion-debug] Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
 	}()
@@ -163,7 +199,7 @@ func (s *Service) check(
 		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "parsing connection config: %s", err)
+		return nil, fmt.Errorf("parsing connection config: %w", err)
 	}
 
 	// parse meta config
@@ -174,7 +210,7 @@ func (s *Service) check(
 		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "parsing meta config: %s", err)
+		return nil, fmt.Errorf("parsing meta config: %w", err)
 	}
 
 	// init dhctl cache
@@ -183,21 +219,22 @@ func (s *Service) check(
 	if request.State != "" {
 		err = json.Unmarshal([]byte(request.State), &initialState)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "unmarshalling dhctl state: %s", err)
+			return nil, fmt.Errorf("unmarshalling dhctl state: %w", err)
 		}
 	}
 	err = cache.InitWithOptions(
 		cachePath,
 		cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 	)
+	fmt.Printf("cache.InitWIthOptions -> err=%v\n", err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "initializing cache at %s: %s", cachePath, err)
+		return nil, fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 	}
 
 	// preparse ssh client
 	sshClient, err := prepareSSHClient(connectionConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, fmt.Errorf("preparing ssh client: %w", err)
 	}
 	defer sshClient.Stop()
 
@@ -215,12 +252,12 @@ func (s *Service) check(
 
 	result, err := checker.Check(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "checking cluster state: %s", err)
+		return nil, fmt.Errorf("checking cluster state: %s", err)
 	}
 
 	resultString, err := json.Marshal(result)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "marshalling check result: %s", err)
+		return nil, fmt.Errorf("marshalling check result: %s", err)
 	}
 
 	return &pb.CheckResult{Result: string(resultString)}, nil
@@ -231,7 +268,6 @@ type checkLogWriter struct {
 }
 
 func (w *checkLogWriter) Write(p []byte) (int, error) {
-	log.WarnF("[multiversion-debug] send logs...\n")
 	err := w.server.Send(&pb.CheckResponse{
 		Message: &pb.CheckResponse_Logs{
 			Logs: &pb.Logs{
@@ -240,10 +276,8 @@ func (w *checkLogWriter) Write(p []byte) (int, error) {
 		},
 	})
 	if err != nil {
-		log.WarnF("[multiversion-debug] send logs NOT OK, err: %v\n", err)
 		return 0, fmt.Errorf("writing check logs: %w", err)
 	}
-	log.WarnF("[multiversion-debug] send logs OK\n")
 	return len(p), nil
 }
 
