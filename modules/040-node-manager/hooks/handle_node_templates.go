@@ -232,7 +232,6 @@ func fixMasterTaints(nodeTaints []v1.Taint, ngTaints []v1.Taint) []v1.Taint {
 
 	nodeTaintsMap := make(map[string]*v1.Taint, len(nodeTaints))
 	for _, sourceTaint := range nodeTaints {
-		sourceTaint := sourceTaint // The copy of the 'for' variable "sourceTaint" can be deleted (Go 1.22+)
 		nodeTaintsMap[sourceTaint.Key] = &sourceTaint
 	}
 

@@ -119,7 +119,6 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	var crowdConfig *provider
 
 	for _, prov := range providers {
-		prov := prov // The copy of the 'for' variable "prov" can be deleted (Go 1.22+)
 		if prov.Typ == "Crowd" && prov.Crowd.EnableBasicAuth {
 			if crowdConfig != nil {
 				return errors.New("only one enableBasicAuth must be enabled for Crowd")

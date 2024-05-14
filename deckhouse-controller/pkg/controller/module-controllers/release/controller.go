@@ -382,7 +382,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
 	for _, r := range otherReleases.Items {
-		r := r // The copy of the 'for' variable "r" can be deleted (Go 1.22+)
 		pointerReleases = append(pointerReleases, &r)
 	}
 	releaseUpdater.PrepareReleases(pointerReleases)

@@ -381,7 +381,6 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 	var found bool
 
 	for _, policy := range policies {
-		policy := policy // The copy of the 'for' variable "policy" can be deleted (Go 1.22+)
 		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
 			if err != nil {
