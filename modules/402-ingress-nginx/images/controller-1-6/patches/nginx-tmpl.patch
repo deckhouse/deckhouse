@@ -39,7 +39,7 @@ index 958397dd5..8b6de93c5 100755
      }
  
      {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
-@@ -373,6 +373,12 @@ http {
+@@ -373,6 +374,15 @@ http {
          {{ $reqUri }} 0;{{ end }}
          default 1;
      }
@@ -49,10 +49,13 @@ index 958397dd5..8b6de93c5 100755
 +    map $server_name $upstream_retries {
 +        default 0;
 +    }
++    map $server_name $formatted_status {
++        default $status;
++    }
  
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
-@@ -910,9 +928,7 @@ stream {
+@@ -910,9 +920,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -63,7 +66,7 @@ index 958397dd5..8b6de93c5 100755
              }
          }
          {{ end }}
-@@ -1203,6 +1219,8 @@ stream {
+@@ -1203,6 +1211,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -72,7 +75,7 @@ index 958397dd5..8b6de93c5 100755
              {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1233,11 +1253,9 @@ stream {
+@@ -1233,11 +1243,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -85,7 +88,7 @@ index 958397dd5..8b6de93c5 100755
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1515,13 +1515,14 @@ stream {
+@@ -1515,13 +1523,14 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
