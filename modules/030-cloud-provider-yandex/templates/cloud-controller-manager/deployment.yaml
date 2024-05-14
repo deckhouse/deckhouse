@@ -125,6 +125,8 @@ spec:
           - name: YANDEX_CLOUD_FOLDER_ID
             value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | quote }}
           - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
+            value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
+          - name: YANDEX_CLOUD_DEFAULT_INTERNAL_LB_LISTENER_SUBNET_ID
             value: {{ index .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap (.Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap | keys | first) | quote }}
           - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
             value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
