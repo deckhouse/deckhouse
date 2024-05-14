@@ -41,7 +41,7 @@ var (
 
 const (
 	ProxyTunnelPort      = "22323"
-	authPath             = "/auth/"
+	registryPath         = "/v2/"
 	httpClientTimeoutSec = 20
 )
 
@@ -236,39 +236,22 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return fmt.Errorf("%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag", ErrAuthFailed)
 	}
 
-	req, err := prepareAuthRequest(ctx, pc.metaConfig, authData)
-	if err != nil {
-		return err
-	}
-
-	client, err := prepareAuthHTTPClient(pc.metaConfig)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("cannot auth in regestry. %w", err)
-	}
-	defer resp.Body.Close()
-
-	log.DebugF("Status Code: %d\n", resp.StatusCode)
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return ErrAuthFailed
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
-	}
-
-	return nil
+	return checkRegistryAuth(ctx, pc.metaConfig, authData)
 }
 
-func prepareAuthRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
-	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: authPath}
+func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig) (*http.Request, error) {
+	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: registryPath}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registryURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("prepare registry request: %w", err)
+	}
+
+	return req, nil
+}
+
+func prepareAuthRequest(ctx context.Context, authURL string, authData string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare auth request: %w", err)
 	}
@@ -305,4 +288,60 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 	client.Transport = httpTransport
 
 	return client, nil
+}
+
+func getAuthURL(ctx context.Context, metaConfig *config.MetaConfig, client *http.Client) (string, error) {
+	authURL := ""
+
+	req, err := prepareRegistryRequest(ctx, metaConfig)
+	if err != nil {
+		return authURL, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return authURL, fmt.Errorf("cannot auth in regestry. %w", err)
+	}
+	defer resp.Body.Close()
+
+	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
+
+	// Bearer realm="https://registry.local:5001/auth",service="Docker registry"
+	log.DebugF("WWW-Authenticate: %s\n", wwwAuthHeader)
+	return authURL, ErrAuthFailed
+}
+
+func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
+	client, err := prepareAuthHTTPClient(metaConfig)
+	if err != nil {
+		return err
+	}
+
+	authURL, err := getAuthURL(ctx, metaConfig, client)
+	if err != nil {
+		return err
+	}
+
+	req, err := prepareAuthRequest(ctx, authURL, authData)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot auth in regestry. %w", err)
+	}
+	defer resp.Body.Close()
+
+	log.DebugF("Status Code: %d\n", resp.StatusCode)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrAuthFailed
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
+	}
+
+	return nil
 }
