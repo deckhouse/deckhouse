@@ -10,12 +10,12 @@ Attach one of the following annotations to the service:
    ```yaml
    yandex.cpi.flant.com/listener-subnet-id: SubnetID
    ```
-   
+
    The annotation links the LoadBalancer with the appropriate Subnet.
 
-2. 
+2.
    ```yaml
-   yandex.cloud/load-balancer-type: Internal
+   yandex.cpi.flant.com/loadbalancer-internal: ""
    ```
 
    LoadBalancer will listen to the first available subnet.

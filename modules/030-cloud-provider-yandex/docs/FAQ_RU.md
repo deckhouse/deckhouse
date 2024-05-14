@@ -10,12 +10,14 @@ title: "Cloud provider — Yandex Cloud: FAQ"
    ```yaml
    yandex.cpi.flant.com/listener-subnet-id: SubnetID
    ```
+
    Аннотация указывает, какой subnet будет слушать LoadBalancer.
+   
 2.
    ```yaml
-   yandex.cloud/load-balancer-type: Internal
+   yandex.cpi.flant.com/loadbalancer-internal: ""
    ```
-   
+
    LoadBalancer будет слушать первую из доступных subnet.
 
 Аннотация указывает, какой subnet будет слушать LoadBalancer.
