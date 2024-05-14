@@ -1,7 +1,9 @@
 package main
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
+	"log"
+	"net/http"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
