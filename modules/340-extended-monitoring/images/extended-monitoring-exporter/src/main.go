@@ -24,6 +24,8 @@ var (
 		Name: "myapp_processed_ops_total",
 		Help: "The total number of processed events",
 	})
+	EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX = "threshold.extended-monitoring.deckhouse.io/"
+	ENDED_MONITORING_ENABLED_LABEL             = "extended-monitoring.deckhouse.io/enabled"
 )
 
 func main() {
