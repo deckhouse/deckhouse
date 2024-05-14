@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
-	"system-registry-manager/pkg"
+	pkg_files "system-registry-manager/pkg/files"
 )
 
 func UpdateManifests(manifestsSpec *config.ManifestsSpec) error {
@@ -38,13 +38,13 @@ func copyCertsToDest(manifestsSpec *config.ManifestsSpec) error {
 		}
 
 		log.Infof("Copying certificate key from '%s' to '%s'", cert.Key.TmpGeneratePath, cert.Key.DestPath)
-		err := pkg.CopyFile(cert.Key.TmpGeneratePath, cert.Key.DestPath)
+		err := pkg_files.CopyFile(cert.Key.TmpGeneratePath, cert.Key.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying cert key from '%s' to '%s': %v", cert.Key.TmpGeneratePath, cert.Key.DestPath, err)
 		}
 
 		log.Infof("Copying certificate from '%s' to '%s'", cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
-		err = pkg.CopyFile(cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
+		err = pkg_files.CopyFile(cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying cert from '%s' to '%s': %v", cert.Cert.TmpGeneratePath, cert.Cert.DestPath, err)
 		}
@@ -64,7 +64,7 @@ func copyManifestsToDest(manifestsSpec *config.ManifestsSpec) error {
 		}
 
 		log.Infof("Copying manifest from '%s' to '%s'", manifest.TmpPath, manifest.DestPath)
-		err := pkg.CopyFile(manifest.TmpPath, manifest.DestPath)
+		err := pkg_files.CopyFile(manifest.TmpPath, manifest.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying manifest from '%s' to '%s': %v", manifest.TmpPath, manifest.DestPath, err)
 		}
