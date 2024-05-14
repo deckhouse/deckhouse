@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package kubeapi
+package actions
 
 import (
 	"context"
@@ -102,7 +102,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 
 	// If the same and not completed - nothing to do
 	if ActionStatusEqual(&newStatus, &nodeStatus.FromMe) && !nodeStatus.FromMe.Completed {
-		log.Info("Status is the same and not completed, no approve action needed")
+		log.Info("Status is the same and not completed")
 	} else {
 		// Update status
 		node.Annotations[config.AnnotationFromMe], err = newStatus.toString()
@@ -110,7 +110,7 @@ func SetMyStatusAndWaitApprove(actionName string, actionPriority int) error {
 			log.Errorf("Error converting new status to string: %v", err)
 			return err
 		}
-	
+
 		_, err = cfg.K8sClient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 		if err != nil {
 			log.Errorf("Error updating node status: %v", err)

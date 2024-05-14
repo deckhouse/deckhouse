@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/pkg"
+	pkg_files "system-registry-manager/pkg/files"
 )
 
 func CheckDestFiles(manifestsSpec *config.ManifestsSpec) error {
@@ -33,13 +34,13 @@ func checkDestManifests(manifestsSpec *config.ManifestsSpec) error {
 	log.Info("Checking destination manifest files...")
 
 	for i, manifest := range manifestsSpec.Manifests {
-		if !pkg.IsPathExists(manifest.DestPath) {
+		if !pkg_files.IsPathExists(manifest.DestPath) {
 			log.Warnf("Destination path does not exist for manifest: %s", manifest.DestPath)
 			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByExist = true
 			continue
 		}
 
-		isSumEq, err := pkg.CompareChecksum(manifest.TmpPath, manifest.DestPath)
+		isSumEq, err := pkg_files.CompareChecksum(manifest.TmpPath, manifest.DestPath)
 		if err != nil {
 			return fmt.Errorf("error comparing checksums for files '%s' and '%s': %v", manifest.TmpPath, manifest.DestPath, err)
 		}
@@ -57,13 +58,13 @@ func checkDestSerts(manifestsSpec *config.ManifestsSpec) error {
 	log.Info("Checking destination certificate files...")
 
 	for i, cert := range manifestsSpec.GeneratedCertificates {
-		if !pkg.IsPathExists(cert.Cert.DestPath) {
+		if !pkg_files.IsPathExists(cert.Cert.DestPath) {
 			log.Warnf("Destination certificate path does not exist: %s", cert.Cert.DestPath)
 			manifestsSpec.GeneratedCertificates[i].NeedChangeFileBy.NeedChangeFileByExist = true
 			continue
 		}
 
-		if !pkg.IsPathExists(cert.Key.DestPath) {
+		if !pkg_files.IsPathExists(cert.Key.DestPath) {
 			log.Warnf("Destination key path does not exist: %s", cert.Key.DestPath)
 			manifestsSpec.GeneratedCertificates[i].NeedChangeFileBy.NeedChangeFileByExist = true
 			continue

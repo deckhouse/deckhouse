@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"system-registry-manager/internal/config"
-	"system-registry-manager/internal/kubeapi"
 	"system-registry-manager/internal/steps"
+	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -109,13 +109,13 @@ func startManager() error {
 		return nil
 	}
 
-	if err := kubeapi.SetMyStatusAndWaitApprove("update", 0); err != nil {
+	if err := kube_actions.SetMyStatusAndWaitApprove("update", 0); err != nil {
 		return err
 	}
 	if err := steps.UpdateManifests(manifestsSpec); err != nil {
 		return err
 	}
-	if err := kubeapi.SetMyStatusDone(); err != nil {
+	if err := kube_actions.SetMyStatusDone(); err != nil {
 		return err
 	}
 	return nil

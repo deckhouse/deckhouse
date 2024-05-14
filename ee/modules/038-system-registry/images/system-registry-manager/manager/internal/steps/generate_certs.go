@@ -11,7 +11,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"system-registry-manager/internal/config"
-	"system-registry-manager/pkg"
+	pkg_files "system-registry-manager/pkg/files"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -59,12 +59,12 @@ func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error
 	}
 
 	// Save cert and key
-	err = pkg.OsWriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Cert), 0600)
+	err = pkg_files.OsWriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Cert), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing certificate to %s: %v", genCertSpec.Cert.TmpGeneratePath, err)
 	}
 
-	err = pkg.OsWriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Key), 0600)
+	err = pkg_files.OsWriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Key), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing private key to %s: %v", genCertSpec.Key.TmpGeneratePath, err)
 	}
