@@ -21,7 +21,7 @@ function __config__(){
 configVersion: v1
 kubernetes:
   - name: nodeUsers
-    apiVersion: deckhouse.io/v1alpha1
+    apiVersion: deckhouse.io/v1
     kind: NodeUser
     queue: "nodeuser"
     group: main
