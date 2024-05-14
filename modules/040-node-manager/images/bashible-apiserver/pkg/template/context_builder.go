@@ -392,12 +392,13 @@ func (rid registryInputData) toRegistry() registry {
 	}
 
 	return registry{
-		Address:   rid.Address,
-		Path:      rid.Path,
-		Scheme:    rid.Scheme,
-		CA:        rid.CA,
-		DockerCFG: rid.DockerConfig,
-		Auth:      auth,
+		Address:      rid.Address,
+		Path:         rid.Path,
+		Scheme:       rid.Scheme,
+		CA:           rid.CA,
+		DockerCFG:    rid.DockerConfig,
+		Auth:         auth,
+		RegistryMode: rid.RegistryMode,
 	}
 }
 
