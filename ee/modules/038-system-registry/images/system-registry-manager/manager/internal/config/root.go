@@ -24,7 +24,6 @@ var (
 type Config struct {
 	FileConfig
 	RuntimeConfig
-	ManifestsSpec
 }
 
 func InitConfig() error {
@@ -38,12 +37,9 @@ func InitConfig() error {
 		return err
 	}
 
-	manifestsConfig := NewManifestsSpec()
-
 	config = &Config{
 		*fileConfig,
 		*runtimeConfig,
-		*manifestsConfig,
 	}
 	return nil
 }

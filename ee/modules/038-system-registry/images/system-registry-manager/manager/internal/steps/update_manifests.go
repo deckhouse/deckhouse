@@ -13,70 +13,41 @@ import (
 	"system-registry-manager/pkg"
 )
 
-func UpdateManifests(shouldUpdateBy *ShouldUpdateBy) error {
+func UpdateManifests(manifestsSpec *config.ManifestsSpec) error {
 	log.Info("Starting UpdateManifests")
 
-	if err := copyCertsToDest(shouldUpdateBy); err != nil {
+	if err := copyCertsToDest(manifestsSpec); err != nil {
 		return err
 	}
-	if err := copyManifestsToDest(shouldUpdateBy); err != nil {
+	if err := copyManifestsToDest(manifestsSpec); err != nil {
 		return err
 	}
 	log.Info("UpdateManifests completed")
 	return nil
 }
 
-func copyCertsToDest(shouldUpdateBy *ShouldUpdateBy) error {
-	cfg := config.GetConfig()
-	copyFilesCerts := []FileMV{}
-
-	if shouldUpdateBy.NeedChangeSeaweedfsCerts {
-		copyFilesCerts = append(copyFilesCerts,
-			[]FileMV{
-				{
-					From: cfg.GeneratedCertificates.SeaweedEtcdClientCert.Cert.TmpGeneratePath,
-					To:   cfg.GeneratedCertificates.SeaweedEtcdClientCert.Cert.DestPath,
-				},
-				{
-					From: cfg.GeneratedCertificates.SeaweedEtcdClientCert.Key.TmpGeneratePath,
-					To:   cfg.GeneratedCertificates.SeaweedEtcdClientCert.Key.DestPath,
-				},
-			}...,
-		)
-	}
-
-	if shouldUpdateBy.NeedChangeDockerAuthTokenCerts {
-		copyFilesCerts = append(copyFilesCerts,
-			[]FileMV{
-				{
-					From: cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.TmpGeneratePath,
-					To:   cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.DestPath,
-				},
-				{
-					From: cfg.GeneratedCertificates.DockerAuthTokenCert.Key.TmpGeneratePath,
-					To:   cfg.GeneratedCertificates.DockerAuthTokenCert.Key.DestPath,
-				},
-			}...,
-		)
-	}
-
-	for _, copyFile := range copyFilesCerts {
-		err := pkg.CopyFile(copyFile.From, copyFile.To)
+func copyCertsToDest(manifestsSpec *config.ManifestsSpec) error {
+	for _, cert := range manifestsSpec.GeneratedCertificates {
+		if !cert.NeedChangeFileBy.NeedChange() {
+			return nil
+		}
+		err := pkg.CopyFile(cert.Key.TmpGeneratePath, cert.Key.DestPath)
 		if err != nil {
-			return fmt.Errorf("error copying cert from '%s' to '%s': %v", copyFile.From, copyFile.To, err)
+			return fmt.Errorf("error copying cert key from '%s' to '%s': %v", cert.Key.TmpGeneratePath, cert.Key.DestPath, err)
+		}
+		err = pkg.CopyFile(cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
+		if err != nil {
+			return fmt.Errorf("error copying cert cert from '%s' to '%s': %v", cert.Cert.TmpGeneratePath, cert.Cert.DestPath, err)
 		}
 	}
 	return nil
 }
 
-func copyManifestsToDest(shouldUpdateBy *ShouldUpdateBy) error {
-	cfg := config.GetConfig()
-
-	if !(shouldUpdateBy.NeedChangeFileByCheckSum || shouldUpdateBy.NeedChangeFileByExist) {
-		return nil
-	}
-
-	for _, manifest := range cfg.Manifests {
+func copyManifestsToDest(manifestsSpec *config.ManifestsSpec) error {
+	for _, manifest := range manifestsSpec.Manifests {
+		if !manifest.NeedChangeFileBy.NeedChange() {
+			return nil
+		}
 		err := pkg.CopyFile(manifest.TmpPath, manifest.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying manifests from '%s' to '%s': %v", manifest.TmpPath, manifest.DestPath, err)
