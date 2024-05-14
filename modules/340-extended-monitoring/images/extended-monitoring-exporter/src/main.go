@@ -20,6 +20,20 @@ func recordMetrics() {
 }
 
 var (
+	//    540 extended_monitoring_pod_threshold
+	//     90 extended_monitoring_pod_enabled
+	//     52 extended_monitoring_ingress_threshold
+	//     45 extended_monitoring_deployment_threshold
+	//     45 extended_monitoring_deployment_enabled
+	//     26 extended_monitoring_ingress_enabled
+	//     22 extended_monitoring_enabled
+	//     18 extended_monitoring_node_threshold
+	//     14 extended_monitoring_daemonset_threshold
+	//     14 extended_monitoring_daemonset_enabled
+	//      3 extended_monitoring_statefulset_threshold
+	//      3 extended_monitoring_statefulset_enabled
+	//      3 extended_monitoring_node_enabled
+
 	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "myapp_processed_ops_total",
 		Help: "The total number of processed events",
