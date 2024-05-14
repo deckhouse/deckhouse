@@ -29,7 +29,7 @@ import (
 )
 
 func moduleValidationHandler() http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, _ metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		// UserInfo groups: [system:serviceaccounts system:serviceaccounts:d8-system system:authenticated]
 		if review.UserInfo.Username != "system:serviceaccount:d8-system:deckhouse" {
 			return rejectResult("manual Module change is forbidden")

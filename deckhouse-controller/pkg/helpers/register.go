@@ -31,7 +31,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		privateKeyPath := genJWTCommand.Flag("private-key-path", "Path to private RSA key in PEM format.").Required().ExistingFile()
 		claims := genJWTCommand.Flag("claim", "Claims for token (ex --claim iss=deckhouse --claim sub=akakiy).").Required().StringMap()
 		ttl := genJWTCommand.Flag("ttl", "TTL duration (ex. 10s).").Required().Duration()
-		genJWTCommand.Action(func(c *kingpin.ParseContext) error {
+		genJWTCommand.Action(func(_ *kingpin.ParseContext) error {
 			return jwt.GenJWT(*privateKeyPath, *claims, *ttl)
 		})
 	}
@@ -48,7 +48,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		dryRun := changeRegistryCommand.Flag("dry-run", "Don't change deckhouse resources, only print them.").Default("false").Bool()
 
 		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
-		changeRegistryCommand.Action(func(c *kingpin.ParseContext) error {
+		changeRegistryCommand.Action(func(_ *kingpin.ParseContext) error {
 			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun)
 		})
 	}

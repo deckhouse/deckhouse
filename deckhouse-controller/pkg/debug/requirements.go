@@ -25,7 +25,7 @@ import (
 
 func DefineRequirementsCommands(kpApp *kingpin.Application) {
 	requirementsCmd := kpApp.Command("requirements", "Dump all requirements from memory storage.")
-	requirementsCmd.Action(func(c *kingpin.ParseContext) error {
+	requirementsCmd.Action(func(_ *kingpin.ParseContext) error {
 		debugServerAddr := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
 		resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugServerAddr))
 		if err != nil || resp.StatusCode != http.StatusOK {

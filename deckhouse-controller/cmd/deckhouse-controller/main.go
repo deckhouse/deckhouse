@@ -19,6 +19,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
@@ -41,7 +42,7 @@ var (
 )
 
 func version() string {
-	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
+	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, runtime.Version())
 }
 
 // main is almost a copy from addon-operator. We compile addon-operator to inline
@@ -64,12 +65,12 @@ func main() {
 	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
 	// print version
-	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
+	kpApp.Command("version", "Show version.").Action(func(_ *kingpin.ParseContext) error {
 		fmt.Println(version())
 		return nil
 	})
 
-	kpApp.Action(func(c *kingpin.ParseContext) error {
+	kpApp.Action(func(_ *kingpin.ParseContext) error {
 		klogtologrus.InitAdapter(sh_app.DebugKubernetesAPI)
 		stdliblogtologrus.InitAdapter()
 		return nil

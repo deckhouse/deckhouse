@@ -24,7 +24,7 @@ import (
 
 // RegisterRoutes register routes for dumping requirements memory storage
 func RegisterRoutes(dbgSrv *debug.Server) {
-	dbgSrv.RegisterHandler(http.MethodGet, "/requirements", func(req *http.Request) (interface{}, error) {
+	dbgSrv.RegisterHandler(http.MethodGet, "/requirements", func(_ *http.Request) (interface{}, error) {
 		return requirements.DumpValues(), nil
 	})
 }

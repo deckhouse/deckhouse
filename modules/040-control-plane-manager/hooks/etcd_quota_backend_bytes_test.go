@@ -150,7 +150,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 		}
 
 		for _, c := range casesIncrementalIncrease {
-			c := c
 			It(fmt.Sprintf("Node size %d", c.nodeSize/1024/1024/1024), func() {
 				newQuota := calcNewQuotaForMemory(c.nodeSize)
 
@@ -314,7 +313,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 		}
 
 		for _, c := range cases {
-			c := c
 			It(c.title, func() {
 				node := getNodeWithMinimalMemory(c.nodes)
 

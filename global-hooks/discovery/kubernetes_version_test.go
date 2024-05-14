@@ -204,7 +204,7 @@ subsets:
 			Context(fmt.Sprintf("%s created", s.title), func() {
 				BeforeEach(func() {
 					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(req *http.Request) (rp1 *http.Response, err error) {
+						Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 							return versionsResponse(initialVersion), nil
 						})
 					f.BindingContexts.Set(f.KubeStateSet(podState))
@@ -228,7 +228,7 @@ subsets:
 			const initialVersion = "1.19.2"
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
-					Set(func(req *http.Request) (rp1 *http.Response, err error) {
+					Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 						return versionsResponse(initialVersion), nil
 					})
 				f.BindingContexts.Set(f.KubeStateSet(stateEndpoints(endpointsOne)))
@@ -364,7 +364,7 @@ status:
 		endpointsState := stateEndpoints(endpointsOne)
 		BeforeEach(func() {
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 					return versionsResponse(initialVersion), nil
 				})
 			f.BindingContexts.Set(f.KubeStateSet(endpointsState))
@@ -401,7 +401,7 @@ status:
 			Context("Change version", func() {
 				BeforeEach(func() {
 					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(req *http.Request) (rp1 *http.Response, err error) {
+						Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 							return versionsResponse(verToChange), nil
 						})
 					f.RunHook()
@@ -441,7 +441,7 @@ status:
 				Context("Change version", func() {
 					BeforeEach(func() {
 						dependency.TestDC.HTTPClient.DoMock.
-							Set(func(req *http.Request) (rp1 *http.Response, err error) {
+							Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 								return versionsResponse(verToChange), nil
 							})
 						f.RunHook()
@@ -467,7 +467,7 @@ status:
 
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
-					Set(func(req *http.Request) (rp1 *http.Response, err error) {
+					Set(func(_ *http.Request) (rp1 *http.Response, err error) {
 						return versionsResponse(initialVersion), nil
 					})
 

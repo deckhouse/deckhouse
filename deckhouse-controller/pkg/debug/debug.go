@@ -181,7 +181,7 @@ func createTarball() *bytes.Buffer {
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
-	collectDebug.Action(func(c *kingpin.ParseContext) error {
+	collectDebug.Action(func(_ *kingpin.ParseContext) error {
 		res := createTarball()
 		_, err := io.Copy(os.Stdout, res)
 		return err

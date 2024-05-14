@@ -115,7 +115,7 @@ func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
 // GetOpenAPIYAMLFiles returns all .yaml files which are placed into openapi/ | crds/ directory
 func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 	var result []string
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			if info.Name() == ".git" {
 				return filepath.SkipDir

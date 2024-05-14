@@ -155,7 +155,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest
+runs-on: 1.22-alpine3.19
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
