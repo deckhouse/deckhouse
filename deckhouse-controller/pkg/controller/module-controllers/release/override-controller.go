@@ -134,7 +134,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
-		err := c.modulesValidator.RunModuleWithNewStaticValues(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, downloader.DefaultDevVersion))
+		err := c.moduleManager.RunModuleWithNewStaticValues(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, downloader.DefaultDevVersion))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
