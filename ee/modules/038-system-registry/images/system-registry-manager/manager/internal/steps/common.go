@@ -9,10 +9,3 @@ type FileMV struct {
 	From string
 	To   string
 }
-
-type ShouldUpdateBy struct {
-	NeedChangeFileByExist          bool
-	NeedChangeFileByCheckSum       bool
-	NeedChangeSeaweedfsCerts       bool
-	NeedChangeDockerAuthTokenCerts bool
-}

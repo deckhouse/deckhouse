@@ -66,7 +66,7 @@ func Start() {
 
 	// Start manager
 	for {
-		if err := StartManager(); err != nil {
+		if err := startManager(); err != nil {
 			log.Errorf("Manager error: %v", err)
 			// TODO
 			time.Sleep(10 * time.Second)
@@ -91,29 +91,26 @@ func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
-func StartManager() error {
-	shouldUpdateBy := steps.ShouldUpdateBy{}
+func startManager() error {
+	manifestsSpec := config.NewManifestsSpec()
 
-	if err := steps.PrepareWorkspace(); err != nil {
+	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
 		return err
 	}
-	if err := steps.GenerateCerts(); err != nil {
+	if err := steps.GenerateCerts(manifestsSpec); err != nil {
 		return err
 	}
-	if err := steps.CheckDestFiles(&shouldUpdateBy); err != nil {
+	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
 		return err
 	}
-	if !((shouldUpdateBy.NeedChangeFileByExist ||
-		shouldUpdateBy.NeedChangeFileByCheckSum) ||
-		(shouldUpdateBy.NeedChangeSeaweedfsCerts ||
-			shouldUpdateBy.NeedChangeDockerAuthTokenCerts)) {
+	if !manifestsSpec.NeedChange() {
 		return nil
 	}
 
 	if err := kubeapi.SetMyStatusAndWaitApprove("update", 0); err != nil {
 		return err
 	}
-	if err := steps.UpdateManifests(&shouldUpdateBy); err != nil {
+	if err := steps.UpdateManifests(manifestsSpec); err != nil {
 		return err
 	}
 	if err := kubeapi.SetMyStatusDone(); err != nil {
