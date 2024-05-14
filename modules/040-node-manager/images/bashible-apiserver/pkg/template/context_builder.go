@@ -364,6 +364,10 @@ func (rid *registryInputData) FromMap(m map[string][]byte) {
 	if v, ok := m[".dockerconfigjson"]; ok {
 		rid.DockerConfig = v
 	}
+
+	if v, ok := m["registryMode"]; ok {
+		rid.RegistryMode = string(v)
+	}
 }
 
 func (rid registryInputData) toRegistry() registry {
