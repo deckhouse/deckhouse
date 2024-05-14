@@ -48,7 +48,14 @@ except ImportError as e:
 ssl.match_hostname = lambda cert, hostname: True
 request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
-data = json.loads(response.read())
+
+phase2 = response.read()
+f = open("/var/lib/bashible/phase2", "ab")
+f.write('response\n'.encode())
+f.write(phase2)
+f.close()
+
+data = json.loads(phase2)
 sys.stdout.write(data["bootstrap"])
 EOF
 }

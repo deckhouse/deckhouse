@@ -15,11 +15,11 @@
 package destroy
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/google/uuid"
 )
@@ -67,7 +67,7 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 		return g.kubeCl, nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(g.sshClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(g.sshClient)
 	if err != nil {
 		return nil, err
 	}

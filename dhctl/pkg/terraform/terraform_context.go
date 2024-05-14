@@ -88,7 +88,7 @@ func (f *TerraformContext) GetCheckNodeRunner(metaConfig *config.MetaConfig, opt
 					WithName(opts.NodeName).
 					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 					WithAutoApprove(opts.AutoApprove).
-					WithHook(opts.ReadinessChecker)
+					WithHook(opts.Hook)
 
 				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
@@ -184,7 +184,7 @@ type NodeRunnerOptions struct {
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
-	ReadinessChecker                 InfraActionHook
+	Hook                             InfraActionHook
 }
 
 func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
@@ -197,7 +197,7 @@ func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, 
 				WithName(opts.NodeName).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 				WithAutoApprove(opts.AutoApprove).
-				WithHook(opts.ReadinessChecker)
+				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)
@@ -225,6 +225,7 @@ type NodeDeleteRunnerOptions struct {
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
+	Hook                             InfraActionHook
 }
 
 func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
@@ -237,7 +238,8 @@ func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaCo
 				WithAllowedCachedState(true).
 				WithSkipChangesOnDeny(true).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-				WithAutoApprove(opts.AutoApprove)
+				WithAutoApprove(opts.AutoApprove).
+				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)

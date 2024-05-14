@@ -37,6 +37,8 @@ ifndef OS
 	endif
 endif
 
+OS = linux
+
 ifndef D8_VERSION
 	D8_VERSION = local
 endif

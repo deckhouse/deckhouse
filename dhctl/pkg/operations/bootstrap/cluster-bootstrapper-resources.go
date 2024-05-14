@@ -18,9 +18,9 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
@@ -57,7 +57,7 @@ func (b *ClusterBootstrapper) CreateResources() error {
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.SSHClient)
 		if err != nil {
 			return err
 		}

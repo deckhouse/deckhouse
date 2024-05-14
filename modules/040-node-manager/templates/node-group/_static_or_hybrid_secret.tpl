@@ -15,4 +15,5 @@ type: Opaque
 data:
   cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
   bootstrap.sh: {{ include "node_group_static_or_hybrid_script" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
+  apiserverEndpoints: {{ $context.Values.nodeManager.internal.clusterMasterAddresses | toYaml | b64enc }}
 {{- end }}
