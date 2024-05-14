@@ -200,6 +200,7 @@ spec:
                     - "network-ssd"
                     - "network-hdd"
                     - "network-ssd-nonreplicated"
+                    - "network-ssd-io-m3"
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gibibytes.
