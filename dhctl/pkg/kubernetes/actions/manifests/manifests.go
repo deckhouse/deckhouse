@@ -636,6 +636,17 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	)
 }
 
+func SecretConvergeState(state []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-dhctl-converge-state",
+		"d8-system",
+		map[string][]byte{
+			"state.json": state,
+		},
+		map[string]string{},
+	)
+}
+
 const (
 	ClusterUUIDCmKey       = "cluster-uuid"
 	ClusterUUIDCm          = "d8-cluster-uuid"

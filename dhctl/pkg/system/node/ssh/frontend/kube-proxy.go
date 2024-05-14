@@ -129,6 +129,7 @@ func (k *KubeProxy) Stop(startID int) {
 		k.proxy.Stop()
 		log.DebugF("[%d] Proxy command stopped\n", startID)
 		k.proxy = nil
+		k.port = "0"
 	}
 	if k.tunnel != nil {
 		log.DebugF("[%d] Stop tunnel\n", startID)
@@ -169,7 +170,8 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 
 func (k *KubeProxy) proxyCMD(startID int) *Command {
 	kubectlProxy := fmt.Sprintf(
-		"kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf",
+		// --disable-filter is needed to exec into etcd pods
+		"kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf --disable-filter",
 		k.port,
 	)
 	if v := os.Getenv("KUBE_PROXY_ACCEPT_HOSTS"); v != "" {

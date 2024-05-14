@@ -25,9 +25,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
 
 type KubeProxyChecker struct {
+	input            *session.Input
+	privateKeys      []session.AgentPrivateKey
 	initParams       *client.KubernetesInitParams
 	logCheckResult   bool
 	askPassword      bool
@@ -72,8 +76,20 @@ func (c *KubeProxyChecker) WithExternalIPs(ips map[string]string) *KubeProxyChec
 	return c
 }
 
+func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys ...session.AgentPrivateKey) *KubeProxyChecker {
+	c.input = &input
+	c.privateKeys = privateKeys
+	return c
+}
+
 func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
-	sshClient := ssh.NewClientFromFlags()
+	var sshClient *ssh.Client
+
+	if c.input != nil {
+		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
+	} else {
+		sshClient = ssh.NewClientFromFlags()
+	}
 
 	if len(c.nodesExternalIPs) > 0 {
 		ip, ok := c.nodesExternalIPs[nodeName]
@@ -102,7 +118,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		}
 
 		if kubeCl.KubeProxy != nil {
-			kubeCl.KubeProxy.Stop(0)
+			kubeCl.KubeProxy.StopAll()
 		}
 
 		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
