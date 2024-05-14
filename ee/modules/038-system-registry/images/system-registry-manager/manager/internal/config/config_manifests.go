@@ -6,8 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package config
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"os"
 	"path/filepath"
+	"system-registry-manager/pkg"
+	"time"
 )
 
 const (
@@ -42,9 +45,10 @@ var (
 )
 
 type ManifestSpec struct {
-	InputPath string
-	TmpPath   string
-	DestPath  string
+	NeedChangeFileBy pkg.NeedChangeFileBy
+	InputPath        string
+	TmpPath          string
+	DestPath         string
 }
 
 type CaCertificateSpec struct {
@@ -65,10 +69,13 @@ type BaseCertificatesSpec struct {
 }
 
 type GeneratedCertificateSpec struct {
-	CAKey  CaCertificateSpec
-	CACert CaCertificateSpec
-	Key    CertificateSpec
-	Cert   CertificateSpec
+	NeedChangeFileBy pkg.NeedChangeFileBy
+	CAKey            CaCertificateSpec
+	CACert           CaCertificateSpec
+	Key              CertificateSpec
+	Cert             CertificateSpec
+	CN               string
+	Options          []interface{}
 }
 
 type GeneratedCertificatesSpec struct {
@@ -77,14 +84,31 @@ type GeneratedCertificatesSpec struct {
 }
 
 type ManifestsSpec struct {
-	GeneratedCertificates GeneratedCertificatesSpec
+	GeneratedCertificates []GeneratedCertificateSpec
 	Manifests             []ManifestSpec
 }
+
+func (m *ManifestsSpec) NeedChange() bool {
+	for _, cert := range m.GeneratedCertificates {
+		if cert.NeedChangeFileBy.NeedChange() {
+			return true
+		}
+	}
+	for _, manifest := range m.Manifests {
+		if manifest.NeedChangeFileBy.NeedChange() {
+			return true
+		}
+	}
+	return false
+}
+
 type DataForManifestRendering struct {
 	DiscoveredNodeIP string
 }
 
 func NewManifestsSpec() *ManifestsSpec {
+	cfg := GetConfig()
+
 	baseCertificates := BaseCertificatesSpec{
 		CACrt: CaCertificateSpec{
 			InputPath: filepath.Join(InputCertsDir, "ca.crt"),
@@ -104,36 +128,48 @@ func NewManifestsSpec() *ManifestsSpec {
 		},
 	}
 
-	generatedCertificates := GeneratedCertificatesSpec{
-		SeaweedEtcdClientCert: GeneratedCertificateSpec{
-			CAKey:  baseCertificates.EtcdCAKey,
-			CACert: baseCertificates.EtcdCACrt,
-			Key: CertificateSpec{
-				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.key"),
-				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.key"),
-			},
-			Cert: CertificateSpec{
-				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.crt"),
-				DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.crt"),
-			},
-		},
-		DockerAuthTokenCert: GeneratedCertificateSpec{
-			CAKey:  baseCertificates.EtcdCAKey,
-			CACert: baseCertificates.EtcdCACrt,
-			Key: CertificateSpec{
-				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.key"),
-				DestPath:        filepath.Join(DestinationCertsDir, "token.key"),
-			},
-			Cert: CertificateSpec{
-				TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.crt"),
-				DestPath:        filepath.Join(DestinationCertsDir, "token.crt"),
-			},
-		},
-	}
-
 	manifestsSpec := ManifestsSpec{
-		// BaseCertificates:      baseCertificates,
-		GeneratedCertificates: generatedCertificates,
+		GeneratedCertificates: []GeneratedCertificateSpec{
+			{
+				CAKey:  baseCertificates.EtcdCAKey,
+				CACert: baseCertificates.EtcdCACrt,
+				Key: CertificateSpec{
+					TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.key"),
+					DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.key"),
+				},
+				Cert: CertificateSpec{
+					TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "seaweedfs-etcd-client.crt"),
+					DestPath:        filepath.Join(DestinationCertsDir, "seaweedfs-etcd-client.crt"),
+				},
+				CN: "seaweedfs-etcd-client",
+				Options: []interface{}{
+					certificate.WithKeyAlgo("rsa"),
+					certificate.WithKeySize(2048),
+					certificate.WithGroups("system:masters"),
+					certificate.WithSigningDefaultExpiry(365 * 24 * time.Hour),
+					certificate.WithSigningDefaultUsage([]string{"digital signature", "key encipherment"}),
+				},
+			},
+			{
+				CAKey:  baseCertificates.EtcdCAKey,
+				CACert: baseCertificates.EtcdCACrt,
+				Key: CertificateSpec{
+					TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.key"),
+					DestPath:        filepath.Join(DestinationCertsDir, "token.key"),
+				},
+				Cert: CertificateSpec{
+					TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.crt"),
+					DestPath:        filepath.Join(DestinationCertsDir, "token.crt"),
+				},
+				CN: cfg.MyIP,
+				Options: []interface{}{
+					certificate.WithKeyAlgo("ecdsa"),
+					certificate.WithKeySize(256),
+					certificate.WithGroups("Deckhouse Registry"),
+					certificate.WithSANs(cfg.MyIP),
+				},
+			},
+		},
 		Manifests: []ManifestSpec{
 			{
 				InputPath: filepath.Join(InputDockerDistribManifestsDir, "config.yaml"),

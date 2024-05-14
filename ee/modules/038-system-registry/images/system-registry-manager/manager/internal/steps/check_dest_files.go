@@ -12,26 +12,27 @@ import (
 	"system-registry-manager/pkg"
 )
 
-func CheckDestFiles(shouldUpdateBy *ShouldUpdateBy) error {
+func CheckDestFiles(manifestsSpec *config.ManifestsSpec) error {
 	log.Info("Checking destination files...")
 
-	if err := checkDestFileCheckSumAndExist(shouldUpdateBy); err != nil {
-		log.Errorf("Error checking destination files: %v", err)
+	if err := checkDestManifests(manifestsSpec); err != nil {
+		log.Errorf("Error checking destination manifest files: %v", err)
 		return err
 	}
-	validateSeaweedEtcdClientCert(shouldUpdateBy)
-	validateDockerAuthTokenCert(shouldUpdateBy)
+
+	if err := checkDestSerts(manifestsSpec); err != nil {
+		log.Errorf("Error checking destination cert files: %v", err)
+		return err
+	}
 
 	log.Info("Destination files check completed.")
 	return nil
 }
 
-func checkDestFileCheckSumAndExist(shouldUpdateBy *ShouldUpdateBy) error {
-	cfg := config.GetConfig()
-
-	for _, manifest := range cfg.Manifests {
+func checkDestManifests(manifestsSpec *config.ManifestsSpec) error {
+	for i, manifest := range manifestsSpec.Manifests {
 		if !pkg.IsPathExists(manifest.DestPath) {
-			shouldUpdateBy.NeedChangeFileByExist = true
+			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByExist = true
 			continue
 		}
 		isSumEq, err := pkg.CompareChecksum(manifest.TmpPath, manifest.DestPath)
@@ -39,34 +40,23 @@ func checkDestFileCheckSumAndExist(shouldUpdateBy *ShouldUpdateBy) error {
 			return fmt.Errorf("error comparing checksums for files '%s' and '%s': %v", manifest.TmpPath, manifest.DestPath, err)
 		}
 		if !isSumEq {
-			shouldUpdateBy.NeedChangeFileByExist = true
+			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByCheckSum = pkg.CreatePointer(true).(*bool)
 		}
 	}
 	return nil
 }
 
-func validateSeaweedEtcdClientCert(shouldUpdateBy *ShouldUpdateBy) {
-	cfg := config.GetConfig()
-
-	if !pkg.IsPathExists(cfg.GeneratedCertificates.SeaweedEtcdClientCert.Cert.DestPath) {
-		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
-		return
+func checkDestSerts(manifestsSpec *config.ManifestsSpec) error {
+	for i, cert := range manifestsSpec.GeneratedCertificates {
+		if !pkg.IsPathExists(cert.Cert.DestPath) {
+			manifestsSpec.GeneratedCertificates[i].NeedChangeFileBy.NeedChangeFileByExist = true
+			continue
+		}
+		if !pkg.IsPathExists(cert.Key.DestPath) {
+			manifestsSpec.GeneratedCertificates[i].NeedChangeFileBy.NeedChangeFileByExist = true
+			continue
+		}
+		// TODO
 	}
-	if !pkg.IsPathExists(cfg.GeneratedCertificates.SeaweedEtcdClientCert.Key.DestPath) {
-		shouldUpdateBy.NeedChangeSeaweedfsCerts = true
-		return
-	}
-}
-
-func validateDockerAuthTokenCert(shouldUpdateBy *ShouldUpdateBy) {
-	cfg := config.GetConfig()
-
-	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Cert.DestPath) {
-		shouldUpdateBy.NeedChangeDockerAuthTokenCerts = true
-		return
-	}
-	if !pkg.IsPathExists(cfg.GeneratedCertificates.DockerAuthTokenCert.Key.DestPath) {
-		shouldUpdateBy.NeedChangeDockerAuthTokenCerts = true
-		return
-	}
+	return nil
 }
