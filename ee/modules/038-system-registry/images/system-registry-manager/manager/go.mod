@@ -5,13 +5,16 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/deckhouse/deckhouse v1.59.11
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.18.2
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
+)
+
+require (
+	github.com/deckhouse/deckhouse v1.59.11
+	github.com/spf13/viper v1.18.2
 )
 
 require (
@@ -114,3 +117,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/deckhouse/deckhouse/go_lib/certificate/ => ../../../../../../go_lib/certificate/
