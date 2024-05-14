@@ -43,6 +43,7 @@ import (
 
 const (
 	defaultModuleWeight = 900
+	DefaultDevVersion   = "dev"
 )
 
 type ModuleDownloader struct {
@@ -75,7 +76,7 @@ type ModuleDownloadResult struct {
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
-	moduleStorePath := path.Join(md.externalModulesDir, moduleName, "dev")
+	moduleStorePath := path.Join(md.externalModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
 	if err != nil {
