@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+LC_NUMERIC=C
 bb-event-on 'bb-sync-file-changed' 'bb-flag-set kubelet-need-restart'
 
 # Detect systemd-resolved
