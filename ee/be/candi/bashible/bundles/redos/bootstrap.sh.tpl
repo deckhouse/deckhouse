@@ -103,6 +103,10 @@ export no_proxy=${NO_PROXY}
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
+{{- if .packagesProxy }}
+export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+{{- end }}
 bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
 
 {{- /*
