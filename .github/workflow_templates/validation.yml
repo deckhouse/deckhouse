@@ -40,7 +40,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -74,7 +74,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -155,7 +155,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -180,7 +180,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -204,7 +204,7 @@ needs:
   - discover
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
