@@ -2,15 +2,15 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 docker:
-  ENTRYPOINT: ["/image-availability-exporter"]
+  ENTRYPOINT: ["/extended-monitoring-exporter"]
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /image-availability-exporter
-    to: /image-availability-exporter
+    add: /extended-monitoring-exporter
+    to: /extended-monitoring-exporter
     after: setup
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_22_BULLSEYE_DEV }}
 git:
   - add: /{{ .ModulePath }}modules/340-{{ .ModuleName }}/images/{{ .ImageName }}/src
     to: /src
@@ -32,9 +32,12 @@ mount:
 shell:
   install:
     - cd /src
-    - GOPROXY={{ $.GOPROXY }} go mod download
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go mod download
   setup:
     - cd /src
-    - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /image-availability-exporter .
-    - chown 64535:64535 /image-availability-exporter
-    - chmod 0700 /image-availability-exporter
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+    - go build -ldflags="-s -w" -o /extended-monitoring-exporter main.go
+    - chown 64535:64535 /extended-monitoring-exporter
+    - chmod 0700 /extended-monitoring-exporter
