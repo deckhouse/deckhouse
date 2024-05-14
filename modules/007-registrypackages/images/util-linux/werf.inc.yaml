@@ -1,4 +1,4 @@
-{{- $version := "2.39.2" }}
+{{- $version := "2.40.1" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -9,6 +9,7 @@ import:
   to: /
   includePaths:
   - mount
+  - umount
   - install
   - uninstall
   before: setup
@@ -17,6 +18,7 @@ docker:
     distro: all
     version: all
     mount: {{ $version }}
+    umount: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALT_DEV }}
@@ -28,10 +30,10 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git src
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git src
     - cd /src
     - ./autogen.sh 
-    - ./configure  --enable-static-programs=mount --disable-liblastlog2
-    - CFLAGS='-static' LDFLAGS="-static" make mount
-    - mv ./mount /mount
-    - chmod +x /mount /install /uninstall
+    - ./configure  --enable-static-programs=mount,umount --disable-shared --disable-liblastlog2
+    - make mount.static umount.static
+    - mv ./mount.static /mount && mv ./umount
+    - chmod +x /mount /umount /install /uninstall
