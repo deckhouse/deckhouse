@@ -62,6 +62,7 @@ spec:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false
         args:
+        - "--do-not-write-debug-log-file"
         - "terraform"
         - "converge-exporter"
         - "--logger-type=json"

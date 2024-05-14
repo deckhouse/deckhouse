@@ -28,27 +28,35 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
+	coordv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
+	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docs"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
@@ -64,6 +72,7 @@ var (
 
 type DeckhouseController struct {
 	ctx context.Context
+	mgr manager.Manager
 
 	dirs       []string
 	mm         *module_manager.ModuleManager // probably it's better to set it via the interface
@@ -75,16 +84,6 @@ type DeckhouseController struct {
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
 	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
-
-	informerFactory externalversions.SharedInformerFactory
-
-	// separate controllers
-	moduleSourceController       *source.Controller
-	moduleReleaseController      *release.Controller
-	modulePullOverrideController *release.ModulePullOverrideController
-
-	// documentation
-	documentationUpdater *docs.Updater
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -93,27 +92,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
-	cs, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	informerFactory := externalversions.NewSharedInformerFactory(mcClient, 15*time.Minute)
-	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
-	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
-	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
-	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
-
-	leaseInformer := informers.NewSharedInformerFactoryWithOptions(
-		cs,
-		15*time.Minute,
-		informers.WithNamespace(namespace),
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = docsLeaseLabel
-		}),
-	).Coordination().V1().Leases()
-
-	httpClient := d8http.NewClient()
+	dc := dependency.NewDependencyContainer()
 	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
@@ -121,47 +100,96 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		ReleaseChannel: "Stable",
 	}
 
-	documentationUpdater := docs.NewUpdater(leaseInformer, moduleReleaseInformer, moduleSourceInformer, modulePullOverrideInformer, httpClient)
+	scheme := runtime.NewScheme()
+
+	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme} {
+		err = add(scheme)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Setting the controller-runtime logger to a no-op logger by default,
+	// unless debug mode is enabled. This is because the controller-runtime
+	// logger is *very* verbose even at info level. This is not really needed,
+	// but otherwise we get a warning from the controller-runtime.
+	controllerruntime.SetLogger(logr.New(ctrllog.NullLogSink{}))
+
+	mgr, err := controllerruntime.NewManager(config, controllerruntime.Options{
+		Scheme: scheme,
+		BaseContext: func() context.Context {
+			return ctx
+		},
+		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				// for ModuleDocumentation controller
+				&coordv1.Lease{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+						},
+					},
+				},
+				// for ModuleRelease controller
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)
+	if err != nil {
+		return nil, err
+	}
+
+	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	err = release.NewModulePullOverrideController(mgr, dc, mm)
+	if err != nil {
+		return nil, err
+	}
+
+	err = docbuilder.NewModuleDocumentationController(mgr, dc)
+	if err != nil {
+		return nil, err
+	}
 
 	return &DeckhouseController{
 		ctx:        ctx,
 		kubeClient: mcClient,
 		dirs:       utils.SplitToPaths(mm.ModulesDir),
 		mm:         mm,
+		mgr:        mgr,
 
 		deckhouseModules:        make(map[string]*models.DeckhouseModule),
 		sourceModules:           make(map[string]string),
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 		metricStorage:           metricStorage,
-
-		informerFactory: informerFactory,
-
-		moduleSourceController:       source.NewController(mcClient, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, embeddedDeckhousePolicy),
-		moduleReleaseController:      release.NewController(cs, mcClient, moduleReleaseInformer, moduleSourceInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer, mm, metricStorage, embeddedDeckhousePolicy, documentationUpdater),
-		modulePullOverrideController: release.NewModulePullOverrideController(cs, mcClient, moduleSourceInformer, modulePullOverrideInformer, mm, documentationUpdater),
-		documentationUpdater:         documentationUpdater,
 	}, nil
 }
 
-// Start runs preflight checks and load all deckhouse modules from the FS
+// Setup runs preflight checks and load all deckhouse modules from the FS
 // it doesn't start controllers for ModuleSource/ModuleRelease objects
-func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
-	dml.informerFactory.Start(dml.ctx.Done())
-	dml.documentationUpdater.RunLeaseInformer(dml.ctx.Done())
-
-	err := dml.moduleReleaseController.RunPreflightCheck(dml.ctx)
+func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
+	err := dml.searchAndLoadDeckhouseModules()
 	if err != nil {
 		return err
 	}
 
-	err = dml.documentationUpdater.RunPreflightCheck(dml.ctx)
-	if err != nil {
-		return err
-	}
-
-	dml.sourceModules = dml.moduleReleaseController.GetModuleSources()
-
-	err = dml.searchAndLoadDeckhouseModules()
+	// we have to get all source module for deployed releases
+	err = dml.setupSourceModules(ctx)
 	if err != nil {
 		return err
 	}
@@ -186,12 +214,37 @@ func (dml *DeckhouseController) Start(moduleEventC <-chan events.ModuleEvent, de
 	return nil
 }
 
-// RunControllers function starts all child controllers linked with Modules
-func (dml *DeckhouseController) RunControllers() {
-	go dml.moduleSourceController.Run(dml.ctx, 3)
-	go dml.moduleReleaseController.Run(dml.ctx, 3)
-	go dml.modulePullOverrideController.Run(dml.ctx, 1)
-	go dml.documentationUpdater.Run(dml.ctx)
+// really, don't like this method, because it doesn't use cache
+// we can't use Manager.Client here, because it's cache is not started yet.
+// but another way is to make some reactive storage, which will collect modules without sources and update them
+func (dml *DeckhouseController) setupSourceModules(ctx context.Context) error {
+	// fetch modules source for deployed releases
+	mrList, err := dml.kubeClient.DeckhouseV1alpha1().ModuleReleases().List(ctx, v1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, rl := range mrList.Items {
+		if rl.Status.Phase != v1alpha1.PhaseDeployed {
+			continue
+		}
+		dml.sourceModules[rl.GetModuleName()] = rl.GetModuleSource()
+	}
+
+	return nil
+}
+
+// Start function starts all child controllers linked with Modules
+func (dml *DeckhouseController) Start(ctx context.Context) {
+	if os.Getenv("EXTERNAL_MODULES_DIR") == "" {
+		return
+	}
+	go func() {
+		err := dml.mgr.Start(ctx)
+		if err != nil {
+			log.Fatalf("Start controller manager failed: %s", err)
+		}
+	}()
 }
 
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {

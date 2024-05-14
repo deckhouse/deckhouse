@@ -35,8 +35,7 @@ standard:
     instanceClass:
       flavorName: m1.large                      # Обязательный параметр.
       imageName: ubuntu-20-04-cloud-amd64       # Обязательный параметр.
-      # Необязательный параметр. Если не указан — используется локальный диск.
-      rootDiskSize: 50
+      rootDiskSize: 50                          # Обязательный параметр, по умолчанию 50 гигабайт.
       additionalTags:
         severity: critical                      # Необязательный параметр.
         environment: production                 # Необязательный параметр.

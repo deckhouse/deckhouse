@@ -36,12 +36,7 @@ properties:
             type:
               type: string
               enum:
-                - Standard_LRS
-                - Premium_LRS
-                - StandardSSD_LRS
                 - UltraSSD_LRS
-                - Premium_ZRS
-                - StandardSSD_ZRS
               description: |
                 Azure disk storage account type.
 
@@ -53,7 +48,7 @@ properties:
                 - ReadOnly
                 - ReadWrite
               description: |
-                String value that corresponds to destired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
+                String value that corresponds to the desired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
 
                 Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
             diskIOPSReadWrite:
@@ -64,3 +59,22 @@ properties:
               type: number
               description: |
                 Disk throughput in `MBps` (limit of a single disk is 256 KiB/s for each provisioned IOPS).
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    pattern: '^[A-Za-z0-9][-A-Za-z0-9_.]*$'
+                  value:
+                    type: string
+                    pattern: '^[A-Za-z0-9][-A-Za-z0-9_.]*$'
+              x-examples:
+                -
+                  - key: key1
+                    value: val1
+                  - key: key2
+                    value: val2
+              description: |
+                Azure disk [tags](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/).

@@ -50,12 +50,12 @@ You can view the list of `ModuleConfig` custom resources and the states of the c
 
 ```shell
 $ kubectl get moduleconfigs
-NAME                STATE      VERSION    STATUS    AGE
-deckhouse           Enabled    1                    12h
-documentation       Enabled    2                    12h
-global              Enabled    1                    12h
-prometheus          Enabled    2                    12h
-upmeter             Disabled   2                    12h
+NAME            ENABLED   VERSION   AGE     MESSAGE
+deckhouse       true      1         12h
+documentation   true      1         12h
+global                    1         12h
+prometheus      true      2         12h
+upmeter         false     2         12h
 ```
 
 To change the global Deckhouse configuration or module configuration, create or edit the corresponding `ModuleConfig` custom resource.
@@ -63,7 +63,7 @@ To change the global Deckhouse configuration or module configuration, create or 
 For example, this command allows you to configure the `upmeter` module:
 
 ```shell
-kubectl -n d8-system edit moduleconfig/upmeter
+kubectl edit moduleconfig/upmeter
 ```
 
 Changes are applied automatically once the resource configuration is saved.
@@ -126,9 +126,9 @@ To check the status of the module, run the `kubectl get moduleconfig <MODULE_NAM
 Example:
 
 ```shell
-$ kubectl get moduleconfigs
-NAME                STATE      VERSION    STATUS    AGE
-user-authn          Disabled   1                    12h
+$ kubectl get moduleconfig user-authn
+NAME         ENABLED   VERSION   AGE   MESSAGE
+user-authn   false     1         12h
 ```
 
 ## Module bundles

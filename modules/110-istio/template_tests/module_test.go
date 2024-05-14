@@ -90,8 +90,6 @@ const istioValues = `
         key: mykey
         root: myroot
         chain: mychain
-      dataPlane:
-        trafficRedirectionSetupMode: CNIPlugin
       auth:
         password: qqq
     auth:
@@ -125,6 +123,8 @@ const istioValues = `
           memory:
             min: "256Mi"
             max: "2Gi"
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
 `
 
 func getSubdirs(dir string) ([]string, error) {

@@ -32,6 +32,7 @@ const (
 	PhaseDeployed        = "Deployed"
 	PhaseSuperseded      = "Superseded"
 	PhaseSuspended       = "Suspended"
+	PhaseSkipped         = "Skipped"
 
 	approvalAnnotation = "modules.deckhouse.io/approved"
 )

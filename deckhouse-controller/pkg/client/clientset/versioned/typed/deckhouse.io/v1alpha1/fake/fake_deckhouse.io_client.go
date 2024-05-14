@@ -28,12 +28,20 @@ type FakeDeckhouseV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeDeckhouseV1alpha1) DeckhouseReleases() v1alpha1.DeckhouseReleaseInterface {
+	return &FakeDeckhouseReleases{c}
+}
+
 func (c *FakeDeckhouseV1alpha1) Modules() v1alpha1.ModuleInterface {
 	return &FakeModules{c}
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleConfigs() v1alpha1.ModuleConfigInterface {
 	return &FakeModuleConfigs{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ModuleDocumentations() v1alpha1.ModuleDocumentationInterface {
+	return &FakeModuleDocumentations{c}
 }
 
 func (c *FakeDeckhouseV1alpha1) ModulePullOverrides() v1alpha1.ModulePullOverrideInterface {

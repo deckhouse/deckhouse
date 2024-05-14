@@ -15,16 +15,20 @@
 package commands
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"context"
+
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -35,9 +39,12 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHClient:        sshClient,
+			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return converger.Converge()
+		_, err = converger.Converge(context.Background())
+
+		return err
 	})
 	return cmd
 }
@@ -45,12 +52,16 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge-periodical", "Start service for periodical run converge.")
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		converger := converge.NewConverger(&converge.Params{AutoDismissDestructive: true, AutoApprove: true})
+		converger := converge.NewConverger(&converge.Params{
+			AutoDismissDestructive: true,
+			AutoApprove:            true,
+			TerraformContext:       terraform.NewTerraformContext(),
+		})
 		return converger.AutoConverge()
 	})
 	return cmd

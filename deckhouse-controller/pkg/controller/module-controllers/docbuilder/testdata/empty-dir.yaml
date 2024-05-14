@@ -1,0 +1,30 @@
+# New lease is created but module directory was deleted somehow
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  name: absentmodule
+spec:
+  version: v1.0.0
+  checksum: abc
+  path: /absentmodule/v1.0.0
+status:
+  conditions:
+    - address: http://10-111-111-111.d8-system.pod.cluster.local:8081
+      checksum: abc
+      lastTransitionTime: "2019-10-17T15:33:00Z"
+      message: ""
+      type: Rendered
+      version: v1.0.0
+  result: Rendered
+---
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  labels:
+    deckhouse.io/documentation-builder-sync: ""
+  name: module-docs-builder-ldq7x
+  namespace: d8-system
+spec:
+  holderIdentity: 10-222-222-22.d8-system.pod.cluster.local:8081
+  leaseDurationSeconds: 35
+  renewTime: "2024-05-08T12:11:04.160683Z"

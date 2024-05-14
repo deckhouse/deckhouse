@@ -44,6 +44,39 @@ var once sync.Once
 
 var store *SchemaStore
 
+type validateOptions struct {
+	commanderMode      bool
+	strictUnmarshal    bool
+	validateExtensions bool
+	requiredSSHHost    bool
+}
+
+type ValidateOption func(o *validateOptions)
+
+func ValidateOptionCommanderMode(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.commanderMode = v
+	}
+}
+
+func ValidateOptionStrictUnmarshal(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.strictUnmarshal = v
+	}
+}
+
+func ValidateOptionValidateExtensions(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.validateExtensions = v
+	}
+}
+
+func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.requiredSSHHost = v
+	}
+}
+
 func NewSchemaStore(paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 
@@ -71,7 +104,13 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 
 		switch info.Name() {
-		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml", "cloud_provider_discovery_data.yaml":
+		case "init_configuration.yaml",
+			"cluster_configuration.yaml",
+			"static_cluster_configuration.yaml",
+			"cloud_discovery_data.yaml",
+			"cloud_provider_discovery_data.yaml",
+			"ssh_configuration.yaml",
+			"ssh_host_configuration.yaml":
 			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
@@ -91,7 +130,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir not found")
+		log.WarnF("Modules dir not found\n")
 		return st
 	}
 
@@ -110,7 +149,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
-			log.DebugF("openapi spec not found for module %s", moduleName)
+			log.DebugF("openapi spec not found for module %s\n", moduleName)
 		} else {
 			return err
 		}
@@ -172,7 +211,7 @@ func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	return 1
 }
 
-func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
+func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaIndex, error) {
 	var index SchemaIndex
 
 	err := yaml.Unmarshal(*doc, &index)
@@ -180,7 +219,7 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 
-	err = s.ValidateWithIndex(&index, doc)
+	err = s.ValidateWithIndex(&index, doc, opts...)
 	return &index, err
 }
 
@@ -200,7 +239,8 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 // two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
-func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
+func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
 			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
@@ -259,8 +299,11 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		return ErrSchemaNotFound
 	}
 
-	isValid, err := openAPIValidate(&docForValidate, schema)
+	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
+		if options.commanderMode {
+			return fmt.Errorf("%q document validation failed: %w", index.String(), err)
+		}
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
 
@@ -307,38 +350,59 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (isValid bool, multiErr error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}
 
-	err := yaml.Unmarshal(*dataObj, &blank)
-	if err != nil {
-		return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+	if options.strictUnmarshal {
+		err := yaml.UnmarshalStrict(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal strict: %v", err)
+		}
+	} else {
+		err := yaml.Unmarshal(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+		}
 	}
 
 	result := validator.Validate(blank)
-	if result.IsValid() {
-		// Add default values from openAPISpec
-		post.ApplyDefaults(result)
-		*dataObj, _ = json.Marshal(result.Data())
+	if !result.IsValid() {
+		var allErrs *multierror.Error
+		allErrs = multierror.Append(allErrs, result.Errors...)
 
-		return true, nil
+		return false, allErrs.ErrorOrNil()
 	}
 
-	var allErrs *multierror.Error
-	allErrs = multierror.Append(allErrs, result.Errors...)
+	if options.validateExtensions {
+		if err := validateExtensions(*dataObj, *schema); err != nil {
+			return false, err
+		}
+	}
 
-	return false, allErrs.ErrorOrNil()
+	// Add default values from openAPISpec
+	post.ApplyDefaults(result)
+	*dataObj, _ = json.Marshal(result.Data())
+
+	return true, nil
 }
 
-func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
+func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
 	schemaStore := NewSchemaStore(paths...)
 
-	_, err := schemaStore.Validate(config)
+	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
 		return false, fmt.Errorf("Loading schema file: %v", err)
 	}
 
 	return true, nil
+}
+
+func applyOptions(opts ...ValidateOption) validateOptions {
+	options := validateOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	return options
 }

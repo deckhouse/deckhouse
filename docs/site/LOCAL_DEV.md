@@ -68,3 +68,20 @@ werf compose up --config werf-debug.yaml --follow --docker-compose-command-optio
 ```
 
 Connect to localhost:2345
+
+## Working with spellcheck
+
+Use the following commands:
+- `make docs-spellcheck` — to check all the documentation for spelling errors.
+- `file=<PATH_TO_FILE> make docs-spellcheck` — to check the specified file for spelling errors.
+
+  Example:
+
+  ```shell
+  file=ee/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
+  ```
+
+- `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/spelling/wordlist file.
+- `make docs-spellcheck-get-typos-list` — to get the sorted list of typos from the documentation.
+
+The `make lint-doc-spellcheck-pr` command is used in CI to check the spelling of the documentation in a PR.

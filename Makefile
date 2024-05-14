@@ -225,7 +225,7 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 .PHONY: docs
-docs: ## Run containers with the documentation (werf is required to build the containers).
+docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
 	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
@@ -241,6 +241,30 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+
+.PHONY: docs-spellcheck
+docs-spellcheck: ## Check the spelling in the documentation.
+  ##~ Options: file="path/to/file" (Specify a path to a specific file)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+
+lint-doc-spellcheck-pr:
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
+
+.PHONY: docs-spellcheck-generate-dictionary
+docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/spelling/wordlist file).
+	@echo "Sorting wordlist..."
+	@sort ./tools/spelling/wordlist -o ./tools/spelling/wordlist
+	@echo "Generating dictionary..."
+	@test -f ./tools/spelling/dictionaries/dev_OPS.dic && rm ./tools/spelling/dictionaries/dev_OPS.dic
+	@touch ./tools/spelling/dictionaries/dev_OPS.dic
+	@cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
+	@sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
+	@echo "Don't forget to commit changes and push it!"
+	@git diff --stat
+
+.PHONY: docs-spellcheck-get-typos-list
+docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell check the documentation/ d; /^Possible typos/d" | sort -u
 
 ##@ Update kubernetes control-plane patchversions
 

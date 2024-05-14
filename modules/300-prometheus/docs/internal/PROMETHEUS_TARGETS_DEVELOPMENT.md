@@ -14,7 +14,7 @@ search: Developing Prometheus targets, prometheus target
 
 ## Best practices
 
-### Set labels for Pod-oriented mertics
+### Set labels for Pod-oriented metrics
 
 Most metrics stored in Prometheus either contain Pod-related data or information about the parameters of the application running in the Pod. We call these metrics ~Pod-oriented~. They include (predominantly but not exclusively) the following metric varieties:
 * system metrics that reflect the performance parameters of the Pod (these are exported by kubelet);

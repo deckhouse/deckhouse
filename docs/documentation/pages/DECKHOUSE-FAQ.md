@@ -343,7 +343,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   * `Allow anonymous docker pull` must be enabled. This option enables Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access*, and the `anonymous` user is not granted access rights to the created repository.
   * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
-  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the folowing permissions:
+  * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the following permissions:
     * `nx-repository-view-docker-<repo>-browse`
     * `nx-repository-view-docker-<repo>-read`
   * The user (*Administration* -> *Security* -> *Users*) must be created with the above role granted.
@@ -508,17 +508,17 @@ This feature is available in Enterprise Edition only.
    After installation, apply DeckhouseReleases manifests that were generated during pull operation to your cluster via `kubectl` as follows:
 
    ```shell
-   kubectl apply -f $(pwd)/d8-images/deckhousereleaases.yaml
+   kubectl apply -f $(pwd)/d8-images/deckhousereleases.yaml
    ```
 
-### Manually uploading images of Deckhouse modules into an isolated private registry
+### Manually uploading images of Deckhouse modules into an air-gapped registry
 
 The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
 1. Run Deckhouse installer version 1.58.6 or higher:
 
   ```shell
-   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ce/install:v1.58.6 bash
+   docker run -ti --pull=always -v $(HOME)/d8-modules:/tmp/d8-modules -v $(HOME)/module_source.yml:/tmp/module_source.yml registry.deckhouse.io/deckhouse/ee/install:v1.58.6 bash
    ```
 
    Note that the directory from the host file system is mounted in the installer container. It will store module images and the [ModuleSource](cr.html#modulesource) YAML manifest describing the source of modules.

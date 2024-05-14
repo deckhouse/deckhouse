@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"runtime/trace"
+	"strings"
+	"time"
 
 	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -28,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	stcache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -66,6 +70,9 @@ func main() {
 		runApplication(kpApp)
 		return
 	}
+
+	commands.DefineServerCommand(kpApp)
+	commands.DefineSingleThreadedServerCommand(kpApp)
 
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
@@ -143,6 +150,45 @@ func main() {
 func runApplication(kpApp *kingpin.Application) {
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		log.InitLogger(app.LoggerType)
+		if app.DoNotWriteDebugLogFile {
+			return nil
+		}
+
+		if c.SelectedCommand == nil {
+			return nil
+		}
+
+		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+
+		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+
+		logPath := path.Join(app.TmpDirName, logFile)
+		err := log.WrapWithTeeLogger(logPath, 1024)
+		if err != nil {
+			return err
+		}
+
+		tomb.RegisterOnShutdown("Finalize logger", func() {
+			if err := log.FlushAndClose(); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+				return
+			}
+
+			if logPath == "" || logFile == "" {
+				return
+			}
+
+			pathInCache := stcache.Global().GetPath(logFile)
+			if pathInCache == "" {
+				return
+			}
+
+			if err := os.Rename(logPath, pathInCache); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+				return
+			}
+		})
+
 		return nil
 	})
 

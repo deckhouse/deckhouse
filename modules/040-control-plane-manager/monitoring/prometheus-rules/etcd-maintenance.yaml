@@ -17,7 +17,7 @@
 
           Possible solutions:
           - You can do defragmentation. Use next command:
-          `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s'`
+          `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
           - Increase node memory. Begin from 24 GB `quota-backend-bytes` will be increased on 1G every extra 8 GB node memory.
             For example:
             Node Memory  quota-backend-bytes
@@ -49,7 +49,7 @@
           If is true, you should set quota-backend-bytes manually with `controlPlaneManager.etcd.maxDbSize` configuration parameter.
           Before set new value, please check current DB usage on every control-plane node:
           ```
-          for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do kubectl -n kube-system exec -ti "$pod" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key endpoint status -w json' | jq --arg a "$pod" -r '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"'; done
+          for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do kubectl -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key endpoint status -w json | jq --arg a "$pod" -r '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"'; done
           ```
           Recommendations:
           - `controlPlaneManager.etcd.maxDbSize` maximum value is 8 GB.

@@ -157,7 +157,7 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 	}
 
 	if applyTimeChanged && !(*predictedRelease).GetApplyNow() {
-		err = du.kubeAPI.PatchReleaseApplyAfter((*predictedRelease).GetName(), releaseApplyTime)
+		err = du.kubeAPI.PatchReleaseApplyAfter(*predictedRelease, releaseApplyTime)
 		if err != nil {
 			du.logger.Errorf("patch apply after: %s", err.Error())
 		}
@@ -396,7 +396,7 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 	// remove annotation if exists
 	if (*predictedRelease).GetApplyNow() {
 		err = du.kubeAPI.PatchReleaseAnnotations(
-			(*predictedRelease).GetName(),
+			*predictedRelease,
 			map[string]interface{}{
 				"release.deckhouse.io/apply-now": nil,
 			})
@@ -484,7 +484,7 @@ func (du *Updater[R]) ApplyForcedRelease() {
 	du.runReleaseDeploy(forcedRelease, currentRelease)
 
 	// remove annotation
-	err := du.kubeAPI.PatchReleaseAnnotations((*forcedRelease).GetName(), map[string]any{
+	err := du.kubeAPI.PatchReleaseAnnotations(*forcedRelease, map[string]any{
 		"release.deckhouse.io/force": nil,
 	})
 	if err != nil {
@@ -582,7 +582,7 @@ func (du *Updater[R]) patchSuspendedStatus(release R) R {
 		return release
 	}
 
-	err := du.kubeAPI.PatchReleaseAnnotations(release.GetName(), map[string]any{
+	err := du.kubeAPI.PatchReleaseAnnotations(release, map[string]any{
 		"release.deckhouse.io/suspended": nil,
 	})
 	if err != nil {
@@ -688,13 +688,13 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 }
 
 func (du *Updater[R]) saveReleaseData() error {
-	var releaseName string
+	var release R
 
 	if du.predictedReleaseIndex != -1 {
-		releaseName = du.releases[du.predictedReleaseIndex].GetName()
+		release = du.releases[du.predictedReleaseIndex]
 	}
 
-	return du.kubeAPI.SaveReleaseData(releaseName, du.releaseData)
+	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
 }
 
 func (du *Updater[R]) GetPredictedReleaseIndex() int {

@@ -1843,6 +1843,7 @@ jobs:
 
   doc_web_build:
     name: Doc web build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -1961,6 +1962,7 @@ jobs:
 
   main_web_build:
     name: Main web build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -2683,7 +2685,7 @@ jobs:
 
   web_links_test:
     name: Web links test
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -3232,7 +3234,6 @@ jobs:
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases
-      - web_links_test
       - validators
     if: ${{ always() }}
     runs-on: ubuntu-latest

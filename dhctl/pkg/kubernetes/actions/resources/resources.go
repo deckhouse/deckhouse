@@ -57,7 +57,7 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 
 	var resourcesList *metav1.APIResourceList
 	var err error
-	err = retry.NewSilentLoop("Get resources list", 25, 5*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get resources list", 50, 5*time.Second).Run(func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
@@ -174,7 +174,8 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	doc := resource.Object
 	gvk := resource.GVK
 
-	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5*time.Second).Run(func() error {
+	// Wait up to 10 minutes
+	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 60, 10*time.Second).Run(func() error {
 		gvr, err := c.kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
 		if err != nil {
 			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
@@ -218,11 +219,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 }
 
 func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker) error {
-	timeout, err := time.ParseDuration(app.ResourcesTimeout)
-	if err != nil {
-		return fmt.Errorf("cannot parse timeout to create resources: %v", err)
-	}
-	endChannel := time.After(timeout)
+	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()

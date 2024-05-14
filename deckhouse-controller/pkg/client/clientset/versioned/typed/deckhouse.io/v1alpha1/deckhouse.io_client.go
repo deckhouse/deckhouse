@@ -28,8 +28,10 @@ import (
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
+	ModuleDocumentationsGetter
 	ModulePullOverridesGetter
 	ModuleReleasesGetter
 	ModuleSourcesGetter
@@ -41,12 +43,20 @@ type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
 }
 
+func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
+	return newDeckhouseReleases(c)
+}
+
 func (c *DeckhouseV1alpha1Client) Modules() ModuleInterface {
 	return newModules(c)
 }
 
 func (c *DeckhouseV1alpha1Client) ModuleConfigs() ModuleConfigInterface {
 	return newModuleConfigs(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModuleDocumentations() ModuleDocumentationInterface {
+	return newModuleDocumentations(c)
 }
 
 func (c *DeckhouseV1alpha1Client) ModulePullOverrides() ModulePullOverrideInterface {

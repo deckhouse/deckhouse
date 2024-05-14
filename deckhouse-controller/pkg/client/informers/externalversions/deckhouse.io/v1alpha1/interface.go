@@ -24,10 +24,14 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// DeckhouseReleases returns a DeckhouseReleaseInformer.
+	DeckhouseReleases() DeckhouseReleaseInformer
 	// Modules returns a ModuleInformer.
 	Modules() ModuleInformer
 	// ModuleConfigs returns a ModuleConfigInformer.
 	ModuleConfigs() ModuleConfigInformer
+	// ModuleDocumentations returns a ModuleDocumentationInformer.
+	ModuleDocumentations() ModuleDocumentationInformer
 	// ModulePullOverrides returns a ModulePullOverrideInformer.
 	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleReleases returns a ModuleReleaseInformer.
@@ -49,6 +53,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// DeckhouseReleases returns a DeckhouseReleaseInformer.
+func (v *version) DeckhouseReleases() DeckhouseReleaseInformer {
+	return &deckhouseReleaseInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // Modules returns a ModuleInformer.
 func (v *version) Modules() ModuleInformer {
 	return &moduleInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -57,6 +66,11 @@ func (v *version) Modules() ModuleInformer {
 // ModuleConfigs returns a ModuleConfigInformer.
 func (v *version) ModuleConfigs() ModuleConfigInformer {
 	return &moduleConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModuleDocumentations returns a ModuleDocumentationInformer.
+func (v *version) ModuleDocumentations() ModuleDocumentationInformer {
+	return &moduleDocumentationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ModulePullOverrides returns a ModulePullOverrideInformer.

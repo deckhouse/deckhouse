@@ -23,17 +23,24 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
+type DeckhouseDestroyerOptions struct {
+	CommanderMode bool
+}
+
 type DeckhouseDestroyer struct {
 	convergeUnlocker func(fullUnlock bool)
 	sshClient        *ssh.Client
 	kubeCl           *client.KubernetesClient
 	state            *State
+
+	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
-		sshClient: sshClient,
-		state:     state,
+		sshClient:                 sshClient,
+		state:                     state,
+		DeckhouseDestroyerOptions: opts,
 	}
 }
 
@@ -62,14 +69,15 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
-	if err != nil {
-		return nil, err
-	}
-
 	g.kubeCl = kubeCl
-	g.convergeUnlocker = unlockConverge
+
+	if !g.CommanderMode {
+		unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
+		if err != nil {
+			return nil, err
+		}
+		g.convergeUnlocker = unlockConverge
+	}
 
 	return kubeCl, err
 }

@@ -202,7 +202,7 @@ provider:
 organization: *!CHANGE_ORG*
 virtualApplicationName: *!CHANGE_VAPP*
 virtualDataCenter: *!CHANGE__DC*
-# [<en>] Внутренная сеть узлов.
+# [<en>] Внутренняя сеть узлов.
 # [<ru>] Internal network name.
 mainNetwork: *!CHANGE_SSH_KEY_MAIN_NETWORK*
 # [<en>] Public SSH key for accessing cloud nodes.

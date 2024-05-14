@@ -7,6 +7,8 @@
  - Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
  - `sds-drbd` module is renamed. Please switch to [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume) module ASAP. `sds-drbd` module cannot be enabled but will continue to work if it was already enabled before.
+ - **The way of how application traffic is captured by Istio has been revised.** The CNI plugin is now used instead of the init container. This, for example, removes restrictions that prevented _istio_ from being used together with the _admission-policy-engine_ module in some configurations. The new routing method is used by default, a switchover will be performed when DKP is updated. **Possible regressions** for applications that do network requests in their init containers. The solutions are described in the [PR](https://github.com/deckhouse/deckhouse/pull/8353).
+
 
 ## Features
 
@@ -43,6 +45,7 @@
  - **[ingress-nginx]** Add the IP address and hostname to the `status` field of the `IngressNginxController` resource. [#7785](https://github.com/deckhouse/deckhouse/pull/7785)
  - **[ingress-nginx]** Add VPA support to OpenKruise advance daemonsets. [#7557](https://github.com/deckhouse/deckhouse/pull/7557)
     Vpa-admission-controller/recommender/updater pods will be recreated. OpenKruise controller manager pod will restart.
+ - **[istio]** The `trafficRedirectionSetupMode` module parameter. [#8353](https://github.com/deckhouse/deckhouse/pull/8353)
  - **[istio]** The new traffic redirection mode "IstioCNI" for the Istio module is to replace the old one, "InitContainer". [#7488](https://github.com/deckhouse/deckhouse/pull/7488)
     Application traffic redirection setup method in the istio module deligated to a special CNI plugin. Cilium agent pods will restart, and L7-based policies will flap.
  - **[l2-load-balancer]** Show public IP in the status field of the `L2LoadBalancer` CustomResource. [#7937](https://github.com/deckhouse/deckhouse/pull/7937)
@@ -95,6 +98,7 @@
  - **[deckhouse-controller]** Drop cluster-domain part of the leader identity if KUBERNETES_CLUSTER_DOMAIN isn't set. [#8225](https://github.com/deckhouse/deckhouse/pull/8225)
  - **[deckhouse-controller]** Use FQDN K8s pod name for the lease leader. [#8187](https://github.com/deckhouse/deckhouse/pull/8187)
  - **[descheduler]** Remove incorrect inclusions of the `removeDuplicates` field. [#7242](https://github.com/deckhouse/deckhouse/pull/7242)
+ - **[dhctl]** Backport fix for pulling of additional modules images from d8-cli into `dhctl mirror`. [#8364](https://github.com/deckhouse/deckhouse/pull/8364)
  - **[dhctl]** Remove dependency on addon-operator. [#8210](https://github.com/deckhouse/deckhouse/pull/8210)
  - **[dhctl]** Add pod security context to `deckhouse` pod and disable `deckhouse` init container if `external-module-manager` is off. [#8173](https://github.com/deckhouse/deckhouse/pull/8173)
  - **[dhctl]** Fix `dhctl mirror` producing bundles with unexpected components versions. [#8161](https://github.com/deckhouse/deckhouse/pull/8161)
@@ -102,6 +106,7 @@
  - **[external-module-manager]** Fix panic at a module status update. [#7648](https://github.com/deckhouse/deckhouse/pull/7648)
  - **[flant-integration]** Remove python tests from the image. [#8321](https://github.com/deckhouse/deckhouse/pull/8321)
  - **[flant-integration]** Fix resources counting. [#8291](https://github.com/deckhouse/deckhouse/pull/8291)
+ - **[global-hooks]** Trigger `k8s_upgrade` migration when K8s version changes. [#8260](https://github.com/deckhouse/deckhouse/pull/8260)
  - **[global-hooks]** Fix K8s upgrade migration. [#8148](https://github.com/deckhouse/deckhouse/pull/8148)
  - **[global-hooks]** Fix ability to downgrade Kubernetes by more than 1 minor version. [#7279](https://github.com/deckhouse/deckhouse/pull/7279)
  - **[ingress-nginx]** Preventing istio-proxy from terminating before the ingress-controller is stopped during grace period. [#8064](https://github.com/deckhouse/deckhouse/pull/8064)

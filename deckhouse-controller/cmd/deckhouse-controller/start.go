@@ -185,7 +185,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 
 	// Starts main event lop
-	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
+	err = dController.Setup(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	debugserver.RegisterRoutes(operator.DebugServer)
 
-	dController.RunControllers()
+	dController.Start(ctx)
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {

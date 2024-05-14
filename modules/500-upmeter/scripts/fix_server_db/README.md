@@ -35,7 +35,7 @@ watch kubectl -n d8-upmeter get po -l app=upmeter -o wide
 ## How it helps
 
 The fix is based on vacuuming sqlite file since it has too much unneccessary
-data and prevents migrations from runnung. ON the migrations, the database file
+data and prevents migrations from running. ON the migrations, the database file
 doubles in size. Given PVC size is 1G, and the DB size is 600M, migration cannot
 run.
 

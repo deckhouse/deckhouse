@@ -21,19 +21,20 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -61,7 +62,8 @@ var (
 )
 
 type Runner struct {
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	terraformContext       *terraform.TerraformContext
 
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
@@ -76,7 +78,7 @@ type Runner struct {
 	stateCache dstate.Cache
 }
 
-func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache) *Runner {
+func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateCache dstate.Cache, terraformContext *terraform.TerraformContext) *Runner {
 	return &Runner{
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
@@ -85,6 +87,8 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner, stateC
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[Phase]bool),
 		stateCache:    stateCache,
+
+		terraformContext: terraformContext,
 	}
 }
 
@@ -98,7 +102,7 @@ func (r *Runner) WithCommanderMode(commanderMode bool) *Runner {
 	return r
 }
 
-func (r *Runner) WithPhasedExecutionContext(pec *phases.PhasedExecutionContext) *Runner {
+func (r *Runner) WithPhasedExecutionContext(pec phases.DefaultPhasedExecutionContext) *Runner {
 	r.PhasedExecutionContext = pec
 	return r
 }
@@ -140,7 +144,11 @@ func (r *Runner) isSkip(phase Phase) bool {
 }
 
 func (r *Runner) RunConverge() error {
-	return r.lockRunner.Run(r.converge)
+	if r.lockRunner != nil {
+		return r.lockRunner.Run(r.converge)
+	} else {
+		return r.converge()
+	}
 }
 
 func (r *Runner) converge() error {
@@ -174,7 +182,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
@@ -191,13 +199,22 @@ func (r *Runner) converge() error {
 			}
 		}
 
-		var nodesState map[string]NodeGroupTerraformState
-
+		var nodesState map[string]state.NodeGroupTerraformState
 		err = log.Process("converge", "Gather Nodes Terraform state", func() error {
-			nodesState, err = GetNodesStateFromCluster(r.kubeCl)
-			if err != nil {
-				return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
+			// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
+			// NOTE: In the commander mode nodes state should exist in the local state cache.
+			if r.commanderMode {
+				nodesState, err = LoadNodesStateForCommanderMode(r.stateCache, metaConfig, r.kubeCl)
+				if err != nil {
+					return fmt.Errorf("unable to load nodes state: %w", err)
+				}
+			} else {
+				nodesState, err = state_terraform.GetNodesStateFromCluster(r.kubeCl)
+				if err != nil {
+					return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
+				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -235,7 +252,7 @@ func (r *Runner) converge() error {
 
 		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 			ngState := nodesState[nodeGroupName]
-			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
+			controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache, r.terraformContext)
 			controller.WithChangeSettings(r.changeSettings)
 			controller.WithCommanderMode(r.commanderMode)
 			controller.WithExcludedNodes(r.excludedNodes)
@@ -246,7 +263,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
@@ -276,7 +293,7 @@ func (r *Runner) converge() error {
 		}
 
 		if r.PhasedExecutionContext != nil {
-			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache); err != nil {
+			if err := r.PhasedExecutionContext.CompletePhase(r.stateCache, nil); err != nil {
 				return err
 			}
 		}
@@ -287,27 +304,28 @@ func (r *Runner) converge() error {
 
 func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 	return log.Process("converge", "Update Cluster Terraform state", func() error {
-		clusterState, err := GetClusterStateFromCluster(r.kubeCl)
-		if err != nil {
-			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
-		}
-
-		if clusterState == nil {
-			return fmt.Errorf("kubernetes cluster has no state")
-		}
-
-		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", r.stateCache).
-			WithSkipChangesOnDeny(true).
-			WithVariables(metaConfig.MarshalConfig()).
-			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
-			WithAutoApprove(r.changeSettings.AutoApprove)
+		var clusterState []byte
+		var err error
+		// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
+		// NOTE: In the commander mode cluster state should exist in the local state cache.
 		if !r.commanderMode {
-			baseRunner = baseRunner.WithState(clusterState)
+			clusterState, err = state_terraform.GetClusterStateFromCluster(r.kubeCl)
+			if err != nil {
+				return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+			}
+			if clusterState == nil {
+				return fmt.Errorf("kubernetes cluster has no state")
+			}
 		}
 
-		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
-
-		baseRunner.WithAdditionalStateSaverDestination(NewClusterStateSaver(r.kubeCl))
+		baseRunner := r.terraformContext.GetConvergeBaseInfraRunner(metaConfig, terraform.BaseInfraRunnerOptions{
+			AutoDismissDestructive:           r.changeSettings.AutoDismissDestructive,
+			AutoApprove:                      r.changeSettings.AutoApprove,
+			CommanderMode:                    r.commanderMode,
+			StateCache:                       r.stateCache,
+			ClusterState:                     clusterState,
+			AdditionalStateSaverDestinations: []terraform.SaverDestination{NewClusterStateSaver(r.kubeCl)},
+		})
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
@@ -335,7 +353,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 		}
 
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true)
+			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
 			if err != nil {
 				return err
 			}
@@ -356,9 +374,10 @@ type NodeGroupController struct {
 
 	nodeToHost map[string]string
 	name       string
-	state      NodeGroupTerraformState
+	state      state.NodeGroupTerraformState
 
-	commanderMode bool
+	commanderMode    bool
+	terraformContext *terraform.TerraformContext
 }
 
 type NodeGroupGroupOptions struct {
@@ -373,13 +392,14 @@ func (n *NodeGroupGroupOptions) CurReplicas() int {
 	return len(n.State)
 }
 
-func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, name string, state NodeGroupTerraformState, stateCache dstate.Cache) *NodeGroupController {
+func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, name string, state state.NodeGroupTerraformState, stateCache dstate.Cache, terraformContext *terraform.TerraformContext) *NodeGroupController {
 	return &NodeGroupController{
-		client:         kubeCl,
-		config:         metaConfig,
-		changeSettings: &terraform.ChangeActionSettings{},
-		excludedNodes:  make(map[string]bool),
-		stateCache:     stateCache,
+		client:           kubeCl,
+		config:           metaConfig,
+		changeSettings:   &terraform.ChangeActionSettings{},
+		excludedNodes:    make(map[string]bool),
+		stateCache:       stateCache,
+		terraformContext: terraformContext,
 
 		name:  name,
 		state: state,
@@ -528,9 +548,9 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 			var err error
 			var output *terraform.PipelineOutputs
 			if nodeGroup.Name == MasterNodeGroupName {
-				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
+				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true, c.terraformContext)
 			} else {
-				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
+				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true, c.terraformContext)
 			}
 			if err != nil {
 				return err
@@ -557,7 +577,12 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 		return nil
 	}
 
-	state := nodeGroup.State[nodeName]
+	// NOTE: In the commander mode nodes state should exist in the local state cache, no need to pass state explicitly.
+	var nodeState []byte
+	if !c.commanderMode {
+		nodeState = nodeGroup.State[nodeName]
+	}
+
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, nodeName)
@@ -565,19 +590,6 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 	}
 
 	checker := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
-
-	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
-		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
-		WithSkipChangesOnDeny(true).
-		WithName(nodeName).
-		WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
-		WithAutoApprove(c.changeSettings.AutoApprove).
-		WithHook(checker)
-	if !c.commanderMode {
-		nodeRunner = nodeRunner.WithState(state)
-	}
-
-	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
 	pipelineForMaster := nodeGroup.Step == "master-node"
 
@@ -592,7 +604,22 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 		nodeGroupSettingsFromConfig = c.config.FindTerraNodeGroup(nodeGroup.Name)
 	}
 
-	nodeRunner.WithAdditionalStateSaverDestination(NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+	nodeRunner := c.terraformContext.GetConvergeNodeRunner(c.config, terraform.NodeRunnerOptions{
+		AutoDismissDestructive: c.changeSettings.AutoDismissDestructive,
+		AutoApprove:            c.changeSettings.AutoApprove,
+		NodeName:               nodeName,
+		NodeGroupName:          nodeGroup.Name,
+		NodeGroupStep:          nodeGroup.Step,
+		NodeIndex:              nodeIndex,
+		NodeState:              nodeState,
+		NodeCloudConfig:        nodeGroup.CloudConfig,
+		CommanderMode:          c.commanderMode,
+		StateCache:             c.stateCache,
+		AdditionalStateSaverDestinations: []terraform.SaverDestination{
+			NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
+		},
+		ReadinessChecker: checker,
+	})
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
@@ -651,20 +678,27 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 			return nil
 		}
 
-		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
-			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, nodeIndex, nodeGroup.CloudConfig)).
-			WithName(name).
-			WithAllowedCachedState(true).
-			WithSkipChangesOnDeny(true).
-			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
-			WithAutoApprove(c.changeSettings.AutoApprove)
+		// NOTE: In the commander mode nodes state should exist in the local state cache, no need to pass state explicitly.
+		var nodeState []byte
 		if !c.commanderMode {
-			nodeRunner = nodeRunner.WithState(state)
+			nodeState = state
 		}
 
-		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
-
-		nodeRunner.WithAdditionalStateSaverDestination(NewNodeStateSaver(c.client, name, nodeGroup.Name, nil))
+		nodeRunner := c.terraformContext.GetConvergeNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
+			AutoDismissDestructive: c.changeSettings.AutoDismissDestructive,
+			AutoApprove:            c.changeSettings.AutoApprove,
+			NodeName:               name,
+			NodeGroupName:          nodeGroup.Name,
+			NodeGroupStep:          nodeGroup.Step,
+			NodeIndex:              nodeIndex,
+			NodeState:              nodeState,
+			NodeCloudConfig:        nodeGroup.CloudConfig,
+			CommanderMode:          c.commanderMode,
+			StateCache:             c.stateCache,
+			AdditionalStateSaverDestinations: []terraform.SaverDestination{
+				NewNodeStateSaver(c.client, name, nodeGroup.Name, nil),
+			},
+		})
 
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
@@ -678,6 +712,11 @@ func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOpti
 
 		if err := DeleteNode(c.client, name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
+			continue
+		}
+
+		if err := state_terraform.DeleteNodeTerraformStateFromCache(name, c.stateCache); err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s terraform state from cache: %w", name, err))
 			continue
 		}
 
@@ -720,6 +759,7 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
 	})
 }
+
 func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
 	for {
@@ -868,7 +908,7 @@ func GetMetaConfig(kubeCl *client.KubernetesClient) (*config.MetaConfig, error) 
 		return nil, err
 	}
 
-	metaConfig.UUID, err = GetClusterUUID(kubeCl)
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
 	if err != nil {
 		return nil, err
 	}

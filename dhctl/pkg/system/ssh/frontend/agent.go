@@ -15,13 +15,19 @@
 package frontend
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"os"
+
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 type Agent struct {
@@ -64,22 +70,9 @@ func (a *Agent) Start() error {
 
 // TODO replace with x/crypto/ssh/agent ?
 func (a *Agent) AddKeys() error {
-	for _, k := range a.AgentSettings.PrivateKeys {
-		log.DebugF("add key %s\n", k)
-		sshAdd := cmd.NewSSHAdd(a.AgentSettings).KeyCmd(k)
-		output, err := sshAdd.CombinedOutput()
-		if err != nil {
-			werr := "signal: interrupt"
-			if err.Error() == werr {
-				return fmt.Errorf("process stopped")
-			}
-			return fmt.Errorf("ssh-add: %s %v", string(output), err)
-		}
-
-		str := string(output)
-		if str != "" && str != "\n" {
-			log.InfoF("ssh-add: %s\n", output)
-		}
+	err := addKeys(a.AgentSettings.AuthSock, a.AgentSettings.PrivateKeys)
+	if err != nil {
+		return fmt.Errorf("add keys: %w", err)
 	}
 
 	if app.IsDebug {
@@ -102,4 +95,62 @@ func (a *Agent) AddKeys() error {
 
 func (a *Agent) Stop() {
 	a.Agent.Stop()
+}
+
+func addKeys(authSock string, keys []session.AgentPrivateKey) error {
+	conn, err := net.Dial("unix", authSock)
+	if err != nil {
+		return fmt.Errorf("error dialing with ssh agent %s: %w", authSock, err)
+	}
+	defer conn.Close()
+
+	agentClient := agent.NewClient(conn)
+
+	for _, key := range keys {
+		privateKey, err := parsePrivateSSHKey(key.Key, []byte(key.Passphrase))
+		if err != nil {
+			return err
+		}
+
+		err = agentClient.Add(agent.AddedKey{PrivateKey: privateKey})
+		if err != nil {
+			return fmt.Errorf("adding ssh key with ssh agent %s: %w", authSock, err)
+		}
+	}
+
+	return nil
+}
+
+func parsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
+	keyData, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
+	}
+
+	var privateKey interface{}
+
+	privateKey, err = ssh.ParseRawPrivateKey(keyData)
+	if err != nil {
+		var passphraseMissingError *ssh.PassphraseMissingError
+		switch {
+		case errors.As(err, &passphraseMissingError):
+			if len(passphrase) == 0 {
+				passphraseFromStdin, err := terminal.AskPassword(
+					fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
+				)
+				if err != nil {
+					return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
+				}
+				passphrase = passphraseFromStdin
+			}
+			privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+			if err != nil {
+				return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
+			}
+		default:
+			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
+		}
+	}
+
+	return privateKey, nil
 }

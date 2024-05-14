@@ -53,10 +53,14 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=deckhouse.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("deckhousereleases"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().DeckhouseReleases().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().Modules().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("moduleconfigs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleConfigs().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("moduledocumentations"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleDocumentations().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulepulloverrides"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModulePullOverrides().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulereleases"):

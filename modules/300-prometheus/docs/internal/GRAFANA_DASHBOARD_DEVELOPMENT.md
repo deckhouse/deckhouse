@@ -125,7 +125,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
           <li>7 days — 756 seconds.</li>
         </ul>
       </li>
-      <li>Next, Grafana turns to the <code>Min step</code> parameter and makes the minimum data point <code>step</code> equal to the <code>Min step</code> (if specified). Note that the <code>Min step</code> arameter can be specified globally (in the data source settings) and for each query in the panel. In our case, the <code>Min step</code>  is set globally. It corresponds to the <code>scrape_interval</code> for Prometheus (the <code>scrape_interval</code> for the main one is 30 seconds). In the end, Grafana gets the following values (taking into account the above restriction):
+      <li>Next, Grafana turns to the <code>Min step</code> parameter and makes the minimum data point <code>step</code> equal to the <code>Min step</code> (if specified). Note that the <code>Min step</code> parameter can be specified globally (in the data source settings) and for each query in the panel. In our case, the <code>Min step</code>  is set globally. It corresponds to the <code>scrape_interval</code> for Prometheus (the <code>scrape_interval</code> for the main one is 30 seconds). In the end, Grafana gets the following values (taking into account the above restriction):
         <ul>
           <li>30 minutes — 30 seconds (instead of 2.25),</li>
           <li>3 hours — 30 seconds (instead of 13.5 seconds),</li>

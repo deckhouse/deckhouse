@@ -49,7 +49,7 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineOutputs, error)) (*PipelineOutputs, error) {
+func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterface) (*PipelineOutputs, error)) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
 	pipelineFunc := func() error {
 		err := r.Init()
@@ -57,7 +57,7 @@ func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineO
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(PlanOptions{})
 		if err != nil {
 			return err
 		}
@@ -73,44 +73,82 @@ func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineO
 		return err
 	}
 
-	err := log.Process("terraform", fmt.Sprintf("Pipeline %s for %s", r.step, name), pipelineFunc)
+	err := log.Process("terraform", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
 	return extractedData, err
 }
 
-func CheckPipeline(r *Runner, name string) (int, error) {
+func CheckPipeline(r RunnerInterface, name string, opts PlanOptions) (int, TerraformPlan, *PlanDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
+	var destructiveChanges *PlanDestructiveChanges
+	var terraformPlan map[string]any
+
 	pipelineFunc := func() error {
 		err := r.Init()
 		if err != nil {
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(opts)
 		if err != nil {
 			return err
 		}
 
-		isChange = r.changesInPlan
+		isChange = r.GetChangesInPlan()
+		destructiveChanges = r.GetPlanDestructiveChanges()
+
+		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
+		if err != nil {
+			var ee *exec.ExitError
+			if ok := errors.As(err, &ee); ok {
+				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+			}
+			return fmt.Errorf("can't get terraform plan for %q\n%v", r.GetPlanPath(), err)
+		}
+
+		err = json.Unmarshal(rawPlan, &terraformPlan)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
-	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)
-	return isChange, err
+	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	return isChange, terraformPlan, destructiveChanges, err
 }
 
-func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
+type BaseInfrastructureDestructiveChanges struct {
+	PlanDestructiveChanges
+	OutputBrokenReason string      `json:"output_broken_reason,omitempty"`
+	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
+}
+
+func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, TerraformPlan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
+
+	var destructiveChanges *BaseInfrastructureDestructiveChanges
+	getOrCreateDestructiveChanges := func() *BaseInfrastructureDestructiveChanges {
+		if destructiveChanges == nil {
+			destructiveChanges = &BaseInfrastructureDestructiveChanges{}
+		}
+		return destructiveChanges
+	}
+	var terraformPlan map[string]any
+
 	pipelineFunc := func() error {
 		err := r.Init()
 		if err != nil {
 			return err
 		}
 
-		err = r.Plan()
+		err = r.Plan(PlanOptions{})
 		if err != nil {
 			return err
 		}
 
-		isChange = r.changesInPlan
+		isChange = r.GetChangesInPlan()
+		if pdc := r.GetPlanDestructiveChanges(); pdc != nil {
+			getOrCreateDestructiveChanges().PlanDestructiveChanges = *pdc
+		}
 		if isChange > PlanHasChanges {
 			return nil
 		}
@@ -118,6 +156,7 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 		info, err := GetBaseInfraResult(r)
 		if err != nil {
 			isChange = PlanHasDestructiveChanges
+			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
 			return err
 		}
 
@@ -140,16 +179,21 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 			} `json:"output_changes"`
 		}
 
-		result, err := r.terraformExecutor.Output("show", "-json", r.planPath)
+		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
 		if err != nil {
 			var ee *exec.ExitError
 			if ok := errors.As(err, &ee); ok {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
-			return fmt.Errorf("can't get terraform plan for %q\n%v", r.planPath, err)
+			return fmt.Errorf("can't get terraform plan for %q\n%v", r.GetPlanPath(), err)
 		}
 
-		err = json.Unmarshal(result, &changes)
+		err = json.Unmarshal(rawPlan, &changes)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(rawPlan, &terraformPlan)
 		if err != nil {
 			return err
 		}
@@ -159,15 +203,19 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 
 		if !equalArray(data.Zones, changes.Output.Data.After.Zones) {
 			isChange = PlanHasDestructiveChanges
+			getOrCreateDestructiveChanges().OutputZonesChanged = ValueChange{
+				CurrentValue: data.Zones,
+				NextValue:    changes.Output.Data.After.Zones,
+			}
 		}
 
 		return nil
 	}
-	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)
-	return isChange, err
+	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	return isChange, terraformPlan, destructiveChanges, err
 }
 
-func DestroyPipeline(r *Runner, name string) error {
+func DestroyPipeline(r RunnerInterface, name string) error {
 	pipelineFunc := func() error {
 		err := r.Init()
 		if err != nil {
@@ -185,10 +233,10 @@ func DestroyPipeline(r *Runner, name string) error {
 		}
 		return nil
 	}
-	return log.Process("terraform", fmt.Sprintf("Destroy %s for %s", r.step, name), pipelineFunc)
+	return log.Process("terraform", fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
 }
 
-func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
+func GetBaseInfraResult(r RunnerInterface) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetTerraformOutput("cloud_discovery_data")
 	if err != nil {
 		return nil, err
@@ -203,7 +251,7 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 	// bastion host is optional
 	bastionHost, _ := getStringOrIntOutput(r, "bastion_ip_address_for_ssh")
 
-	tfState, err := r.getState()
+	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +263,7 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 	}, nil
 }
 
-func GetMasterNodeResult(r *Runner) (*PipelineOutputs, error) {
+func GetMasterNodeResult(r RunnerInterface) (*PipelineOutputs, error) {
 	masterIPAddressForSSH, err := getStringOrIntOutput(r, "master_ip_address_for_ssh")
 	if err != nil {
 		return nil, err
@@ -231,7 +279,7 @@ func GetMasterNodeResult(r *Runner) (*PipelineOutputs, error) {
 		return nil, err
 	}
 
-	tfState, err := r.getState()
+	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
 	}
@@ -244,8 +292,8 @@ func GetMasterNodeResult(r *Runner) (*PipelineOutputs, error) {
 	}, nil
 }
 
-func OnlyState(r *Runner) (*PipelineOutputs, error) {
-	tfState, err := r.getState()
+func OnlyState(r RunnerInterface) (*PipelineOutputs, error) {
+	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +319,7 @@ func (s *stringOrInt) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func getStringOrIntOutput(r *Runner, name string) (string, error) {
+func getStringOrIntOutput(r RunnerInterface, name string) (string, error) {
 	outputRaw, err := r.GetTerraformOutput(name)
 	if err != nil {
 		return "", err

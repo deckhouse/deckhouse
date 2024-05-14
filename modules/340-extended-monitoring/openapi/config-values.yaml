@@ -77,7 +77,7 @@ properties:
       severityLevel:
         type: string
         description: |
-          Whether to expose only crutial events.
+          Whether to expose only crucial events.
         enum: ["All", "OnlyWarnings"]
         default: "OnlyWarnings"
   certificates:

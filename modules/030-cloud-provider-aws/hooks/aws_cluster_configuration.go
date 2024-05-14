@@ -110,7 +110,7 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}
 
-	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData)
+	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{})
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 	}
