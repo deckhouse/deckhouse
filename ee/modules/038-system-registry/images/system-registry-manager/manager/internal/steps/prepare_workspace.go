@@ -9,7 +9,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
-	"system-registry-manager/pkg"
+	pkg_files "system-registry-manager/pkg/files"
 )
 
 func PrepareWorkspace(manifestsSpec *config.ManifestsSpec) error {
@@ -43,7 +43,7 @@ func checkInputFilesExist(manifestsSpec *config.ManifestsSpec) error {
 	}
 
 	for _, inputFile := range inputFiles {
-		if !pkg.IsPathExists(inputFile) {
+		if !pkg_files.IsPathExists(inputFile) {
 			return fmt.Errorf("can't find file '%s'", inputFile)
 		}
 	}
@@ -57,13 +57,13 @@ func copyFilesToWorkspace(manifestsSpec *config.ManifestsSpec) error {
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 		log.Infof("Copying CA key from %s to %s", cert.CAKey.InputPath, cert.CAKey.TmpPath)
-		err := pkg.CopyFile(cert.CAKey.InputPath, cert.CAKey.TmpPath)
+		err := pkg_files.CopyFile(cert.CAKey.InputPath, cert.CAKey.TmpPath)
 		if err != nil {
 			return err
 		}
 
 		log.Infof("Copying CA certificate from %s to %s", cert.CACert.InputPath, cert.CACert.TmpPath)
-		err = pkg.CopyFile(cert.CACert.InputPath, cert.CACert.TmpPath)
+		err = pkg_files.CopyFile(cert.CACert.InputPath, cert.CACert.TmpPath)
 		if err != nil {
 			return err
 		}
@@ -72,12 +72,12 @@ func copyFilesToWorkspace(manifestsSpec *config.ManifestsSpec) error {
 	renderData := config.GetDataForManifestRendering()
 	for _, manifest := range manifestsSpec.Manifests {
 		log.Infof("Copying manifest from %s to %s", manifest.InputPath, manifest.TmpPath)
-		err := pkg.CopyFile(manifest.InputPath, manifest.TmpPath)
+		err := pkg_files.CopyFile(manifest.InputPath, manifest.TmpPath)
 		if err != nil {
 			return err
 		}
 		log.Infof("Rendering manifest template at %s", manifest.TmpPath)
-		err = pkg.RenderTemplateFiles(manifest.TmpPath, renderData)
+		err = pkg_files.RenderTemplateFiles(manifest.TmpPath, renderData)
 		if err != nil {
 			return err
 		}
