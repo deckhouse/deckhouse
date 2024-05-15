@@ -284,10 +284,12 @@ shell:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "20240515-1"
 git:
 - add: /
   to: /deckhouse
+  stageDependencies:
+    install:
+      - "**/*"
   includePaths:
   - candi
   - modules
