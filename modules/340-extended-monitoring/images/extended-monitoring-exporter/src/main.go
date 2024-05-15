@@ -8,13 +8,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"k8s.io/api/core/v1"
-	"k8s.io/client-go"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 func recordMetrics() {
 	go func() {
 		for {
+			// Init kubeClient
+			config, err := rest.InClusterConfig()
+			if err != nil {
+				log.Fatalf("failed to init kubeClient config. Error: %v", err)
+			}
+			kubeClient, err := kubernetes.NewForConfig(config)
+			if err != nil {
+				log.Fatalf("Failed to init kubeClient. Error: %v", err)
+			}
+			log.Infof("kubeClient successfully inited")
 			// подключение к kube
 			// получение списка ns нужной аннотацией
 			// построение extended_monitoring_enabled
@@ -50,8 +60,12 @@ var (
 
 func main() {
 	r := prometheus.NewRegistry()
-	r.MustRegister(myMetrics)
-	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
+	//r.MustRegister(opsProcessed)
+	handler := promhttp.HandlerFor(
+		r,
+		promhttp.HandlerOpts{
+			EnableOpenMetrics: false,
+		})
 	recordMetrics()
 	http.Handle("/metrics", handler)
 	log.Fatal(http.ListenAndServe("127.0.0.1:8081", nil))
