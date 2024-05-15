@@ -76,8 +76,8 @@ data:
   {{- if $crd.spec.disableHTTP2 }}
   use-http2: "false"
   {{- end }}
-  {{- if $crd.spec.disableHTTP3 }}
-  use-http3: "false"
+  {{- if $crd.spec.enableHTTP3 }}
+  use-http3: "true"
   {{- end}}
   {{- if $crd.spec.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"

@@ -906,11 +906,11 @@ spec:
                   description: |
                     Switch off HTTP2 support.
                   default: false
-                disableHTTP3:
+                enableHTTP3:
                   type: boolean
                   description: |
                     Switch off HTTP3 support.
-                    
+
                     HTTP3 is only available in ingress-nginx version 1.10.
                   default: false
                 config:
