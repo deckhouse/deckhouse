@@ -64,7 +64,7 @@ if [ -n "${file_name}" ]; then
         print_message_about_typos_in_a_file "${file_name}"
         result="$(file_check_spell ${file_name})"
         if [ -n "${result}" ]; then
-          echo "${result}" | sed 's/\s\+/\n/g'
+          echo "${result}" | sed 's/\s\+/\n/g' | sort -u
           echo
           exit_code=1
         fi
@@ -82,7 +82,7 @@ else
         if [ -n "${result}" ]; then
           exit_code=1
           print_message_about_typos_in_a_file "${file_name}"
-          echo ${result} | sed 's/\s\+/\n/g'
+          echo ${result} | sed 's/\s\+/\n/g' | sort -u
           echo
         fi
     fi
