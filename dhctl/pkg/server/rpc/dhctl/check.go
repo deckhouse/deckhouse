@@ -119,7 +119,7 @@ func (s *Service) startReceiver(_ context.Context, server pb.DHCTL_CheckServer, 
 				if errors.Is(err, io.EOF) {
 					return
 				}
-				internalErrCh <- status.Errorf(codes.Internal, "receiving message: %w", err)
+				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
 			fmt.Printf("Got request form check stream: %#v", request)
