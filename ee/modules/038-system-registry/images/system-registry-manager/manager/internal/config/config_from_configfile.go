@@ -6,52 +6,80 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package config
 
 import (
-	log "github.com/sirupsen/logrus"
+	"log"
+
 	"github.com/spf13/viper"
 )
 
 type FileConfig struct {
-	HostName  string `mapstructure:"hostName"`
-	MyIP      string `mapstructure:"myIP"`
-	MyPodName string `mapstructure:"myPodName"`
+	HostName       string `mapstructure:"hostName"`
+	MyIP           string `mapstructure:"myIP"`
+	MyPodName      string `mapstructure:"myPodName"`
+	LeaderElection struct {
+		Namespace            string `mapstructure:"namespace"`
+		LeaseDurationSeconds int    `mapstructure:"leaseDurationSeconds"`
+		RenewDeadlineSeconds int    `mapstructure:"renewDeadlineSeconds"`
+		RetryPeriodSeconds   int    `mapstructure:"retryPeriodSeconds"`
+	}
 }
 
 func NewFileConfig() (*FileConfig, error) {
 	var cfg *FileConfig
 	viper.SetConfigFile(GetConfigFilePath())
+	viper.SetDefault("LeaderElection.LeaseDurationSeconds", 3600)
+	viper.SetDefault("LeaderElection.RenewDeadlineSeconds", 10)
+	viper.SetDefault("LeaderElection.RetryPeriodSeconds", 4)
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.WithError(err).Fatal("Error reading config file")
+		log.Fatalf("Error reading config file: %v", err)
 	}
 
 	bindEnv("HostName", "HOSTNAME")
 	bindEnv("MyIP", "MY_IP")
 	bindEnv("MyPodName", "MY_POD_NAME")
+	bindEnv("LeaderElection.Namespace", "LEADER_ELECTION_NAMESPACE")
+	bindEnv("LeaderElection.LeaseDurationSeconds", "LEADER_ELECTION_LEASE_DURATION_SECONDS")
+	bindEnv("LeaderElection.RenewDeadlineSeconds", "LEADER_ELECTION_RENEW_DEADLINE_SECONDS")
+	bindEnv("LeaderElection.RetryPeriodSeconds", "LEADER_ELECTION_RETRY_PERIOD_SECONDS")
 
 	validateConfigEntry(
-		"HostName",
-		"HostName",
 		"HostName",
 		"HOSTNAME",
 	)
 
 	validateConfigEntry(
 		"MyIP",
-		"MyIP",
-		"MyIP",
 		"MY_IP",
 	)
 
 	validateConfigEntry(
 		"MyPodName",
-		"MyPodName",
-		"MyPodName",
 		"MY_POD_NAME",
+	)
+
+	validateConfigEntry(
+		"LeaderElection.Namespace",
+		"LEADER_ELECTION_NAMESPACE",
+	)
+
+	validateConfigEntry(
+		"LeaderElection.LeaseDurationSeconds",
+		"LEADER_ELECTION_LEASE_DURATION_SECONDS",
+	)
+
+	validateConfigEntry(
+		"LeaderElection.RenewDeadlineSeconds",
+		"LEADER_ELECTION_RENEW_DEADLINE_SECONDS",
+	)
+
+	validateConfigEntry(
+		"LeaderElection.RetryPeriodSeconds",
+		"LEADER_ELECTION_RETRY_PERIOD_SECONDS",
 	)
 
 	viper.AutomaticEnv()
 	if err := viper.Unmarshal(&cfg); err != nil {
-		log.WithError(err).Fatal("Error unmarshaling config")
+		log.Fatalf("Error unmarshaling config: %v", err)
 	}
 
 	return cfg, nil
@@ -59,19 +87,12 @@ func NewFileConfig() (*FileConfig, error) {
 
 func bindEnv(configKey, envVar string) {
 	if err := viper.BindEnv(configKey, envVar); err != nil {
-		log.WithError(err).Fatalf("Error binding %s", configKey)
+		log.Fatalf("Error binding %s: %v", configKey, err)
 	}
 }
 
-func validateConfigEntry(entry, prettyName, configPath, envVar string) {
-	if !viper.IsSet(entry) {
-		log.Fatalf(
-			"%s is not set. Please configure it in the configuration file ('%s') or via the '%s' environment variable.",
-			prettyName,
-			configPath,
-			envVar,
-		)
-	} else if viper.GetString(entry) == "" {
-		log.Fatalf("%s is empty. Please provide a valid value in the '%s' file ('%s') or via the '%s' environment variable.", GetConfigFilePath(), prettyName, configPath, envVar)
+func validateConfigEntry(entry, envVar string) {
+	if !viper.IsSet(entry) || viper.GetString(entry) == "" {
+		log.Fatalf("%s is not set or empty. Please configure it in the configuration file or via the environment variable %s.", entry, envVar)
 	}
 }
