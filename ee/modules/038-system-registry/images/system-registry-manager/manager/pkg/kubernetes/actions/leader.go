@@ -50,9 +50,9 @@ func StartLeaderElection(
 
 	le, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:            rl,
-		LeaseDuration:   time.Duration(cfg.LeaderElection.LeaseDurationSeconds),
-		RenewDeadline:   time.Duration(cfg.LeaderElection.RenewDeadlineSeconds),
-		RetryPeriod:     time.Duration(cfg.LeaderElection.RetryPeriodSeconds),
+		LeaseDuration:   time.Duration(cfg.LeaderElection.LeaseDurationSeconds * int(time.Second)),
+		RenewDeadline:   time.Duration(cfg.LeaderElection.RenewDeadlineSeconds * int(time.Second)),
+		RetryPeriod:     time.Duration(cfg.LeaderElection.RetryPeriodSeconds * int(time.Second)),
 		ReleaseOnCancel: true,
 		Callbacks:       callbacks,
 	})
