@@ -8,8 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	corev1 "k8s.io/api/core/v1"
-	kube "k8s.io/client-go"
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go"
 )
 
 func recordMetrics() {
