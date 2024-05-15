@@ -1,3 +1,0 @@
-shell-operator==0.0.8
-requests==2.31.0
-kubernetes==12.0.1
