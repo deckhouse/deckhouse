@@ -348,6 +348,7 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 }
 
 func checkResponseError(resp *http.Response) error {
+	log.DebugF("%v", resp.Header)
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
