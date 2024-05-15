@@ -53,7 +53,7 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	doneCh := make(chan struct{})
 	requestsCh := make(chan *pb.CheckRequest)
 
-	s.startReceiver(server, requestsCh, internalErrCh)
+	s.startCheckerReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -109,7 +109,7 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startReceiver(
+func (s *Service) startCheckerReceiver(
 	server pb.DHCTL_CheckServer,
 	requestsCh chan *pb.CheckRequest,
 	internalErrCh chan error,
@@ -206,7 +206,7 @@ func (s *Service) check(
 		return nil, fmt.Errorf("parsing cluster meta config: %w", err)
 	}
 
-	err = log.Process("default", "Init DHCTL cache", func() error {
+	err = log.Process("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if request.State != "" {
@@ -229,7 +229,7 @@ func (s *Service) check(
 	}
 
 	var sshClient *ssh.Client
-	err = log.Process("default", "Prepare SSH client", func() error {
+	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			request.ConnectionConfig,
 			config.NewSchemaStore(),
@@ -252,7 +252,6 @@ func (s *Service) check(
 	}
 	defer sshClient.Stop()
 
-	// check cluster state
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
