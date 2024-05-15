@@ -52,13 +52,11 @@ func Start() {
 	http.HandleFunc("/readyz", readyzHandler)
 
 	go handleShutdown()
-
 	go startHTTPServer()
 
 	leaderCh := make(chan bool)
 	leaderCtx, cancelLeader := context.WithCancel(context.Background())
 	defer cancelLeader()
-
 	go checkLeader(leaderCtx, leaderCh)
 	go runLeader(leaderCtx, leaderCh)
 
@@ -135,45 +133,39 @@ func startManager() error {
 	return nil
 }
 
-func checkLeader(ctx context.Context, ch chan<- bool) {
+func checkLeader(ctx context.Context, isLeader chan<- bool) {
 	leaderCallbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			ch <- true
+			isLeader <- true
 		},
 		OnStoppedLeading: func() {
-			ch <- false
+			isLeader <- false
 		},
 	}
 
 	err := kube_actions.StartLeaderElection(ctx, leaderCallbacks)
 	if err != nil {
 		log.Errorf("Failed to start leader election: %v", err)
-		close(ch)
 	}
 }
 
-func runLeader(ctx context.Context, leaderCh <-chan bool) {
+func runLeader(ctx context.Context, isLeader <-chan bool) {
+	leader := false
+
 	for {
-		isLeader := <-leaderCh
-		if isLeader {
+		select {
+		case newLeader := <-isLeader:
+			leader = newLeader
+		case <-ctx.Done():
+			return
+		}
+
+		if leader {
 			log.Info("Performing master's work...")
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				log.Info("Master's work in progress...")
-				time.Sleep(leaderWorkDelay)
-			}
+			time.Sleep(leaderWorkDelay)
 		} else {
 			log.Info("Performing slave's work...")
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				log.Info("Slave's work in progress...")
-				time.Sleep(slaveWorkDelay)
-			}
+			time.Sleep(slaveWorkDelay)
 		}
-		time.Sleep(leaderCheckTimeout)
 	}
 }
