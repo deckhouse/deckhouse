@@ -74,7 +74,7 @@ spec:
                   description: |
                     Hashed user password.
 
-                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
+                    The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
                   x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
@@ -181,7 +181,7 @@ spec:
                   description: |
                     Hashed user password.
 
-                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
+                    The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
                   x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
