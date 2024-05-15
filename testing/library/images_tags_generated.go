@@ -391,6 +391,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet12810":             "imageHash-registrypackages-kubelet12810",
 		"kubelet1295":              "imageHash-registrypackages-kubelet1295",
 		"kubernetesCni140":         "imageHash-registrypackages-kubernetesCni140",
+		"netcat071":                "imageHash-registrypackages-netcat071",
 		"socat1734":                "imageHash-registrypackages-socat1734",
 		"tomlMerge01":              "imageHash-registrypackages-tomlMerge01",
 		"utilLinux2401":            "imageHash-registrypackages-utilLinux2401",

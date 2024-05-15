@@ -1,0 +1,36 @@
+{{- $version := "0.7.1" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - nc
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    nc: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - curl -fsSL "https://netix.dl.sourceforge.net/project/netcat/netcat/{{ $version }}/netcat-{{ $version }}.tar.gz" | tar zxvf -
+    - cd netcat-{{ $version }}
+    - LDFLAGS="-static" DFLAGS="-DTELNET" ./configure
+    - make
+    - mv /usr/local/bin/nc /nc
+    - chmod +x /nc /install /uninstall
