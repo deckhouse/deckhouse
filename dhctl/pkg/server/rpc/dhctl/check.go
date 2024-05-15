@@ -22,6 +22,7 @@ import (
 	"io"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -43,66 +44,64 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	fmt.Printf("Check processing started!\n")
+	s.logc.Info("started")
+
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	userErrCh := make(chan error, 0)
-	internalErrCh := make(chan error, 0)
-	doneCh := make(chan struct{}, 0)
-	requestsCh := make(chan *pb.CheckRequest, 0)
+	dhctlErrCh := make(chan error)
+	internalErrCh := make(chan error)
+	doneCh := make(chan struct{})
+	requestsCh := make(chan *pb.CheckRequest)
 
-	s.startReceiver(ctx, server, requestsCh, internalErrCh)
+	s.startReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			fmt.Printf("Done check processing!\n")
+			s.logc.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
+			s.logc.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case err := <-userErrCh:
+		case err := <-dhctlErrCh:
 			sendErr := server.Send(&pb.CheckResponse{
 				Message: &pb.CheckResponse_Err{
 					Err: err.Error(),
 				},
 			})
 			if sendErr != nil {
+				s.logc.Error("finished with internal error", logger.Err(sendErr))
 				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
 			}
-			fmt.Printf("Sent error to server: done check processing!\n")
+
+			s.logc.Info("finished with dhctl error", logger.Err(err))
 			return nil
 
 		case request := <-requestsCh:
-			fmt.Printf("Check request received!\n")
-
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					s.logc.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				fmt.Printf("CheckRequest_Start ...\n")
-				s.startChecker(ctx, server, message.Start, userErrCh, internalErrCh, doneCh)
-				fmt.Printf("CheckRequest_Start DONE\n")
+				s.startChecker(ctx, server, message.Start, dhctlErrCh, internalErrCh, doneCh)
 
 			case *pb.CheckRequest_Stop:
-				log.WarnF("[multiversion-debug] process CheckRequest_Stop...\n")
 				err := f.Event("stop")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					s.logc.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
 				s.stopCheck(cancel, message.Stop)
-				log.WarnF("[multiversion-debug] process CheckRequest_Stop OK\n")
 
 			default:
-				s.log.Error("got unprocessable message",
+				s.logc.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -110,10 +109,13 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startReceiver(_ context.Context, server pb.DHCTL_CheckServer, requestsCh chan *pb.CheckRequest, internalErrCh chan error) {
+func (s *Service) startReceiver(
+	server pb.DHCTL_CheckServer,
+	requestsCh chan *pb.CheckRequest,
+	internalErrCh chan error,
+) {
 	go func() {
 		for {
-			fmt.Printf("Awaiting for request from check stream...\n")
 			request, err := server.Recv()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
@@ -122,7 +124,10 @@ func (s *Service) startReceiver(_ context.Context, server pb.DHCTL_CheckServer, 
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			fmt.Printf("Got request form check stream: %#v", request)
+			s.logc.Info(
+				"processing CheckRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			requestsCh <- request
 		}
 	}()
@@ -132,14 +137,14 @@ func (s *Service) startChecker(
 	ctx context.Context,
 	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
-	userErrCh chan error,
+	dhctlErrCh chan error,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
 		result, err := s.check(ctx, request, &checkLogWriter{server: server})
 		if err != nil {
-			userErrCh <- err
+			dhctlErrCh <- err
 			return
 		}
 
@@ -171,8 +176,6 @@ func (s *Service) check(
 ) (*pb.CheckResult, error) {
 	var err error
 
-	fmt.Printf("Service::check BEGIN\n")
-
 	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -185,56 +188,67 @@ func (s *Service) check(
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	fmt.Printf("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.WarnF("[multiversion-debug] Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
 	}()
 
-	// parse connection config
-	connectionConfig, err := config.ParseConnectionConfig(
-		request.ConnectionConfig,
-		config.NewSchemaStore(),
-		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-	)
+	var metaConfig *config.MetaConfig
+	err = log.Process("default", "Parsing cluster config", func() error {
+		metaConfig, err = config.ParseConfigFromData(
+			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
+		return err
+	})
 	if err != nil {
-		return nil, fmt.Errorf("parsing connection config: %w", err)
+		return nil, fmt.Errorf("parsing cluster meta config: %w", err)
 	}
 
-	// parse meta config
-	metaConfig, err := config.ParseConfigFromData(
-		input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("parsing meta config: %w", err)
-	}
-
-	// init dhctl cache
-	cachePath := metaConfig.CachePath()
-	var initialState phases.DhctlState
-	if request.State != "" {
-		err = json.Unmarshal([]byte(request.State), &initialState)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshalling dhctl state: %w", err)
+	err = log.Process("default", "Init DHCTL cache", func() error {
+		cachePath := metaConfig.CachePath()
+		var initialState phases.DhctlState
+		if request.State != "" {
+			err = json.Unmarshal([]byte(request.State), &initialState)
+			if err != nil {
+				return fmt.Errorf("unmarshalling dhctl state: %w", err)
+			}
 		}
-	}
-	err = cache.InitWithOptions(
-		cachePath,
-		cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
-	)
-	fmt.Printf("cache.InitWIthOptions -> err=%v\n", err)
+		err = cache.InitWithOptions(
+			cachePath,
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+		)
+		if err != nil {
+			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("initializing cache at %s: %w", cachePath, err)
+		return nil, err
 	}
 
-	// preparse ssh client
-	sshClient, err := prepareSSHClient(connectionConfig)
+	var sshClient *ssh.Client
+	err = log.Process("default", "Prepare SSH client", func() error {
+		connectionConfig, err := config.ParseConnectionConfig(
+			request.ConnectionConfig,
+			config.NewSchemaStore(),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
+		if err != nil {
+			return fmt.Errorf("parsing connection config: %w", err)
+		}
+
+		sshClient, err = prepareSSHClient(connectionConfig)
+		if err != nil {
+			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("preparing ssh client: %w", err)
+		return nil, err
 	}
 	defer sshClient.Stop()
 
@@ -263,6 +277,21 @@ func (s *Service) check(
 	return &pb.CheckResult{Result: string(resultString)}, nil
 }
 
+func (s *Service) checkServerTransitions() []fsm.Transition {
+	return []fsm.Transition{
+		{
+			Event:       "start",
+			Sources:     []fsm.State{"initial"},
+			Destination: "running",
+		},
+		{
+			Event:       "stop",
+			Sources:     []fsm.State{"running"},
+			Destination: "stopped",
+		},
+	}
+}
+
 type checkLogWriter struct {
 	server pb.DHCTL_CheckServer
 }
@@ -279,19 +308,4 @@ func (w *checkLogWriter) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("writing check logs: %w", err)
 	}
 	return len(p), nil
-}
-
-func (s *Service) checkServerTransitions() []fsm.Transition {
-	return []fsm.Transition{
-		{
-			Event:       "start",
-			Sources:     []fsm.State{"initial"},
-			Destination: "running",
-		},
-		{
-			Event:       "stop",
-			Sources:     []fsm.State{"running"},
-			Destination: "stopped",
-		},
-	}
 }
