@@ -51,15 +51,17 @@ func Logger(log *slog.Logger) logging.Logger {
 
 func UnaryParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+		log.Info("limiter tries to start task", slog.Int("concurrent_tasks", len(sem)))
 		timeout := time.After(5 * time.Minute)
 		select {
 		case <-timeout:
-			return nil, status.Error(codes.ResourceExhausted, "ResourceExhausted")
+			log.Info("limiter couldn't start task", slog.Int("concurrent_tasks", len(sem)))
+			return nil, status.Error(codes.ResourceExhausted, "too many dhctl operation has already started")
 		case sem <- struct{}{}:
+			log.Info("limiter started task", slog.Int("concurrent_tasks", len(sem)))
 			defer func() {
 				<-sem
-				log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+				log.Info("limiter finished task", slog.Int("concurrent_tasks", len(sem)))
 			}()
 
 			return handler(ctx, req)
@@ -69,15 +71,17 @@ func UnaryParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.UnarySe
 
 func StreamParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+		log.Info("limiter tries to start task", slog.Int("concurrent_tasks", len(sem)))
 		timeout := time.After(5 * time.Minute)
 		select {
 		case <-timeout:
-			return status.Error(codes.ResourceExhausted, "ResourceExhausted")
+			log.Info("limiter couldn't start task", slog.Int("concurrent_tasks", len(sem)))
+			return status.Error(codes.ResourceExhausted, "too many dhctl operation has already started")
 		case sem <- struct{}{}:
+			log.Info("limiter started task", slog.Int("concurrent_tasks", len(sem)))
 			defer func() {
 				<-sem
-				log.Info("limiter", slog.Int("concurrent_tasks", len(sem)))
+				log.Info("limiter finished task", slog.Int("concurrent_tasks", len(sem)))
 			}()
 
 			return handler(srv, ss)
@@ -91,16 +95,15 @@ func UnaryServerSinglefligt(m *sync.Mutex, log *slog.Logger) grpc.UnaryServerInt
 			return handler(ctx, req)
 		}
 
-		log.Info("global lock acquired", slog.String("method", info.FullMethod))
+		log.Info("lock acquired", slog.String("method", info.FullMethod))
 		locked := m.TryLock()
 		if !locked {
+			log.Info("couldn't acquire lock", slog.String("method", info.FullMethod))
 			return nil, status.Error(codes.ResourceExhausted, "one dhctl operation has already started")
 		}
 		defer func() {
-			rollbackAppVars()
-			tomb.Shutdown(0)
 			m.Unlock()
-			log.Info("global lock released", slog.String("method", info.FullMethod))
+			log.Info("lock released", slog.String("method", info.FullMethod))
 		}()
 		return handler(ctx, req)
 	}
@@ -112,28 +115,16 @@ func StreamServerSinglefligt(m *sync.Mutex, log *slog.Logger) grpc.StreamServerI
 			return handler(srv, ss)
 		}
 
-		log.Info("global lock acquired", slog.String("method", info.FullMethod))
+		log.Info("lock acquired", slog.String("method", info.FullMethod))
 		locked := m.TryLock()
 		if !locked {
+			log.Info("couldn't acquire lock", slog.String("method", info.FullMethod))
 			return status.Error(codes.ResourceExhausted, "one dhctl operation has already started")
 		}
 		defer func() {
-			rollbackAppVars()
-			tomb.Shutdown(0)
 			m.Unlock()
-			log.Info("global lock released", slog.String("method", info.FullMethod))
+			log.Info("lock released", slog.String("method", info.FullMethod))
 		}()
 		return handler(srv, ss)
 	}
-}
-
-func rollbackAppVars() {
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
-
-	app.SanityCheck = false
-	app.UseTfCache = "ask"
-	app.ResourcesTimeout = 15 * time.Minute
-	app.DeckhouseTimeout = 15 * time.Minute
-	app.PreflightSkipDeckhouseVersionCheck = false
-	app.PreflightSkipAll = false
 }
