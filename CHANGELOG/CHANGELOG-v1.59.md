@@ -7,7 +7,7 @@
  - Deckhouse will not update if `linstor` module is enabled. [Migrate](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-the-deckhouse-kubernetes-platform-linstorhttpsdeckhouseiodocumentationv157modules041-linstor--built-in-module-to-sds-replicated-volume) from `linstor` module to `sds-replicated-volume`.
  - Ingress pods will restart if `enableIstioSidecar` parameter is enabled.
  - `sds-drbd` module is renamed. Please switch to [sds-replicated-volume](https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume) module ASAP. `sds-drbd` module cannot be enabled but will continue to work if it was already enabled before.
- - **The way of how application traffic is captured by Istio has been revised.** The CNI plugin is now used instead of the init container. This, for example, removes restrictions that prevented _istio_ from being used together with the _admission-policy-engine_ module in some configurations. The new routing method is used by default, a switchover will be performed when DKP is updated. **Possible regressions** for applications that do network requests in their init containers. The solutions are described in the [PR](https://github.com/deckhouse/deckhouse/pull/8353).
+ - **The new way of how application traffic is captured by Istio has been added.** The CNI plugin mode is now added instead of the init container. This, for example, removes restrictions that prevented _istio_ from being used together with the _admission-policy-engine_ module in some configurations. The new routing method is used by default, a switchover will be performed when DKP is updated. **Possible regressions** for applications that do network requests in their init containers. The solutions are described in the [PR](https://github.com/deckhouse/deckhouse/pull/8353).
 
 
 ## Features
@@ -115,6 +115,7 @@
  - **[ingress-nginx]** Improve description of `NginxIngressSslWillExpire` and `NginxIngressSslExpired` alerts. [#7830](https://github.com/deckhouse/deckhouse/pull/7830)
  - **[ingress-nginx]** Fix HTTPS port validation for HostPort inlet. [#7813](https://github.com/deckhouse/deckhouse/pull/7813)
  - **[ingress-nginx]** Prevent rendering of unavailable components. [#7663](https://github.com/deckhouse/deckhouse/pull/7663)
+ - **[istio]** Set `trafficRedirectionSetupMode` option to `InitContainer` by default. [#8394](https://github.com/deckhouse/deckhouse/pull/8394)
  - **[istio]** fix PromQL expression for alert `D8IstioDataPlaneVersionMismatch`. [#7898](https://github.com/deckhouse/deckhouse/pull/7898)
  - **[kube-proxy]** Add missing сonntrack binary to the `kube-proxy` image. [#8091](https://github.com/deckhouse/deckhouse/pull/8091)
     `kube-proxy` pods will restart.
