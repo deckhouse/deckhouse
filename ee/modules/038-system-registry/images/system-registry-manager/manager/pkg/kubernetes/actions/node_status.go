@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"system-registry-manager/internal/config"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type NodeStatus struct {
