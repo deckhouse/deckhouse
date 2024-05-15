@@ -33,7 +33,8 @@ func New(podName, cacheDir string, log *slog.Logger) *Service {
 	return &Service{
 		podName:  podName,
 		cacheDir: cacheDir,
-		log:      log,
+		logc:     log.With(slog.String("operation", "check")),
+		logb:     log.With(slog.String("operation", "bootstrap")),
 	}
 }
 
@@ -42,7 +43,8 @@ type Service struct {
 
 	podName  string
 	cacheDir string
-	log      *slog.Logger
+	logc     *slog.Logger
+	logb     *slog.Logger
 }
 
 func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {

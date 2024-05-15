@@ -67,7 +67,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 			case *pb.BootstrapRequest_Start:
 				err = f.Event("start")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					s.logb.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue
 				}
@@ -76,7 +76,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 			case *pb.BootstrapRequest_Stop:
 				err = f.Event("stop")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					s.logb.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue
 				}
@@ -86,7 +86,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 				if message.Continue.Error != "" {
 					err = f.Event("toStop")
 					if err != nil {
-						s.log.Error("got unprocessable message",
+						s.logb.Error("got unprocessable message",
 							logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 						continue
 					}
@@ -96,14 +96,14 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 
 				err = f.Event("toNextPhase")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					s.logb.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue
 				}
 				phaseSwitcher.next <- struct{ err error }{err: nil}
 
 			default:
-				s.log.Error("got unprocessable message",
+				s.logb.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue
 			}
@@ -241,24 +241,6 @@ func (s *Service) boostrap(
 	return &pb.BootstrapResult{State: string(data)}, errors.Join(bootstrapErr, marshalErr)
 }
 
-type bootstrapLogWriter struct {
-	server pb.DHCTL_BootstrapServer
-}
-
-func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
-	}
-	return len(p), nil
-}
-
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
@@ -287,6 +269,24 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 			Destination: "stopped",
 		},
 	}
+}
+
+type bootstrapLogWriter struct {
+	server pb.DHCTL_BootstrapServer
+}
+
+func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.BootstrapResponse{
+		Message: &pb.BootstrapResponse_Logs{
+			Logs: &pb.Logs{
+				Logs: p,
+			},
+		},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("writing check logs: %w", err)
+	}
+	return len(p), nil
 }
 
 type bootstrapPhaseSwitcher struct {
