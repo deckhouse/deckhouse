@@ -27,9 +27,9 @@ func NewFileConfig() (*FileConfig, error) {
 	var cfg *FileConfig
 	viper.SetConfigFile(GetConfigFilePath())
 	viper.SetConfigType("yaml")
-	viper.SetDefault("LeaderElection.LeaseDurationSeconds", 3600)
+	viper.SetDefault("LeaderElection.LeaseDurationSeconds", 15)
 	viper.SetDefault("LeaderElection.RenewDeadlineSeconds", 10)
-	viper.SetDefault("LeaderElection.RetryPeriodSeconds", 4)
+	viper.SetDefault("LeaderElection.RetryPeriodSeconds", 2)
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Error reading config file: %v", err)
