@@ -73,4 +73,8 @@ done < ${pr_diff}
 
 check "${file_name}" "${file_changes}"
 
+if [ "${exit_code}" -ne 0 ]; then
+  echo -e "\nFix the problem or use 'docs/documentation-validation' PR label to skip."
+fi
+
 exit ${exit_code}
