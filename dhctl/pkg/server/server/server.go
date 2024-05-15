@@ -16,9 +16,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -28,6 +30,7 @@ import (
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
@@ -41,7 +44,7 @@ func Serve(network, address string) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl)
+	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -50,17 +53,24 @@ func Serve(network, address string) error {
 
 	podName := os.Getenv("HOSTNAME")
 
-	log.Info(
-		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
-	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
 		cancel()
 		<-done
 		log.Info("grpc server stopped")
 	})
+
+	cacheDir, err := cacheDirectory()
+	if err != nil {
+		return fmt.Errorf("failed to init grpc server: %w", err)
+	}
+
+	log.Info(
+		"starting grpc server",
+		slog.String("network", network),
+		slog.String("address", address),
+		slog.String("cache directory", cacheDir),
+	)
 
 	listener, err := net.Listen(network, address)
 	if err != nil {
@@ -88,7 +98,7 @@ func Serve(network, address string) error {
 	reflection.Register(s)
 
 	// services
-	dhctlService := dhctl.New(podName, address, log)
+	dhctlService := dhctl.New(podName, cacheDir, log)
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
@@ -120,4 +130,15 @@ func gracefulStop(s *grpc.Server, timeout time.Duration) {
 	case <-stopped:
 		t.Stop()
 	}
+}
+
+func cacheDirectory() (string, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", fmt.Errorf("creating uuid for cache directory")
+	}
+
+	path := filepath.Join(os.TempDir(), "dhctl", "cache_"+id.String())
+
+	return path, nil
 }
