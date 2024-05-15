@@ -288,7 +288,7 @@ git:
 - add: /
   to: /deckhouse
   stageDependencies:
-    install:
+    setup:
       - "**/*"
   includePaths:
   - candi
