@@ -326,7 +326,7 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return authURL, registryService, fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+				"Check if container registry address is correct",
 			ErrAuthFailed,
 		)
 	}
@@ -385,7 +385,7 @@ func checkBasicRegistryAuth(
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+				"Check if container registry address is correct",
 			ErrAuthFailed,
 		)
 	}
