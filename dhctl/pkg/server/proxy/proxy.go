@@ -47,7 +47,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl)
+	log := logger.NewLogger(lvl).With(slog.String("component", "proxy"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -135,11 +135,10 @@ func (d *streamDirector) new() proxy.StreamDirector {
 		md, _ := metadata.FromIncomingContext(ctx)
 		outCtx := metadata.NewOutgoingContext(ctx, md.Copy())
 
-		sockUUID, err := uuid.NewUUID()
+		address, err := socketPath()
 		if err != nil {
-			return outCtx, nil, fmt.Errorf("creating uuid for socket path")
+			return outCtx, nil, err
 		}
-		address := filepath.Join(os.TempDir(), "dhctl", sockUUID.String())
 
 		d.log.Info("starting new dhctl instance", "addr", address)
 
@@ -188,4 +187,14 @@ func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error 
 		}
 		return nil
 	})
+}
+
+func socketPath() (string, error) {
+	sockUUID, err := uuid.NewUUID()
+	if err != nil {
+		return "", fmt.Errorf("creating uuid for socket path")
+	}
+
+	address := filepath.Join("/var/run/dhctl", sockUUID.String()+".sock")
+	return address, nil
 }
