@@ -21,7 +21,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 53,
@@ -566,36 +566,48 @@
       "id": 804,
       "panels": [
         {
-          "cards": {
-            "cardHSpacing": 2,
-            "cardMinWidth": 5,
-            "cardVSpacing": 2
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateGnYlRd",
-            "defaultColor": "#757575",
-            "exponent": 0.5,
-            "mode": "discrete",
-            "thresholds": [
-              {
-                "$$hashKey": "object:96",
-                "color": "#E02F44",
-                "tooltip": "Session is not established",
-                "value": "0"
-              },
-              {
-                "$$hashKey": "object:100",
-                "color": "#56A64B",
-                "tooltip": "Session is established",
-                "value": "1"
-              }
-            ]
-          },
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "continuous-GrYlRd"
+              },
+              "custom": {
+                "fillOpacity": 70,
+                "lineWidth": 0,
+                "spanNulls": false
+              },
+              "mappings": [
+                {
+                  "options": {
+                    "0": {
+                      "color": "red",
+                      "index": 0,
+                      "text": "Session is not established"
+                    },
+                    "1": {
+                      "color": "green",
+                      "index": 1,
+                      "text": "Session is established"
+                    }
+                  },
+                  "type": "value"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -603,17 +615,20 @@
             "x": 0,
             "y": 24
           },
-          "hideBranding": false,
-          "highlightCards": true,
           "id": 806,
-          "legend": {
-            "show": true
-          },
-          "nullPointMode": "as empty",
-          "pageSize": 15,
-          "seriesFilterIndex": -1,
-          "statusmap": {
-            "ConfigVersion": "v1"
+          "options": {
+            "alignValue": "left",
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "mergeValues": false,
+            "rowHeight": 0.9,
+            "showValue": "auto",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
           "targets": [
             {
@@ -632,32 +647,8 @@
             }
           ],
           "title": "Sessions",
-          "tooltip": {
-            "extraInfo": "",
-            "freezeOnClick": true,
-            "items": [],
-            "show": true,
-            "showExtraInfo": false,
-            "showItems": false
-          },
           "transformations": [],
-          "type": "flant-statusmap-panel",
-          "useMax": true,
-          "usingPagination": false,
-          "xAxis": {
-            "show": true
-          },
-          "yAxis": {
-            "maxWidth": -1,
-            "minWidth": -1,
-            "show": true
-          },
-          "yAxisSort": "metrics",
-          "yLabel": {
-            "delimiter": "",
-            "labelTemplate": "",
-            "usingSplitLabel": false
-          }
+          "type": "state-timeline"
         }
       ],
       "title": "BGP",
