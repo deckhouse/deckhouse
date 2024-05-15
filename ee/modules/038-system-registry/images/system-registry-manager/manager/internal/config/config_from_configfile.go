@@ -26,6 +26,7 @@ type FileConfig struct {
 func NewFileConfig() (*FileConfig, error) {
 	var cfg *FileConfig
 	viper.SetConfigFile(GetConfigFilePath())
+	viper.SetConfigType("yaml")
 	viper.SetDefault("LeaderElection.LeaseDurationSeconds", 3600)
 	viper.SetDefault("LeaderElection.RenewDeadlineSeconds", 10)
 	viper.SetDefault("LeaderElection.RetryPeriodSeconds", 4)
@@ -60,21 +61,6 @@ func NewFileConfig() (*FileConfig, error) {
 	validateConfigEntry(
 		"LeaderElection.Namespace",
 		"LEADER_ELECTION_NAMESPACE",
-	)
-
-	validateConfigEntry(
-		"LeaderElection.LeaseDurationSeconds",
-		"LEADER_ELECTION_LEASE_DURATION_SECONDS",
-	)
-
-	validateConfigEntry(
-		"LeaderElection.RenewDeadlineSeconds",
-		"LEADER_ELECTION_RENEW_DEADLINE_SECONDS",
-	)
-
-	validateConfigEntry(
-		"LeaderElection.RetryPeriodSeconds",
-		"LEADER_ELECTION_RETRY_PERIOD_SECONDS",
 	)
 
 	viper.AutomaticEnv()
