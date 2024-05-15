@@ -4,7 +4,11 @@ go 1.22.0
 
 toolchain go1.22.3
 
-require github.com/prometheus/client_golang v1.19.1
+require (
+	github.com/prometheus/client_golang v1.19.1
+	k8s.io/api v0.30.0
+	k8s.io/client-go v0.28.0
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -24,7 +28,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.30.0 // indirect
 	k8s.io/apimachinery v0.30.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect

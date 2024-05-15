@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	kube "github.com/flant/kube-client/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	corev1 "k8s.io/api/core/v1"
+	kube "k8s.io/client-go"
 )
 
 func recordMetrics() {
@@ -45,8 +45,10 @@ var (
 )
 
 func main() {
+	r := prometheus.NewRegistry()
+	r.MustRegister(myMetrics)
+	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	recordMetrics()
-
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", handler)
 	log.Fatal(http.ListenAndServe("127.0.0.1:8081", nil))
 }
