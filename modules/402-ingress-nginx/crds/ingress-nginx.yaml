@@ -909,7 +909,7 @@ spec:
                 enableHTTP3:
                   type: boolean
                   description: |
-                    Switch off HTTP3 support.
+                    Switch off HTTP3 support
 
                     HTTP3 is only available in ingress-nginx version 1.10.
                   default: false
