@@ -13,11 +13,20 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/leaderelection"
 	"system-registry-manager/internal/config"
 	"system-registry-manager/internal/steps"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
+)
 
-	log "github.com/sirupsen/logrus"
+const (
+	serverAddr         = "127.0.0.1:8097"
+	shutdownTimeout    = 5 * time.Second
+	leaderCheckTimeout = 10 * time.Second
+	workInterval       = 10 * time.Second
+	leaderWorkDelay    = 3 * time.Second
+	slaveWorkDelay     = 3 * time.Second
 )
 
 var (
@@ -26,52 +35,39 @@ var (
 )
 
 func Start() {
-	// Initialize logger
 	initLogger()
 
-	log.Info("Start service")
+	log.Info("Starting service")
 	log.Infof("Config file: %s", config.GetConfigFilePath())
 
-	// Initialize configuration
 	if err := config.InitConfig(); err != nil {
 		log.Fatalf("Error initializing config: %v", err)
 	}
 
-	// Create HTTP server
 	server = &http.Server{
-		Addr: "127.0.0.1:8097",
+		Addr: serverAddr,
 	}
 
-	// Define HTTP routes
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
 
-	// Graceful shutdown
-	go func() {
-		stop := make(chan os.Signal, 1)
-		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-		<-stop
-		log.Info("Shutting down server...")
-		if err := server.Shutdown(context.Background()); err != nil {
-			log.Errorf("Error shutting down server: %v", err)
-		}
-	}()
+	go handleShutdown()
 
-	// Start HTTP server
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Errorf("Error starting server: %v", err)
-		}
-	}()
+	go startHTTPServer()
 
-	// Start manager
+	leaderCh := make(chan bool)
+	leaderCtx, cancelLeader := context.WithCancel(context.Background())
+	defer cancelLeader()
+
+	go checkLeader(leaderCtx, leaderCh)
+	go runLeader(leaderCtx, leaderCh)
+
 	for {
 		if err := startManager(); err != nil {
 			log.Errorf("Manager error: %v", err)
 		}
-		// TODO
-		time.Sleep(10 * time.Second)
-		log.Info("Wait for 10 seconds...")
+		log.Info("Waiting for the next cycle...")
+		time.Sleep(workInterval)
 	}
 }
 
@@ -90,6 +86,24 @@ func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func handleShutdown() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+	log.Info("Shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Errorf("Error shutting down server: %v", err)
+	}
+}
+
+func startHTTPServer() {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Errorf("Error starting server: %v", err)
+	}
 }
 
 func startManager() error {
@@ -119,4 +133,47 @@ func startManager() error {
 		return err
 	}
 	return nil
+}
+
+func checkLeader(ctx context.Context, ch chan<- bool) {
+	leaderCallbacks := leaderelection.LeaderCallbacks{
+		OnStartedLeading: func(ctx context.Context) {
+			ch <- true
+		},
+		OnStoppedLeading: func() {
+			ch <- false
+		},
+	}
+
+	err := kube_actions.StartLeaderElection(ctx, leaderCallbacks)
+	if err != nil {
+		log.Errorf("Failed to start leader election: %v", err)
+		close(ch)
+	}
+}
+
+func runLeader(ctx context.Context, leaderCh <-chan bool) {
+	for {
+		isLeader := <-leaderCh
+		if isLeader {
+			log.Info("Performing master's work...")
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				log.Info("Master's work in progress...")
+				time.Sleep(leaderWorkDelay)
+			}
+		} else {
+			log.Info("Performing slave's work...")
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				log.Info("Slave's work in progress...")
+				time.Sleep(slaveWorkDelay)
+			}
+		}
+		time.Sleep(leaderCheckTimeout)
+	}
 }
