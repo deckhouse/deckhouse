@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1470 }}" "mount:{{ .images.registrypackages.utilLinux2401 }}" "xfsprogs:{{ .images.registrypackages.xfsprogs670 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1470 }}" "mount:{{ .images.registrypackages.utilLinux2401 }}" "xfsprogs:{{ .images.registrypackages.xfsprogs670 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"

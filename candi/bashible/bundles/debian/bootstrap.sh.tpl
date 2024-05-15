@@ -118,5 +118,5 @@ export no_proxy=${NO_PROXY}
 export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
 mkdir -p /var/lib/bashible/
