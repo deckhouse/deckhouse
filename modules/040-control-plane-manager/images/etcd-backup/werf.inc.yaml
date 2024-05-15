@@ -1,0 +1,18 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+fromCacheVersion: 1
+git:
+  - add: /{{ $.ModulePath }}/main.go
+    to: /
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o etcd-backup main.go
+docker:
+  ENTRYPOINT: ["/etcd-backup"]

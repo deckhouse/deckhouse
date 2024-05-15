@@ -2,29 +2,32 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
-    to: /usr/bin
-    includePaths:
-    - etcd
-    - etcdctl
-    before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/kube-apiserver-healthcheck
+  to: /usr/local/bin/kube-apiserver-healthcheck
+  before: setup
 docker:
-  ENTRYPOINT: ["/usr/bin/etcd"]
+  ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - go.mod
+  - go.sum
+  - main.go
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - mkdir /src && cd /src
-    - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
-    - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
-    - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
+  - cd /src
+  - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
+  - chown 64535:64535 kube-apiserver-healthcheck
+  - chmod 0700 kube-apiserver-healthcheck
