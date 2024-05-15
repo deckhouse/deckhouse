@@ -38,11 +38,11 @@ shell:
     - aclocal -I m4 &&	autoconf
     - LDFLAGS="-static" ./configure --enable-shared=no  --disable-scrub
     - make LLDFLAGS=-all-static
-    - mv mkfs/mkfs.xfs /mkfs.xfs && \
-      mv repair/xfs_repair /xfs_repair && \
-      mv quota/xfs_quota /xfs_quota && \
-      mv growfs/xfs_growfs /xfs_growfs && \
-      mv mdrestore/xfs_mdrestore /xfs_mdrestore && \
-      mv spaceman/xfs_spaceman /xfs_spaceman && \
+    - mv mkfs/mkfs.xfs /mkfs.xfs &&
+      mv repair/xfs_repair /xfs_repair &&
+      mv quota/xfs_quota /xfs_quota &&
+      mv growfs/xfs_growfs /xfs_growfs &&
+      mv mdrestore/xfs_mdrestore /xfs_mdrestore &&
+      mv spaceman/xfs_spaceman /xfs_spaceman &&
       mv spaceman/xfs_info.sh /xfs_info
     - chmod +x /mkfs.xfs /xfs_repair /xfs_quota /xfs_growfs /xfs_mdrestore /xfs_spaceman /xfs_info /install /uninstall
