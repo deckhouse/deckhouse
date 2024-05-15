@@ -323,6 +323,13 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	}
 	defer resp.Body.Close()
 
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return authURL, registryService, fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+			ErrAuthFailed,
+		)
+	}
 	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
 
 	if len(wwwAuthHeader) == 0 {
@@ -348,16 +355,6 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 }
 
 func checkResponseError(resp *http.Response) error {
-	log.DebugF("Docker-Distribution-API-Version: %s\n", resp.Header.Get("Docker-Distribution-API-Version"))
-
-	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		return fmt.Errorf(
-			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
-			ErrAuthFailed,
-		)
-	}
-
 	if resp.StatusCode == http.StatusUnauthorized {
 		return ErrAuthFailed
 	}
@@ -384,6 +381,14 @@ func checkBasicRegistryAuth(
 		return fmt.Errorf("cannot request to registry. %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+			ErrAuthFailed,
+		)
+	}
 
 	return checkResponseError(resp)
 }
