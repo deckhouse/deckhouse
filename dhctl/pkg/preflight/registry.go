@@ -243,12 +243,15 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	return checkRegistryAuth(ctx, pc.metaConfig, authData)
 }
 
-func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig) (*http.Request, error) {
+func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
 	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: registryPath}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare registry request: %w", err)
+	}
+	if authData != "" {
+		req.Header.Add("Authorization", "Basic "+authData)
 	}
 
 	return req, nil
@@ -309,14 +312,14 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	authURL := ""
 	registryService := ""
 
-	req, err := prepareRegistryRequest(ctx, metaConfig)
+	req, err := prepareRegistryRequest(ctx, metaConfig, "")
 	if err != nil {
 		return authURL, registryService, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return authURL, registryService, fmt.Errorf("cannot auth in regestry. %w", err)
+		return authURL, registryService, fmt.Errorf("cannot auth in registry. %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -344,12 +347,39 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	return authURL, registryService, nil
 }
 
-func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
-	client, err := prepareAuthHTTPClient(metaConfig)
+func checkBasicRegistryAuth(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+	client *http.Client,
+) error {
+	req, err := prepareRegistryRequest(ctx, metaConfig, authData)
 	if err != nil {
 		return err
 	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot request to registry. %w", err)
+	}
+	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrAuthFailed
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
+	}
+
+	return nil
+}
+
+func checkTokenRegistryAuth(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+	client *http.Client,
+) error {
 	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
 	if err != nil {
 		return err
@@ -362,7 +392,7 @@ func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authD
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot auth in regestry. %w", err)
+		return fmt.Errorf("cannot auth in registry. %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -377,4 +407,22 @@ func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authD
 	}
 
 	return nil
+}
+
+func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
+	client, err := prepareAuthHTTPClient(metaConfig)
+	if err != nil {
+		return err
+	}
+
+	err = checkBasicRegistryAuth(ctx, metaConfig, authData, client)
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, ErrAuthFailed) {
+		return err
+	}
+
+	return checkTokenRegistryAuth(ctx, metaConfig, authData, client)
 }
