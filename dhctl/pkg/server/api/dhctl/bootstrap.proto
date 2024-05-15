@@ -35,6 +35,7 @@ message BootstrapResponse {
     BootstrapResult result = 1;
     BootstrapPhaseEnd phase_end = 2;
     Logs logs = 3;
+    string err = 4;
   }
 }
 
@@ -59,8 +60,16 @@ message BootstrapPhaseEnd {
   bool next_phase_critical = 4;
 }
 
+enum continue {
+  CONTINUE_UNSPECIFIED = 0;
+  CONTINUE_NEXT_PHASE = 1;
+  CONTINUE_STOP_OPERATION = 2;
+  CONTINUE_ERROR = 3;
+}
+
 message BootstrapContinue {
-  string error = 1;
+  continue continue = 1;
+  string err = 2;
 }
 
 message BootstrapStartOptions {
