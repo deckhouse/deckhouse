@@ -15,6 +15,10 @@ import (
 func recordMetrics() {
 	go func() {
 		for {
+			// подключение к kube
+			// получение списка ns нужной аннотацией
+			// построение extended_monitoring_enabled
+
 			opsProcessed.Inc()
 			time.Sleep(10 * 60 * time.Second)
 		}
@@ -41,7 +45,7 @@ var (
 		Help: "The total number of processed events",
 	})
 	EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX = "threshold.extended-monitoring.deckhouse.io/"
-	ENDED_MONITORING_ENABLED_LABEL             = "extended-monitoring.deckhouse.io/enabled"
+	EXTENDED_MONITORING_ENABLED_LABEL          = "extended-monitoring.deckhouse.io/enabled"
 )
 
 func main() {
