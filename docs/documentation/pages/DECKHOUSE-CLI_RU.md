@@ -12,7 +12,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
 
-* `d8 mirror` — команды, ранее известные как утилита `dhctl mirror`, которые позволяют скопировать дистрибутив DKP в частный container registry.
+* `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
   > Группы команд `d8 d` и `d8 mirror` не доступны для Community Edition (CE) и Basic Edition (BE).

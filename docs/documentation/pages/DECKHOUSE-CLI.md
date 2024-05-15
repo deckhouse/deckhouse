@@ -11,7 +11,7 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
 * `d8 d` — the range of delivery-related commands (see the `werf` tool).  
     For example, you can run `d8 d plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
 
-* `d8 mirror` — the range of DKP distribution mirroring-related commands that were previously known as `dhctl mirror` tool.  
+* `d8 mirror` — the range of commands that allow you to copy DKP distribution images to a private container registry (previously the `dhctl mirror` tool was used for this purpose).
   For example, you can run `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` instead of `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
   > The `d8 d` and `d8 mirror` command groups are not available for Community Edition (CE) and Basic Edition (BE).
