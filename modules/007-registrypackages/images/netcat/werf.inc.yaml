@@ -28,9 +28,9 @@ git:
       - '**/*'
 shell:
   setup:
-    - curl -fsSL "https://netix.dl.sourceforge.net/project/netcat/netcat/{{ $version }}/netcat-{{ $version }}.tar.gz" | tar zxvf -
-    - cd netcat-{{ $version }}
-    - LDFLAGS="-static" DFLAGS="-DTELNET" ./configure
+    - git clone https://git.launchpad.net/ubuntu/+source/netcat src
+    - cd src
+    - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
     - make && make install
-    - mv /usr/local/bin/netcat /nc
+    - mv ./nc /nc
     - chmod +x /nc /install /uninstall
