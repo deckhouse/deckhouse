@@ -11,9 +11,9 @@ spec:
   sizingPolicy: *!CHANGE_SIZING_POLICY*
   storageProfile: *!CHANGE_STORAGE_PROFILE*
   # [<en>] The name of the image, taking into account the vCloudDirector without catalog path.
-  # [<en>] Example: "catalog/ubuntu-jammy-22.04".
+  # [<en>] Example: "ubuntu-jammy-22.04".
   # [<ru>] Имя образа, созданного с без учета каталога размещения образа в vCloudDirector.
-  # [<ru>] Пример: "catatlog/ubuntu-jammy-22.04".
+  # [<ru>] Пример: "ubuntu-jammy-22.04".
   template: *!CHANGE_TEMPLATE_NAME*
 ---
 # [<en>] Section containing the parameters of worker node group.
