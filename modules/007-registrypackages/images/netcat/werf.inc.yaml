@@ -1,4 +1,4 @@
-{{- $version := "0.7.1" }}
+{{- $version := "1.10-48.1" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -28,9 +28,8 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone https://git.launchpad.net/ubuntu/+source/netcat src
+    - git clone -b applied/{{ $version }} --depth 1 https://git.launchpad.net/ubuntu/+source/netcat src
     - cd src && for i in `cat ./debian/patches/series`; do   echo "** patch $i" 1>&2;   cat "./debian/patches/$i"; done | patch -p1
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
-    - make && make install
     - mv ./nc /nc
     - chmod +x /nc /install /uninstall
