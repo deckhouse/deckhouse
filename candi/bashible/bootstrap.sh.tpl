@@ -84,7 +84,7 @@ while [ "$patch_pending" = true ] ; do
       machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
     fi
 
-    if curl -sS --fail -x "" \
+    if d8-curl -sS --fail -x "" \
       --max-time 10 \
       -XPATCH \
       -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
