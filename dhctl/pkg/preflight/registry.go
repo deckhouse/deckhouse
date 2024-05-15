@@ -347,6 +347,26 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	return authURL, registryService, nil
 }
 
+func checkResponseError(resp *http.Response) error {
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+			ErrAuthFailed,
+		)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrAuthFailed
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
+	}
+
+	return nil
+}
+
 func checkBasicRegistryAuth(
 	ctx context.Context,
 	metaConfig *config.MetaConfig,
@@ -363,15 +383,7 @@ func checkBasicRegistryAuth(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return ErrAuthFailed
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
-	}
-
-	return nil
+	return checkResponseError(resp)
 }
 
 func checkTokenRegistryAuth(
@@ -398,15 +410,7 @@ func checkTokenRegistryAuth(
 
 	log.DebugF("Status Code: %d\n", resp.StatusCode)
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return ErrAuthFailed
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
-	}
-
-	return nil
+	return checkResponseError(resp)
 }
 
 func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
