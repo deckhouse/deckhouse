@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -15,21 +18,24 @@ import (
 func recordMetrics() {
 	go func() {
 		for {
-			// Init kubeClient
-			config, err := rest.InClusterConfig()
+			list, err := kubeClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
+				LabelSelector:  EXTENDED_MONITORING_ENABLED_LABEL,
+				TimeoutSeconds: &timeOut,
+			})
 			if err != nil {
-				log.Fatalf("failed to init kubeClient config. Error: %v", err)
+				log.Fatal(err.Error())
 			}
-			kubeClient, err := kubernetes.NewForConfig(config)
-			if err != nil {
-				log.Fatalf("Failed to init kubeClient. Error: %v", err)
+			httpReqs := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "extended_monitoring_enabled"},
+				[]string{"namespace"},
+			)
+			prometheus.MustRegister(httpReqs)
+			for _, item := range list.Items {
+				log.Print(fmt.Sprintf("extended_monitoring_enabled{namespace=%q} 1", item.Name))
+				httpReqs.WithLabelValues(item.Name).Add(1)
 			}
-			log.Infof("kubeClient successfully inited")
-			// подключение к kube
-			// получение списка ns нужной аннотацией
-			// построение extended_monitoring_enabled
 
-			opsProcessed.Inc()
+			reg.MustRegister(httpReqs)
 			time.Sleep(10 * 60 * time.Second)
 		}
 	}()
@@ -42,27 +48,36 @@ var (
 	//     45 extended_monitoring_deployment_threshold
 	//     45 extended_monitoring_deployment_enabled
 	//     26 extended_monitoring_ingress_enabled
-	//     22 extended_monitoring_enabled
-	//     18 extended_monitoring_node_threshold
 	//     14 extended_monitoring_daemonset_threshold
 	//     14 extended_monitoring_daemonset_enabled
 	//      3 extended_monitoring_statefulset_threshold
 	//      3 extended_monitoring_statefulset_enabled
 	//      3 extended_monitoring_node_enabled
+	//     18 extended_monitoring_node_threshold
 
-	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_processed_ops_total",
-		Help: "The total number of processed events",
-	})
 	EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX = "threshold.extended-monitoring.deckhouse.io/"
 	EXTENDED_MONITORING_ENABLED_LABEL          = "extended-monitoring.deckhouse.io/enabled"
+	kubeClient                                 *kubernetes.Clientset
+	timeOut                                    = int64(60)
+	reg                                        = prometheus.NewRegistry()
 )
 
+func init() {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		fmt.Printf("Error kubernetes config: %v\n", err)
+		os.Exit(1)
+	}
+	kubeClient, err = kubernetes.NewForConfig(config)
+	if err != nil {
+		fmt.Printf("Error getting kubernetes config: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
-	r := prometheus.NewRegistry()
-	//r.MustRegister(opsProcessed)
 	handler := promhttp.HandlerFor(
-		r,
+		reg,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: false,
 		})
