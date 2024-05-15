@@ -624,7 +624,7 @@
             },
             "mergeValues": false,
             "rowHeight": 0.9,
-            "showValue": "auto",
+            "showValue": "never",
             "tooltip": {
               "mode": "single",
               "sort": "none"
