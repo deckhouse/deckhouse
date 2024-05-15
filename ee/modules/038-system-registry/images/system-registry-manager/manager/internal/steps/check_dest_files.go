@@ -9,7 +9,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"system-registry-manager/internal/config"
-	"system-registry-manager/pkg"
 	pkg_files "system-registry-manager/pkg/files"
 )
 
@@ -47,7 +46,8 @@ func checkDestManifests(manifestsSpec *config.ManifestsSpec) error {
 
 		if !isSumEq {
 			log.Warnf("Checksum mismatch for manifest: %s", manifest.DestPath)
-			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByCheckSum = pkg.CreatePointer(true).(*bool)
+			NeedChangeFileByCheckSum := true
+			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByCheckSum = &NeedChangeFileByCheckSum
 		}
 	}
 	log.Info("Completed checking destination manifest files.")
