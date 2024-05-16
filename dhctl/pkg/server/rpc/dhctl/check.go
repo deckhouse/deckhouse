@@ -91,15 +91,6 @@ connectionProcessor:
 				}
 				s.startChecker(ctx, server, message.Start, dhctlErrCh, internalErrCh, doneCh)
 
-			case *pb.CheckRequest_Stop:
-				err := f.Event("stop")
-				if err != nil {
-					s.logc.Error("got unprocessable message",
-						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue connectionProcessor
-				}
-				s.stopCheck(cancel, message.Stop)
-
 			default:
 				s.logc.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
@@ -160,13 +151,6 @@ func (s *Service) startChecker(
 
 		doneCh <- struct{}{}
 	}()
-}
-
-func (s *Service) stopCheck(
-	cancel context.CancelFunc,
-	_ *pb.CheckStop,
-) {
-	cancel()
 }
 
 func (s *Service) check(
@@ -282,11 +266,6 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 			Event:       "start",
 			Sources:     []fsm.State{"initial"},
 			Destination: "running",
-		},
-		{
-			Event:       "stop",
-			Sources:     []fsm.State{"running"},
-			Destination: "stopped",
 		},
 	}
 }
