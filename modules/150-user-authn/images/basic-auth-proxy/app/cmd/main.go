@@ -41,16 +41,16 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVar(&handler.ListenAddress, "listen", ":7332", "listen address and port")
 	rootCmd.PersistentFlags().StringVar(&handler.CertPath, "cert-path", "/some/cert/path", "directory with client.crt and client.key files")
-	rootCmd.PersistentFlags().StringVar(&handler.KubernetesAPIServerURL, "api-server-url", "https://api.example.com", "Kubernetes api server URL")
+	rootCmd.PersistentFlags().StringVar(&handler.KubernetesAPIServerURL, "api-server-url", "https://kubernetes.default", "Kubernetes api server URL")
 	rootCmd.PersistentFlags().DurationVar(&handler.AuthCacheTTL, "auth-cache-ttl", 10*time.Second, "Crowd auth cache TTL")
 	rootCmd.PersistentFlags().DurationVar(&handler.GroupsCacheTTL, "groups-cache-ttl", 2*time.Minute, "Crowd groups cache TTL")
 
-	rootCmd.PersistentFlags().StringVar(&handler.CrowdBaseURL, "crowd-base-url", "https://crowd.example.com", "URL of Atlassian Crowd")
-	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationLogin, "crowd-application-login", "crowd", "login of Atlassian Crowd application")
-	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationPassword, "crowd-application-password", "user123", "password of Atlassian Crowd application")
+	rootCmd.PersistentFlags().StringVar(&handler.CrowdBaseURL, "crowd-base-url", "", "URL of Atlassian Crowd")
+	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationLogin, "crowd-application-login", "", "login of Atlassian Crowd application")
+	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationPassword, "crowd-application-password", "", "password of Atlassian Crowd application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.CrowdGroups, "crowd-allowed-group", nil, "Allowed Crowd groups")
 
-	rootCmd.PersistentFlags().StringVar(&handler.OIDCBaseURL, "oidc-base-url", "https://oidc.example.com", "URL of OIDC provider")
+	rootCmd.PersistentFlags().StringVar(&handler.OIDCBaseURL, "oidc-base-url", "", "URL of OIDC provider")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientID, "oidc-client-id", "", "clientID of OIDC application")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientSecret, "oidc-client-secret", "", "clientSecret of OIDC application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.OIDCScopes, "oidc-scope", nil, "Scopes passed from OIDC provider settings")

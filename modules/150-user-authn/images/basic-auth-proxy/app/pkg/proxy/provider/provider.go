@@ -17,5 +17,5 @@ limitations under the License.
 package provider
 
 type Provider interface {
-	ValidateCredentials(string, string) ([]string, error)
+	ValidateCredentials(login string, password string) ([]string, error)
 }
