@@ -555,11 +555,11 @@ mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 #### Steps to restore a multi-master cluster
 For correct multi-master recovery:
 
-1. Switch the cluster to single-master mode in accordance with [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D0%BC%D0%B5%D0%BD%D1%8C%D1%88%D0%B8%D1%82%D1%8C-%D1%87%D0%B8%D1%81%D0%BB%D0%BE-master-%D1%83%D0%B7%D0%BB%D0%BE%D0%B2-%D0%B2-%D0%BE%D0%B1%D0%BB%D0%B0%D1%87%D0%BD%D0%BE%D0%BC-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5-multi-master-%D0%B2-single-master ) for cloud nodes or independently remove static master nodes from the cluster.
+1. Switch the cluster to single-master mode in accordance with [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) for cloud cluster or independently remove static master nodes from the cluster.
 
-2. On a single master node, perform the steps to restore etcd from backup in accordance with [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0 ) for single-master.
+2. On a single master node, perform the steps to restore etcd from backup in accordance with [instructions](#steps-to-restore-a-single-master-cluster) for single-master.
 
-3. When etcd operation is restored, switch the cluster back to multi-master mode according to [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0 ) for cloud nodes or [instructions](https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D1%83%D0%B7%D0%BB%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 ) for static ones.
+3. When etcd operation is restored, switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud cluster or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static cluster.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 

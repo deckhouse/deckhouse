@@ -551,11 +551,11 @@ tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /
 
 Для корректного восстановления multi-master:
 
-1. Переведите кластер в single-master режим в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D0%BC%D0%B5%D0%BD%D1%8C%D1%88%D0%B8%D1%82%D1%8C-%D1%87%D0%B8%D1%81%D0%BB%D0%BE-master-%D1%83%D0%B7%D0%BB%D0%BE%D0%B2-%D0%B2-%D0%BE%D0%B1%D0%BB%D0%B0%D1%87%D0%BD%D0%BE%D0%BC-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5-multi-master-%D0%B2-single-master) для облачных нод или самостоятельно выведите статические мастер ноды из кластера.
+1. Переведите кластер в single-master режим в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические мастер ноды из кластера.
 
-2. На единственной мастер ноде выполните шаги по восстановлению etcd из бекапа в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0) для single-master.
+2. На единственной мастер ноде выполните шаги по восстановлению etcd из бекапа в соответствии с [инструкцией](#шаги-по-восстановлению-single-master-кластера) для single-master.
 
-3. Когда работа etcd восстановлена, переведите кластер обратно в multi-master режим в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0) для облачных нод или [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D1%83%D0%B7%D0%BB%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80) для статических.
+3. Когда работа etcd восстановлена, переведите кластер обратно в multi-master режим в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
