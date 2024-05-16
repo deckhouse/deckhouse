@@ -36,12 +36,7 @@ import (
 )
 
 func ListStatefulSet(client kubernetes.Interface, namespasce string) *apps.StatefulSetList {
-	rows, err := client.AppsV1().StatefulSets(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.AppsV1().StatefulSets(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[StatefulSet] couldn't get")
 		log.Fatal(err.Error())
@@ -50,12 +45,7 @@ func ListStatefulSet(client kubernetes.Interface, namespasce string) *apps.State
 }
 
 func ListDaemonSet(client kubernetes.Interface, namespasce string) *apps.DaemonSetList {
-	rows, err := client.AppsV1().DaemonSets(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.AppsV1().DaemonSets(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[DaemonSet] couldn't get")
 		log.Fatal(err.Error())
@@ -64,12 +54,7 @@ func ListDaemonSet(client kubernetes.Interface, namespasce string) *apps.DaemonS
 }
 
 func ListDeployment(client kubernetes.Interface, namespasce string) *apps.DeploymentList {
-	rows, err := client.AppsV1().Deployments(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.AppsV1().Deployments(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Deployments] couldn't get")
 		log.Fatal(err.Error())
@@ -78,12 +63,7 @@ func ListDeployment(client kubernetes.Interface, namespasce string) *apps.Deploy
 }
 
 func ListCronJob(client kubernetes.Interface, namespasce string) *batch.CronJobList {
-	rows, err := client.BatchV1().CronJobs(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.BatchV1().CronJobs(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[CronJob] couldn't get")
 		log.Fatal(err.Error())
@@ -92,12 +72,7 @@ func ListCronJob(client kubernetes.Interface, namespasce string) *batch.CronJobL
 }
 
 func ListIngress(client kubernetes.Interface, namespasce string) *networking.IngressList {
-	rows, err := client.NetworkingV1().Ingresses(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.NetworkingV1().Ingresses(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Ingress] couldn't get")
 		log.Fatal(err.Error())
@@ -106,12 +81,7 @@ func ListIngress(client kubernetes.Interface, namespasce string) *networking.Ing
 }
 
 func ListPods(client kubernetes.Interface, namespasce string) *core.PodList {
-	rows, err := client.CoreV1().Pods(namespasce).List(
-		context.Background(),
-		metav1.ListOptions{
-			TimeoutSeconds: &timeOut,
-		},
-	)
+	rows, err := client.CoreV1().Pods(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Pods] couldn't get")
 		log.Fatal(err.Error())
@@ -120,9 +90,7 @@ func ListPods(client kubernetes.Interface, namespasce string) *core.PodList {
 }
 
 func ListNodes(client kubernetes.Interface) *core.NodeList {
-	rows, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
-		TimeoutSeconds: &timeOut,
-	})
+	rows, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Nodes] couldn't get")
 		log.Fatal(err.Error())
