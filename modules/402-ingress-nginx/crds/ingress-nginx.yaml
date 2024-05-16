@@ -67,7 +67,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9', '1.10']
+                  enum: ['1.6','1.9','1.10']
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -1106,6 +1106,8 @@ spec:
               x-kubernetes-validations:
                 - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
                   rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
+                  rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
