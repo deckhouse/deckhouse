@@ -123,7 +123,7 @@ def is_exist(arr: list[DotMap], target: dict) -> bool:
 
 
 def validate_delete(ctx: DotMap) -> Optional[str]:
-    group_name = ctx.review.oldObject.object.spec.name
+    group_name = ctx.review.request.oldObject.spec.name
 
     for group in ctx.snapshots.groups:
         for member in group.filterResult.members:

@@ -90,7 +90,7 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
 
     user_with_the_same_email = [obj.filterResult for obj in ctx.snapshots.users if obj.filterResult.name != user_name and obj.filterResult.email == email]
     if user_with_the_same_email:
-        output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0]}\" is already using email \"{email}\"")
+        output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"")
         return
 
     if operation == "CREATE" and groups:
