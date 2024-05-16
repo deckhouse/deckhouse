@@ -3,6 +3,7 @@ type: object
 properties:
   globalVersion:
     type: string
+    pattern: 'the pattern'
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
     examples: ["1.16"]
     default: "1.19"
