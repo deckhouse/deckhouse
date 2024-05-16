@@ -25,8 +25,7 @@ import "common.proto";
 message BootstrapRequest {
   oneof message {
     BootstrapStart start = 1;
-    BootstrapStop stop = 2;
-    BootstrapContinue continue = 3;
+    BootstrapContinue continue = 2;
   }
 }
 
@@ -51,8 +50,6 @@ message BootstrapStart {
   BootstrapStartOptions options = 9;
 }
 
-message BootstrapStop {}
-
 message BootstrapPhaseEnd {
   string completed_phase = 1;
   map<string, bytes> completed_phase_state = 2;
@@ -60,7 +57,7 @@ message BootstrapPhaseEnd {
   bool next_phase_critical = 4;
 }
 
-enum continue {
+enum Continue {
   CONTINUE_UNSPECIFIED = 0;
   CONTINUE_NEXT_PHASE = 1;
   CONTINUE_STOP_OPERATION = 2;
@@ -68,7 +65,7 @@ enum continue {
 }
 
 message BootstrapContinue {
-  continue continue = 1;
+  Continue continue = 1;
   string err = 2;
 }
 
