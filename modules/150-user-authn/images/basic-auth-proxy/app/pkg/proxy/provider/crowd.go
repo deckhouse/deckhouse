@@ -66,7 +66,7 @@ func NewCrowd(apiURL, login, password string, allowedGroups []string) Provider {
 }
 
 func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
-	_, err := p.client.MakeRequest("/session", "POST", struct {
+	_, err := p.client.MakeRequest("/session", http.MethodPost, struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}{Username: login, Password: password})
@@ -74,7 +74,7 @@ func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
 		return nil, err
 	}
 
-	body, err := p.client.MakeRequest("/user/group/nested?username="+login, "GET", nil)
+	body, err := p.client.MakeRequest("/user/group/nested?username="+login, http.MethodGet, nil)
 	if err != nil {
 		return nil, err
 	}

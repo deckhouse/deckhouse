@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/coreos/pkg/capnslog"
 	"golang.org/x/oauth2"
 )
 
@@ -31,10 +32,11 @@ type OpenIDConnect struct {
 	httpClient  *http.Client
 	oidc        *oidc.Provider
 	oauth2      *oauth2.Config
+	logger      *capnslog.PackageLogger
 	getUserInfo bool
 }
 
-func NewOIDC(oidcURL, clientID, clientSecret string, scopes []string) Provider {
+func NewOIDC(oidcURL, clientID, clientSecret string, basicAuthUnsupported bool, scopes []string) Provider {
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -51,7 +53,7 @@ func NewOIDC(oidcURL, clientID, clientSecret string, scopes []string) Provider {
 		},
 	}
 
-	provider, err := oidc.NewProvider(context.WithValue(context.Background(), oauth2.HTTPClient, httpClient), oidcURL)
+	provider, err := oidc.NewProvider(oidc.ClientContext(context.Background(), httpClient), oidcURL)
 	if err != nil {
 		panic(err) // TODO: handle error
 	}
@@ -63,7 +65,12 @@ func NewOIDC(oidcURL, clientID, clientSecret string, scopes []string) Provider {
 		Scopes:       scopes,
 	}
 
+	if basicAuthUnsupported {
+		config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
+	}
+
 	return &OpenIDConnect{
+		logger:     capnslog.NewPackageLogger("basic-auth-proxy", "provider"),
 		httpClient: httpClient,
 		oidc:       provider,
 		oauth2:     &config,
@@ -71,21 +78,19 @@ func NewOIDC(oidcURL, clientID, clientSecret string, scopes []string) Provider {
 }
 
 func (p *OpenIDConnect) ValidateCredentials(login, password string) ([]string, error) {
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, p.httpClient)
-
-	// TODO: set authentication strategy to POST (endpoint.AuthStyle = oauth2.AuthStyleInParams)
-	//   if the basicAuthUnsupported option is enabled
-	token, err := p.oauth2.PasswordCredentialsToken(ctx, login, password)
+	p.logger.Info("oidc provider validates credentials")
+	token, err := p.oauth2.PasswordCredentialsToken(oidc.ClientContext(context.Background(), p.httpClient), login, password)
 	if err != nil {
 		return nil, err
 	}
-
+	p.logger.Info("oidc provider validates credentials successful")
+	p.logger.Info("oidc provider gets user info")
 	// TODO: request user info only if the getUserInfo option is enabled
-	info, err := p.oidc.UserInfo(ctx, oauth2.StaticTokenSource(token))
+	info, err := p.oidc.UserInfo(oidc.ClientContext(context.Background(), p.httpClient), oauth2.StaticTokenSource(token))
 	if err != nil {
 		return nil, err
 	}
-
+	p.logger.Info("oidc provider gets user info successful")
 	// TODO: get the groups claim from the claimMappings settings of the provider
 	claims := struct {
 		Groups []string `json:"groups"`
@@ -93,6 +98,5 @@ func (p *OpenIDConnect) ValidateCredentials(login, password string) ([]string, e
 	if err = info.Claims(&claims); err != nil {
 		return nil, err
 	}
-
 	return claims.Groups, nil
 }

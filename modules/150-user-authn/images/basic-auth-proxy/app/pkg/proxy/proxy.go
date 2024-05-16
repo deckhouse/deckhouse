@@ -43,11 +43,9 @@ const (
 	keyFilename  = "client.key"
 
 	caFilepath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+	defaultFlushInterval = 50 * time.Second
 )
-
-var logger = capnslog.NewPackageLogger("basic-auth-proxy", "proxy")
-
-var defaultFlushInterval = 50 * time.Millisecond
 
 var _ http.Handler = &Handler{}
 
@@ -61,16 +59,19 @@ type Handler struct {
 	CrowdApplicationPassword string
 	CrowdGroups              []string
 
-	OIDCBaseURL      string
-	OIDCClientID     string
-	OIDCClientSecret string
-	OIDCScopes       []string
+	OIDCBaseURL              string
+	OIDCClientID             string
+	OIDCClientSecret         string
+	OIDCScopes               []string
+	OIDCBasicAuthUnsupported bool
 
 	AuthCacheTTL   time.Duration
 	GroupsCacheTTL time.Duration
 
 	Cache        *ttlcache.Cache
 	reverseProxy *httputil.ReverseProxy
+
+	logger *capnslog.PackageLogger
 
 	provider provider.Provider
 
@@ -80,33 +81,33 @@ type Handler struct {
 func New() *Handler {
 	c := ttlcache.NewCache()
 	c.SkipTtlExtensionOnHit(true)
-	return &Handler{Cache: c, CrowdGroups: []string{}}
+	return &Handler{Cache: c, CrowdGroups: []string{}, logger: capnslog.NewPackageLogger("basic-auth-proxy", "proxy")}
 }
 
 func (h *Handler) Run() {
-	logger.Printf("-- Listening on: %s", h.ListenAddress)
-	logger.Printf("-- Kubernetes API URL: %s", h.KubernetesAPIServerURL)
-	logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
-	logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
+	h.logger.Printf("-- Listening on: %s", h.ListenAddress)
+	h.logger.Printf("-- Kubernetes API URL: %s", h.KubernetesAPIServerURL)
+	h.logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
+	h.logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
 
 	if h.CrowdBaseURL != "" && h.OIDCBaseURL != "" {
-		logger.Fatal("only one auth provider can be used")
+		h.logger.Fatal("only one auth provider can be used")
 	}
 
 	if h.CrowdBaseURL != "" {
 		h.provider = provider.NewCrowd(h.CrowdBaseURL, h.CrowdApplicationLogin, h.CrowdApplicationPassword, h.CrowdGroups)
-		logger.Printf("-- Crowd URL: %s", h.CrowdBaseURL)
+		h.logger.Printf("-- Crowd URL: %s", h.CrowdBaseURL)
 	}
 
 	if h.OIDCBaseURL != "" {
-		h.provider = provider.NewOIDC(h.OIDCBaseURL, h.OIDCClientID, h.OIDCClientSecret, h.OIDCScopes)
-		logger.Printf("-- OIDC URL: %s", h.OIDCBaseURL)
+		h.provider = provider.NewOIDC(h.OIDCBaseURL, h.OIDCClientID, h.OIDCClientSecret, h.OIDCBasicAuthUnsupported, h.OIDCScopes)
+		h.logger.Printf("-- OIDC URL: %s", h.OIDCBaseURL)
 	}
 
 	u, _ := url.Parse(h.KubernetesAPIServerURL)
 
 	h.reverseProxy = httputil.NewSingleHostReverseProxy(u)
-	h.reverseProxy.Transport = tlsHTTPClientTransport(h.CertPath)
+	h.reverseProxy.Transport = h.buildHTTPTransport(h.CertPath)
 	h.reverseProxy.FlushInterval = defaultFlushInterval
 
 	h.PrometheusRegistry = prometheus.NewRegistry()
@@ -117,12 +118,12 @@ func (h *Handler) Run() {
 
 	err := h.PrometheusRegistry.Register(requestCounter)
 	if err != nil {
-		logger.Fatalf("cannot register prometheus metrics: %s", err)
+		h.logger.Fatalf("cannot register prometheus metrics: %s", err)
 	}
 
 	err = h.PrometheusRegistry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	if err != nil {
-		logger.Fatalf("cannot register process metrics: %s", err)
+		h.logger.Fatalf("cannot register process metrics: %s", err)
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +142,7 @@ func (h *Handler) Run() {
 
 	caCert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
-		logger.Fatal(err)
+		h.logger.Fatal(err)
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -158,7 +159,7 @@ func (h *Handler) Run() {
 
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		if _, err = client.Get(h.KubernetesAPIServerURL + "/version"); err != nil {
-			logger.Error(err)
+			h.logger.Error(err)
 			http.Error(w, "Error", http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -166,26 +167,26 @@ func (h *Handler) Run() {
 		}
 	})
 
-	logger.Fatal(http.ListenAndServe(h.ListenAddress, nil))
+	h.logger.Fatal(http.ListenAndServe(h.ListenAddress, nil))
 }
-func tlsHTTPClientTransport(certPath string) *http.Transport {
+func (h *Handler) buildHTTPTransport(certPath string) *http.Transport {
 	cert, err := tls.LoadX509KeyPair(
 		filepath.Join(certPath, certFilename),
 		filepath.Join(certPath, keyFilename),
 	)
 	if err != nil {
-		logger.Fatalf("loading certificates: %+v", err)
+		h.logger.Fatalf("loading certificates: %+v", err)
 	}
 
 	caCerts := x509.NewCertPool()
 	caCert, err := os.ReadFile(caFilepath)
 	if err != nil {
-		logger.Fatalf("append CA cert: %+v", err)
+		h.logger.Fatalf("append CA cert: %+v", err)
 	}
 
 	ok := caCerts.AppendCertsFromPEM(caCert)
 	if !ok {
-		logger.Fatal("failed to parse CA certificate")
+		h.logger.Fatal("failed to parse CA certificate")
 	}
 
 	transport := &http.Transport{
@@ -207,16 +208,17 @@ func tlsHTTPClientTransport(certPath string) *http.Transport {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("receive a new request from", r.RemoteAddr)
 	basicLogin, basicPassword, ok := r.BasicAuth()
 	if !ok {
-		logger.Error("401 Unauthorized, no basic auth credentials have been sent")
+		h.logger.Error("401 Unauthorized, no basic auth credentials have been sent")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	groups := h.validateCredentials(basicLogin, basicPassword)
 	if len(groups) == 0 {
-		logger.Errorf("403 Forbidden, Crowd authentication problem: User %s has no allowed groups", basicLogin)
+		h.logger.Errorf("403 Forbidden, Crowd authentication problem: User %s has no allowed groups", basicLogin)
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -237,13 +239,13 @@ func (h *Handler) validateCredentials(login, password string) []string {
 
 	groups, err := h.provider.ValidateCredentials(login, password)
 	if err != nil {
-		logger.Errorf("validating user credentials: %+v", err)
+		h.logger.Errorf("validating user credentials: %+v", err)
 		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
 		return nil
 	}
 
 	h.Cache.SetWithTTL(userID, groups, h.GroupsCacheTTL)
-	logger.Printf("received groups for %s: %s", login, groups)
+	h.logger.Printf("received groups for %s: %s", login, groups)
 	return groups
 }
 
@@ -255,6 +257,6 @@ func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login st
 		r.Header.Add("X-Remote-Group", group)
 	}
 
-	logger.Printf("%s [%s] %s --  %v", r.Method, r.Host, r.RequestURI, r.Header)
+	h.logger.Printf("%s [%s] %s --  %v", r.Method, r.Host, r.RequestURI, r.Header)
 	h.reverseProxy.ServeHTTP(w, r)
 }
