@@ -115,7 +115,7 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
 
 
 def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
-    user_name = ctx.review.request.object.metadata.name
+    user_name = ctx.review.request.oldObject.metadata.name
 
     for group in ctx.snapshots.groups:
         for member in group.filterResult.members:
