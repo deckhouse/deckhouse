@@ -516,7 +516,7 @@ The steps below are necessary for manually loading images of modules connected f
       d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
       ```
 
-1. Upload the directory with the pulled Deckhouse modules images to a host with access to the air-gapped registry.
+1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry.
    To continue, install and use the Deckhouse CLI tool on that host further on.
 
 1. Upload module images to the isolated registry using the `d8 mirror modules push` command.
