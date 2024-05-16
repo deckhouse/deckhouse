@@ -500,6 +500,172 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
+### Как выполнить полное восстановление состояния кластера из резервной копии etcd?
+
+Далее будут описаны шаги по восстановлению до предыдущего состояния кластера из резервной копии при полной потере данных
+
+#### Шаги по восстановлению single-master кластера
+
+1. По необходимости скопируйте ключи доступа и сертификаты etcd-сервера в директорию `/etc/kubernetes`.
+2. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же как и версия etcd в кластере).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+3. Остановите etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+4. Сохраните текущие данные etcd.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+5. Очистите директорию etcd.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+6. Перенесите и переименуйте бекап в `~/etcd-backup.snapshot`.
+
+7. Восстановите базу данных etcd.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   ```
+
+8. Запустите etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+#### Шаги по восстановлению multi-master кластера
+
+Выполните следующие действия на всех узлах кластера etcd (мастер нодах):
+
+1. Остановите etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+2. Сохраните текущие данные etcd.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+3. Очистите директорию etcd.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+4. Выберите любую мастер ноду для её первого восстановления.
+
+На остальных(двух) мастер нодах выполните следующее:
+
+5. Остановите kubelet.
+
+   ```shell
+   systemctl stop kubelet.service
+   ```
+
+6. Удалите все контейнеры.
+
+   ```shell
+   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   ```
+
+7. Очистите ноду.
+
+   ```shell
+   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+   rm -f /etc/kubernetes/authorization-webhook-config.yaml
+   rm -f /etc/kubernetes/admin.conf /root/.kube/config
+   rm -rf /etc/kubernetes/deckhouse
+   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+   ```
+
+8. На выбранной в п4 мастер ноде выполните шаги п2,п6 и п7 аналогичные восстановлению single-master:
+9. Добавьте флаг `--force-new-cluster` в манифест `~/etcd.yaml`.
+10. Запустите etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+11. После успешного старта etcd удалите флаг `--force-new-cluster` из манифеста `/etc/kubernetes/manifests/etcd.yaml`.
+12. Проверьте [режим HA,](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) чтобы предотвратить отсутствие режима HA у модулей (например, мы можем потерять одну реплику Prometheus и её данные).
+13. Удалите лейбл control-plane у других мастер нод, отличных от выбранной в п4.
+
+   ```shell
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   ```
+
+14. Запустите kubelet на этих нодах:
+
+```shell
+systemctl start kubelet.service
+```
+
+На выбранной в п4 мастер ноде выполните следующие действия:
+
+15. Перезапустите и подождите, пока Deckhouse будет готов.
+
+   ```shell
+   kubectl -n d8-system rollout restart deployment deckhouse
+   ```
+
+   Если под Deckhouse завис в состоянии Terminating, принудительно удалите его:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse --force
+   ```
+
+   Если вы получили ошибку `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, принудительно удалите поды control-plane-manager на других узлах.
+
+16. Подождите, пока под control plane перезапустится и станет `Ready`.
+
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
+
+17. Убедитесь, что член узла etcd в качестве peer и client имеет внутренний IP-адрес узла.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+18. Верните роль control plane для остальных master узлов:
+
+```shell
+kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+```
+
+Подождите, пока все поды control plane перезапустятся и станут `Ready`:
+
+```shell
+watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+```
+
+Убедитесь, что все экземпляры etcd теперь являются членами кластера:
+
+```shell
+ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+```
+
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
 Чтобы получить данные определенных объектов кластера из резервной копии etcd:
