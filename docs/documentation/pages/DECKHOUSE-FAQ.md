@@ -407,7 +407,7 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 ### Manually uploading images to an air-gapped registry
 
 {% alert level="warning" %}
-This feature is only available in Standard Edition (SE), Enterprise Edition (EE) and Certified Security Edition (CSE).
+This feature is only available in Standard Edition (SE), Enterprise Edition (EE), and Certified Security Edition (CSE).
 {% endalert %}
 
 1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
