@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -73,7 +75,7 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
-def validate(ctx: DotMap) -> str | None:
+def validate(ctx: DotMap) -> Optional[str]:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
         return validate_creation_or_update(ctx)
@@ -83,7 +85,7 @@ def validate(ctx: DotMap) -> str | None:
         raise Exception(f"Unknown operation {ctx.operation}")
 
 
-def validate_creation_or_update(ctx: DotMap) -> str | None:
+def validate_creation_or_update(ctx: DotMap) -> Optional[str]:
     obj_name = ctx.review.request.object.metadata.name
     group_name = ctx.review.request.object.spec.name
 
@@ -118,7 +120,7 @@ def is_exist(arr: list[DotMap], target: dict) -> bool:
     return False
 
 
-def validate_delete(ctx: DotMap) -> str | None:
+def validate_delete(ctx: DotMap) -> Optional[str]:
     group_name = ctx.review.request.object.spec.name
 
     for group in ctx.snapshots.groups:
