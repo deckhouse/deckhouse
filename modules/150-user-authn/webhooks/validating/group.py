@@ -74,13 +74,13 @@ def main(ctx: hook.Context):
 
 
 def validate(ctx: DotMap) -> str | None:
-    match ctx.review.request.operation:
-        case "CREATE" | "UPDATE":
-            return validate_creation_or_update(ctx)
-        case "DELETE":
-            return validate_delete(ctx)
-        case _:
-            raise Exception(f"Unknown operation {ctx.operation}")
+    operation = ctx.review.request.operation
+    if operation == "CREATE" or operation == "UPDATE":
+        return validate_creation_or_update(ctx)
+    elif operation == "DELETE":
+        return validate_delete(ctx)
+    else:
+        raise Exception(f"Unknown operation {ctx.operation}")
 
 
 def validate_creation_or_update(ctx: DotMap) -> str | None:
@@ -95,15 +95,14 @@ def validate_creation_or_update(ctx: DotMap) -> str | None:
         return f"groups.deckhouse.io \"{group_name}\" must not start with the \"system:\" prefix"
 
     for member in ctx.review.request.object.spec.members:
-        match member.kind:
-            case "Group":
-                if not is_exist(ctx.snapshots.groups, {"groupName": member.name}):
-                    return f"groups.deckhouse.io \"{member.name}\" not exist"
-            case "User":
-                if not is_exist(ctx.snapshots.users, {"userName": member.name}):
-                    return f"users.deckhouse.io \"{member.name}\" not exist"
-            case _:
-                raise Exception(f"Unknown member kind {member.kind}")
+        if member.kind == "Group":
+            if not is_exist(ctx.snapshots.groups, {"groupName": member.name}):
+                return f"groups.deckhouse.io \"{member.name}\" not exist"
+        elif member.kind == "User":
+            if not is_exist(ctx.snapshots.users, {"userName": member.name}):
+                return f"users.deckhouse.io \"{member.name}\" not exist"
+        else:
+            raise Exception(f"Unknown member kind {member.kind}")
 
     return None
 

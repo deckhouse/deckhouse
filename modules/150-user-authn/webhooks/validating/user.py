@@ -71,13 +71,13 @@ def main(ctx: hook.Context):
 
 
 def validate(ctx: DotMap, output: hook.ValidationsCollector):
-    match ctx.review.request.operation:
-        case "CREATE" | "UPDATE":
-            validate_creation_or_update(ctx, output)
-        case "DELETE":
-            validate_delete(ctx, output)
-        case _:
-            raise Exception(f"Unknown operation {ctx.operation}")
+    operation = ctx.review.request.operation
+    if operation == "CREATE" or operation == "UPDATE":
+        validate_creation_or_update(ctx, output)
+    elif operation == "DELETE":
+        validate_delete(ctx, output)
+    else:
+        raise Exception(f"Unknown operation {ctx.operation}")
 
 
 def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
