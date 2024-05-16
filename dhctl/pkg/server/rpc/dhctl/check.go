@@ -41,6 +41,8 @@ import (
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
+	s.shutdown(server.Context().Done())
+
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 

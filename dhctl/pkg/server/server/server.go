@@ -21,7 +21,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -49,7 +48,7 @@ func Serve(network, address string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
-	globalLock := &sync.Mutex{}
+	sem := make(chan struct{}, 1)
 
 	podName := os.Getenv("HOSTNAME")
 
@@ -81,12 +80,12 @@ func Serve(network, address string) error {
 		grpc.ChainUnaryInterceptor(
 			logging.UnaryServerInterceptor(interceptors.Logger(log)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryServerSinglefligt(globalLock, log),
+			interceptors.UnaryParallelTasksLimiter(sem, log),
 		),
 		grpc.ChainStreamInterceptor(
 			logging.StreamServerInterceptor(interceptors.Logger(log)),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamServerSinglefligt(globalLock, log),
+			interceptors.StreamParallelTasksLimiter(sem, log),
 		),
 	)
 
