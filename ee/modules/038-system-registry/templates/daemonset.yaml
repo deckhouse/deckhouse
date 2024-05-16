@@ -90,7 +90,7 @@ spec:
       {{- range $templateConfigFilesValues.files }}
         {{- $filePath := .filePath }}
         {{- $templateName := .templateName  }}
-        - name: configs-files
+        - name: configs
           mountPath: {{ $filePath }}
           subPath: {{ $templateName }}
           readOnly: true
@@ -149,8 +149,8 @@ spec:
       volumes:
       - name: pki
         secret:
-          secretName: d8-pki
-      - name: configs-files
+          secretName: d8-system-registry-manager-pki
+      - name: configs
         secret:
           secretName: d8-system-registry-manager-configs
       - name: etc-kubernetes
