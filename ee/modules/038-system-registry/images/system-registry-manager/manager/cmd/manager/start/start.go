@@ -143,6 +143,10 @@ func checkLeader(ctx context.Context, isLeader chan<- bool) {
 		},
 	}
 
+	defer func() {
+		isLeader <- false
+	}()
+
 	err := kube_actions.StartLeaderElection(ctx, leaderCallbacks)
 	if err != nil {
 		log.Errorf("Failed to start leader election: %v", err)
@@ -152,20 +156,29 @@ func checkLeader(ctx context.Context, isLeader chan<- bool) {
 func runLeader(ctx context.Context, isLeader <-chan bool) {
 	leader := false
 
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				leader = <-isLeader
+			}
+		}
+	}()
+
 	for {
 		select {
-		case newLeader := <-isLeader:
-			leader = newLeader
 		case <-ctx.Done():
 			return
-		}
-
-		if leader {
-			log.Info("Performing master's work...")
-			time.Sleep(leaderWorkDelay)
-		} else {
-			log.Info("Performing slave's work...")
-			time.Sleep(slaveWorkDelay)
+		default:
+			if leader {
+				log.Info("Performing master's work...")
+				time.Sleep(leaderWorkDelay)
+			} else {
+				log.Info("Performing slave's work...")
+				time.Sleep(slaveWorkDelay)
+			}
 		}
 	}
 }
