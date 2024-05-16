@@ -155,6 +155,7 @@ spec:
       - -filer
       - -s3
       - -dir=/data
+      - -volume.port=8081
       - -volume.max=0
       - -master.volumeSizeLimitMB=1024
       - -metricsPort=9324
