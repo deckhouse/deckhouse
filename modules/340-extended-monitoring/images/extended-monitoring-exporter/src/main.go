@@ -261,9 +261,8 @@ func recordMetrics() {
 					}
 				}
 			}
-
-			time.Sleep(1 * 60 * time.Second)
-			log.Print("Loop")
+			time_healthz = time.Now()
+			time.Sleep(5 * 60 * time.Second)
 		}
 	}()
 }
@@ -274,6 +273,7 @@ const (
 )
 
 var (
+	time_healthz = time.Now()
 	timeOut      = int64(60)
 	kubeClient   *kubernetes.Clientset
 	reg          = prometheus.NewRegistry()
@@ -396,10 +396,26 @@ func main() {
 			EnableOpenMetrics: false,
 		})
 	recordMetrics()
-	// todo
-	// нужна проверка проб.
-	// /ready  - запрос в kubeapi
-	// /healthz - специальная переменная со временем последнего чека metrics ? возможно надо поменять логику. при большём цикле мало полезна
+	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		_, err := kubeClient.ServerVersion()
+		if err != nil {
+			http.Error(w, "Error", http.StatusInternalServerError)
+			log.Print(err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}
+	})
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		time_check := time.Now()
+		if time_check.Sub(time_healthz) > time.Duration(15*time.Minute) {
+			log.Printf("Fail if metrics were last collected more than %v", time.Duration(15*time.Minute))
+			http.Error(w, "Error", http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}
+	})
 	http.Handle("/metrics", handler)
 	log.Fatal(http.ListenAndServe("127.0.0.1:8081", nil))
 }
