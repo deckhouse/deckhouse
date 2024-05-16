@@ -71,7 +71,7 @@ connectionProcessor:
 		case err := <-dhctlErrCh:
 			sendErr := server.Send(&pb.CheckResponse{
 				Message: &pb.CheckResponse_Err{
-					Err: err.Error(),
+					Err: &pb.Error{Err: err.Error()},
 				},
 			})
 			if sendErr != nil {
@@ -186,10 +186,13 @@ func (s *Service) check(
 			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
 		)
-		return err
+		if err != nil {
+			return fmt.Errorf("parsing cluster meta config: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("parsing cluster meta config: %w", err)
+		return nil, err
 	}
 
 	err = log.Process("default", "Preparing DHCTL state", func() error {
@@ -249,17 +252,10 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	result, err := checker.Check(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("checking cluster state: %s", err)
-	}
+	result, checkErr := checker.Check(ctx)
+	resultString, marshalErr := json.Marshal(result)
 
-	resultString, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("marshalling check result: %s", err)
-	}
-
-	return &pb.CheckResult{Result: string(resultString)}, nil
+	return &pb.CheckResult{Result: string(resultString)}, errors.Join(checkErr, marshalErr)
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {

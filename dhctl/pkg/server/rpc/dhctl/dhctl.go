@@ -37,6 +37,7 @@ type Service struct {
 	cacheDir string
 	logc     *slog.Logger
 	logb     *slog.Logger
+	logd     *slog.Logger
 }
 
 func New(podName, cacheDir string, log *slog.Logger) *Service {
@@ -45,6 +46,7 @@ func New(podName, cacheDir string, log *slog.Logger) *Service {
 		cacheDir: cacheDir,
 		logc:     log.With(slog.String("operation", "check")),
 		logb:     log.With(slog.String("operation", "bootstrap")),
+		logd:     log.With(slog.String("operation", "destroy")),
 	}
 }
 

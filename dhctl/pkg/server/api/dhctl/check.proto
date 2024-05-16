@@ -31,7 +31,7 @@ message CheckResponse {
   oneof message {
     CheckResult result = 1;
     Logs logs = 2;
-    string err = 3;
+    Error err = 3;
   }
 }
 

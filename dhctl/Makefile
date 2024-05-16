@@ -87,7 +87,8 @@ protoc:
 	pkg/server/api/dhctl/dhctl.proto \
 	pkg/server/api/dhctl/common.proto \
 	pkg/server/api/dhctl/check.proto \
-	pkg/server/api/dhctl/bootstrap.proto
+	pkg/server/api/dhctl/bootstrap.proto \
+	pkg/server/api/dhctl/destroy.proto
 
 generate: protoc
 	go generate ./...

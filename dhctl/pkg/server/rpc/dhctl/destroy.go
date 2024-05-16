@@ -21,86 +21,72 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
 )
 
-func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
+func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	s.logb.Info("started")
+	s.logd.Info("started")
 
-	f := fsm.New("initial", s.bootstrapServerTransitions())
+	f := fsm.New("initial", s.destroyServerTransitions())
 
 	dhctlErrCh := make(chan error)
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.BootstrapRequest)
+	requestsCh := make(chan *pb.DestroyRequest)
 
-	phaseSwitcher := &bootstrapPhaseSwitcher{
+	phaseSwitcher := &destroyPhaseSwitcher{
 		server: server,
 		f:      f,
 		next:   make(chan error),
 	}
 	defer close(phaseSwitcher.next)
 
-	s.startBootstrapperReceiver(server, requestsCh, internalErrCh)
+	s.startDestroyerReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logb.Info("finished normally")
+			s.logd.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logb.Error("finished with internal error", logger.Err(err))
+			s.logd.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
-
-		case err := <-dhctlErrCh:
-			sendErr := server.Send(&pb.BootstrapResponse{
-				Message: &pb.BootstrapResponse_Err{
-					Err: &pb.Error{Err: err.Error()},
-				},
-			})
-			if sendErr != nil {
-				s.logb.Error("finished with internal error", logger.Err(sendErr))
-				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
-			}
-
-			s.logb.Info("finished with dhctl error", logger.Err(err))
-			return nil
 
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
-			case *pb.BootstrapRequest_Start:
+			case *pb.DestroyRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					s.logd.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startBootstrap(ctx, server, message.Start, phaseSwitcher, dhctlErrCh, internalErrCh, doneCh)
+				s.startDestroy(ctx, server, message.Start, phaseSwitcher, dhctlErrCh, internalErrCh, doneCh)
 
-			case *pb.BootstrapRequest_Continue:
+			case *pb.DestroyRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					s.logd.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -116,7 +102,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logb.Error("got unprocessable message",
+				s.logd.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -124,9 +110,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startBootstrapperReceiver(
-	server pb.DHCTL_BootstrapServer,
-	requestsCh chan *pb.BootstrapRequest,
+func (s *Service) startDestroyerReceiver(
+	server pb.DHCTL_DestroyServer,
+	requestsCh chan *pb.DestroyRequest,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -139,8 +125,8 @@ func (s *Service) startBootstrapperReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logb.Info(
-				"processing BootstrapRequest",
+			s.logd.Info(
+				"processing DestroyRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			requestsCh <- request
@@ -148,24 +134,24 @@ func (s *Service) startBootstrapperReceiver(
 	}()
 }
 
-func (s *Service) startBootstrap(
+func (s *Service) startDestroy(
 	ctx context.Context,
-	server pb.DHCTL_BootstrapServer,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
+	server pb.DHCTL_DestroyServer,
+	request *pb.DestroyStart,
+	phaseSwitcher *destroyPhaseSwitcher,
 	dhctlErrCh chan error,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result, err := s.boostrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
+		result, err := s.destroy(ctx, request, phaseSwitcher, &destroyLogWriter{server: server})
 		if err != nil {
 			dhctlErrCh <- err
 			return
 		}
 
-		err = server.Send(&pb.BootstrapResponse{
-			Message: &pb.BootstrapResponse_Result{
+		err = server.Send(&pb.DestroyResponse{
+			Message: &pb.DestroyResponse_Result{
 				Result: result,
 			},
 		})
@@ -178,12 +164,12 @@ func (s *Service) startBootstrap(
 	}()
 }
 
-func (s *Service) boostrap(
+func (s *Service) destroy(
 	_ context.Context,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
+	request *pb.DestroyStart,
+	phaseSwitcher *destroyPhaseSwitcher,
 	logWriter io.Writer,
-) (*pb.BootstrapResult, error) {
+) (*pb.DestroyResult, error) {
 	var err error
 
 	// set global variables from options
@@ -193,8 +179,8 @@ func (s *Service) boostrap(
 	})
 	app.SanityCheck = request.Options.SanityCheck
 	app.UseTfCache = app.UseStateCacheYes
-	app.PreflightSkipDeckhouseVersionCheck = true
-	app.PreflightSkipAll = true
+	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
@@ -202,52 +188,38 @@ func (s *Service) boostrap(
 		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
 	}()
 
-	var (
-		configPath              string
-		resourcesPath           string
-		postBootstrapScriptPath string
-	)
-	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
+	var metaConfig *config.MetaConfig
+	err = log.Process("default", "Parsing cluster config", func() error {
+		metaConfig, err = config.ParseConfigFromData(
+			input.CombineYAMLs(request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
 		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
+			return fmt.Errorf("parsing cluster meta config: %w", err)
 		}
-
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
-		}
-
-		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
-		if err != nil {
-			return fmt.Errorf("failed to write post bootstrap script: %w", err)
-		}
-		postBootstrapScript, err := os.Open(postBootstrapScriptPath)
-		if err != nil {
-			return fmt.Errorf("failed to open post bootstrap script: %w", err)
-		}
-		err = postBootstrapScript.Chmod(0555)
-		if err != nil {
-			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var initialState phases.DhctlState
 	err = log.Process("default", "Preparing DHCTL state", func() error {
+		cachePath := metaConfig.CachePath()
+		var initialState phases.DhctlState
 		if request.State != "" {
 			err = json.Unmarshal([]byte(request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
+		}
+		err = cache.InitWithOptions(
+			cachePath,
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+		)
+		if err != nil {
+			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
 		return nil
 	})
@@ -279,32 +251,29 @@ func (s *Service) boostrap(
 	}
 	defer sshClient.Stop()
 
-	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		SSHClient:                  sshClient,
-		InitialState:               initialState,
-		ResetInitialState:          true,
-		DisableBootstrapClearCache: true,
-		OnPhaseFunc:                phaseSwitcher.switchPhase,
-		CommanderMode:              request.Options.CommanderMode,
-		TerraformContext:           terraform.NewTerraformContext(),
-		ConfigPath:                 configPath,
-		ResourcesPath:              resourcesPath,
-		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 pointer.Bool(true),
-		AutoApprove:                pointer.Bool(true),
-		KubernetesInitParams:       nil,
+	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+		SSHClient:     sshClient,
+		StateCache:    cache.Global(),
+		OnPhaseFunc:   phaseSwitcher.switchPhase,
+		CommanderMode: true,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext: terraform.NewTerraformContext(),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize cluster destroyer: %w", err)
+	}
 
-	bootstrapErr := bootstrapper.Bootstrap()
-	state := bootstrapper.GetLastState()
+	destroyErr := destroyer.DestroyCluster(true)
+	state := destroyer.PhasedExecutionContext.GetLastState()
 	data, marshalErr := json.Marshal(state)
 
-	return &pb.BootstrapResult{State: string(data)}, errors.Join(bootstrapErr, marshalErr)
+	return &pb.DestroyResult{State: string(data)}, errors.Join(destroyErr, marshalErr)
 }
 
-func (s *Service) bootstrapServerTransitions() []fsm.Transition {
+func (s *Service) destroyServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -324,13 +293,13 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 	}
 }
 
-type bootstrapLogWriter struct {
-	server pb.DHCTL_BootstrapServer
+type destroyLogWriter struct {
+	server pb.DHCTL_DestroyServer
 }
 
-func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_Logs{
+func (w *destroyLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.DestroyResponse{
+		Message: &pb.DestroyResponse_Logs{
 			Logs: &pb.Logs{
 				Logs: p,
 			},
@@ -342,13 +311,13 @@ func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-type bootstrapPhaseSwitcher struct {
-	server pb.DHCTL_BootstrapServer
+type destroyPhaseSwitcher struct {
+	server pb.DHCTL_DestroyServer
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *bootstrapPhaseSwitcher) switchPhase(
+func (b *destroyPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	_ interface{},
@@ -360,9 +329,9 @@ func (b *bootstrapPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_PhaseEnd{
-			PhaseEnd: &pb.BootstrapPhaseEnd{
+	err = b.server.Send(&pb.DestroyResponse{
+		Message: &pb.DestroyResponse_PhaseEnd{
+			PhaseEnd: &pb.DestroyPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				NextPhase:           string(nextPhase),
