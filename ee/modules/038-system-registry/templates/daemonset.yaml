@@ -27,7 +27,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: d8-system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
@@ -59,7 +59,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: d8-system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager")) | nindent 2 }}
 spec:
   selector:
@@ -91,7 +91,7 @@ spec:
       {{- range $templateFilesValues.files }}
         {{- $filePath := .filePath }}
         {{- $templateName := .templateName  }}
-        - name: static-pod-files
+        - name: manifests
           mountPath: {{ $filePath }}
           subPath: {{ $templateName }}
           readOnly: true
@@ -162,9 +162,9 @@ spec:
       - name: configs-files
         secret:
           secretName: d8-system-registry-manager-configs
-      - name: static-pod-files
+      - name: manifests
         secret:
-          secretName: d8-static-pod-files
+          secretName: d8-system-registry-manager-manifests
       - name: etc-kubernetes
         hostPath:
           path: /etc/kubernetes/
