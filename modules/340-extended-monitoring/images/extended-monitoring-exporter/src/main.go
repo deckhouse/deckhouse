@@ -34,61 +34,112 @@ import (
 func recordMetrics() {
 	go func() {
 		for {
-			list, err := kubeClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
-				LabelSelector:  EXTENDED_MONITORING_ENABLED_LABEL,
+			namespaces, err := kubeClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
+				LabelSelector:  namespaces_enabled_label,
 				TimeoutSeconds: &timeOut,
 			})
 			if err != nil {
+				log.Print("[namespace] couldn't get")
 				log.Fatal(err.Error())
 			}
-			httpReqs := prometheus.NewCounterVec(
-				prometheus.CounterOpts{Name: "extended_monitoring_enabled"},
-				[]string{"namespace"},
-			)
-			prometheus.MustRegister(httpReqs)
-			for _, item := range list.Items {
+			for _, item := range namespaces.Items {
 				log.Print(fmt.Sprintf("extended_monitoring_enabled{namespace=%q} 1", item.Name))
-				httpReqs.WithLabelValues(item.Name).Add(1)
+				namespaces_enabled.WithLabelValues(item.Name).Add(1)
 			}
 
-			reg.MustRegister(httpReqs)
+			reg.MustRegister(namespaces_enabled)
 			time.Sleep(10 * 60 * time.Second)
 		}
 	}()
 }
 
-var (
-	//    540 extended_monitoring_pod_threshold
-	//     90 extended_monitoring_pod_enabled
-	//     52 extended_monitoring_ingress_threshold
-	//     45 extended_monitoring_deployment_threshold
-	//     45 extended_monitoring_deployment_enabled
-	//     26 extended_monitoring_ingress_enabled
-	//     14 extended_monitoring_daemonset_threshold
-	//     14 extended_monitoring_daemonset_enabled
-	//      3 extended_monitoring_statefulset_threshold
-	//      3 extended_monitoring_statefulset_enabled
-	//      3 extended_monitoring_node_enabled
-	//     18 extended_monitoring_node_threshold
+const (
+	label_theshold_prefix    = "threshold.extended-monitoring.deckhouse.io/"
+	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
+)
 
-	EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX = "threshold.extended-monitoring.deckhouse.io/"
-	EXTENDED_MONITORING_ENABLED_LABEL          = "extended-monitoring.deckhouse.io/enabled"
-	kubeClient                                 *kubernetes.Clientset
-	timeOut                                    = int64(60)
-	reg                                        = prometheus.NewRegistry()
+var (
+	timeOut      = int64(60)
+	kubeClient   *kubernetes.Clientset
+	reg          = prometheus.NewRegistry()
+	node_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_node_enabled"},
+		[]string{"node"},
+	)
+	node_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_node_threshold"},
+		[]string{"node", "threshold"},
+	)
+	namespaces_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_enabled"},
+		[]string{"namespace"},
+	)
+	pod_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_pod_enabled"},
+		[]string{"namespace", "pod"},
+	)
+	pod_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
+		[]string{"namespace", "pod", "threshold"},
+	)
+	ingress_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
+		[]string{"namespace", "ingress"},
+	)
+	ingress_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
+		[]string{"namespace", "ingress", "threshold"},
+	)
+	deployment_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
+		[]string{"namespace", "deployment"},
+	)
+	deployment_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
+		[]string{"namespace", "deployment", "threshold"},
+	)
+	daemonset_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
+		[]string{"namespace", "daemonset"},
+	)
+	daemonset_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
+		[]string{"namespace", "daemonset", "threshold"},
+	)
+	statefulset_enabled = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
+		[]string{"namespace", "statefulset"},
+	)
+	statefulset_threshold = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
+		[]string{"namespace", "statefulset", "threshold"},
+	)
 )
 
 func init() {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		fmt.Printf("Error kubernetes config: %v\n", err)
+		log.Printf("Error kubernetes config: %v\n", err)
 		os.Exit(1)
 	}
 	kubeClient, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		fmt.Printf("Error getting kubernetes config: %v\n", err)
+		log.Printf("Error getting kubernetes config: %v\n", err)
 		os.Exit(1)
 	}
+	prometheus.MustRegister(node_enabled)
+	prometheus.MustRegister(node_threshold)
+	prometheus.MustRegister(namespaces_enabled)
+	prometheus.MustRegister(pod_enabled)
+	prometheus.MustRegister(pod_threshold)
+	prometheus.MustRegister(ingress_enabled)
+	prometheus.MustRegister(ingress_threshold)
+	prometheus.MustRegister(deployment_enabled)
+	prometheus.MustRegister(deployment_threshold)
+	prometheus.MustRegister(daemonset_enabled)
+	prometheus.MustRegister(daemonset_threshold)
+	prometheus.MustRegister(statefulset_enabled)
+	prometheus.MustRegister(statefulset_threshold)
 }
 
 func main() {
