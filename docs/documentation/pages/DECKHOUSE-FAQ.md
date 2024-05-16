@@ -453,7 +453,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    d8 mirror pull --source="corp.company.com/sys/deckhouse" --source-login="<USER>" --source-password="<PASSWORD>" $(pwd)/d8.tar
    ```
 
-   > Note: `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
+   > Note: the `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
    > If you specify both license and login+password pair for source registry, the latter will be used.
 
    `d8 mirror pull` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Streebog) hash function (the `--gost-digest` parameter).
