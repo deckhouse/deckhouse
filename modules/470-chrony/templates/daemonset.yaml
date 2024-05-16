@@ -129,7 +129,7 @@ spec:
         - name: NTP_SERVERS
           value: {{ join " " $ntpServers | quote }}
         - name: CHRONY_MASTERS_SERVICE
-          value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.clusterConfiguration.clusterDomain | quote }}
+          value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
         - name: HOST_IP
           valueFrom:
             fieldRef:
