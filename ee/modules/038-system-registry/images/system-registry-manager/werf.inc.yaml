@@ -25,6 +25,11 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/templates
+    to: /templates
+    stageDependencies:
+      install:
+        - '**/*'
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
     to: /tmp

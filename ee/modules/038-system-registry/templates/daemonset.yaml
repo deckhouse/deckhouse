@@ -12,7 +12,6 @@ memory: 10Mi
 {{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
 #####
 
-{{- $templateFilesValues := (include "template-files-values" $ ) | fromYaml }}
 {{- $templateConfigFilesValues := (include "template-config-files-values" $ ) | fromYaml }}
 
 {{- $images := dict }}
@@ -88,17 +87,6 @@ spec:
           - start
           - --config=/config/config.yaml
         volumeMounts:
-      {{- range $templateFilesValues.files }}
-        {{- $filePath := .filePath }}
-        {{- $templateName := .templateName  }}
-        - name: manifests
-          mountPath: {{ $filePath }}
-          subPath: {{ $templateName }}
-          readOnly: true
-      {{- end }}
-        - mountPath: /pki
-          name: pki
-          readOnly: true
       {{- range $templateConfigFilesValues.files }}
         {{- $filePath := .filePath }}
         {{- $templateName := .templateName  }}
@@ -107,6 +95,9 @@ spec:
           subPath: {{ $templateName }}
           readOnly: true
       {{- end }}
+        - mountPath: /pki
+          name: pki
+          readOnly: true
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
         - mountPath: /root/.kube/
@@ -114,11 +105,11 @@ spec:
         - mountPath: /tmp
           name: tmp
         env:
-        - name: MY_IP
+        - name: HOST_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: MY_POD_NAME
+        - name: POD_NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
@@ -162,9 +153,6 @@ spec:
       - name: configs-files
         secret:
           secretName: d8-system-registry-manager-configs
-      - name: manifests
-        secret:
-          secretName: d8-system-registry-manager-manifests
       - name: etc-kubernetes
         hostPath:
           path: /etc/kubernetes/
