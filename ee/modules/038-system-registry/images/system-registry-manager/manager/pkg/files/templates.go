@@ -7,6 +7,7 @@ package pkg
 
 import (
 	"bytes"
+	"github.com/Masterminds/sprig/v3"
 	"os"
 	"text/template"
 )
@@ -32,7 +33,7 @@ func RenderTemplateFiles(filePath string, data interface{}) error {
 }
 
 func RenderTemplate(templateContent string, data interface{}) (string, error) {
-	tmpl, err := template.New("").Parse(templateContent)
+	tmpl, err := template.New("").Funcs(sprig.TxtFuncMap()).Parse(templateContent)
 	if err != nil {
 		return "", err
 	}

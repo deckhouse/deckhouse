@@ -3,7 +3,7 @@ recursive_delete = false # do we really need for registry?
 
 [etcd]
 enabled = true
-servers = "{{ .Etcd.Addresses | join "," }}"
+servers = "{{ join .Etcd.Addresses "," }}"
 
 key_prefix = "seaweedfs_meta."
 tls_ca_file= "/kubernetes_pki/etcd/ca.crt"
