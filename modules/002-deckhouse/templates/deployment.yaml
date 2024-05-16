@@ -138,7 +138,7 @@ spec:
 {{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
               value: "true"
             - name: KUBERNETES_CLUSTER_DOMAIN
-              value: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
+              value: {{ .Values.global.discovery.clusterDomain | quote }}
 {{- else }}
               value: "false"
 {{- end }}

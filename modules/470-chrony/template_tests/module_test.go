@@ -45,6 +45,7 @@ const (
     placement: {}
   discovery:
     kubernetesVersion: 1.24.5
+    clusterDomain: "cluster.local"
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3
