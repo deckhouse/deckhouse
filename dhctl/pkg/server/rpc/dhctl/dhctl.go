@@ -27,7 +27,17 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
+
+type Service struct {
+	pb.UnimplementedDHCTLServer
+
+	podName  string
+	cacheDir string
+	logc     *slog.Logger
+	logb     *slog.Logger
+}
 
 func New(podName, cacheDir string, log *slog.Logger) *Service {
 	return &Service{
@@ -38,13 +48,11 @@ func New(podName, cacheDir string, log *slog.Logger) *Service {
 	}
 }
 
-type Service struct {
-	pb.UnimplementedDHCTLServer
-
-	podName  string
-	cacheDir string
-	logc     *slog.Logger
-	logb     *slog.Logger
+func (s *Service) shutdown(done <-chan struct{}) {
+	go func() {
+		<-done
+		tomb.Shutdown(0)
+	}()
 }
 
 func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
