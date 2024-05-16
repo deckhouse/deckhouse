@@ -283,6 +283,7 @@ shell:
 
 ---
 image: dev-prebuild
+fromCacheVersion: "bububub"
 fromImage: common-base
 git:
 - add: /
