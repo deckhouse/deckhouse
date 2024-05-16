@@ -70,6 +70,10 @@ registries:
         ALLOWED_OCI_ARTIFACT_TYPES:
           "application/vnd.aquasec.trivy.config.v1+json":
             - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+          "application/octet-stream":
+            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
+          "application/vnd.oci.empty.v1+json":
+            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
         </pre>
       en: |
         <em>It is required to add support for <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">additional types of OCI artifacts.</a></em>
@@ -78,4 +82,8 @@ registries:
         ALLOWED_OCI_ARTIFACT_TYPES:
           "application/vnd.aquasec.trivy.config.v1+json":
             - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+          "application/octet-stream":
+            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
+          "application/vnd.oci.empty.v1+json":
+            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
         </pre>
