@@ -159,9 +159,6 @@ func thresholdLable(labels map[string]string, threshold string, i float64) float
 		if key == (label_theshold_prefix + threshold) {
 			tmp, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				//todo
-				// нужно задавать метрику с текущим временем
-				// также нужен алерт если эта метрика есть и меняет значение за 10m
 				log.Printf("[thresholdLable] failed ParseFloat: %v\n", err)
 			} else {
 				i = tmp
