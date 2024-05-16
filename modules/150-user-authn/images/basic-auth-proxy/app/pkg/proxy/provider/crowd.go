@@ -28,7 +28,11 @@ import (
 	"time"
 )
 
-func NewCrowdProvider(apiURL, login, password string, allowedGroups []string) *CrowdProvider {
+type Crowd struct {
+	client *crowdClient
+}
+
+func NewCrowd(apiURL, login, password string, allowedGroups []string) Provider {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -50,7 +54,7 @@ func NewCrowdProvider(apiURL, login, password string, allowedGroups []string) *C
 		groups[group] = struct{}{}
 	}
 
-	return &CrowdProvider{
+	return &Crowd{
 		client: &crowdClient{
 			apiURL:        strings.TrimSuffix(apiURL, "/"),
 			login:         login,
@@ -59,6 +63,28 @@ func NewCrowdProvider(apiURL, login, password string, allowedGroups []string) *C
 			httpClient:    client,
 		},
 	}
+}
+
+func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
+	_, err := p.client.MakeRequest("/session", "POST", struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}{Username: login, Password: password})
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.client.MakeRequest("/user/group/nested?username="+login, "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	crowdGroups, err := p.client.GetGroups(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return crowdGroups, nil
 }
 
 type crowdClient struct {
@@ -127,30 +153,4 @@ func (c *crowdClient) GetGroups(body string) ([]string, error) {
 		}
 	}
 	return groups, nil
-}
-
-type CrowdProvider struct {
-	client *crowdClient
-}
-
-func (c *CrowdProvider) ValidateCredentials(login, password string) ([]string, error) {
-	_, err := c.client.MakeRequest("/session", "POST", struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}{Username: login, Password: password})
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := c.client.MakeRequest("/user/group/nested?username="+login, "GET", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	crowdGroups, err := c.client.GetGroups(body)
-	if err != nil {
-		return nil, err
-	}
-
-	return crowdGroups, nil
 }

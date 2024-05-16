@@ -112,7 +112,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if eq $type "OIDC" }}
-        - --oidc-base-url={{ $config.issuerURL }}
+        - --oidc-base-url={{ $config.issuer }}
         - --oidc-client-id={{ $config.clientID }}
         - --oidc-client-secret={{ $config.clientSecret }}
         {{- if $config.scopes }}

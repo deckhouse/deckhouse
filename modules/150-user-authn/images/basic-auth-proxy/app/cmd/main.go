@@ -17,17 +17,15 @@ limitations under the License.
 package main
 
 import (
+	"basic-auth-proxy/pkg/proxy"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"time"
-
-	"github.com/spf13/cobra"
-
-	"basic-auth-proxy/pkg/proxy"
 )
 
-func Execute() {
-	handler := proxy.NewHandler()
+func main() {
+	handler := proxy.New()
 
 	rootCmd := &cobra.Command{
 		Use:   "basic-auth-proxy",
@@ -53,9 +51,8 @@ func Execute() {
 	rootCmd.PersistentFlags().StringArrayVar(&handler.CrowdGroups, "crowd-allowed-group", nil, "Allowed Crowd groups")
 
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCBaseURL, "oidc-base-url", "https://oidc.example.com", "URL of OIDC provider")
-	rootCmd.PersistentFlags().StringVar(&handler.OIDCApplicationLogin, "oidc-application-login", "crowd", "login of OIDC application")
-	rootCmd.PersistentFlags().StringVar(&handler.OIDCApplicationPassword, "oidc-application-password", "user123", "password of OIDC application")
-	rootCmd.PersistentFlags().StringArrayVar(&handler.OIDCGroups, "oidc-allowed-group", nil, "Allowed OIDC groups")
+	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientID, "oidc-client-id", "", "clientID of OIDC application")
+	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientSecret, "oidc-client-secret", "", "clientSecret of OIDC application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.OIDCScopes, "oidc-scope", nil, "Scopes passed from OIDC provider settings")
 
 	if err := rootCmd.Execute(); err != nil {

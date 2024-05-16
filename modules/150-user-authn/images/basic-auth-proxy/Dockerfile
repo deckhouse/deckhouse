@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src/
 COPY /app/ /src/
-RUN go build -ldflags="-s -w" ./cmd/basic-auth-proxy
+RUN go build -ldflags="-s -w" -o basic-auth-proxy ./cmd/main.go
 
 RUN chown 64535:64535 basic-auth-proxy
 RUN chmod 0700 basic-auth-proxy

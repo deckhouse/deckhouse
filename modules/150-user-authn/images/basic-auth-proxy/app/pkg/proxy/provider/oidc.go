@@ -27,20 +27,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type OIDCProvider struct {
-	apiURL   string
-	login    string
-	password string
-
-	allowedGroups map[string]struct{}
-
-	httpClient   *http.Client
-	oidcProvider *oidc.Provider
-	oauth2Config *oauth2.Config
+type OpenIDConnect struct {
+	httpClient  *http.Client
+	oidc        *oidc.Provider
+	oauth2      *oauth2.Config
+	getUserInfo bool
 }
 
-func NewOIDCProvider(apiURL, login, password string, scopes, allowedGroups []string) *OIDCProvider {
-	client := &http.Client{
+func NewOIDC(oidcURL, clientID, clientSecret string, scopes []string) Provider {
+	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -56,50 +51,37 @@ func NewOIDCProvider(apiURL, login, password string, scopes, allowedGroups []str
 		},
 	}
 
-	groups := make(map[string]struct{})
-	for _, group := range allowedGroups {
-		groups[group] = struct{}{}
-	}
-
-	ctx := context.Background()
-	context.WithValue(ctx, oauth2.HTTPClient, client)
-
-	provider, err := oidc.NewProvider(ctx, apiURL)
+	provider, err := oidc.NewProvider(context.WithValue(context.Background(), oauth2.HTTPClient, httpClient), oidcURL)
 	if err != nil {
 		panic(err) // TODO: handle error
 	}
 
 	config := oauth2.Config{
-		ClientID:     login,
-		ClientSecret: password,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		Endpoint:     provider.Endpoint(),
 		Scopes:       scopes,
 	}
 
-	return &OIDCProvider{
-		apiURL:        apiURL,
-		login:         login,
-		password:      password,
-		allowedGroups: groups,
-		httpClient:    client,
-		oidcProvider:  provider,
-		oauth2Config:  &config,
+	return &OpenIDConnect{
+		httpClient: httpClient,
+		oidc:       provider,
+		oauth2:     &config,
 	}
 }
 
-func (c *OIDCProvider) ValidateCredentials(login, password string) ([]string, error) {
-	ctx := context.Background()
-	context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
+func (p *OpenIDConnect) ValidateCredentials(login, password string) ([]string, error) {
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, p.httpClient)
 
 	// TODO: set authentication strategy to POST (endpoint.AuthStyle = oauth2.AuthStyleInParams)
 	//   if the basicAuthUnsupported option is enabled
-	token, err := c.oauth2Config.PasswordCredentialsToken(ctx, login, password)
+	token, err := p.oauth2.PasswordCredentialsToken(ctx, login, password)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: request user info only if the getUserInfo option is enabled
-	info, err := c.oidcProvider.UserInfo(ctx, oauth2.StaticTokenSource(token))
+	info, err := p.oidc.UserInfo(ctx, oauth2.StaticTokenSource(token))
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +90,7 @@ func (c *OIDCProvider) ValidateCredentials(login, password string) ([]string, er
 	claims := struct {
 		Groups []string `json:"groups"`
 	}{}
-	if err := info.Claims(&claims); err != nil {
+	if err = info.Claims(&claims); err != nil {
 		return nil, err
 	}
 
