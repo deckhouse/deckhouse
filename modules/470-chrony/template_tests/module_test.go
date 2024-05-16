@@ -33,8 +33,6 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
-  discovery:
-    clusterDomain: "cluster.local"
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: ClusterConfiguration
@@ -47,6 +45,7 @@ const (
     placement: {}
   discovery:
     kubernetesVersion: 1.24.5
+    clusterDomain: "cluster.local"
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3
