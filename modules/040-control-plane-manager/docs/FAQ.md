@@ -510,6 +510,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 ### How do perform a full recovery of the cluster state from an etcd backup?
 
 The following steps will be described to restore to the previous state of the cluster from a backup in case of complete data loss
+
 #### Steps to restore a single-master cluster
 
 1. If necessary, copy the access keys and certificates of the etcd server to the directory `/etc/kubernetes'.
@@ -552,7 +553,9 @@ ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kube
 ```shell
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 ```
+
 #### Steps to restore a multi-master cluster
+
 For correct multi-master recovery:
 
 1. Switch the cluster to single-master mode in accordance with [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) for cloud cluster or independently remove static master nodes from the cluster.
