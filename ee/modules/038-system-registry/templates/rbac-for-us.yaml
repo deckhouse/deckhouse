@@ -7,14 +7,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: d8-system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager")) | nindent 2 }}
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager")) | nindent 2 }}
 rules:
 - apiGroups: [""]
@@ -28,12 +28,12 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: d8-system-registry-manager
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
 roleRef:
   kind: Role
   name: d8:system-registry-manager
@@ -57,7 +57,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: d8-system-registry-manager
-    namespace: d8-{{ $.Chart.Name }}
+    namespace: d8-system
 roleRef:
   kind: ClusterRole
   name: d8:system-registry-manager
