@@ -459,7 +459,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    `d8 mirror pull` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Streebog) hash function (the `--gost-digest` parameter).
    The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
 
-   Also, `d8 mirror pull` supports splitting the images bundle into chunks of arbitrary size instead of dumping all images into a single tar file.
+   Also, `d8 mirror pull` supports splitting the image bundle into chunks of arbitrary size instead of dumping all the images into a single tar file.
    To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag.
    This will create a series of smaller `.chunk` files instead of a single tar bundle.
    To upload such a chunked bundle into your private registry, use `d8 mirror push` as specified below, passing the tar bundle path parameter as if you were pushing from a single-file bundle.
