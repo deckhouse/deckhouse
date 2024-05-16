@@ -12,7 +12,7 @@ spec:
   hostNetwork: true
   containers:
   - name: distribution
-    image: "{{ Distribution.Image }}"
+    image: "{{ .Distribution.Image }}"
     imagePullPolicy: IfNotPresent
     args:
       - serve
@@ -23,7 +23,7 @@ spec:
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
   - name: auth
-    image: "{{ Auth.Image }}"
+    image: "{{ .Auth.Image }}"
     imagePullPolicy: IfNotPresent
     args:
       - -logtostderr
@@ -34,7 +34,7 @@ spec:
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
   - name: seaweedfs
-    image: "{{ Seaweedfs.Image }}"
+    image: "{{ .Seaweedfs.Image }}"
     imagePullPolicy: IfNotPresent
     args:
       - -config_dir="/config"
