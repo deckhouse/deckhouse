@@ -18,6 +18,7 @@ from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
+from json import dumps
 
 config = """
 configVersion: v1
@@ -46,7 +47,7 @@ kubernetes:
     keepFullObjectsInMemory: false
     jqFilter: |
       {
-        "userName": .spec.name
+        "userName": .metadata.name
       }
 kubernetesValidating:
 - name: groups-unique.deckhouse.io
@@ -64,7 +65,8 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        binding_context.pprint(pformat="json")  # debug printing
+
+        print(dumps(binding_context.toDict(), sort_keys=True))  # debug printing
 
         errmsg = validate(binding_context)
         if errmsg is None:
@@ -111,7 +113,7 @@ def validate_creation_or_update(ctx: DotMap) -> Optional[str]:
 
 def is_exist(arr: list[DotMap], target: dict) -> bool:
     for obj in arr:
-        for k, v in target:
+        for k, v in target.items():
             if obj.filterResult[k] != v:
                 break  # go to next item in list
         else:

@@ -16,6 +16,7 @@
 
 from deckhouse import hook
 from dotmap import DotMap
+from json import dumps
 
 config = """
 configVersion: v1
@@ -64,7 +65,7 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        binding_context.pprint(pformat="json")  # debug printing
+        print(dumps(binding_context.toDict(), sort_keys=True))   # debug printing
         validate(binding_context, ctx.output.validations)
     except Exception as e:
         ctx.output.validations.error(str(e))
