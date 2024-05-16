@@ -322,6 +322,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
+	preflightChecker.AfterInfrastuctureCreate()
+	if err != nil {
+		return err
+	}
+
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
@@ -584,7 +589,7 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 }
 
 func setWithRestore[T any](target *T, newValue T) func() {
-	var oldValue = *target
+	oldValue := *target
 	*target = newValue
 	return func() {
 		*target = oldValue

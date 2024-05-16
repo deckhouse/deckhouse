@@ -88,6 +88,16 @@ func (pc *Checker) Global() error {
 	})
 }
 
+func (pc *Checker) AfterInfrastuctureCreate() error {
+	return pc.do("After infrastucture create preflight checks", []checkStep{
+		{
+			fun:            pc.CheckSSHCredential,
+			successMessage: "ssh credential is correctly",
+			skipFlag:       app.SSHCredentialsCheckArgName,
+		},
+	})
+}
+
 func (pc *Checker) do(title string, checks []checkStep) error {
 	return log.Process("common", title, func() error {
 		if app.PreflightSkipAll {
