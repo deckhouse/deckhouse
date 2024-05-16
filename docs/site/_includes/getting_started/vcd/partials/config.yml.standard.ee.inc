@@ -6,7 +6,7 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: vSphere
+  provider: VCD
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
@@ -178,7 +178,7 @@ nodeGroups:
     # [<en>] Example: "catalog/ubuntu-jammy-22.04".
     # [<ru>] Имя образа, созданного с учетом каталога размещения образа в vCloudDirector.
     # [<ru>] Пример: "catatlog/ubuntu-jammy-22.04".
-    template: flant-df-lab_DC1/ubuntu-22.04-template-23-03
+    template: *!CHANGE_TEMPLATE_NAME*
   name: frontend
   replicas: 1
   nodeTemplate:
@@ -204,7 +204,7 @@ virtualApplicationName: *!CHANGE_VAPP*
 virtualDataCenter: *!CHANGE__DC*
 # [<en>] Внутренняя сеть узлов.
 # [<ru>] Internal network name.
-mainNetwork: *!CHANGE_SSH_KEY_MAIN_NETWORK*
+mainNetwork: *!CHANGE_MAIN_NETWORK*
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
