@@ -292,7 +292,7 @@ git:
       - '**/*'
   includePaths:
   - candi
-  - 'modules/**/*'
+  - modules
   - global-hooks
   - shell_lib.sh
   - shell_lib
