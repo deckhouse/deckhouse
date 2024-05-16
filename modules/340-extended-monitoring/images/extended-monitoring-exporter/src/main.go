@@ -26,25 +26,54 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func ListNodes(client kubernetes.Interface) (*v1.NodeList, error) {
-	namespaces, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
+func ListIngress(client kubernetes.Interface, namespasce string) (*networking.IngressList, error) {
+	rows, err := client.NetworkingV1().Ingresses(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[ingress] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows, nil
+}
+
+func ListPods(client kubernetes.Interface, namespasce string) (*core.PodList, error) {
+	rows, err := client.CoreV1().Pods(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[pods] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows, nil
+}
+
+func ListNodes(client kubernetes.Interface) (*core.NodeList, error) {
+	rows, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
 		TimeoutSeconds: &timeOut,
 	})
 	if err != nil {
 		log.Print("[nodes] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return namespaces, nil
+	return rows, nil
 }
 
-func ListNamespaces(client kubernetes.Interface) (*v1.NamespaceList, error) {
-	namespaces, err := client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
+func ListNamespaces(client kubernetes.Interface) (*core.NamespaceList, error) {
+	rows, err := client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
 		LabelSelector:  namespaces_enabled_label,
 		TimeoutSeconds: &timeOut,
 	})
@@ -52,7 +81,7 @@ func ListNamespaces(client kubernetes.Interface) (*v1.NamespaceList, error) {
 		log.Print("[namespace] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return namespaces, nil
+	return rows, nil
 }
 
 func enabledLable(labels map[string]string) float64 {
@@ -87,9 +116,9 @@ func thresholdLable(labels map[string]string, threshold string, i float64) float
 func recordMetrics() {
 	go func() {
 		for {
+			//node
 			nodes, _ := ListNodes(kubeClient)
 			for _, node := range nodes.Items {
-				//log.Print(fmt.Sprintf("extended_monitoring_node_enabled{node=%q} %v", node.Name, enabledLable(node.Labels)))
 				enabled := enabledLable(node.Labels)
 				node_enabled.DeleteLabelValues(node.Name)
 				node_enabled.WithLabelValues(node.Name).Add(enabled)
@@ -101,13 +130,46 @@ func recordMetrics() {
 				}
 			}
 
+			//namespace
 			namespasces, _ := ListNamespaces(kubeClient)
 			for _, namespasce := range namespasces.Items {
+				enabled_namespace := enabledLable(namespasce.Labels)
 				namespaces_enabled.DeleteLabelValues(namespasce.Name)
-				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabledLable(namespasce.Labels))
+				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
+
+				if enabled_namespace == 1 {
+					//pod
+					pods, _ := ListPods(kubeClient, namespasce.Name)
+					for _, pod := range pods.Items {
+						enabled_pod := enabledLable(pod.Labels)
+						pod_enabled.DeleteLabelValues(namespasce.Name, pod.Name)
+						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled_pod)
+						if enabled_pod == 1 {
+							for key, value := range pod_threshold_map {
+								pod_threshold.DeleteLabelValues(namespasce.Name, pod.Name, key)
+								pod_threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLable(pod.Labels, key, value))
+							}
+						}
+					}
+					//ingress
+					ingresss, _ := ListIngress(kubeClient, namespasce.Name)
+					for _, ingress := range ingresss.Items {
+						enabled_ingress := enabledLable(ingress.Labels)
+						ingress_enabled.DeleteLabelValues(namespasce.Name, ingress.Name)
+						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled_ingress)
+						if enabled_ingress == 1 {
+							for key, value := range pod_threshold_map {
+								pod_threshold.DeleteLabelValues(namespasce.Name, ingress.Name, key)
+								pod_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLable(ingress.Labels, key, value))
+							}
+						}
+					}
+
+				}
 			}
 
-			time.Sleep(10 * 60 * time.Second)
+			time.Sleep(1 * 60 * time.Second)
+			log.Print("Loop")
 		}
 	}()
 }
@@ -149,6 +211,14 @@ var (
 		prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
 		[]string{"namespace", "pod", "threshold"},
 	)
+	pod_threshold_map = map[string]float64{
+		"disk-bytes-warning":            85,
+		"disk-bytes-critical":           95,
+		"disk-inodes-warning":           85,
+		"disk-inodes-critical":          90,
+		"container-throttling-warning":  25,
+		"container-throttling-critical": 50,
+	}
 	ingress_enabled = promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
 		[]string{"namespace", "ingress"},
