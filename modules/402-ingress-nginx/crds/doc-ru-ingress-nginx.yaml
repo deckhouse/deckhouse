@@ -537,7 +537,7 @@ spec:
                     Выключить ли HTTP/2.
                 disableHTTP3:
                   description: |
-                    Выключить ли HTTP/3
+                    Выключить ли HTTP/3.
                     
                     **HTTP/3 доступен только в контролере версии 1.10.**
                 config:
