@@ -29,7 +29,7 @@ var (
 	TmpWorkspaceDockerDistribManifestsDir = filepath.Join(TmpWorkspaceManifestsDir, "distribution_config")
 
 	InputCertsDir                  = "/pki"
-	InputManifestsDir              = "/manifests"
+	InputManifestsDir              = "/templates"
 	InputStaticPodsDir             = filepath.Join(InputManifestsDir, "static_pods")
 	InputSeaweedManifestsDir       = filepath.Join(InputManifestsDir, "seaweedfs_config")
 	InputDockerAuthManifestsDir    = filepath.Join(InputManifestsDir, "auth_config")
@@ -97,10 +97,6 @@ func (m *ManifestsSpec) NeedChange() bool {
 	return false
 }
 
-type DataForManifestRendering struct {
-	DiscoveredNodeIP string
-}
-
 func NewManifestsSpec() *ManifestsSpec {
 	cfg := GetConfig()
 
@@ -156,12 +152,12 @@ func NewManifestsSpec() *ManifestsSpec {
 					TmpGeneratePath: filepath.Join(TmpWorkspaceCertsDir, "token.crt"),
 					DestPath:        filepath.Join(DestinationCertsDir, "token.crt"),
 				},
-				CN: cfg.MyIP,
+				CN: cfg.HostIP,
 				Options: []interface{}{
 					certificate.WithKeyAlgo("ecdsa"),
 					certificate.WithKeySize(256),
 					certificate.WithGroups("Deckhouse Registry"),
-					certificate.WithSANs(cfg.MyIP),
+					certificate.WithSANs(cfg.HostIP),
 				},
 			},
 		},
@@ -196,9 +192,7 @@ func NewManifestsSpec() *ManifestsSpec {
 	return &manifestsSpec
 }
 
-func GetDataForManifestRendering() DataForManifestRendering {
+func GetDataForManifestRendering() FileConfig {
 	cfg := GetConfig()
-	return DataForManifestRendering{
-		DiscoveredNodeIP: cfg.MyIP,
-	}
+	return cfg.FileConfig
 }
