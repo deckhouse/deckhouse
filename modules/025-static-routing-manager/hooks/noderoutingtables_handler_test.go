@@ -94,6 +94,35 @@ spec:
   nodeSelector:
     node-role: testrole1
 `
+		rt4YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: testrt4
+spec:
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 2.2.2.1
+  nodeSelector:
+    node-role: testrole1
+`
+		rt5YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: testrt5
+spec:
+  ipRoutingTableID: 300
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 2.2.2.1
+  nodeSelector:
+    node-role: testrole1
+status:
+  ipRoutingTableID: 500
+`
 		nrt11YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
@@ -143,6 +172,8 @@ metadata:
 		rt1u  *unstructured.Unstructured
 		rt2u  *unstructured.Unstructured
 		rt3u  *unstructured.Unstructured
+		rt4u  *unstructured.Unstructured
+		rt5u  *unstructured.Unstructured
 		nrt1u *unstructured.Unstructured
 		node1 *v1.Node
 		node2 *v1.Node
@@ -151,6 +182,8 @@ metadata:
 		_ = yaml.Unmarshal([]byte(rt1YAML), &rt1u)
 		_ = yaml.Unmarshal([]byte(rt2YAML), &rt2u)
 		_ = yaml.Unmarshal([]byte(rt3YAML), &rt3u)
+		_ = yaml.Unmarshal([]byte(rt4YAML), &rt4u)
+		_ = yaml.Unmarshal([]byte(rt5YAML), &rt5u)
 		_ = yaml.Unmarshal([]byte(nrt11YAML), &nrt1u)
 		_ = yaml.Unmarshal([]byte(node1YAML), &node1)
 		_ = yaml.Unmarshal([]byte(node2YAML), &node2)
@@ -233,7 +266,7 @@ metadata:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			nrt31Name := "testrt3" + "-" + generateShortHash("testrt3"+"#"+"kube-worker-1")
-			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal(""))
+			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt31Name))
 		})
 	})
@@ -247,7 +280,7 @@ metadata:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
-			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal(""))
+			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt11Name))
 		})
 	})
@@ -261,7 +294,7 @@ metadata:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
-			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal(""))
+			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt11Name))
 		})
 	})
@@ -285,6 +318,57 @@ metadata:
 - destination: 192.168.1.0/24
   gateway: 192.168.2.1
 `))
+		})
+	})
+
+	Context("Checking setting id in status(from spec) of a CR RoutingTable", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rt3YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt3").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status").String()
+			Expect(rtstatus).NotTo(Equal(""))
+			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status.ipRoutingTableID").String()
+			Expect(rtstatusid).To(MatchYAML(`300`))
+		})
+	})
+
+	Context("Checking generating and setting id in status of a CR RoutingTable", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rt3YAML + rt4YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt4").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status").String()
+			Expect(rtstatus).NotTo(Equal(""))
+			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status.ipRoutingTableID").String()
+			Expect(rtstatusid).To(MatchYAML(`10000`))
+		})
+	})
+
+	Context("Checking setting id in status(from spec) (overwrite) of a CR RoutingTable", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rt5YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt5").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status").String()
+			Expect(rtstatus).NotTo(Equal(""))
+			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status.ipRoutingTableID").String()
+			Expect(rtstatusid).To(MatchYAML(`300`))
 		})
 	})
 

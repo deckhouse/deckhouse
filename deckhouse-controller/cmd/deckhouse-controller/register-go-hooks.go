@@ -51,7 +51,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	_ "github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-azure/hooks"
