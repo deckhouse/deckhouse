@@ -7,5 +7,5 @@ files:
 {{- define "registry-manager-config.yaml"  }}
 ---
 leaderElection:
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-system
 {{- end }}
