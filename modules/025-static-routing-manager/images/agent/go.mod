@@ -1,6 +1,8 @@
 module static-routing-manager-agent
 
-go 1.21
+go 1.22.0
+
+toolchain go1.22.2
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 

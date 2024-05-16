@@ -45,7 +45,6 @@ const (
 	GroupVersion          = Group + "/" + Version
 	RTKind                = "RoutingTable"
 	NRTKind               = "NodeRoutingTable"
-	nodeNameLabel         = "routing-manager.network.deckhouse.io/node-name"
 	finalizer             = "routing-tables-manager.network.deckhouse.io"
 	nrtKeyPath            = "staticRoutingManager.internal.nodeRoutingTables"
 	RoutingTableIDMin int = 10000

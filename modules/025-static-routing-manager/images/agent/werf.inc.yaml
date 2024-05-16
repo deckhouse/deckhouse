@@ -1,7 +1,6 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
-fromCacheVersion: 2404202401
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
@@ -30,7 +29,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 2404202401
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /src/cmd/agent
