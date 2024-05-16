@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -58,15 +59,17 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	}
 	defer close(phaseSwitcher.next)
 
+	s.startBootstrapperReceiver(server, requestsCh, internalErrCh)
+
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logc.Info("finished normally")
+			s.logb.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logc.Error("finished with internal error", logger.Err(err))
+			s.logb.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case err := <-dhctlErrCh:
@@ -76,11 +79,11 @@ connectionProcessor:
 				},
 			})
 			if sendErr != nil {
-				s.logc.Error("finished with internal error", logger.Err(sendErr))
+				s.logb.Error("finished with internal error", logger.Err(sendErr))
 				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
 			}
 
-			s.logc.Info("finished with dhctl error", logger.Err(err))
+			s.logb.Info("finished with dhctl error", logger.Err(err))
 			return nil
 
 		case request := <-requestsCh:
@@ -93,15 +96,6 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				s.startBootstrap(ctx, server, message.Start, phaseSwitcher, dhctlErrCh, internalErrCh, doneCh)
-
-			case *pb.BootstrapRequest_Stop:
-				err := f.Event("stop")
-				if err != nil {
-					s.logb.Error("got unprocessable message",
-						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue connectionProcessor
-				}
-				err = s.stopBootstrap(cancel, message.Stop)
 
 			case *pb.BootstrapRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -145,7 +139,7 @@ func (s *Service) startBootstrapperReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logc.Info(
+			s.logb.Info(
 				"processing BootstrapRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
@@ -182,14 +176,6 @@ func (s *Service) startBootstrap(
 
 		doneCh <- struct{}{}
 	}()
-}
-
-func (s *Service) stopBootstrap(
-	cancel context.CancelFunc,
-	_ *pb.BootstrapStop,
-) error {
-	cancel()
-	return nil
 }
 
 func (s *Service) boostrap(
@@ -238,8 +224,17 @@ func (s *Service) boostrap(
 
 		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
 		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
+			return fmt.Errorf("failed to write post bootstrap script: %w", err)
 		}
+		postBootstrapScript, err := os.Open(postBootstrapScriptPath)
+		if err != nil {
+			return fmt.Errorf("failed to open post bootstrap script: %w", err)
+		}
+		err = postBootstrapScript.Chmod(0555)
+		if err != nil {
+			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -325,16 +320,6 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 			Event:       "toNextPhase",
 			Sources:     []fsm.State{"waiting"},
 			Destination: "running",
-		},
-		{
-			Event:       "toStop",
-			Sources:     []fsm.State{"waiting"},
-			Destination: "stopped",
-		},
-		{
-			Event:       "stop",
-			Sources:     []fsm.State{"running", "waiting"},
-			Destination: "stopped",
 		},
 	}
 }
