@@ -553,123 +553,13 @@ ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kube
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 ```
 #### Steps to restore a multi-master cluster
+For correct multi-master recovery:
 
-Follow these steps on all nodes of the etcd cluster (master nodes):
+1. Switch the cluster to single-master mode in accordance with [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D0%BC%D0%B5%D0%BD%D1%8C%D1%88%D0%B8%D1%82%D1%8C-%D1%87%D0%B8%D1%81%D0%BB%D0%BE-master-%D1%83%D0%B7%D0%BB%D0%BE%D0%B2-%D0%B2-%D0%BE%D0%B1%D0%BB%D0%B0%D1%87%D0%BD%D0%BE%D0%BC-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5-multi-master-%D0%B2-single-master ) for cloud nodes or independently remove static master nodes from the cluster.
 
-1. Stop etcd.
+2. On a single master node, perform the steps to restore etcd from backup in accordance with [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0 ) for single-master.
 
-```shell
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-```
-
-2. Save the current etcd data.
-
-```shell
-cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
-```
-
-3. Clear the etcd directory.
-
-```shell
-rm -rf /var/lib/etcd/member/
-```
-
-4. Select any master node to restore it for the first time.
-
-On the other (two) master nodes, do the following:
-
-5. Stop kubelet.
-
-```shell
-systemctl stop kubelet.service
-```
-
-6. Remove all containers.
-
-```shell
-kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-```
-
-7. Clean the node.
-
-```shell
-rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
-rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
-rm -f /etc/kubernetes/authorization-webhook-config.yaml
-rm -f /etc/kubernetes/admin.conf /root/.kube/config
-rm -rf /etc/kubernetes/deckhouse
-rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-```
-
-8. On the master node selected in p4, perform steps p2, p6 and p7 similar to restoring single-master:
-9. Add the flag `--force-new-cluster` to the manifest `~/etcd.yaml`.
-10. Launch etcd.
-
-```shell
-mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-```
-
-11. After etcd is successfully started, remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd' manifest.yaml`.
-12. Check the [mode HA,](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) to prevent modules from not having HA mode (for example, we may lose one Prometheus replica and its data).
-13. Remove the control-plane label from other master nodes other than the one selected in p4.
-
-```shell
-kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-```
-
-14. Run kubelet on these nodes:
-
-```shell
-systemctl start kubelet.service
-```
-
-On the master node selected in p4, follow these steps:
-
-15. Restart and wait for the Deckhouse to be ready.
-
-```shell
-kubectl -n d8-system rollout restart deployment deckhouse
-```
-
-If the Deckhouse is suspended in the Terminating state, forcibly delete it:
-
-```shell
-kubectl -n d8-system delete po -l app=deckhouse --force
-```
-
-If you receive the error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, forcibly delete the control-plane-manager pods on other nodes.
-
-16. Wait for the control plane to restart and become `Ready`.
-
-```shell
-watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-```
-
-17. Make sure that the etcd node member as peer and client has the internal IP address of the node.
-
-```shell
-ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-```
-
-18. Return the control plane role for the remaining master nodes:
-
-```shell
-kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
-```
-
-Wait until all control plane pods restart and become `Ready`:
-
-```shell
-watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-```
-
-Make sure that all etcd instances are now members of the cluster:
-
-```shell
-ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-```
+3. When etcd operation is restored, switch the cluster back to multi-master mode according to [instructions](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0 ) for cloud nodes or [instructions](https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D1%83%D0%B7%D0%BB%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 ) for static ones.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 

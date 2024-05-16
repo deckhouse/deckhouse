@@ -549,122 +549,13 @@ tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /
 
 #### Шаги по восстановлению multi-master кластера
 
-Выполните следующие действия на всех узлах кластера etcd (мастер нодах):
+Для корректного восстановления multi-master:
 
-1. Остановите etcd.
+1. Переведите кластер в single-master режим в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D1%83%D0%BC%D0%B5%D0%BD%D1%8C%D1%88%D0%B8%D1%82%D1%8C-%D1%87%D0%B8%D1%81%D0%BB%D0%BE-master-%D1%83%D0%B7%D0%BB%D0%BE%D0%B2-%D0%B2-%D0%BE%D0%B1%D0%BB%D0%B0%D1%87%D0%BD%D0%BE%D0%BC-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5-multi-master-%D0%B2-single-master) для облачных нод или самостоятельно выведите статические мастер ноды из кластера.
 
-   ```shell
-   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-   ```
+2. На единственной мастер ноде выполните шаги по восстановлению etcd из бекапа в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0) для single-master.
 
-2. Сохраните текущие данные etcd.
-
-   ```shell
-   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
-   ```
-
-3. Очистите директорию etcd.
-
-   ```shell
-   rm -rf /var/lib/etcd/member/
-   ```
-
-4. Выберите любую мастер ноду для её первого восстановления.
-
-На остальных(двух) мастер нодах выполните следующее:
-
-5. Остановите kubelet.
-
-   ```shell
-   systemctl stop kubelet.service
-   ```
-
-6. Удалите все контейнеры.
-
-   ```shell
-   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-   ```
-
-7. Очистите ноду.
-
-   ```shell
-   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
-   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
-   rm -f /etc/kubernetes/authorization-webhook-config.yaml
-   rm -f /etc/kubernetes/admin.conf /root/.kube/config
-   rm -rf /etc/kubernetes/deckhouse
-   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-   ```
-
-8. На выбранной в п4 мастер ноде выполните шаги п2,п6 и п7 аналогичные восстановлению single-master:
-9. Добавьте флаг `--force-new-cluster` в манифест `~/etcd.yaml`.
-10. Запустите etcd.
-
-   ```shell
-   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-   ```
-
-11. После успешного старта etcd удалите флаг `--force-new-cluster` из манифеста `/etc/kubernetes/manifests/etcd.yaml`.
-12. Проверьте [режим HA,](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) чтобы предотвратить отсутствие режима HA у модулей (например, мы можем потерять одну реплику Prometheus и её данные).
-13. Удалите лейбл control-plane у других мастер нод, отличных от выбранной в п4.
-
-   ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   ```
-
-14. Запустите kubelet на этих нодах:
-
-```shell
-systemctl start kubelet.service
-```
-
-На выбранной в п4 мастер ноде выполните следующие действия:
-
-15. Перезапустите и подождите, пока Deckhouse будет готов.
-
-   ```shell
-   kubectl -n d8-system rollout restart deployment deckhouse
-   ```
-
-   Если под Deckhouse завис в состоянии Terminating, принудительно удалите его:
-
-   ```shell
-   kubectl -n d8-system delete po -l app=deckhouse --force
-   ```
-
-   Если вы получили ошибку `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, принудительно удалите поды control-plane-manager на других узлах.
-
-16. Подождите, пока под control plane перезапустится и станет `Ready`.
-
-   ```shell
-   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-   ```
-
-17. Убедитесь, что член узла etcd в качестве peer и client имеет внутренний IP-адрес узла.
-
-   ```shell
-   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-18. Верните роль control plane для остальных master узлов:
-
-```shell
-kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
-```
-
-Подождите, пока все поды control plane перезапустятся и станут `Ready`:
-
-```shell
-watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-```
-
-Убедитесь, что все экземпляры etcd теперь являются членами кластера:
-
-```shell
-ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-```
+3. Когда работа etcd восстановлена, переведите кластер обратно в multi-master режим в соответствии с [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/faq.html#%D1%88%D0%B0%D0%B3%D0%B8-%D0%BF%D0%BE-%D0%B2%D0%BE%D1%81%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8E-single-master-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0) для облачных нод или [инструкцией](https://deckhouse.ru/documentation/v1/modules/040-node-manager/examples.html#%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D1%83%D0%B7%D0%BB%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80) для статических.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
