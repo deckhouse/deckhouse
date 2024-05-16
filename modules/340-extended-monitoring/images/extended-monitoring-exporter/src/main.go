@@ -26,6 +26,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	apps "k8s.io/api/apps/v1"
+	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +35,63 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func ListIngress(client kubernetes.Interface, namespasce string) (*networking.IngressList, error) {
+func ListStatefulSet(client kubernetes.Interface, namespasce string) *apps.StatefulSetList {
+	rows, err := client.AppsV1().StatefulSets(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[StatefulSet] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows
+}
+
+func ListDaemonSet(client kubernetes.Interface, namespasce string) *apps.DaemonSetList {
+	rows, err := client.AppsV1().DaemonSets(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[DaemonSet] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows
+}
+
+func ListDeployment(client kubernetes.Interface, namespasce string) *apps.DeploymentList {
+	rows, err := client.AppsV1().Deployments(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[Deployments] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows
+}
+
+func ListCronJob(client kubernetes.Interface, namespasce string) *batch.CronJobList {
+	rows, err := client.BatchV1().CronJobs(namespasce).List(
+		context.Background(),
+		metav1.ListOptions{
+			TimeoutSeconds: &timeOut,
+		},
+	)
+	if err != nil {
+		log.Print("[CronJob] couldn't get")
+		log.Fatal(err.Error())
+	}
+	return rows
+}
+
+func ListIngress(client kubernetes.Interface, namespasce string) *networking.IngressList {
 	rows, err := client.NetworkingV1().Ingresses(namespasce).List(
 		context.Background(),
 		metav1.ListOptions{
@@ -41,13 +99,13 @@ func ListIngress(client kubernetes.Interface, namespasce string) (*networking.In
 		},
 	)
 	if err != nil {
-		log.Print("[ingress] couldn't get")
+		log.Print("[Ingress] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return rows, nil
+	return rows
 }
 
-func ListPods(client kubernetes.Interface, namespasce string) (*core.PodList, error) {
+func ListPods(client kubernetes.Interface, namespasce string) *core.PodList {
 	rows, err := client.CoreV1().Pods(namespasce).List(
 		context.Background(),
 		metav1.ListOptions{
@@ -55,33 +113,33 @@ func ListPods(client kubernetes.Interface, namespasce string) (*core.PodList, er
 		},
 	)
 	if err != nil {
-		log.Print("[pods] couldn't get")
+		log.Print("[Pods] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return rows, nil
+	return rows
 }
 
-func ListNodes(client kubernetes.Interface) (*core.NodeList, error) {
+func ListNodes(client kubernetes.Interface) *core.NodeList {
 	rows, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
 		TimeoutSeconds: &timeOut,
 	})
 	if err != nil {
-		log.Print("[nodes] couldn't get")
+		log.Print("[Nodes] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return rows, nil
+	return rows
 }
 
-func ListNamespaces(client kubernetes.Interface) (*core.NamespaceList, error) {
+func ListNamespaces(client kubernetes.Interface) *core.NamespaceList {
 	rows, err := client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
 		LabelSelector:  namespaces_enabled_label,
 		TimeoutSeconds: &timeOut,
 	})
 	if err != nil {
-		log.Print("[namespace] couldn't get")
+		log.Print("[Namespaces] couldn't get")
 		log.Fatal(err.Error())
 	}
-	return rows, nil
+	return rows
 }
 
 func enabledLable(labels map[string]string) float64 {
@@ -117,8 +175,7 @@ func recordMetrics() {
 	go func() {
 		for {
 			//node
-			nodes, _ := ListNodes(kubeClient)
-			for _, node := range nodes.Items {
+			for _, node := range ListNodes(kubeClient).Items {
 				enabled := enabledLable(node.Labels)
 				node_enabled.DeleteLabelValues(node.Name)
 				node_enabled.WithLabelValues(node.Name).Add(enabled)
@@ -131,20 +188,18 @@ func recordMetrics() {
 			}
 
 			//namespace
-			namespasces, _ := ListNamespaces(kubeClient)
-			for _, namespasce := range namespasces.Items {
+			for _, namespasce := range ListNamespaces(kubeClient).Items {
 				enabled_namespace := enabledLable(namespasce.Labels)
 				namespaces_enabled.DeleteLabelValues(namespasce.Name)
 				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
 				if enabled_namespace == 1 {
 					//pod
-					pods, _ := ListPods(kubeClient, namespasce.Name)
-					for _, pod := range pods.Items {
-						enabled_pod := enabledLable(pod.Labels)
+					for _, pod := range ListPods(kubeClient, namespasce.Name).Items {
+						enabled := enabledLable(pod.Labels)
 						pod_enabled.DeleteLabelValues(namespasce.Name, pod.Name)
-						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled_pod)
-						if enabled_pod == 1 {
+						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
+						if enabled == 1 {
 							for key, value := range pod_threshold_map {
 								pod_threshold.DeleteLabelValues(namespasce.Name, pod.Name, key)
 								pod_threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLable(pod.Labels, key, value))
@@ -152,19 +207,58 @@ func recordMetrics() {
 						}
 					}
 					//ingress
-					ingresss, _ := ListIngress(kubeClient, namespasce.Name)
-					for _, ingress := range ingresss.Items {
-						enabled_ingress := enabledLable(ingress.Labels)
+					for _, ingress := range ListIngress(kubeClient, namespasce.Name).Items {
+						enabled := enabledLable(ingress.Labels)
 						ingress_enabled.DeleteLabelValues(namespasce.Name, ingress.Name)
-						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled_ingress)
-						if enabled_ingress == 1 {
-							for key, value := range pod_threshold_map {
-								pod_threshold.DeleteLabelValues(namespasce.Name, ingress.Name, key)
-								pod_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLable(ingress.Labels, key, value))
+						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
+						if enabled == 1 {
+							for key, value := range ingress_threshold_map {
+								ingress_threshold.DeleteLabelValues(namespasce.Name, ingress.Name, key)
+								ingress_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLable(ingress.Labels, key, value))
 							}
 						}
 					}
-
+					//deployment
+					for _, deployment := range ListDeployment(kubeClient, namespasce.Name).Items {
+						enabled := enabledLable(deployment.Labels)
+						deployment_enabled.DeleteLabelValues(namespasce.Name, deployment.Name)
+						deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
+						if enabled == 1 {
+							for key, value := range deployment_threshold_map {
+								deployment_threshold.DeleteLabelValues(namespasce.Name, deployment.Name, key)
+								deployment_threshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLable(deployment.Labels, key, value))
+							}
+						}
+					}
+					//daemonset
+					for _, daemonset := range ListDaemonSet(kubeClient, namespasce.Name).Items {
+						enabled := enabledLable(daemonset.Labels)
+						daemonset_enabled.DeleteLabelValues(namespasce.Name, daemonset.Name)
+						daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
+						if enabled == 1 {
+							for key, value := range daemonset_threshold_map {
+								daemonset_threshold.DeleteLabelValues(namespasce.Name, daemonset.Name, key)
+								daemonset_threshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLable(daemonset.Labels, key, value))
+							}
+						}
+					}
+					//statefulset
+					for _, statefulset := range ListStatefulSet(kubeClient, namespasce.Name).Items {
+						enabled := enabledLable(statefulset.Labels)
+						statefulset_enabled.DeleteLabelValues(namespasce.Name, statefulset.Name)
+						statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
+						if enabled == 1 {
+							for key, value := range daemonset_threshold_map {
+								statefulset_threshold.DeleteLabelValues(namespasce.Name, statefulset.Name, key)
+								statefulset_threshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLable(statefulset.Labels, key, value))
+							}
+						}
+					}
+					//cronjob
+					for _, cronjob := range ListCronJob(kubeClient, namespasce.Name).Items {
+						cronjob_enabled.DeleteLabelValues(namespasce.Name, cronjob.Name)
+						cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLable(cronjob.Labels))
+					}
 				}
 			}
 
@@ -227,6 +321,10 @@ var (
 		prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
 		[]string{"namespace", "ingress", "threshold"},
 	)
+	ingress_threshold_map = map[string]float64{
+		"5xx-warning":  10,
+		"5xx-critical": 20,
+	}
 	deployment_enabled = promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
 		[]string{"namespace", "deployment"},
@@ -235,6 +333,9 @@ var (
 		prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
 		[]string{"namespace", "deployment", "threshold"},
 	)
+	deployment_threshold_map = map[string]float64{
+		"replicas-not-ready": 0,
+	}
 	daemonset_enabled = promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
 		[]string{"namespace", "daemonset"},
@@ -243,6 +344,9 @@ var (
 		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
 		[]string{"namespace", "daemonset", "threshold"},
 	)
+	daemonset_threshold_map = map[string]float64{
+		"replicas-not-ready": 0,
+	}
 	statefulset_enabled = promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
 		[]string{"namespace", "statefulset"},
@@ -251,6 +355,9 @@ var (
 		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
 		[]string{"namespace", "statefulset", "threshold"},
 	)
+	statefulset_threshold_map = map[string]float64{
+		"replicas-not-ready": 0,
+	}
 	cronjob_enabled = promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
 		[]string{"namespace", "cronjob"},
@@ -289,6 +396,10 @@ func main() {
 			EnableOpenMetrics: false,
 		})
 	recordMetrics()
+	// todo
+	// нужна проверка проб.
+	// /ready  - запрос в kubeapi
+	// /healthz - специальная переменная со временем последнего чека metrics ? возможно надо поменять логику. при большём цикле мало полезна
 	http.Handle("/metrics", handler)
 	log.Fatal(http.ListenAndServe("127.0.0.1:8081", nil))
 }
