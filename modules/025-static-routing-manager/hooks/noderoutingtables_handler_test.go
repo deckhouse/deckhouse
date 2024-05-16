@@ -16,12 +16,17 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -155,6 +160,74 @@ metadata:
   name: kube-worker-2
   labels:
     node-role: "testrole1"
+`
+		rt666YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  generation: 1
+  name: testrt666
+spec:
+  ipRoutingTableID: 500
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.0.0/24
+    gateway: 192.168.0.1
+  nodeSelector:
+    node-role: testrole1
+status:
+  affectedNodeRoutingTables: 1
+  conditions:
+  - lastHeartbeatTime: "2024-05-16T16:28:56Z"
+    lastTransitionTime: "2024-05-16T16:28:56Z"
+    message: ""
+    reason: Pending
+    status: "False"
+    type: Ready
+  ipRoutingTableID: 500
+  observedGeneration: 1
+`
+		nrt666YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: NodeRoutingTable
+metadata:
+  finalizers:
+  - routing-tables-manager.network.deckhouse.io
+  generation: 1
+  labels:
+    routing-manager.network.deckhouse.io/node-name: kube-worker-1
+  name: testrt666-4795340ecf
+  ownerReferences:
+  - apiVersion: NodeRoutingTable
+    blockOwnerDeletion: true
+    controller: true
+    kind: RoutingTable
+    name: testrt666
+spec:
+  nodeName: kube-worker-1
+  ipRoutingTableID: 500
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.0.0/24
+    gateway: 192.168.0.1
+status:
+  appliedRoutes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.0.0/24
+    gateway: 192.168.0.1
+  conditions:
+  - lastHeartbeatTime: "2024-05-16T15:28:50Z"
+    lastTransitionTime: "2024-05-16T15:28:50Z"
+    message: ""
+    reason: ReconciliationSucceed
+    status: "True"
+    type: Ready
+  observedGeneration: 1
 `
 	)
 
@@ -369,6 +442,35 @@ metadata:
 			Expect(rtstatus).NotTo(Equal(""))
 			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status.ipRoutingTableID").String()
 			Expect(rtstatusid).To(MatchYAML(`300`))
+		})
+	})
+
+	Context("Checking condition update", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt666YAML + nrt666YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt666").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt666").Field("status").Exists()).To(BeTrue())
+			rtstatusraw := f.KubernetesGlobalResource("RoutingTable", "testrt666").Field("status").String()
+			Expect(rtstatusraw).NotTo(Equal(""))
+			var rtstatus *v1alpha1.RoutingTableStatus
+			_ = json.Unmarshal([]byte(rtstatusraw), &rtstatus)
+			Expect(rtstatus.AffectedNodeRoutingTables).To(Equal(1))
+			Expect(rtstatus.ReadyNodeRoutingTables).To(Equal(1))
+			Expect(rtstatus.IPRoutingTableID).To(Equal(500))
+			Expect(rtstatus.ObservedGeneration).To(Equal(int64(1)))
+			Expect(rtstatus.Conditions[0].Type).To(Equal(v1alpha1.ReconciliationSucceedType))
+			Expect(rtstatus.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(rtstatus.Conditions[0].Reason).To(Equal(v1alpha1.ReconciliationReasonSucceed))
+			Expect(rtstatus.Conditions[0].Message).To(Equal(""))
+			Expect(rtstatus.Conditions[0].LastHeartbeatTime).NotTo(Equal(nil))
+			Expect(rtstatus.Conditions[0].LastTransitionTime).NotTo(Equal(nil))
+
 		})
 	})
 

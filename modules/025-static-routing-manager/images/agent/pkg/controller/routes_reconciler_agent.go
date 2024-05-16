@@ -455,6 +455,7 @@ func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status NRTR
 		if _, ok := actREM[hash]; !ok {
 			continue
 		}
+		log.Debug(fmt.Sprintf("Route %v should be deleted", route))
 		err := delRouteFromNode(route)
 		if err != nil {
 			log.Debug(fmt.Sprintf("err: %v", err))

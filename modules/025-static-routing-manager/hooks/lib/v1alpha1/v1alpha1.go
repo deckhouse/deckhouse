@@ -62,7 +62,7 @@ type RoutingTableStatus struct {
 
 type RoutingTableCondition struct {
 	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition
+	metav1.Condition  `json:",inline"`
 }
 
 // CR NodeRoutingTable
@@ -94,7 +94,7 @@ type NodeRoutingTableStatus struct {
 
 type NodeRoutingTableCondition struct {
 	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition
+	metav1.Condition  `json:",inline"`
 }
 
 const (

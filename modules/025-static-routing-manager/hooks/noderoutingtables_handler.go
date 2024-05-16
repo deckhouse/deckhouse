@@ -172,7 +172,7 @@ func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		result.Ready = false
 		result.Reason = v1alpha1.ReconciliationReasonPending
 	} else {
-		result.Ready = cond.Status == "true"
+		result.Ready = cond.Status == metav1.ConditionTrue
 		result.Reason = cond.Reason
 	}
 
@@ -240,15 +240,12 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 		// if should to do then set pending status, else continue
 
-		//var tmpDRTS rtsPlus
-		tmpDRTS := rtsPlus{}
+		tmpDRTS := new(rtsPlus)
 		tmpDRTS.failedNodes = make([]string, 0)
 		tmpDRTS.localErrors = make([]string, 0)
-		// tmpDRTS.AffectedNodeRoutingTables = 0
-		// tmpDRTS.ReadyNodeRoutingTables = 0
 
 		if _, ok := desiredRTStatus[rti.Name]; ok {
-			tmpDRTS = desiredRTStatus[rti.Name]
+			*tmpDRTS = desiredRTStatus[rti.Name]
 		}
 
 		// Generate desired ObservedGeneration
@@ -275,6 +272,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
 			nodei := nodeiRaw.(NodeInfo)
+
 			if validatedSelector.Matches(labels.Set(nodei.Labels)) {
 				tmpDRTS.AffectedNodeRoutingTables++
 				nrtName := rti.Name + "-" + generateShortHash(rti.Name+"#"+nodei.Name)
@@ -337,7 +335,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 
 		_ = RTSetStatusCondition(&tmpDRTS.Conditions, newCond)
 
-		desiredRTStatus[rti.Name] = tmpDRTS
+		desiredRTStatus[rti.Name] = *tmpDRTS
 	}
 
 	// Filling desiredNodeRoutingTables
