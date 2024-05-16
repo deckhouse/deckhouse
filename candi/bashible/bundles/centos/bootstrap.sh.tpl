@@ -148,5 +148,5 @@ export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 # Install jq from deckhouse registry.
 # When we will move to Centos 8, we should install jq from main repo.
 */}}
-bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
 mkdir -p /var/lib/bashible/
