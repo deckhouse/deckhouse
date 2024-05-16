@@ -27,6 +27,8 @@ import (
 	"static-routing-manager-agent/pkg/kubutils"
 	"static-routing-manager-agent/pkg/logger"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
 	v1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,6 +68,7 @@ func main() {
 	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
 	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
+	log.Info(fmt.Sprintf("[main] %s = %s", config.MetricsAddressPortENV, cfgParams.MetricsAddressPort))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
@@ -85,10 +88,12 @@ func main() {
 	log.Info("[main] successfully read scheme CR")
 
 	managerOpts := manager.Options{
-		Scheme: scheme,
-		//MetricsBindAddress: cfgParams.MetricsPort,
+		Scheme:                 scheme,
 		HealthProbeBindAddress: cfgParams.ProbeAddressPort,
 		Logger:                 log.GetLogger(),
+		Metrics: metricsserver.Options{
+			BindAddress: cfgParams.MetricsAddressPort,
+		},
 	}
 
 	mgr, err := manager.New(kConfig, managerOpts)

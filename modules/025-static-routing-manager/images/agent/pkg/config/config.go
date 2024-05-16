@@ -25,6 +25,7 @@ const (
 	LogLevelENV            = "LOG_LEVEL"
 	RequeueIntervalENV     = "REQUEUE_INTERVAL"
 	ProbeAddressPortENV    = "PROBE_ADDRESS_PORT"
+	MetricsAddressPortENV  = "METRICS_ADDRESS_PORT"
 	ControllerNamespaceEnv = "CONTROLLER_NAMESPACE"
 	NodeNameENV            = "NODE_NAME"
 	ControllerName         = "static-routing-manager-agent"
@@ -34,6 +35,7 @@ const (
 type Options struct {
 	Loglevel            logger.Verbosity
 	ProbeAddressPort    string
+	MetricsAddressPort  string
 	ControllerNamespace string
 	RequeueInterval     time.Duration
 	NodeName            string
@@ -54,6 +56,13 @@ func NewConfig() (*Options, error) {
 		opts.ProbeAddressPort = ":0"
 	} else {
 		opts.ProbeAddressPort = probeAddressPort
+	}
+
+	metricsAddressPort := os.Getenv(MetricsAddressPortENV)
+	if metricsAddressPort == "" {
+		opts.MetricsAddressPort = ":0"
+	} else {
+		opts.MetricsAddressPort = metricsAddressPort
 	}
 
 	controllerNamespace := os.Getenv(ControllerNamespaceEnv)
