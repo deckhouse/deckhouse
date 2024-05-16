@@ -20,7 +20,7 @@ memory: 25Mi
     {{- end }}
 
     {{- if eq $provider.type "OIDC" }}
-      {{- if $provider.crowd.enableBasicAuth }}
+      {{- if $provider.oidc.enableBasicAuth }}
         {{- if $config }}
           {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
         {{- end }}

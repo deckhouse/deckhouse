@@ -18,5 +18,5 @@ RUN chown 64535:64535 basic-auth-proxy
 RUN chmod 0700 basic-auth-proxy
 
 FROM $BASE_DISTROLESS
-COPY --from=artifact /src/basic-auth-proxy /cbasic-auth-proxy
+COPY --from=artifact /src/basic-auth-proxy /basic-auth-proxy
 ENTRYPOINT [ "/basic-auth-proxy" ]
