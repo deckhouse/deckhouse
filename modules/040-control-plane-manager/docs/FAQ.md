@@ -558,11 +558,25 @@ mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 For correct multi-master recovery:
 
-1. Switch the cluster to single-master mode in accordance with [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) for cloud cluster or independently remove static master nodes from the cluster.
+1. Switch the cluster to single-master mode according to [instructions](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
 
-2. On a single master node, perform the steps to restore etcd from backup in accordance with [instructions](#steps-to-restore-a-single-master-cluster) for single-master.
+2. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions] (#steps-to-restore-single-master-cluster) for single-master.
 
-3. When etcd operation is restored, switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud cluster or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static cluster.
+3. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+
+   ```shell
+   kubectl delete node MASTER_NODE_I
+   ```
+
+4. Restart all nodes of the cluster.
+
+5. Wait for the deckhouse queue to complete:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
+   ```
+
+4. Switch the cluster back to multi-master mode according to [instructions](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-in-multi-master) for cloud clusters or [instructions](#how-to-add-a-master-node-in-a-static-or-hybrid-cluster) for static or hybrid clusters.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
