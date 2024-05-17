@@ -2096,17 +2096,14 @@ spec:
                   type: object
                   description: |
                     Enable fencing controller for this group.
+                  required: [mode]
                   properties:
                     mode:
                       type: string
                       enum:
-                        - "Disabled"
                         - "Watchdog"
-                      x-doc-default: Disabled
-                      default: Disabled
                       description: |
                         Supported fencing modes:
-                        * Disabled - fencing is disabled.
                         * Watchdog - use watchdog kernel module for fencing.
 
                         The Watchdog implementation includes two main components:

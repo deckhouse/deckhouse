@@ -346,7 +346,6 @@ properties:
                 mode:
                   type: string
                   enum:
-                    - "Disabled"
                     - "Watchdog"
         x-examples:
           - - name: worker
