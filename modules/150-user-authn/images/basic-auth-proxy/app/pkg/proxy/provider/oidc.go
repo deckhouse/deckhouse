@@ -36,7 +36,7 @@ type OpenIDConnect struct {
 	getUserInfo bool
 }
 
-func NewOIDC(oidcURL, clientID, clientSecret string, basicAuthUnsupported bool, scopes []string) Provider {
+func NewOIDC(oidcURL, clientID, clientSecret string, getUserInfo, basicAuthUnsupported bool, scopes []string) Provider {
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -70,33 +70,36 @@ func NewOIDC(oidcURL, clientID, clientSecret string, basicAuthUnsupported bool, 
 	}
 
 	return &OpenIDConnect{
-		logger:     capnslog.NewPackageLogger("basic-auth-proxy", "provider"),
-		httpClient: httpClient,
-		oidc:       provider,
-		oauth2:     &config,
+		logger:      capnslog.NewPackageLogger("basic-auth-proxy", "oidc provider"),
+		httpClient:  httpClient,
+		oidc:        provider,
+		oauth2:      &config,
+		getUserInfo: getUserInfo,
 	}
 }
 
 func (p *OpenIDConnect) ValidateCredentials(login, password string) ([]string, error) {
-	p.logger.Info("oidc provider validates credentials")
+	p.logger.Info("validate credentials")
 	token, err := p.oauth2.PasswordCredentialsToken(oidc.ClientContext(context.Background(), p.httpClient), login, password)
 	if err != nil {
 		return nil, err
 	}
-	p.logger.Info("oidc provider validates credentials successful")
-	p.logger.Info("oidc provider gets user info")
-	// TODO: request user info only if the getUserInfo option is enabled
-	info, err := p.oidc.UserInfo(oidc.ClientContext(context.Background(), p.httpClient), oauth2.StaticTokenSource(token))
-	if err != nil {
-		return nil, err
+	p.logger.Info("validate credentials successful")
+	if p.getUserInfo {
+		p.logger.Info("get user info")
+		info, err := p.oidc.UserInfo(oidc.ClientContext(context.Background(), p.httpClient), oauth2.StaticTokenSource(token))
+		if err != nil {
+			return nil, err
+		}
+		p.logger.Info("get user info successful")
+		// TODO: get the groups claim from the claimMappings settings of the provider
+		claims := struct {
+			Groups []string `json:"groups"`
+		}{}
+		if err = info.Claims(&claims); err != nil {
+			return nil, err
+		}
+		return claims.Groups, nil
 	}
-	p.logger.Info("oidc provider gets user info successful")
-	// TODO: get the groups claim from the claimMappings settings of the provider
-	claims := struct {
-		Groups []string `json:"groups"`
-	}{}
-	if err = info.Claims(&claims); err != nil {
-		return nil, err
-	}
-	return claims.Groups, nil
+	return nil, nil
 }

@@ -19,7 +19,6 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -33,6 +32,7 @@ import (
 	"github.com/coreos/pkg/capnslog"
 	"github.com/felixge/httpsnoop"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"basic-auth-proxy/pkg/proxy/provider"
@@ -64,24 +64,29 @@ type Handler struct {
 	OIDCClientSecret         string
 	OIDCScopes               []string
 	OIDCBasicAuthUnsupported bool
+	OIDCGetUserInfo          bool
 
 	AuthCacheTTL   time.Duration
 	GroupsCacheTTL time.Duration
 
-	Cache        *ttlcache.Cache
+	cache        *ttlcache.Cache
 	reverseProxy *httputil.ReverseProxy
 
 	logger *capnslog.PackageLogger
 
 	provider provider.Provider
 
-	PrometheusRegistry *prometheus.Registry
+	prometheusRegistry *prometheus.Registry
 }
 
 func New() *Handler {
 	c := ttlcache.NewCache()
 	c.SkipTtlExtensionOnHit(true)
-	return &Handler{Cache: c, CrowdGroups: []string{}, logger: capnslog.NewPackageLogger("basic-auth-proxy", "proxy")}
+	return &Handler{
+		cache:       c,
+		CrowdGroups: []string{},
+		OIDCScopes:  []string{},
+		logger:      capnslog.NewPackageLogger("basic-auth-proxy", "proxy")}
 }
 
 func (h *Handler) Run() {
@@ -100,7 +105,8 @@ func (h *Handler) Run() {
 	}
 
 	if h.OIDCBaseURL != "" {
-		h.provider = provider.NewOIDC(h.OIDCBaseURL, h.OIDCClientID, h.OIDCClientSecret, h.OIDCBasicAuthUnsupported, h.OIDCScopes)
+		h.provider = provider.NewOIDC(h.OIDCBaseURL, h.OIDCClientID, h.OIDCClientSecret, h.OIDCGetUserInfo,
+			h.OIDCBasicAuthUnsupported, h.OIDCScopes)
 		h.logger.Printf("-- OIDC URL: %s", h.OIDCBaseURL)
 	}
 
@@ -110,18 +116,18 @@ func (h *Handler) Run() {
 	h.reverseProxy.Transport = h.buildHTTPTransport(h.CertPath)
 	h.reverseProxy.FlushInterval = defaultFlushInterval
 
-	h.PrometheusRegistry = prometheus.NewRegistry()
+	h.prometheusRegistry = prometheus.NewRegistry()
 	requestCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Count of all HTTP requests.",
 	}, []string{"handler", "code", "method"})
 
-	err := h.PrometheusRegistry.Register(requestCounter)
+	err := h.prometheusRegistry.Register(requestCounter)
 	if err != nil {
 		h.logger.Fatalf("cannot register prometheus metrics: %s", err)
 	}
 
-	err = h.PrometheusRegistry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	err = h.prometheusRegistry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	if err != nil {
 		h.logger.Fatalf("cannot register process metrics: %s", err)
 	}
@@ -134,7 +140,7 @@ func (h *Handler) Run() {
 			"method":  r.Method,
 		}).Inc()
 	})
-	http.Handle("/metrics", promhttp.HandlerFor(h.PrometheusRegistry, promhttp.HandlerOpts{}))
+	http.Handle("/metrics", promhttp.HandlerFor(h.prometheusRegistry, promhttp.HandlerOpts{}))
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -208,7 +214,7 @@ func (h *Handler) buildHTTPTransport(certPath string) *http.Transport {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("receive a new request from", r.RemoteAddr)
+	h.logger.Info("receive a new request from ", r.RemoteAddr)
 	basicLogin, basicPassword, ok := r.BasicAuth()
 	if !ok {
 		h.logger.Error("401 Unauthorized, no basic auth credentials have been sent")
@@ -216,8 +222,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups := h.validateCredentials(basicLogin, basicPassword)
-	if len(groups) == 0 {
+	groups, err := h.validateCredentials(basicLogin, basicPassword)
+	if err != nil {
+		h.logger.Errorf("403 Forbidden, authentication problem: %s", err.Error())
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if h.CrowdBaseURL != "" && len(groups) == 0 {
 		h.logger.Errorf("403 Forbidden, Crowd authentication problem: User %s has no allowed groups", basicLogin)
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
@@ -226,27 +237,26 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.modifyRequest(w, r, basicLogin, groups)
 }
 
-func (h *Handler) validateCredentials(login, password string) []string {
+func (h *Handler) validateCredentials(login, password string) ([]string, error) {
 	userID := login + ":" + password
 
-	value, exists := h.Cache.Get(userID)
-	if exists {
+	if value, exists := h.cache.Get(userID); exists {
 		if value != nil {
-			return value.([]string)
+			return value.([]string), nil
 		}
-		return []string{}
+		return []string{}, nil
 	}
 
 	groups, err := h.provider.ValidateCredentials(login, password)
 	if err != nil {
-		h.logger.Errorf("validating user credentials: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
-		return nil
+		h.logger.Errorf("error during validating user credentials: %+v", err)
+		h.cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
+		return nil, err
 	}
 
-	h.Cache.SetWithTTL(userID, groups, h.GroupsCacheTTL)
+	h.cache.SetWithTTL(userID, groups, h.GroupsCacheTTL)
 	h.logger.Printf("received groups for %s: %s", login, groups)
-	return groups
+	return groups, nil
 }
 
 func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login string, groups []string) {

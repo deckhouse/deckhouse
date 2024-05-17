@@ -51,6 +51,7 @@ func main() {
 	rootCmd.PersistentFlags().StringArrayVar(&handler.CrowdGroups, "crowd-allowed-group", nil, "Allowed Crowd groups")
 
 	rootCmd.PersistentFlags().BoolVar(&handler.OIDCBasicAuthUnsupported, "oidc-basic-auth-unsupported", false, "basicAuthUnsupported option")
+	rootCmd.PersistentFlags().BoolVar(&handler.OIDCGetUserInfo, "oidc-get-user-info", false, "getUserInfo option")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCBaseURL, "oidc-base-url", "", "URL of OIDC provider")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientID, "oidc-client-id", "", "clientID of OIDC application")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientSecret, "oidc-client-secret", "", "clientSecret of OIDC application")

@@ -115,6 +115,8 @@ spec:
         - --oidc-base-url={{ $config.issuer }}
         - --oidc-client-id={{ $config.clientID }}
         - --oidc-client-secret={{ $config.clientSecret }}
+        - --oidc-get-user-info={{ $config.getUserInfo }}
+        - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
         - --oidc-scope={{ $scope }}
