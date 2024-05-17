@@ -114,14 +114,14 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
 
 def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
     user_name = ctx.review.request.oldObject.metadata.name
+    warnings = []
 
     for group in ctx.snapshots.groups:
         for member in group.filterResult.members:
             if member.kind == "User" and member.name == user_name:
-                output.deny(f"groups.deckhouse.io \"{group.filterResult.name}\" contains users.deckhouse.io \"{user_name}\"")
-                return
+                warnings.append(f"groups.deckhouse.io \"{group.filterResult.name}\" contains users.deckhouse.io \"{user_name}\"")
 
-    output.allow()
+    output.allow(*warnings)
 
 
 if __name__ == "__main__":

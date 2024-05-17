@@ -64,16 +64,16 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        errmsg = validate(binding_context)
+        errmsg, warnings = validate(binding_context)
         if errmsg is None:
-            ctx.output.validations.allow()
+            ctx.output.validations.allow(*warnings)
         else:
             ctx.output.validations.deny(errmsg)
     except Exception as e:
         ctx.output.validations.error(str(e))
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
         return validate_creation_or_update(ctx)
@@ -83,28 +83,29 @@ def validate(ctx: DotMap) -> Optional[str]:
         raise Exception(f"Unknown operation {ctx.operation}")
 
 
-def validate_creation_or_update(ctx: DotMap) -> Optional[str]:
+def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     obj_name = ctx.review.request.object.metadata.name
     group_name = ctx.review.request.object.spec.name
+    warnings = []
 
     if [obj.filterResult for obj in ctx.snapshots.groups if
         obj.filterResult.name != obj_name and obj.filterResult.groupName == group_name]:
-        return f"groups.deckhouse.io \"{group_name}\" already exists"
+        return f"groups.deckhouse.io \"{group_name}\" already exists", warnings
 
     if group_name.startswith("system:"):
-        return f"groups.deckhouse.io \"{group_name}\" must not start with the \"system:\" prefix"
+        return f"groups.deckhouse.io \"{group_name}\" must not start with the \"system:\" prefix", warnings
 
     for member in ctx.review.request.object.spec.members:
         if member.kind == "Group":
             if not is_exist(ctx.snapshots.groups, {"groupName": member.name}):
-                return f"groups.deckhouse.io \"{member.name}\" not exist"
+                warnings.append(f"groups.deckhouse.io \"{member.name}\" not exist")
         elif member.kind == "User":
             if not is_exist(ctx.snapshots.users, {"userName": member.name}):
-                return f"users.deckhouse.io \"{member.name}\" not exist"
+                warnings.append(f"users.deckhouse.io \"{member.name}\" not exist")
         else:
             raise Exception(f"Unknown member kind {member.kind}")
 
-    return None
+    return None, warnings
 
 
 def is_exist(arr: list[DotMap], target: dict) -> bool:
@@ -118,15 +119,16 @@ def is_exist(arr: list[DotMap], target: dict) -> bool:
     return False
 
 
-def validate_delete(ctx: DotMap) -> Optional[str]:
+def validate_delete(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     group_name = ctx.review.request.oldObject.spec.name
+    warnings = []
 
     for group in ctx.snapshots.groups:
         for member in group.filterResult.members:
             if member.kind == "Group" and member.name == group_name:
-                return f"groups.deckhouse.io \"{group.filterResult.name}\" contains groups.deckhouse.io \"{group_name}\""
+                warnings.append(f"groups.deckhouse.io \"{group.filterResult.name}\" contains groups.deckhouse.io \"{group_name}\"")
 
-    return None
+    return None, warnings
 
 
 if __name__ == "__main__":
