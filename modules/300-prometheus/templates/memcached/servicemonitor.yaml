@@ -12,6 +12,10 @@ spec:
     - port: http-metrics
       scheme: http
       honorLabels: true
+      metricRelabelings:
+        - action: drop
+          regex: (memcached_slab_.*)
+          sourceLabels: [__name__]
       relabelings:
         - targetLabel: tier
           replacement: cluster
