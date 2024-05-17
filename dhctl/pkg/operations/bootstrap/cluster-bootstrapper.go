@@ -322,11 +322,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	preflightChecker.AfterInfrastuctureCreate()
-	if err != nil {
-		return err
-	}
-
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
