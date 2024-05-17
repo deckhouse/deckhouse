@@ -30,7 +30,6 @@ require (
 	github.com/werf/logboek v0.5.5
 	go.cypherpunks.ru/gogost/v5 v5.13.0
 	golang.org/x/crypto v0.21.0
-	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.18.0
 	google.golang.org/grpc v1.63.0
 	google.golang.org/protobuf v1.33.0
@@ -111,6 +110,7 @@ require (
 	go.mongodb.org/mongo-driver v1.5.4 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect

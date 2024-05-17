@@ -22,64 +22,89 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func (s *Service) Check(server pb.DHCTL_CheckServer) error {
+func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	s.shutdown(server.Context().Done())
 
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	s.logc.Info("started")
+	s.logd.Info("started")
 
-	f := fsm.New("initial", s.checkServerTransitions())
+	f := fsm.New("initial", s.convergeServerTransitions())
 
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.CheckRequest)
+	requestsCh := make(chan *pb.ConvergeRequest)
 
-	s.startCheckerReceiver(server, requestsCh, internalErrCh)
+	phaseSwitcher := &convergePhaseSwitcher{
+		server: server,
+		f:      f,
+		next:   make(chan error),
+	}
+	defer close(phaseSwitcher.next)
+
+	s.startConvergeerReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logc.Info("finished normally")
+			s.logd.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logc.Error("finished with internal error", logger.Err(err))
+			s.logd.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
-			case *pb.CheckRequest_Start:
+			case *pb.ConvergeRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logc.Error("got unprocessable message",
+					s.logd.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(ctx, server, message.Start, internalErrCh, doneCh)
+				s.startConverge(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+
+			case *pb.ConvergeRequest_Continue:
+				err := f.Event("toNextPhase")
+				if err != nil {
+					s.logd.Error("got unprocessable message",
+						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
+					continue connectionProcessor
+				}
+				switch message.Continue.Continue {
+				case pb.Continue_CONTINUE_UNSPECIFIED:
+					phaseSwitcher.next <- errors.New("bad continue message")
+				case pb.Continue_CONTINUE_NEXT_PHASE:
+					phaseSwitcher.next <- nil
+				case pb.Continue_CONTINUE_STOP_OPERATION:
+					phaseSwitcher.next <- phases.StopOperationCondition
+				case pb.Continue_CONTINUE_ERROR:
+					phaseSwitcher.next <- errors.New(message.Continue.Err)
+				}
 
 			default:
-				s.logc.Error("got unprocessable message",
+				s.logd.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -87,9 +112,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startCheckerReceiver(
-	server pb.DHCTL_CheckServer,
-	requestsCh chan *pb.CheckRequest,
+func (s *Service) startConvergeerReceiver(
+	server pb.DHCTL_ConvergeServer,
+	requestsCh chan *pb.ConvergeRequest,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -102,8 +127,8 @@ func (s *Service) startCheckerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logc.Info(
-				"processing CheckRequest",
+			s.logd.Info(
+				"processing ConvergeRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			requestsCh <- request
@@ -111,17 +136,18 @@ func (s *Service) startCheckerReceiver(
 	}()
 }
 
-func (s *Service) startChecker(
+func (s *Service) startConverge(
 	ctx context.Context,
-	server pb.DHCTL_CheckServer,
-	request *pb.CheckStart,
+	server pb.DHCTL_ConvergeServer,
+	request *pb.ConvergeStart,
+	phaseSwitcher *convergePhaseSwitcher,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.check(ctx, request, &checkLogWriter{server: server})
-		err := server.Send(&pb.CheckResponse{
-			Message: &pb.CheckResponse_Result{
+		result := s.converge(ctx, request, phaseSwitcher, &convergeLogWriter{server: server})
+		err := server.Send(&pb.ConvergeResponse{
+			Message: &pb.ConvergeResponse_Result{
 				Result: result,
 			},
 		})
@@ -134,11 +160,12 @@ func (s *Service) startChecker(
 	}()
 }
 
-func (s *Service) check(
+func (s *Service) converge(
 	ctx context.Context,
-	request *pb.CheckStart,
+	request *pb.ConvergeStart,
+	phaseSwitcher *convergePhaseSwitcher,
 	logWriter io.Writer,
-) *pb.CheckResult {
+) *pb.ConvergeResult {
 	var err error
 
 	// set global variables from options
@@ -171,7 +198,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
 	err = log.Process("default", "Preparing DHCTL state", func() error {
@@ -193,7 +220,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -216,9 +243,11 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
+
+	terraformContext := terraform.NewTerraformContext()
 
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
@@ -231,30 +260,58 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	result, checkErr := checker.Check(ctx)
-	resultData, marshalErr := json.Marshal(result)
-	err = errors.Join(checkErr, marshalErr)
+	converger := converge.NewConverger(&converge.Params{
+		SSHClient:              sshClient,
+		OnPhaseFunc:            phaseSwitcher.switchPhase,
+		AutoApprove:            true,
+		AutoDismissDestructive: false,
+		CommanderMode:          true,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext:           terraformContext,
+		Checker:                    checker,
+		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
+		OnCheckResult:              onCheckResult,
+	})
 
-	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
+	result, convergeErr := converger.Converge(ctx)
+	state := converger.GetLastState()
+	stateData, marshalStateErr := json.Marshal(state)
+	resultString, marshalResultErr := json.Marshal(result)
+	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
+
+	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
 }
 
-func (s *Service) checkServerTransitions() []fsm.Transition {
+func (s *Service) convergeServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
 			Sources:     []fsm.State{"initial"},
 			Destination: "running",
 		},
+		{
+			Event:       "wait",
+			Sources:     []fsm.State{"running"},
+			Destination: "waiting",
+		},
+		{
+			Event:       "toNextPhase",
+			Sources:     []fsm.State{"waiting"},
+			Destination: "running",
+		},
 	}
 }
 
-type checkLogWriter struct {
-	server pb.DHCTL_CheckServer
+type convergeLogWriter struct {
+	server pb.DHCTL_ConvergeServer
 }
 
-func (w *checkLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Logs{
+func (w *convergeLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.ConvergeResponse{
+		Message: &pb.ConvergeResponse_Logs{
 			Logs: &pb.Logs{
 				Logs: p,
 			},
@@ -264,4 +321,43 @@ func (w *checkLogWriter) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("writing check logs: %w", err)
 	}
 	return len(p), nil
+}
+
+type convergePhaseSwitcher struct {
+	server pb.DHCTL_ConvergeServer
+	f      *fsm.FiniteStateMachine
+	next   chan error
+}
+
+func (b *convergePhaseSwitcher) switchPhase(
+	completedPhase phases.OperationPhase,
+	completedPhaseState phases.DhctlState,
+	_ interface{},
+	nextPhase phases.OperationPhase,
+	nextPhaseCritical bool,
+) error {
+	err := b.f.Event("wait")
+	if err != nil {
+		return fmt.Errorf("changing state to waiting: %w", err)
+	}
+
+	err = b.server.Send(&pb.ConvergeResponse{
+		Message: &pb.ConvergeResponse_PhaseEnd{
+			PhaseEnd: &pb.ConvergePhaseEnd{
+				CompletedPhase:      string(completedPhase),
+				CompletedPhaseState: completedPhaseState,
+				NextPhase:           string(nextPhase),
+				NextPhaseCritical:   nextPhaseCritical,
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("sending on phase message: %w", err)
+	}
+
+	switchErr, ok := <-b.next
+	if !ok {
+		return fmt.Errorf("server stopped, cancel task")
+	}
+	return switchErr
 }
