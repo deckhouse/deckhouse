@@ -25,21 +25,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/utils/pointer"
 )
 
-func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
+func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	s.shutdown(server.Context().Done())
 
 	ctx, cancel := context.WithCancel(server.Context())
@@ -47,20 +46,20 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 
 	s.logd.Info("started")
 
-	f := fsm.New("initial", s.destroyServerTransitions())
+	f := fsm.New("initial", s.abortServerTransitions())
 
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.DestroyRequest)
+	requestsCh := make(chan *pb.AbortRequest)
 
-	phaseSwitcher := &destroyPhaseSwitcher{
+	phaseSwitcher := &abortPhaseSwitcher{
 		server: server,
 		f:      f,
 		next:   make(chan error),
 	}
 	defer close(phaseSwitcher.next)
 
-	s.startDestroyerReceiver(server, requestsCh, internalErrCh)
+	s.startAborterReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -75,16 +74,16 @@ connectionProcessor:
 
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
-			case *pb.DestroyRequest_Start:
+			case *pb.AbortRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					s.logd.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startDestroy(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startAbort(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
 
-			case *pb.DestroyRequest_Continue:
+			case *pb.AbortRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
 					s.logd.Error("got unprocessable message",
@@ -111,9 +110,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startDestroyerReceiver(
-	server pb.DHCTL_DestroyServer,
-	requestsCh chan *pb.DestroyRequest,
+func (s *Service) startAborterReceiver(
+	server pb.DHCTL_AbortServer,
+	requestsCh chan *pb.AbortRequest,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -127,7 +126,7 @@ func (s *Service) startDestroyerReceiver(
 				return
 			}
 			s.logd.Info(
-				"processing DestroyRequest",
+				"processing AbortRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			requestsCh <- request
@@ -135,18 +134,18 @@ func (s *Service) startDestroyerReceiver(
 	}()
 }
 
-func (s *Service) startDestroy(
+func (s *Service) startAbort(
 	ctx context.Context,
-	server pb.DHCTL_DestroyServer,
-	request *pb.DestroyStart,
-	phaseSwitcher *destroyPhaseSwitcher,
+	server pb.DHCTL_AbortServer,
+	request *pb.AbortStart,
+	phaseSwitcher *abortPhaseSwitcher,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.destroy(ctx, request, phaseSwitcher, &destroyLogWriter{server: server})
-		err := server.Send(&pb.DestroyResponse{
-			Message: &pb.DestroyResponse_Result{
+		result := s.abort(ctx, request, phaseSwitcher, &abortLogWriter{server: server})
+		err := server.Send(&pb.AbortResponse{
+			Message: &pb.AbortResponse_Result{
 				Result: result,
 			},
 		})
@@ -159,12 +158,12 @@ func (s *Service) startDestroy(
 	}()
 }
 
-func (s *Service) destroy(
+func (s *Service) abort(
 	_ context.Context,
-	request *pb.DestroyStart,
-	phaseSwitcher *destroyPhaseSwitcher,
+	request *pb.AbortStart,
+	phaseSwitcher *abortPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.DestroyResult {
+) *pb.AbortResult {
 	var err error
 
 	// set global variables from options
@@ -177,49 +176,51 @@ func (s *Service) destroy(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.PreflightSkipDeckhouseVersionCheck = true
+	app.PreflightSkipAll = true
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
 		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
 	}()
 
-	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
-		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
+	var (
+		configPath    string
+		resourcesPath string
+	)
+	err = log.Process("default", "Preparing configuration", func() error {
+		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
+			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
+		)))
 		if err != nil {
-			return fmt.Errorf("parsing cluster meta config: %w", err)
+			return fmt.Errorf("failed to write init configuration: %w", err)
 		}
+
+		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
+			request.InitResources, request.Resources,
+		)))
+		if err != nil {
+			return fmt.Errorf("failed to write resources: %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {
-		return &pb.DestroyResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 
+	var initialState phases.DhctlState
 	err = log.Process("default", "Preparing DHCTL state", func() error {
-		cachePath := metaConfig.CachePath()
-		var initialState phases.DhctlState
 		if request.State != "" {
 			err = json.Unmarshal([]byte(request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
-		err = cache.InitWithOptions(
-			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
-		)
-		if err != nil {
-			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
-		}
 		return nil
 	})
 	if err != nil {
-		return &pb.DestroyResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -242,34 +243,35 @@ func (s *Service) destroy(
 		return nil
 	})
 	if err != nil {
-		return &pb.DestroyResult{Err: err.Error()}
+		return &pb.AbortResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-		SSHClient:     sshClient,
-		StateCache:    cache.Global(),
-		OnPhaseFunc:   phaseSwitcher.switchPhase,
-		CommanderMode: true,
-		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
-		),
-		TerraformContext: terraform.NewTerraformContext(),
+	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		ConfigPath:       configPath,
+		ResourcesPath:    resourcesPath,
+		InitialState:     initialState,
+		SSHClient:        sshClient,
+		UseTfCache:       pointer.Bool(true),
+		AutoApprove:      pointer.Bool(true),
+		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
+		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
+
+		ResetInitialState: true,
+		OnPhaseFunc:       phaseSwitcher.switchPhase,
+		CommanderMode:     request.Options.CommanderMode,
+		TerraformContext:  terraform.NewTerraformContext(),
 	})
-	if err != nil {
-		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
-	}
 
-	destroyErr := destroyer.DestroyCluster(true)
-	state := destroyer.PhasedExecutionContext.GetLastState()
+	abortErr := bootstrapper.Abort(false)
+	state := bootstrapper.GetLastState()
 	data, marshalErr := json.Marshal(state)
-	err = errors.Join(destroyErr, marshalErr)
+	err = errors.Join(abortErr, marshalErr)
 
-	return &pb.DestroyResult{State: string(data), Err: errToString(err)}
+	return &pb.AbortResult{State: string(data), Err: errToString(err)}
 }
 
-func (s *Service) destroyServerTransitions() []fsm.Transition {
+func (s *Service) abortServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -289,13 +291,13 @@ func (s *Service) destroyServerTransitions() []fsm.Transition {
 	}
 }
 
-type destroyLogWriter struct {
-	server pb.DHCTL_DestroyServer
+type abortLogWriter struct {
+	server pb.DHCTL_AbortServer
 }
 
-func (w *destroyLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.DestroyResponse{
-		Message: &pb.DestroyResponse_Logs{
+func (w *abortLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.AbortResponse{
+		Message: &pb.AbortResponse_Logs{
 			Logs: &pb.Logs{
 				Logs: p,
 			},
@@ -307,13 +309,13 @@ func (w *destroyLogWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-type destroyPhaseSwitcher struct {
-	server pb.DHCTL_DestroyServer
+type abortPhaseSwitcher struct {
+	server pb.DHCTL_AbortServer
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *destroyPhaseSwitcher) switchPhase(
+func (b *abortPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	_ interface{},
@@ -325,9 +327,9 @@ func (b *destroyPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.DestroyResponse{
-		Message: &pb.DestroyResponse_PhaseEnd{
-			PhaseEnd: &pb.DestroyPhaseEnd{
+	err = b.server.Send(&pb.AbortResponse{
+		Message: &pb.AbortResponse_PhaseEnd{
+			PhaseEnd: &pb.AbortPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				NextPhase:           string(nextPhase),

@@ -40,6 +40,8 @@ import (
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
+	s.shutdown(server.Context().Done())
+
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
@@ -47,7 +49,6 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 
 	f := fsm.New("initial", s.bootstrapServerTransitions())
 
-	dhctlErrCh := make(chan error)
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
 	requestsCh := make(chan *pb.BootstrapRequest)
@@ -72,20 +73,6 @@ connectionProcessor:
 			s.logb.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case err := <-dhctlErrCh:
-			sendErr := server.Send(&pb.BootstrapResponse{
-				Message: &pb.BootstrapResponse_Err{
-					Err: &pb.Error{Err: err.Error()},
-				},
-			})
-			if sendErr != nil {
-				s.logb.Error("finished with internal error", logger.Err(sendErr))
-				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
-			}
-
-			s.logb.Info("finished with dhctl error", logger.Err(err))
-			return nil
-
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
 			case *pb.BootstrapRequest_Start:
@@ -95,7 +82,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startBootstrap(ctx, server, message.Start, phaseSwitcher, dhctlErrCh, internalErrCh, doneCh)
+				s.startBootstrap(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
 
 			case *pb.BootstrapRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -112,7 +99,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_STOP_OPERATION:
 					phaseSwitcher.next <- phases.StopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err.GetErr())
+					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
 
 			default:
@@ -153,18 +140,12 @@ func (s *Service) startBootstrap(
 	server pb.DHCTL_BootstrapServer,
 	request *pb.BootstrapStart,
 	phaseSwitcher *bootstrapPhaseSwitcher,
-	dhctlErrCh chan error,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result, err := s.boostrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
-		if err != nil {
-			dhctlErrCh <- err
-			return
-		}
-
-		err = server.Send(&pb.BootstrapResponse{
+		result := s.boostrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
+		err := server.Send(&pb.BootstrapResponse{
 			Message: &pb.BootstrapResponse_Result{
 				Result: result,
 			},
@@ -183,7 +164,7 @@ func (s *Service) boostrap(
 	request *pb.BootstrapStart,
 	phaseSwitcher *bootstrapPhaseSwitcher,
 	logWriter io.Writer,
-) (*pb.BootstrapResult, error) {
+) *pb.BootstrapResult {
 	var err error
 
 	// set global variables from options
@@ -238,7 +219,7 @@ func (s *Service) boostrap(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
 	var initialState phases.DhctlState
@@ -252,7 +233,7 @@ func (s *Service) boostrap(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -275,7 +256,7 @@ func (s *Service) boostrap(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.BootstrapResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
@@ -300,8 +281,9 @@ func (s *Service) boostrap(
 	bootstrapErr := bootstrapper.Bootstrap()
 	state := bootstrapper.GetLastState()
 	data, marshalErr := json.Marshal(state)
+	err = errors.Join(bootstrapErr, marshalErr)
 
-	return &pb.BootstrapResult{State: string(data)}, errors.Join(bootstrapErr, marshalErr)
+	return &pb.BootstrapResult{State: string(data), Err: errToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {

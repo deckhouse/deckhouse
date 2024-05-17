@@ -33,7 +33,6 @@ message BootstrapResponse {
     BootstrapResult result = 1;
     BootstrapPhaseEnd phase_end = 2;
     Logs logs = 3;
-    Error err = 4;
   }
 }
 
@@ -58,7 +57,7 @@ message BootstrapPhaseEnd {
 
 message BootstrapContinue {
   Continue continue = 1;
-  Error err = 2;
+  string err = 2;
 }
 
 message BootstrapStartOptions {
@@ -71,4 +70,5 @@ message BootstrapStartOptions {
 
 message BootstrapResult {
   string state = 1;
+  string err = 2;
 }

@@ -138,3 +138,10 @@ func portToString(p *int32) string {
 	}
 	return strconv.Itoa(int(*p))
 }
+
+func errToString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}

@@ -31,7 +31,6 @@ message CheckResponse {
   oneof message {
     CheckResult result = 1;
     Logs logs = 2;
-    Error err = 3;
   }
 }
 
@@ -53,4 +52,5 @@ message CheckStartOptions {
 
 message CheckResult {
   string result = 1;
+  string err = 2;
 }

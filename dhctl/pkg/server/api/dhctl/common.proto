@@ -28,7 +28,3 @@ enum Continue {
 message Logs {
   bytes logs = 1;
 }
-
-message Error {
-  string err = 1;
-}

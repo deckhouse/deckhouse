@@ -50,7 +50,6 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	dhctlErrCh := make(chan error)
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
 	requestsCh := make(chan *pb.CheckRequest)
@@ -68,20 +67,6 @@ connectionProcessor:
 			s.logc.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case err := <-dhctlErrCh:
-			sendErr := server.Send(&pb.CheckResponse{
-				Message: &pb.CheckResponse_Err{
-					Err: &pb.Error{Err: err.Error()},
-				},
-			})
-			if sendErr != nil {
-				s.logc.Error("finished with internal error", logger.Err(sendErr))
-				return status.Errorf(codes.Internal, "sending message: %s", sendErr)
-			}
-
-			s.logc.Info("finished with dhctl error", logger.Err(err))
-			return nil
-
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
@@ -91,7 +76,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(ctx, server, message.Start, dhctlErrCh, internalErrCh, doneCh)
+				s.startChecker(ctx, server, message.Start, internalErrCh, doneCh)
 
 			default:
 				s.logc.Error("got unprocessable message",
@@ -130,18 +115,12 @@ func (s *Service) startChecker(
 	ctx context.Context,
 	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
-	dhctlErrCh chan error,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result, err := s.check(ctx, request, &checkLogWriter{server: server})
-		if err != nil {
-			dhctlErrCh <- err
-			return
-		}
-
-		err = server.Send(&pb.CheckResponse{
+		result := s.check(ctx, request, &checkLogWriter{server: server})
+		err := server.Send(&pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
@@ -159,7 +138,7 @@ func (s *Service) check(
 	ctx context.Context,
 	request *pb.CheckStart,
 	logWriter io.Writer,
-) (*pb.CheckResult, error) {
+) *pb.CheckResult {
 	var err error
 
 	// set global variables from options
@@ -192,7 +171,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.CheckResult{Err: err.Error()}
 	}
 
 	err = log.Process("default", "Preparing DHCTL state", func() error {
@@ -214,7 +193,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.CheckResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -237,7 +216,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return &pb.CheckResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
@@ -254,8 +233,9 @@ func (s *Service) check(
 
 	result, checkErr := checker.Check(ctx)
 	resultString, marshalErr := json.Marshal(result)
+	err = errors.Join(checkErr, marshalErr)
 
-	return &pb.CheckResult{Result: string(resultString)}, errors.Join(checkErr, marshalErr)
+	return &pb.CheckResult{Result: string(resultString), Err: errToString(err)}
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {

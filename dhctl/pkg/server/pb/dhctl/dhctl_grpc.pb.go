@@ -36,6 +36,7 @@ const (
 	DHCTL_Check_FullMethodName     = "/dhctl.DHCTL/Check"
 	DHCTL_Bootstrap_FullMethodName = "/dhctl.DHCTL/Bootstrap"
 	DHCTL_Destroy_FullMethodName   = "/dhctl.DHCTL/Destroy"
+	DHCTL_Abort_FullMethodName     = "/dhctl.DHCTL/Abort"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -45,6 +46,7 @@ type DHCTLClient interface {
 	Check(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CheckClient, error)
 	Bootstrap(ctx context.Context, opts ...grpc.CallOption) (DHCTL_BootstrapClient, error)
 	Destroy(ctx context.Context, opts ...grpc.CallOption) (DHCTL_DestroyClient, error)
+	Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error)
 }
 
 type dHCTLClient struct {
@@ -148,6 +150,37 @@ func (x *dHCTLDestroyClient) Recv() (*DestroyResponse, error) {
 	return m, nil
 }
 
+func (c *dHCTLClient) Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[3], DHCTL_Abort_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dHCTLAbortClient{stream}
+	return x, nil
+}
+
+type DHCTL_AbortClient interface {
+	Send(*AbortRequest) error
+	Recv() (*AbortResponse, error)
+	grpc.ClientStream
+}
+
+type dHCTLAbortClient struct {
+	grpc.ClientStream
+}
+
+func (x *dHCTLAbortClient) Send(m *AbortRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dHCTLAbortClient) Recv() (*AbortResponse, error) {
+	m := new(AbortResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTLServer is the server API for DHCTL service.
 // All implementations must embed UnimplementedDHCTLServer
 // for forward compatibility
@@ -155,6 +188,7 @@ type DHCTLServer interface {
 	Check(DHCTL_CheckServer) error
 	Bootstrap(DHCTL_BootstrapServer) error
 	Destroy(DHCTL_DestroyServer) error
+	Abort(DHCTL_AbortServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -170,6 +204,9 @@ func (UnimplementedDHCTLServer) Bootstrap(DHCTL_BootstrapServer) error {
 }
 func (UnimplementedDHCTLServer) Destroy(DHCTL_DestroyServer) error {
 	return status.Errorf(codes.Unimplemented, "method Destroy not implemented")
+}
+func (UnimplementedDHCTLServer) Abort(DHCTL_AbortServer) error {
+	return status.Errorf(codes.Unimplemented, "method Abort not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -262,6 +299,32 @@ func (x *dHCTLDestroyServer) Recv() (*DestroyRequest, error) {
 	return m, nil
 }
 
+func _DHCTL_Abort_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).Abort(&dHCTLAbortServer{stream})
+}
+
+type DHCTL_AbortServer interface {
+	Send(*AbortResponse) error
+	Recv() (*AbortRequest, error)
+	grpc.ServerStream
+}
+
+type dHCTLAbortServer struct {
+	grpc.ServerStream
+}
+
+func (x *dHCTLAbortServer) Send(m *AbortResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dHCTLAbortServer) Recv() (*AbortRequest, error) {
+	m := new(AbortRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTL_ServiceDesc is the grpc.ServiceDesc for DHCTL service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -285,6 +348,12 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Destroy",
 			Handler:       _DHCTL_Destroy_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Abort",
+			Handler:       _DHCTL_Abort_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
