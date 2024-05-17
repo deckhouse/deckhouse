@@ -22,64 +22,88 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func (s *Service) Check(server pb.DHCTL_CheckServer) error {
+func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	s.shutdown(server.Context().Done())
 
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	s.logc.Info("started")
+	s.logd.Info("started")
 
-	f := fsm.New("initial", s.checkServerTransitions())
+	f := fsm.New("initial", s.destroyServerTransitions())
 
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.CheckRequest)
+	requestsCh := make(chan *pb.DestroyRequest)
 
-	s.startCheckerReceiver(server, requestsCh, internalErrCh)
+	phaseSwitcher := &destroyPhaseSwitcher{
+		server: server,
+		f:      f,
+		next:   make(chan error),
+	}
+	defer close(phaseSwitcher.next)
+
+	s.startDestroyerReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logc.Info("finished normally")
+			s.logd.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logc.Error("finished with internal error", logger.Err(err))
+			s.logd.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
-			case *pb.CheckRequest_Start:
+			case *pb.DestroyRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logc.Error("got unprocessable message",
+					s.logd.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(ctx, server, message.Start, internalErrCh, doneCh)
+				s.startDestroy(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+
+			case *pb.DestroyRequest_Continue:
+				err := f.Event("toNextPhase")
+				if err != nil {
+					s.logd.Error("got unprocessable message",
+						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
+					continue connectionProcessor
+				}
+				switch message.Continue.Continue {
+				case pb.Continue_CONTINUE_UNSPECIFIED:
+					phaseSwitcher.next <- errors.New("bad continue message")
+				case pb.Continue_CONTINUE_NEXT_PHASE:
+					phaseSwitcher.next <- nil
+				case pb.Continue_CONTINUE_STOP_OPERATION:
+					phaseSwitcher.next <- phases.StopOperationCondition
+				case pb.Continue_CONTINUE_ERROR:
+					phaseSwitcher.next <- errors.New(message.Continue.Err)
+				}
 
 			default:
-				s.logc.Error("got unprocessable message",
+				s.logd.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -87,9 +111,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startCheckerReceiver(
-	server pb.DHCTL_CheckServer,
-	requestsCh chan *pb.CheckRequest,
+func (s *Service) startDestroyerReceiver(
+	server pb.DHCTL_DestroyServer,
+	requestsCh chan *pb.DestroyRequest,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -102,8 +126,8 @@ func (s *Service) startCheckerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logc.Info(
-				"processing CheckRequest",
+			s.logd.Info(
+				"processing DestroyRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			requestsCh <- request
@@ -111,17 +135,18 @@ func (s *Service) startCheckerReceiver(
 	}()
 }
 
-func (s *Service) startChecker(
+func (s *Service) startDestroy(
 	ctx context.Context,
-	server pb.DHCTL_CheckServer,
-	request *pb.CheckStart,
+	server pb.DHCTL_DestroyServer,
+	request *pb.DestroyStart,
+	phaseSwitcher *destroyPhaseSwitcher,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.check(ctx, request, &checkLogWriter{server: server})
-		err := server.Send(&pb.CheckResponse{
-			Message: &pb.CheckResponse_Result{
+		result := s.destroy(ctx, request, phaseSwitcher, &destroyLogWriter{server: server})
+		err := server.Send(&pb.DestroyResponse{
+			Message: &pb.DestroyResponse_Result{
 				Result: result,
 			},
 		})
@@ -134,11 +159,12 @@ func (s *Service) startChecker(
 	}()
 }
 
-func (s *Service) check(
-	ctx context.Context,
-	request *pb.CheckStart,
+func (s *Service) destroy(
+	_ context.Context,
+	request *pb.DestroyStart,
+	phaseSwitcher *destroyPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.CheckResult {
+) *pb.DestroyResult {
 	var err error
 
 	// set global variables from options
@@ -160,7 +186,7 @@ func (s *Service) check(
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+			input.CombineYAMLs(request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig),
 			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
@@ -171,7 +197,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.DestroyResult{Err: err.Error()}
 	}
 
 	err = log.Process("default", "Preparing DHCTL state", func() error {
@@ -193,7 +219,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.DestroyResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -216,45 +242,60 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.DestroyResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	checker := check.NewChecker(&check.Params{
+	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
-		CommanderMode: request.Options.CommanderMode,
+		OnPhaseFunc:   phaseSwitcher.switchPhase,
+		CommanderMode: true,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
 	})
+	if err != nil {
+		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
+	}
 
-	result, checkErr := checker.Check(ctx)
-	resultData, marshalErr := json.Marshal(result)
-	err = errors.Join(checkErr, marshalErr)
+	destroyErr := destroyer.DestroyCluster(true)
+	state := destroyer.PhasedExecutionContext.GetLastState()
+	data, marshalErr := json.Marshal(state)
+	err = errors.Join(destroyErr, marshalErr)
 
-	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
+	return &pb.DestroyResult{State: string(data), Err: errToString(err)}
 }
 
-func (s *Service) checkServerTransitions() []fsm.Transition {
+func (s *Service) destroyServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
 			Sources:     []fsm.State{"initial"},
 			Destination: "running",
 		},
+		{
+			Event:       "wait",
+			Sources:     []fsm.State{"running"},
+			Destination: "waiting",
+		},
+		{
+			Event:       "toNextPhase",
+			Sources:     []fsm.State{"waiting"},
+			Destination: "running",
+		},
 	}
 }
 
-type checkLogWriter struct {
-	server pb.DHCTL_CheckServer
+type destroyLogWriter struct {
+	server pb.DHCTL_DestroyServer
 }
 
-func (w *checkLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Logs{
+func (w *destroyLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.DestroyResponse{
+		Message: &pb.DestroyResponse_Logs{
 			Logs: &pb.Logs{
 				Logs: p,
 			},
@@ -264,4 +305,43 @@ func (w *checkLogWriter) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("writing check logs: %w", err)
 	}
 	return len(p), nil
+}
+
+type destroyPhaseSwitcher struct {
+	server pb.DHCTL_DestroyServer
+	f      *fsm.FiniteStateMachine
+	next   chan error
+}
+
+func (b *destroyPhaseSwitcher) switchPhase(
+	completedPhase phases.OperationPhase,
+	completedPhaseState phases.DhctlState,
+	_ interface{},
+	nextPhase phases.OperationPhase,
+	nextPhaseCritical bool,
+) error {
+	err := b.f.Event("wait")
+	if err != nil {
+		return fmt.Errorf("changing state to waiting: %w", err)
+	}
+
+	err = b.server.Send(&pb.DestroyResponse{
+		Message: &pb.DestroyResponse_PhaseEnd{
+			PhaseEnd: &pb.DestroyPhaseEnd{
+				CompletedPhase:      string(completedPhase),
+				CompletedPhaseState: completedPhaseState,
+				NextPhase:           string(nextPhase),
+				NextPhaseCritical:   nextPhaseCritical,
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("sending on phase message: %w", err)
+	}
+
+	switchErr, ok := <-b.next
+	if !ok {
+		return fmt.Errorf("server stopped, cancel task")
+	}
+	return switchErr
 }
