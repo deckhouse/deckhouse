@@ -279,7 +279,8 @@ local function fill_buffer()
   _increment("c01#" .. detail_key .. "#" .. var_scheme .. "#" .. var_request_method, var_annotations, 1)
 
   -- responses
-  local var_status = ngx.var.status
+  ngx.var.formatted_status = tonumber(ngx.var.status)
+  local var_status = ngx.var.formatted_status
   _increment("c02#" .. overall_key .. "#" .. var_status, var_annotations, 2)
   _increment("c03#" .. detail_key .. "#" .. var_status, var_annotations, 3)
 
