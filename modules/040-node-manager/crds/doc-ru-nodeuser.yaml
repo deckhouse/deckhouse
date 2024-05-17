@@ -45,4 +45,51 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Описывает Linux-пользователей, которые будут созданы на всех узлах.
+
+            Домашний каталог пользователя создается в директории `/home/deckhouse/`.
+          properties:
+            spec:
+              properties:
+                uid:
+                  description: |
+                    User ID пользователя на узлах.
+
+                    Рекомендуем использовать значения `>= 1100` во избежание возможных конфликтов с пользователями, созданными вручную.
+
+                    Неизменяемый в течение жизни ресурса параметр.
+                sshPublicKey:
+                  description: |
+                    Публичный SSH-ключ пользователя.
+
+                    **Обязательно** должен быть указан либо `sshPublicKey`, либо `sshPublicKeys`.
+                sshPublicKeys:
+                  description: |
+                    Массив публичных SSH-ключей пользователя.
+
+                    **Обязательно** должен быть указан либо `sshPublicKey`, либо `sshPublicKeys`.
+                passwordHash:
+                  description: |
+                    Хэш пароля пользователя.
+
+                    Формат соответствует хэшам паролей, содержащихся в `/etc/shadow`. Его можно получить с помощью команды `openssl passwd -6`.
+                isSudoer:
+                  description: |
+                    Определяет, будет ли пользователю разрешено sudo.
+                extraGroups:
+                  description: |
+                    Список дополнительных групп, в которые должен быть включен пользователь.
+                nodeGroups:
+                  description: |
+                    Список NodeGroup, к которым будет применяться настройка пользователя.
+            status:
+              description: |
+                Информация о статусе создания пользователя
+              properties:
+                errors:
+                  description: |
+                    Список ошибок создания пользователя на каждом узле
