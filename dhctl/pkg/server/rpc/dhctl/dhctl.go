@@ -15,6 +15,7 @@
 package dhctl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -28,28 +29,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"google.golang.org/grpc"
 )
+
+var logTypeDHCTL = slog.String("type", "dhctl")
 
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
 	podName  string
 	cacheDir string
-	logc     *slog.Logger
-	logb     *slog.Logger
-	logd     *slog.Logger
 }
 
-func New(podName, cacheDir string, log *slog.Logger) *Service {
+func New(podName, cacheDir string) *Service {
 	return &Service{
 		podName:  podName,
 		cacheDir: cacheDir,
-		logc:     log.With(slog.String("operation", "check")),
-		logb:     log.With(slog.String("operation", "bootstrap")),
-		logd:     log.With(slog.String("operation", "destroy")),
 	}
 }
 
@@ -58,6 +57,36 @@ func (s *Service) shutdown(done <-chan struct{}) {
 		<-done
 		tomb.Shutdown(0)
 	}()
+}
+
+func operationCtx(server grpc.ServerStream) context.Context {
+	ctx := server.Context()
+
+	var operation string
+	switch server.(type) {
+	case pb.DHCTL_CheckServer:
+		operation = "check"
+	case pb.DHCTL_BootstrapServer:
+		operation = "bootstrap"
+	case pb.DHCTL_ConvergeServer:
+		operation = "converge"
+	case pb.DHCTL_DestroyServer:
+		operation = "destroy"
+	case pb.DHCTL_AbortServer:
+		operation = "abort"
+	case pb.DHCTL_ImportServer:
+		operation = "import"
+	default:
+		operation = "unknown"
+	}
+	go func() {
+		<-ctx.Done()
+		tomb.Shutdown(0)
+	}()
+	return logger.ToContext(
+		ctx,
+		logger.L(ctx).With(slog.String("operation", operation)),
+	)
 }
 
 func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {

@@ -28,9 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -40,12 +40,9 @@ import (
 )
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logd.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.destroyServerTransitions())
 
@@ -66,28 +63,35 @@ connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logd.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logd.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
+			logger.L(ctx).Info(
+				"processing DestroyRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.DestroyRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startDestroy(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startDestroy(
+					ctx, server, message.Start, phaseSwitcher, &destroyLogWriter{l: logger.L(ctx), server: server},
+					internalErrCh, doneCh,
+				)
 
 			case *pb.DestroyRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -103,7 +107,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logd.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -126,10 +130,6 @@ func (s *Service) startDestroyerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logd.Info(
-				"processing DestroyRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
 			requestsCh <- request
 		}
 	}()
@@ -140,11 +140,12 @@ func (s *Service) startDestroy(
 	server pb.DHCTL_DestroyServer,
 	request *pb.DestroyStart,
 	phaseSwitcher *destroyPhaseSwitcher,
+	logWriter *destroyLogWriter,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.destroy(ctx, request, phaseSwitcher, &destroyLogWriter{server: server})
+		result := s.destroy(ctx, request, phaseSwitcher, logWriter)
 		err := server.Send(&pb.DestroyResponse{
 			Message: &pb.DestroyResponse_Result{
 				Result: result,
@@ -172,7 +173,7 @@ func (s *Service) destroy(
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -180,7 +181,7 @@ func (s *Service) destroy(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -290,10 +291,13 @@ func (s *Service) destroyServerTransitions() []fsm.Transition {
 }
 
 type destroyLogWriter struct {
+	l      *slog.Logger
 	server pb.DHCTL_DestroyServer
 }
 
 func (w *destroyLogWriter) Write(p []byte) (int, error) {
+	w.l.Info(string(p), logTypeDHCTL)
+
 	err := w.server.Send(&pb.DestroyResponse{
 		Message: &pb.DestroyResponse_Logs{
 			Logs: &pb.Logs{

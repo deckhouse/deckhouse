@@ -18,17 +18,21 @@ import (
 	"context"
 	"log/slog"
 	"runtime/debug"
+	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func PanicRecoveryHandler(log *slog.Logger) func(p any) error {
-	return func(p any) error {
-		log.Error(
+const resourceExhaustedTimeout = time.Second
+
+func PanicRecoveryHandler() func(ctx context.Context, p any) error {
+	return func(ctx context.Context, p any) error {
+		logger.L(ctx).Error(
 			"recovered from panic",
 			slog.Any("panic", p),
 			slog.Any("stack", string(debug.Stack())),
@@ -37,14 +41,33 @@ func PanicRecoveryHandler(log *slog.Logger) func(p any) error {
 	}
 }
 
-func Logger(log *slog.Logger) logging.Logger {
+func UnaryLogger(log *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		return handler(logger.ToContext(ctx, log), req)
+	}
+}
+
+func StreamLogger(log *slog.Logger) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		wss := newStreamContextWrapper(ss)
+		wss.SetContext(logger.ToContext(ss.Context(), log))
+		return handler(srv, wss)
+	}
+}
+
+func Logger() logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
-		log.Log(ctx, slog.Level(lvl), msg, fields...)
+		logger.L(ctx).Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
 
-func UnaryParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.UnaryServerInterceptor {
+func UnaryParallelTasksLimiter(sem chan struct{}) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		if !strings.Contains(info.FullMethod, "dhctl") {
+			return handler(ctx, req)
+		}
+
+		log := logger.L(ctx)
 		log.Info("limiter tries to start operation", slog.Int("concurrent_operation", len(sem)))
 		timeout := time.After(5 * time.Minute)
 		select {
@@ -63,10 +86,15 @@ func UnaryParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.UnarySe
 	}
 }
 
-func StreamParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.StreamServerInterceptor {
+func StreamParallelTasksLimiter(sem chan struct{}) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if !strings.Contains(info.FullMethod, "dhctl") {
+			return handler(srv, ss)
+		}
+
+		log := logger.L(ss.Context())
 		log.Info("limiter tries to start operation", slog.Int("concurrent_operation", len(sem)))
-		timeout := time.After(5 * time.Minute)
+		timeout := time.After(resourceExhaustedTimeout)
 		select {
 		case <-timeout:
 			log.Info("limiter couldn't start operation due to timeout", slog.Int("concurrent_operation", len(sem)))
@@ -80,5 +108,31 @@ func StreamParallelTasksLimiter(sem chan struct{}, log *slog.Logger) grpc.Stream
 
 			return handler(srv, ss)
 		}
+	}
+}
+
+type StreamContextWrapper interface {
+	grpc.ServerStream
+	SetContext(context.Context)
+}
+
+type wrapper struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (w *wrapper) Context() context.Context {
+	return w.ctx
+}
+
+func (w *wrapper) SetContext(ctx context.Context) {
+	w.ctx = ctx
+}
+
+func newStreamContextWrapper(inner grpc.ServerStream) StreamContextWrapper {
+	ctx := inner.Context()
+	return &wrapper{
+		inner,
+		ctx,
 	}
 }

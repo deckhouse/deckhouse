@@ -28,9 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -40,12 +40,9 @@ import (
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logb.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.bootstrapServerTransitions())
 
@@ -66,28 +63,35 @@ connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logb.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logb.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
+			logger.L(ctx).Info(
+				"processing BootstrapRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.BootstrapRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startBootstrap(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startBootstrap(
+					ctx, server, message.Start, phaseSwitcher, &bootstrapLogWriter{l: logger.L(ctx), server: server},
+					internalErrCh, doneCh,
+				)
 
 			case *pb.BootstrapRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -103,7 +107,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logb.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -126,10 +130,6 @@ func (s *Service) startBootstrapperReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logb.Info(
-				"processing BootstrapRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
 			requestsCh <- request
 		}
 	}()
@@ -140,11 +140,12 @@ func (s *Service) startBootstrap(
 	server pb.DHCTL_BootstrapServer,
 	request *pb.BootstrapStart,
 	phaseSwitcher *bootstrapPhaseSwitcher,
+	logWriter *bootstrapLogWriter,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.bootstrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
+		result := s.bootstrap(ctx, request, phaseSwitcher, logWriter)
 		err := server.Send(&pb.BootstrapResponse{
 			Message: &pb.BootstrapResponse_Result{
 				Result: result,
@@ -172,7 +173,7 @@ func (s *Service) bootstrap(
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.PreflightSkipDeckhouseVersionCheck = true
 	app.PreflightSkipAll = true
@@ -180,7 +181,7 @@ func (s *Service) bootstrap(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var (
@@ -307,10 +308,13 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 }
 
 type bootstrapLogWriter struct {
+	l      *slog.Logger
 	server pb.DHCTL_BootstrapServer
 }
 
 func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
+	w.l.Info(string(p), logTypeDHCTL)
+
 	err := w.server.Send(&pb.BootstrapResponse{
 		Message: &pb.BootstrapResponse_Logs{
 			Logs: &pb.Logs{

@@ -32,21 +32,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logc.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.checkServerTransitions())
 
@@ -60,26 +57,33 @@ connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logc.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logc.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
+			logger.L(ctx).Info(
+				"processing CheckRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logc.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(ctx, server, message.Start, internalErrCh, doneCh)
+				s.startChecker(
+					ctx, server, message.Start, &checkLogWriter{l: logger.L(ctx), server: server},
+					internalErrCh, doneCh,
+				)
 
 			default:
-				s.logc.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -102,10 +106,6 @@ func (s *Service) startCheckerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logc.Info(
-				"processing CheckRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
 			requestsCh <- request
 		}
 	}()
@@ -115,11 +115,12 @@ func (s *Service) startChecker(
 	ctx context.Context,
 	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
+	logWriter *checkLogWriter,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.check(ctx, request, &checkLogWriter{server: server})
+		result := s.check(ctx, request, logWriter)
 		err := server.Send(&pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
@@ -146,7 +147,7 @@ func (s *Service) check(
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -154,7 +155,7 @@ func (s *Service) check(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -235,6 +236,11 @@ func (s *Service) check(
 	resultData, marshalErr := json.Marshal(result)
 	err = errors.Join(checkErr, marshalErr)
 
+	if result != nil {
+		// todo: move onCheckResult call to check.Check() func (as in converge)
+		_ = onCheckResult(result)
+	}
+
 	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
 }
 
@@ -249,10 +255,13 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 }
 
 type checkLogWriter struct {
+	l      *slog.Logger
 	server pb.DHCTL_CheckServer
 }
 
 func (w *checkLogWriter) Write(p []byte) (int, error) {
+	w.l.Info(string(p), logTypeDHCTL)
+
 	err := w.server.Send(&pb.CheckResponse{
 		Message: &pb.CheckResponse_Logs{
 			Logs: &pb.Logs{

@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/import"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"google.golang.org/grpc/codes"
@@ -37,12 +37,9 @@ import (
 )
 
 func (s *Service) Import(server pb.DHCTL_ImportServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logb.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.importServerTransitions())
 
@@ -57,34 +54,41 @@ func (s *Service) Import(server pb.DHCTL_ImportServer) error {
 	}
 	defer close(phaseSwitcher.next)
 
-	s.startImportperReceiver(server, requestsCh, internalErrCh)
+	s.startImporterReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logb.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logb.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
+			logger.L(ctx).Info(
+				"processing ImportRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.ImportRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startImport(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startImport(
+					ctx, server, message.Start, phaseSwitcher, &importLogWriter{l: logger.L(ctx), server: server},
+					internalErrCh, doneCh,
+				)
 
 			case *pb.ImportRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logb.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -100,7 +104,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logb.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -108,7 +112,7 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startImportperReceiver(
+func (s *Service) startImporterReceiver(
 	server pb.DHCTL_ImportServer,
 	requestsCh chan *pb.ImportRequest,
 	internalErrCh chan error,
@@ -123,10 +127,6 @@ func (s *Service) startImportperReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logb.Info(
-				"processing ImportRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
 			requestsCh <- request
 		}
 	}()
@@ -137,11 +137,12 @@ func (s *Service) startImport(
 	server pb.DHCTL_ImportServer,
 	request *pb.ImportStart,
 	phaseSwitcher *importPhaseSwitcher,
+	logWriter *importLogWriter,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.importCluster(ctx, request, phaseSwitcher, &importLogWriter{server: server})
+		result := s.importCluster(ctx, request, phaseSwitcher, logWriter)
 		err := server.Send(&pb.ImportResponse{
 			Message: &pb.ImportResponse_Result{
 				Result: result,
@@ -169,7 +170,7 @@ func (s *Service) importCluster(
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -177,7 +178,7 @@ func (s *Service) importCluster(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var sshClient *ssh.Client
@@ -247,10 +248,13 @@ func (s *Service) importServerTransitions() []fsm.Transition {
 }
 
 type importLogWriter struct {
+	l      *slog.Logger
 	server pb.DHCTL_ImportServer
 }
 
 func (w *importLogWriter) Write(p []byte) (int, error) {
+	w.l.Info(string(p), logTypeDHCTL)
+
 	err := w.server.Send(&pb.ImportResponse{
 		Message: &pb.ImportResponse_Logs{
 			Logs: &pb.Logs{

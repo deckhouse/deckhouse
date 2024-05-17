@@ -29,9 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -41,12 +41,9 @@ import (
 )
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logd.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.convergeServerTransitions())
 
@@ -67,28 +64,35 @@ connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logd.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logd.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
+			logger.L(ctx).Info(
+				"processing ConvergeRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.ConvergeRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startConverge(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startConverge(
+					ctx, server, message.Start, phaseSwitcher, &convergeLogWriter{l: logger.L(ctx), server: server},
+					internalErrCh, doneCh,
+				)
 
 			case *pb.ConvergeRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -104,7 +108,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logd.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -127,10 +131,6 @@ func (s *Service) startConvergeerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logd.Info(
-				"processing ConvergeRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
 			requestsCh <- request
 		}
 	}()
@@ -141,11 +141,12 @@ func (s *Service) startConverge(
 	server pb.DHCTL_ConvergeServer,
 	request *pb.ConvergeStart,
 	phaseSwitcher *convergePhaseSwitcher,
+	logWriter *convergeLogWriter,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.converge(ctx, request, phaseSwitcher, &convergeLogWriter{server: server})
+		result := s.converge(ctx, request, phaseSwitcher, logWriter)
 		err := server.Send(&pb.ConvergeResponse{
 			Message: &pb.ConvergeResponse_Result{
 				Result: result,
@@ -173,7 +174,7 @@ func (s *Service) converge(
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -181,7 +182,7 @@ func (s *Service) converge(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -306,10 +307,13 @@ func (s *Service) convergeServerTransitions() []fsm.Transition {
 }
 
 type convergeLogWriter struct {
+	l      *slog.Logger
 	server pb.DHCTL_ConvergeServer
 }
 
 func (w *convergeLogWriter) Write(p []byte) (int, error) {
+	w.l.Info(string(p), logTypeDHCTL)
+
 	err := w.server.Send(&pb.ConvergeResponse{
 		Message: &pb.ConvergeResponse_Logs{
 			Logs: &pb.Logs{

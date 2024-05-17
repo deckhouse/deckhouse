@@ -25,8 +25,8 @@ import (
 	"time"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/google/uuid"
@@ -76,14 +76,16 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptors.Logger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryParallelTasksLimiter(sem, log),
+			interceptors.UnaryLogger(log),
+			logging.UnaryServerInterceptor(interceptors.Logger()),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.UnaryParallelTasksLimiter(sem),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptors.Logger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamParallelTasksLimiter(sem, log),
+			interceptors.StreamLogger(log),
+			logging.StreamServerInterceptor(interceptors.Logger()),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.StreamParallelTasksLimiter(sem),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.new())),
 	)
@@ -139,7 +141,7 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			return outCtx, nil, err
 		}
 
-		d.log.Info("starting new dhctl instance", "addr", address)
+		logger.L(ctx).Info("starting new dhctl instance", "addr", address)
 
 		cmd := exec.Command(
 			os.Args[0],
