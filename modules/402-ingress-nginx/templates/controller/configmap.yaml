@@ -162,7 +162,7 @@ data:
     "referrer": "$http_referer",
     "user_agent": "$http_user_agent",
     "request_time": $request_time,
-    "status": $status,
+    "status": $formatted_status,
     "content_kind": "$content_kind",
     "upstream_response_time": $total_upstream_response_time,
     "upstream_retries": $upstream_retries,

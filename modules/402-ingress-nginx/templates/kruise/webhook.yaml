@@ -17,7 +17,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     sideEffects: None
-    timeoutSeconds: 30
+    timeoutSeconds: 28
     name: mdaemonset.kb.io
     rules:
       - apiGroups:

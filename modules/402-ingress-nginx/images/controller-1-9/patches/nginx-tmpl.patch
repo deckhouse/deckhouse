@@ -56,7 +56,7 @@ index 94dc12412..93b7d2efc 100644
      {{ if $cfg.UseGeoIP2 }}
      # https://github.com/leev/ngx_http_geoip2_module#example-usage
  
-@@ -387,6 +387,12 @@ http {
+@@ -387,6 +398,15 @@ http {
          {{ $reqUri }} 0;{{ end }}
          default 1;
      }
@@ -66,10 +66,13 @@ index 94dc12412..93b7d2efc 100644
 +    map $server_name $upstream_retries {
 +        default 0;
 +    }
++    map $server_name $formatted_status {
++        default $status;
++    }
  
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
-@@ -928,9 +939,7 @@ stream {
+@@ -928,9 +948,7 @@ stream {
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -80,7 +83,7 @@ index 94dc12412..93b7d2efc 100644
              }
          }
          {{ end }}
-@@ -1223,6 +1232,8 @@ stream {
+@@ -1223,6 +1241,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -89,7 +92,7 @@ index 94dc12412..93b7d2efc 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1253,11 +1266,9 @@ stream {
+@@ -1253,11 +1273,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -102,7 +105,7 @@ index 94dc12412..93b7d2efc 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1531,14 +1542,15 @@ stream {
+@@ -1531,14 +1549,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
