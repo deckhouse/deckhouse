@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"static-routing-manager-agent/api/v1alpha1"
@@ -188,13 +189,21 @@ func RunRoutesReconcilerAgentController(
 			}
 
 			// Getting all routes from our node
-			actualRouteEntryMap, err = getActualRouteEntryMapFromNode()
+			log.Debug(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
+			actualRouteEntryMap, err = getActualRouteEntryMapFromNode(log)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get Actual routes from node"))
 				return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
 			}
+			jsonVar, _ := json.Marshal(actualRouteEntryMap)
+			log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
+			for hash, are := range actualRouteEntryMap {
+				log.Debug(fmt.Sprintf("Entry %v: dst %v gw %v tbl %v", hash, are.destination, are.gateway, are.table))
+			}
 
 			for _, nrt := range nrtList.Items {
+				jsonVar, _ := json.Marshal(actualRouteEntryMap)
+				log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
 				// Gathering facts
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
 				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
@@ -248,7 +257,9 @@ func RunRoutesReconcilerAgentController(
 						tmpREM.AppendRE(route)
 					}
 				}
-				erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
+				if len(tmpREM) > 0 {
+					erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
+				}
 
 				// Actions: add routes
 				if len(routesToAdd) > 0 {
@@ -270,6 +281,8 @@ func RunRoutesReconcilerAgentController(
 			// Actions: delete routes because NRT has been deleted
 			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because NRT has been deleted)"))
 			for nrtName, rem := range deletedNRTRouteEntryMaps {
+				jsonVar, _ := json.Marshal(actualRouteEntryMap)
+				log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
 				status := nrtReconciliationStatusMap[nrtName]
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
@@ -279,6 +292,7 @@ func RunRoutesReconcilerAgentController(
 					log,
 				)
 				if nrtReconciliationStatusMap[nrtName].IsSuccess {
+					log.Debug(fmt.Sprintf("[NRTReconciler] Deleting routes was successful, removing the finalizer from the NRT %v", nrtName))
 					removeFinalizer(nrtK8sResourcesMap[nrtName])
 					specNeedToUpdate[nrt.Name] = true
 				}
@@ -373,7 +387,7 @@ func RunRoutesReconcilerAgentController(
 	return c, nil
 }
 
-func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
+func getActualRouteEntryMapFromNode(log logger.Logger) (RouteEntryMap, error) {
 	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
@@ -381,12 +395,20 @@ func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 	ar := make(RouteEntryMap)
 
 	for _, route := range routes {
-		ar.AppendRE(RouteEntry{
+		log.Debug(fmt.Sprintf("dst %v gw %v tbl %v", route.Dst.String(), route.Gw.String(), route.Table))
+		re := RouteEntry{
 			destination: route.Dst.String(),
 			gateway:     route.Gw.String(),
 			table:       route.Table,
-		})
+		}
+		log.Debug(fmt.Sprintf("re(asis): %v", re))
+		jsonVar, _ := json.Marshal(re)
+		log.Debug(fmt.Sprintf("re(marshal): %v", jsonVar))
+		ar.AppendRE(re)
 	}
+
+	jsonVar, _ := json.Marshal(ar)
+	log.Debug(fmt.Sprintf("ar(marshal) = %s", jsonVar))
 
 	return ar, nil
 }
@@ -448,14 +470,22 @@ func delRouteFromNode(route RouteEntry) error {
 }
 
 func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status NRTReconciliationStatus, log logger.Logger) NRTReconciliationStatus {
+	// tmp debug
+	jsonVar, _ := json.Marshal(delREM)
+	log.Debug(fmt.Sprintf("delREM = %s", jsonVar))
+	jsonVar, _ = json.Marshal(actREM)
+	log.Debug(fmt.Sprintf("actREM = %s", jsonVar))
+
 	for hash, route := range delREM {
-		if _, ok := gdREM[hash]; ok {
-			continue
-		}
-		if _, ok := actREM[hash]; !ok {
-			continue
-		}
 		log.Debug(fmt.Sprintf("Route %v should be deleted", route))
+		if _, ok := (gdREM)[hash]; ok {
+			log.Debug(fmt.Sprintf("but it is present in other NRT"))
+			continue
+		}
+		if _, ok := (actREM)[hash]; !ok {
+			log.Debug(fmt.Sprintf("but it is not present on Node"))
+			continue
+		}
 		err := delRouteFromNode(route)
 		if err != nil {
 			log.Debug(fmt.Sprintf("err: %v", err))
