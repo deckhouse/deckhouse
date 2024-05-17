@@ -18,6 +18,13 @@ option go_package = "pb/dhctl";
 
 package dhctl;
 
+enum Continue {
+  CONTINUE_UNSPECIFIED = 0;
+  CONTINUE_NEXT_PHASE = 1;
+  CONTINUE_STOP_OPERATION = 2;
+  CONTINUE_ERROR = 3;
+}
+
 message Logs {
   bytes logs = 1;
 }

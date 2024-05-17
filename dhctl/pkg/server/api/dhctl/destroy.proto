@@ -21,46 +21,43 @@ package dhctl;
 import "google/protobuf/duration.proto";
 import "common.proto";
 
-message BootstrapRequest {
+message DestroyRequest {
   oneof message {
-    BootstrapStart start = 1;
-    BootstrapContinue continue = 2;
+    DestroyStart start = 1;
+    DestroyContinue continue = 2;
   }
 }
 
-message BootstrapResponse {
+message DestroyResponse {
   oneof message {
-    BootstrapResult result = 1;
-    BootstrapPhaseEnd phase_end = 2;
+    DestroyResult result = 1;
+    DestroyPhaseEnd phase_end = 2;
     Logs logs = 3;
   }
 }
 
-message BootstrapStart {
+message DestroyStart {
   string connection_config = 1;
   string init_config = 2;
   string cluster_config = 3;
   string provider_specific_cluster_config = 4;
-  string init_resources = 5;
-  string resources = 6;
-  string state = 7;
-  string post_bootstrap_script = 8;
-  BootstrapStartOptions options = 9;
+  string state = 5;
+  DestroyStartOptions options = 6;
 }
 
-message BootstrapPhaseEnd {
+message DestroyPhaseEnd {
   string completed_phase = 1;
   map<string, bytes> completed_phase_state = 2;
   string next_phase = 3;
   bool next_phase_critical = 4;
 }
 
-message BootstrapContinue {
+message DestroyContinue {
   Continue continue = 1;
   string err = 2;
 }
 
-message BootstrapStartOptions {
+message DestroyStartOptions {
   bool commander_mode = 1;
   bool sanity_check = 2;
   int32 log_width = 3;
@@ -68,7 +65,7 @@ message BootstrapStartOptions {
   google.protobuf.Duration deckhouse_timeout = 5;
 }
 
-message BootstrapResult {
+message DestroyResult {
   string state = 1;
   string err = 2;
 }
