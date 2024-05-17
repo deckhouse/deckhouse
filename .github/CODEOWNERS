@@ -53,7 +53,7 @@
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @nabokihms
 500-upmeter/                    @nabokihms
-500-okmeter/                    @nabokihms
+500-okmeter/                    @nabokihms @vladimirGuryanov @lazovskiy @kolashtov
 500-operator-trivy/             @miklezzzz @yalosev
 502-delivery/                   @shvgn
 600-flant-integration/          @nabokihms
