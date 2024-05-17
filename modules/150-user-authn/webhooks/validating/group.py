@@ -18,7 +18,6 @@ from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
-from json import dumps
 
 config = """
 configVersion: v1
@@ -65,9 +64,6 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-
-        print(dumps(binding_context.toDict(), sort_keys=True))  # debug printing
-
         errmsg = validate(binding_context)
         if errmsg is None:
             ctx.output.validations.allow()
