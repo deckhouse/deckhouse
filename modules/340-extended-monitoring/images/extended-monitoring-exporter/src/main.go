@@ -25,17 +25,20 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	apps "k8s.io/api/apps/v1"
-	batch "k8s.io/api/batch/v1"
-	core "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 )
 
-func ListStatefulSet(client kubernetes.Interface, namespasce string) *apps.StatefulSetList {
-	rows, err := client.AppsV1().StatefulSets(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListStatefulSet(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "apps",
+		Version:  "v1",
+		Resource: "statefulsets",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[StatefulSet] couldn't get")
 		log.Fatal(err.Error())
@@ -43,8 +46,13 @@ func ListStatefulSet(client kubernetes.Interface, namespasce string) *apps.State
 	return rows
 }
 
-func ListDaemonSet(client kubernetes.Interface, namespasce string) *apps.DaemonSetList {
-	rows, err := client.AppsV1().DaemonSets(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListDaemonSet(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "apps",
+		Version:  "v1",
+		Resource: "daemonsets",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[DaemonSet] couldn't get")
 		log.Fatal(err.Error())
@@ -52,8 +60,13 @@ func ListDaemonSet(client kubernetes.Interface, namespasce string) *apps.DaemonS
 	return rows
 }
 
-func ListDeployment(client kubernetes.Interface, namespasce string) *apps.DeploymentList {
-	rows, err := client.AppsV1().Deployments(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListDeployment(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "apps",
+		Version:  "v1",
+		Resource: "deployments",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Deployments] couldn't get")
 		log.Fatal(err.Error())
@@ -61,8 +74,13 @@ func ListDeployment(client kubernetes.Interface, namespasce string) *apps.Deploy
 	return rows
 }
 
-func ListCronJob(client kubernetes.Interface, namespasce string) *batch.CronJobList {
-	rows, err := client.BatchV1().CronJobs(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListCronJob(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "batch",
+		Version:  "v1",
+		Resource: "cronjobs",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[CronJob] couldn't get")
 		log.Fatal(err.Error())
@@ -70,8 +88,13 @@ func ListCronJob(client kubernetes.Interface, namespasce string) *batch.CronJobL
 	return rows
 }
 
-func ListIngress(client kubernetes.Interface, namespasce string) *networking.IngressList {
-	rows, err := client.NetworkingV1().Ingresses(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListIngress(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "networking.k8s.io",
+		Version:  "v1",
+		Resource: "ingresses",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Ingress] couldn't get")
 		log.Fatal(err.Error())
@@ -79,8 +102,13 @@ func ListIngress(client kubernetes.Interface, namespasce string) *networking.Ing
 	return rows
 }
 
-func ListPods(client kubernetes.Interface, namespasce string) *core.PodList {
-	rows, err := client.CoreV1().Pods(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListPods(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "",
+		Version:  "v1",
+		Resource: "pods",
+	}
+	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Pods] couldn't get")
 		log.Fatal(err.Error())
@@ -88,8 +116,13 @@ func ListPods(client kubernetes.Interface, namespasce string) *core.PodList {
 	return rows
 }
 
-func ListNodes(client kubernetes.Interface) *core.NodeList {
-	rows, err := client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+func ListNodes(client metadata.Interface) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "",
+		Version:  "v1",
+		Resource: "nodes",
+	}
+	rows, err := client.Resource(resource).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
 	if err != nil {
 		log.Print("[Nodes] couldn't get")
 		log.Fatal(err.Error())
@@ -97,8 +130,13 @@ func ListNodes(client kubernetes.Interface) *core.NodeList {
 	return rows
 }
 
-func ListNamespaces(client kubernetes.Interface) *core.NamespaceList {
-	rows, err := client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{
+func ListNamespaces(client metadata.Interface) *metav1.PartialObjectMetadataList {
+	resource := schema.GroupVersionResource{
+		Group:    "",
+		Version:  "v1",
+		Resource: "namespaces",
+	}
+	rows, err := client.Resource(resource).List(context.Background(), metav1.ListOptions{
 		LabelSelector:  namespaces_enabled_label,
 		TimeoutSeconds: &timeOut,
 	})
@@ -139,7 +177,6 @@ func recordMetrics() {
 	go func() {
 		for {
 			//init
-			log.Print("Start")
 			local := prometheus.NewRegistry()
 			node_enabled := prometheus.NewCounterVec(
 				prometheus.CounterOpts{Name: "extended_monitoring_node_enabled"},
@@ -198,7 +235,7 @@ func recordMetrics() {
 				[]string{"namespace", "cronjob"},
 			)
 			//node
-			for _, node := range ListNodes(kubeClient).Items {
+			for _, node := range ListNodes(kubeMetadata).Items {
 				enabled := enabledLable(node.Labels)
 				node_enabled.WithLabelValues(node.Name).Add(enabled)
 				if enabled == 1 {
@@ -208,13 +245,13 @@ func recordMetrics() {
 				}
 			}
 			//namespace
-			for _, namespasce := range ListNamespaces(kubeClient).Items {
+			for _, namespasce := range ListNamespaces(kubeMetadata).Items {
 				enabled_namespace := enabledLable(namespasce.Labels)
 				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
 				if enabled_namespace == 1 {
 					//pod
-					for _, pod := range ListPods(kubeClient, namespasce.Name).Items {
+					for _, pod := range ListPods(kubeMetadata, namespasce.Name).Items {
 						enabled := enabledLable(pod.Labels)
 						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 						if enabled == 1 {
@@ -224,7 +261,7 @@ func recordMetrics() {
 						}
 					}
 					//ingress
-					for _, ingress := range ListIngress(kubeClient, namespasce.Name).Items {
+					for _, ingress := range ListIngress(kubeMetadata, namespasce.Name).Items {
 						enabled := enabledLable(ingress.Labels)
 						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
 						if enabled == 1 {
@@ -234,7 +271,7 @@ func recordMetrics() {
 						}
 					}
 					//deployment
-					for _, deployment := range ListDeployment(kubeClient, namespasce.Name).Items {
+					for _, deployment := range ListDeployment(kubeMetadata, namespasce.Name).Items {
 						enabled := enabledLable(deployment.Labels)
 						deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
 						if enabled == 1 {
@@ -244,7 +281,7 @@ func recordMetrics() {
 						}
 					}
 					//daemonset
-					for _, daemonset := range ListDaemonSet(kubeClient, namespasce.Name).Items {
+					for _, daemonset := range ListDaemonSet(kubeMetadata, namespasce.Name).Items {
 						enabled := enabledLable(daemonset.Labels)
 						daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
 						if enabled == 1 {
@@ -254,7 +291,7 @@ func recordMetrics() {
 						}
 					}
 					//statefulset
-					for _, statefulset := range ListStatefulSet(kubeClient, namespasce.Name).Items {
+					for _, statefulset := range ListStatefulSet(kubeMetadata, namespasce.Name).Items {
 						enabled := enabledLable(statefulset.Labels)
 						statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
 						if enabled == 1 {
@@ -264,7 +301,7 @@ func recordMetrics() {
 						}
 					}
 					//cronjob
-					for _, cronjob := range ListCronJob(kubeClient, namespasce.Name).Items {
+					for _, cronjob := range ListCronJob(kubeMetadata, namespasce.Name).Items {
 						cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLable(cronjob.Labels))
 					}
 				}
@@ -285,8 +322,7 @@ func recordMetrics() {
 			local.MustRegister(cronjob_enabled)
 			*reg = *local
 			time_healthz = time.Now()
-			log.Print("End")
-			//time.Sleep(5 * 60 * time.Second)
+			time.Sleep(5 * 60 * time.Second)
 		}
 	}()
 }
@@ -300,6 +336,7 @@ var (
 	time_healthz       = time.Now()
 	timeOut            = int64(60)
 	kubeClient         *kubernetes.Clientset
+	kubeMetadata       metadata.Interface
 	reg                = prometheus.NewRegistry()
 	node_threshold_map = map[string]float64{
 		"disk-bytes-warning":             70,
@@ -340,6 +377,10 @@ func init() {
 	kubeClient, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Fatalf("Error getting kubernetes config: %v\n", err)
+	}
+	kubeMetadata, err = metadata.NewForConfig(config)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
