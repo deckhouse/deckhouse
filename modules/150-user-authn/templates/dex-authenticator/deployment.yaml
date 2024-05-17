@@ -150,8 +150,15 @@ spec:
         - --silence-ping-logging
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
-        - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
-        - --cookie-expire={{ $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+    {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
+    {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+    {{- $delta := now }}
+        - --cookie-refresh={{ $idTokenTTL }}
+    {{- if gt ($delta | mustDateModify $keepUsersLoggedInFor | unixEpoch) ($delta | mustDateModify $idTokenTTL | unixEpoch) }}
+        - --cookie-expire={{ $keepUsersLoggedInFor }}
+    {{- else }}
+        - --cookie-expire={{ duration (add (sub ($delta | mustDateModify $idTokenTTL | unixEpoch) ($delta | unixEpoch)) 1) }}
+    {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
