@@ -280,10 +280,10 @@ func (s *Service) boostrap(
 
 	bootstrapErr := bootstrapper.Bootstrap()
 	state := bootstrapper.GetLastState()
-	data, marshalErr := json.Marshal(state)
+	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)
 
-	return &pb.BootstrapResult{State: string(data), Err: errToString(err)}
+	return &pb.BootstrapResult{State: string(stateData), Err: errToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {

@@ -22,10 +22,12 @@ import "check.proto";
 import "bootstrap.proto";
 import "destroy.proto";
 import "abort.proto";
+import "converge.proto";
 
 service DHCTL {
   rpc Check (stream CheckRequest) returns (stream CheckResponse) {}
   rpc Bootstrap (stream BootstrapRequest) returns (stream BootstrapResponse) {}
   rpc Destroy (stream DestroyRequest) returns (stream DestroyResponse) {}
   rpc Abort (stream AbortRequest) returns (stream AbortResponse) {}
+  rpc Converge (stream ConvergeRequest) returns (stream ConvergeResponse) {}
 }

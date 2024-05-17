@@ -15,6 +15,7 @@
 package dhctl
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -23,7 +24,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
@@ -130,6 +133,23 @@ func writeTempFile(data []byte) (string, error) {
 	}
 
 	return f.Name(), nil
+}
+
+func onCheckResult(checkRes *check.CheckResult) error {
+	printableCheckRes := *checkRes
+	printableCheckRes.StatusDetails.TerraformPlan = nil
+
+	printableCheckResDump, err := json.MarshalIndent(printableCheckRes, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to encode check result json: %w", err)
+	}
+
+	_ = log.Process("default", "Check result", func() error {
+		log.InfoF("%s\n", printableCheckResDump)
+		return nil
+	})
+
+	return nil
 }
 
 func portToString(p *int32) string {

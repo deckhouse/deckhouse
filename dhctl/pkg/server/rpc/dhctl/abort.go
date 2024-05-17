@@ -265,10 +265,10 @@ func (s *Service) abort(
 
 	abortErr := bootstrapper.Abort(false)
 	state := bootstrapper.GetLastState()
-	data, marshalErr := json.Marshal(state)
+	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)
 
-	return &pb.AbortResult{State: string(data), Err: errToString(err)}
+	return &pb.AbortResult{State: string(stateData), Err: errToString(err)}
 }
 
 func (s *Service) abortServerTransitions() []fsm.Transition {

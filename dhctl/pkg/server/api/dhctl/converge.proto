@@ -21,22 +21,22 @@ package dhctl;
 import "google/protobuf/duration.proto";
 import "common.proto";
 
-message AbortRequest {
+message ConvergeRequest {
   oneof message {
-    AbortStart start = 1;
-    AbortContinue continue = 2;
+    ConvergeStart start = 1;
+    ConvergeContinue continue = 2;
   }
 }
 
-message AbortResponse {
+message ConvergeResponse {
   oneof message {
-    AbortResult result = 1;
-    AbortPhaseEnd phase_end = 2;
+    ConvergeResult result = 1;
+    ConvergePhaseEnd phase_end = 2;
     Logs logs = 3;
   }
 }
 
-message AbortStart {
+message ConvergeStart {
   string connection_config = 1;
   string init_config = 2;
   string cluster_config = 3;
@@ -44,22 +44,23 @@ message AbortStart {
   string init_resources = 5;
   string resources = 6;
   string state = 7;
-  AbortStartOptions options = 8;
+  string approve_destruction_change_id = 8;
+  ConvergeStartOptions options = 9;
 }
 
-message AbortPhaseEnd {
+message ConvergePhaseEnd {
   string completed_phase = 1;
   map<string, bytes> completed_phase_state = 2;
   string next_phase = 3;
   bool next_phase_critical = 4;
 }
 
-message AbortContinue {
+message ConvergeContinue {
   Continue continue = 1;
   string err = 2;
 }
 
-message AbortStartOptions {
+message ConvergeStartOptions {
   bool commander_mode = 1;
   bool sanity_check = 2;
   int32 log_width = 3;
@@ -67,7 +68,8 @@ message AbortStartOptions {
   google.protobuf.Duration deckhouse_timeout = 5;
 }
 
-message AbortResult {
+message ConvergeResult {
   string state = 1;
-  string err = 2;
+  string result = 2;
+  string err = 3;
 }

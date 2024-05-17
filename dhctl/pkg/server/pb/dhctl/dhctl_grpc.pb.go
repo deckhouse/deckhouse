@@ -37,6 +37,7 @@ const (
 	DHCTL_Bootstrap_FullMethodName = "/dhctl.DHCTL/Bootstrap"
 	DHCTL_Destroy_FullMethodName   = "/dhctl.DHCTL/Destroy"
 	DHCTL_Abort_FullMethodName     = "/dhctl.DHCTL/Abort"
+	DHCTL_Converge_FullMethodName  = "/dhctl.DHCTL/Converge"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -47,6 +48,7 @@ type DHCTLClient interface {
 	Bootstrap(ctx context.Context, opts ...grpc.CallOption) (DHCTL_BootstrapClient, error)
 	Destroy(ctx context.Context, opts ...grpc.CallOption) (DHCTL_DestroyClient, error)
 	Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error)
+	Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error)
 }
 
 type dHCTLClient struct {
@@ -181,6 +183,37 @@ func (x *dHCTLAbortClient) Recv() (*AbortResponse, error) {
 	return m, nil
 }
 
+func (c *dHCTLClient) Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[4], DHCTL_Converge_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dHCTLConvergeClient{stream}
+	return x, nil
+}
+
+type DHCTL_ConvergeClient interface {
+	Send(*ConvergeRequest) error
+	Recv() (*ConvergeResponse, error)
+	grpc.ClientStream
+}
+
+type dHCTLConvergeClient struct {
+	grpc.ClientStream
+}
+
+func (x *dHCTLConvergeClient) Send(m *ConvergeRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dHCTLConvergeClient) Recv() (*ConvergeResponse, error) {
+	m := new(ConvergeResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTLServer is the server API for DHCTL service.
 // All implementations must embed UnimplementedDHCTLServer
 // for forward compatibility
@@ -189,6 +222,7 @@ type DHCTLServer interface {
 	Bootstrap(DHCTL_BootstrapServer) error
 	Destroy(DHCTL_DestroyServer) error
 	Abort(DHCTL_AbortServer) error
+	Converge(DHCTL_ConvergeServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -207,6 +241,9 @@ func (UnimplementedDHCTLServer) Destroy(DHCTL_DestroyServer) error {
 }
 func (UnimplementedDHCTLServer) Abort(DHCTL_AbortServer) error {
 	return status.Errorf(codes.Unimplemented, "method Abort not implemented")
+}
+func (UnimplementedDHCTLServer) Converge(DHCTL_ConvergeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Converge not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -325,6 +362,32 @@ func (x *dHCTLAbortServer) Recv() (*AbortRequest, error) {
 	return m, nil
 }
 
+func _DHCTL_Converge_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).Converge(&dHCTLConvergeServer{stream})
+}
+
+type DHCTL_ConvergeServer interface {
+	Send(*ConvergeResponse) error
+	Recv() (*ConvergeRequest, error)
+	grpc.ServerStream
+}
+
+type dHCTLConvergeServer struct {
+	grpc.ServerStream
+}
+
+func (x *dHCTLConvergeServer) Send(m *ConvergeResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dHCTLConvergeServer) Recv() (*ConvergeRequest, error) {
+	m := new(ConvergeRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTL_ServiceDesc is the grpc.ServiceDesc for DHCTL service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -354,6 +417,12 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Abort",
 			Handler:       _DHCTL_Abort_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Converge",
+			Handler:       _DHCTL_Converge_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
