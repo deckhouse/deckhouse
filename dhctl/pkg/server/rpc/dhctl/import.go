@@ -25,70 +25,66 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/import"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
+func (s *Service) Import(server pb.DHCTL_ImportServer) error {
 	s.shutdown(server.Context().Done())
 
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	s.logd.Info("started")
+	s.logb.Info("started")
 
-	f := fsm.New("initial", s.convergeServerTransitions())
+	f := fsm.New("initial", s.importServerTransitions())
 
 	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.ConvergeRequest)
+	requestsCh := make(chan *pb.ImportRequest)
 
-	phaseSwitcher := &convergePhaseSwitcher{
+	phaseSwitcher := &importPhaseSwitcher{
 		server: server,
 		f:      f,
 		next:   make(chan error),
 	}
 	defer close(phaseSwitcher.next)
 
-	s.startConvergeerReceiver(server, requestsCh, internalErrCh)
+	s.startImportperReceiver(server, requestsCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logd.Info("finished normally")
+			s.logb.Info("finished normally")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logd.Error("finished with internal error", logger.Err(err))
+			s.logb.Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
 		case request := <-requestsCh:
 			switch message := request.Message.(type) {
-			case *pb.ConvergeRequest_Start:
+			case *pb.ImportRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					s.logb.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startConverge(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startImport(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
 
-			case *pb.ConvergeRequest_Continue:
+			case *pb.ImportRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					s.logb.Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -104,7 +100,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logd.Error("got unprocessable message",
+				s.logb.Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -112,9 +108,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startConvergeerReceiver(
-	server pb.DHCTL_ConvergeServer,
-	requestsCh chan *pb.ConvergeRequest,
+func (s *Service) startImportperReceiver(
+	server pb.DHCTL_ImportServer,
+	requestsCh chan *pb.ImportRequest,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -127,8 +123,8 @@ func (s *Service) startConvergeerReceiver(
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logd.Info(
-				"processing ConvergeRequest",
+			s.logb.Info(
+				"processing ImportRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			requestsCh <- request
@@ -136,18 +132,18 @@ func (s *Service) startConvergeerReceiver(
 	}()
 }
 
-func (s *Service) startConverge(
+func (s *Service) startImport(
 	ctx context.Context,
-	server pb.DHCTL_ConvergeServer,
-	request *pb.ConvergeStart,
-	phaseSwitcher *convergePhaseSwitcher,
+	server pb.DHCTL_ImportServer,
+	request *pb.ImportStart,
+	phaseSwitcher *importPhaseSwitcher,
 	internalErrCh chan error,
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.converge(ctx, request, phaseSwitcher, &convergeLogWriter{server: server})
-		err := server.Send(&pb.ConvergeResponse{
-			Message: &pb.ConvergeResponse_Result{
+		result := s.importCluster(ctx, request, phaseSwitcher, &importLogWriter{server: server})
+		err := server.Send(&pb.ImportResponse{
+			Message: &pb.ImportResponse_Result{
 				Result: result,
 			},
 		})
@@ -160,12 +156,12 @@ func (s *Service) startConverge(
 	}()
 }
 
-func (s *Service) converge(
+func (s *Service) importCluster(
 	ctx context.Context,
-	request *pb.ConvergeStart,
-	phaseSwitcher *convergePhaseSwitcher,
+	request *pb.ImportStart,
+	phaseSwitcher *importPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.ConvergeResult {
+) *pb.ImportResult {
 	var err error
 
 	// set global variables from options
@@ -183,45 +179,6 @@ func (s *Service) converge(
 	defer func() {
 		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
 	}()
-
-	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
-		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing cluster meta config: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
-	}
-
-	err = log.Process("default", "Preparing DHCTL state", func() error {
-		cachePath := metaConfig.CachePath()
-		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
-			if err != nil {
-				return fmt.Errorf("unmarshalling dhctl state: %w", err)
-			}
-		}
-		err = cache.InitWithOptions(
-			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
-		)
-		if err != nil {
-			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
-	}
 
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
@@ -243,49 +200,33 @@ func (s *Service) converge(
 		return nil
 	})
 	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
+		return &pb.ImportResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	terraformContext := terraform.NewTerraformContext()
-
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
-		StateCache:    cache.Global(),
-		CommanderMode: request.Options.CommanderMode,
-		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
-		),
+	importer := _import.NewImporter(&_import.Params{
+		CommanderMode:    request.Options.CommanderMode,
+		SSHClient:        sshClient,
+		OnCheckResult:    onCheckResult,
 		TerraformContext: terraform.NewTerraformContext(),
+		OnPhaseFunc:      phaseSwitcher.switchPhase,
+		ImportResources: _import.ImportResources{
+			Template: request.ResourcesTemplate,
+			Values:   request.ResourcesValues.AsMap(),
+		},
+		ScanOnly: request.ScanOnly,
 	})
 
-	converger := converge.NewConverger(&converge.Params{
-		SSHClient:              sshClient,
-		OnPhaseFunc:            phaseSwitcher.switchPhase,
-		AutoApprove:            true,
-		AutoDismissDestructive: false,
-		CommanderMode:          true,
-		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
-		),
-		TerraformContext:           terraformContext,
-		Checker:                    checker,
-		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
-		OnCheckResult:              onCheckResult,
-	})
-
-	result, convergeErr := converger.Converge(ctx)
-	state := converger.GetLastState()
+	result, importErr := importer.Import(ctx)
+	state := importer.PhasedExecutionContext.GetLastState()
 	stateData, marshalStateErr := json.Marshal(state)
 	resultString, marshalResultErr := json.Marshal(result)
-	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
+	err = errors.Join(importErr, marshalStateErr, marshalResultErr)
 
-	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.ImportResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
 }
 
-func (s *Service) convergeServerTransitions() []fsm.Transition {
+func (s *Service) importServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -305,13 +246,13 @@ func (s *Service) convergeServerTransitions() []fsm.Transition {
 	}
 }
 
-type convergeLogWriter struct {
-	server pb.DHCTL_ConvergeServer
+type importLogWriter struct {
+	server pb.DHCTL_ImportServer
 }
 
-func (w *convergeLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.ConvergeResponse{
-		Message: &pb.ConvergeResponse_Logs{
+func (w *importLogWriter) Write(p []byte) (int, error) {
+	err := w.server.Send(&pb.ImportResponse{
+		Message: &pb.ImportResponse_Logs{
 			Logs: &pb.Logs{
 				Logs: p,
 			},
@@ -323,16 +264,16 @@ func (w *convergeLogWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-type convergePhaseSwitcher struct {
-	server pb.DHCTL_ConvergeServer
+type importPhaseSwitcher struct {
+	server pb.DHCTL_ImportServer
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *convergePhaseSwitcher) switchPhase(
+func (b *importPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
-	_ interface{},
+	phaseData _import.PhaseData,
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
 ) error {
@@ -341,11 +282,17 @@ func (b *convergePhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.ConvergeResponse{
-		Message: &pb.ConvergeResponse_PhaseEnd{
-			PhaseEnd: &pb.ConvergePhaseEnd{
+	phaseDataBytes, err := json.Marshal(phaseData)
+	if err != nil {
+		return fmt.Errorf("changing state to waiting: %w", err)
+	}
+
+	err = b.server.Send(&pb.ImportResponse{
+		Message: &pb.ImportResponse_PhaseEnd{
+			PhaseEnd: &pb.ImportPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
+				CompletedPhaseData:  string(phaseDataBytes),
 				NextPhase:           string(nextPhase),
 				NextPhaseCritical:   nextPhaseCritical,
 			},

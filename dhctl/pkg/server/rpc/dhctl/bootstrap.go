@@ -144,7 +144,7 @@ func (s *Service) startBootstrap(
 	doneCh chan struct{},
 ) {
 	go func() {
-		result := s.boostrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
+		result := s.bootstrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
 		err := server.Send(&pb.BootstrapResponse{
 			Message: &pb.BootstrapResponse_Result{
 				Result: result,
@@ -159,7 +159,7 @@ func (s *Service) startBootstrap(
 	}()
 }
 
-func (s *Service) boostrap(
+func (s *Service) bootstrap(
 	_ context.Context,
 	request *pb.BootstrapStart,
 	phaseSwitcher *bootstrapPhaseSwitcher,

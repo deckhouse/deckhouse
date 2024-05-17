@@ -90,7 +90,8 @@ protoc:
 	pkg/server/api/dhctl/bootstrap.proto \
 	pkg/server/api/dhctl/destroy.proto \
 	pkg/server/api/dhctl/abort.proto \
-	pkg/server/api/dhctl/converge.proto
+	pkg/server/api/dhctl/converge.proto \
+	pkg/server/api/dhctl/import.proto
 
 generate: protoc
 	go generate ./...

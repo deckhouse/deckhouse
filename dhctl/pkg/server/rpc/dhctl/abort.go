@@ -176,8 +176,6 @@ func (s *Service) abort(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.PreflightSkipDeckhouseVersionCheck = true
-	app.PreflightSkipAll = true
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {

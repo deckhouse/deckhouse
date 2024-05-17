@@ -38,6 +38,7 @@ const (
 	DHCTL_Destroy_FullMethodName   = "/dhctl.DHCTL/Destroy"
 	DHCTL_Abort_FullMethodName     = "/dhctl.DHCTL/Abort"
 	DHCTL_Converge_FullMethodName  = "/dhctl.DHCTL/Converge"
+	DHCTL_Import_FullMethodName    = "/dhctl.DHCTL/Import"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -49,6 +50,7 @@ type DHCTLClient interface {
 	Destroy(ctx context.Context, opts ...grpc.CallOption) (DHCTL_DestroyClient, error)
 	Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error)
 	Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error)
+	Import(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ImportClient, error)
 }
 
 type dHCTLClient struct {
@@ -214,6 +216,37 @@ func (x *dHCTLConvergeClient) Recv() (*ConvergeResponse, error) {
 	return m, nil
 }
 
+func (c *dHCTLClient) Import(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ImportClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[5], DHCTL_Import_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dHCTLImportClient{stream}
+	return x, nil
+}
+
+type DHCTL_ImportClient interface {
+	Send(*ImportRequest) error
+	Recv() (*ImportResponse, error)
+	grpc.ClientStream
+}
+
+type dHCTLImportClient struct {
+	grpc.ClientStream
+}
+
+func (x *dHCTLImportClient) Send(m *ImportRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dHCTLImportClient) Recv() (*ImportResponse, error) {
+	m := new(ImportResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTLServer is the server API for DHCTL service.
 // All implementations must embed UnimplementedDHCTLServer
 // for forward compatibility
@@ -223,6 +256,7 @@ type DHCTLServer interface {
 	Destroy(DHCTL_DestroyServer) error
 	Abort(DHCTL_AbortServer) error
 	Converge(DHCTL_ConvergeServer) error
+	Import(DHCTL_ImportServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -244,6 +278,9 @@ func (UnimplementedDHCTLServer) Abort(DHCTL_AbortServer) error {
 }
 func (UnimplementedDHCTLServer) Converge(DHCTL_ConvergeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Converge not implemented")
+}
+func (UnimplementedDHCTLServer) Import(DHCTL_ImportServer) error {
+	return status.Errorf(codes.Unimplemented, "method Import not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -388,6 +425,32 @@ func (x *dHCTLConvergeServer) Recv() (*ConvergeRequest, error) {
 	return m, nil
 }
 
+func _DHCTL_Import_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).Import(&dHCTLImportServer{stream})
+}
+
+type DHCTL_ImportServer interface {
+	Send(*ImportResponse) error
+	Recv() (*ImportRequest, error)
+	grpc.ServerStream
+}
+
+type dHCTLImportServer struct {
+	grpc.ServerStream
+}
+
+func (x *dHCTLImportServer) Send(m *ImportResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dHCTLImportServer) Recv() (*ImportRequest, error) {
+	m := new(ImportRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DHCTL_ServiceDesc is the grpc.ServiceDesc for DHCTL service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -423,6 +486,12 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Converge",
 			Handler:       _DHCTL_Converge_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Import",
+			Handler:       _DHCTL_Import_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
