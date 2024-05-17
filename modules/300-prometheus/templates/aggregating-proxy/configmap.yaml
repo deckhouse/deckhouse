@@ -37,7 +37,7 @@ data:
                 {{- else }}
                 - prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
                 {{- end }}
-          ignore_error: true
+          ignore_error: false
           anti_affinity: 30s
           timeout: 5s
           remote_read: false
