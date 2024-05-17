@@ -69,15 +69,19 @@ sysctl -w kernel.pid_max=2000000
 {{- if eq .bundle "centos" }}
 sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
 {{- end }}
+
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic_on_oops=1
 
-{{- $fencingTime := 10 }} 
+# Default value for correct kubelet startup
+{{- $fencingTime := 10 }}
 {{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  # For fencing to work correctly, we need to block node restart in case of panic.
   {{- $fencingTime = 0 }}
 {{- end }}
 sysctl -w kernel.panic={{ $fencingTime }}
+
 # we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
