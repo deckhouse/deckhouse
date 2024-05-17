@@ -58,7 +58,7 @@ spec:
         command: ["/agent"]
         env:
         - name: LOG_LEVEL
-          value: "2"
+          value: {{ .Values.staticRoutingManager.logLevel | quote }}
         - name: PROBE_ADDRESS_PORT
           value: ":9239"
         - name: NODE_NAME

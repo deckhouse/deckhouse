@@ -1,2 +1,4 @@
 type: object
-properties: {}
+properties:
+  logLevel:
+    description: logLevel
