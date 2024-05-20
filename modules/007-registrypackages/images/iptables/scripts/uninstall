@@ -17,5 +17,3 @@ set -Eeo pipefail
 rm -f /opt/deckhouse/bin/iptables
 rm -f /opt/deckhouse/bin/ip6tables
 rm -f /opt/deckhouse/bin/xtables-legacy-multi
-rm -f /opt/deckhouse/bin/xtables-nft-multi
-rm -f /opt/deckhouse/bin/iptables-apply

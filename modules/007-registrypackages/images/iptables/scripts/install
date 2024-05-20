@@ -16,7 +16,5 @@
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f xtables-legacy-multi /opt/deckhouse/bin
-cp -f xtables-nft-multi /opt/deckhouse/bin
-cp -f iptables-apply /opt/deckhouse/bin
 ln -sf /opt/deckhouse/bin/xtables-nft-multi  /opt/deckhouse/bin/iptables
 ln -sf /opt/deckhouse/bin/xtables-nft-multi  /opt/deckhouse/bin/ip6tables
