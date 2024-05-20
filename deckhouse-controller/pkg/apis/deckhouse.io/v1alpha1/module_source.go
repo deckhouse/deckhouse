@@ -71,7 +71,7 @@ type ModuleSourceStatus struct {
 	ModulesCount     int               `json:"modulesCount"`
 	AvailableModules []AvailableModule `json:"modules"`
 	Msg              string            `json:"message"`
-	ModuleErrors     []ModuleError     `json:"moduleErrors"`
+	ModuleErrors     []ModuleError     `json:"moduleErrors" patchStrategy:"retainKeys" patchKey:"name"`
 }
 
 type AvailableModule struct {

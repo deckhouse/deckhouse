@@ -23,8 +23,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,6 +81,10 @@ func (suite *ControllerTestSuite) AfterTest(_, _ string) {
 	suite.compareGolden = false
 }
 
+func (suite *ControllerTestSuite) SetupSubTest() {
+	dependency.TestDC.CRClient = cr.NewClientMock(suite.T())
+}
+
 func (suite *ControllerTestSuite) TearDownSubTest() {
 	if !suite.compareGolden {
 		return
@@ -97,27 +104,68 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
-	entries, err := os.ReadDir("./testdata")
-	require.NoError(suite.T(), err)
+	suite.Run("init.yaml", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
+		suite.setupController(string(suite.fetchTestFileData("init.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
 
-	suite.Run("testdata cases", func() {
+	suite.Run("ms-with-registry.yaml", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 		}}, nil)
 
-		for _, en := range entries {
-			if en.IsDir() {
-				continue
+		suite.setupController(string(suite.fetchTestFileData("ms-with-registry.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("ms-with-policy.yaml", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+		}}, nil)
+
+		suite.setupController(string(suite.fetchTestFileData("with-policy.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("With error from registry", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar", "baz"}, nil)
+		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
+			if tag == "alpha" {
+				return nil, errors.New("fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
 			}
 
-			suite.Run(en.Name(), func() {
-				suite.setupController(string(suite.fetchTestFileData(en.Name())))
-				ms := suite.getModuleSource(suite.testMSName)
-				_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
-				require.NoError(suite.T(), err)
-			})
-		}
+			return &crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			}}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("with-error.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("With stale registry error", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil) // baz module was removed
+		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
+			return &crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			}}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
 	})
 }
 
