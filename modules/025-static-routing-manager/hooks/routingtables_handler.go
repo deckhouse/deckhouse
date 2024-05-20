@@ -147,12 +147,16 @@ func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		NodeSelector: rt.Spec.NodeSelector,
 		Status:       rt.Status,
 	}
-	if rt.Spec.IPRoutingTableID != 0 {
+
+	switch rt.Spec.IPRoutingTableID != 0 {
+	case true:
 		result.IPRoutingTableID = rt.Spec.IPRoutingTableID
-	} else if rt.Status.IPRoutingTableID != 0 {
-		result.IPRoutingTableID = rt.Status.IPRoutingTableID
-	} else {
-		result.IPRoutingTableID = 0
+	case false:
+		if rt.Status.IPRoutingTableID != 0 {
+			result.IPRoutingTableID = rt.Status.IPRoutingTableID
+		} else {
+			result.IPRoutingTableID = 0
+		}
 	}
 
 	return result, nil
