@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
@@ -464,6 +465,13 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			moduleName := m.GetBasicModule().GetName()
 			src := dml.sourceModules[moduleName]
+			if src != "" {
+				fmt.Println("MPATH", m.GetBasicModule().GetPath())
+				if !strings.HasPrefix(m.GetBasicModule().GetPath(), os.Getenv("EXTERNAL_MODULES_DIR")) {
+					fmt.Println("MPATH2")
+					src = ""
+				}
+			}
 			newModule := m.AsKubeObject(src)
 			newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
