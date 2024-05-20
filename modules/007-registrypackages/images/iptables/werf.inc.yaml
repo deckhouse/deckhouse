@@ -10,7 +10,6 @@ import:
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
-  - iptables-apply
   - install
   - uninstall
   before: setup
@@ -21,7 +20,7 @@ docker:
     iptables: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALT_DEV }}
+from: {{ $.Images.BASE_UBUNTU_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -30,11 +29,22 @@ git:
       - '**/*'
 shell:
   setup:
-    - apt-get update && apt-get install libtool libmnl-dev libnftnl-dev -y
+    - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+    - apt-get update && apt-get install libtool -y
+    - git clone -b libmnl-1.0.5 --depth 1 git://git.netfilter.org/libmnl /src-libmnl
+    - cd /src-libmnl
+    - ./autogen.sh
+    - ./configure --enable-static
+    - make && make install
+    - git clone -b libnftnl-1.2.6 --depth 1 git://git.netfilter.org/libnftnl /src-libnftnl
+    - cd /src-libnftnl
+    - ./autogen.sh
+    - ./configure --enable-static
+    - make && make install
     - git clone -b v{{ $version }} --depth 1 git://git.netfilter.org/iptables /src
     - cd /src
     - ./autogen.sh
-    - ./configure --enable-static --disable-shared --disable-nftables
+    - ./configure --enable-static --disable-shared
     - make LDFLAGS='-all-static'
-    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi 
-    - chmod +x /xtables-legacy-multi /install /uninstall
+    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi
+    - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
