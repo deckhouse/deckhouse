@@ -75,7 +75,7 @@ file_diff_check_spell() {
   local file_changes="$2"
 
   # Clean the file changes, remove empty lines, check spelling, and format the output
-  echo "${file_changes}" | python3 /app/clean-files.py - | sed '/^\s*$/d' | hunspell -d ${DICTIONARIES} -l | sed 's/\s\+/\n/g'
+  echo "${file_changes}" | python3 /app/clean-files.py --stdin "${file_name}" | sed '/^\s*$/d' | hunspell -d ${DICTIONARIES} -l | sed 's/\s\+/\n/g'
 }
 
 # Function to print a message about typos in a file

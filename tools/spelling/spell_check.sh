@@ -57,7 +57,7 @@ while true; do
   esac
 done
 
-echo "Spell check the documentation..."
+echo "Spell-checking the documentation..."
 
 if [ -n "${file_name}" ]; then
     if validate_file_name "${file_name}"; then
