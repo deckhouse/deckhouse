@@ -1,0 +1,40 @@
+{{- $version := "1.8.8" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - iptables-apply
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    iptables: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - git clone -b v{{ $version }} --depth 1 git://git.netfilter.org/iptables src
+    - apt-get update && apt-get install libmnl-devel libnftnl-devel -y
+    - cd /src
+    - ./autogen.sh
+    - ./configure --enable-static
+    - make
+    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi && ./iptables/iptables-apply /iptables-apply
+    - chmod +x /xtables-legacy-multi /xtables-nft-multi /iptables-apply  /install /uninstall
