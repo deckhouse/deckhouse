@@ -64,7 +64,7 @@ func (pc *Checker) CheckSSHCredential() error {
 	sshCheck := pc.sshClient.Check()
 	err := sshCheck.CheckAvailability()
 	if err != nil {
-		return fmt.Errorf("ssh %w, %s", ErrAuthFailed, err.Error())
+		return fmt.Errorf("ssh %w. Please check ssh credential and try again", ErrAuthFailed)
 	}
 	return nil
 }
