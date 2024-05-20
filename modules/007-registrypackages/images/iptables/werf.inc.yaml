@@ -30,13 +30,13 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone -b libnftnl-1.2.6 --depth 1 git://git.netfilter.org/libnftnl libnftnl
-    - cd /libnftnl
+    - git clone -b libmnl-1.0.5 --depth 1 git://git.netfilter.org/libmnl libmnl
+    - cd /libmnl
     - ./autogen.sh
     - ./configure --enable-static
     - make && make install
-    - git clone -b libmnl-1.0.5 --depth 1 git://git.netfilter.org/libmnl libmnl
-    - cd /libmnl
+    - git clone -b libnftnl-1.2.6 --depth 1 git://git.netfilter.org/libnftnl libnftnl
+    - cd /libnftnl
     - ./autogen.sh
     - ./configure --enable-static
     - make && make install
