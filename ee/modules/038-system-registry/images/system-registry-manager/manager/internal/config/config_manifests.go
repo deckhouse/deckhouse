@@ -20,29 +20,37 @@ const (
 )
 
 var (
-	TmpWorkspaceDir                       = filepath.Join(os.TempDir(), "system-registry-manager/workspace")
-	TmpWorkspaceCertsDir                  = filepath.Join(TmpWorkspaceDir, "pki")
-	TmpWorkspaceManifestsDir              = filepath.Join(TmpWorkspaceDir, "manifests")
-	TmpWorkspaceStaticPodsDir             = filepath.Join(TmpWorkspaceManifestsDir, "static_pods")
-	TmpWorkspaceSeaweedManifestsDir       = filepath.Join(TmpWorkspaceManifestsDir, "seaweedfs_config")
-	TmpWorkspaceDockerAuthManifestsDir    = filepath.Join(TmpWorkspaceManifestsDir, "auth_config")
-	TmpWorkspaceDockerDistribManifestsDir = filepath.Join(TmpWorkspaceManifestsDir, "distribution_config")
-
-	InputCertsDir                  = "/pki"
-	InputManifestsDir              = "/templates"
-	InputStaticPodsDir             = filepath.Join(InputManifestsDir, "static_pods")
-	InputSeaweedManifestsDir       = filepath.Join(InputManifestsDir, "seaweedfs_config")
-	InputDockerAuthManifestsDir    = filepath.Join(InputManifestsDir, "auth_config")
-	InputDockerDistribManifestsDir = filepath.Join(InputManifestsDir, "distribution_config")
-
-	DestionationDir                       = "/etc/kubernetes"
-	DestinationSystemRegistryDir          = filepath.Join(DestionationDir, "system-registry")
-	DestinationCertsDir                   = filepath.Join(DestinationSystemRegistryDir, "pki")
-	DestionationDirStaticPodsDir          = filepath.Join(DestionationDir, "manifests")
-	DestionationSeaweedManifestsDir       = filepath.Join(DestinationSystemRegistryDir, "seaweedfs_config")
-	DestionationDockerAuthManifestsDir    = filepath.Join(DestinationSystemRegistryDir, "auth_config")
-	DestionationDockerDistribManifestsDir = filepath.Join(DestinationSystemRegistryDir, "distribution_config")
+	SystemRegistryManagerLocation          = "/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/"
+	TmpDirForSystemRegistryManagerLocation = filepath.Join(SystemRegistryManagerLocation, "data")
 )
+
+func getTmpWorkspaceDir() string {
+	if os.Getenv("IS_TEST") == "" {
+		return filepath.Join(os.TempDir(), "system-registry-manager/workspace")
+	}
+	return filepath.Join(TmpDirForSystemRegistryManagerLocation, "workspace")
+}
+
+func getInputCertsDir() string {
+	if os.Getenv("IS_TEST") == "" {
+		return "/pki"
+	}
+	return filepath.Join(TmpDirForSystemRegistryManagerLocation, "pki")
+}
+
+func getInputManifestsDir() string {
+	if os.Getenv("IS_TEST") == "" {
+		return "/templates"
+	}
+	return filepath.Join(SystemRegistryManagerLocation, "templates")
+}
+
+func getDestionationDir() string {
+	if os.Getenv("IS_TEST") == "" {
+		return "/etc/kubernetes"
+	}
+	return filepath.Join(TmpDirForSystemRegistryManagerLocation, "etc_k&s_destionation")
+}
 
 type ManifestSpec struct {
 	NeedChangeFileBy pkg.NeedChangeFileBy
@@ -98,6 +106,30 @@ func (m *ManifestsSpec) NeedChange() bool {
 }
 
 func NewManifestsSpec() *ManifestsSpec {
+
+	TmpWorkspaceDir := getTmpWorkspaceDir()
+	TmpWorkspaceCertsDir := filepath.Join(TmpWorkspaceDir, "pki")
+	TmpWorkspaceManifestsDir := filepath.Join(TmpWorkspaceDir, "manifests")
+	TmpWorkspaceStaticPodsDir := filepath.Join(TmpWorkspaceManifestsDir, "static_pods")
+	TmpWorkspaceSeaweedManifestsDir := filepath.Join(TmpWorkspaceManifestsDir, "seaweedfs_config")
+	TmpWorkspaceDockerAuthManifestsDir := filepath.Join(TmpWorkspaceManifestsDir, "auth_config")
+	TmpWorkspaceDockerDistribManifestsDir := filepath.Join(TmpWorkspaceManifestsDir, "distribution_config")
+
+	InputCertsDir := getInputCertsDir()
+	InputManifestsDir := getInputManifestsDir()
+	InputStaticPodsDir := filepath.Join(InputManifestsDir, "static_pods")
+	InputSeaweedManifestsDir := filepath.Join(InputManifestsDir, "seaweedfs_config")
+	InputDockerAuthManifestsDir := filepath.Join(InputManifestsDir, "auth_config")
+	InputDockerDistribManifestsDir := filepath.Join(InputManifestsDir, "distribution_config")
+
+	DestionationDir := getDestionationDir()
+	DestinationSystemRegistryDir := filepath.Join(DestionationDir, "system-registry")
+	DestinationCertsDir := filepath.Join(DestinationSystemRegistryDir, "pki")
+	DestionationDirStaticPodsDir := filepath.Join(DestionationDir, "manifests")
+	DestionationSeaweedManifestsDir := filepath.Join(DestinationSystemRegistryDir, "seaweedfs_config")
+	DestionationDockerAuthManifestsDir := filepath.Join(DestinationSystemRegistryDir, "auth_config")
+	DestionationDockerDistribManifestsDir := filepath.Join(DestinationSystemRegistryDir, "distribution_config")
+
 	cfg := GetConfig()
 
 	baseCertificates := BaseCertificatesSpec{
@@ -190,6 +222,11 @@ func NewManifestsSpec() *ManifestsSpec {
 		},
 	}
 	return &manifestsSpec
+}
+
+func NewManifestsSpecForTest() *ManifestsSpec {
+	os.Setenv("IS_TEST", "true")
+	return NewManifestsSpec()
 }
 
 func GetDataForManifestRendering() FileConfig {

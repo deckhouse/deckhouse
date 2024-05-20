@@ -44,6 +44,14 @@ func InitConfig() error {
 	return nil
 }
 
+func InitConfigForTests(fileConfig FileConfig) error {
+	config = &Config{
+		fileConfig,
+		RuntimeConfig{},
+	}
+	return nil
+}
+
 func GetConfig() *Config {
 	return config
 }
