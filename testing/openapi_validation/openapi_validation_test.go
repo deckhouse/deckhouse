@@ -24,8 +24,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/testing/openapi_validation/validators"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
