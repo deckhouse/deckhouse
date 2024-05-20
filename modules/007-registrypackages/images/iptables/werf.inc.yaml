@@ -30,18 +30,17 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone -b libmnl-1.0.5 --depth 1 git://git.netfilter.org/libmnl libmnl
-    - cd /libmnl
+    - git clone -b libmnl-1.0.5 --depth 1 git://git.netfilter.org/libmnl /src-libmnl
+    - cd /src-libmnl
     - ./autogen.sh
     - ./configure --enable-static
     - make && make install
-    - git clone -b libnftnl-1.2.6 --depth 1 git://git.netfilter.org/libnftnl libnftnl
-    - cd /libnftnl
+    - git clone -b libnftnl-1.2.6 --depth 1 git://git.netfilter.org/libnftnl /src-libnftnl
+    - cd /src-libnftnl
     - ./autogen.sh
     - ./configure --enable-static
     - make && make install
-    - git clone -b v{{ $version }} --depth 1 git://git.netfilter.org/iptables src
-    - apt-get update && apt-get install libmnl-devel libnftnl-devel -y
+    - git clone -b v{{ $version }} --depth 1 git://git.netfilter.org/iptables /src
     - cd /src
     - ./autogen.sh
     - ./configure --enable-static --disable-shared
