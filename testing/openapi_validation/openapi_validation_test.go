@@ -104,34 +104,6 @@ func TestCRDValidators(t *testing.T) {
 	}
 }
 
-func TestCRDIsSubset(t *testing.T) {
-	childFile := deckhousePath + "testing/openapi_validation/openapi_testdata/crd.yaml"
-	parentFile := deckhousePath + "testing/openapi_validation/openapi_testdata/crd-parent.yaml"
-	nonparentFile := deckhousePath + "testing/openapi_validation/openapi_testdata/crd-nonparent.yaml"
-
-	childMap := getFileYAMLContent(childFile)
-
-	parentValidator := validators.NewExtendedCRDValidator().WithParentCRD(getFileYAMLContent(parentFile))
-
-	require.NoError(t, parentValidator.Run("crd.yaml", "", childMap))
-
-	nonparentValidator := validators.NewExtendedCRDValidator().WithParentCRD(getFileYAMLContent(nonparentFile))
-
-	err := nonparentValidator.Run("crd.yaml", "", childMap)
-
-	require.Error(t, err)
-}
-
-func TestNginxCDRisSubset(t *testing.T) {
-	childFile := deckhousePath + "testing/openapi_validation/openapi_testdata/ingress-nginx-ce.yaml"
-	parentFile := deckhousePath + "testing/openapi_validation/openapi_testdata/ingress-nginx-ee.yaml"
-	childMap := getFileYAMLContent(childFile)
-
-	parentValidator := validators.NewExtendedCRDValidator().WithParentCRD(getFileYAMLContent(parentFile))
-
-	require.NoError(t, parentValidator.Run("ingress-nginx-ce.yaml", "", childMap))
-}
-
 func TestModulesVersionsValidation(t *testing.T) {
 	mv, err := modulesVersions(deckhousePath)
 	require.NoError(t, err)

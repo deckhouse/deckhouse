@@ -65,7 +65,6 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	setDefaultEmptyObjectOnCondition("hostPort", spec, inlet == "HostPort")
 	setDefaultEmptyObjectOnCondition("hostPortWithProxyProtocol", spec, inlet == "HostPortWithProxyProtocol")
 	setDefaultEmptyObjectOnCondition("hostWithFailover", spec, inlet == "HostWithFailover")
-	setDefaultEmptyObjectOnCondition("l2LoadBalancer", spec, inlet == "L2LoadBalancer")
 
 	setDefaultEmptyObject("hstsOptions", spec)
 	setDefaultEmptyObject("geoIP2", spec)

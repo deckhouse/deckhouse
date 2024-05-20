@@ -128,39 +128,4 @@ metallb:
       value: frontend
 ```
 
-## Пример для bare metal (L2 Load Balancer)
-
-> Доступно только в редакции Enterprise Edition.
-
-```yaml
-  apiVersion: deckhouse.io/v1
-  kind: IngressNginxController
-  metadata:
-    name: main
-  spec:
-    nodeSelector:
-      node.deckhouse.io/frontend: ""
-    ingressClass: "nginx"
-    inlet: "L2LoadBalancer"
-    l2LoadBalancer:
-      addressPool: mypool
-```
-
-[конфигурация L2 Load Balancer](../381-l2-load-balancer/configuration.html):
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: l2-load-balancer
-spec:
-  enabled: true
-  settings:
-    addressPools:
-      - addresses:
-          - 192.168.122.100-192.168.122.130
-        name: mypool
-  version: 1
-```
-
 {% endraw %}
