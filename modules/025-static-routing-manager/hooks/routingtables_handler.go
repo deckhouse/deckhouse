@@ -23,13 +23,11 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,14 +48,14 @@ const (
 )
 
 type RoutingTableInfo struct {
-	Name                 string
-	UID                  types.UID
-	Generation           int64
-	IsDeleted            bool
-	SpecIPRoutingTableID int
-	Routes               []v1alpha1.Route
-	NodeSelector         map[string]string
-	Status               v1alpha1.RoutingTableStatus
+	Name             string
+	UID              types.UID
+	Generation       int64
+	IsDeleted        bool
+	IPRoutingTableID int
+	Routes           []v1alpha1.Route
+	NodeSelector     map[string]string
+	Status           v1alpha1.RoutingTableStatus
 }
 
 type NodeRoutingTableInfo struct {
@@ -130,23 +128,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, routingTablesHandler)
 
 func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var rt v1alpha1.RoutingTable
+	var (
+		rt     v1alpha1.RoutingTable
+		result RoutingTableInfo
+	)
 
 	err := sdk.FromUnstructured(obj, &rt)
 	if err != nil {
 		return nil, err
 	}
 
-	return RoutingTableInfo{
-		Name:                 rt.Name,
-		UID:                  rt.UID,
-		Generation:           rt.Generation,
-		IsDeleted:            rt.DeletionTimestamp != nil,
-		SpecIPRoutingTableID: rt.Spec.IPRoutingTableID,
-		Routes:               rt.Spec.Routes,
-		NodeSelector:         rt.Spec.NodeSelector,
-		Status:               rt.Status,
-	}, nil
+	result = RoutingTableInfo{
+		Name:         rt.Name,
+		UID:          rt.UID,
+		Generation:   rt.Generation,
+		IsDeleted:    rt.DeletionTimestamp != nil,
+		Routes:       rt.Spec.Routes,
+		NodeSelector: rt.Spec.NodeSelector,
+		Status:       rt.Status,
+	}
+	if rt.Spec.IPRoutingTableID != 0 {
+		result.IPRoutingTableID = rt.Spec.IPRoutingTableID
+	} else if rt.Status.IPRoutingTableID != 0 {
+		result.IPRoutingTableID = rt.Status.IPRoutingTableID
+	} else {
+		result.IPRoutingTableID = 0
+	}
+
+	return result, nil
 }
 
 func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -221,10 +230,8 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	// Filling utilizedIDs
 	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(RoutingTableInfo)
-		if rti.Status.IPRoutingTableID != 0 {
-			idi.UtilizedIDs[rti.Status.IPRoutingTableID] = struct{}{}
-		} else if rti.SpecIPRoutingTableID != 0 {
-			idi.UtilizedIDs[rti.SpecIPRoutingTableID] = struct{}{}
+		if rti.IPRoutingTableID != 0 {
+			idi.UtilizedIDs[rti.IPRoutingTableID] = struct{}{}
 		}
 	}
 
@@ -246,20 +253,15 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		tmpDRTS.ObservedGeneration = rti.Generation
 
 		// Generate desired IPRoutingTableID
-		if shouldUpdateStatusRoutingTableID(rti, input.LogEntry) {
+		if rti.IPRoutingTableID == 0 {
 			input.LogEntry.Infof("RoutingTable %v needs to be updated", rti.Name)
-
-			if rti.SpecIPRoutingTableID != 0 {
-				tmpDRTS.IPRoutingTableID = rti.SpecIPRoutingTableID
-			} else {
-				tmpDRTS.IPRoutingTableID, err = idi.pickNextFreeID()
-				if err != nil {
-					input.LogEntry.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
-					tmpDRTS.localErrors = append(tmpDRTS.localErrors, err.Error())
-				}
+			tmpDRTS.IPRoutingTableID, err = idi.pickNextFreeID()
+			if err != nil {
+				input.LogEntry.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
+				tmpDRTS.localErrors = append(tmpDRTS.localErrors, err.Error())
 			}
 		} else {
-			tmpDRTS.IPRoutingTableID = rti.Status.IPRoutingTableID
+			tmpDRTS.IPRoutingTableID = rti.IPRoutingTableID
 		}
 
 		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and filling affectedNodes
@@ -451,28 +453,6 @@ func NRTFindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, con
 		}
 	}
 	return nil
-}
-
-func shouldUpdateStatusRoutingTableID(rti RoutingTableInfo, log *logrus.Entry) bool {
-	if rti.IsDeleted {
-		return false
-	}
-
-	if rti.Status.IPRoutingTableID == 0 {
-		log.Infof("In RoutingTable %v status.IPRoutingTableID is empty", rti.Name)
-		return true
-	}
-
-	if rti.Status.IPRoutingTableID != 0 && rti.SpecIPRoutingTableID == 0 {
-		return false
-	}
-
-	if rti.SpecIPRoutingTableID != 0 && rti.SpecIPRoutingTableID == rti.Status.IPRoutingTableID {
-		return false
-	}
-
-	log.Infof("RoutingTable %v is not in the deletion status, status.IPRoutingTableID and spec.IPRoutingTableID are not empty, but not are equal", rti.Name)
-	return true
 }
 
 func deleteFinalizerFromNRT(input *go_hook.HookInput, nrtName string) {
