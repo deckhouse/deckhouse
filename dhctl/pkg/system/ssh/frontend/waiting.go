@@ -39,11 +39,19 @@ func (c *Check) WithDelaySeconds(seconds int) *Check {
 }
 
 func (c *Check) AwaitAvailability() error {
+	return c.awaitAvailability(50, 5)
+}
+
+func (c *Check) CheckAvailability() error {
+	return c.awaitAvailability(3, 5)
+}
+
+func (c *Check) awaitAvailability(retryCount int, retryDelaySecond time.Duration) error {
 	if c.Session.Host() == "" {
-		return fmt.Errorf("Empty host for connection received")
+		return fmt.Errorf("empty host for connection received")
 	}
 	time.Sleep(c.delay)
-	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).Run(func() error {
+	return retry.NewLoop("Waiting for SSH connection", retryCount, retryDelaySecond*time.Second).Run(func() error {
 		log.InfoF("Try to connect to %v host\n", c.Session.Host())
 		output, err := c.ExpectAvailable()
 		if err == nil {
@@ -68,7 +76,7 @@ func (c *Check) ExpectAvailable() ([]byte, error) {
 		return nil, nil
 	}
 
-	return output, fmt.Errorf("SSH command otput should contain \"SUCCESS\", error: %v", err)
+	return output, fmt.Errorf("SSH command output should contain \"SUCCESS\", error: %v", err)
 }
 
 func (c *Check) String() string {
