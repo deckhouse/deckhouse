@@ -308,7 +308,7 @@ spec:
                         Enables basic authorization for the Kubernetes API server.
 
                         The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the `publishAPI` is enabled.
+                        Works **only** if the [publishAPI](https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi) parameter is enabled.
 
                         Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap

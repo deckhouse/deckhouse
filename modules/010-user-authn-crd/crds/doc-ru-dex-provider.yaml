@@ -206,7 +206,7 @@ spec:
 
                         В качестве credentials для basic-авторизации указываются логин и пароль пользователя из приложения, созданного в OIDC (возможно включить при указании только одного провайдера с типом OIDC/Crowd).
 
-                        Работает **только** при включенном `publishAPI`.
+                        Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi).
 
                         Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
                 ldap: &ldap
