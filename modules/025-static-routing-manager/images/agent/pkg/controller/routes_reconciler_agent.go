@@ -281,8 +281,6 @@ func RunRoutesReconcilerAgentController(
 			// Actions: delete routes because NRT has been deleted
 			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because NRT has been deleted)"))
 			for nrtName, rem := range deletedNRTRouteEntryMaps {
-				jsonVar, _ := json.Marshal(actualRouteEntryMap)
-				log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
 				status := nrtReconciliationStatusMap[nrtName]
 				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
 					rem,
@@ -388,27 +386,20 @@ func RunRoutesReconcilerAgentController(
 }
 
 func getActualRouteEntryMapFromNode(log logger.Logger) (RouteEntryMap, error) {
-	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM)
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
 	ar := make(RouteEntryMap)
 
 	for _, route := range routes {
-		log.Debug(fmt.Sprintf("dst %v gw %v tbl %v", route.Dst.String(), route.Gw.String(), route.Table))
 		re := RouteEntry{
 			destination: route.Dst.String(),
 			gateway:     route.Gw.String(),
 			table:       route.Table,
 		}
-		log.Debug(fmt.Sprintf("re(asis): %v", re))
-		jsonVar, _ := json.Marshal(re)
-		log.Debug(fmt.Sprintf("re(marshal): %v", jsonVar))
 		ar.AppendRE(re)
 	}
-
-	jsonVar, _ := json.Marshal(ar)
-	log.Debug(fmt.Sprintf("ar(marshal) = %s", jsonVar))
 
 	return ar, nil
 }
@@ -470,12 +461,6 @@ func delRouteFromNode(route RouteEntry) error {
 }
 
 func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status NRTReconciliationStatus, log logger.Logger) NRTReconciliationStatus {
-	// tmp debug
-	jsonVar, _ := json.Marshal(delREM)
-	log.Debug(fmt.Sprintf("delREM = %s", jsonVar))
-	jsonVar, _ = json.Marshal(actREM)
-	log.Debug(fmt.Sprintf("actREM = %s", jsonVar))
-
 	for hash, route := range delREM {
 		log.Debug(fmt.Sprintf("Route %v should be deleted", route))
 		if _, ok := (gdREM)[hash]; ok {

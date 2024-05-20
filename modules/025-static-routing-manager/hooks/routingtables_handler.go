@@ -23,14 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -225,10 +223,8 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		rti := rtiRaw.(RoutingTableInfo)
 		if rti.Status.IPRoutingTableID != 0 {
 			idi.UtilizedIDs[rti.Status.IPRoutingTableID] = struct{}{}
-		} else {
-			if rti.SpecIPRoutingTableID != 0 {
-				idi.UtilizedIDs[rti.SpecIPRoutingTableID] = struct{}{}
-			}
+		} else if rti.SpecIPRoutingTableID != 0 {
+			idi.UtilizedIDs[rti.SpecIPRoutingTableID] = struct{}{}
 		}
 	}
 
@@ -277,10 +273,8 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 				if _, ok := actualNodeRoutingTables[nrtName]; ok {
 					if actualNodeRoutingTables[nrtName].Ready {
 						tmpDRTS.ReadyNodeRoutingTables++
-					} else {
-						if actualNodeRoutingTables[nrtName].Reason == v1alpha1.ReconciliationReasonFailed {
-							tmpDRTS.failedNodes = append(tmpDRTS.failedNodes, nodei.Name)
-						}
+					} else if actualNodeRoutingTables[nrtName].Reason == v1alpha1.ReconciliationReasonFailed {
+						tmpDRTS.failedNodes = append(tmpDRTS.failedNodes, nodei.Name)
 					}
 				}
 
