@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -47,11 +50,13 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.CheckRequest)
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.CheckRequest)
+	sendCh := make(chan *pb.CheckResponse, 100)
 
-	s.startCheckerReceiver(server, requestsCh, internalErrCh)
+	s.startCheckerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startCheckerSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -64,7 +69,7 @@ connectionProcessor:
 			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case request := <-requestsCh:
+		case request := <-receiveCh:
 			logger.L(ctx).Info(
 				"processing CheckRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
@@ -78,8 +83,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				s.startChecker(
-					ctx, server, message.Start, &checkLogWriter{l: logger.L(ctx), server: server},
-					internalErrCh, doneCh,
+					ctx, message.Start, &checkLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
 			default:
@@ -93,45 +97,58 @@ connectionProcessor:
 
 func (s *Service) startCheckerReceiver(
 	server pb.DHCTL_CheckServer,
-	requestsCh chan *pb.CheckRequest,
+	receiveCh chan *pb.CheckRequest,
+	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
 	go func() {
 		for {
 			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			requestsCh <- request
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startCheckerSender(
+	server pb.DHCTL_CheckServer,
+	sendCh chan *pb.CheckResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
 		}
 	}()
 }
 
 func (s *Service) startChecker(
 	ctx context.Context,
-	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
 	logWriter *checkLogWriter,
-	internalErrCh chan error,
-	doneCh chan struct{},
+	sendCh chan *pb.CheckResponse,
 ) {
 	go func() {
 		result := s.check(ctx, request, logWriter)
-		err := server.Send(&pb.CheckResponse{
+		sendCh <- &pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			internalErrCh <- fmt.Errorf("sending message: %w", err)
-			return
 		}
-
-		doneCh <- struct{}{}
 	}()
 }
 
@@ -142,7 +159,6 @@ func (s *Service) check(
 ) *pb.CheckResult {
 	var err error
 
-	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -256,21 +272,39 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 
 type checkLogWriter struct {
 	l      *slog.Logger
-	server pb.DHCTL_CheckServer
+	sendCh chan *pb.CheckResponse
+
+	m    sync.Mutex
+	prev []byte
 }
 
-func (w *checkLogWriter) Write(p []byte) (int, error) {
-	w.l.Info(string(p), logTypeDHCTL)
+func (w *checkLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
 
-	err := w.server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
 	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.CheckResponse{
+			Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
 	return len(p), nil
 }

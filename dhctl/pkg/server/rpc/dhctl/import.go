@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -32,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,18 +46,19 @@ func (s *Service) Import(server pb.DHCTL_ImportServer) error {
 
 	f := fsm.New("initial", s.importServerTransitions())
 
-	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.ImportRequest)
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.ImportRequest)
+	sendCh := make(chan *pb.ImportResponse)
 
 	phaseSwitcher := &importPhaseSwitcher{
-		server: server,
+		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
-	defer close(phaseSwitcher.next)
 
-	s.startImporterReceiver(server, requestsCh, internalErrCh)
+	s.startImporterReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startImporterSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -67,7 +71,7 @@ connectionProcessor:
 			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case request := <-requestsCh:
+		case request := <-receiveCh:
 			logger.L(ctx).Info(
 				"processing ImportRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
@@ -81,8 +85,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				s.startImport(
-					ctx, server, message.Start, phaseSwitcher, &importLogWriter{l: logger.L(ctx), server: server},
-					internalErrCh, doneCh,
+					ctx, message.Start, phaseSwitcher, &importLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
 			case *pb.ImportRequest_Continue:
@@ -114,46 +117,59 @@ connectionProcessor:
 
 func (s *Service) startImporterReceiver(
 	server pb.DHCTL_ImportServer,
-	requestsCh chan *pb.ImportRequest,
+	receiveCh chan *pb.ImportRequest,
+	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
 	go func() {
 		for {
 			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			requestsCh <- request
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startImporterSender(
+	server pb.DHCTL_ImportServer,
+	sendCh chan *pb.ImportResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
 		}
 	}()
 }
 
 func (s *Service) startImport(
 	ctx context.Context,
-	server pb.DHCTL_ImportServer,
 	request *pb.ImportStart,
 	phaseSwitcher *importPhaseSwitcher,
 	logWriter *importLogWriter,
-	internalErrCh chan error,
-	doneCh chan struct{},
+	sendCh chan *pb.ImportResponse,
 ) {
 	go func() {
 		result := s.importCluster(ctx, request, phaseSwitcher, logWriter)
-		err := server.Send(&pb.ImportResponse{
+		sendCh <- &pb.ImportResponse{
 			Message: &pb.ImportResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			internalErrCh <- fmt.Errorf("sending message: %w", err)
-			return
 		}
-
-		doneCh <- struct{}{}
 	}()
 }
 
@@ -165,7 +181,6 @@ func (s *Service) importCluster(
 ) *pb.ImportResult {
 	var err error
 
-	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -249,27 +264,45 @@ func (s *Service) importServerTransitions() []fsm.Transition {
 
 type importLogWriter struct {
 	l      *slog.Logger
-	server pb.DHCTL_ImportServer
+	sendCh chan *pb.ImportResponse
+
+	m    sync.Mutex
+	prev []byte
 }
 
-func (w *importLogWriter) Write(p []byte) (int, error) {
-	w.l.Info(string(p), logTypeDHCTL)
+func (w *importLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
 
-	err := w.server.Send(&pb.ImportResponse{
-		Message: &pb.ImportResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
 	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.ImportResponse{
+			Message: &pb.ImportResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
 	return len(p), nil
 }
 
 type importPhaseSwitcher struct {
-	server pb.DHCTL_ImportServer
+	sendCh chan *pb.ImportResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
@@ -291,7 +324,7 @@ func (b *importPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.ImportResponse{
+	b.sendCh <- &pb.ImportResponse{
 		Message: &pb.ImportResponse_PhaseEnd{
 			PhaseEnd: &pb.ImportPhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -301,9 +334,6 @@ func (b *importPhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("sending on phase message: %w", err)
 	}
 
 	switchErr, ok := <-b.next

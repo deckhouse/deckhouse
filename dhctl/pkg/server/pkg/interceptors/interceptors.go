@@ -132,7 +132,7 @@ func (w *wrapper) SetContext(ctx context.Context) {
 func newStreamContextWrapper(inner grpc.ServerStream) StreamContextWrapper {
 	ctx := inner.Context()
 	return &wrapper{
-		inner,
-		ctx,
+		ServerStream: inner,
+		ctx:          ctx,
 	}
 }

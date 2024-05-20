@@ -141,8 +141,6 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			return outCtx, nil, err
 		}
 
-		logger.L(ctx).Info("starting new dhctl instance", "addr", address)
-
 		cmd := exec.Command(
 			os.Args[0],
 			"_server",
@@ -150,6 +148,7 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
+		// todo: handle logs from parallel server instances
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -157,6 +156,14 @@ func (d *streamDirector) new() proxy.StreamDirector {
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
+
+		logger.L(ctx).Info("started new dhctl instance", slog.String("addr", address))
+
+		go func() {
+			exitErr := cmd.Wait()
+			logger.L(ctx).
+				Info("stopped dhctl instance", slog.String("addr", address), logger.Err(exitErr))
+		}()
 
 		conn, err := grpc.NewClient(
 			"unix://"+address,
