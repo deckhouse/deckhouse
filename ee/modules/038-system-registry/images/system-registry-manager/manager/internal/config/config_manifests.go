@@ -6,10 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package config
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"os"
 	"path/filepath"
 	"system-registry-manager/pkg"
+	"system-registry-manager/pkg/certificate"
 	"time"
 )
 
