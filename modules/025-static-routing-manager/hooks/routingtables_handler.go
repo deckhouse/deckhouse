@@ -129,28 +129,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyNodeFilter,
 		},
 	},
-}, nodeRoutingTablesHandler)
+}, routingTablesHandler)
 
 func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var (
-		rt     v1alpha1.RoutingTable
-		result RoutingTableInfo
-	)
+	var rt v1alpha1.RoutingTable
+
 	err := sdk.FromUnstructured(obj, &rt)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Name = rt.Name
-	result.UID = rt.UID
-	result.Generation = rt.Generation
-	result.IsDeleted = rt.DeletionTimestamp != nil
-	result.SpecIPRoutingTableID = rt.Spec.IPRoutingTableID
-	result.Routes = rt.Spec.Routes
-	result.NodeSelector = rt.Spec.NodeSelector
-	result.Status = rt.Status
-
-	return result, nil
+	return RoutingTableInfo{
+		Name:                 rt.Name,
+		UID:                  rt.UID,
+		Generation:           rt.Generation,
+		IsDeleted:            rt.DeletionTimestamp != nil,
+		SpecIPRoutingTableID: rt.Spec.IPRoutingTableID,
+		Routes:               rt.Spec.Routes,
+		NodeSelector:         rt.Spec.NodeSelector,
+		Status:               rt.Status,
+	}, nil
 }
 
 func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -195,10 +193,10 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return result, nil
 }
 
-func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
+func routingTablesHandler(input *go_hook.HookInput) error {
 	var err error
 	actualNodeRoutingTables := make(map[string]NodeRoutingTableInfo)
-	actualNodes := make(map[string]struct{})
+	allNodes := make(map[string]struct{})
 	affectedNodes := make(map[string][]RoutingTableInfo)
 	desiredRTStatus := make(map[string]rtsPlus)
 	desiredNodeRoutingTables := make([]desiredNRTInfo, 0)
@@ -207,17 +205,17 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 		IDSlider:    RoutingTableIDMin,
 	}
 
-	// Filling actualNodes
+	// Filling allNodes
 	for _, nodeRaw := range input.Snapshots["nodes"] {
 		node := nodeRaw.(NodeInfo)
-		actualNodes[node.Name] = struct{}{}
+		allNodes[node.Name] = struct{}{}
 	}
 
 	// Filling actualNodeRoutingTables and delete finalizers from orphan NRTs
 	for _, nrtRaw := range input.Snapshots["noderoutingtables"] {
 		nrtis := nrtRaw.(NodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
-		if _, ok := actualNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
+		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
 			deleteFinalizerFromNRT(input, nrtis.Name)
 		}
 	}
@@ -268,7 +266,7 @@ func nodeRoutingTablesHandler(input *go_hook.HookInput) error {
 			tmpDRTS.IPRoutingTableID = rti.Status.IPRoutingTableID
 		}
 
-		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and feeling affectedNodes
+		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and filling affectedNodes
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
 			nodei := nodeiRaw.(NodeInfo)
