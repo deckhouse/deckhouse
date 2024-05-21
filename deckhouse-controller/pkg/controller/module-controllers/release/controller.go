@@ -202,7 +202,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
-		mr.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+		mr.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 		if e := c.client.Status().Update(ctx, mr); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
@@ -424,7 +424,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 			release.Status.Phase = v1alpha1.PhaseSuperseded
 			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+			release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 			if e := c.client.Status().Update(ctx, &release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
@@ -488,7 +488,7 @@ func (c *moduleReleaseReconciler) suspendModuleVersionForRelease(ctx context.Con
 
 	release.Status.Phase = v1alpha1.PhaseSuspended
 	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 
 	return c.client.Status().Update(ctx, release)
 }
