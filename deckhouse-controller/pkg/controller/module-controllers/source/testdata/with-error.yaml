@@ -1,0 +1,48 @@
+# Error from registry should be kept in the status field
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
+    modules.deckhouse.io/registry-spec-checksum: 81fdf7f3b8420e50645c30d01c2f052c
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: deckhouse
+  name: deckhouse
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: registry.deckhouse.io/deckhouse/ee/modules
+    scheme: HTTPS
+status:
+  message: Some errors occurred. Inspect status for details
+  moduleErrors:
+    - error: 'fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:
+      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]'
+      name: baz
+  modules:
+    - name: foo
+      policy: deckhouse
+    - name: bar
+      policy: deckhouse
+  modulesCount: 2
+  syncTime: "2024-05-20T13:20:21Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: deckhouse-baz
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: deckhouse
+        module: baz
+  releaseChannel: Alpha
+  update:
+    mode: Auto
