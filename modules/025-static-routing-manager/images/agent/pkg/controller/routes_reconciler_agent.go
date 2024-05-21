@@ -18,12 +18,12 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"static-routing-manager-agent/api/v1alpha1"
 	"static-routing-manager-agent/pkg/config"
 	"static-routing-manager-agent/pkg/logger"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -190,20 +190,16 @@ func RunRoutesReconcilerAgentController(
 
 			// Getting all routes from our node
 			log.Debug(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
-			actualRouteEntryMap, err = getActualRouteEntryMapFromNode(log)
+			actualRouteEntryMap, err = getActualRouteEntryMapFromNode()
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get Actual routes from node"))
 				return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
 			}
-			jsonVar, _ := json.Marshal(actualRouteEntryMap)
-			log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
-			for hash, are := range actualRouteEntryMap {
-				log.Debug(fmt.Sprintf("Entry %v: dst %v gw %v tbl %v", hash, are.destination, are.gateway, are.table))
+			if len(actualRouteEntryMap) == 0 {
+				log.Error(err, fmt.Sprintf("[NRTReconciler] There are no routes with Realm="+strconv.Itoa(d8Realm)))
 			}
 
 			for _, nrt := range nrtList.Items {
-				jsonVar, _ := json.Marshal(actualRouteEntryMap)
-				log.Debug(fmt.Sprintf("actualRouteEntryMap = %s", jsonVar))
 				// Gathering facts
 				log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
 				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
@@ -385,7 +381,7 @@ func RunRoutesReconcilerAgentController(
 	return c, nil
 }
 
-func getActualRouteEntryMapFromNode(log logger.Logger) (RouteEntryMap, error) {
+func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
