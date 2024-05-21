@@ -7,6 +7,7 @@ package config
 
 import (
 	"log"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -24,15 +25,17 @@ type FileConfig struct {
 	Etcd struct {
 		Addresses []string `mapstructure:"addresses"`
 	} `mapstructure:"etcd"`
-	Distribution struct {
-		Image string `mapstructure:"image"`
-	} `mapstructure:"distribution"`
-	Auth struct {
-		Image string `mapstructure:"image"`
-	} `mapstructure:"auth"`
-	Seaweedfs struct {
-		Image string `mapstructure:"image"`
-	} `mapstructure:"seaweedfs"`
+	Registry struct {
+		Address string `mapstructure:"address" yaml:"address"`
+		Path    string `mapstructure:"path" yaml:"path"`
+	} `mapstructure:"registry"`
+	Images struct {
+		SystemRegistry struct {
+			DockerDistribution string `mapstructure:"dockerDistribution"`
+			DockerAuth         string `mapstructure:"dockerAuth"`
+			Seaweedfs          string `mapstructure:"seaweedfs"`
+		} `mapstructure:"systemRegistry"`
+	} `mapstructure:"images"`
 }
 
 func NewFileConfig() (*FileConfig, error) {
@@ -62,6 +65,9 @@ func NewFileConfig() (*FileConfig, error) {
 	}
 
 	viper.AutomaticEnv()
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+
 	if err := viper.Unmarshal(&cfg); err != nil {
 		log.Fatalf("Error unmarshaling config: %v", err)
 	}
