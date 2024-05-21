@@ -4,6 +4,9 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
