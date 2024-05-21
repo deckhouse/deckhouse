@@ -142,7 +142,8 @@ func checkLeader(ctx context.Context, isLeader chan<- bool) {
 		isLeader <- false
 	}()
 
-	err := kube_actions.StartLeaderElection(ctx, leaderCallbacks)
+	recorder := kube_actions.NewLeaderElectionRecorder(log.NewEntry(log.New()))
+	err := kube_actions.StartLeaderElection(ctx, recorder, leaderCallbacks)
 	if err != nil {
 		log.Errorf("Failed to start leader election: %v", err)
 	}
