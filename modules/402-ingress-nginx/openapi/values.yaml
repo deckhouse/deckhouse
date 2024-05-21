@@ -194,6 +194,8 @@ properties:
                   type: boolean
                 disableHTTP2:
                   type: boolean
+                enableHTTP3:
+                  type: boolean
                 config:
                   type: object
                   additionalProperties: true
