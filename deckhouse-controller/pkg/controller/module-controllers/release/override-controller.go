@@ -294,6 +294,11 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 	}
 
 	for _, item := range mpoList.Items {
+		// ignore deleted Releases
+		if !item.ObjectMeta.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		moduleName := item.Name
 		moduleSource := item.Spec.Source
 		moduleImageTag := item.Spec.ImageTag

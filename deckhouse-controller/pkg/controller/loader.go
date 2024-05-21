@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -143,6 +144,10 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 					continue
 				}
 				return err
+			}
+
+			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
+				dml.sourceModules[def.Name] = "Embedded"
 			}
 
 			dml.deckhouseModules[def.Name] = dm
