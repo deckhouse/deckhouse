@@ -124,11 +124,6 @@ func (c *moduleSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms *v1alpha1.ModuleSource) (ctrl.Result, error) {
-	modulesErrorsMap := make(map[string]string)
-	for _, moduleError := range ms.Status.ModuleErrors {
-		modulesErrorsMap[moduleError.Name] = moduleError.Error
-	}
-
 	ms.Status.Msg = ""
 	ms.Status.ModuleErrors = make([]v1alpha1.ModuleError, 0)
 
@@ -195,11 +190,12 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 		newChecksum, av, err := c.processSourceModule(ctx, md, ms, moduleName, modulesChecksums[moduleName], policies.Items)
 		availableModules = append(availableModules, av)
 		if err != nil {
-			modulesErrorsMap[moduleName] = err.Error()
+			ms.Status.ModuleErrors = append(ms.Status.ModuleErrors, v1alpha1.ModuleError{
+				Name:  moduleName,
+				Error: err.Error(),
+			})
 			continue
 		}
-
-		delete(modulesErrorsMap, moduleName)
 
 		if newChecksum != "" {
 			modulesChecksums[moduleName] = newChecksum
@@ -208,11 +204,8 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 
 	ms.Status.AvailableModules = availableModules
 
-	if len(modulesErrorsMap) > 0 {
+	if len(ms.Status.ModuleErrors) > 0 {
 		ms.Status.Msg = "Some errors occurred. Inspect status for details"
-		for moduleName, moduleError := range modulesErrorsMap {
-			ms.Status.ModuleErrors = append(ms.Status.ModuleErrors, v1alpha1.ModuleError{Name: moduleName, Error: moduleError})
-		}
 	}
 
 	err = c.updateModuleSourceStatus(ctx, ms)
@@ -267,6 +260,7 @@ func (c *moduleSourceReconciler) processSourceModule(ctx context.Context, md *do
 		Policy:     "",
 		Overridden: false,
 	}
+
 	// check if we have a ModulePullOverride for source/module
 	exists, err := c.isModulePullOverrideExists(ctx, ms.Name, moduleName)
 	if err != nil {
@@ -278,7 +272,6 @@ func (c *moduleSourceReconciler) processSourceModule(ctx context.Context, md *do
 		av.Overridden = true
 		return "", av, nil
 	}
-
 	// check if we have an update policy for the moduleName
 	policy, err := c.getReleasePolicy(ms.Name, moduleName, policies)
 	if err != nil {
