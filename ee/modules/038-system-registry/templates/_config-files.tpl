@@ -17,12 +17,13 @@ etcd:
   - {{ $etcd_addresses }}
   {{- end }}
 
-distribution:
-  image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
+registry:
+  address: {{ $.Values.global.modulesImages.registry.address }}
+  path: {{ $.Values.global.modulesImages.registry.path }}
 
-auth:
-  image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
-
-seaweedfs:
-  image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
+images:
+  systemRegistry
+    dockerDistribution: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
+    dockerAuth: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
+    seaweedfs: {{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
 {{- end }}
