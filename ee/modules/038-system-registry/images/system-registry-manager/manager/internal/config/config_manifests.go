@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"system-registry-manager/pkg"
-	"system-registry-manager/pkg/certificate"
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 	"time"
 )
 
