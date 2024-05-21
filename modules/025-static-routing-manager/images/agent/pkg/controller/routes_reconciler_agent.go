@@ -196,7 +196,7 @@ func RunRoutesReconcilerAgentController(
 				return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
 			}
 			if len(actualRouteEntryMap) == 0 {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] There are no routes with Realm="+strconv.Itoa(d8Realm)))
+				log.Debug(fmt.Sprintf("[NRTReconciler] There are no routes with Realm=" + strconv.Itoa(d8Realm)))
 			}
 
 			for _, nrt := range nrtList.Items {
