@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
@@ -233,7 +232,10 @@ func (dml *DeckhouseController) setupSourceModules(ctx context.Context) error {
 			continue
 		}
 
-		dml.sourceModules[rl.GetModuleName()] = rl.GetModuleSource()
+		if _, ok := dml.sourceModules[rl.GetModuleName()]; !ok {
+			// ignore modules that are already marked as Embedded
+			dml.sourceModules[rl.GetModuleName()] = rl.GetModuleSource()
+		}
 	}
 
 	return nil
@@ -469,12 +471,6 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			moduleName := m.GetBasicModule().GetName()
 			src := dml.sourceModules[moduleName]
-			if src != "" {
-				// if module is not from external path - take it as Embedded one
-				if !strings.HasPrefix(m.GetBasicModule().GetPath(), os.Getenv("EXTERNAL_MODULES_DIR")) {
-					src = ""
-				}
-			}
 			newModule := m.AsKubeObject(src)
 			newModule.SetLabels(map[string]string{epochLabelKey: epochLabelValue})
 
