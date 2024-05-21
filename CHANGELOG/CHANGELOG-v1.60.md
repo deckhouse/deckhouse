@@ -1,10 +1,5 @@
 # Changelog v1.60
 
-## [MALFORMED]
-
-
- - #8429 unknown section "l2-load-balancer"
-
 ## Know before update
 
 
@@ -13,6 +8,7 @@
  - Okagent will update from the Deckhouse Observability platform source and will start sending metrics to DOP for FE installations.
  - The method for configuring network interfaces and routes has changed in OpenStack instances.
  - You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
+ - The experimental l2-load-balancer module is not available anymore. A renewed one is coming soon.
 
 ## Features
 
@@ -97,6 +93,7 @@
  - **[ingress-nginx]** Fix base image for the Ingress nginx controller v1.6. [#8183](https://github.com/deckhouse/deckhouse/pull/8183)
  - **[ingress-nginx]** Fix the way the number of ingress nginx replicas is counted. [#8155](https://github.com/deckhouse/deckhouse/pull/8155)
     Kruise-controller pod will be recreated.
+ - **[l2-load-balancer]** The l2-load-balancer module is cancelled. [#8429](https://github.com/deckhouse/deckhouse/pull/8429)
  - **[prometheus]** Fix URLs to the documentation in the Grafana home panel. [#8072](https://github.com/deckhouse/deckhouse/pull/8072)
  - **[registrypackages]** Bump d8 CLI version to v0.1.0. [#8378](https://github.com/deckhouse/deckhouse/pull/8378)
 
