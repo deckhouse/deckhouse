@@ -142,16 +142,6 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
-                l2LoadBalancer:
-                  type: object
-                  default: { }
-                  properties:
-                    addressPool:
-                      type: string
-                    sourceRanges:
-                      type: array
-                      items:
-                        type: string
                 hostPort:
                   type: object
                   default: {}

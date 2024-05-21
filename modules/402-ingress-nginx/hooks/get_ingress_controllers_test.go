@@ -67,7 +67,6 @@ spec:
   "ingressClass": "nginx",
   "controllerVersion": "1.6",
   "inlet": "LoadBalancer",
-  "l2LoadBalancer": {},
   "loadBalancer": {},
   "hstsOptions": {},
   "geoIP2": {},
@@ -177,7 +176,6 @@ spec:
   "static": {},
   "vpa": {"cpu": {}, "memory": {}}
 },
-"l2LoadBalancer": {},
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {},
@@ -198,7 +196,6 @@ spec:
   "vpa": {"cpu": {"max": "100m"}, "memory": {"max": "200Mi"}, "mode": "Auto"}
 },
 "loadBalancer": {},
-"l2LoadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {"httpPort": 80, "httpsPort": 443},
 "hostWithFailover": {},
@@ -218,7 +215,6 @@ spec:
   "vpa": {"cpu": {}, "memory": {}}
 },
 "loadBalancer": {},
-"l2LoadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {},
 "hostWithFailover": {},
