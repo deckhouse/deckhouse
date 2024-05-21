@@ -10,6 +10,7 @@ import:
   includePaths:
   - mount
   - umount
+  - swapoff
   - install
   - uninstall
   before: setup
@@ -19,6 +20,7 @@ docker:
     version: all
     mount: {{ $version }}
     umount: {{ $version }}
+    swapoff: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALT_DEV }}
@@ -33,8 +35,8 @@ shell:
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git src
     - cd /src
     - ./autogen.sh 
-    - ./configure  --enable-static-programs=mount,umount --disable-shared --disable-liblastlog2
-    - make mount.static umount.static
-    - strip ./mount.static && strip ./umount.static
-    - mv ./mount.static /mount && mv ./umount.static /umount
-    - chmod +x /mount /umount /install /uninstall
+    - ./configure  --enable-static-programs=mount,umount,swapoff --disable-shared --disable-liblastlog2
+    - make LDFLAGS='-all-static' mount.static umount.static swapoff
+    - strip ./mount.static && strip ./umount.static && strip ./swapoff
+    - mv ./mount.static /mount && mv ./umount.static /umount && mv ./swapoff /swapoff
+    - chmod +x /mount /umount /swapoff /install /uninstall
