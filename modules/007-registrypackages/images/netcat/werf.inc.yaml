@@ -28,7 +28,7 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone -b applied/{{ $version }} --depth 1 https://git.launchpad.net/ubuntu/+source/netcat src
+    - git clone -b applied/{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/netcat src
     - cd src
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
     - strip ./nc
