@@ -40,7 +40,7 @@ global:
     kubernetesCA: "discoveredKubernetesCA"
 userAuthn:
   publishAPI:
-    enable: true
+    enabled: true
     https:
       mode: SelfSigned
   internal: {}

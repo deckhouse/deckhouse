@@ -1,4 +1,4 @@
-{{ if .Values.userAuthn.publishAPI.enable -}}
+{{ if .Values.userAuthn.publishAPI.enabled -}}
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" -}}
     {{- if eq (include "helm_lib_module_https_mode" .) "CustomCertificate" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-user-authn" "kubernetes-tls") -}}

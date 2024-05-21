@@ -1,4 +1,4 @@
-{{- if or (and (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -40,7 +40,7 @@ clusters:
   {{- $_ := set $publish_api_cluster "description" $publish_api_master_url }}
   {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
 
-  {{- if and (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry) }}
+  {{- if and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry) }}
 {{- include "kubeconfig_settings" (list $ "" $publish_api_cluster) }}
   {{- end }}
 

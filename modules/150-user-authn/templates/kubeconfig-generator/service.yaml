@@ -1,4 +1,4 @@
-{{- if or (and (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
 ---
 apiVersion: v1
 kind: Service

@@ -32,7 +32,7 @@ var _ = Describe("User Authn hooks :: generate selfsigned ca ::", func() {
 	Context("Without secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSet("userAuthn.publishAPI.enable", true)
+			f.ValuesSet("userAuthn.publishAPI.enabled", true)
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
 			f.RunHook()
 		})
@@ -62,7 +62,7 @@ data:
   tls.crt: dGVzdA==
   tls.key: dGVzdA==
 `))
-			f.ValuesSet("userAuthn.publishAPI.enable", true)
+			f.ValuesSet("userAuthn.publishAPI.enabled", true)
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
 			f.RunHook()
 		})

@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: discover apiserver endpoints ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"publishAPI":{"enable": true},"internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"publishAPI":{"enabled": true},"internal": {}}}`, "")
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {

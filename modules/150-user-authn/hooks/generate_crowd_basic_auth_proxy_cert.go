@@ -99,7 +99,7 @@ type provider struct {
 
 func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) error {
 	// check proxy rollout conditions
-	if !input.Values.Get("userAuthn.publishAPI.enable").Bool() {
+	if !input.Values.Get("userAuthn.publishAPI.enabled").Bool() {
 		return nil
 	}
 
