@@ -49,72 +49,31 @@ const (
 	finalizer     = "routing-tables-manager.network.deckhouse.io"
 )
 
-// ============
-type workingSubstance struct {
-	k8sResources            *v1alpha1.NodeRoutingTable
-	nrtWasDeleted           bool
-	desiredRoutesToAddByNRT RouteEntryMap
-	desiredRoutesToDelByNRT RouteEntryMap
-	newReconciliationStatus NRTReconciliationStatus
-	specNeedToUpdate        bool
-}
-
-type nrtMap map[string]workingSubstance
-
-func (nrtMap *nrtMap) gatheringFacts() {
-}
-
-var (
-	actualRoutesOnNode         RouteEntryMap
-	globalDesiredRoutesForNode RouteEntryMap
-)
-
-// ============
-
 type RouteEntry struct {
 	destination string
 	gateway     string
 	table       int
 }
 
-func (re *RouteEntry) getHash() string {
-	return fmt.Sprintf("%d#%s#%s", re.table, re.destination, re.gateway)
-}
-
 type RouteEntryMap map[string]RouteEntry
-
-func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
-	if len(*rem) == 0 {
-		*rem = make(map[string]RouteEntry)
-	}
-	(*rem)[re.getHash()] = re
-}
-
-func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
-	if len(*rem) == 0 {
-		*rem = make(map[string]RouteEntry)
-	}
-	re := RouteEntry{
-		destination: route.Destination,
-		gateway:     route.Gateway,
-		table:       tbl,
-	}
-	(*rem)[re.getHash()] = re
-}
 
 type NRTReconciliationStatus struct {
 	IsSuccess    bool
 	ErrorMessage string
 }
 
-func (s *NRTReconciliationStatus) AppendError(err error) {
-	s.IsSuccess = false
-	if s.ErrorMessage == "" {
-		s.ErrorMessage = err.Error()
-	} else {
-		s.ErrorMessage = s.ErrorMessage + "\n" + err.Error()
-	}
+type nrtDeepSpec struct {
+	k8sResources            *v1alpha1.NodeRoutingTable
+	newReconciliationStatus NRTReconciliationStatus
+	desiredRoutesByNRT      RouteEntryMap
+	lastAppliedRoutesByNRT  RouteEntryMap
+	desiredRoutesToAddByNRT []RouteEntry
+	desiredRoutesToDelByNRT RouteEntryMap
+	nrtWasDeleted           bool
+	specNeedToUpdate        bool
 }
+
+type nrtMap map[string]*nrtDeepSpec
 
 // Main
 
@@ -129,25 +88,22 @@ func RunRoutesReconcilerAgentController(
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Debug(fmt.Sprintf("[NRTReconciler] Received a reconcile.Request for CR %v", request.Name))
 
-			log.Info("[NRTReconciler] starts Reconcile")
 			nrt := &v1alpha1.NodeRoutingTable{}
 			err := cl.Get(ctx, request.NamespacedName, nrt)
 			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get NodeRoutingTable, name: %s", request.Name))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to get NodeRoutingTable, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
 			if nrt.Name == "" {
-				log.Info(fmt.Sprintf("[NRTReconciler] seems like the NodeRoutingTable for the request %s was deleted. Reconcile retrying will stop.", request.Name))
+				log.Info(fmt.Sprintf("[NRTReconciler] Seems like the NodeRoutingTable for the request %s was deleted. Reconcile retrying will stop.", request.Name))
 				return reconcile.Result{}, nil
 			}
-
 			labelSelectorSet := map[string]string{nodeNameLabel: cfg.NodeName}
 			validatedSelector, _ := labels.ValidatedSelectorFromSet(labelSelectorSet)
 			if !validatedSelector.Matches(labels.Set(nrt.Labels)) {
 				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended(by label) for our node (%v)", cfg.NodeName))
 				return reconcile.Result{}, nil
 			}
-
 			if nrt.Spec.NodeName != cfg.NodeName {
 				log.Debug(fmt.Sprintf("[NRTReconciler] This request is not intended(by spec.nodeName) for our node (%v)", cfg.NodeName))
 				return reconcile.Result{}, nil
@@ -159,199 +115,20 @@ func RunRoutesReconcilerAgentController(
 					log.Debug(fmt.Sprintf("[NRTReconciler] There's nothing to do"))
 					return reconcile.Result{}, nil
 				}
-			} else {
-				log.Debug(fmt.Sprintf("[NRTReconciler] NodeRoutingTable %v needs to be reconciled", nrt.Name))
-				tmpNRT := new(v1alpha1.NodeRoutingTable)
-				*tmpNRT = *nrt
-				err := SetStatusConditionPending(ctx, cl, log, tmpNRT)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("[NRTReconciler] error"))
-				}
+			}
+			log.Debug(fmt.Sprintf("[NRTReconciler] NodeRoutingTable %v needs to be reconciled. Set status to Pending", nrt.Name))
+			tmpNRT := new(v1alpha1.NodeRoutingTable)
+			*tmpNRT = *nrt
+			err = SetStatusConditionPending(ctx, cl, log, tmpNRT)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to set status to Pending for NRT %v", nrt.Name))
 			}
 
 			// ============================= main logic start =============================
-			// Declaring variables
-			globalDesiredRouteEntryMap := make(RouteEntryMap)
-			actualRouteEntryMap := make(RouteEntryMap)
-			deletedNRTRouteEntryMaps := make(map[string]RouteEntryMap)
-			erasedNRTRouteEntryMaps := make(map[string]RouteEntryMap)
-			nrtK8sResourcesMap := make(map[string]*v1alpha1.NodeRoutingTable)
-			nrtReconciliationStatusMap := make(map[string]NRTReconciliationStatus)
-			specNeedToUpdate := make(map[string]bool)
-			shouldRequeue := false
-
-			// Getting all the NodeRoutingTable associated with our node
-			nrtList := &v1alpha1.NodeRoutingTableList{}
-			err = cl.List(ctx, nrtList, client.MatchingLabels{nodeNameLabel: cfg.NodeName})
-			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to list NodeRoutingTable for node %s", cfg.NodeName))
-				return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
-			}
-
-			// Getting all routes from our node
-			log.Debug(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
-			actualRouteEntryMap, err = getActualRouteEntryMapFromNode()
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starts of the reconciliation (initiated by the k8s-event)"))
+			shouldRequeue, err := runEventReconcile(ctx, cl, log, cfg.NodeName)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get Actual routes from node"))
-				return reconcile.Result{RequeueAfter: cfg.RequeueInterval * time.Second}, err
-			}
-			if len(actualRouteEntryMap) == 0 {
-				log.Debug(fmt.Sprintf("[NRTReconciler] There are no routes with Realm=" + strconv.Itoa(d8Realm)))
-			}
-
-			for _, nrt := range nrtList.Items {
-				// Gathering facts
-				log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
-				// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
-				tmpNrt := nrt
-				tmpNrt.Status.ObservedGeneration = nrt.Generation
-				nrtK8sResourcesMap[nrt.Name] = &tmpNrt
-				nrtReconciliationStatusMap[nrt.Name] = NRTReconciliationStatus{IsSuccess: true}
-				specNeedToUpdate[nrt.Name] = false
-
-				if nrt.DeletionTimestamp != nil {
-					log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
-					tmpREM := make(RouteEntryMap)
-					for _, route := range nrt.Spec.Routes {
-						tmpREM.AppendR(route, nrt.Spec.IPRoutingTableID)
-					}
-					deletedNRTRouteEntryMaps[nrt.Name] = tmpREM
-					continue
-				}
-
-				// Filling nrtDesiredRouteEntryMap and globalDesiredRouteEntryMap
-				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: DesiredRoute and globalDesiredRoute"))
-				nrtDesiredRouteEntryMap := make(RouteEntryMap)
-				for _, route := range nrt.Spec.Routes {
-					nrtDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
-					globalDesiredRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
-				}
-
-				// Filling nrtLastAppliedRouteEntryMap
-				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: LastAppliedRoute"))
-				nrtLastAppliedRouteEntryMap := make(RouteEntryMap)
-				if nrt.Status.AppliedRoutes != nil && len(nrt.Status.AppliedRoutes) > 0 {
-					for _, route := range nrt.Status.AppliedRoutes {
-						nrtLastAppliedRouteEntryMap.AppendR(route, nrt.Spec.IPRoutingTableID)
-					}
-				}
-
-				// Filling routesToAdd
-				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: routesToAdd"))
-				routesToAdd := make([]RouteEntry, 0)
-				for hash, desiredRoute := range nrtDesiredRouteEntryMap {
-					if _, ok := actualRouteEntryMap[hash]; !ok {
-						routesToAdd = append(routesToAdd, desiredRoute)
-					}
-				}
-
-				// Filling erasedNRTRouteEntryMaps[nrt.Name]
-				log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: erasedRoute"))
-				tmpREM := make(RouteEntryMap)
-				for hash, route := range nrtLastAppliedRouteEntryMap {
-					if _, ok := nrtDesiredRouteEntryMap[hash]; !ok {
-						tmpREM.AppendRE(route)
-					}
-				}
-				if len(tmpREM) > 0 {
-					erasedNRTRouteEntryMaps[nrt.Name] = tmpREM
-				}
-
-				// Actions: add routes
-				if len(routesToAdd) > 0 {
-					log.Debug(fmt.Sprintf("[NRTReconciler] Starting adding routes to the node"))
-					status := nrtReconciliationStatusMap[nrt.Name]
-					for _, route := range routesToAdd {
-						err := addRouteToNode(route)
-						if err == nil {
-							actualRouteEntryMap.AppendRE(route)
-						} else {
-							log.Debug(fmt.Sprintf("err: %v", err))
-							status.AppendError(err)
-						}
-					}
-					nrtReconciliationStatusMap[nrt.Name] = status
-				}
-			}
-
-			// Actions: delete routes because NRT has been deleted
-			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because NRT has been deleted)"))
-			for nrtName, rem := range deletedNRTRouteEntryMaps {
-				status := nrtReconciliationStatusMap[nrtName]
-				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
-					rem,
-					globalDesiredRouteEntryMap,
-					actualRouteEntryMap,
-					status,
-					log,
-				)
-				if nrtReconciliationStatusMap[nrtName].IsSuccess {
-					log.Debug(fmt.Sprintf("[NRTReconciler] Deleting routes was successful, removing the finalizer from the NRT %v", nrtName))
-					removeFinalizer(nrtK8sResourcesMap[nrtName])
-					specNeedToUpdate[nrt.Name] = true
-				}
-			}
-
-			// Actions: delete routes because they were deleted from NRT
-			log.Debug(fmt.Sprintf("[NRTReconciler] Starting deleting routes from the node (because they were deleted from NRT)"))
-			for nrtName, rem := range erasedNRTRouteEntryMaps {
-				status := nrtReconciliationStatusMap[nrtName]
-				nrtReconciliationStatusMap[nrtName] = deleteRouteEntriesFromNode(
-					rem,
-					globalDesiredRouteEntryMap,
-					actualRouteEntryMap,
-					status,
-					log,
-				)
-			}
-
-			// Generate new condition for each processed nrt
-			log.Debug(fmt.Sprintf("[NRTReconciler] Starting generate new conditions"))
-			for nrtName, nrtReconciliationStatus := range nrtReconciliationStatusMap {
-				newCond := v1alpha1.NodeRoutingTableCondition{}
-				t := metav1.NewTime(time.Now())
-
-				if nrtK8sResourcesMap[nrtName].Status.Conditions == nil {
-					nrtK8sResourcesMap[nrtName].Status.Conditions = make([]v1alpha1.NodeRoutingTableCondition, 0)
-				}
-
-				if nrtReconciliationStatus.IsSuccess {
-					nrtK8sResourcesMap[nrtName].Status.AppliedRoutes = nrtK8sResourcesMap[nrtName].Spec.Routes
-
-					newCond.Type = v1alpha1.ReconciliationSucceedType
-					newCond.LastHeartbeatTime = t
-					newCond.Status = metav1.ConditionTrue
-					newCond.Reason = v1alpha1.ReconciliationReasonSucceed
-					newCond.Message = ""
-				} else {
-					newCond.Type = v1alpha1.ReconciliationSucceedType
-					newCond.LastHeartbeatTime = t
-					newCond.Status = metav1.ConditionFalse
-					newCond.Reason = v1alpha1.ReconciliationReasonFailed
-					newCond.Message = nrtReconciliationStatus.ErrorMessage
-
-					shouldRequeue = true
-				}
-				_ = SetStatusCondition(&nrtK8sResourcesMap[nrtName].Status.Conditions, newCond)
-			}
-
-			// Update state in k8s
-			log.Debug(fmt.Sprintf("[NRTReconciler] Starting updating resourses in k8s"))
-			for _, nrt := range nrtK8sResourcesMap {
-				if specNeedToUpdate[nrt.Name] && nrt.DeletionTimestamp != nil {
-					// Update spec if we need to remove the finalizer
-					log.Debug(fmt.Sprintf("Update of NRT: %v", nrt.Name))
-					err = cl.Update(ctx, nrt)
-					if err != nil {
-						log.Error(err, fmt.Sprintf("unable to update CR NodeRoutingTable %v, err: %v", nrt.Name, err))
-					}
-				}
-				// Update status every time
-				log.Debug(fmt.Sprintf("Update status of NRT: %v", nrt.Name))
-				err = cl.Status().Update(ctx, nrt)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrt.Name, err))
-				}
+				log.Error(err, fmt.Sprintf("[NRTReconciler] An error occurred while route reconcile"))
 			}
 
 			if shouldRequeue {
@@ -360,10 +137,9 @@ func RunRoutesReconcilerAgentController(
 					RequeueAfter: cfg.RequeueInterval * time.Second,
 				}, nil
 			}
-
 			// ============================= main logic end =============================
 
-			log.Info("[NRTReconciler] ends Reconcile")
+			log.Debug(fmt.Sprintf("[NRTReconciler] Ends of the reconciliation (initiated by the k8s-event)"))
 			return reconcile.Result{}, nil
 		}),
 	})
@@ -378,8 +154,101 @@ func RunRoutesReconcilerAgentController(
 		return nil, err
 	}
 
+	// trigger reconcile every 30 sec
+	ctx := context.Background()
+	go periodicalRunEventReconcile(ctx, cl, log, cfg.NodeName)
+
 	return c, nil
 }
+
+func runEventReconcile(
+	ctx context.Context,
+	cl client.Client,
+	log logger.Logger,
+	nodeName string) (bool, error) {
+	// Declaring variables
+	var err error
+	globalDesiredRoutesForNode := make(RouteEntryMap)
+	actualRoutesOnNode := make(RouteEntryMap)
+	nrtMap := nrtMapInit()
+
+	// Getting all the NodeRoutingTable associated with our node
+	nrtList := &v1alpha1.NodeRoutingTableList{}
+	err = cl.List(ctx, nrtList, client.MatchingLabels{nodeNameLabel: nodeName})
+	if err != nil && !errors2.IsNotFound(err) {
+		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to list NodeRoutingTable for node %s", nodeName))
+		return true, err
+	}
+
+	// Getting all routes from our node
+	log.Debug(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
+	actualRoutesOnNode, err = getActualRouteEntryMapFromNode()
+	if err != nil {
+		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get Actual routes from node"))
+		return true, err
+	}
+	if len(actualRoutesOnNode) == 0 {
+		log.Debug(fmt.Sprintf("[NRTReconciler] There are no routes with Realm=" + strconv.Itoa(d8Realm)))
+	}
+
+	for _, nrt := range nrtList.Items {
+		nrtDeepSpec := nrtDeepSpecInit()
+		// Gathering facts
+		log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
+		if nrtDeepSpec.gatheringFacts(nrt, &globalDesiredRoutesForNode, &actualRoutesOnNode, log) {
+			(*nrtMap)[nrt.Name] = nrtDeepSpec
+			continue
+		}
+
+		// Actions: add routes
+		if len(nrtDeepSpec.desiredRoutesToAddByNRT) > 0 {
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starting adding routes to the node"))
+			nrtDeepSpec.addRoutes(&actualRoutesOnNode, log)
+		}
+
+		(*nrtMap)[nrt.Name] = nrtDeepSpec
+	}
+
+	// Actions: delete routes and finalizers
+	nrtMap.deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode, log)
+
+	// Generate new condition for each processed nrt
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting generate new conditions"))
+	shouldRequeue := nrtMap.generateNewCondition()
+
+	// Update state in k8s for each processed nrt
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting updating resourses in k8s"))
+	nrtMap.updateStateInK8S(ctx, cl, log)
+
+	return shouldRequeue, nil
+}
+
+func periodicalRunEventReconcile(
+	ctx context.Context,
+	cl client.Client,
+	log logger.Logger,
+	nodeName string,
+) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			log.Debug(fmt.Sprintf("[NRTReconciler] Starts a periodic reconciliation (initiated by a timer)"))
+			_, err := runEventReconcile(ctx, cl, log, nodeName)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("[NRTReconciler] an error occurred while route reconcile"))
+			}
+			log.Debug(fmt.Sprintf("[NRTReconciler] Ends a periodic reconciliation (initiated by a timer)"))
+		case <-ctx.Done():
+			log.Debug(fmt.Sprintf("[NRTReconciler] Completion of periodic reconciliations"))
+			return
+		}
+	}
+}
+
+// service functions
 
 func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
@@ -543,12 +412,7 @@ func FindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, condit
 	return nil
 }
 
-func SetStatusConditionPending(
-	ctx context.Context,
-	cl client.Client,
-	log logger.Logger,
-	nrt *v1alpha1.NodeRoutingTable,
-) error {
+func SetStatusConditionPending(ctx context.Context, cl client.Client, log logger.Logger, nrt *v1alpha1.NodeRoutingTable) error {
 	t := metav1.NewTime(time.Now())
 	nrt.Status.ObservedGeneration = nrt.Generation
 
@@ -567,4 +431,208 @@ func SetStatusConditionPending(
 		return err
 	}
 	return nil
+}
+
+func nrtDeepSpecInit() *nrtDeepSpec {
+	return &nrtDeepSpec{
+		k8sResources:            new(v1alpha1.NodeRoutingTable),
+		newReconciliationStatus: NRTReconciliationStatus{},
+		desiredRoutesByNRT:      RouteEntryMap{},
+		lastAppliedRoutesByNRT:  RouteEntryMap{},
+		desiredRoutesToAddByNRT: make([]RouteEntry, 0),
+		desiredRoutesToDelByNRT: RouteEntryMap{},
+		nrtWasDeleted:           false,
+		specNeedToUpdate:        false,
+	}
+}
+
+func nrtMapInit() *nrtMap {
+	newNRTMap := new(nrtMap)
+	*newNRTMap = make(map[string]*nrtDeepSpec)
+	return newNRTMap
+}
+
+func (re *RouteEntry) getHash() string {
+	return fmt.Sprintf("%d#%s#%s", re.table, re.destination, re.gateway)
+}
+
+func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
+	if len(*rem) == 0 {
+		*rem = make(map[string]RouteEntry)
+	}
+	(*rem)[re.getHash()] = re
+}
+
+func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
+	if len(*rem) == 0 {
+		*rem = make(map[string]RouteEntry)
+	}
+	re := RouteEntry{
+		destination: route.Destination,
+		gateway:     route.Gateway,
+		table:       tbl,
+	}
+	(*rem)[re.getHash()] = re
+}
+
+func (s *NRTReconciliationStatus) AppendError(err error) {
+	s.IsSuccess = false
+	if s.ErrorMessage == "" {
+		s.ErrorMessage = err.Error()
+	} else {
+		s.ErrorMessage = s.ErrorMessage + "\n" + err.Error()
+	}
+}
+
+func (nds *nrtDeepSpec) gatheringFacts(nrt v1alpha1.NodeRoutingTable, globalDesiredRoutesForNode, actualRoutesOnNode *RouteEntryMap, log logger.Logger) bool {
+	// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
+	tmpNrt := nrt
+	tmpNrt.Status.ObservedGeneration = nrt.Generation
+	nds.k8sResources = &tmpNrt
+	nds.newReconciliationStatus = NRTReconciliationStatus{IsSuccess: true}
+	nds.specNeedToUpdate = false
+
+	// If NRT was deleted filling map desiredRoutesToDelByNRT and set flag nrtWasDeleted
+	if nrt.DeletionTimestamp != nil {
+		log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
+		log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling map routesToDel, and set flag nrtWasDeleted "))
+		tmpREM := make(RouteEntryMap)
+		for _, route := range nrt.Spec.Routes {
+			tmpREM.AppendR(route, nrt.Spec.IPRoutingTableID)
+		}
+		nds.desiredRoutesToDelByNRT = tmpREM
+		nds.nrtWasDeleted = true
+		return true
+	}
+
+	// Filling desiredRoutesByNRT and globalDesiredRoutesForNode
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling maps: desiredRoutes and globalDesiredRoutes"))
+	for _, route := range nrt.Spec.Routes {
+		nds.desiredRoutesByNRT.AppendR(route, nrt.Spec.IPRoutingTableID)
+		globalDesiredRoutesForNode.AppendR(route, nrt.Spec.IPRoutingTableID)
+	}
+
+	// Filling lastAppliedRoutesByNRT
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling map lastAppliedRoutes"))
+	if nrt.Status.AppliedRoutes != nil && len(nrt.Status.AppliedRoutes) > 0 {
+		for _, route := range nrt.Status.AppliedRoutes {
+			nds.lastAppliedRoutesByNRT.AppendR(route, nrt.Spec.IPRoutingTableID)
+		}
+	}
+
+	// Filling desiredRoutesToAddByNRT
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling map routesToAdd"))
+	for hash, desiredRoute := range nds.desiredRoutesByNRT {
+		if _, ok := (*actualRoutesOnNode)[hash]; !ok {
+			nds.desiredRoutesToAddByNRT = append(nds.desiredRoutesToAddByNRT, desiredRoute)
+		}
+	}
+
+	// Filling desiredRoutesToDelByNRT
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling map routesToDel"))
+	tmpREM := make(RouteEntryMap)
+	for hash, route := range nds.lastAppliedRoutesByNRT {
+		if _, ok := nds.desiredRoutesByNRT[hash]; !ok {
+			tmpREM.AppendRE(route)
+		}
+	}
+	if len(tmpREM) > 0 {
+		nds.desiredRoutesToDelByNRT = tmpREM
+	}
+
+	return false
+}
+
+func (nds *nrtDeepSpec) addRoutes(actualRoutesOnNode *RouteEntryMap, log logger.Logger) {
+	status := nds.newReconciliationStatus
+	for _, route := range nds.desiredRoutesToAddByNRT {
+		log.Debug(fmt.Sprintf("Route %v should be added", route))
+		if _, ok := (*actualRoutesOnNode)[route.getHash()]; ok {
+			log.Debug(fmt.Sprintf("but it is already present on Node"))
+			continue
+		}
+		err := addRouteToNode(route)
+		if err == nil {
+			actualRoutesOnNode.AppendRE(route)
+		} else {
+			log.Debug(fmt.Sprintf("err: %v", err))
+			status.AppendError(err)
+		}
+	}
+	nds.newReconciliationStatus = status
+}
+
+func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode RouteEntryMap, log logger.Logger) {
+	for nrtName, nds := range *nm {
+		if len(nds.desiredRoutesToDelByNRT) == 0 && !nds.nrtWasDeleted {
+			log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v has no entries in desiredRoutesToDelByNRT and DeletionTimestamp is not set", nrtName))
+			continue
+		}
+		log.Debug(fmt.Sprintf("[NRTReconciler] Starting to delete routes deleted from NRT %v from node", nrtName))
+		status := nds.newReconciliationStatus
+		nds.newReconciliationStatus = deleteRouteEntriesFromNode(
+			nds.desiredRoutesToDelByNRT,
+			globalDesiredRoutesForNode,
+			actualRoutesOnNode,
+			status,
+			log,
+		)
+		if nds.nrtWasDeleted && nds.newReconciliationStatus.IsSuccess {
+			log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v has been deleted and its routes has been successfully deleted too. Clearing the finalizer in NRT", nrtName))
+			removeFinalizer(nds.k8sResources)
+			nds.specNeedToUpdate = true
+		}
+	}
+}
+
+func (nm *nrtMap) generateNewCondition() bool {
+	shouldRequeue := false
+	for _, nds := range *nm {
+		newCond := v1alpha1.NodeRoutingTableCondition{}
+		t := metav1.NewTime(time.Now())
+
+		if nds.k8sResources.Status.Conditions == nil {
+			nds.k8sResources.Status.Conditions = make([]v1alpha1.NodeRoutingTableCondition, 0)
+		}
+
+		if nds.newReconciliationStatus.IsSuccess {
+			nds.k8sResources.Status.AppliedRoutes = nds.k8sResources.Spec.Routes
+
+			newCond.Type = v1alpha1.ReconciliationSucceedType
+			newCond.LastHeartbeatTime = t
+			newCond.Status = metav1.ConditionTrue
+			newCond.Reason = v1alpha1.ReconciliationReasonSucceed
+			newCond.Message = ""
+		} else {
+			newCond.Type = v1alpha1.ReconciliationSucceedType
+			newCond.LastHeartbeatTime = t
+			newCond.Status = metav1.ConditionFalse
+			newCond.Reason = v1alpha1.ReconciliationReasonFailed
+			newCond.Message = nds.newReconciliationStatus.ErrorMessage
+
+			shouldRequeue = true
+		}
+		_ = SetStatusCondition(&nds.k8sResources.Status.Conditions, newCond)
+	}
+	return shouldRequeue
+}
+
+func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log logger.Logger) {
+	var err error
+	for nrtName, nds := range *nm {
+		if nds.specNeedToUpdate && nds.k8sResources.DeletionTimestamp != nil {
+			// Update spec if we need to remove the finalizer
+			log.Debug(fmt.Sprintf("Update of NRT: %v", nrtName))
+			err = cl.Update(ctx, nds.k8sResources)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("unable to update CR NodeRoutingTable %v, err: %v", nrtName, err))
+			}
+		}
+		// Update status every time
+		log.Debug(fmt.Sprintf("Update status of NRT: %v", nrtName))
+		err = cl.Status().Update(ctx, nds.k8sResources)
+		if err != nil {
+			log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrtName, err))
+		}
+	}
 }
