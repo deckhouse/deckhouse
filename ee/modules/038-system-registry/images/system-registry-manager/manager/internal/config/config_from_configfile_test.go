@@ -29,12 +29,14 @@ leaderElection:
   retryPeriodSeconds: 8
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
-distribution:
-  image: distribution_image
-auth:
-  image: auth_image
-seaweedfs:
-  image: seaweedfs_image
+registry:
+  address: registry.example.com
+  path: /path
+images:
+  systemRegistry:
+    dockerDistribution: distribution_image
+    dockerAuth: auth_image
+    seaweedfs: seaweedfs_image
 `)
 	assert.NoError(t, err)
 	tmpFile.Close()
@@ -73,20 +75,29 @@ seaweedfs:
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
-		Distribution: struct {
-			Image string `mapstructure:"image"`
+		Registry: struct {
+			Address string `mapstructure:"address" yaml:"address"`
+			Path    string `mapstructure:"path" yaml:"path"`
 		}{
-			Image: "distribution_image",
+			Address: "registry.example.com",
+			Path:    "/path",
 		},
-		Auth: struct {
-			Image string `mapstructure:"image"`
+		Images: struct {
+			SystemRegistry struct {
+				DockerDistribution string `mapstructure:"dockerDistribution"`
+				DockerAuth         string `mapstructure:"dockerAuth"`
+				Seaweedfs          string `mapstructure:"seaweedfs"`
+			} `mapstructure:"systemRegistry"`
 		}{
-			Image: "auth_image",
-		},
-		Seaweedfs: struct {
-			Image string `mapstructure:"image"`
-		}{
-			Image: "seaweedfs_image",
+			SystemRegistry: struct {
+				DockerDistribution string `mapstructure:"dockerDistribution"`
+				DockerAuth         string `mapstructure:"dockerAuth"`
+				Seaweedfs          string `mapstructure:"seaweedfs"`
+			}{
+				DockerDistribution: "distribution_image",
+				DockerAuth:         "auth_image",
+				Seaweedfs:          "seaweedfs_image",
+			},
 		},
 	}
 	cfg, err := NewFileConfig()
@@ -118,12 +129,14 @@ leaderElection:
   retryPeriodSeconds: 8
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
-distribution:
-  image: distribution_image
-auth:
-  image: auth_image
-seaweedfs:
-  image: seaweedfs_image
+registry:
+  address: registry.example.com
+  path: /path
+images:
+  systemRegistry:
+    dockerDistribution: distribution_image
+    dockerAuth: auth_image
+    seaweedfs: seaweedfs_image
 `)
 	assert.NoError(t, err)
 	tmpFile.Close()
@@ -150,20 +163,29 @@ seaweedfs:
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
-		Distribution: struct {
-			Image string `mapstructure:"image"`
+		Registry: struct {
+			Address string `mapstructure:"address" yaml:"address"`
+			Path    string `mapstructure:"path" yaml:"path"`
 		}{
-			Image: "distribution_image",
+			Address: "registry.example.com",
+			Path:    "/path",
 		},
-		Auth: struct {
-			Image string `mapstructure:"image"`
+		Images: struct {
+			SystemRegistry struct {
+				DockerDistribution string `mapstructure:"dockerDistribution"`
+				DockerAuth         string `mapstructure:"dockerAuth"`
+				Seaweedfs          string `mapstructure:"seaweedfs"`
+			} `mapstructure:"systemRegistry"`
 		}{
-			Image: "auth_image",
-		},
-		Seaweedfs: struct {
-			Image string `mapstructure:"image"`
-		}{
-			Image: "seaweedfs_image",
+			SystemRegistry: struct {
+				DockerDistribution string `mapstructure:"dockerDistribution"`
+				DockerAuth         string `mapstructure:"dockerAuth"`
+				Seaweedfs          string `mapstructure:"seaweedfs"`
+			}{
+				DockerDistribution: "distribution_image",
+				DockerAuth:         "auth_image",
+				Seaweedfs:          "seaweedfs_image",
+			},
 		},
 	}
 	cfg, err := NewFileConfig()
