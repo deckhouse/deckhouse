@@ -466,9 +466,8 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 			moduleName := m.GetBasicModule().GetName()
 			src := dml.sourceModules[moduleName]
 			if src != "" {
-				fmt.Println("MPATH", m.GetBasicModule().GetPath())
+				// if module is not from external path - take it as Embedded one
 				if !strings.HasPrefix(m.GetBasicModule().GetPath(), os.Getenv("EXTERNAL_MODULES_DIR")) {
-					fmt.Println("MPATH2")
 					src = ""
 				}
 			}
