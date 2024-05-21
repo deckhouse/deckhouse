@@ -564,7 +564,7 @@ mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 For correct multi-master recovery:
 
 
-1. Explicitly set the High Availability mode by specifying the appropriate [parameter](#https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) in the `ModuleConfig/global` resource. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Explicitly set the High Availability mode by specifying the appropriate [parameter](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) in the `ModuleConfig/global` resource. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
 
 2. Switch the cluster to single-master mode according to [instructions](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
 

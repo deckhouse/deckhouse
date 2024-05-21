@@ -556,7 +556,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления multi-master:
 
-1. Явно задайте режим High Availability, указав соответсвующий [параметр](#https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) в ресурсе `ModuleConfig/global`. Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
+1. Явно задайте режим High Availability, указав соответсвующий [параметр](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) в ресурсе `ModuleConfig/global`. Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
 
 2. Переведите кластер в single-master режим в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
