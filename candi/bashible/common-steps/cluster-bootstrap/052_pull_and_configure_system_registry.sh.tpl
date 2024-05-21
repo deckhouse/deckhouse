@@ -33,7 +33,7 @@ mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 # Read previously discovered IP address of the node
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
-bb-sync-file /etc/kubernetes/system-registry/auth_config/auth_config.yaml - << EOF
+bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
 server:
   addr: "${discovered_node_ip}:5051"
   #addr: "0.0.0.0:5051"
@@ -182,7 +182,7 @@ spec:
     imagePullPolicy: IfNotPresent
     args:
       - -logtostderr
-      - /config/auth_config.yaml
+      - /config/config.yaml
     volumeMounts:
       - mountPath: /config/
         name: auth-config-volume
