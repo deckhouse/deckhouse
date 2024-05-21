@@ -23,8 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/pkg/errors"
@@ -43,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 var golden bool
@@ -156,11 +155,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("With stale registry error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil) // baz module was removed
-		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
-			return &crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+		dependency.TestDC.CRClient.ImageMock.Return(
+			&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-			}}, nil
-		})
+			}}, nil,
+		)
 
 		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))
 		ms := suite.getModuleSource(suite.testMSName)
