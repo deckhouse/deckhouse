@@ -25,8 +25,8 @@ import (
 	"time"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/google/uuid"
@@ -76,14 +76,16 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptors.Logger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryParallelTasksLimiter(sem, log),
+			interceptors.UnaryLogger(log),
+			logging.UnaryServerInterceptor(interceptors.Logger()),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.UnaryParallelTasksLimiter(sem),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptors.Logger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamParallelTasksLimiter(sem, log),
+			interceptors.StreamLogger(log),
+			logging.StreamServerInterceptor(interceptors.Logger()),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.StreamParallelTasksLimiter(sem),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.new())),
 	)
@@ -139,8 +141,6 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			return outCtx, nil, err
 		}
 
-		d.log.Info("starting new dhctl instance", "addr", address)
-
 		cmd := exec.Command(
 			os.Args[0],
 			"_server",
@@ -148,6 +148,7 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
+		// todo: handle logs from parallel server instances
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -155,6 +156,14 @@ func (d *streamDirector) new() proxy.StreamDirector {
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
+
+		logger.L(ctx).Info("started new dhctl instance", slog.String("addr", address))
+
+		go func() {
+			exitErr := cmd.Wait()
+			logger.L(ctx).
+				Info("stopped dhctl instance", slog.String("addr", address), logger.Err(exitErr))
+		}()
 
 		conn, err := grpc.NewClient(
 			"unix://"+address,
