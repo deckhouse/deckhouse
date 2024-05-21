@@ -8,14 +8,14 @@ kind: ServiceAccount
 metadata:
   name: {{ .Chart.Name }}
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: system-registry-manager
+  name: {{ .Chart.Name }}
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -27,23 +27,23 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: system-registry-manager
+  name: {{ .Chart.Name }}
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: system-registry-manager
+  name: {{ .Chart.Name }}
   namespace: d8-system
 roleRef:
   kind: Role
-  name: system-registry-manager
+  name: {{ .Chart.Name }}
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: system-registry-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  name: {{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -52,15 +52,15 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: system-registry-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  name: {{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: system-registry-manager
+    name: {{ .Chart.Name }}
     namespace: d8-system
 roleRef:
   kind: ClusterRole
-  name: system-registry-manager
+  name: {{ .Chart.Name }}
   apiGroup: rbac.authorization.k8s.io
 
 ##### For specific env
