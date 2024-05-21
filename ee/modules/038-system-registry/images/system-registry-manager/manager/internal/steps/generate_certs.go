@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"system-registry-manager/internal/config"
-	"system-registry-manager/pkg/certificate"
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 	pkg_files "system-registry-manager/pkg/files"
 
 	log "github.com/sirupsen/logrus"
