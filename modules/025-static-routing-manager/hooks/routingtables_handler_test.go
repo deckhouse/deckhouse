@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -279,7 +280,7 @@ status:
 
 	Context("Checking the creation operation of a CR NodeRoutingTable", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1YAML + node2YAML + rt1YAML + rt2YAML))
+			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + rt2YAML + rt3YAML + rt4YAML + rt5YAML + node1YAML + node2YAML))
 			f.RunHook()
 		})
 
@@ -326,20 +327,60 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-		})
-	})
-
-	Context("Checking the creation operation of a CR NodeRoutingTable from CR RoutingTable without ipRoutingTableID in status", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt3YAML))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			nrt31Name := "testrt3" + "-" + generateShortHash("testrt3"+"#"+"kube-worker-1")
-			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
-			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt31Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".5.name").String()).To(Equal(nrt31Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".5.nodeName").String()).To(Equal("kube-worker-1"))
+			Expect(f.ValuesGet(nrtKeyPath + ".5.ownerRTName").String()).To(Equal("testrt3"))
+			Expect(f.ValuesGet(nrtKeyPath + ".5.ipRoutingTableID").String()).To(Equal("300"))
+			Expect(f.ValuesGet(nrtKeyPath + ".5.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
+			nrt32Name := "testrt3" + "-" + generateShortHash("testrt3"+"#"+"kube-worker-2")
+			Expect(f.ValuesGet(nrtKeyPath + ".4.name").String()).To(Equal(nrt32Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".4.nodeName").String()).To(Equal("kube-worker-2"))
+			Expect(f.ValuesGet(nrtKeyPath + ".4.ownerRTName").String()).To(Equal("testrt3"))
+			Expect(f.ValuesGet(nrtKeyPath + ".4.ipRoutingTableID").String()).To(Equal("300"))
+			Expect(f.ValuesGet(nrtKeyPath + ".4.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
+			nrt41Name := "testrt4" + "-" + generateShortHash("testrt4"+"#"+"kube-worker-1")
+			Expect(f.ValuesGet(nrtKeyPath + ".6.name").String()).To(Equal(nrt41Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".6.nodeName").String()).To(Equal("kube-worker-1"))
+			Expect(f.ValuesGet(nrtKeyPath + ".6.ownerRTName").String()).To(Equal("testrt4"))
+			Expect(f.ValuesGet(nrtKeyPath + ".6.ipRoutingTableID").String()).To(Equal("10000"))
+			Expect(f.ValuesGet(nrtKeyPath + ".6.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
+			nrt42Name := "testrt4" + "-" + generateShortHash("testrt4"+"#"+"kube-worker-2")
+			Expect(f.ValuesGet(nrtKeyPath + ".7.name").String()).To(Equal(nrt42Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".7.nodeName").String()).To(Equal("kube-worker-2"))
+			Expect(f.ValuesGet(nrtKeyPath + ".7.ownerRTName").String()).To(Equal("testrt4"))
+			Expect(f.ValuesGet(nrtKeyPath + ".7.ipRoutingTableID").String()).To(Equal("10000"))
+			Expect(f.ValuesGet(nrtKeyPath + ".7.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
+			nrt51Name := "testrt5" + "-" + generateShortHash("testrt5"+"#"+"kube-worker-1")
+			Expect(f.ValuesGet(nrtKeyPath + ".9.name").String()).To(Equal(nrt51Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".9.nodeName").String()).To(Equal("kube-worker-1"))
+			Expect(f.ValuesGet(nrtKeyPath + ".9.ownerRTName").String()).To(Equal("testrt5"))
+			Expect(f.ValuesGet(nrtKeyPath + ".9.ipRoutingTableID").String()).To(Equal("300"))
+			Expect(f.ValuesGet(nrtKeyPath + ".9.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
+			nrt52Name := "testrt5" + "-" + generateShortHash("testrt5"+"#"+"kube-worker-2")
+			Expect(f.ValuesGet(nrtKeyPath + ".8.name").String()).To(Equal(nrt52Name))
+			Expect(f.ValuesGet(nrtKeyPath + ".8.nodeName").String()).To(Equal("kube-worker-2"))
+			Expect(f.ValuesGet(nrtKeyPath + ".8.ownerRTName").String()).To(Equal("testrt5"))
+			Expect(f.ValuesGet(nrtKeyPath + ".8.ipRoutingTableID").String()).To(Equal("300"))
+			Expect(f.ValuesGet(nrtKeyPath + ".8.routes").String()).To(MatchYAML(`
+- destination: 0.0.0.0/0
+  gateway: 2.2.2.1
+`))
 		})
 	})
 

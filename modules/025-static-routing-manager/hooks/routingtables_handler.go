@@ -285,8 +285,10 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 				}
 
 				// Filling affectedNodes
+				// the IPRoutingTableID is filled with the desired or generated value
+				rti.Status.IPRoutingTableID = tmpDRTS.IPRoutingTableID
 				if rti.Status.IPRoutingTableID != 0 {
-					// if 0 - status.ipRouteTableID isn't set yet
+					// if 0, it means that the value has not been set yet, and the generation of a new one failed
 					affectedNodes[nodei.Name] = append(affectedNodes[nodei.Name], rti)
 				}
 			}
