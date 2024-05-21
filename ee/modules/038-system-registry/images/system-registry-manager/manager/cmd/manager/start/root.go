@@ -6,8 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package start
 
 import (
+	// log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"system-registry-manager/cmd/manager/common"
+	// "system-registry-manager/internal/config"
+	// "system-registry-manager/internal/manager"
 )
 
 var (
@@ -28,6 +31,10 @@ func NewStartCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			common.SetDefaultFlagsVars(&defaultFlagVars)
 			Start()
+			// if err := config.InitConfig(); err != nil {
+			// 	log.Fatalf("Error initializing config: %v", err)
+			// }
+			// manager.StartManager()
 			return nil
 		},
 	}

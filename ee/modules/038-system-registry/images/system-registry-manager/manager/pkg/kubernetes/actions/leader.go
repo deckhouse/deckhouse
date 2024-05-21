@@ -8,17 +8,22 @@ package actions
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	// "k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/record"
 	"os"
 	"system-registry-manager/internal/config"
 	"time"
 )
 
+const componentName = "system-registry-manager"
+
 func StartLeaderElection(
 	ctx context.Context,
-	// recorder record.EventRecorder,
+	recorder record.EventRecorder,
 	callbacks leaderelection.LeaderCallbacks,
 ) error {
 
@@ -29,8 +34,8 @@ func StartLeaderElection(
 
 	cfg := config.GetConfig()
 
-	lockName := "system-registry-manager"
-	identity := "system-registry-manager-" + hostname
+	lockName := componentName
+	identity := componentName + "-" + hostname
 	namespace := cfg.LeaderElection.Namespace
 
 	rl, err := resourcelock.New(
@@ -40,8 +45,8 @@ func StartLeaderElection(
 		cfg.K8sClient.CoreV1(),
 		cfg.K8sClient.CoordinationV1(),
 		resourcelock.ResourceLockConfig{
-			Identity: identity,
-			// EventRecorder: recorder,
+			Identity:      identity,
+			EventRecorder: recorder,
 		},
 	)
 	if err != nil {
@@ -62,4 +67,10 @@ func StartLeaderElection(
 
 	le.Run(ctx)
 	return nil
+}
+
+func NewLeaderElectionRecorder(logEntry *log.Entry) record.EventRecorder {
+	broadcaster := record.NewBroadcaster()
+	broadcaster.StartLogging(logEntry.Infof)
+	return broadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: componentName})
 }
