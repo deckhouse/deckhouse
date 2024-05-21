@@ -1251,28 +1251,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/380-metallb/configuration.html
-        - title: l2-load-balancer
-          d8Revision: ee
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/381-l2-load-balancer/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/381-l2-load-balancer/configuration.html
-                - title: Custom Resources
-                  url: /modules/381-l2-load-balancer/cr.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/381-l2-load-balancer/examples.html
         - title: network-gateway
           d8Revision: ee
           folders:
