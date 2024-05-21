@@ -513,42 +513,47 @@ The following steps will be described to restore to the previous state of the cl
 
 #### Steps to restore a single-master cluster
 
-1. If necessary, copy the access keys and certificates of the etcd server to the directory `/etc/kubernetes'.
-2. Download the [etcdctl] utility(https://github.com/etcd-io/etcd/releases ) to the server (preferably its version is the same as the etcd version in the cluster).
+1. Download the [etcdctl] utility(https://github.com/etcd-io/etcd/releases ) to the server (preferably its version is the same as the etcd version in the cluster).
 
 ```shell
 wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
 tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
 ```
 
-3. Stop the etcd.
+View the etcd version in the cluster:
+
+```shell
+kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+```
+
+2. Stop the etcd.
 
 ```shell
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 ```
 
-4. Save the current etcd data.
+3. Save the current etcd data.
 
 ```shell
 cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
 ```
 
-5. Clear the etcd directory.
+4. Clear the etcd directory.
 
 ```shell
 rm -rf /var/lib/etcd/member/
 ```
 
-6. Transfer and rename the backup to `~/etcd-backup.snapshot'.
+5. Transfer and rename the backup to `~/etcd-backup.snapshot'.
 
-7. Restore the etcd database.
+6. Restore the etcd database.
 
 ```shell
 ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
 --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
 ```
 
-8. Launch etcd.
+7. Launch etcd.
 
 ```shell
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
@@ -558,25 +563,28 @@ mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 For correct multi-master recovery:
 
-1. Switch the cluster to single-master mode according to [instructions](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
 
-2. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions] (#steps-to-restore-single-master-cluster) for single-master.
+1. Explicitly set the High Availability mode by specifying the appropriate [parameter](#https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) in the `ModuleConfig/global` resource. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
 
-3. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+2. Switch the cluster to single-master mode according to [instructions](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
+
+3. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions] (#steps-to-restore-single-master-cluster) for single-master.
+
+4. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
 
    ```shell
    kubectl delete node MASTER_NODE_I
    ```
 
-4. Restart all nodes of the cluster.
+5. Restart all nodes of the cluster.
 
-5. Wait for the deckhouse queue to complete:
+6. Wait for the deckhouse queue to complete:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
    ```
 
-4. Switch the cluster back to multi-master mode according to [instructions](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-in-multi-master) for cloud clusters or [instructions](#how-to-add-a-master-node-in-a-static-or-hybrid-cluster) for static or hybrid clusters.
+7. Switch the cluster back to multi-master mode according to [instructions](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-in-multi-master) for cloud clusters or [instructions](#how-to-add-a-master-node-in-a-static-or-hybrid-cluster) for static or hybrid clusters.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
