@@ -8,7 +8,7 @@
  - Okagent will update from the Deckhouse Observability platform source and will start sending metrics to DOP for FE installations.
  - The method for configuring network interfaces and routes has changed in OpenStack instances.
  - You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
- - The experimental l2-load-balancer module is not available anymore. A renewed one is coming soon.
+ - The experimental `l2-load-balancer` module is not available anymore. A renewed one is coming soon.
 
 ## Features
 
