@@ -1,52 +1,9 @@
----
-artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
-shell:
-  beforeInstall:
-    - mkdir -m 1777 /tmp-tmp
-  install:
-    - cd /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - export GOOS=linux
-    - export GOARCH=amd64
-    - export CGO_ENABLED=0
-    - go build -ldflags="-s -w" -o /manager ./cmd/manager
-git:
-  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/manager
-    to: /src
-    includePaths:
-      - '**/*.go'
-      - '**/*.mod'
-      - '**/*.sum'
-    stageDependencies:
-      install:
-        - '**/*.go'
-        - '**/*.mod'
-        - '**/*.sum'
-  - add: /{{ .ModulePath }}go_lib/system-registry-manager
-    to: /go_lib/system-registry-manager
-    includePaths:
-      - '**/*.go'
-      - '**/*.mod'
-      - '**/*.sum'
-    stageDependencies:
-      install:
-        - '**/*.go'
-        - '**/*.mod'
-        - '**/*.sum'
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-
+{{ $managerTemplatesRelPath := printf "%s/modules/038-%s/images/%s/templates" $.ModulePath $.ModuleName $.ImageName }}
+{{ $managerRelPath := printf "%s/modules/038-%s/images/%s/manager" $.ModulePath $.ModuleName $.ImageName }}
+{{ $managerAbsPath := "/deckhouse/ee/modules/038-%s/images/%s/manager" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
-git:
-  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/templates
-    to: /templates
-    stageDependencies:
-      install:
-        - '**/*'
 import:
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
@@ -56,5 +13,54 @@ import:
     add: "/manager"
     to: /manager
     before: setup
+git:
+  - add: /{{ $managerTemplatesRelPath }}
+    to: /templates
+    stageDependencies:
+      install:
+        - '**/*'
 docker:
   ENTRYPOINT: ["/manager"]
+---
+artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+shell:
+  beforeInstall:
+    - mkdir -m 1777 /tmp-tmp
+  install:
+    - cd {{ $managerAbsPath }}
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd {{ $managerAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/manager
+    - chown 64535:64535 /manager
+    - chmod 0755 /manager
+git:
+  - add: /{{ $managerRelPath }}
+    to:  {{ $managerAbsPath }}
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.mod'
+        - '**/*.sum'
+      setup:
+        - "**/*.go"
+  - add: /go_lib/system-registry-manager
+    to: /deckhouse/go_lib/system-registry-manager
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.mod'
+        - '**/*.sum'
+      setup:
+        - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
