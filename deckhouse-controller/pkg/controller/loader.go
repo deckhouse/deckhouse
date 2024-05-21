@@ -143,7 +143,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 					log.Warnf("Module %q is already exists. Skipping module from %q", def.Name, def.Path)
 					continue
 				}
-				return err
+				return fmt.Errorf("process module %s: %w", def.Name, err)
 			}
 
 			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
