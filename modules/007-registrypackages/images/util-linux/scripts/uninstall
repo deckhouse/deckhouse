@@ -16,3 +16,4 @@
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/mount
 rm -f /opt/deckhouse/bin/umount
+rm -f /opt/deckhouse/bin/swapoff

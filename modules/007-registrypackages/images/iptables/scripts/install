@@ -13,8 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+$kubeletChainsRegex = '(?m)^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
+$cmds = "iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore"
+
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
-cp -f iptables-wrapper /opt/deckhouse/bin
+
+IPTABLES_LEGACY_SAVE=$(/opt/deckhouse/bin/xtables-legacy-multi iptables-legacy-save)
+if [[ ${IPTABLES_LEGACY_SAVE} =~ $kubeletChainsRegex ]]; then
+  $iptablesMode = "/opt/deckhouse/bin/xtables-legacy-multi"
+else
+  $iptablesMode = "/opt/deckhouse/bin/xtables-nft-multi"
+fi
+
+for cmd in $cmds; do
+  ln -sf $iptablesMode /opt/deckhouse/bin/$cmd
+done

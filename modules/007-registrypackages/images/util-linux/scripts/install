@@ -17,3 +17,4 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f mount /opt/deckhouse/bin
 cp -f umount /opt/deckhouse/bin
+cp -f swapoff /opt/deckhouse/bin

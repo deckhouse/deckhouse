@@ -4,10 +4,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-iptables-wrapper
-  add: /src/iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
@@ -22,29 +18,6 @@ docker:
     distro: all
     version: all
     iptables: {{ $version }}
----
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-iptables-wrapper
-from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}/modules/000-common/images/iptables-wrapper/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - git clone {{ .SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
-  - cd /src
-  - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3
-  install:
-  - cd /src
-  - find /patches -name '*.patch' | xargs git apply --verbose
-  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go
-  - chown 64535:64535 iptables-wrapper
-  - chmod 0755 iptables-wrapper
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALT_DEV }}

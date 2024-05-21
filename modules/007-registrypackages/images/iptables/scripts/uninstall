@@ -14,8 +14,7 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/iptables
-rm -f /opt/deckhouse/bin/ip6tables
-rm -f /opt/deckhouse/bin/xtables-legacy-multi
-rm -f /opt/deckhouse/bin/xtables-nft-multi
-rm -f /opt/deckhouse/bin/iptables-wrapper
+$cmds = "iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore xtables-legacy-multi iptables-wrapper"
+for cmd in $cmds; do
+  rm -f /opt/deckhouse/bin/$cmd
+done
