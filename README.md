@@ -16,7 +16,7 @@
 
 <img align="right" width="200" height="270" src="docs/site/images/cncf-certified-kubernetes.png">
 
-- NoOps: system software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
+- NoOps: s ystem software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
 - SLA by design: availability can be guaranteed even without direct access to your infrastructure.
 - Completely identical and infrastructure-agnostic clusters. Deploy on a public cloud of your choice (AWS, GCP, Microsoft Azure, OVH Cloud), self-hosted cloud solutions (OpenStack and vSphere), and even bare-metal servers.
 - 100 % vanilla Kubernetes based on an upstream version of Kubernetes.
