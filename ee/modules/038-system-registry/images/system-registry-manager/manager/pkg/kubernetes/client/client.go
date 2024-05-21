@@ -19,7 +19,7 @@ func NewK8sClient() (*kubernetes.Clientset, error) {
 		return nil, err
 	}
 	k8sClient, err := kubernetes.NewForConfig(config)
-	return k8sClient, nil
+	return k8sClient, err
 }
 
 // func NewK8sClient() (*kubernetes.Clientset, error) {
@@ -31,8 +31,5 @@ func NewK8sClient() (*kubernetes.Clientset, error) {
 // 	}
 
 // 	clientset, err := kubernetes.NewForConfig(config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return clientset, nil
+// 	return clientset, err
 // }
