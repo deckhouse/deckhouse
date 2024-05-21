@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -32,54 +35,59 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logc.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.CheckRequest)
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.CheckRequest)
+	sendCh := make(chan *pb.CheckResponse, 100)
 
-	s.startCheckerReceiver(server, requestsCh, internalErrCh)
+	s.startCheckerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startCheckerSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logc.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logc.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case request := <-requestsCh:
+		case request := <-receiveCh:
+			logger.L(ctx).Info(
+				"processing CheckRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logc.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(ctx, server, message.Start, internalErrCh, doneCh)
+				s.startChecker(
+					ctx, message.Start, &checkLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				)
 
 			default:
-				s.logc.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -89,48 +97,58 @@ connectionProcessor:
 
 func (s *Service) startCheckerReceiver(
 	server pb.DHCTL_CheckServer,
-	requestsCh chan *pb.CheckRequest,
+	receiveCh chan *pb.CheckRequest,
+	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
 	go func() {
 		for {
 			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logc.Info(
-				"processing CheckRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
-			requestsCh <- request
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startCheckerSender(
+	server pb.DHCTL_CheckServer,
+	sendCh chan *pb.CheckResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
 		}
 	}()
 }
 
 func (s *Service) startChecker(
 	ctx context.Context,
-	server pb.DHCTL_CheckServer,
 	request *pb.CheckStart,
-	internalErrCh chan error,
-	doneCh chan struct{},
+	logWriter *checkLogWriter,
+	sendCh chan *pb.CheckResponse,
 ) {
 	go func() {
-		result := s.check(ctx, request, &checkLogWriter{server: server})
-		err := server.Send(&pb.CheckResponse{
+		result := s.check(ctx, request, logWriter)
+		sendCh <- &pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			internalErrCh <- fmt.Errorf("sending message: %w", err)
-			return
 		}
-
-		doneCh <- struct{}{}
 	}()
 }
 
@@ -141,12 +159,11 @@ func (s *Service) check(
 ) *pb.CheckResult {
 	var err error
 
-	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -154,7 +171,7 @@ func (s *Service) check(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -235,6 +252,11 @@ func (s *Service) check(
 	resultData, marshalErr := json.Marshal(result)
 	err = errors.Join(checkErr, marshalErr)
 
+	if result != nil {
+		// todo: move onCheckResult call to check.Check() func (as in converge)
+		_ = onCheckResult(result)
+	}
+
 	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
 }
 
@@ -249,19 +271,40 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 }
 
 type checkLogWriter struct {
-	server pb.DHCTL_CheckServer
+	l      *slog.Logger
+	sendCh chan *pb.CheckResponse
+
+	m    sync.Mutex
+	prev []byte
 }
 
-func (w *checkLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
+func (w *checkLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
 	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.CheckResponse{
+			Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
 	return len(p), nil
 }

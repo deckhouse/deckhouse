@@ -26,5 +26,5 @@ enum Continue {
 }
 
 message Logs {
-  bytes logs = 1;
+  repeated string logs = 1;
 }
