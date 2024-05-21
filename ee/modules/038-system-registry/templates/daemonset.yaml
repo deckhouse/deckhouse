@@ -25,14 +25,14 @@ memory: 10Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: d8-system-registry-manager
+  name: system-registry-manager
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: d8-system-registry-manager
+    name: system-registry-manager
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -57,17 +57,17 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: d8-system-registry-manager
+  name: system-registry-manager
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      app: d8-system-registry-manager
+      app: system-registry-manager
   template:
     metadata:
       labels:
-        app: d8-system-registry-manager
+        app: system-registry-manager
       annotations:
         # checksum/config: 
         # checksum/pki: 
@@ -78,7 +78,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: d8-system-registry-manager
+      serviceAccountName: {{ .Chart.Name }}
       containers:
       - name: system-registry-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
@@ -149,10 +149,10 @@ spec:
       volumes:
       - name: pki
         secret:
-          secretName: d8-system-registry-manager-pki
+          secretName: system-registry-manager-pki
       - name: configs
         secret:
-          secretName: d8-system-registry-manager-configs
+          secretName: system-registry-manager-configs
       - name: etc-kubernetes
         hostPath:
           path: /etc/kubernetes/
