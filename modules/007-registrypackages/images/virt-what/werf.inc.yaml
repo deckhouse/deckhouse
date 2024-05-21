@@ -35,5 +35,6 @@ shell:
     - autoconf
     - LDFLAGS="-static" ./configure
     - make
+    - strip ./virt-what-cpuid-helper
     - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
     - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall

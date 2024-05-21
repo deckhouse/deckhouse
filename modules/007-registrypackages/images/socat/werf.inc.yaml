@@ -34,5 +34,6 @@ shell:
     - autoconf
     - CC='/usr/bin/gcc -static' CFLAGS="-fPIC" CPPFLAGS="-I/build -DNETDB_INTERNAL=-1" ./configure
     - make
+    - strip ./socat
     - mv ./socat /socat
     - chmod +x /socat  /install /uninstall

@@ -34,5 +34,6 @@ shell:
     - cd /src
     - CFLAGS='-static' LDFLAGS="-static" ./configure
     - make
+    - strip ./misc/mke2fs && strip ./misc/fsck
     - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
     - chmod +x /mke2fs /fsck  /install /uninstall

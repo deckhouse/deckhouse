@@ -31,5 +31,6 @@ shell:
     - git clone -b applied/{{ $version }} --depth 1 https://git.launchpad.net/ubuntu/+source/netcat src
     - cd src
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
+    - strip ./nc
     - mv ./nc /nc
     - chmod +x /nc /install /uninstall

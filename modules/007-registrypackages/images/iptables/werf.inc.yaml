@@ -46,5 +46,6 @@ shell:
     - ./autogen.sh
     - ./configure --enable-static --disable-shared
     - make LDFLAGS='-all-static'
+    - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
     - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi
     - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
