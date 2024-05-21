@@ -228,7 +228,14 @@ func (dml *DeckhouseController) setupSourceModules(ctx context.Context) error {
 		if rl.Status.Phase != v1alpha1.PhaseDeployed {
 			continue
 		}
-		dml.sourceModules[rl.GetModuleName()] = rl.GetModuleSource()
+		if !rl.ObjectMeta.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		if _, ok := dml.sourceModules[rl.GetModuleName()]; !ok {
+			// ignore modules that are already marked as Embedded
+			dml.sourceModules[rl.GetModuleName()] = rl.GetModuleSource()
+		}
 	}
 
 	return nil

@@ -682,6 +682,11 @@ func (c *moduleReleaseReconciler) restoreAbsentModulesFromReleases(ctx context.C
 			continue
 		}
 
+		// ignore deleted Releases
+		if !item.ObjectMeta.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		moduleWeight := item.Spec.Weight
 		moduleVersion := "v" + item.Spec.Version.String()
 		moduleName := item.Spec.ModuleName
