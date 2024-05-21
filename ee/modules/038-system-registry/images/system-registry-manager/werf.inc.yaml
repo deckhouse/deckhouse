@@ -1,6 +1,6 @@
 {{ $managerTemplatesRelPath := printf "%s/modules/038-%s/images/%s/templates" $.ModulePath $.ModuleName $.ImageName }}
 {{ $managerRelPath := printf "%s/modules/038-%s/images/%s/manager" $.ModulePath $.ModuleName $.ImageName }}
-{{ $managerAbsPath := "/deckhouse/ee/modules/038-%s/images/%s/manager" $.ModuleName $.ImageName }}
+{{ $managerAbsPath := printf "/deckhouse/ee/modules/038-%s/images/%s/manager" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
