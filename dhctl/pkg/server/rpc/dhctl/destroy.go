@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -28,66 +30,70 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logd.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.destroyServerTransitions())
 
-	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.DestroyRequest)
-
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.DestroyRequest)
+	sendCh := make(chan *pb.DestroyResponse)
 	phaseSwitcher := &destroyPhaseSwitcher{
-		server: server,
+		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
-	defer close(phaseSwitcher.next)
 
-	s.startDestroyerReceiver(server, requestsCh, internalErrCh)
+	s.startDestroyerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startDestroyerSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logd.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logd.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case request := <-requestsCh:
+		case request := <-receiveCh:
+			logger.L(ctx).Info(
+				"processing DestroyRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.DestroyRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startDestroy(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startDestroy(
+					ctx, message.Start, phaseSwitcher, &destroyLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				)
 
 			case *pb.DestroyRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -103,7 +109,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logd.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -113,49 +119,59 @@ connectionProcessor:
 
 func (s *Service) startDestroyerReceiver(
 	server pb.DHCTL_DestroyServer,
-	requestsCh chan *pb.DestroyRequest,
+	receiveCh chan *pb.DestroyRequest,
+	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
 	go func() {
 		for {
 			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logd.Info(
-				"processing DestroyRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
-			requestsCh <- request
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startDestroyerSender(
+	server pb.DHCTL_DestroyServer,
+	sendCh chan *pb.DestroyResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
 		}
 	}()
 }
 
 func (s *Service) startDestroy(
 	ctx context.Context,
-	server pb.DHCTL_DestroyServer,
 	request *pb.DestroyStart,
 	phaseSwitcher *destroyPhaseSwitcher,
-	internalErrCh chan error,
-	doneCh chan struct{},
+	logWriter *destroyLogWriter,
+	sendCh chan *pb.DestroyResponse,
 ) {
 	go func() {
-		result := s.destroy(ctx, request, phaseSwitcher, &destroyLogWriter{server: server})
-		err := server.Send(&pb.DestroyResponse{
+		result := s.destroy(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.DestroyResponse{
 			Message: &pb.DestroyResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			internalErrCh <- fmt.Errorf("sending message: %w", err)
-			return
 		}
-
-		doneCh <- struct{}{}
 	}()
 }
 
@@ -167,12 +183,11 @@ func (s *Service) destroy(
 ) *pb.DestroyResult {
 	var err error
 
-	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -180,7 +195,7 @@ func (s *Service) destroy(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -290,25 +305,46 @@ func (s *Service) destroyServerTransitions() []fsm.Transition {
 }
 
 type destroyLogWriter struct {
-	server pb.DHCTL_DestroyServer
+	l      *slog.Logger
+	sendCh chan *pb.DestroyResponse
+
+	m    sync.Mutex
+	prev []byte
 }
 
-func (w *destroyLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.DestroyResponse{
-		Message: &pb.DestroyResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
+func (w *destroyLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
 	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.DestroyResponse{
+			Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
 	return len(p), nil
 }
 
 type destroyPhaseSwitcher struct {
-	server pb.DHCTL_DestroyServer
+	sendCh chan *pb.DestroyResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
@@ -325,7 +361,7 @@ func (b *destroyPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.DestroyResponse{
+	b.sendCh <- &pb.DestroyResponse{
 		Message: &pb.DestroyResponse_PhaseEnd{
 			PhaseEnd: &pb.DestroyPhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -334,9 +370,6 @@ func (b *destroyPhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("sending on phase message: %w", err)
 	}
 
 	switchErr, ok := <-b.next

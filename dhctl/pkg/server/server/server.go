@@ -24,9 +24,9 @@ import (
 	"time"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/google/uuid"
@@ -78,14 +78,16 @@ func Serve(network, address string) error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptors.Logger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryParallelTasksLimiter(sem, log),
+			interceptors.UnaryLogger(log),
+			logging.UnaryServerInterceptor(interceptors.Logger()),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.UnaryParallelTasksLimiter(sem),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptors.Logger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamParallelTasksLimiter(sem, log),
+			interceptors.StreamLogger(log),
+			logging.StreamServerInterceptor(interceptors.Logger()),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.StreamParallelTasksLimiter(sem),
 		),
 	)
 
@@ -97,7 +99,7 @@ func Serve(network, address string) error {
 	reflection.Register(s)
 
 	// services
-	dhctlService := dhctl.New(podName, cacheDir, log)
+	dhctlService := dhctl.New(podName, cacheDir)
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)

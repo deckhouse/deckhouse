@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -29,66 +31,70 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
-	s.shutdown(server.Context().Done())
+	ctx := operationCtx(server)
 
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
-
-	s.logd.Info("started")
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.convergeServerTransitions())
 
-	internalErrCh := make(chan error)
 	doneCh := make(chan struct{})
-	requestsCh := make(chan *pb.ConvergeRequest)
-
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.ConvergeRequest)
+	sendCh := make(chan *pb.ConvergeResponse)
 	phaseSwitcher := &convergePhaseSwitcher{
-		server: server,
+		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
-	defer close(phaseSwitcher.next)
 
-	s.startConvergeerReceiver(server, requestsCh, internalErrCh)
+	s.startConvergerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startConvergerSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
 		select {
 		case <-doneCh:
-			s.logd.Info("finished normally")
+			logger.L(ctx).Info("finished")
 			return nil
 
 		case err := <-internalErrCh:
-			s.logd.Error("finished with internal error", logger.Err(err))
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
 			return status.Errorf(codes.Internal, "%s", err)
 
-		case request := <-requestsCh:
+		case request := <-receiveCh:
+			logger.L(ctx).Info(
+				"processing ConvergeRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.ConvergeRequest_Start:
 				err := f.Event("start")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startConverge(ctx, server, message.Start, phaseSwitcher, internalErrCh, doneCh)
+				s.startConverge(
+					ctx, message.Start, phaseSwitcher, &convergeLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				)
 
 			case *pb.ConvergeRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
-					s.logd.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
@@ -104,7 +110,7 @@ connectionProcessor:
 				}
 
 			default:
-				s.logd.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
 				continue connectionProcessor
 			}
@@ -112,51 +118,61 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startConvergeerReceiver(
+func (s *Service) startConvergerReceiver(
 	server pb.DHCTL_ConvergeServer,
-	requestsCh chan *pb.ConvergeRequest,
+	receiveCh chan *pb.ConvergeRequest,
+	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
 	go func() {
 		for {
 			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
-			s.logd.Info(
-				"processing ConvergeRequest",
-				slog.String("message", fmt.Sprintf("%T", request.Message)),
-			)
-			requestsCh <- request
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startConvergerSender(
+	server pb.DHCTL_ConvergeServer,
+	sendCh chan *pb.ConvergeResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
 		}
 	}()
 }
 
 func (s *Service) startConverge(
 	ctx context.Context,
-	server pb.DHCTL_ConvergeServer,
 	request *pb.ConvergeStart,
 	phaseSwitcher *convergePhaseSwitcher,
-	internalErrCh chan error,
-	doneCh chan struct{},
+	logWriter *convergeLogWriter,
+	sendCh chan *pb.ConvergeResponse,
 ) {
 	go func() {
-		result := s.converge(ctx, request, phaseSwitcher, &convergeLogWriter{server: server})
-		err := server.Send(&pb.ConvergeResponse{
+		result := s.converge(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.ConvergeResponse{
 			Message: &pb.ConvergeResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			internalErrCh <- fmt.Errorf("sending message: %w", err)
-			return
 		}
-
-		doneCh <- struct{}{}
 	}()
 }
 
@@ -168,12 +184,11 @@ func (s *Service) converge(
 ) *pb.ConvergeResult {
 	var err error
 
-	// set global variables from options
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
@@ -181,7 +196,7 @@ func (s *Service) converge(
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s, err: %v\n", s.podName, err)
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
@@ -306,25 +321,46 @@ func (s *Service) convergeServerTransitions() []fsm.Transition {
 }
 
 type convergeLogWriter struct {
-	server pb.DHCTL_ConvergeServer
+	l      *slog.Logger
+	sendCh chan *pb.ConvergeResponse
+
+	m    sync.Mutex
+	prev []byte
 }
 
-func (w *convergeLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.ConvergeResponse{
-		Message: &pb.ConvergeResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
+func (w *convergeLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
 	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.ConvergeResponse{
+			Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
 	return len(p), nil
 }
 
 type convergePhaseSwitcher struct {
-	server pb.DHCTL_ConvergeServer
+	sendCh chan *pb.ConvergeResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
@@ -341,7 +377,7 @@ func (b *convergePhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.ConvergeResponse{
+	b.sendCh <- &pb.ConvergeResponse{
 		Message: &pb.ConvergeResponse_PhaseEnd{
 			PhaseEnd: &pb.ConvergePhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -350,9 +386,6 @@ func (b *convergePhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("sending on phase message: %w", err)
 	}
 
 	switchErr, ok := <-b.next
