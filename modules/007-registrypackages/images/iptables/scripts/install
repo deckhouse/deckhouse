@@ -41,10 +41,10 @@ for cmd in $cmds; do
 done
 
 if ls -l /etc/alternatives/iptables; then
-	update-alternatives --set iptables /opt/deckhouse/bin/${iptablesModeBin}
-	update-alternatives --set iptables-save /opt/deckhouse/bin/${iptablesModeBin}
-	update-alternatives --set iptables-restore /opt/deckhouse/bin/${iptablesModeBin}
-	update-alternatives --set ip6tables /opt/deckhouse/bin/${iptablesModeBin}
-	update-alternatives --set ip6tables-restore /opt/deckhouse/bin/${iptablesModeBin}
-	update-alternatives --set ip6tables-save /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --install /usr/sbin/iptables iptables /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives --install /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives --install /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives --install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives --install /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives --install /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/${iptablesModeBin} 100
 fi
