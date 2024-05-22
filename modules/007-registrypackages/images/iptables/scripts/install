@@ -21,8 +21,8 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 
 nft_support=$(cat /proc/modules | grep nf_tables)
-IPTABLES_LEGACY_RULE=$(/opt/deckhouse/bin/xtables-legacy-multi iptables-save | grep -E ${kubeletChainsRegex} | wc -l )
-IPTABLES_NFT_RULE=$(/opt/deckhouse/bin/xtables-nft-multi iptables-save -t mangle | grep -E ${kubeletChainsRegex} | wc -l )
+IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
+IPTABLES_NFT_RULE=$( (/opt/deckhouse/bin/xtables-nft-multi iptables-save -t mangle || true ) 2>/dev/null | grep -E ${kubeletChainsRegex} | wc -l )
 
 if [[ $IPTABLES_LEGACY_RULE -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
@@ -38,5 +38,5 @@ fi
 
 cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore"
 for cmd in $cmds; do
-  ln -sf /opt/deckhouse/bin/$iptablesModeBin /opt/deckhouse/bin/$cmd
+  ln -sf /opt/deckhouse/bin/${iptablesModeBin} /opt/deckhouse/bin/${cmd}
 done
