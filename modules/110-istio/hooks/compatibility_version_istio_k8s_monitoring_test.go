@@ -30,7 +30,6 @@ var _ = Describe("Istio hooks :: check_istio_k8s_version_compatibility ::", func
 istio:
   internal:
     istioToK8sCompatibilityMap:
-      "1.13": ["1.20", "1.21", "1.22", "1.23"]
       "1.16": ["1.22", "1.23", "1.24", "1.25"]
       "1.19": ["1.25", "1.26", "1.27", "1.28"]
 `

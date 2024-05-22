@@ -11,7 +11,7 @@ properties:
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-    - ["1.13", "1.16"]
+    - ["1.16"]
     default: []
     items:
       type: string
