@@ -363,9 +363,11 @@ properties:
             properties:
               vcdVersion:
                 type: string
+                default: "10.3.3.4"
                 minLength: 1
               apiVersion:
                 type: string
+                default: "36.0"
                 minLength: 1
       providerDiscoveryData:
         type: object
@@ -420,9 +422,11 @@ properties:
             properties:
               vcdVersion:
                 type: string
+                default: "10.3.3.4"
                 minLength: 1
               apiVersion:
                 type: string
+                default: "36.0"
                 minLength: 1
       storageClasses:
         type: array

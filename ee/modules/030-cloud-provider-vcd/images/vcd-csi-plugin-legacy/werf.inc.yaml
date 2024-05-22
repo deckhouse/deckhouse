@@ -45,7 +45,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="1.6.0"
+  - export VERSION="1.4.1"
   - mkdir -p /src
   - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src

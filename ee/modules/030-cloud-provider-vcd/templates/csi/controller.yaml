@@ -62,9 +62,9 @@
 
 {{- define "csi_node_image_name" }}
 {{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.version.apiVersion }}
-vcdCsiPlugin160
+vcdCsiPlugin
 {{- else }}
-vcdCsiPlugin141
+vcdCsiPluginLegacy
 {{- end }}
 {{- end }}
 
