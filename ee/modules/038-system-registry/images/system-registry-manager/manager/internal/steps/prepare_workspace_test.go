@@ -36,20 +36,22 @@ func TestRenderTemplate(t *testing.T) {
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
-		Distribution: struct {
-			Image string `mapstructure:"image"`
+		Images: struct {
+			SystemRegistry struct {
+				DockerDistribution string "mapstructure:\"dockerDistribution\""
+				DockerAuth         string "mapstructure:\"dockerAuth\""
+				Seaweedfs          string "mapstructure:\"seaweedfs\""
+			} "mapstructure:\"systemRegistry\""
 		}{
-			Image: "distribution_image",
-		},
-		Auth: struct {
-			Image string `mapstructure:"image"`
-		}{
-			Image: "auth_image",
-		},
-		Seaweedfs: struct {
-			Image string `mapstructure:"image"`
-		}{
-			Image: "seaweedfs_image",
+			SystemRegistry: struct {
+				DockerDistribution string "mapstructure:\"dockerDistribution\""
+				DockerAuth         string "mapstructure:\"dockerAuth\""
+				Seaweedfs          string "mapstructure:\"seaweedfs\""
+			}{
+				DockerDistribution: "distribution_image",
+				DockerAuth: "auth_image",
+				Seaweedfs: "seaweedfs_image",
+			},
 		},
 	})
 	assert.NoError(t, err)
