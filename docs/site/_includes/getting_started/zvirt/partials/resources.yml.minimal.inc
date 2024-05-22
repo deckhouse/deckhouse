@@ -44,12 +44,6 @@ spec:
     # [<en>] The minimum number of instances for the group in each zone.
     # [<ru>] Минимальное количество инстансов в каждой зоне.
     minPerZone: 1
-    # [<en>] List of availability zones to create instances in.
-    # [<ru>] Список зон, в которых создаются инстансы.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    zones:
-    - default
   disruptions:
     approvalMode: Automatic
   nodeType: CloudEphemeral
