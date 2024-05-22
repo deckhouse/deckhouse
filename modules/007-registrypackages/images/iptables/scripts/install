@@ -17,18 +17,18 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
-
+set -x
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 
 nft_support=$(cat /proc/modules | grep nf_tables)
 IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 IPTABLES_NFT_RULE=$( (/opt/deckhouse/bin/xtables-nft-multi iptables-save -t mangle || true ) 2>/dev/null | grep -E ${kubeletChainsRegex} | wc -l )
 
-if [[ $IPTABLES_LEGACY_RULE -ne 0 ]]; then
+if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
-elif [[ $IPTABLES_NFT_RULE -ne 0 ]]; then
+elif [[ ${IPTABLES_NFT_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-nft-multi"
-elif [[ -n $nft_support ]]; then
+elif [[ -n ${nft_support} ]]; then
   # if iptables-save doesn't contain k8s rules and have nft support, we use nft as default
   iptablesModeBin="xtables-nft-multi"
 else
