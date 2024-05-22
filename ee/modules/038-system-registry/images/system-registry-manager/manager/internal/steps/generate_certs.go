@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"system-registry-manager/internal/config"
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
+	"system-registry-manager/internal/config"
 	pkg_files "system-registry-manager/pkg/files"
 
 	log "github.com/sirupsen/logrus"

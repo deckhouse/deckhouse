@@ -7,15 +7,12 @@ package steps
 
 import (
 	"github.com/stretchr/testify/assert"
-	"os"
 	"system-registry-manager/internal/config"
-	pkg_files "system-registry-manager/pkg/files"
 	"testing"
 )
 
-func TestRenderTemplate(t *testing.T) {
-
-	err := config.InitConfigForTests(config.FileConfig{
+func generateInputConfig() error {
+	return config.InitConfigForTests(config.FileConfig{
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
@@ -49,19 +46,27 @@ func TestRenderTemplate(t *testing.T) {
 				Seaweedfs          string "mapstructure:\"seaweedfs\""
 			}{
 				DockerDistribution: "distribution_image",
-				DockerAuth: "auth_image",
-				Seaweedfs: "seaweedfs_image",
+				DockerAuth:         "auth_image",
+				Seaweedfs:          "seaweedfs_image",
 			},
 		},
 	})
+}
+
+func TestCheckInputManifestsExist(t *testing.T) {
+	err := generateInputConfig()
 	assert.NoError(t, err)
 
 	manifestsSpec := config.NewManifestsSpecForTest()
-	for _, manifest := range manifestsSpec.Manifests {
-		manifestTemplate, err := os.ReadFile(manifest.InputPath)
-		assert.NoError(t, err)
+	err = checkInputManifestsExist(manifestsSpec)
+	assert.NoError(t, err)
+}
 
-		_, err = pkg_files.RenderTemplate(string(manifestTemplate), config.GetDataForManifestRendering())
-		assert.NoError(t, err)
-	}
+func TestCopyManifestsToWorkspace(t *testing.T) {
+	err := generateInputConfig()
+	assert.NoError(t, err)
+
+	manifestsSpec := config.NewManifestsSpecForTest()
+	err = copyManifestsToWorkspace(manifestsSpec)
+	assert.NoError(t, err)
 }

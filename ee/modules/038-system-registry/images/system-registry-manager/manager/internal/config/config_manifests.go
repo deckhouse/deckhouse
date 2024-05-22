@@ -6,10 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package config
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 	"os"
 	"path/filepath"
 	"system-registry-manager/pkg"
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 	"time"
 )
 
@@ -21,7 +21,7 @@ const (
 
 var (
 	SystemRegistryManagerLocation          = "/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/"
-	TmpDirForSystemRegistryManagerLocation = filepath.Join(SystemRegistryManagerLocation, "data")
+	TmpDirForSystemRegistryManagerLocation = filepath.Join(SystemRegistryManagerLocation, "test_data")
 )
 
 func getTmpWorkspaceDir() string {
