@@ -81,7 +81,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager128": "imageHash-cloudProviderVcd-cloudControllerManager128",
 		"cloudControllerManager129": "imageHash-cloudProviderVcd-cloudControllerManager129",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderVcd-cloudDataDiscoverer",
-		"vcdCsiPlugin":              "imageHash-cloudProviderVcd-vcdCsiPlugin",
+		"vcdCsiPlugin141":           "imageHash-cloudProviderVcd-vcdCsiPlugin141",
+		"vcdCsiPlugin160":           "imageHash-cloudProviderVcd-vcdCsiPlugin160",
 	},
 	"cloudProviderVsphere": map[string]interface{}{
 		"cloudControllerManager125": "imageHash-cloudProviderVsphere-cloudControllerManager125",

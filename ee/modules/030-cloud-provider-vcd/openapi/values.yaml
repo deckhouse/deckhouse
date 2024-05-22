@@ -309,6 +309,64 @@ properties:
           ca:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+      discoveryData:
+        type: object
+        default: {}
+        additionalProperties: false
+        required: [ apiVersion, kind ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: VCDCloudProviderDiscoveryData
+          zones: ["default"]
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ VCDCloudProviderDiscoveryData ]
+          sizingPolicies:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of flavors.
+            uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
+          internalNetworks:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: List of internal networks.
+            uniqueItems: true
+          storageProfiles:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                isEnabled:
+                  type: boolean
+                isDefaultStorageProfile:
+                  type: boolean
+            description: List of storage classes.
+          version:
+            type: object
+            description: VCD version and API version.
+            properties:
+              vcdVersion:
+                type: string
+                minLength: 1
+              apiVersion:
+                type: string
+                minLength: 1
       providerDiscoveryData:
         type: object
         additionalProperties: false
@@ -356,6 +414,16 @@ properties:
                 isDefaultStorageProfile:
                   type: boolean
             description: List of storage classes.
+          version:
+            type: object
+            description: VCD version and API version.
+            properties:
+              vcdVersion:
+                type: string
+                minLength: 1
+              apiVersion:
+                type: string
+                minLength: 1
       storageClasses:
         type: array
         items:
@@ -367,3 +435,4 @@ properties:
               type: string
       defaultStorageClass:
         type: string
+

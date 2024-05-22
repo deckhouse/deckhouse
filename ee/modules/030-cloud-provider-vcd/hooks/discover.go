@@ -58,7 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleCloudProviderDiscoveryDataSecret)
 
 func applyCloudProviderDiscoveryDataSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret = &v1.Secret{}
+	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert kubernetes object: %v", err)
@@ -68,7 +68,7 @@ func applyCloudProviderDiscoveryDataSecretFilter(obj *unstructured.Unstructured)
 }
 
 func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var storageClass = &storage.StorageClass{}
+	storageClass := &storage.StorageClass{}
 	err := sdk.FromUnstructured(obj, storageClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert kubernetes object: %v", err)
@@ -126,7 +126,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderVcd.internal.discoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageProfiles)
 

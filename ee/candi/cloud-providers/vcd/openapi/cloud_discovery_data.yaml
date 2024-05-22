@@ -44,3 +44,13 @@ apiVersions:
             isDefaultStorageProfile:
               type: boolean
         description: List of storage classes.
+      version:
+        type: object
+        description: VCD version and API version.
+        properties:
+          vcdVersion:
+            type: string
+            minLength: 1
+          apiVersion:
+            type: string
+            minLength: 1
