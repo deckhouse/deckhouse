@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,5 +13,3 @@
 # limitations under the License.
 
 bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1470 }}" "mount:{{ .images.registrypackages.utilLinux2401 }}" "xfsprogs:{{ .images.registrypackages.xfsprogs670 }}" "netcat:{{ .images.registrypackages.netcat110481 }}" "iptbales:{{ .images.registrypackages.iptables188 }}"
-
-bb-yum-remove yum-cron
