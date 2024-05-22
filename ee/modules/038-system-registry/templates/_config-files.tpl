@@ -22,8 +22,9 @@ registry:
   path: {{ $.Values.global.modulesImages.registry.path }}
 
 images:
-  systemRegistry
-    dockerDistribution: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
-    dockerAuth: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
-    seaweedfs: {{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
+  systemRegistry:
+    dockerDistribution: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
+    dockerAuth: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
+    seaweedfs: {{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+
 {{- end }}
