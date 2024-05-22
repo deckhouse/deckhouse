@@ -1,0 +1,68 @@
+{{- if hasKey .Values.controlPlaneManager "etcdBackup" }}
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+  labels:
+    app: etcd-backup
+spec:
+  selector:
+    matchLabels:
+      app: etcd-backup
+  template:
+    metadata:
+      labels:
+        app: etcd-backup
+    spec:
+      serviceAccountName: etcd-backup
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      volumes:
+      - name: etcd
+        hostPath:
+          path: /var/lib/etcd
+          type: DirectoryOrCreate
+      - name: etcd-pki
+        hostPath:
+          path: /etc/kubernetes/pki/etcd
+          type: DirectoryOrCreate
+      - name: backup-dir
+        hostPath:
+          path: {{ .Values.controlPlaneManager.etcdBackup.backupDir }}
+          type: DirectoryOrCreate
+      containers:
+      - name: etcd-backup
+        image: {{ include "helm_lib_module_image" (list . "etcdBackup") }}
+        env:
+        - name: BACKUP_DIR
+          value: {{ .Values.controlPlaneManager.etcdBackup.backupDir | quote }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8096
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8096
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 8
+        volumeMounts:
+        - mountPath: /var/lib/etcd
+          name: etcd
+        - mountPath: /etc/kubernetes/pki/etcd
+          name: etcd-pki
+          readOnly: true
+        - mountPath: {{ .Values.controlPlaneManager.etcdBackup.backupDir }}
+          name: backup-dir
+        resources:
+          requests:
+            cpu: 20m
+            memory: 30Mi
+{{- end }}

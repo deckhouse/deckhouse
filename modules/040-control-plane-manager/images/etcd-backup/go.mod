@@ -3,6 +3,7 @@ module main
 go 1.21.1
 
 require (
+	github.com/robfig/cron/v3 v3.0.1
 	go.etcd.io/etcd/client/pkg/v3 v3.5.13
 	go.etcd.io/etcd/client/v3 v3.5.13
 )

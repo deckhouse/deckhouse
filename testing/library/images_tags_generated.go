@@ -173,6 +173,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager128":   "imageHash-controlPlaneManager-controlPlaneManager128",
 		"controlPlaneManager129":   "imageHash-controlPlaneManager-controlPlaneManager129",
 		"etcd":                     "imageHash-controlPlaneManager-etcd",
+		"etcdBackup":               "imageHash-controlPlaneManager-etcdBackup",
 		"kubeApiserver125":         "imageHash-controlPlaneManager-kubeApiserver125",
 		"kubeApiserver126":         "imageHash-controlPlaneManager-kubeApiserver126",
 		"kubeApiserver127":         "imageHash-controlPlaneManager-kubeApiserver127",

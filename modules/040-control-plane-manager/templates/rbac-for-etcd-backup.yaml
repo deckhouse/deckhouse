@@ -1,0 +1,69 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: etcd-backup
+  namespace: kube-system
+roleRef:
+  kind: Role
+  name: etcd-backup
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: etcd-backup
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: etcd-backup
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: etcd-backup
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: etcd-backup
+  apiGroup: rbac.authorization.k8s.io

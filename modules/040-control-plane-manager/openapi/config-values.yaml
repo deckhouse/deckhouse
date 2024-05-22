@@ -249,6 +249,15 @@ properties:
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-:\-\/]+$'
+  etcdBackup:
+    type: object
+    properties:
+      backupDir:
+        type: string
+        default: "/opt/deckhouse/backup/"
+      maxSnapshots:
+        type: integer
+        default: 5
   nodeMonitorGracePeriodSeconds:
     type: integer
     default: 40
