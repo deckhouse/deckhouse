@@ -359,6 +359,7 @@ properties:
             description: List of storage classes.
           version:
             type: object
+            default: {}
             description: VCD version and API version.
             properties:
               vcdVersion:
@@ -418,6 +419,7 @@ properties:
             description: List of storage classes.
           version:
             type: object
+            default: {}
             description: VCD version and API version.
             properties:
               vcdVersion:

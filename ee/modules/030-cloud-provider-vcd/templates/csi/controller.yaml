@@ -60,10 +60,10 @@
   readOnly: true
 {{- end }}
 
-{{- define "csi_node_image_name" }}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.version.apiVersion }}
+{{- define "csi_node_image_name" -}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.version.apiVersion -}}
 vcdCsiPlugin
-{{- else }}
+{{- else -}}
 vcdCsiPluginLegacy
 {{- end }}
 {{- end }}
