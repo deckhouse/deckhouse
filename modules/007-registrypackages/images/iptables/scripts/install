@@ -13,21 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kubeletChainsRegex='(?m)^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
-cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore"
-
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
 
-IPTABLES_LEGACY_SAVE=$(/opt/deckhouse/bin/xtables-legacy-multi iptables-legacy-save)
+kubeletChainsRegex='(?m)^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
+
+nft_support=$(cat /proc/modules | grep nf_tables)
+IPTABLES_LEGACY_SAVE=$(/opt/deckhouse/bin/xtables-legacy-multi iptables-save)
+IPTABLES_NFT_SAVE=$(/opt/deckhouse/bin/xtables-nft-multi iptables-save -t mangle)
+
 if [[ ${IPTABLES_LEGACY_SAVE} =~ ${kubeletChainsRegex} ]]; then
-  iptablesMode="/opt/deckhouse/bin/xtables-legacy-multi"
+  iptablesModeBin="xtables-legacy-multi"
+elif [[ ${IPTABLES_NFT_SAVE} =~ ${kubeletChainsRegex} ]]; then
+  iptablesModeBin="xtables-nft-multi"
+elif [[ -n $nft_support ]]; then
+  # if iptables-save doesn't contain k8s rules and nft support
+  iptablesModeBin="xtables-nft-multi"
 else
-  iptablesMode="/opt/deckhouse/bin/xtables-nft-multi"
+  # if kernel doesn't support nftables mod
+  iptablesModeBin="xtables-legacy-multi"
 fi
 
+cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore"
 for cmd in $cmds; do
-  ln -sf $iptablesMode /opt/deckhouse/bin/$cmd
+  ln -sf /opt/deckhouse/bin/$iptablesModeBin /opt/deckhouse/bin/$cmd
 done

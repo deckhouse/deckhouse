@@ -14,7 +14,7 @@
 # limitations under the License.
 
 set -Eeo pipefail
-$cmds = "iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore xtables-legacy-multi iptables-wrapper"
+cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore xtables-legacy-multi iptables-wrapper"
 for cmd in $cmds; do
   rm -f /opt/deckhouse/bin/$cmd
 done
