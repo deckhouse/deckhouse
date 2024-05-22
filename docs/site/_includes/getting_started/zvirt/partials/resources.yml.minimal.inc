@@ -7,11 +7,21 @@ kind: ZvirtInstanceClass
 metadata:
   name: worker
 spec:
-  numCPUs: 2
+  # [<en>] Number of allocated CPUs for the virtual machine.
+  # [<ru>] Количество выделеных CPU для виртуальной машины.
+  numCPUs: 4
+  # [<en>] The amount of allocated RAM for the virtual machine.
+  # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
   memory: 8192
-  template: ALT-p10
+  # [<en>] Disk size for the root FS.
+  # [<ru>] Размер диска для корневой ФС.
   rootDiskSizeGb: 40
-  vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+  # [<en>] Virtual machine template name.
+  # [<ru>] Название шаблона виртуальной машины.
+  template: *!CHANGE_TEMPLATE*
+  # [<en>] vNIC profile ID.
+  # [<ru>] Идентификатор профиля vNIC.
+  vnicProfileID: *!CHANGE_VNIC_PROFILE_ID*
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup

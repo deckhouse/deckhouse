@@ -108,30 +108,42 @@ layout: Standard
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+# [<en>] Identifier of the Zvirt cluster in which virtual machines will be created
+# [<ru>] Идентификатор кластера Zvirt, в котором будут создаваться виртуальные машины
 clusterID: *!CHANGE_CLUSTER_ID*
 # [<en>] Zvirt API access parameters
 # [<ru>] параметры доступа к Zvirt API
 provider:
+  # [<en>] Url address to access Zvirt API.
+  # [<ru>] Url адрес доступа к Zvirt API.
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
   server: *!CHANGE_API_URL*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   username: *!CHANGE_USERNAME*
-  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
-  password: *!CHANGE_PASSWORD*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
+  password: *!CHANGE_PASSWORD*
 masterNodeGroup:
   replicas: 1
-  # [<en>] Disk type array.
-  # [<ru>] Массив используемых типов дисков.
   instanceClass:
+    # [<en>] Number of allocated CPUs for the virtual machine.
+    # [<ru>] Количество выделеных CPU для виртуальной машины.
     numCPUs: 4
+    # [<en>] The amount of allocated RAM for the virtual machine.
+    # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
     memory: 8192
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSizeGb: 40
+    # [<en>] Virtual machine template name.
+    # [<ru>] Название шаблона виртуальной машины.
     template: *!CHANGE_TEMPLATE*
+    # [<en>] vNIC profile ID.
+    # [<ru>] Идентификатор профиля vNIC.
     vnicProfileID: *!CHANGE_VNIC_PROFILE_ID*
+    # [<en>] Storage domain ID.
+    # [<ru>] Идентификатор домена хранения.
     storageDomainID: *!CHANGE_STORAGE_DOMAIN_ID*
 
