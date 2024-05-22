@@ -41,10 +41,12 @@ for cmd in $cmds; do
 done
 
 if ls -l /etc/alternatives/iptables; then
-	update-alternatives --install /usr/sbin/iptables iptables /opt/deckhouse/bin/${iptablesModeBin} 100
-	update-alternatives --install /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/${iptablesModeBin} 100
-	update-alternatives --install /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/${iptablesModeBin} 100
-	update-alternatives --install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/${iptablesModeBin} 100
-	update-alternatives --install /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/${iptablesModeBin} 100
-	update-alternatives --install /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/${iptablesModeBin} 100
+	update-alternatives \
+		--install /usr/sbin/iptables iptables /opt/deckhouse/bin/${iptablesModeBin} 90 \
+		--slave /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/${iptablesModeBin} \
+		--slave /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives \
+		--install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/${iptablesModeBin} 90 \
+		--slave /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/${iptablesModeBin} \
+		--slave /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/${iptablesModeBin}
 fi
