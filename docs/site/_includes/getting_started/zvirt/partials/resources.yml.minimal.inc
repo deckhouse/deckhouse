@@ -3,21 +3,15 @@
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
 # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cr.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackInstanceClass
+kind: ZvirtInstanceClass
 metadata:
   name: worker
 spec:
-  # [<en>] Flavor in use for this instance class.
-  # [<ru>] Используемый flavor для данного инстанс-класса.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  flavorName: Standard-2-4-50
-  rootDiskSize: 30
-  # [<en>] VM image in use.
-  # [<ru>] Используемый образ виртуальной машины.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  numCPUs: 2
+  memory: 8192
+  template: ALT-p10
+  rootDiskSizeGb: 40
+  vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup
@@ -30,7 +24,7 @@ metadata:
 spec:
   cloudInstances:
     classReference:
-      kind: OpenStackInstanceClass
+      kind: ZvirtInstanceClass
       name: worker
     # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
     # [<en>] You might consider changing this.
@@ -45,7 +39,7 @@ spec:
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     zones:
-    - DP1
+    - default
   disruptions:
     approvalMode: Automatic
   nodeType: CloudEphemeral

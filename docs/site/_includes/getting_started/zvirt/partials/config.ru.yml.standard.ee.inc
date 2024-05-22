@@ -6,7 +6,7 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: OpenStack
+  provider: Zvirt
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
@@ -101,71 +101,37 @@ spec:
 # [<ru>] Настройки облачного провайдера.
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackClusterConfiguration
+kind: ZvirtClusterConfiguration
 layout: Standard
-standard:
-  # [<en>] Network name for external communication.
-  # [<ru>] Имя сети для внешнего взаимодействия.
-  externalNetworkName: *!CHANGE_EXT_NET*
-  # [<en>] Addressing for the internal network of the cluster nodes.
-  # [<ru>] Адресация для внутренней сети узлов кластера.
-  internalNetworkCIDR: 192.168.198.0/24
-  # [<en>] A list of recursive DNS addresses of the internal network.
-  # [<ru>] Список адресов рекурсивных DNS внутренней сети.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  internalNetworkDNSServers:
-    - 8.8.8.8
-    - 8.8.4.4
-  # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
-  # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
-  internalNetworkSecurity: true
-# [<en>] OpenStack API access parameters
-# [<ru>] параметры доступа к OpenStack API
-provider:
-  authURL: *!CHANGE_API_URL*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  domainName: users
-  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
-  password: *!CHANGE_PASSWORD*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  region: RegionOne
-  # [<en>] You might need to specify tenantName instead of tenantID.
-  # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
-  # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # tenantName: PROJECT_NAME
-  tenantID: *!CHANGE_PROJECT_ID*
-  username: *!CHANGE_USERNAME*
-masterNodeGroup:
-  replicas: 1
-  # [<en>] Disk type array.
-  # [<ru>] Массив используемых типов дисков.
-  volumeTypeMap:
-    # [<en>] <availability zone>: <volume type>
-    # [<ru>] <availability zone>: <volume type>
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
-  instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
-    # [<en>] Disk size for the root FS.
-    # [<ru>] Размер диска для корневой ФС.
-    rootDiskSize: 40
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+clusterID: *!CHANGE_CLUSTER_ID*
+# [<en>] Zvirt API access parameters
+# [<ru>] параметры доступа к Zvirt API
+provider:
+  server: *!CHANGE_API_URL*
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  username: *!CHANGE_USERNAME*
+  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
+  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
+  password: *!CHANGE_PASSWORD*
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+masterNodeGroup:
+  replicas: 1
+  # [<en>] Disk type array.
+  # [<ru>] Массив используемых типов дисков.
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    # [<en>] Disk size for the root FS.
+    # [<ru>] Размер диска для корневой ФС.
+    rootDiskSizeGb: 40
+    template: *!CHANGE_TEMPLATE*
+    vnicProfileID: *!CHANGE_VNIC_PROFILE_ID*
+    storageDomainID: *!CHANGE_STORAGE_DOMAIN_ID*
+
