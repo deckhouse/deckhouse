@@ -185,7 +185,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	err := dml.searchAndLoadDeckhouseModules()
 	if err != nil {
-		return err
+		return fmt.Errorf("search and load Deckhouse modules: %w", err)
 	}
 
 	// we have to get all source module for deployed releases
