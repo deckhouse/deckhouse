@@ -39,3 +39,12 @@ cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables
 for cmd in $cmds; do
   ln -sf /opt/deckhouse/bin/${iptablesModeBin} /opt/deckhouse/bin/${cmd}
 done
+
+if ls -l /etc/alternatives/iptables; then
+	update-alternatives --set iptables /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --set iptables-save /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --set iptables-restore /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --set ip6tables /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --set ip6tables-restore /opt/deckhouse/bin/${iptablesModeBin}
+	update-alternatives --set ip6tables-save /opt/deckhouse/bin/${iptablesModeBin}
+fi
