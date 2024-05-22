@@ -23,8 +23,8 @@ registry:
 
 images:
   systemRegistry:
-    dockerDistribution: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
-    dockerAuth: {{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
-    seaweedfs: {{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+    dockerDistribution: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
+    dockerAuth: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
+    seaweedfs: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 
 {{- end }}
