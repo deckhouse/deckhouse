@@ -24,7 +24,6 @@ import (
 	"static-routing-manager-agent/pkg/config"
 	"static-routing-manager-agent/pkg/logger"
 	"strconv"
-	"syscall"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,9 +118,12 @@ func RunRoutesReconcilerAgentController(
 			log.Debug(fmt.Sprintf("[NRTReconciler] NodeRoutingTable %v needs to be reconciled. Set status to Pending", nrt.Name))
 			tmpNRT := new(v1alpha1.NodeRoutingTable)
 			*tmpNRT = *nrt
-			err = SetStatusConditionPending(ctx, cl, log, tmpNRT)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to set status to Pending for NRT %v", nrt.Name))
+
+			if nrt.Generation != nrt.Status.ObservedGeneration {
+				err = SetStatusConditionPending(ctx, cl, log, tmpNRT)
+				if err != nil {
+					log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to set status to Pending for NRT %v", nrt.Name))
+				}
 			}
 
 			// ============================= main logic start =============================
@@ -286,7 +288,7 @@ func addRouteToNode(route RouteEntry) error {
 		Dst:   dstnetIPNet,
 		Gw:    gwNetIP,
 	})
-	if err != nil && err.Error() != syscall.EEXIST.Error() {
+	if err != nil {
 		return fmt.Errorf("unable to add route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
