@@ -42,9 +42,48 @@ func GetChecksum(filePath string) (string, error) {
 	return checksum, nil
 }
 
-func OsWriteFile(name string, data []byte, perm os.FileMode) error {
+func CopyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	if err := MkdirAllForFile(dst, os.ModePerm); err != nil {
+		return err
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WriteFile(name string, data []byte, perm os.FileMode) error {
 	if err := MkdirAllForFile(name, os.ModePerm); err != nil {
 		return err
 	}
 	return os.WriteFile(name, data, perm)
+}
+
+func DeleteFileIfExist(fileName string) error {
+	if _, err := os.Stat(fileName); err == nil {
+		err := os.Remove(fileName)
+		if err != nil {
+			return fmt.Errorf("failed to delete file '%s': %w", fileName, err)
+		}
+	} else if os.IsNotExist(err) {
+		return nil
+	} else {
+		return fmt.Errorf("failed to check if file exists '%s': %w", fileName, err)
+	}
+	return nil
 }

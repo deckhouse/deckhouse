@@ -23,3 +23,17 @@ func (n *NeedChangeFileBy) NeedChange() bool {
 	}
 	return false
 }
+
+func (n *NeedChangeFileBy) NeedCreate() bool {
+	return n.NeedChangeFileByExist
+}
+
+func (n *NeedChangeFileBy) NeedUpdate() bool {
+	if n.NeedChangeFileByCheckSum != nil && *n.NeedChangeFileByCheckSum {
+		return true
+	}
+	if n.NeedChangeFileByDataInconsistency != nil && *n.NeedChangeFileByDataInconsistency {
+		return true
+	}
+	return false
+}

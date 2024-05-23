@@ -7,7 +7,6 @@ package pkg
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -22,31 +21,6 @@ func IsPathExists(path string) bool {
 		fmt.Println("Error checking for file or directory existence:", err)
 		return false
 	}
-}
-
-func CopyFile(src, dst string) error {
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	if err := MkdirAllForFile(dst, os.ModePerm); err != nil {
-		return err
-	}
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	_, err = io.Copy(destination, source)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func MkdirAllForFile(filePath string, dirPerm os.FileMode) error {

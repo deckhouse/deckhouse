@@ -11,9 +11,11 @@ import (
 )
 
 type RuntimeConfig struct {
-	sync.RWMutex
+	sync.Mutex
 	rootContextCancel *context.CancelFunc
 	isMaster          bool
+	masterName        string
+	currentMasterName string
 }
 
 func NewRuntimeConfig(rootContextCancel *context.CancelFunc) *RuntimeConfig {
@@ -30,8 +32,8 @@ func (rCfg *RuntimeConfig) StopManager() {
 }
 
 func (rCfg *RuntimeConfig) IsMaster() bool {
-	rCfg.RLock()
-	defer rCfg.RUnlock()
+	rCfg.Lock()
+	defer rCfg.Unlock()
 	return rCfg.isMaster
 }
 
@@ -39,4 +41,22 @@ func (rCfg *RuntimeConfig) IsMasterUpdate(isMaster bool) {
 	rCfg.Lock()
 	defer rCfg.Unlock()
 	rCfg.isMaster = isMaster
+}
+
+func (rCfg *RuntimeConfig) MasterName() string {
+	rCfg.Lock()
+	defer rCfg.Unlock()
+	return rCfg.masterName
+}
+
+func (rCfg *RuntimeConfig) CurrentMasterName() string {
+	rCfg.Lock()
+	defer rCfg.Unlock()
+	return rCfg.currentMasterName
+}
+
+func (rCfg *RuntimeConfig) CurrentMasterNameUpdate(currentMasterName string) {
+	rCfg.Lock()
+	defer rCfg.Unlock()
+	rCfg.currentMasterName = currentMasterName
 }
