@@ -9,11 +9,11 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
 )
 
-func UpdateManifests(manifestsSpec *config.ManifestsSpec) error {
+func UpdateManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting UpdateManifests")
 
 	if err := copyCertsToDest(manifestsSpec); err != nil {
@@ -28,7 +28,7 @@ func UpdateManifests(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func copyCertsToDest(manifestsSpec *config.ManifestsSpec) error {
+func copyCertsToDest(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting to copy certificates to destination")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -54,7 +54,7 @@ func copyCertsToDest(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func copyManifestsToDest(manifestsSpec *config.ManifestsSpec) error {
+func copyManifestsToDest(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting to copy manifests to destination")
 
 	for _, manifest := range manifestsSpec.Manifests {

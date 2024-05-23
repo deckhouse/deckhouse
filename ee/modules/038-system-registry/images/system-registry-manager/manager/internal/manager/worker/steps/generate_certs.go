@@ -10,13 +10,13 @@ import (
 	"os"
 
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func GenerateCerts(manifestsSpec *config.ManifestsSpec) error {
+func GenerateCerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting certificate generation...")
 
 	for _, certSpec := range manifestsSpec.GeneratedCertificates {
@@ -30,7 +30,7 @@ func GenerateCerts(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error {
+func generateCertToWorkspace(genCertSpec *pkg_cfg.GeneratedCertificateSpec) error {
 	// Load the CA cert and key content from file
 	caCert, err := os.ReadFile(genCertSpec.CACert.TmpPath)
 	if err != nil {
