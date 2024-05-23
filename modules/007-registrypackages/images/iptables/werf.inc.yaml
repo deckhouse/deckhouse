@@ -20,7 +20,7 @@ docker:
     iptables: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_UBUNTU_DEV }}
+from: {{ $.Images.BASE_ALT_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -41,7 +41,7 @@ shell:
     - ./autogen.sh
     - ./configure --enable-static
     - make && make install
-    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
+    - git clone -b v1.8.10 --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
     - cd /src
     - ./autogen.sh
     - ./configure --enable-static --disable-shared
