@@ -10,6 +10,7 @@ import:
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
+  - .libs
   - install
   - uninstall
   before: setup
@@ -51,4 +52,5 @@ shell:
     - patchelf --set-interpreter /opt/deckhouse/bin/.libs/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.deps/sbin/xtables-legacy-multi
     - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
     - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi 
+    - mv /opt/deckhouse/bin/.libs  /.libs
     - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
