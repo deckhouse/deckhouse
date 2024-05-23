@@ -1,5 +1,5 @@
 server:
-  addr: "{{ .HostIP }}:5051"
+  addr: "{{ .hostIP }}:5051"
 token:
   issuer: "Registry server"
   expiration: 900

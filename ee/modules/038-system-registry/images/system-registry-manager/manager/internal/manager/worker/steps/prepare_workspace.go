@@ -91,7 +91,12 @@ func copyCertificatesToWorkspace(manifestsSpec *config.ManifestsSpec) error {
 func copyManifestsToWorkspace(manifestsSpec *config.ManifestsSpec) error {
 	log.Info("Copying manifests to workspace...")
 
-	renderData := config.GetDataForManifestRendering()
+	renderData, err := config.GetDataForManifestRendering()
+
+	if err != nil {
+		log.Fatalf("error decoding config: %v", err)
+	}
+
 	for _, manifest := range manifestsSpec.Manifests {
 		log.Infof("Copying manifest from %s to %s", manifest.InputPath, manifest.TmpPath)
 		if err := pkg_files.CopyFile(manifest.InputPath, manifest.TmpPath); err != nil {
