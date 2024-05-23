@@ -68,7 +68,7 @@ do
   if [ ${metadata_block} = true ] || [ ${skip_file} = true ]; then
     continue
   fi
-  file_changes+=$(echo "${line}" | grep '^+' | sed 's/^+//')
+  file_changes+=" $(echo "${line}" | grep '^+' | sed 's/^+//')"
 done < ${pr_diff}
 
 check "${file_name}" "${file_changes}"
