@@ -38,6 +38,8 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 		return errors.Wrap(err, "failed to decode private ssh key")
 	}
 
+	privateSSHKey = append(bytes.TrimSpace(privateSSHKey), '\n')
+
 	dir := os.TempDir()
 	sshKey := filepath.Join(dir, "ssh-key")
 

@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -126,6 +127,8 @@ func parsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
 	}
+
+	keyData = append(bytes.TrimSpace(keyData), '\n')
 
 	var privateKey interface{}
 
