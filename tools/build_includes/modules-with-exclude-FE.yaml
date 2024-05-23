@@ -77,6 +77,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se/modules/010-metallb-crd
+  to: /deckhouse/modules/010-metallb-crd
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   excludePaths:
@@ -495,6 +508,19 @@
     - .build.yaml
 - add: /ee/modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/381-l2-load-balancer
+  to: /deckhouse/modules/381-l2-load-balancer
   excludePaths:
     - docs
     - README.md

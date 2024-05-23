@@ -55,6 +55,9 @@ spec:
         - args:
             - --port=7472
             - --webhook-mode=disabled
+            {{ if .Values.metallb.loadBalancerClass }}
+            - --lb-class={{ .Values.metallb.loadBalancerClass }}
+            {{- end }}
           env:
           - name: METALLB_ML_SECRET_NAME
             value: memberlist

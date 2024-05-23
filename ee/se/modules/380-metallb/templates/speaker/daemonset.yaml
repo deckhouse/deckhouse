@@ -59,6 +59,9 @@ spec:
         - args:
             - --host=127.0.0.1
             - --port=7472
+            {{ if .Values.metallb.loadBalancerClass }}
+            - --lb-class={{ .Values.metallb.loadBalancerClass }}
+            {{- end }}
           env:
             - name: METALLB_NODE_NAME
               valueFrom:

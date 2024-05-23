@@ -181,17 +181,17 @@ groups:
     description:
       en: "Deckhouse Virtualization Platform VM live migration port"
       ru: "Живая миграция ВМ в Deckhouse Virtualization Platform"
-  - ports: "7946, 7947"
+  - ports: "7946, 4225"
     protocol: TCP
     description:
       en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
       ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
-  - ports: "7946, 7947"
+  - ports: "7946, 4225"
     protocol: UDP
     description:
       en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
       ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb* и *l2-load-balancer*"
-  - ports: "7473, 7475"
+  - ports: "7473, 4226"
     protocol: TCP
     description:
       en: "*metallb* and *l2-load-balancer* speakers metrics"

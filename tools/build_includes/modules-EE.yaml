@@ -29,6 +29,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se/modules/010-metallb-crd
+  to: /deckhouse/modules/010-metallb-crd
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
@@ -231,6 +236,11 @@
         - '**/*.go'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/381-l2-load-balancer
+  to: /deckhouse/modules/381-l2-load-balancer
   stageDependencies:
     setup:
         - '**/*.go'
