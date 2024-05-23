@@ -8,11 +8,11 @@ package steps
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
 )
 
-func PrepareWorkspace(manifestsSpec *config.ManifestsSpec) error {
+func PrepareWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting workspace preparation...")
 
 	if err := checkInputCertificatesExist(manifestsSpec); err != nil {
@@ -36,7 +36,7 @@ func PrepareWorkspace(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func checkInputCertificatesExist(manifestsSpec *config.ManifestsSpec) error {
+func checkInputCertificatesExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Checking existence of input certificates...")
 
 	var inputFiles []string
@@ -56,7 +56,7 @@ func checkInputCertificatesExist(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func checkInputManifestsExist(manifestsSpec *config.ManifestsSpec) error {
+func checkInputManifestsExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Checking existence of input manifests...")
 
 	for _, manifest := range manifestsSpec.Manifests {
@@ -69,7 +69,7 @@ func checkInputManifestsExist(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func copyCertificatesToWorkspace(manifestsSpec *config.ManifestsSpec) error {
+func copyCertificatesToWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Copying certificates to workspace...")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -88,10 +88,10 @@ func copyCertificatesToWorkspace(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func copyManifestsToWorkspace(manifestsSpec *config.ManifestsSpec) error {
+func copyManifestsToWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Copying manifests to workspace...")
 
-	renderData, err := config.GetDataForManifestRendering()
+	renderData, err := pkg_cfg.GetDataForManifestRendering()
 
 	if err != nil {
 		log.Fatalf("error decoding config: %v", err)

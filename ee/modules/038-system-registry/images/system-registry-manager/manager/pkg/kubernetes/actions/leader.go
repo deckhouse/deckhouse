@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 	"os"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	"time"
 )
 
@@ -32,7 +32,7 @@ func StartLeaderElection(
 		return fmt.Errorf("failed to get hostname: %v", err)
 	}
 
-	cfg := config.GetConfig()
+	cfg := pkg_cfg.GetConfig()
 
 	lockName := componentName
 	identity := componentName + "-" + hostname

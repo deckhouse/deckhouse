@@ -7,9 +7,9 @@ package worker
 
 import (
 	"net/http"
-	"system-registry-manager/internal/config"
 	"system-registry-manager/internal/manager/worker/steps"
 	pkg_api "system-registry-manager/pkg/api"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 )
 
 func createServer(workerData *WorkerData) *http.Server {
@@ -66,7 +66,7 @@ func masterInfoHandlerFunc(workerData *WorkerData) (*pkg_api.MasterInfoResponse,
 }
 
 func checkRegistryHandlerFunc(_ *WorkerData, _ *pkg_api.CheckRegistryRequest) (*pkg_api.CheckRegistryResponse, error) {
-	manifestsSpec := config.NewManifestsSpec()
+	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
 	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func checkRegistryHandlerFunc(_ *WorkerData, _ *pkg_api.CheckRegistryRequest) (*
 }
 
 func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRequest) error {
-	manifestsSpec := config.NewManifestsSpec()
+	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
 	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
 		return err
@@ -133,6 +133,6 @@ func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryR
 }
 
 func deleteRegistryHandlerFunc(_ *WorkerData) error {
-	manifestsSpec := config.NewManifestsSpec()
+	manifestsSpec := pkg_cfg.NewManifestsSpec()
 	return steps.DeleteManifests(manifestsSpec)
 }

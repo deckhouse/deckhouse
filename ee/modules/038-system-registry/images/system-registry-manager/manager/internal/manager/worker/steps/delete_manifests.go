@@ -8,11 +8,11 @@ package steps
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
 )
 
-func DeleteManifests(manifestsSpec *config.ManifestsSpec) error {
+func DeleteManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting delete step")
 
 	if err := deleteCerts(manifestsSpec); err != nil {
@@ -27,7 +27,7 @@ func DeleteManifests(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func deleteCerts(manifestsSpec *config.ManifestsSpec) error {
+func deleteCerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting to delete certificates")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -49,7 +49,7 @@ func deleteCerts(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func deleteManifests(manifestsSpec *config.ManifestsSpec) error {
+func deleteManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting to delete manifests")
 
 	for _, manifest := range manifestsSpec.Manifests {
