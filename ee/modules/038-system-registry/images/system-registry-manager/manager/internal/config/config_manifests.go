@@ -6,11 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package config
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 	"os"
 	"path/filepath"
 	"system-registry-manager/pkg"
 	"time"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/certificate"
 )
 
 const (
@@ -285,7 +286,6 @@ func NewManifestsSpecForTest() *ManifestsSpec {
 	return NewManifestsSpec()
 }
 
-func GetDataForManifestRendering() FileConfig {
-	cfg := GetConfig()
-	return cfg.FileConfig
+func GetDataForManifestRendering() (map[string]interface{}, error) {
+	return (GetConfig().FileConfig).DecodeToMapstructure()
 }

@@ -9,6 +9,8 @@ import (
 	"log"
 	"strings"
 
+	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
 
@@ -26,8 +28,15 @@ type FileConfig struct {
 		Addresses []string `mapstructure:"addresses"`
 	} `mapstructure:"etcd"`
 	Registry struct {
-		Address string `mapstructure:"address" yaml:"address"`
-		Path    string `mapstructure:"path" yaml:"path"`
+		RegistryMode     string `mapstructure:"registryMode"`
+		UpstreamRegistry struct {
+			UpstreamRegistryHost     string `mapstructure:"upstreamRegistryHost"`
+			UpstreamRegistryScheme   string `mapstructure:"upstreamRegistryScheme"`
+			UpstreamRegistryCa       string `mapstructure:"upstreamRegistryCa"`
+			UpstreamRegistryPath     string `mapstructure:"upstreamRegistryPath"`
+			UpstreamRegistryUser     string `mapstructure:"upstreamRegistryUser"`
+			UpstreamRegistryPassword string `mapstructure:"upstreamRegistryPassword"`
+		} `mapstructure:"upstreamRegistry"`
 	} `mapstructure:"registry"`
 	Images struct {
 		SystemRegistry struct {
@@ -36,6 +45,16 @@ type FileConfig struct {
 			Seaweedfs          string `mapstructure:"seaweedfs"`
 		} `mapstructure:"systemRegistry"`
 	} `mapstructure:"images"`
+}
+
+func (fcfg *FileConfig) DecodeToMapstructure() (map[string]interface{}, error) {
+	var configMap map[string]interface{}
+
+	err := mapstructure.Decode(fcfg, &configMap)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding config: %v", err)
+	}
+	return configMap, nil
 }
 
 func NewFileConfig() (*FileConfig, error) {
@@ -51,6 +70,9 @@ func NewFileConfig() (*FileConfig, error) {
 	var cfg FileConfig
 	viper.SetConfigFile(GetConfigFilePath())
 	viper.SetConfigType("yaml")
+	viper.AutomaticEnv()
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
 
 	for _, configVar := range configVars {
 		setDefault(&configVar)
@@ -63,10 +85,6 @@ func NewFileConfig() (*FileConfig, error) {
 	for _, configVar := range configVars {
 		bindEnvAndValidate(&configVar)
 	}
-
-	viper.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
 
 	if err := viper.Unmarshal(&cfg); err != nil {
 		log.Fatalf("Error unmarshaling config: %v", err)

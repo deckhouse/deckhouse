@@ -30,8 +30,14 @@ leaderElection:
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
-  address: registry.example.com
-  path: /path
+  registryMode: TestRegistryMode
+  upstreamRegistry:
+    upstreamRegistryHost: TestUpstreamRegistryHost
+    upstreamRegistryScheme: TestUpstreamRegistryScheme
+    upstreamRegistryCa: TestUpstreamRegistryCa
+    upstreamRegistryPath: TestUpstreamRegistryPath
+    upstreamRegistryUser: TestUpstreamRegistryUser
+    upstreamRegistryPassword: TestUpstreamRegistryPassword
 images:
   systemRegistry:
     dockerDistribution: distribution_image
@@ -69,18 +75,38 @@ images:
 			RenewDeadlineSeconds: 20,
 			RetryPeriodSeconds:   8,
 		},
-		// Add new fields
 		Etcd: struct {
 			Addresses []string `mapstructure:"addresses"`
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
 		Registry: struct {
-			Address string `mapstructure:"address" yaml:"address"`
-			Path    string `mapstructure:"path" yaml:"path"`
+			RegistryMode     string "mapstructure:\"registryMode\""
+			UpstreamRegistry struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			} "mapstructure:\"upstreamRegistry\""
 		}{
-			Address: "registry.example.com",
-			Path:    "/path",
+			RegistryMode: "TestRegistryMode",
+			UpstreamRegistry: struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			}{
+				UpstreamRegistryHost:     "TestUpstreamRegistryHost",
+				UpstreamRegistryScheme:   "TestUpstreamRegistryScheme",
+				UpstreamRegistryCa:       "TestUpstreamRegistryCa",
+				UpstreamRegistryPath:     "TestUpstreamRegistryPath",
+				UpstreamRegistryUser:     "TestUpstreamRegistryUser",
+				UpstreamRegistryPassword: "TestUpstreamRegistryPassword",
+			},
 		},
 		Images: struct {
 			SystemRegistry struct {
@@ -130,8 +156,14 @@ leaderElection:
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
-  address: registry.example.com
-  path: /path
+  registryMode: TestRegistryMode
+  upstreamRegistry:
+    upstreamRegistryHost: TestUpstreamRegistryHost
+    upstreamRegistryScheme: TestUpstreamRegistryScheme
+    upstreamRegistryCa: TestUpstreamRegistryCa
+    upstreamRegistryPath: TestUpstreamRegistryPath
+    upstreamRegistryUser: TestUpstreamRegistryUser
+    upstreamRegistryPassword: TestUpstreamRegistryPassword
 images:
   systemRegistry:
     dockerDistribution: distribution_image
@@ -157,18 +189,38 @@ images:
 			RenewDeadlineSeconds: 20,
 			RetryPeriodSeconds:   8,
 		},
-		// Add new fields
 		Etcd: struct {
 			Addresses []string `mapstructure:"addresses"`
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
 		Registry: struct {
-			Address string `mapstructure:"address" yaml:"address"`
-			Path    string `mapstructure:"path" yaml:"path"`
+			RegistryMode     string "mapstructure:\"registryMode\""
+			UpstreamRegistry struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			} "mapstructure:\"upstreamRegistry\""
 		}{
-			Address: "registry.example.com",
-			Path:    "/path",
+			RegistryMode: "TestRegistryMode",
+			UpstreamRegistry: struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			}{
+				UpstreamRegistryHost:     "TestUpstreamRegistryHost",
+				UpstreamRegistryScheme:   "TestUpstreamRegistryScheme",
+				UpstreamRegistryCa:       "TestUpstreamRegistryCa",
+				UpstreamRegistryPath:     "TestUpstreamRegistryPath",
+				UpstreamRegistryUser:     "TestUpstreamRegistryUser",
+				UpstreamRegistryPassword: "TestUpstreamRegistryPassword",
+			},
 		},
 		Images: struct {
 			SystemRegistry struct {

@@ -25,7 +25,7 @@ storage:
   cache:
     blobdescriptor: inmemory
 http:
-  addr: "{{ .HostIP }}:5000"
+  addr: "{{ .hostIP }}:5000"
   #addr: 0.0.0.0:5000
   prefix: /
   secret: asecretforlocaldevelopment
@@ -34,13 +34,17 @@ http:
     prometheus:
       enabled: true
       path: /metrics
+
+{{- if eq .registry.registryMode "Proxy" }}
 proxy:
-  username: "$UPSTREAM_REGISTRY_LOGIN"
-  password: "$UPSTREAM_REGISTRY_PASSWORD"
+  remoteurl: "{{ .registry.upstreamRegistry.upstreamRegistryScheme }}://{{ $.registry.upstreamRegistry.upstreamRegistryHost }}"
+  username: "{{ .registry.upstreamRegistry.upstreamRegistryUser }}"
+  password: "{{ .registry.upstreamRegistry.upstreamRegistryPassword }}"
   ttl: 72h
+{{- end }}
 auth:
   token:
-    realm: "http://{{ .HostIP }}:5051/auth"
+    realm: "http://{{ .hostIP }}:5051/auth"
     service: Docker registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
