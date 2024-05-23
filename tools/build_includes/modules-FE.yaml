@@ -39,6 +39,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/010-metallb-crd
+  to: /deckhouse/modules/010-metallb-crd
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
@@ -231,6 +236,11 @@
         - '**/*.go'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/381-l2-load-balancer
+  to: /deckhouse/modules/381-l2-load-balancer
   stageDependencies:
     setup:
         - '**/*.go'

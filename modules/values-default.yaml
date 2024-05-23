@@ -19,6 +19,7 @@ kubeDnsEnabled: true
 kubeProxyEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
+metallbCrdEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true

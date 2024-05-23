@@ -1,0 +1,11 @@
+positive:
+  configValues:
+    - loadBalancerClass: custom
+negative:
+  configValues:
+  # Invalid value: pools are configured in L2LoadBalacncer resources
+    - addressPools:
+      - addresses:
+        - 192.168.199.100-192.168.199.102
+        name: frontend_pool
+        protocol: layer2

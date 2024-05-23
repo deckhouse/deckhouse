@@ -1,0 +1,29 @@
+---
+artifact: {{ .ModuleName }}/l2-load-balancer-artifact
+from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+git:
+  - add: /{{ $.ModulePath }}modules/381-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - apk add --no-cache git
+    - mkdir -p /src
+    - cd /src
+    - git clone -b v0.14.5 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+    - git config --global user.email "builder@deckhouse.io"
+    - git checkout 7ebb4a2e569930bcbf303e95ff801240c4cb466b
+    - mkdir ./api/v1alpha1
+    - find /patches -name '*.patch' | sort | xargs git apply --verbose
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd controller
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller
+    - chown 64535:64535 /controller
+    - chmod 0700 /controller
+    - cd ../speaker
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
+    - chown 64535:64535 /speaker
+    - chmod 0755 /speaker

@@ -1,5 +1,8 @@
 type: object
 properties:
+  loadBalancerClass:
+    description: |
+      Необязательное поле, описывающее класс LoadBalancer. Поле LoadBalancerClass обязательно для заполнении при одновременном использовании модулей metallb и l2-load-balancer. Также рекомендуется его заполнять, если в кластере есть сторонние контроллеры, которые обслуживают ресурсы Service с типом LoadBalancer.
   nodeSelector:
     description: |
       Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
