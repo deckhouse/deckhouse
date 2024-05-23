@@ -1,58 +1,57 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы развернуть Deckhouse Kubernetes Platform на zVirt, необходимо выполнить предварительные настройки в системе виртуализации:
-- [Подготовить образ операционной системы](#подготовка-образа-операционной-системы)
-- [Подготовить шаблон виртуальной машины](#подготовка-шаблона-виртуальной-машины)
+To deploy Deckhouse Kubernetes Platform on zVirt, you need to perform preconfigurations in the virtualization system:
+- [Prepare an operating system image](#prepare-an-operating-system-image)
+- [Prepare a virtual machine template](#prepare-a-virtual-machine-template)
 
-### Подготовка образа операционной системы
+### Prepare an operating system image
 
-Вендоры операционных систем обычно предоставляют специальные cloud-сборки своих операционных систем для использования в среде виртуализации. Эти сборки, как правило, содержат драйверы для виртуального оборудования, cloud-init, гостевые агенты систем виртуализации и распространяются в виде образов дисков в форматах .img или .qcow2. Мы рекомендуем использовать такие cloud-образы в качестве ОС на нодах ваших кластеров.
+Operating system vendors typically provide special cloud builds of their operating systems for use in virtualization environments. These builds typically contain virtual hardware drivers, cloud-init, virtualization guest agents, and are distributed as .img or .qcow2 disk images. We recommend that you use these cloud images as the OS on the nodes in your clusters.
+The cloud image of the operating system must be placed in the zVirt disk storage. Follow these steps to upload the OS image to the storage:
 
-Cloud-образ операционной системы должен быть размещен в хранилище дисков zVirt. Выполните следующие шаги для загрузки образа ОС в хранилище:
+1. Go to the administration portal zVirt -> Storage -> Disks
+2. Upload the cloud image of the OS to the repository
 
-1. Перейдите в портал администрирования zVirt -> Хранилище -> Диски
-2. Загрузите cloud-образ ОС в хранилище
+   ![ Start loading the cloud-image of the OS into the repository ](/images/gs/zvirt/step_env_en_01.png)
 
-   ![ Начало загрузки cloud-образ ОС в хранилище ](/images/gs/zvirt/step_env_en_01.png)
+   ![ Uploading a cloud-image of the OS to the repository ](/images/gs/zvirt/step_env_en_02.png)
 
-   ![ Загрузка cloud-образ ОС в хранилище ](/images/gs/zvirt/step_env_en_02.png)
+3. Wait until the image has finished loading into the storage. The status “OK” should appear in the “Status” column. This completes the preparation of the OS image.
 
-3. Дождитесь окончания загрузки образа в хранилище. В столбце “Состояние” должен появиться статус “ОК”. На этом подготовка образа ОС завершена.
+   ![ Finalizing the download of the cloud-image of the OS to the repository ](/images/gs/zvirt/step_env_en_03.png)
 
-   ![ Окончание загрузки cloud-образ ОС в хранилище ](/images/gs/zvirt/step_env_en_03.png)
+### Prepare a virtual machine template
 
-### Подготовка шаблона виртуальной машины
+To create a virtual machine template, go to the “Compute -> Virtual Machines” section of the zVirt Administration Portal and create a new virtual machine with the following parameters:
 
-Для создания шаблона виртуальной машины, перейдите в раздел “Ресурсы -> Виртуальные машины” портала администрирования zVirt и создайте новую виртуальную машину со следующими параметрами:
+- Section _General_
+  - **Template:** `Blank`
+  - **Operating system:** depending on the OS in the cloud image.
+  - **Optimized for:** High Performance.
+  - **Instance Images:** Attach -> Select the previously downloaded cloud-image of the OS, check “Bootable”. No other disks need to be created or attached.
 
-- Раздел _Общее_
-  - **Шаблон:** `Blank`
-  - **Операционная система:** в зависимости от ОС в cloud-образе.
-  - **Профиль нагрузки:** Высокая производительность.
-  - **Виртуальные диски:** Прикрепить -> Выберите загруженный ранее cloud-образ ОС, установите галочку “Загрузочный”. Другие диски создавать или прикреплять не нужно.
+    ![ General section ](/images/gs/zvirt/step_env_en_04.png)
 
-    ![ Общий раздел ](/images/gs/zvirt/step_env_en_04.png)
+  - Network interfaces do not need to be attached, Deckhouse will create and configure them on the virtual machine by itself during installation.
 
-  - Сетевые интерфейсы прикреплять не нужно, Deckhouse создаст и настроит их на виртуальной машине самостоятельно во время установки.
+    ![ Network interfaces ](/images/gs/zvirt/step_env_en_05.png)
 
-    ![ Сетевые интерфейсы ](/images/gs/zvirt/step_env_en_05.png)
+- Section _System_
 
-- Раздел _Система_
+  Set the parameters “Memory Size”, “Maximum memory” and “Physical Memory Gauranteed” according to Deckhouse system requirements: at least 8192 MB.Parameter “Total Virtual CPUs” - at least 4 CPUs.
 
-  Установите параметры “Оперативная память (разделяемая)”, “Максимум памяти” и “Оперативная память (гарантированная)” в соответствии с системными требованиями Deckhouse: не менее 8192 MB. Параметр “Всего ЦП” — не менее 4-х.
+  ![ System ](/images/gs/zvirt/step_env_en_06.png)
 
-  ![ Система ](/images/gs/zvirt/step_env_en_06.png)
+- Leave the rest of the parameters as default and create a virtual machine. When the VM creation process is finished, create a template based on it:
 
-- Остальные параметры оставьте по умолчанию, создайте виртуальную машину. Когда процесс создания ВМ закончится, создайте шаблон на ее основе:
+  - Select the created VM in the list and go to the window of creating a new template.
 
-  - Выберите в списке созданную ВМ и перейдите в окно создания нового шаблона.
+    ![ VM creation ](/images/gs/zvirt/step_env_en_07.png)
 
-    ![ Создание ВМ ](/images/gs/zvirt/step_env_en_07.png)
+  - Fill in the template parameters, only the name is mandatory. Enable the parameter _Seal Template (Linux only)_:
 
-  - Заполните параметры шаблона, обязательным является только название. Включите параметр _Запечатать шаблон_:
+    ![ Template parameters ](/images/gs/zvirt/step_env_en_08.png)
 
-    ![ Параметры шаблона ](/images/gs/zvirt/step_env_en_08.png)
+While the template is being created, the virtual machine and the cloud image disk will go into a state of _Image locked_. You can check that the template was successfully created in the section _Compute -> Templates_:
 
-На время создания шаблона виртуальная машина и диск cloud-образа перейдут в состояние _Образ заблокирован_. Проверить что шаблон был успешно создан можно в разделе _Ресурсы -> Шаблоны_:
-
-![ Проверка шаблона ](/images/gs/zvirt/step_env_en_09.png)
+![ Template check ](/images/gs/zvirt/step_env_en_09.png)
