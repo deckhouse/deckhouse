@@ -318,6 +318,9 @@ properties:
         - apiVersion: deckhouse.io/v1
           kind: VCDCloudProviderDiscoveryData
           zones: ["default"]
+          version:
+            apiVersion: "36.0"
+            vcdVersion: "10.3.3.4"
         properties:
           apiVersion:
             type: string

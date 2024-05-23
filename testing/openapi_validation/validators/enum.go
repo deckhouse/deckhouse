@@ -133,6 +133,7 @@ var (
 		},
 		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
