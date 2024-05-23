@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
-func TestIstioConversions(t *testing.T) {
+func TestUserAuthnConversions(t *testing.T) {
 	conversions := "."
 	cases := []struct {
 		name            string
