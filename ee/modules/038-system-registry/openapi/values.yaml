@@ -46,10 +46,3 @@ properties:
                   type: string
                 value:
                   type: string
-      registryMode:
-        type: string
-        default: "Direct"
-        enum:
-          - "Direct"
-          - "Proxy"
-          - "Detached"
