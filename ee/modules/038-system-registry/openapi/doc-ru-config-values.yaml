@@ -3,3 +3,25 @@ properties:
   environment:
     description: |
       Название окружения
+  registryMode:
+    description: |
+      Тип регистри
+  upstreamRegistry:
+      upstreamRegistryHost:
+        description: |
+          Host или upstream регистри
+      upstreamRegistryScheme:
+        description: |
+          Схема upstream регистри
+      upstreamRegistryCa:
+        description: |
+          CA сертификат upstream регистри
+      upstreamRegistryPath:
+        description: |
+          Путь upstream регистри
+      upstreamRegistryUser:
+        description: |
+          Имя пользователя для upstream регистри
+      upstreamRegistryPassword:
+        description: |
+          Пароль для upstream регистри
