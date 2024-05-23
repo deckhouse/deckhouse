@@ -15,8 +15,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
-	"system-registry-manager/internal/config"
 	"system-registry-manager/internal/manager/worker/steps"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 )
 
@@ -37,9 +37,9 @@ func Start() {
 	initLogger()
 
 	log.Info("Starting service")
-	log.Infof("Config file: %s", config.GetConfigFilePath())
+	log.Infof("Config file: %s", pkg_cfg.GetConfigFilePath())
 
-	if err := config.InitConfig(); err != nil {
+	if err := pkg_cfg.InitConfig(); err != nil {
 		log.Fatalf("Error initializing config: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func startHTTPServer() {
 }
 
 func startManager() error {
-	manifestsSpec := config.NewManifestsSpec()
+	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
 	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
 		return err

@@ -8,11 +8,11 @@ package steps
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
 )
 
-func CheckDestFiles(manifestsSpec *config.ManifestsSpec) error {
+func CheckDestFiles(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Starting check of destination files...")
 
 	if err := checkDestManifests(manifestsSpec); err != nil {
@@ -29,7 +29,7 @@ func CheckDestFiles(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func checkDestManifests(manifestsSpec *config.ManifestsSpec) error {
+func checkDestManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Checking destination manifest files...")
 
 	for i, manifest := range manifestsSpec.Manifests {
@@ -54,7 +54,7 @@ func checkDestManifests(manifestsSpec *config.ManifestsSpec) error {
 	return nil
 }
 
-func checkDestSerts(manifestsSpec *config.ManifestsSpec) error {
+func checkDestSerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log.Info("Checking destination certificate files...")
 
 	for i, cert := range manifestsSpec.GeneratedCertificates {

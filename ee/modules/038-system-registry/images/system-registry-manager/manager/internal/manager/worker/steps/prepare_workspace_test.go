@@ -7,12 +7,12 @@ package steps
 
 import (
 	"github.com/stretchr/testify/assert"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	"testing"
 )
 
 func generateInputConfig() error {
-	return config.InitConfigForTests(config.FileConfig{
+	return pkg_cfg.InitConfigForTests(pkg_cfg.FileConfig{
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
@@ -85,7 +85,7 @@ func TestCheckInputManifestsExist(t *testing.T) {
 	err := generateInputConfig()
 	assert.NoError(t, err)
 
-	manifestsSpec := config.NewManifestsSpecForTest()
+	manifestsSpec := pkg_cfg.NewManifestsSpecForTest()
 	err = checkInputManifestsExist(manifestsSpec)
 	assert.NoError(t, err)
 }
@@ -94,7 +94,7 @@ func TestCopyManifestsToWorkspace(t *testing.T) {
 	err := generateInputConfig()
 	assert.NoError(t, err)
 
-	manifestsSpec := config.NewManifestsSpecForTest()
+	manifestsSpec := pkg_cfg.NewManifestsSpecForTest()
 	err = copyManifestsToWorkspace(manifestsSpec)
 	assert.NoError(t, err)
 }

@@ -7,7 +7,7 @@ package common
 
 import (
 	"github.com/spf13/pflag"
-	"system-registry-manager/internal/config"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 )
 
 type DefaultFlagVars struct {
@@ -15,9 +15,9 @@ type DefaultFlagVars struct {
 }
 
 func AddDefaultFlags(f *pflag.FlagSet, flagVars *DefaultFlagVars) {
-	f.StringVarP(&flagVars.ConfigFilePath, "config", "c", config.GetConfigFilePath(), "config.yaml filePath")
+	f.StringVarP(&flagVars.ConfigFilePath, "config", "c", pkg_cfg.GetConfigFilePath(), "config.yaml filePath")
 }
 
 func SetDefaultFlagsVars(flagVars *DefaultFlagVars) {
-	config.SetConfigFilePath(flagVars.ConfigFilePath)
+	pkg_cfg.SetConfigFilePath(flagVars.ConfigFilePath)
 }
