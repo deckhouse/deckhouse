@@ -61,7 +61,7 @@ type NRTReconciliationStatus struct {
 	ErrorMessage string
 }
 
-type nrtDeepSpec struct {
+type nrtSummary struct {
 	k8sResources            *v1alpha1.NodeRoutingTable
 	newReconciliationStatus NRTReconciliationStatus
 	desiredRoutesByNRT      RouteEntryMap
@@ -72,7 +72,7 @@ type nrtDeepSpec struct {
 	specNeedToUpdate        bool
 }
 
-type nrtMap map[string]*nrtDeepSpec
+type nrtMap map[string]*nrtSummary
 
 // Main
 
@@ -141,7 +141,7 @@ func RunRoutesReconcilerAgentController(
 			}
 			// ============================= main logic end =============================
 
-			log.Debug(fmt.Sprintf("[NRTReconciler] Ends of the reconciliation (initiated by the k8s-event)"))
+			log.Debug(fmt.Sprintf("[NRTReconciler] End of the reconciliation (initiated by the k8s-event)"))
 			return reconcile.Result{}, nil
 		}),
 	})
@@ -197,7 +197,7 @@ func runEventReconcile(
 		nrtDeepSpec := nrtDeepSpecInit()
 		// Gathering facts
 		log.Debug(fmt.Sprintf("[NRTReconciler] Starting gather facts about nrt %v", nrt.Name))
-		if nrtDeepSpec.gatheringFacts(nrt, &globalDesiredRoutesForNode, &actualRoutesOnNode, log) {
+		if nrtDeepSpec.discoverFacts(nrt, &globalDesiredRoutesForNode, &actualRoutesOnNode, log) {
 			(*nrtMap)[nrt.Name] = nrtDeepSpec
 			continue
 		}
@@ -272,13 +272,21 @@ func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 }
 
 func addRouteToNode(route RouteEntry) error {
-	_, dstnetIPNet, err := net.ParseCIDR(route.destination)
+	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
 		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
 			err,
+		)
+	}
+	if !ip.Equal(dstnetIPNet.IP) {
+		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
+			route.destination,
+			route.gateway,
+			route.table,
+			dstnetIPNet.String(),
 		)
 	}
 	gwNetIP := net.ParseIP(route.gateway)
@@ -300,13 +308,21 @@ func addRouteToNode(route RouteEntry) error {
 }
 
 func delRouteFromNode(route RouteEntry) error {
-	_, dstnetIPNet, err := net.ParseCIDR(route.destination)
+	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
 		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
 			route.destination,
 			route.gateway,
 			route.table,
 			err,
+		)
+	}
+	if !ip.Equal(dstnetIPNet.IP) {
+		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
+			route.destination,
+			route.gateway,
+			route.table,
+			dstnetIPNet.String(),
 		)
 	}
 	gwNetIP := net.ParseIP(route.gateway)
@@ -435,8 +451,8 @@ func SetStatusConditionPending(ctx context.Context, cl client.Client, log logger
 	return nil
 }
 
-func nrtDeepSpecInit() *nrtDeepSpec {
-	return &nrtDeepSpec{
+func nrtDeepSpecInit() *nrtSummary {
+	return &nrtSummary{
 		k8sResources:            new(v1alpha1.NodeRoutingTable),
 		newReconciliationStatus: NRTReconciliationStatus{},
 		desiredRoutesByNRT:      RouteEntryMap{},
@@ -450,7 +466,7 @@ func nrtDeepSpecInit() *nrtDeepSpec {
 
 func nrtMapInit() *nrtMap {
 	newNRTMap := new(nrtMap)
-	*newNRTMap = make(map[string]*nrtDeepSpec)
+	*newNRTMap = make(map[string]*nrtSummary)
 	return newNRTMap
 }
 
@@ -486,7 +502,7 @@ func (s *NRTReconciliationStatus) AppendError(err error) {
 	}
 }
 
-func (nds *nrtDeepSpec) gatheringFacts(nrt v1alpha1.NodeRoutingTable, globalDesiredRoutesForNode, actualRoutesOnNode *RouteEntryMap, log logger.Logger) bool {
+func (nds *nrtSummary) discoverFacts(nrt v1alpha1.NodeRoutingTable, globalDesiredRoutesForNode, actualRoutesOnNode *RouteEntryMap, log logger.Logger) bool {
 	// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
 	tmpNrt := nrt
 	tmpNrt.Status.ObservedGeneration = nrt.Generation
@@ -516,7 +532,7 @@ func (nds *nrtDeepSpec) gatheringFacts(nrt v1alpha1.NodeRoutingTable, globalDesi
 
 	// Filling lastAppliedRoutesByNRT
 	log.Debug(fmt.Sprintf("[NRTReconciler] Starting filling map lastAppliedRoutes"))
-	if nrt.Status.AppliedRoutes != nil && len(nrt.Status.AppliedRoutes) > 0 {
+	if nrt.Status.AppliedRoutes != nil {
 		for _, route := range nrt.Status.AppliedRoutes {
 			nds.lastAppliedRoutesByNRT.AppendR(route, nrt.Spec.IPRoutingTableID)
 		}
@@ -538,14 +554,12 @@ func (nds *nrtDeepSpec) gatheringFacts(nrt v1alpha1.NodeRoutingTable, globalDesi
 			tmpREM.AppendRE(route)
 		}
 	}
-	if len(tmpREM) > 0 {
-		nds.desiredRoutesToDelByNRT = tmpREM
-	}
+	nds.desiredRoutesToDelByNRT = tmpREM
 
 	return false
 }
 
-func (nds *nrtDeepSpec) addRoutes(actualRoutesOnNode *RouteEntryMap, log logger.Logger) {
+func (nds *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logger.Logger) {
 	status := nds.newReconciliationStatus
 	for _, route := range nds.desiredRoutesToAddByNRT {
 		log.Debug(fmt.Sprintf("Route %v should be added", route))

@@ -33,6 +33,11 @@ import (
 var _ = Describe("StatisRouteMgr hooks :: noderoutingtables_handler ::", func() {
 
 	const (
+		initValuesString       = `{"staticRoutingManager":{"internal": {}}}`
+		initConfigValuesString = `{"staticRoutingManager":{"routingTableIDMin": "20000", "routingTableIDMax": "21000"}}`
+	)
+
+	const (
 		rt1YAML = `
 ---
 apiVersion: network.deckhouse.io/v1alpha1
@@ -261,7 +266,7 @@ status:
 		_ = yaml.Unmarshal([]byte(node2YAML), &node2)
 	})
 
-	f := HookExecutionConfigInit(`{"staticRoutingManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD(rtGVK.Group, rtGVK.Version, rtGVK.Kind, false)
 	f.RegisterCRD(nrtGVK.Group, nrtGVK.Version, nrtGVK.Kind, false)
 
@@ -348,7 +353,7 @@ status:
 			Expect(f.ValuesGet(nrtKeyPath + ".6.name").String()).To(Equal(nrt41Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".6.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".6.ownerRTName").String()).To(Equal("testrt4"))
-			Expect(f.ValuesGet(nrtKeyPath + ".6.ipRoutingTableID").String()).To(Equal("10000"))
+			Expect(f.ValuesGet(nrtKeyPath + ".6.ipRoutingTableID").String()).To(Equal("20000"))
 			Expect(f.ValuesGet(nrtKeyPath + ".6.routes").String()).To(MatchYAML(`
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
@@ -357,7 +362,7 @@ status:
 			Expect(f.ValuesGet(nrtKeyPath + ".7.name").String()).To(Equal(nrt42Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".7.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".7.ownerRTName").String()).To(Equal("testrt4"))
-			Expect(f.ValuesGet(nrtKeyPath + ".7.ipRoutingTableID").String()).To(Equal("10000"))
+			Expect(f.ValuesGet(nrtKeyPath + ".7.ipRoutingTableID").String()).To(Equal("20000"))
 			Expect(f.ValuesGet(nrtKeyPath + ".7.routes").String()).To(MatchYAML(`
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
@@ -463,7 +468,7 @@ status:
 			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status").String()
 			Expect(rtstatus).NotTo(Equal(""))
 			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status.ipRoutingTableID").String()
-			Expect(rtstatusid).To(MatchYAML(`10000`))
+			Expect(rtstatusid).To(MatchYAML(`20000`))
 		})
 	})
 

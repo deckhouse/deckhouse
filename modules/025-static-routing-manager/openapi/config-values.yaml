@@ -6,3 +6,15 @@ properties:
     maximum: 4
     default: 2
     description: logLevel
+  routingTableIDMin:
+    type: integer
+    minimum: 256
+    maximum: 4294967295
+    default: 10000
+    description: routingTableIDMin
+  routingTableIDMax:
+    type: integer
+    minimum: 256
+    maximum: 4294967295
+    default: 11000
+    description: routingTableIDMax

@@ -2,3 +2,7 @@ type: object
 properties:
   logLevel:
     description: logLevel
+  routingTableIDMin:
+    description: routingTableIDMin
+  RoutingTableIDMax:
+    description: routingTableIDMax

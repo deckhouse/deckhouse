@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,8 +44,8 @@ const (
 	NRTKind               = "NodeRoutingTable"
 	finalizer             = "routing-tables-manager.network.deckhouse.io"
 	nrtKeyPath            = "staticRoutingManager.internal.nodeRoutingTables"
-	RoutingTableIDMin int = 10000
-	RoutingTableIDMax int = 11000
+	routingTableIDMinPath = "staticRoutingManager.routingTableIDMin"
+	routingTableIDMaxPath = "staticRoutingManager.routingTableIDMax"
 )
 
 type RoutingTableInfo struct {
@@ -80,7 +81,7 @@ type desiredNRTInfo struct {
 	Routes           []v1alpha1.Route `json:"routes"`
 }
 
-type rtsPlus struct {
+type rtStatusPlus struct {
 	v1alpha1.RoutingTableStatus
 	failedNodes []string
 	localErrors []string
@@ -89,11 +90,12 @@ type rtsPlus struct {
 type idIterator struct {
 	UtilizedIDs map[int]struct{}
 	IDSlider    int
+	MaxID       int
 }
 
 func (i *idIterator) pickNextFreeID() (int, error) {
 	if _, ok := i.UtilizedIDs[i.IDSlider]; ok {
-		if i.IDSlider == RoutingTableIDMax {
+		if i.IDSlider == i.MaxID {
 			return 0, fmt.Errorf("ID pool for RoutingTable is over. Too many RoutingTables")
 		}
 		i.IDSlider++
@@ -176,7 +178,7 @@ func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	result.IsDeleted = nrt.DeletionTimestamp != nil
 	result.NodeName = nrt.Spec.NodeName
 
-	cond := NRTFindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
+	cond := nrtFindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
 	if cond == nil {
 		result.Ready = false
 		result.Reason = v1alpha1.ReconciliationReasonPending
@@ -205,16 +207,27 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func routingTablesHandler(input *go_hook.HookInput) error {
-	var err error
+	// Init vars
+	routingTableIDMin, err := strconv.Atoi(input.Values.Get(routingTableIDMinPath).String())
+	if err != nil {
+		input.LogEntry.Errorf("unable to get routingTableIDMin from moduleConfig values")
+		return nil
+	}
+	routingTableIDMax, err := strconv.Atoi(input.Values.Get(routingTableIDMaxPath).String())
+	if err != nil {
+		input.LogEntry.Errorf("unable to get routingTableIDMax from moduleConfig values")
+		return nil
+	}
+	idi := idIterator{
+		UtilizedIDs: make(map[int]struct{}),
+		IDSlider:    routingTableIDMin,
+		MaxID:       routingTableIDMax,
+	}
 	actualNodeRoutingTables := make(map[string]NodeRoutingTableInfo)
 	allNodes := make(map[string]struct{})
 	affectedNodes := make(map[string][]RoutingTableInfo)
-	desiredRTStatus := make(map[string]rtsPlus)
+	desiredRTStatus := make(map[string]rtStatusPlus)
 	desiredNodeRoutingTables := make([]desiredNRTInfo, 0)
-	idi := idIterator{
-		UtilizedIDs: make(map[int]struct{}),
-		IDSlider:    RoutingTableIDMin,
-	}
 
 	// Filling allNodes
 	for _, nodeRaw := range input.Snapshots["nodes"] {
@@ -243,9 +256,8 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	for _, rtiRaw := range input.Snapshots["routingtables"] {
 		rti := rtiRaw.(RoutingTableInfo)
 
-		// if should to do then set pending status, else continue
-
-		tmpDRTS := new(rtsPlus)
+		// DRT stands for Desired Routing Table
+		tmpDRTS := new(rtStatusPlus)
 		tmpDRTS.failedNodes = make([]string, 0)
 		tmpDRTS.localErrors = make([]string, 0)
 
@@ -284,9 +296,9 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				// Filling affectedNodes
-				// the IPRoutingTableID is filled with the desired or generated value
 				rti.Status.IPRoutingTableID = tmpDRTS.IPRoutingTableID
+
+				// Filling affectedNodes
 				if rti.Status.IPRoutingTableID != 0 {
 					// if 0, it means that the value has not been set yet, and the generation of a new one failed
 					affectedNodes[nodei.Name] = append(affectedNodes[nodei.Name], rti)
@@ -316,7 +328,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 					newCond.LastHeartbeatTime = t
 					newCond.Status = metav1.ConditionFalse
 					newCond.Reason = v1alpha1.ReconciliationReasonFailed
-					newCond.Message = "Failed reconciling on " + strings.Join(tmpDRTS.failedNodes, ",")
+					newCond.Message = "Failed reconciling on " + strings.Join(tmpDRTS.failedNodes, ", ")
 				} else {
 					newCond.Type = v1alpha1.ReconciliationSucceedType
 					newCond.LastHeartbeatTime = t
@@ -333,7 +345,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			newCond.Message = strings.Join(tmpDRTS.localErrors, "\n")
 		}
 
-		_ = RTSetStatusCondition(&tmpDRTS.Conditions, newCond)
+		_ = rtSetStatusCondition(&tmpDRTS.Conditions, newCond)
 
 		desiredRTStatus[rti.Name] = *tmpDRTS
 	}
@@ -341,21 +353,20 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	// Filling desiredNodeRoutingTables
 	for nodeName, rtis := range affectedNodes {
 		for _, rti := range rtis {
-			var tmpNRTS desiredNRTInfo
-			tmpNRTS.Name = rti.Name + "-" + generateShortHash(rti.Name+"#"+nodeName)
-			tmpNRTS.NodeName = nodeName
-			tmpNRTS.OwnerRTName = rti.Name
-			tmpNRTS.OwnerRTUID = rti.UID
-			tmpNRTS.IPRoutingTableID = rti.Status.IPRoutingTableID
-			tmpNRTS.Routes = rti.Routes
-			desiredNodeRoutingTables = append(desiredNodeRoutingTables, tmpNRTS)
+			var tmpNRTSpec desiredNRTInfo
+			tmpNRTSpec.Name = rti.Name + "-" + generateShortHash(rti.Name+"#"+nodeName)
+			tmpNRTSpec.NodeName = nodeName
+			tmpNRTSpec.OwnerRTName = rti.Name
+			tmpNRTSpec.OwnerRTUID = rti.UID
+			tmpNRTSpec.IPRoutingTableID = rti.Status.IPRoutingTableID
+			tmpNRTSpec.Routes = rti.Routes
+			desiredNodeRoutingTables = append(desiredNodeRoutingTables, tmpNRTSpec)
 		}
 	}
-	// Sort desiredNodeRoutingTables
+	// Sort desiredNodeRoutingTables to prevent helm flapping
 	sort.SliceStable(desiredNodeRoutingTables, func(i, j int) bool {
 		return desiredNodeRoutingTables[i].Name < desiredNodeRoutingTables[j].Name
 	})
-	// Set desiredNodeRoutingTables to internal values (for helm)
 	input.Values.Set(nrtKeyPath, desiredNodeRoutingTables)
 
 	// Update status in k8s
@@ -383,7 +394,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			object_patch.WithSubresource("/status"),
 		)
 	}
-	// main logic end
+
 	return nil
 }
 
@@ -397,14 +408,14 @@ func generateShortHash(input string) string {
 	return fullHash
 }
 
-func RTSetStatusCondition(conditions *[]v1alpha1.RoutingTableCondition, newCondition v1alpha1.RoutingTableCondition) (changed bool) {
+func rtSetStatusCondition(conditions *[]v1alpha1.RoutingTableCondition, newCondition v1alpha1.RoutingTableCondition) (changed bool) {
 	if conditions == nil {
 		return false
 	}
 
 	timeNow := metav1.NewTime(time.Now())
 
-	existingCondition := RTFindStatusCondition(*conditions, newCondition.Type)
+	existingCondition := rtFindStatusCondition(*conditions, newCondition.Type)
 	if existingCondition == nil {
 		if newCondition.LastTransitionTime.IsZero() {
 			newCondition.LastTransitionTime = timeNow
@@ -443,7 +454,7 @@ func RTSetStatusCondition(conditions *[]v1alpha1.RoutingTableCondition, newCondi
 	return changed
 }
 
-func RTFindStatusCondition(conditions []v1alpha1.RoutingTableCondition, conditionType string) *v1alpha1.RoutingTableCondition {
+func rtFindStatusCondition(conditions []v1alpha1.RoutingTableCondition, conditionType string) *v1alpha1.RoutingTableCondition {
 	for i := range conditions {
 		if conditions[i].Type == conditionType {
 			return &conditions[i]
@@ -452,7 +463,7 @@ func RTFindStatusCondition(conditions []v1alpha1.RoutingTableCondition, conditio
 	return nil
 }
 
-func NRTFindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType string) *v1alpha1.NodeRoutingTableCondition {
+func nrtFindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType string) *v1alpha1.NodeRoutingTableCondition {
 	for i := range conditions {
 		if conditions[i].Type == conditionType {
 			return &conditions[i]
