@@ -507,6 +507,86 @@ You can use one of third-party files backup tools, for example: [Restic](https:/
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
 
+### How do perform a full recovery of the cluster state from an etcd backup?
+
+The following steps will be described to restore to the previous state of the cluster from a backup in case of complete data loss.
+
+#### Restoring a single-master cluster
+
+Follow these steps to restore a single-master cluster:
+
+1. Download the [etcdctl] utility(<https://github.com/etcd-io/etcd/releases> ) to the server (preferably its version is the same as the etcd version in the cluster).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+   Use the following command to view the etcd version in the cluster:
+
+   ```shell
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   ```
+
+1. Stop the etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Save the current etcd data.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Clean the etcd directory.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+
+1. Restore the etcd database.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+   ```
+
+1. Run etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+#### Steps to restore a multi-master cluster
+
+Follow these steps to restore a multi-master cluster:
+
+1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+
+1. Switch the cluster to single-master mode according to [instruction](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
+
+1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions] (#steps-to-restore-single-master-cluster) for single-master.
+
+1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+
+   ```shell
+   kubectl delete node MASTER_NODE_I
+   ```
+
+1. Restart all nodes of the cluster.
+
+1. Wait for the deckhouse queue to complete:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
+   ```
+
+1. Switch the cluster back to multi-master mode according to [instructions](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-in-multi-master) for cloud clusters or [instructions](#how-to-add-a-master-node-in-a-static-or-hybrid-cluster) for static or hybrid clusters.
+
 ### How do I restore a Kubernetes object from an etcd backup?
 
 To get cluster objects data from an etcd backup, you need:
