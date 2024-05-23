@@ -25,6 +25,14 @@ properties:
       - registryMode: Detached
   upstreamRegistry:
     type: object
+    x-example:
+      - upstreamRegistry:
+          upstreamRegistryHost: dev-registry.deckhouse.io
+          upstreamRegistryScheme: https
+          upstreamRegistryCa: ""
+          upstreamRegistryPath: sys/deckhouse-oss
+          upstreamRegistryUser: license-token
+          upstreamRegistryPassword: "123456"
     properties:
       upstreamRegistryHost:
         type: string
@@ -61,4 +69,4 @@ properties:
         description: |
           Password of upstream registry
         x-example:
-          - 123456
+          - "123456"
