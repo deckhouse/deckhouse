@@ -15,7 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
-	"system-registry-manager/internal/manager/worker/steps"
+	"system-registry-manager/internal/worker/steps"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 )

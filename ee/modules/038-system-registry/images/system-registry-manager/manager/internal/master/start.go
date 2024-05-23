@@ -9,7 +9,7 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
-	common "system-registry-manager/internal/manager/common"
+	common "system-registry-manager/internal/common"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 	pkg_logs "system-registry-manager/pkg/logs"
 )

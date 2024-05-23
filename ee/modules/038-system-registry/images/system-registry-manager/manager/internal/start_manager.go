@@ -3,14 +3,14 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package manager
+package internal
 
 import (
 	"context"
 	"sync"
-	common_config "system-registry-manager/internal/manager/common"
-	"system-registry-manager/internal/manager/master"
-	"system-registry-manager/internal/manager/worker"
+	common_config "system-registry-manager/internal/common"
+	"system-registry-manager/internal/master"
+	"system-registry-manager/internal/worker"
 	pkg_logs "system-registry-manager/pkg/logs"
 )
 

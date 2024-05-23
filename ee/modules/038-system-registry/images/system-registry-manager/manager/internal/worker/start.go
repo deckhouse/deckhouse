@@ -9,7 +9,7 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	common "system-registry-manager/internal/manager/common"
+	common "system-registry-manager/internal/common"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
 )

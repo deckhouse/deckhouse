@@ -7,7 +7,7 @@ package worker
 
 import (
 	"net/http"
-	"system-registry-manager/internal/manager/worker/steps"
+	"system-registry-manager/internal/worker/steps"
 	pkg_api "system-registry-manager/pkg/api"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 )
