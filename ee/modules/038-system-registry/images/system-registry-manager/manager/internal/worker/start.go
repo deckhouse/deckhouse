@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	common "system-registry-manager/internal/common"
+	pkg_api "system-registry-manager/pkg/api"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
 )
@@ -26,9 +27,10 @@ type Worker struct {
 }
 
 type WorkerData struct {
-	commonCfg *common.RuntimeConfig
-	rootCtx   context.Context
-	log       *log.Entry
+	commonCfg        *common.RuntimeConfig
+	rootCtx          context.Context
+	log              *log.Entry
+	singleRequestCfg *pkg_api.SingleRequestConfig
 }
 type WorkerServer struct {
 	server *http.Server
@@ -40,9 +42,10 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Worker {
 
 	worker := &Worker{
 		WorkerData{
-			commonCfg: rCfg,
-			rootCtx:   rootCtx,
-			log:       log,
+			commonCfg:        rCfg,
+			rootCtx:          rootCtx,
+			log:              log,
+			singleRequestCfg: pkg_api.CreateSingleRequestConfig(),
 		},
 		WorkerServer{
 			server: nil,

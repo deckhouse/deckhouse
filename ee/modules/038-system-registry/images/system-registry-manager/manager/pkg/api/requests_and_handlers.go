@@ -15,6 +15,7 @@ const (
 	CheckRegistryUrlPattern  = "/check_registry"
 	UpdateRegistryUrlPattern = "/update_registry"
 	DeleteRegistryUrlPattern = "/delete_registry"
+	IsBusyUrlPattern         = "/is_busy"
 )
 
 func RequestMasterInfo(client *http.Client, url string, headers map[string]string, response *MasterInfoResponse) error {
@@ -33,7 +34,7 @@ func RequestDeleteRegistry(client *http.Client, url string, headers map[string]s
 	return makeRequestWithoutResponse(client, "POST", url, headers, nil)
 }
 
-func CreateMasterInfoHandler(f func() (*MasterInfoResponse, error)) http.HandlerFunc {
+func CreateMasterInfoHandlerFunc(f func() (*MasterInfoResponse, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -54,8 +55,8 @@ func CreateMasterInfoHandler(f func() (*MasterInfoResponse, error)) http.Handler
 	}
 }
 
-func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryResponse, error)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryResponse, error), cfg *SingleRequestConfig) http.Handler {
+	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		var requestBody CheckRegistryRequest
@@ -80,10 +81,11 @@ func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryRes
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
 	}
+	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
 }
 
-func CreateUpdateRegistryHandler(f func(*UpdateRegistryRequest) error) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func CreateUpdateRegistryHandler(f func(*UpdateRegistryRequest) error, cfg *SingleRequestConfig) http.Handler {
+	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		var requestBody UpdateRegistryRequest
@@ -101,10 +103,11 @@ func CreateUpdateRegistryHandler(f func(*UpdateRegistryRequest) error) http.Hand
 
 		w.WriteHeader(http.StatusOK)
 	}
+	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
 }
 
-func CreateDeleteRegistryHandler(f func() error) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func CreateDeleteRegistryHandler(f func() error, cfg *SingleRequestConfig) http.Handler {
+	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		err := f()
@@ -114,5 +117,36 @@ func CreateDeleteRegistryHandler(f func() error) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
+}
+
+func CreateIsBusyHandlerFunc(cfg *SingleRequestConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		var requestBody CheckRegistryRequest
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		responce := BusyResponce{
+			Data: struct {
+				IsBusy bool "json:\"isBusy\""
+			}{
+				IsBusy: cfg.IsBusy(),
+			},
+		}
+
+		jsonResponse, err := json.Marshal(responce)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
 	}
 }
