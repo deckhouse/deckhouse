@@ -35,10 +35,11 @@ func createServer(workerData *WorkerData) *http.Server {
 
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
-	http.HandleFunc(pkg_api.MasterInfoUrlPattern, pkg_api.CreateMasterInfoHandler(masterInfo))
-	http.HandleFunc(pkg_api.CheckRegistryUrlPattern, pkg_api.CreateCheckRegistryHandler(checkRegistry))
-	http.HandleFunc(pkg_api.UpdateRegistryUrlPattern, pkg_api.CreateUpdateRegistryHandler(updateRegistry))
-	http.HandleFunc(pkg_api.DeleteRegistryUrlPattern, pkg_api.CreateDeleteRegistryHandler(deleteRegistry))
+	http.HandleFunc(pkg_api.MasterInfoUrlPattern, pkg_api.CreateMasterInfoHandlerFunc(masterInfo))
+	http.HandleFunc(pkg_api.IsBusyUrlPattern, pkg_api.CreateIsBusyHandlerFunc(workerData.singleRequestCfg))
+	http.Handle(pkg_api.CheckRegistryUrlPattern, pkg_api.CreateCheckRegistryHandler(checkRegistry, workerData.singleRequestCfg))
+	http.Handle(pkg_api.UpdateRegistryUrlPattern, pkg_api.CreateUpdateRegistryHandler(updateRegistry, workerData.singleRequestCfg))
+	http.Handle(pkg_api.DeleteRegistryUrlPattern, pkg_api.CreateDeleteRegistryHandler(deleteRegistry, workerData.singleRequestCfg))
 	return server
 }
 
