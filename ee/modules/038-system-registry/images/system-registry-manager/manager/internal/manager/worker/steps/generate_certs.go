@@ -59,12 +59,12 @@ func generateCertToWorkspace(genCertSpec *config.GeneratedCertificateSpec) error
 	}
 
 	// Save cert and key
-	err = pkg_files.OsWriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Cert), 0600)
+	err = pkg_files.WriteFile(genCertSpec.Cert.TmpGeneratePath, []byte(clientCert.Cert), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing certificate to %s: %v", genCertSpec.Cert.TmpGeneratePath, err)
 	}
 
-	err = pkg_files.OsWriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Key), 0600)
+	err = pkg_files.WriteFile(genCertSpec.Key.TmpGeneratePath, []byte(clientCert.Key), 0600)
 	if err != nil {
 		return fmt.Errorf("error writing private key to %s: %v", genCertSpec.Key.TmpGeneratePath, err)
 	}

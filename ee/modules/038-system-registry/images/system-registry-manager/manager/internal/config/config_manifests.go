@@ -53,10 +53,11 @@ func getDestionationDir() string {
 }
 
 type ManifestSpec struct {
-	NeedChangeFileBy pkg.NeedChangeFileBy
-	InputPath        string
-	TmpPath          string
-	DestPath         string
+	IsStaticPodManifest bool
+	NeedChangeFileBy    pkg.NeedChangeFileBy
+	InputPath           string
+	TmpPath             string
+	DestPath            string
 }
 
 type CaCertificateSpec struct {
@@ -99,6 +100,60 @@ func (m *ManifestsSpec) NeedChange() bool {
 	}
 	for _, manifest := range m.Manifests {
 		if manifest.NeedChangeFileBy.NeedChange() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedStaticPodsCreate() bool {
+	for _, manifest := range m.Manifests {
+		if manifest.IsStaticPodManifest && manifest.NeedChangeFileBy.NeedCreate() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedStaticPodsUpdate() bool {
+	for _, manifest := range m.Manifests {
+		if manifest.IsStaticPodManifest && manifest.NeedChangeFileBy.NeedUpdate() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedManifestsCreate() bool {
+	for _, manifest := range m.Manifests {
+		if !manifest.IsStaticPodManifest && manifest.NeedChangeFileBy.NeedCreate() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedManifestsUpdate() bool {
+	for _, manifest := range m.Manifests {
+		if !manifest.IsStaticPodManifest && manifest.NeedChangeFileBy.NeedUpdate() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedStaticCertificatesCreate() bool {
+	for _, cert := range m.GeneratedCertificates {
+		if cert.NeedChangeFileBy.NeedCreate() {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ManifestsSpec) NeedStaticCertificatesUpdate() bool {
+	for _, cert := range m.GeneratedCertificates {
+		if cert.NeedChangeFileBy.NeedUpdate() {
 			return true
 		}
 	}
@@ -215,9 +270,10 @@ func NewManifestsSpec() *ManifestsSpec {
 				DestPath:  filepath.Join(DestionationSeaweedManifestsDir, "master.toml"),
 			},
 			{
-				InputPath: filepath.Join(InputStaticPodsDir, "system-registry.yaml"),
-				TmpPath:   filepath.Join(TmpWorkspaceStaticPodsDir, "system-registry.yaml"),
-				DestPath:  filepath.Join(DestionationDirStaticPodsDir, "system-registry.yaml"),
+				InputPath:           filepath.Join(InputStaticPodsDir, "system-registry.yaml"),
+				TmpPath:             filepath.Join(TmpWorkspaceStaticPodsDir, "system-registry.yaml"),
+				DestPath:            filepath.Join(DestionationDirStaticPodsDir, "system-registry.yaml"),
+				IsStaticPodManifest: true,
 			},
 		},
 	}

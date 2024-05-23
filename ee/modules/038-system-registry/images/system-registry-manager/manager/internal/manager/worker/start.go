@@ -21,10 +21,16 @@ const (
 )
 
 type Worker struct {
+	WorkerData
+	WorkerServer
+}
+
+type WorkerData struct {
 	commonCfg *common.RuntimeConfig
 	rootCtx   context.Context
 	log       *log.Entry
-
+}
+type WorkerServer struct {
 	server *http.Server
 }
 
@@ -32,12 +38,19 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Worker {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
-	return &Worker{
-		commonCfg: rCfg,
-		rootCtx:   rootCtx,
-		log:       log,
-		server:    createServer(),
+	worker := &Worker{
+		WorkerData{
+			commonCfg: rCfg,
+			rootCtx:   rootCtx,
+			log:       log,
+		},
+		WorkerServer{
+			server: nil,
+		},
 	}
+
+	worker.server = createServer(&worker.WorkerData)
+	return worker
 }
 
 func (m *Worker) Start() {
@@ -56,21 +69,4 @@ func (m *Worker) Stop() {
 		m.log.Errorf("error shutting down server: %v", err)
 	}
 	m.log.Info("Worker shutdown")
-}
-
-func createServer() *http.Server {
-	server := &http.Server{
-		Addr: serverAddr,
-	}
-	http.HandleFunc("/healthz", healthzHandler)
-	http.HandleFunc("/readyz", readyzHandler)
-	return server
-}
-
-func healthzHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-func readyzHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }
