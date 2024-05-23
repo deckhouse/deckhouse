@@ -502,81 +502,83 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 ### Как выполнить полное восстановление состояния кластера из резервной копии etcd?
 
-Далее будут описаны шаги по восстановлению до предыдущего состояния кластера из резервной копии при полной потере данных
+Далее будут описаны шаги по восстановлению кластера до предыдущего состояния из резервной копии при полной потере данных.
 
-#### Шаги по восстановлению single-master кластера
+#### Восстановление кластера single-master
 
-1. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же как и версия etcd в кластере).
+Для корректного восстановления кластера single-master выполните следующие шаги:
+
+1. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
    tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
    ```
 
-   Посмотреть версию etcd в кластере:
+   Посмотреть версию etcd в кластере можно выполнив следующую команду:
 
    ```shell
-	kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
    ```
 
-2. Остановите etcd.
+1. Остановите etcd.
 
    ```shell
    mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
    ```
 
-3. Сохраните текущие данные etcd.
+1. Сохраните текущие данные etcd.
 
    ```shell
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
-4. Очистите директорию etcd.
+1. Очистите директорию etcd.
 
    ```shell
    rm -rf /var/lib/etcd/member/
    ```
 
-5. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
+1. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
 
-6. Восстановите базу данных etcd.
+1. Восстановите базу данных etcd.
 
    ```shell
    ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
      --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
    ```
 
-7. Запустите etcd.
+1. Запустите etcd.
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    ```
 
-#### Шаги по восстановлению multi-master кластера
+#### Восстановление кластерa multi-master
 
-Для корректного восстановления multi-master:
+Для корректного восстановления кластера multi-master выполните следующие шаги:
 
-1. Явно задайте режим High Availability, указав соответсвующий [параметр](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) в ресурсе `ModuleConfig/global`. Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
 
-2. Переведите кластер в single-master режим в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим single-master, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
-3. На единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#шаги-по-восстановлению-single-master-кластера) для single-master.
+1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#шаги-по-восстановлению-single-master-кластера) для single-master.
 
-4. Когда работа etcd восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах:
+1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
    ```shell
-   kubectl delete node MASTER_NODE_I
+   kubectl delete node <MASTER_NODE_I>
    ```
 
-5. Перезапустите все узлы кластера.
+1. Перезапустите все узлы кластера.
 
-6. Дождитесь выполнения очереди deckhouse:
+1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
    ```
 
-7. Переведите кластер обратно в multi-master режим в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
