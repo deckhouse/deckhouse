@@ -12,7 +12,7 @@ spec:
   hostNetwork: true
   containers:
   - name: distribution
-    image: "{{ .Images.SystemRegistry.DockerDistribution }}"
+    image: "{{ .images.systemRegistry.dockerDistribution }}"
     imagePullPolicy: IfNotPresent
     args:
       - serve
@@ -23,7 +23,7 @@ spec:
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
   - name: auth
-    image: "{{ .Images.SystemRegistry.DockerAuth }}"
+    image: "{{ .images.systemRegistry.dockerAuth }}"
     imagePullPolicy: IfNotPresent
     args:
       - -logtostderr
@@ -34,7 +34,7 @@ spec:
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
   - name: seaweedfs
-    image: "{{ .Images.SystemRegistry.Seaweedfs }}"
+    image: "{{ .images.systemRegistry.seaweedfs }}"
     imagePullPolicy: IfNotPresent
     args:
       - -config_dir="/config"
@@ -53,8 +53,8 @@ spec:
       - -master.defaultReplication=000
       - -volume.pprof
       - -filer.maxMB=16
-      - -ip={{ .HostIP }}
-      - -master.peers={{ .HostIP }}:9333
+      - -ip={{ .hostIP }}
+      - -master.peers={{ .hostIP }}:9333
     env:
       - name: GOGC
         value: "20"

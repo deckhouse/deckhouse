@@ -33,6 +33,34 @@ func generateInputConfig() error {
 		}{
 			Addresses: []string{"etcd1.example.com", "etcd2.example.com"},
 		},
+		Registry: struct {
+			RegistryMode     string "mapstructure:\"registryMode\""
+			UpstreamRegistry struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			} "mapstructure:\"upstreamRegistry\""
+		}{
+			RegistryMode: "Proxy",
+			UpstreamRegistry: struct {
+				UpstreamRegistryHost     string "mapstructure:\"upstreamRegistryHost\""
+				UpstreamRegistryScheme   string "mapstructure:\"upstreamRegistryScheme\""
+				UpstreamRegistryCa       string "mapstructure:\"upstreamRegistryCa\""
+				UpstreamRegistryPath     string "mapstructure:\"upstreamRegistryPath\""
+				UpstreamRegistryUser     string "mapstructure:\"upstreamRegistryUser\""
+				UpstreamRegistryPassword string "mapstructure:\"upstreamRegistryPassword\""
+			}{
+				UpstreamRegistryHost:     "TestUpstreamRegistryHost",
+				UpstreamRegistryScheme:   "TestUpstreamRegistryScheme",
+				UpstreamRegistryCa:       "TestUpstreamRegistryCa",
+				UpstreamRegistryPath:     "TestUpstreamRegistryPath",
+				UpstreamRegistryUser:     "TestUpstreamRegistryUser",
+				UpstreamRegistryPassword: "TestUpstreamRegistryPassword",
+			},
+		},
 		Images: struct {
 			SystemRegistry struct {
 				DockerDistribution string "mapstructure:\"dockerDistribution\""
