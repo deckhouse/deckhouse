@@ -20,7 +20,7 @@ docker:
     iptables: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALT_DEV }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -29,23 +29,26 @@ git:
       - '**/*'
 shell:
   setup:
-    - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-    - apt-get update && apt-get install libtool -y
+    - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+    - apk update && apk add patchelf
     - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl
     - cd /src-libmnl
     - ./autogen.sh
-    - ./configure --enable-static
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
     - make && make install
     - git clone -b libnftnl-1.2.6 --depth 1  {{ $.SOURCE_REPO }}/netfilter/libnftnl /src-libnftnl
     - cd /src-libnftnl
     - ./autogen.sh
-    - ./configure --enable-static
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
     - make && make install
     - git clone -b v1.8.10 --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
     - cd /src
     - ./autogen.sh
-    - ./configure --enable-static --disable-shared
-    - make LDFLAGS='-all-static'
+    - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
+    - make && make install
+    - cp -L /lib/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.libs/
+    - patchelf --set-interpreter /opt/deckhouse/bin/.libs/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.deps/sbin/xtables-nft-multi
+    - patchelf --set-interpreter /opt/deckhouse/bin/.libs/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.deps/sbin/xtables-legacy-multi
     - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
-    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi
+    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi 
     - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
