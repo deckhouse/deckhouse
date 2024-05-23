@@ -38,3 +38,9 @@ type MasterInfoResponse struct {
 		CurrentMasterName string `json:"currentMasterName"`
 	} `json:"data,omitempty"`
 }
+
+type BusyResponce struct {
+	Data struct {
+		IsBusy bool `json:"isBusy"`
+	} `json:"data,omitempty"`
+}
