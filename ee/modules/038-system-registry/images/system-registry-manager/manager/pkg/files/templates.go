@@ -28,7 +28,7 @@ func RenderTemplateFiles(filePath string, data interface{}) error {
 		return err
 	}
 
-	err = OsWriteFile(filePath, []byte(strContent), fileInfo.Mode())
+	err = WriteFile(filePath, []byte(strContent), fileInfo.Mode())
 	return err
 }
 
