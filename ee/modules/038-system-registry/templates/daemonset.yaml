@@ -111,6 +111,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        ports:
+        - name: https
+          protocol: TCP
+          containerPort: 8097
         livenessProbe:
           httpGet:
             host: 127.0.0.1
