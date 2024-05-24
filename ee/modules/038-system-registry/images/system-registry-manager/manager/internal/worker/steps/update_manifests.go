@@ -6,21 +6,22 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
+	"context"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-func UpdateManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func UpdateManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting UpdateManifests")
 
-	if err := copyCertsToDest(manifestsSpec); err != nil {
+	if err := copyCertsToDest(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to copy certificates: %v", err)
 		return err
 	}
-	if err := copyManifestsToDest(manifestsSpec); err != nil {
+	if err := copyManifestsToDest(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to copy manifests: %v", err)
 		return err
 	}
@@ -28,7 +29,8 @@ func UpdateManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func copyCertsToDest(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func copyCertsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting to copy certificates to destination")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -54,7 +56,8 @@ func copyCertsToDest(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func copyManifestsToDest(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func copyManifestsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting to copy manifests to destination")
 
 	for _, manifest := range manifestsSpec.Manifests {

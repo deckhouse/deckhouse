@@ -6,28 +6,30 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
+	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-func PrepareWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func PrepareWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting workspace preparation...")
 
-	if err := checkInputCertificatesExist(manifestsSpec); err != nil {
+	if err := checkInputCertificatesExist(ctx, manifestsSpec); err != nil {
 		log.Errorf("Error checking input certificates: %v", err)
 		return err
 	}
-	if err := checkInputManifestsExist(manifestsSpec); err != nil {
+	if err := checkInputManifestsExist(ctx, manifestsSpec); err != nil {
 		log.Errorf("Error checking input manifests: %v", err)
 		return err
 	}
-	if err := copyCertificatesToWorkspace(manifestsSpec); err != nil {
+	if err := copyCertificatesToWorkspace(ctx, manifestsSpec); err != nil {
 		log.Errorf("Error copying certificates to workspace: %v", err)
 		return err
 	}
-	if err := copyManifestsToWorkspace(manifestsSpec); err != nil {
+	if err := copyManifestsToWorkspace(ctx, manifestsSpec); err != nil {
 		log.Errorf("Error copying manifests to workspace: %v", err)
 		return err
 	}
@@ -36,7 +38,8 @@ func PrepareWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func checkInputCertificatesExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func checkInputCertificatesExist(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Checking existence of input certificates...")
 
 	var inputFiles []string
@@ -56,7 +59,8 @@ func checkInputCertificatesExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func checkInputManifestsExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func checkInputManifestsExist(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Checking existence of input manifests...")
 
 	for _, manifest := range manifestsSpec.Manifests {
@@ -69,7 +73,8 @@ func checkInputManifestsExist(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func copyCertificatesToWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func copyCertificatesToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Copying certificates to workspace...")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -88,7 +93,8 @@ func copyCertificatesToWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func copyManifestsToWorkspace(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func copyManifestsToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Copying manifests to workspace...")
 
 	renderData, err := pkg_cfg.GetDataForManifestRendering()

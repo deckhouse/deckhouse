@@ -70,15 +70,15 @@ func checkRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRe
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
+	if err := steps.PrepareWorkspace(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return nil, err
 	}
-	if err := steps.GenerateCerts(manifestsSpec); err != nil {
+	if err := steps.GenerateCerts(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return nil, err
 	}
-	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
+	if err := steps.CheckDestFiles(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return nil, err
 	}
@@ -119,15 +119,15 @@ func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryR
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
+	if err := steps.PrepareWorkspace(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}
-	if err := steps.GenerateCerts(manifestsSpec); err != nil {
+	if err := steps.GenerateCerts(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}
-	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
+	if err := steps.CheckDestFiles(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -135,7 +135,7 @@ func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryR
 		log.Info("No changes")
 		return nil
 	}
-	if err := steps.UpdateManifests(manifestsSpec); err != nil {
+	if err := steps.UpdateManifests(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -146,7 +146,7 @@ func deleteRegistryHandlerFunc(workerData *WorkerData) error {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.DeleteManifests(manifestsSpec); err != nil {
+	if err := steps.DeleteManifests(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}

@@ -6,9 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
-	"github.com/stretchr/testify/assert"
+	"context"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func generateInputConfig() error {
@@ -86,7 +88,7 @@ func TestCheckInputManifestsExist(t *testing.T) {
 	assert.NoError(t, err)
 
 	manifestsSpec := pkg_cfg.NewManifestsSpecForTest()
-	err = checkInputManifestsExist(manifestsSpec)
+	err = checkInputManifestsExist(context.Background(), manifestsSpec)
 	assert.NoError(t, err)
 }
 
@@ -95,6 +97,6 @@ func TestCopyManifestsToWorkspace(t *testing.T) {
 	assert.NoError(t, err)
 
 	manifestsSpec := pkg_cfg.NewManifestsSpecForTest()
-	err = copyManifestsToWorkspace(manifestsSpec)
+	err = copyManifestsToWorkspace(context.Background(), manifestsSpec)
 	assert.NoError(t, err)
 }

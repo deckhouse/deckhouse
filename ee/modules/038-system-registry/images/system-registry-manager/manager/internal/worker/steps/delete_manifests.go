@@ -6,20 +6,22 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
+	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-func DeleteManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func DeleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting delete step")
 
-	if err := deleteCerts(manifestsSpec); err != nil {
+	if err := deleteCerts(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to delete certificates: %v", err)
 		return err
 	}
-	if err := deleteManifests(manifestsSpec); err != nil {
+	if err := deleteManifests(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to delete manifests: %v", err)
 		return err
 	}
@@ -27,7 +29,8 @@ func DeleteManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func deleteCerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func deleteCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting to delete certificates")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
@@ -49,7 +52,8 @@ func deleteCerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func deleteManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func deleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting to delete manifests")
 
 	for _, manifest := range manifestsSpec.Manifests {
