@@ -569,7 +569,7 @@ Follow these steps to restore a multi-master cluster:
 
 1. Switch the cluster to single-master mode according to [instruction](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
 
-1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions] (#steps-to-restore-single-master-cluster) for single-master.
+1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#steps-to-restore-single-master-cluster) for a single-master cluster.
 
 1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
 
