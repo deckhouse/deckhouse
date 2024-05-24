@@ -16,7 +16,7 @@
 mkdir -p /opt/deckhouse/bin/.libs
 cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
-cp -f .libs/* /opt/deckhouse/bin/.libs/
+#cp -f .libs/* /opt/deckhouse/bin/.libs/
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 

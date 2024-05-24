@@ -1,4 +1,4 @@
-{{- $version := "1.8.8" }}
+{{- $version := "1.8.10" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -42,15 +42,13 @@ shell:
     - ./autogen.sh
     - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
     - make && make install
-    - git clone -b v1.8.10 --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
+    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
     - cd /src
     - ./autogen.sh
     - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
-    - make && make install
+    - make LDFLAGS='-all-static' && make install
     - cp -L /lib/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.libs/
     - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
     - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi 
     - mv /opt/deckhouse/bin/.libs  /.libs
     - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
-    - patchelf --set-interpreter /opt/deckhouse/bin/.libs/ld-musl-x86_64.so.1 /xtables-nft-multi
-    - patchelf --set-interpreter /opt/deckhouse/bin/.libs/ld-musl-x86_64.so.1 /xtables-legacy-multi
