@@ -33,12 +33,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	DHCTL_Check_FullMethodName     = "/dhctl.DHCTL/Check"
-	DHCTL_Bootstrap_FullMethodName = "/dhctl.DHCTL/Bootstrap"
-	DHCTL_Destroy_FullMethodName   = "/dhctl.DHCTL/Destroy"
-	DHCTL_Abort_FullMethodName     = "/dhctl.DHCTL/Abort"
-	DHCTL_Converge_FullMethodName  = "/dhctl.DHCTL/Converge"
-	DHCTL_Import_FullMethodName    = "/dhctl.DHCTL/Import"
+	DHCTL_Check_FullMethodName           = "/dhctl.DHCTL/Check"
+	DHCTL_Bootstrap_FullMethodName       = "/dhctl.DHCTL/Bootstrap"
+	DHCTL_Destroy_FullMethodName         = "/dhctl.DHCTL/Destroy"
+	DHCTL_Abort_FullMethodName           = "/dhctl.DHCTL/Abort"
+	DHCTL_Converge_FullMethodName        = "/dhctl.DHCTL/Converge"
+	DHCTL_AttachCommander_FullMethodName = "/dhctl.DHCTL/AttachCommander"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -50,7 +50,7 @@ type DHCTLClient interface {
 	Destroy(ctx context.Context, opts ...grpc.CallOption) (DHCTL_DestroyClient, error)
 	Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error)
 	Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error)
-	Import(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ImportClient, error)
+	AttachCommander(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AttachCommanderClient, error)
 }
 
 type dHCTLClient struct {
@@ -216,31 +216,31 @@ func (x *dHCTLConvergeClient) Recv() (*ConvergeResponse, error) {
 	return m, nil
 }
 
-func (c *dHCTLClient) Import(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ImportClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[5], DHCTL_Import_FullMethodName, opts...)
+func (c *dHCTLClient) AttachCommander(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AttachCommanderClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[5], DHCTL_AttachCommander_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &dHCTLImportClient{stream}
+	x := &dHCTLAttachCommanderClient{stream}
 	return x, nil
 }
 
-type DHCTL_ImportClient interface {
-	Send(*ImportRequest) error
-	Recv() (*ImportResponse, error)
+type DHCTL_AttachCommanderClient interface {
+	Send(*AttachCommanderRequest) error
+	Recv() (*AttachCommanderResponse, error)
 	grpc.ClientStream
 }
 
-type dHCTLImportClient struct {
+type dHCTLAttachCommanderClient struct {
 	grpc.ClientStream
 }
 
-func (x *dHCTLImportClient) Send(m *ImportRequest) error {
+func (x *dHCTLAttachCommanderClient) Send(m *AttachCommanderRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *dHCTLImportClient) Recv() (*ImportResponse, error) {
-	m := new(ImportResponse)
+func (x *dHCTLAttachCommanderClient) Recv() (*AttachCommanderResponse, error) {
+	m := new(AttachCommanderResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ type DHCTLServer interface {
 	Destroy(DHCTL_DestroyServer) error
 	Abort(DHCTL_AbortServer) error
 	Converge(DHCTL_ConvergeServer) error
-	Import(DHCTL_ImportServer) error
+	AttachCommander(DHCTL_AttachCommanderServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -279,8 +279,8 @@ func (UnimplementedDHCTLServer) Abort(DHCTL_AbortServer) error {
 func (UnimplementedDHCTLServer) Converge(DHCTL_ConvergeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Converge not implemented")
 }
-func (UnimplementedDHCTLServer) Import(DHCTL_ImportServer) error {
-	return status.Errorf(codes.Unimplemented, "method Import not implemented")
+func (UnimplementedDHCTLServer) AttachCommander(DHCTL_AttachCommanderServer) error {
+	return status.Errorf(codes.Unimplemented, "method AttachCommander not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -425,26 +425,26 @@ func (x *dHCTLConvergeServer) Recv() (*ConvergeRequest, error) {
 	return m, nil
 }
 
-func _DHCTL_Import_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DHCTLServer).Import(&dHCTLImportServer{stream})
+func _DHCTL_AttachCommander_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).AttachCommander(&dHCTLAttachCommanderServer{stream})
 }
 
-type DHCTL_ImportServer interface {
-	Send(*ImportResponse) error
-	Recv() (*ImportRequest, error)
+type DHCTL_AttachCommanderServer interface {
+	Send(*AttachCommanderResponse) error
+	Recv() (*AttachCommanderRequest, error)
 	grpc.ServerStream
 }
 
-type dHCTLImportServer struct {
+type dHCTLAttachCommanderServer struct {
 	grpc.ServerStream
 }
 
-func (x *dHCTLImportServer) Send(m *ImportResponse) error {
+func (x *dHCTLAttachCommanderServer) Send(m *AttachCommanderResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *dHCTLImportServer) Recv() (*ImportRequest, error) {
-	m := new(ImportRequest)
+func (x *dHCTLAttachCommanderServer) Recv() (*AttachCommanderRequest, error) {
+	m := new(AttachCommanderRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -490,8 +490,8 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
-			StreamName:    "Import",
-			Handler:       _DHCTL_Import_Handler,
+			StreamName:    "AttachCommander",
+			Handler:       _DHCTL_AttachCommander_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
