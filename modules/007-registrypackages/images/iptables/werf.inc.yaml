@@ -10,7 +10,6 @@ import:
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
-  - .libs
   - install
   - uninstall
   before: setup
@@ -35,20 +34,18 @@ shell:
     - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl
     - cd /src-libmnl
     - ./autogen.sh
-    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
     - make && make install
     - git clone -b libnftnl-1.2.6 --depth 1  {{ $.SOURCE_REPO }}/netfilter/libnftnl /src-libnftnl
     - cd /src-libnftnl
     - ./autogen.sh
-    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
     - make && make install
     - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
     - cd /src
     - ./autogen.sh
-    - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs --prefix=/opt/deckhouse/bin/.deps
-    - make LDFLAGS='-all-static' && make install
-    - cp -L /lib/ld-musl-x86_64.so.1 /opt/deckhouse/bin/.libs/
+    - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs
+    - make LDFLAGS='-all-static'
     - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
     - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi 
-    - mv /opt/deckhouse/bin/.libs  /.libs
     - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
