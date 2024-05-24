@@ -30,16 +30,9 @@ func (f *DefaultFieldFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 func init() {
-	initMainLogger()
-	initK8sClientLogger()
-}
-
-func initMainLogger() {
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 	logrus.SetFormatter(&logrus.JSONFormatter{})
-}
 
-func initK8sClientLogger() {
 	logrusLog := logrus.New()
 	logrusLog.SetFormatter(&DefaultFieldFormatter{
 		DefaultFields: map[string]interface{}{

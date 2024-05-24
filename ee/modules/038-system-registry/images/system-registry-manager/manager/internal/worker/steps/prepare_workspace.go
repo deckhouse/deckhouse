@@ -78,12 +78,12 @@ func copyCertificatesToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.Man
 	log.Info("Copying certificates to workspace...")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
-		log.Infof("Copying CA key from %s to %s", cert.CAKey.InputPath, cert.CAKey.TmpPath)
+		log.Debugf("Copying CA key from %s to %s", cert.CAKey.InputPath, cert.CAKey.TmpPath)
 		if err := pkg_files.CopyFile(cert.CAKey.InputPath, cert.CAKey.TmpPath); err != nil {
 			return err
 		}
 
-		log.Infof("Copying CA certificate from %s to %s", cert.CACert.InputPath, cert.CACert.TmpPath)
+		log.Debugf("Copying CA certificate from %s to %s", cert.CACert.InputPath, cert.CACert.TmpPath)
 		if err := pkg_files.CopyFile(cert.CACert.InputPath, cert.CACert.TmpPath); err != nil {
 			return err
 		}
@@ -104,11 +104,11 @@ func copyManifestsToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.Manife
 	}
 
 	for _, manifest := range manifestsSpec.Manifests {
-		log.Infof("Copying manifest from %s to %s", manifest.InputPath, manifest.TmpPath)
+		log.Debugf("Copying manifest from %s to %s", manifest.InputPath, manifest.TmpPath)
 		if err := pkg_files.CopyFile(manifest.InputPath, manifest.TmpPath); err != nil {
 			return err
 		}
-		log.Infof("Rendering manifest template at %s", manifest.TmpPath)
+		log.Debugf("Rendering manifest template at %s", manifest.TmpPath)
 		if err := pkg_files.RenderTemplateFiles(manifest.TmpPath, renderData); err != nil {
 			return err
 		}
