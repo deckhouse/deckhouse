@@ -66,16 +66,20 @@ func masterInfoHandlerFunc(workerData *WorkerData) (*pkg_api.MasterInfoResponse,
 	return &masterInfo, nil
 }
 
-func checkRegistryHandlerFunc(_ *WorkerData, _ *pkg_api.CheckRegistryRequest) (*pkg_api.CheckRegistryResponse, error) {
+func checkRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRequest) (*pkg_api.CheckRegistryResponse, error) {
+	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
 	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	if err := steps.GenerateCerts(manifestsSpec); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	if !manifestsSpec.NeedChange() {
@@ -112,28 +116,39 @@ func checkRegistryHandlerFunc(_ *WorkerData, _ *pkg_api.CheckRegistryRequest) (*
 }
 
 func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRequest) error {
+	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
 	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
+		log.Error(err)
 		return err
 	}
 	if err := steps.GenerateCerts(manifestsSpec); err != nil {
+		log.Error(err)
 		return err
 	}
 	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
+		log.Error(err)
 		return err
 	}
 	if !manifestsSpec.NeedChange() {
-		workerData.log.Info("No changes")
+		log.Info("No changes")
 		return nil
 	}
 	if err := steps.UpdateManifests(manifestsSpec); err != nil {
+		log.Error(err)
 		return err
 	}
 	return nil
 }
 
-func deleteRegistryHandlerFunc(_ *WorkerData) error {
+func deleteRegistryHandlerFunc(workerData *WorkerData) error {
+	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
-	return steps.DeleteManifests(manifestsSpec)
+
+	if err := steps.DeleteManifests(manifestsSpec); err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
 }
