@@ -6,21 +6,23 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package steps
 
 import (
+	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-func CheckDestFiles(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func CheckDestFiles(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Starting check of destination files...")
 
-	if err := checkDestManifests(manifestsSpec); err != nil {
+	if err := checkDestManifests(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to check destination manifest files: %v", err)
 		return err
 	}
 
-	if err := checkDestSerts(manifestsSpec); err != nil {
+	if err := checkDestSerts(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to check destination certificate files: %v", err)
 		return err
 	}
@@ -29,7 +31,8 @@ func CheckDestFiles(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func checkDestManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func checkDestManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Checking destination manifest files...")
 
 	for i, manifest := range manifestsSpec.Manifests {
@@ -54,7 +57,8 @@ func checkDestManifests(manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	return nil
 }
 
-func checkDestSerts(manifestsSpec *pkg_cfg.ManifestsSpec) error {
+func checkDestSerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	log.Info("Checking destination certificate files...")
 
 	for i, cert := range manifestsSpec.GeneratedCertificates {
