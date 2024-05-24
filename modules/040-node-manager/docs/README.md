@@ -323,5 +323,5 @@ Metrics collected for each node group:
 - `d8_node_group_min` — the minimal amount of instances in the group.
 - `d8_node_group_max` — the maximum amount of instances in the group.
 - `d8_node_group_up_to_date` — the number of up-to-date nodes in the group.
-- `d8_node_group_standby` — the number of over provisioned instances in the group.
+- `d8_node_group_standby` — the number of over provisioned instances (see [standby](cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter) in the group.
 - `d8_node_group_has_errors` — the boolean value equal to 1 if there are errors in the group.
