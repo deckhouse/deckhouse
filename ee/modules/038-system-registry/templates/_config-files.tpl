@@ -53,12 +53,12 @@ kind: Secret
 metadata:
   name: system-registry-manager-configs
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $. (dict "app" "d8-system-registry")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-system-registry")) | nindent 2 }}
 type: Opaque
 data:
   {{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
   {{- range $configFilesInfo.files }}
-  "{{ .templateName }}": {{ include .templateName $ | b64enc }}
+  "{{ .templateName }}": {{ include .templateName $  | b64enc }}
   {{- end }}
 {{- end }}
 
@@ -72,7 +72,7 @@ kind: Secret
 metadata:
   name: system-registry-manager-pki
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $. (dict "app" "d8-system-registry")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-system-registry")) | nindent 2 }}
 type: Opaque
 data:
   {{- range $.Values.systemRegistry.internal.pki.data }}
