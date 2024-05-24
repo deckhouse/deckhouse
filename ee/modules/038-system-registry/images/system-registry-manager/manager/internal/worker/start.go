@@ -17,7 +17,7 @@ import (
 
 const (
 	processName     = "worker"
-	serverAddr      = "127.0.0.1:8097"
+	serverAddr      = "0.0.0.0:8097"
 	shutdownTimeout = 5 * time.Second
 )
 
