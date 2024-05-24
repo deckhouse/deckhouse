@@ -17,8 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-	"crypto/sha256"
 	"fmt"
+
 	"sort"
 	"strconv"
 	"strings"
@@ -27,22 +27,16 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
 const (
-	Group                 = "network.deckhouse.io"
-	Version               = "v1alpha1"
-	GroupVersion          = Group + "/" + Version
-	RTKind                = "RoutingTable"
-	NRTKind               = "NodeRoutingTable"
-	finalizer             = "routing-tables-manager.network.deckhouse.io"
 	nrtKeyPath            = "staticRoutingManager.internal.nodeRoutingTables"
 	routingTableIDMinPath = "staticRoutingManager.routingTableIDMin"
 	routingTableIDMaxPath = "staticRoutingManager.routingTableIDMax"
@@ -65,11 +59,6 @@ type NodeRoutingTableInfo struct {
 	NodeName  string
 	Ready     bool
 	Reason    string
-}
-
-type NodeInfo struct {
-	Name   string
-	Labels map[string]string
 }
 
 type desiredNRTInfo struct {
@@ -124,7 +113,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "nodes",
 			ApiVersion: "v1",
 			Kind:       "Node",
-			FilterFunc: applyNodeFilter,
+			FilterFunc: lib.ApplyNodeFilter,
 		},
 	},
 }, routingTablesHandler)
@@ -178,7 +167,7 @@ func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	result.IsDeleted = nrt.DeletionTimestamp != nil
 	result.NodeName = nrt.Spec.NodeName
 
-	cond := nrtFindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
+	cond := lib.FindStatusCondition(nrt.Status.Conditions, v1alpha1.ReconciliationSucceedType)
 	if cond == nil {
 		result.Ready = false
 		result.Reason = v1alpha1.ReconciliationReasonPending
@@ -186,22 +175,6 @@ func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		result.Ready = cond.Status == metav1.ConditionTrue
 		result.Reason = cond.Reason
 	}
-
-	return result, nil
-}
-
-func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var (
-		node   v1.Node
-		result NodeInfo
-	)
-	err := sdk.FromUnstructured(obj, &node)
-	if err != nil {
-		return nil, err
-	}
-
-	result.Name = node.Name
-	result.Labels = node.Labels
 
 	return result, nil
 }
@@ -231,7 +204,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 
 	// Filling allNodes
 	for _, nodeRaw := range input.Snapshots["nodes"] {
-		node := nodeRaw.(NodeInfo)
+		node := nodeRaw.(lib.NodeInfo)
 		allNodes[node.Name] = struct{}{}
 	}
 
@@ -240,7 +213,13 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		nrtis := nrtRaw.(NodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
-			deleteFinalizerFromNRT(input, nrtis.Name)
+			lib.DeleteFinalizer(
+				input,
+				nrtis.Name,
+				v1alpha1.GroupVersion,
+				v1alpha1.NRTKind,
+				v1alpha1.Finalizer,
+			)
 		}
 	}
 
@@ -283,11 +262,11 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and filling affectedNodes
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
-			nodei := nodeiRaw.(NodeInfo)
+			nodei := nodeiRaw.(lib.NodeInfo)
 
 			if validatedSelector.Matches(labels.Set(nodei.Labels)) {
 				tmpDRTS.AffectedNodeRoutingTables++
-				nrtName := rti.Name + "-" + generateShortHash(rti.Name+"#"+nodei.Name)
+				nrtName := rti.Name + "-" + lib.GenerateShortHash(rti.Name+"#"+nodei.Name)
 				if _, ok := actualNodeRoutingTables[nrtName]; ok {
 					if actualNodeRoutingTables[nrtName].Ready {
 						tmpDRTS.ReadyNodeRoutingTables++
@@ -307,12 +286,12 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		}
 
 		// Generate desired conditions
-		newCond := v1alpha1.RoutingTableCondition{}
+		newCond := v1alpha1.ExtendedCondition{}
 		t := metav1.NewTime(time.Now())
 		if rti.Status.Conditions != nil {
 			tmpDRTS.Conditions = rti.Status.Conditions
 		} else {
-			tmpDRTS.Conditions = make([]v1alpha1.RoutingTableCondition, 0)
+			tmpDRTS.Conditions = make([]v1alpha1.ExtendedCondition, 0)
 		}
 
 		if len(tmpDRTS.localErrors) == 0 {
@@ -345,7 +324,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			newCond.Message = strings.Join(tmpDRTS.localErrors, "\n")
 		}
 
-		_ = rtSetStatusCondition(&tmpDRTS.Conditions, newCond)
+		_ = lib.SetStatusCondition(&tmpDRTS.Conditions, newCond)
 
 		desiredRTStatus[rti.Name] = *tmpDRTS
 	}
@@ -354,7 +333,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	for nodeName, rtis := range affectedNodes {
 		for _, rti := range rtis {
 			var tmpNRTSpec desiredNRTInfo
-			tmpNRTSpec.Name = rti.Name + "-" + generateShortHash(rti.Name+"#"+nodeName)
+			tmpNRTSpec.Name = rti.Name + "-" + lib.GenerateShortHash(rti.Name+"#"+nodeName)
 			tmpNRTSpec.NodeName = nodeName
 			tmpNRTSpec.OwnerRTName = rti.Name
 			tmpNRTSpec.OwnerRTUID = rti.UID
@@ -387,8 +366,8 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 
 		input.PatchCollector.MergePatch(
 			statusPatch,
-			GroupVersion,
-			RTKind,
+			v1alpha1.GroupVersion,
+			v1alpha1.RTKind,
 			"",
 			rtName,
 			object_patch.WithSubresource("/status"),
@@ -399,99 +378,3 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 }
 
 // service functions
-
-func generateShortHash(input string) string {
-	fullHash := fmt.Sprintf("%x", sha256.Sum256([]byte(input)))
-	if len(fullHash) > 10 {
-		return fullHash[:10]
-	}
-	return fullHash
-}
-
-func rtSetStatusCondition(conditions *[]v1alpha1.RoutingTableCondition, newCondition v1alpha1.RoutingTableCondition) (changed bool) {
-	if conditions == nil {
-		return false
-	}
-
-	timeNow := metav1.NewTime(time.Now())
-
-	existingCondition := rtFindStatusCondition(*conditions, newCondition.Type)
-	if existingCondition == nil {
-		if newCondition.LastTransitionTime.IsZero() {
-			newCondition.LastTransitionTime = timeNow
-		}
-		if newCondition.LastHeartbeatTime.IsZero() {
-			newCondition.LastHeartbeatTime = timeNow
-		}
-		*conditions = append(*conditions, newCondition)
-		return true
-	}
-
-	if !newCondition.LastHeartbeatTime.IsZero() {
-		existingCondition.LastHeartbeatTime = newCondition.LastHeartbeatTime
-	} else {
-		existingCondition.LastHeartbeatTime = timeNow
-	}
-
-	if existingCondition.Status != newCondition.Status {
-		existingCondition.Status = newCondition.Status
-		if !newCondition.LastTransitionTime.IsZero() {
-			existingCondition.LastTransitionTime = newCondition.LastTransitionTime
-		} else {
-			existingCondition.LastTransitionTime = timeNow
-		}
-		changed = true
-	}
-
-	if existingCondition.Reason != newCondition.Reason {
-		existingCondition.Reason = newCondition.Reason
-		changed = true
-	}
-	if existingCondition.Message != newCondition.Message {
-		existingCondition.Message = newCondition.Message
-		changed = true
-	}
-	return changed
-}
-
-func rtFindStatusCondition(conditions []v1alpha1.RoutingTableCondition, conditionType string) *v1alpha1.RoutingTableCondition {
-	for i := range conditions {
-		if conditions[i].Type == conditionType {
-			return &conditions[i]
-		}
-	}
-	return nil
-}
-
-func nrtFindStatusCondition(conditions []v1alpha1.NodeRoutingTableCondition, conditionType string) *v1alpha1.NodeRoutingTableCondition {
-	for i := range conditions {
-		if conditions[i].Type == conditionType {
-			return &conditions[i]
-		}
-	}
-	return nil
-}
-
-func deleteFinalizerFromNRT(input *go_hook.HookInput, nrtName string) {
-	input.PatchCollector.Filter(
-		func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-			var nrt v1alpha1.NodeRoutingTable
-			err := sdk.FromUnstructured(obj, &nrt)
-			if err != nil {
-				input.LogEntry.Warnf("can't get NRT %v, error: %v", nrtName, err)
-			}
-			tmpNRTFinalizers := make([]string, 0)
-			for _, fnlzr := range nrt.Finalizers {
-				if fnlzr != finalizer {
-					tmpNRTFinalizers = append(tmpNRTFinalizers, fnlzr)
-				}
-			}
-			nrt.Finalizers = tmpNRTFinalizers
-			return sdk.ToUnstructured(&nrt)
-		},
-		GroupVersion,
-		NRTKind,
-		"",
-		nrtName,
-	)
-}

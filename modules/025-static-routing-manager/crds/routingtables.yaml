@@ -118,7 +118,7 @@ spec:
                     - reason
                   properties:
                     type:
-                      description: Type of node group condition.
+                      description: Type of condition.
                       type: string
                     lastHeartbeatTime:
                       type: string
@@ -132,8 +132,7 @@ spec:
                       format: date-time
                       description: Last time the condition transit from one status to another.
                     reason:
-                      description: The reason for the condition's last transition
-                        in CamelCase.
+                      description: The reason for the condition's last transition in CamelCase.
                       type: string
                     message:
                       description: Human readable message indicating details about last transition.

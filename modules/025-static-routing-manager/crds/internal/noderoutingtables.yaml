@@ -66,9 +66,9 @@ spec:
                 maximum: 4294967295
                 description: |
                   ID of the desired routing table.
-                  
+
                   If the value is not explicitly specified, it will be generated automatically.
-                  
+
                   Once a resource is created, you can only change the routing table ID by recreating the resource.
               routes:
                 type: array
@@ -104,7 +104,7 @@ spec:
                 items:
                   type: object
                   description: |
-                    Desired routes.
+                    Applied routes.
                   required:
                     - destination
                     - gateway

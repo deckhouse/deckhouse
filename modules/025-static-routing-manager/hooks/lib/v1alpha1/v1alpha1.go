@@ -20,6 +20,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// API
+	Group        = "network.deckhouse.io"
+	Version      = "v1alpha1"
+	GroupVersion = Group + "/" + Version
+	RTKind       = "RoutingTable"
+	NRTKind      = "NodeRoutingTable"
+	IRSKind      = "IPRuleSet"
+	NIRSKind     = "NodeIPRuleSet"
+	//
+	Finalizer = "routing-tables-manager.network.deckhouse.io"
+	// Types
+	ReconciliationSucceedType = "Ready"
+	// Reasons
+	ReconciliationReasonSucceed = "ReconciliationSucceed"
+	ReconciliationReasonFailed  = "ReconciliationFailed"
+	ReconciliationReasonPending = "Pending"
+)
+
 // network.deckhouse.io/v1alpha1
 
 type Route struct {
@@ -29,6 +48,41 @@ type Route struct {
 
 type Routes struct {
 	Routes []Route `json:"routes"`
+}
+
+type IPRule struct {
+	Priority int            `json:"priority,omitempty"`
+	Selector IPRuleSelector `json:"selector"`
+	Action   IPRuleAction   `json:"action"`
+}
+
+type IPRuleSelector struct {
+	Not        bool     `json:"priority,omitempty"`
+	From       []string `json:"from,omitempty"`
+	To         []string `json:"to,omitempty"`
+	Tos        int      `json:"tos,omitempty"`
+	FWMark     int      `json:"fwmark,omitempty"`
+	IIf        string   `json:"iif,omitempty"`
+	OIf        string   `json:"oif,omitempty"`
+	UIDRange   string   `json:"uidrange,omitempty"`
+	IPProto    int      `json:"ipproto,omitempty"`
+	SPortRange string   `json:"sportrange,omitempty"`
+	DPortRange string   `json:"dportrange,omitempty"`
+	TunID      int      `json:"tun_id,omitempty"`
+}
+
+type IPRuleAction struct {
+	Lookup IPRuleActionLookup `json:"lookup,omitempty"`
+}
+
+type IPRuleActionLookup struct {
+	IPRoutingTableID int    `json:"ipRoutingTableID,omitempty"`
+	RoutingTableName string `json:"routingTableName,omitempty"`
+}
+
+type ExtendedCondition struct {
+	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
+	metav1.Condition  `json:",inline"`
 }
 
 // CR RoutingTable
@@ -53,16 +107,11 @@ type RoutingTableSpec struct {
 }
 
 type RoutingTableStatus struct {
-	ObservedGeneration        int64                   `json:"observedGeneration,omitempty"`
-	IPRoutingTableID          int                     `json:"ipRoutingTableID,omitempty"`
-	ReadyNodeRoutingTables    int                     `json:"readyNodeRoutingTables,omitempty"`
-	AffectedNodeRoutingTables int                     `json:"affectedNodeRoutingTables,omitempty"`
-	Conditions                []RoutingTableCondition `json:"conditions,omitempty"`
-}
-
-type RoutingTableCondition struct {
-	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition  `json:",inline"`
+	ObservedGeneration        int64               `json:"observedGeneration,omitempty"`
+	IPRoutingTableID          int                 `json:"ipRoutingTableID,omitempty"`
+	ReadyNodeRoutingTables    int                 `json:"readyNodeRoutingTables,omitempty"`
+	AffectedNodeRoutingTables int                 `json:"affectedNodeRoutingTables,omitempty"`
+	Conditions                []ExtendedCondition `json:"conditions,omitempty"`
 }
 
 // CR NodeRoutingTable
@@ -87,21 +136,60 @@ type NodeRoutingTableSpec struct {
 }
 
 type NodeRoutingTableStatus struct {
-	ObservedGeneration int64                       `json:"observedGeneration,omitempty"`
-	AppliedRoutes      []Route                     `json:"appliedRoutes,omitempty"`
-	Conditions         []NodeRoutingTableCondition `json:"conditions,omitempty"`
+	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
+	AppliedRoutes      []Route             `json:"appliedRoutes,omitempty"`
+	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
 }
 
-type NodeRoutingTableCondition struct {
-	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition  `json:",inline"`
+// CR IPRuleSet
+
+type IPRuleSet struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              IPRuleSetSpec   `json:"spec"`
+	Status            IPRuleSetStatus `json:"status,omitempty"`
 }
 
-const (
-	// Types
-	ReconciliationSucceedType = "Ready"
-	// Reasons
-	ReconciliationReasonSucceed = "ReconciliationSucceed"
-	ReconciliationReasonFailed  = "ReconciliationFailed"
-	ReconciliationReasonPending = "Pending"
-)
+type IPRuleSetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []IPRuleSet `json:"items"`
+}
+
+type IPRuleSetSpec struct {
+	IPRules      []IPRule          `json:"rules"`
+	NodeSelector map[string]string `json:"nodeSelector"`
+}
+
+type IPRuleSetStatus struct {
+	ObservedGeneration     int64               `json:"observedGeneration,omitempty"`
+	ReadyNodeIPRuleSets    int                 `json:"readyNodeIPRuleSets,omitempty"`
+	AffectedNodeIPRuleSets int                 `json:"affectedNodeIPRuleSets,omitempty"`
+	Conditions             []ExtendedCondition `json:"conditions,omitempty"`
+}
+
+// CR NodeIPRuleSet
+
+type NodeIPRuleSet struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              NodeIPRuleSetSpec   `json:"spec"`
+	Status            NodeIPRuleSetStatus `json:"status,omitempty"`
+}
+
+type NodeIPRuleSetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NodeIPRuleSet `json:"items"`
+}
+
+type NodeIPRuleSetSpec struct {
+	NodeName string   `json:"nodeName"`
+	IPRules  []IPRule `json:"rules"`
+}
+
+type NodeIPRuleSetStatus struct {
+	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
+	AppliedIPRules     int                 `json:"readyNodeIPRuleSets,omitempty"`
+	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
+}

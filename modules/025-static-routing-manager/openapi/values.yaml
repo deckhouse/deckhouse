@@ -36,3 +36,71 @@ properties:
                   gateway:
                     type: string
                     format: ipv4
+      nodeIPRuleSets:
+        type: array
+        default: [ ]
+        items:
+          type: object
+          default: { }
+          properties:
+            name:
+              type: string
+            nodeName:
+              type: string
+            ownerIRSName:
+              type: string
+            ownerIRSUID:
+              type: string
+            rules:
+              type: array
+              default: [ ]
+              items:
+                type: object
+                default: { }
+                properties:
+                  priority:
+                    type: integer
+                  selector:
+                    type: object
+                    properties:
+                      not:
+                        type: bool
+                      from:
+                        type: array
+                        items:
+                          type: string
+                          format: cidr
+                      to:
+                        type: array
+                        items:
+                          type: string
+                          format: cidr
+                      tos:
+                        type: integer
+                      fwmark:
+                        type: integer
+                      iif:
+                        type: string
+                      oif:
+                        type: string
+                      uidrange:
+                        type: string
+                        pattern: '^(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})-(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})$'
+                      ipproto:
+                        type: integer
+                      sportrange:
+                        type: string
+                        pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
+                      dportrange:
+                        type: string
+                        pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
+                      tun_id:
+                        type: integer
+                  action:
+                    type: object
+                    properties:
+                      lookup:
+                        type: object
+                        properties:
+                          ipRoutingTableID:
+                            type: integer

@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: iprulesets.network.deckhouse.io
+  name: nodeiprulesets.network.deckhouse.io
   labels:
     heritage: deckhouse
     module: static-routing-manager
@@ -9,9 +9,9 @@ spec:
   group: network.deckhouse.io
   scope: Cluster
   names:
-    plural: iprulesets
-    singular: ipruleset
-    kind: IPRuleSet
+    plural: nodeiprulesets
+    singular: nodeipruleset
+    kind: NodeIPRuleSet
   preserveUnknownFields: false
   versions:
   - name: v1alpha1
@@ -23,12 +23,12 @@ spec:
       - jsonPath: .status.conditions[?(@.type=="Ready")].status
         name: Ready
         type: string
-      - jsonPath: .status.readyNodeIPRuleSets
-        name: readyNodes
-        type: integer
-      - jsonPath: .status.affectedNodeIPRuleSets
-        name: desiredNodes
-        type: integer
+      - jsonPath: .spec.nodeName
+        name: nodeName
+        type: string
+      - jsonPath: .metadata.ownerReferences[?(@.kind=="IPRuleSet")].name
+        name: ipRuleSetName
+        type: string
       - jsonPath: .metadata.creationTimestamp
         name: Age
         type: date
@@ -36,16 +36,23 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          describe iprulesets
+          describe routingtables and routes on node
         required:
         - spec
         properties:
           spec:
             type: object
             required:
+            - nodeName
             - rules
-            - nodeSelector
             properties:
+              nodeName:
+                type: string
+                x-kubernetes-validations:
+                  - message: nodeName is immutable field
+                    rule: self == oldSelf
+                description: |
+                  The name of the node for which this CR is intended.
               rules:
                 type: array
                 minItems: 1
@@ -94,7 +101,7 @@ spec:
                         tos:
                           type: integer
                           description: |
-                            select the TOS (or diffserv/dscp ????) value to match.
+                            select the TOS (or diffserv/dscp) value to match.
                         fwmark:
                           type: integer
                           description: |
@@ -118,13 +125,13 @@ spec:
                             select the ip protocol value to match.
                         sportrange:
                           description: |
-                            select the source port value to match. supports port range.
+                            select the range of source ports to match.
                           type: string
                           pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         dportrange:
                           description: |
-                            select the destination port value to match. supports port range.
-                          type: object
+                            select the range of destination ports to match.
+                          type: string
                           pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         tun_id:
                           type: integer
@@ -139,9 +146,6 @@ spec:
                           type: object
                           description: |
                             the routing table identifier to lookup if the rule selector matches.
-                          oneOf:
-                          - required: [ipRoutingTableID]
-                          - required: [routingTableName]
                           properties:
                             ipRoutingTableID:
                               type: integer
@@ -149,28 +153,135 @@ spec:
                               maximum: 4294967295
                               description: |
                                 ID of routing table on node
-                            routingTableName:
-                              type: string
-                              description: |
-                                Name of CR RoutingTable
-              nodeSelector:
-                type: object
-                description: |
-                  nodeSelector of node on which inject iprule
-                additionalProperties:
-                  type: string
           status:
             type: object
             properties:
               observedGeneration:
                 description: ObservedGeneration is the latest generation observed
-                  by the controller.
+                    by the controller.
                 format: int64
                 type: integer
-              readyNodeIPRuleSets:
-                type: integer
-              affectedNodeIPRuleSets:
-                type: integer
+              appliedRules:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - selector
+                    - action
+                  properties:
+                    priority:
+                      type: integer
+                      minimum: 0
+                      maximum: 4294967295
+                      description: |
+                        priority of rule
+                    selector:
+                      type: object
+                      required:
+                        - from
+                        - to
+                      properties:
+                        not:
+                          type: bool
+                          description: |
+                            invert the selector match rule
+                        from:
+                          type: array
+                          description: |
+                            Array of source prefixes
+                          items:
+                            type: string
+                            format: cidr
+                            description: |
+                              select the source prefix to match.
+                        to:
+                          type: array
+                          description: |
+                            Array of destination prefixes
+                          items:
+                            type: string
+                            format: cidr
+                            description: |
+                              select the destination prefix to match.
+                        tos:
+                          type: integer
+                          description: |
+                            select the TOS (or diffserv/dscp) value to match.
+                        fwmark:
+                          type: integer
+                          description: |
+                            select the fwmark value to match.
+                        iif:
+                          type: string
+                          description: |
+                            select the incoming device to match.
+                        oif:
+                          type: string
+                          description: |
+                            select the outgoing device (interface) to match.
+                        uidrange:
+                          description: |
+                            select the range of uid (UserID) values to match.
+                          type: object
+                          properties:
+                            start:
+                              type: integer
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              description: |
+                                end of the range.
+                        ipproto:
+                          type: integer
+                          description: |
+                            select the ip protocol value to match.
+                        sportrange:
+                          description: |
+                            select the range of source ports to match.
+                          type: object
+                          properties:
+                            start:
+                              type: integer
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              description: |
+                                end of the range.
+                        dportrange:
+                          description: |
+                            select the range of destination ports to match.
+                          type: object
+                          properties:
+                            start:
+                              type: integer
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              description: |
+                                end of the range.
+                        tun_id:
+                          type: integer
+                          description: |
+                            select the virtual tunnel ID to match.
+                    action:
+                      type: object
+                      required:
+                        - lookup
+                      properties:
+                        lookup:
+                          type: object
+                          description: |
+                            the routing table identifier to lookup if the rule selector matches.
+                          properties:
+                            ipRoutingTableID:
+                              type: integer
+                              minimum: 1
+                              maximum: 4294967295
+                              description: |
+                                ID of routing table on node
               conditions:
                 type: array
                 items:
@@ -181,12 +292,12 @@ spec:
                     - reason
                   properties:
                     type:
-                      description: Type of condition.
+                      description: Type of node group condition.
                       type: string
                     lastHeartbeatTime:
                       type: string
                       format: date-time
-                      description: Last time the ip rules were checked.
+                      description: Last time the routes were checked.
                     status:
                       description: Status of the condition, one of True, False.
                       type: string
@@ -195,7 +306,8 @@ spec:
                       format: date-time
                       description: Last time the condition transit from one status to another.
                     reason:
-                      description: The reason for the condition's last transition in CamelCase.
+                      description: The reason for the condition's last transition
+                        in CamelCase.
                       type: string
                     message:
                       description: Human readable message indicating details about last transition.

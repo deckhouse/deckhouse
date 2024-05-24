@@ -4,10 +4,13 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            describe iprulesets
+            describe routingtables and routes on node
           properties:
             spec:
               properties:
+                nodeName:
+                  description: |
+                    The name of the node for which this CR is intended.
                 rules:
                   description: |
                     ip rules declaration
@@ -82,6 +85,8 @@ spec:
                             description: |
                               select the virtual tunnel ID to match.
                       action:
+                        required:
+                          - lookup
                         properties:
                           lookup:
                             description: |
@@ -90,9 +95,3 @@ spec:
                               ipRoutingTableID:
                                 description: |
                                   ID of routing table on node
-                              routingTableName:
-                                description: |
-                                  Name of CR RoutingTable
-                nodeSelector:
-                  description: |
-                    nodeSelector of node on which inject iprule
