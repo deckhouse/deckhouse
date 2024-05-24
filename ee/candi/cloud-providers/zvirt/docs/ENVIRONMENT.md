@@ -56,4 +56,3 @@ To create a virtual machine template, go to the â€œCompute -> Virtual Machinesâ€
 While the template is being created, the virtual machine and the cloud image disk will go into a state of _Image locked_. You can check that the template was successfully created in the section _Compute -> Templates_:
 
 ![ Template check ](../../images/030-cloud-provider-zvirt/template/step_env_en_09.png)
-

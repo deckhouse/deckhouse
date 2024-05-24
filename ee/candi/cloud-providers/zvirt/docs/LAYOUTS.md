@@ -32,4 +32,3 @@ masterNodeGroup:
     vnicProfileID: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
     storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
 ```
-
