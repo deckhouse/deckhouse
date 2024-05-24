@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"io"
 	"log/slog"
 	"sync"
@@ -27,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/import"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
@@ -39,26 +39,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *Service) Import(server pb.DHCTL_ImportServer) error {
+func (s *Service) AttachCommander(server pb.DHCTL_AttachCommanderServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.importServerTransitions())
+	f := fsm.New("initial", s.attachCommanderServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.ImportRequest)
-	sendCh := make(chan *pb.ImportResponse)
+	receiveCh := make(chan *pb.AttachCommanderRequest)
+	sendCh := make(chan *pb.AttachCommanderResponse)
 
-	phaseSwitcher := &importPhaseSwitcher{
+	phaseSwitcher := &attachCommanderPhaseSwitcher{
 		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
 
-	s.startImporterReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startImporterSender(server, sendCh, internalErrCh)
+	s.startattacherReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startattacherSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -73,22 +73,22 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing ImportRequest",
+				"processing AttachCommanderRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.ImportRequest_Start:
+			case *pb.AttachCommanderRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startImport(
-					ctx, message.Start, phaseSwitcher, &importLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startAttachCommander(
+					ctx, message.Start, phaseSwitcher, &attachCommanderLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
-			case *pb.ImportRequest_Continue:
+			case *pb.AttachCommanderRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
@@ -115,9 +115,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startImporterReceiver(
-	server pb.DHCTL_ImportServer,
-	receiveCh chan *pb.ImportRequest,
+func (s *Service) startattacherReceiver(
+	server pb.DHCTL_AttachCommanderServer,
+	receiveCh chan *pb.AttachCommanderRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -137,9 +137,9 @@ func (s *Service) startImporterReceiver(
 	}()
 }
 
-func (s *Service) startImporterSender(
-	server pb.DHCTL_ImportServer,
-	sendCh chan *pb.ImportResponse,
+func (s *Service) startattacherSender(
+	server pb.DHCTL_AttachCommanderServer,
+	sendCh chan *pb.AttachCommanderResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -156,29 +156,29 @@ func (s *Service) startImporterSender(
 	}()
 }
 
-func (s *Service) startImport(
+func (s *Service) startAttachCommander(
 	ctx context.Context,
-	request *pb.ImportStart,
-	phaseSwitcher *importPhaseSwitcher,
-	logWriter *importLogWriter,
-	sendCh chan *pb.ImportResponse,
+	request *pb.AttachCommanderStart,
+	phaseSwitcher *attachCommanderPhaseSwitcher,
+	logWriter *attachCommanderLogWriter,
+	sendCh chan *pb.AttachCommanderResponse,
 ) {
 	go func() {
-		result := s.importCluster(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.ImportResponse{
-			Message: &pb.ImportResponse_Result{
+		result := s.attachCommanderCluster(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.AttachCommanderResponse{
+			Message: &pb.AttachCommanderResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) importCluster(
+func (s *Service) attachCommanderCluster(
 	ctx context.Context,
-	request *pb.ImportStart,
-	phaseSwitcher *importPhaseSwitcher,
+	request *pb.AttachCommanderStart,
+	phaseSwitcher *attachCommanderPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.ImportResult {
+) *pb.AttachCommanderResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -216,33 +216,33 @@ func (s *Service) importCluster(
 		return nil
 	})
 	if err != nil {
-		return &pb.ImportResult{Err: err.Error()}
+		return &pb.AttachCommanderResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	importer := _import.NewImporter(&_import.Params{
+	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:    request.Options.CommanderMode,
 		SSHClient:        sshClient,
 		OnCheckResult:    onCheckResult,
 		TerraformContext: terraform.NewTerraformContext(),
 		OnPhaseFunc:      phaseSwitcher.switchPhase,
-		ImportResources: _import.ImportResources{
+		AttachResources: attach.AttachResources{
 			Template: request.ResourcesTemplate,
 			Values:   request.ResourcesValues.AsMap(),
 		},
 		ScanOnly: request.ScanOnly,
 	})
 
-	result, importErr := importer.Import(ctx)
-	state := importer.PhasedExecutionContext.GetLastState()
+	result, attacherr := attacher.Attach(ctx)
+	state := attacher.PhasedExecutionContext.GetLastState()
 	stateData, marshalStateErr := json.Marshal(state)
 	resultString, marshalResultErr := json.Marshal(result)
-	err = errors.Join(importErr, marshalStateErr, marshalResultErr)
+	err = errors.Join(attacherr, marshalStateErr, marshalResultErr)
 
-	return &pb.ImportResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.AttachCommanderResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
 }
 
-func (s *Service) importServerTransitions() []fsm.Transition {
+func (s *Service) attachCommanderServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -262,15 +262,15 @@ func (s *Service) importServerTransitions() []fsm.Transition {
 	}
 }
 
-type importLogWriter struct {
+type attachCommanderLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.ImportResponse
+	sendCh chan *pb.AttachCommanderResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *importLogWriter) Write(p []byte) (n int, err error) {
+func (w *attachCommanderLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -293,24 +293,24 @@ func (w *importLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.ImportResponse{
-			Message: &pb.ImportResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.AttachCommanderResponse{
+			Message: &pb.AttachCommanderResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 
 	return len(p), nil
 }
 
-type importPhaseSwitcher struct {
-	sendCh chan *pb.ImportResponse
+type attachCommanderPhaseSwitcher struct {
+	sendCh chan *pb.AttachCommanderResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *importPhaseSwitcher) switchPhase(
+func (b *attachCommanderPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
-	phaseData _import.PhaseData,
+	phaseData attach.PhaseData,
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
 ) error {
@@ -324,9 +324,9 @@ func (b *importPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	b.sendCh <- &pb.ImportResponse{
-		Message: &pb.ImportResponse_PhaseEnd{
-			PhaseEnd: &pb.ImportPhaseEnd{
+	b.sendCh <- &pb.AttachCommanderResponse{
+		Message: &pb.AttachCommanderResponse_PhaseEnd{
+			PhaseEnd: &pb.AttachCommanderPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				CompletedPhaseData:  string(phaseDataBytes),
