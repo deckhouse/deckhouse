@@ -72,7 +72,7 @@ spec:
 
 ```shell
 git clone github.com/deckhouse/deckhouse
-cd deckhouse/ee/modules/650-runtime-audit-engine/hack/fav-converter
+cd deckhouse/ee/modules/650-runtime-audit-engine/hack/far-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 
