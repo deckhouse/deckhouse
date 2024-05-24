@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	serverAddr         = "127.0.0.1:8097"
+	serverAddr         = "0.0.0.0:8097"
 	shutdownTimeout    = 5 * time.Second
 	leaderCheckTimeout = 10 * time.Second
 	workInterval       = 10 * time.Second
