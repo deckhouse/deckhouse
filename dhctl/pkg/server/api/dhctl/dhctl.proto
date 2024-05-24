@@ -23,7 +23,7 @@ import "bootstrap.proto";
 import "destroy.proto";
 import "abort.proto";
 import "converge.proto";
-import "import.proto";
+import "attach_commander.proto";
 
 service DHCTL {
   rpc Check (stream CheckRequest) returns (stream CheckResponse) {}
@@ -31,5 +31,5 @@ service DHCTL {
   rpc Destroy (stream DestroyRequest) returns (stream DestroyResponse) {}
   rpc Abort (stream AbortRequest) returns (stream AbortResponse) {}
   rpc Converge (stream ConvergeRequest) returns (stream ConvergeResponse) {}
-  rpc Import (stream ImportRequest) returns (stream ImportResponse) {}
+  rpc AttachCommander (stream AttachCommanderRequest) returns (stream AttachCommanderResponse) {}
 }

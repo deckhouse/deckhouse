@@ -23,7 +23,7 @@ type (
 )
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
-// Notice that each operation could define own phases (like import operation do).
+// Notice that each operation could define own phases (like attach operation do).
 const (
 	BaseInfraPhase                         OperationPhase = "BaseInfra"
 	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"

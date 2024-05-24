@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package _import
+package attach
 
 import (
 	"context"
@@ -42,35 +42,35 @@ type Params struct {
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
-	ImportResources  ImportResources
+	AttachResources  AttachResources
 	ScanOnly         *bool
 }
 
-type ImportResources struct {
+type AttachResources struct {
 	Template string
 	Values   map[string]any
 }
 
-type Importer struct {
+type Attacher struct {
 	Params                 *Params
 	PhasedExecutionContext phases.PhasedExecutionContext[PhaseData]
 }
 
-func NewImporter(params *Params) *Importer {
+func NewAttacher(params *Params) *Attacher {
 	if !params.CommanderMode {
-		panic("import operation currently supported only in commander mode")
+		panic("attach commander operation supported only in commander mode")
 	}
 
-	return &Importer{
+	return &Attacher{
 		Params:                 params,
 		PhasedExecutionContext: phases.NewPhasedExecutionContext[PhaseData](params.OnPhaseFunc),
 	}
 }
 
-func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
+func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	kubeClient, metaConfig, err := i.prepare(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to prepare cluster import: %w", err)
+		return nil, fmt.Errorf("unable to prepare cluster attach to commander: %w", err)
 	}
 
 	stateCache := cache.Global()
@@ -83,7 +83,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	if shouldStop, err := i.PhasedExecutionContext.StartPhase(ScanPhase, false, stateCache); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return &ImportResult{}, nil
+		return &AttachResult{}, nil
 	}
 
 	scanResult, err := i.scan(ctx, kubeClient, metaConfig)
@@ -97,7 +97,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		}); err != nil {
 			return nil, fmt.Errorf("unable to complete phase: %w", err)
 		}
-		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
+		return &AttachResult{Status: StatusScanned, ScanResult: scanResult}, nil
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
@@ -108,7 +108,7 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return &ImportResult{Status: ImportStatusScanned, ScanResult: scanResult}, nil
+		return &AttachResult{Status: StatusScanned, ScanResult: scanResult}, nil
 	}
 
 	err = i.capture(ctx, kubeClient)
@@ -124,13 +124,13 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 	); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
-		return &ImportResult{Status: ImportStatusImported}, nil
+		return &AttachResult{Status: StatusAttached}, nil
 	}
 
 	checkResult, err := i.check(ctx, kubeClient, scanResult)
 	if err != nil {
 		// check is optional
-		log.WarnF("Can't check imported cluster: %s\n", err)
+		log.WarnF("Can't check attached cluster: %s\n", err)
 	}
 
 	if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
@@ -139,20 +139,20 @@ func (i *Importer) Import(ctx context.Context) (*ImportResult, error) {
 		return nil, fmt.Errorf("unable to complete phase: %w", err)
 	}
 
-	return &ImportResult{
-		Status:      ImportStatusImported,
+	return &AttachResult{
+		Status:      StatusAttached,
 		ScanResult:  scanResult,
 		CheckResult: checkResult,
 	}, nil
 }
 
-func (i *Importer) prepare(_ context.Context) (*client.KubernetesClient, *config.MetaConfig, error) {
+func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config.MetaConfig, error) {
 	var (
 		kubeClient *client.KubernetesClient
 		metaConfig *config.MetaConfig
 	)
 
-	err := log.Process("import", "Prepare cluster import", func() error {
+	err := log.Process("attach", "Prepare cluster attach", func() error {
 		var err error
 
 		kubeClient, err = operations.ConnectToKubernetesAPI(i.Params.SSHClient)
@@ -176,14 +176,14 @@ func (i *Importer) prepare(_ context.Context) (*client.KubernetesClient, *config
 	return kubeClient, metaConfig, err
 }
 
-func (i *Importer) scan(
+func (i *Attacher) scan(
 	_ context.Context,
 	kubeClient *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 ) (*ScanResult, error) {
 	var res *ScanResult
 
-	err := log.Process("import", "Scan cluster", func() error {
+	err := log.Process("attach", "Scan cluster", func() error {
 		var err error
 		stateCache := cache.Global()
 
@@ -270,25 +270,25 @@ func (i *Importer) scan(
 	return res, err
 }
 
-func (i *Importer) capture(
+func (i *Attacher) capture(
 	_ context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
-	return log.Process("import", "Capture cluster", func() error {
-		importResources, err := template.ParseResourcesContent(
-			i.Params.ImportResources.Template,
-			i.Params.ImportResources.Values,
+	return log.Process("attach", "Capture cluster", func() error {
+		attachResources, err := template.ParseResourcesContent(
+			i.Params.AttachResources.Template,
+			i.Params.AttachResources.Values,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse resources: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, importResources, nil)
+		checkers, err := resources.GetCheckers(kubeClient, attachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, importResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
@@ -297,14 +297,14 @@ func (i *Importer) capture(
 	})
 }
 
-func (i *Importer) check(
+func (i *Attacher) check(
 	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 	scanResult *ScanResult,
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
 
-	err := log.Process("import", "Check cluster", func() error {
+	err := log.Process("attach", "Check cluster", func() error {
 		var err error
 
 		checker := check.NewChecker(&check.Params{
