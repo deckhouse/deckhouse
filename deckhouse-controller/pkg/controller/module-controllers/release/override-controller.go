@@ -275,7 +275,7 @@ func (c *modulePullOverrideReconciler) enableModule(moduleName, symlinkPath stri
 }
 
 func (c *modulePullOverrideReconciler) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
-	mo.Status.UpdatedAt = metav1.Now()
+	mo.Status.UpdatedAt = metav1.NewTime(c.dc.GetClock().Now().UTC())
 	return c.client.Status().Update(ctx, mo)
 }
 
@@ -320,7 +320,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 			}
 			moduleWeight = def.Weight
 
-			item.Status.UpdatedAt = metav1.Now()
+			item.Status.UpdatedAt = metav1.NewTime(c.dc.GetClock().Now().UTC())
 			item.Status.Weight = def.Weight
 			// we need not be bothered - even if the update fails, the weight will be set one way or another
 			_ = c.client.Status().Update(ctx, &item)

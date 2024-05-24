@@ -224,6 +224,9 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	ds := new(DownloadStatistic)
 	defer measure.Duration(func(d time.Duration) {
 		ds.PullDuration = d
+		if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
+			ds.PullDuration, _ = time.ParseDuration("555s")
+		}
 	})()
 
 	if err := os.MkdirAll(rootPath, 0o700); err != nil {
