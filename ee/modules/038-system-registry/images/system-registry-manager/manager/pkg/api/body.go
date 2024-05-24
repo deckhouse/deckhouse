@@ -5,18 +5,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package api
 
-// type CommonError = string
-
-// CheckRegistryRequest represents the request structure for checking the registry.
+// CheckRegistry (Request + Response)
 type CheckRegistryRequest struct {
 	Seaweedfs struct {
 		MasterPeers []string `json:"masterPeers"`
 	} `json:"seaweedfs"`
 }
 
-type UpdateRegistryRequest = CheckRegistryRequest
-
-// CheckRegistryResponse represents the response structure for checking the registry.
 type CheckRegistryResponse struct {
 	Data struct {
 		RegistryFilesState struct {
@@ -30,7 +25,10 @@ type CheckRegistryResponse struct {
 	} `json:"data,omitempty"`
 }
 
-// MasterInfoResponse represents the response structure for master info.
+// UpdateRegistry (Request + Response)
+type UpdateRegistryRequest = CheckRegistryRequest
+
+// MasterInfo (Request + Response)
 type MasterInfoResponse struct {
 	Data struct {
 		IsMaster          bool   `json:"isMaster"`
@@ -39,7 +37,12 @@ type MasterInfoResponse struct {
 	} `json:"data,omitempty"`
 }
 
-type BusyResponce struct {
+// Busy (Request + Response)
+type IsBusyRequest struct {
+	WaitTimeoutSeconds *int `json:"waitTimeoutSeconds"`
+}
+
+type IsBusyResponse struct {
 	Data struct {
 		IsBusy bool `json:"isBusy"`
 	} `json:"data,omitempty"`
