@@ -12,7 +12,7 @@ memory: 10Mi
 {{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
 #####
 
-{{- $templateConfigFilesValues := (include "template-config-files-values" $ ) | fromYaml }}
+{{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
 
 {{- $images := dict }}
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
@@ -69,9 +69,9 @@ spec:
       labels:
         app: system-registry-manager
       annotations:
-        # checksum/config: 
-        # checksum/pki: 
-        # rollout-epoch: 
+        {{- range $configFilesInfo.secrets }}
+        {{ .annotationNameForCheckSum }}: {{ include .templateName $ | sha256sum }}
+        {{- end }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
@@ -87,14 +87,12 @@ spec:
           - start
           - --config=/config/config.yaml
         volumeMounts:
-      {{- range $templateConfigFilesValues.files }}
-        {{- $filePath := .filePath }}
-        {{- $templateName := .templateName  }}
+        {{- range $configFilesInfo.files }}
         - name: configs
-          mountPath: {{ $filePath }}
-          subPath: {{ $templateName }}
+          mountPath: {{ .filePath }}
+          subPath: {{ .templateName }}
           readOnly: true
-      {{- end }}
+        {{- end }}
         - mountPath: /pki
           name: pki
           readOnly: true
