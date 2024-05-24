@@ -145,8 +145,8 @@ spec:
             {{- include "image_holder_resources" $ | nindent 12 }}
   {{- end }}
 {{- end }}
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      # hostNetwork: true
+      # dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
       - name: pki
