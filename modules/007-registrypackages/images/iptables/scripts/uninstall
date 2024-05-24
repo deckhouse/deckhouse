@@ -15,7 +15,7 @@
 
 set -Eeo pipefail
 
-if ls -l /etc/alternatives/iptables; then
+if command -v update-alternatives >/dev/null; then
 	update-alternatives --remove iptables /opt/deckhouse/bin/iptables
 	update-alternatives --remove ip6tables /opt/deckhouse/bin/ip6tables
 fi

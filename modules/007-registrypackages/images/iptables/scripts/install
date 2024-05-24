@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/bin/.libs
+mkdir -p /opt/deckhouse/bin
 cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
 
@@ -28,7 +28,7 @@ if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
 elif [[ ${IPTABLES_NFT_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-nft-multi"
 elif [[ -n ${nft_support} ]]; then
-  # if iptables-save doesn't contain k8s rules and have nft support, we use nft as default
+  # if iptables-save doesn't contain k8s rules and nf_tables already exist im kernel mods, we use nft as default
   iptablesModeBin="xtables-nft-multi"
 else
   # if kernel doesn't support nftables mod
@@ -41,12 +41,12 @@ for cmd in $cmds; do
 done
 
 if command -v update-alternatives >/dev/null; then
-	update-alternatives \
-		--install /usr/sbin/iptables iptables /opt/deckhouse/bin/iptables 90 \
-		--slave /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/iptables \
-		--slave /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/iptables
-	update-alternatives \
-		--install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/ip6tables 90 \
-		--slave /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/ip6tables \
-		--slave /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/ip6tables
+  update-alternatives \
+    --install /usr/sbin/iptables iptables /opt/deckhouse/bin/iptables 90 \
+    --slave /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/iptables \
+    --slave /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/iptables
+  update-alternatives \
+    --install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/ip6tables 90 \
+    --slave /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/ip6tables \
+    --slave /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/ip6tables
 fi

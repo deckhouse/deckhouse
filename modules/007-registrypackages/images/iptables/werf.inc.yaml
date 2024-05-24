@@ -30,7 +30,6 @@ git:
 shell:
   setup:
     - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
-    - apk update && apk add patchelf
     - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl
     - cd /src-libmnl
     - ./autogen.sh
