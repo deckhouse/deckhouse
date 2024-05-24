@@ -9,42 +9,15 @@ import (
 	"net/http"
 )
 
-type SingleRequestConfig struct {
-	requestCh chan struct{}
-}
-
-func (cfg *SingleRequestConfig) IsBusy() bool {
-	isBusy := true
-	select {
-	case <-cfg.requestCh:
-		defer func() {
-			cfg.requestCh <- struct{}{}
-		}()
-
-		isBusy = false
-	default:
-		isBusy = true
-	}
-	return isBusy
-}
-
-func CreateSingleRequestConfig() *SingleRequestConfig {
-	cfg := &SingleRequestConfig{
-		requestCh: make(chan struct{}, 1),
-	}
-	cfg.requestCh <- struct{}{}
-	return cfg
-}
-
 func SingleRequestMiddlewares(next http.Handler, cfg *SingleRequestConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case <-cfg.requestCh:
-			defer func() {
-				cfg.requestCh <- struct{}{}
-			}()
+		f := func() error {
 			next.ServeHTTP(w, r)
-		default:
+			return nil
+		}
+		isRun, _ := cfg.tryRunFunc(f)
+
+		if !isRun {
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}

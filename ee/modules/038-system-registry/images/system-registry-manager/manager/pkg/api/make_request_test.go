@@ -61,3 +61,44 @@ func TestMakeRequest(t *testing.T) {
 		t.Errorf("expected response body %v, got %v", expectedResponseBody, responseBody)
 	}
 }
+
+func TestMakeRequestWithoutResponse(t *testing.T) {
+	// Create a mock HTTP server for testing
+	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check the request method
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST method, got %s", r.Method)
+		}
+
+		// Check the request URL path
+		if r.URL.Path != "/test" {
+			t.Errorf("expected URL path /test, got %s", r.URL.Path)
+		}
+
+		// Check the request headers
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "Bearer TEST_TOKEN" {
+			t.Errorf("expected Authorization header value Bearer TEST_TOKEN, got %s", authHeader)
+		}
+
+		// Do not send any response for this test
+	})
+
+	mockServer := httptest.NewServer(mockHandler)
+	defer mockServer.Close()
+
+	// Prepare test data
+	requestBody := map[string]string{"key": "value"}
+
+	// Prepare headers
+	headers := map[string]string{"Authorization": "Bearer TEST_TOKEN"}
+
+	// Create a new HTTP client
+	client := &http.Client{}
+
+	// Make the request
+	err := makeRequestWithoutResponse(client, http.MethodPost, mockServer.URL+"/test", headers, requestBody)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
