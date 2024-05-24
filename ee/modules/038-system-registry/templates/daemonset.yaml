@@ -112,18 +112,18 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         ports:
-        - name: https
+        - name: http
           protocol: TCP
           containerPort: 8097
         livenessProbe:
           httpGet:
-            host: 127.0.0.1
             path: /healthz
             port: 8097
+            scheme: HTTP
         readinessProbe:
           httpGet:
-            host: 127.0.0.1
             path: /readyz
+            scheme: HTTP
             port: 8097
           initialDelaySeconds: 10
           periodSeconds: 3
