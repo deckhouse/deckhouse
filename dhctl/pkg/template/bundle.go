@@ -80,6 +80,12 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 		return err
 	}
 
+	if metaConfig.Registry.RegistryMode != "Direct" {
+		if err := PrepareSystemRegistry(templateController, bashibleData); err != nil {
+			return err
+		}
+	}
+
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
@@ -172,6 +178,54 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	for _, info := range saveInfo {
 		log.InfoF("From %q to %q\n", info.from, info.to)
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func PrepareSystemRegistry(templateController *Controller, templateData map[string]interface{}) error {
+	saveInfo := []saveFromTo{
+		{
+			from: filepath.Join(candiDir, "system-registry"),
+			to:   filepath.Join(bashibleDir, "system-registry"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates", "seaweedfs_config"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates", "seaweedfs_config"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates", "auth_config"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates", "auth_config"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates", "distribution_config"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates", "distribution_config"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates", "seaweedfs_config"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates", "seaweedfs_config"),
+			data: templateData,
+		},
+		{
+			from: filepath.Join(candiDir, "system-registry", "templates", "static_pods"),
+			to:   filepath.Join(bashibleDir, "system-registry", "templates", "static_pods"),
+			data: templateData,
+		},
+	}
+	for _, info := range saveInfo {
+		log.InfoF("From %q to %q\n", info.from, info.to)
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
+			log.ErrorLn(err)
 			return err
 		}
 	}
