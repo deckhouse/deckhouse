@@ -35,17 +35,17 @@ func copyCertsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 		if !cert.NeedChangeFileBy.NeedChange() {
-			log.Infof("No changes needed for certificate: %s", cert.Cert.DestPath)
+			log.Debugf("No changes needed for certificate: %s", cert.Cert.DestPath)
 			continue
 		}
 
-		log.Infof("Copying certificate key from '%s' to '%s'", cert.Key.TmpGeneratePath, cert.Key.DestPath)
+		log.Debugf("Copying certificate key from '%s' to '%s'", cert.Key.TmpGeneratePath, cert.Key.DestPath)
 		err := pkg_files.CopyFile(cert.Key.TmpGeneratePath, cert.Key.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying cert key from '%s' to '%s': %v", cert.Key.TmpGeneratePath, cert.Key.DestPath, err)
 		}
 
-		log.Infof("Copying certificate from '%s' to '%s'", cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
+		log.Debugf("Copying certificate from '%s' to '%s'", cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
 		err = pkg_files.CopyFile(cert.Cert.TmpGeneratePath, cert.Cert.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying cert from '%s' to '%s': %v", cert.Cert.TmpGeneratePath, cert.Cert.DestPath, err)
@@ -62,11 +62,11 @@ func copyManifestsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSp
 
 	for _, manifest := range manifestsSpec.Manifests {
 		if !manifest.NeedChangeFileBy.NeedChange() {
-			log.Infof("No changes needed for manifest: %s", manifest.DestPath)
+			log.Debugf("No changes needed for manifest: %s", manifest.DestPath)
 			continue
 		}
 
-		log.Infof("Copying manifest from '%s' to '%s'", manifest.TmpPath, manifest.DestPath)
+		log.Debugf("Copying manifest from '%s' to '%s'", manifest.TmpPath, manifest.DestPath)
 		err := pkg_files.CopyFile(manifest.TmpPath, manifest.DestPath)
 		if err != nil {
 			return fmt.Errorf("error copying manifest from '%s' to '%s': %v", manifest.TmpPath, manifest.DestPath, err)

@@ -35,13 +35,13 @@ func deleteCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) erro
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 
-		log.Infof("Deleting certificate key from '%s'", cert.Key.DestPath)
+		log.Debugf("Deleting certificate key from '%s'", cert.Key.DestPath)
 		err := pkg_files.DeleteFileIfExist(cert.Key.DestPath)
 		if err != nil {
 			return fmt.Errorf("error deleting cert key from '%s': %w", cert.Key.DestPath, err)
 		}
 
-		log.Infof("Deleting certificate from '%s'", cert.Cert.DestPath)
+		log.Debugf("Deleting certificate from '%s'", cert.Cert.DestPath)
 		err = pkg_files.DeleteFileIfExist(cert.Cert.DestPath)
 		if err != nil {
 			return fmt.Errorf("error deleting cert from '%s': %w", cert.Cert.DestPath, err)
@@ -58,7 +58,7 @@ func deleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 
 	for _, manifest := range manifestsSpec.Manifests {
 
-		log.Infof("Deleting manifest from '%s'", manifest.DestPath)
+		log.Debugf("Deleting manifest from '%s'", manifest.DestPath)
 		err := pkg_files.DeleteFileIfExist(manifest.DestPath)
 		if err != nil {
 			return fmt.Errorf("error deleting manifest from '%s': %w", manifest.DestPath, err)
