@@ -18,6 +18,7 @@ import (
 	"system-registry-manager/internal/worker/steps"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
 const (
@@ -101,14 +102,17 @@ func startHTTPServer() {
 
 func startManager() error {
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
+	context := context.Background()
+	context = pkg_logs.SetLoggerToContext(context, "manager")
+	log := pkg_logs.GetLoggerFromContext(context)
 
-	if err := steps.PrepareWorkspace(manifestsSpec); err != nil {
+	if err := steps.PrepareWorkspace(context, manifestsSpec); err != nil {
 		return err
 	}
-	if err := steps.GenerateCerts(manifestsSpec); err != nil {
+	if err := steps.GenerateCerts(context, manifestsSpec); err != nil {
 		return err
 	}
-	if err := steps.CheckDestFiles(manifestsSpec); err != nil {
+	if err := steps.CheckDestFiles(context, manifestsSpec); err != nil {
 		return err
 	}
 	if !manifestsSpec.NeedChange() {
@@ -119,7 +123,7 @@ func startManager() error {
 	if err := kube_actions.SetMyStatusAndWaitApprove("update", 0); err != nil {
 		return err
 	}
-	if err := steps.UpdateManifests(manifestsSpec); err != nil {
+	if err := steps.UpdateManifests(context, manifestsSpec); err != nil {
 		return err
 	}
 	if err := kube_actions.SetMyStatusDone(); err != nil {
