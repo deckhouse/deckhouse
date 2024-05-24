@@ -12,7 +12,7 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - name: https
+  - name: http
     protocol: TCP
     targetPort: 8097
     port: 8097
