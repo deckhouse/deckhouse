@@ -515,7 +515,7 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster:
 
-1. Download the [etcdctl] utility(<https://github.com/etcd-io/etcd/releases> ) to the server (preferably its version is the same as the etcd version in the cluster).
+1. Download the [etcdctl](https://github.com/etcd-io/etcd/releases) utility to the server (preferably its version is the same as the etcd version in the cluster).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -561,15 +561,15 @@ Follow these steps to restore a single-master cluster:
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    ```
 
-#### Steps to restore a multi-master cluster
+#### Restorige a multi-master cluster
 
 Follow these steps to restore a multi-master cluster:
 
-1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
 
-1. Switch the cluster to single-master mode according to [instruction](#how-to-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-in-single-master) for cloud clusters or independently remove static master-node from the cluster.
+1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) for cloud clusters or independently remove static master-node from the cluster.
 
-1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#steps-to-restore-single-master-cluster) for a single-master cluster.
+1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#restoring-a-single-master-cluster) for a single-master cluster.
 
 1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
 
@@ -585,7 +585,7 @@ Follow these steps to restore a multi-master cluster:
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
    ```
 
-1. Switch the cluster back to multi-master mode according to [instructions](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-in-multi-master) for cloud clusters or [instructions](#how-to-add-a-master-node-in-a-static-or-hybrid-cluster) for static or hybrid clusters.
+1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
