@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
 	"math/rand"
 	"os"
 	"path"
@@ -42,9 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
 	uistate "github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 const (
@@ -191,15 +190,9 @@ func initSSHFromUIState(state uistate.SSHState) error {
 }
 
 func (b *ClusterBootstrapper) Bootstrap() error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
-
 	configYAML := ""
 
-	if app.ConfigPath == "" {
+	if len(app.ConfigPaths) == 0 {
 		uiApp := ui.NewApp()
 		s, err := uiApp.Start()
 		if err != nil {
@@ -209,6 +202,19 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		if err := initSSHFromUIState(s.SSHState); err != nil {
 			return err
 		}
+	}
+
+	sshClient := ssh.NewClientFromFlags()
+	if _, err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+
+	b.SSHClient = sshClient
+
+	if restore, err := b.applyParams(); err != nil {
+		return err
+	} else {
+		defer restore()
 	}
 
 	masterAddressesForSSH := make(map[string]string)
@@ -223,7 +229,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var metaConfig *config.MetaConfig
 	var err error
 	if configYAML == "" {
-		metaConfig, err = config.LoadConfigFromFile(app.ConfigPath)
+		metaConfig, err = config.LoadConfigFromFile(app.ConfigPaths)
 		if err != nil {
 			return err
 		}
@@ -240,7 +246,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	metaConfig, err = config.LoadConfigFromFile(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
