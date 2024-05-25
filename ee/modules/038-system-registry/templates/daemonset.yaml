@@ -111,6 +111,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         ports:
         - name: http
           protocol: TCP
