@@ -184,7 +184,7 @@ func initSSHFromUIState(state uistate.SSHState) error {
 		return err
 	}
 
-	app.SSHPrivateKeys = append(app.SSHPrivateKeys, privKeyPath)
+	app.SSHPrivateKeys = []string{privKeyPath}
 
 	return nil
 }
@@ -243,12 +243,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if app.ResourcesPath != "" {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
-	}
-
-	// first, parse and check cluster config
-	metaConfig, err = config.LoadConfigFromFile(app.ConfigPaths)
-	if err != nil {
-		return err
 	}
 
 	// next init cache
