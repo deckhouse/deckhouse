@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
@@ -71,8 +72,9 @@ var (
 )
 
 type DeckhouseController struct {
-	ctx context.Context
-	mgr manager.Manager
+	ctx                context.Context
+	mgr                manager.Manager
+	preflightCountDown *sync.WaitGroup
 
 	dirs       []string
 	mm         *module_manager.ModuleManager // probably it's better to set it via the interface
@@ -151,12 +153,14 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
-	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage)
+	var preflightCountDown sync.WaitGroup
+
+	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, &preflightCountDown)
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModulePullOverrideController(mgr, dc, mm)
+	err = release.NewModulePullOverrideController(mgr, dc, mm, &preflightCountDown)
 	if err != nil {
 		return nil, err
 	}
@@ -167,11 +171,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	return &DeckhouseController{
-		ctx:        ctx,
-		kubeClient: mcClient,
-		dirs:       utils.SplitToPaths(mm.ModulesDir),
-		mm:         mm,
-		mgr:        mgr,
+		ctx:                ctx,
+		kubeClient:         mcClient,
+		dirs:               utils.SplitToPaths(mm.ModulesDir),
+		mm:                 mm,
+		mgr:                mgr,
+		preflightCountDown: &preflightCountDown,
 
 		deckhouseModules:        make(map[string]*models.DeckhouseModule),
 		sourceModules:           make(map[string]string),
@@ -246,12 +251,17 @@ func (dml *DeckhouseController) Start(ctx context.Context) {
 	if os.Getenv("EXTERNAL_MODULES_DIR") == "" {
 		return
 	}
+
 	go func() {
 		err := dml.mgr.Start(ctx)
 		if err != nil {
 			log.Fatalf("Start controller manager failed: %s", err)
 		}
 	}()
+
+	log.Info("Waiting for the preflight checks to run")
+	dml.preflightCountDown.Wait()
+	log.Info("The preflight checks are done")
 }
 
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
