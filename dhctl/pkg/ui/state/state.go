@@ -433,3 +433,7 @@ func (b *State) PublicSSHKey() string {
 func (b *State) PrivateSSHKey() string {
 	return b.SSHState.Private
 }
+
+func (b *State) GetSSHState() SSHState {
+	return b.SSHState
+}

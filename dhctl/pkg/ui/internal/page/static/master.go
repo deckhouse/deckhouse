@@ -13,7 +13,6 @@ import (
 type staticMasterState interface {
 	SetSSHUser(string) error
 	SetSSHHost(string) error
-	SetInternalNetworkCIDR(string) error
 	SetUsePasswordForSudo(bool)
 
 	SetBastionSSHUser(string)
@@ -21,7 +20,6 @@ type staticMasterState interface {
 
 	GetSSHUser() string
 	GetSSHHost() string
-	GetInternalNetworkCIDR() string
 	IsUsePasswordForSudo() bool
 
 	GetBastionSSHUser() string
@@ -44,7 +42,6 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 
 		sshHostLabel         = "SSH host"
 		sshUserLabel         = "SSH user name"
-		internalNetworkLabel = "Internal network CIDR"
 		askSudoPasswordLabel = "Ask sudo password"
 
 		useBastionHostLabel  = "Use bastion host"
@@ -55,8 +52,6 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 	form := tview.NewForm()
 	form.AddInputField(sshHostLabel, p.st.GetSSHHost(), constInputsWidth, nil, nil)
 	form.AddInputField(sshUserLabel, p.st.GetSSHUser(), constInputsWidth, nil, nil)
-
-	form.AddInputField(internalNetworkLabel, p.st.GetInternalNetworkCIDR(), constInputsWidth, nil, nil)
 
 	form.AddCheckbox(askSudoPasswordLabel, p.st.IsUsePasswordForSudo(), nil)
 
@@ -109,11 +104,6 @@ func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tvie
 		sshUser := form.GetFormItemByLabel(sshUserLabel).(*tview.InputField).GetText()
 		if err := p.st.SetSSHUser(sshUser); err != nil {
 			allErrs = multierror.Append(allErrs, err)
-		}
-
-		sshInternalNetwork := form.GetFormItemByLabel(internalNetworkLabel).(*tview.InputField).GetText()
-		if err := p.st.SetInternalNetworkCIDR(sshInternalNetwork); err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("Internal network CIDR %s", err))
 		}
 
 		askSudoPassword := form.GetFormItemByLabel(askSudoPasswordLabel).(*tview.Checkbox).IsChecked()

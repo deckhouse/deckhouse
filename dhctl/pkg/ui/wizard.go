@@ -17,6 +17,7 @@ const (
 	pageSelectClusterType = "pageSelectClusterType"
 	pageProvider          = "pageProvider"
 	pageStaticMaster      = "pageStaticMaster"
+	pageStaticInternal    = "pageStaticInternal"
 	pageRegistry          = "pageRegistry"
 	pageCluster           = "pageCluster"
 	pageCNI               = "pageCNI"
@@ -42,6 +43,7 @@ var (
 	staticPages = []string{
 		pageSSH,
 		pageStaticMaster,
+		pageStaticInternal,
 	}
 
 	providerGenericPages = []string{
@@ -97,6 +99,7 @@ func newWizard(app *tview.Application, st *state.State, schema *state.Schema) *w
 		pageSelectClusterType: welcome.NewClusterTypePage(st, schema),
 		pageProvider:          provider.NewProviderPage(st, schema),
 		pageStaticMaster:      static.NewStaticMasterPage(st),
+		pageStaticInternal:    static.NewInternalNetworkPage(st),
 		pageRegistry:          deckhouse.NewRegistryPage(st, schema),
 		pageCluster:           deckhouse.NewClusterPage(st, schema),
 		pageCNI:               deckhouse.NewCNIPage(st, schema),
