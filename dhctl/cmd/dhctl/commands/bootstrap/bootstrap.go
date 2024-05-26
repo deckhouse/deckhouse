@@ -15,14 +15,11 @@
 package bootstrap
 
 import (
-	"fmt"
-
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -40,13 +37,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefinePreflight(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient := ssh.NewClientFromFlags()
-		if _, err := sshClient.Start(); err != nil {
-			return fmt.Errorf("unable to start ssh client: %w", err)
-		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.Bootstrap()

@@ -17,6 +17,11 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/ui"
+	"math/rand"
+	"os"
+	"path"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	uistate "github.com/deckhouse/deckhouse/dhctl/pkg/ui/state"
 )
 
 const (
@@ -156,7 +162,55 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func initSSHFromUIState(state uistate.SSHState) error {
+	app.SSHUser = state.User
+
+	if state.BastionUser != "" {
+		app.SSHBastionUser = state.BastionUser
+	}
+
+	if state.BastionHost != "" {
+		app.SSHBastionHost = state.BastionHost
+	}
+
+	if state.Host != "" {
+		app.SSHHosts = []string{state.Host}
+	}
+
+	privKeyPrefix := strconv.Itoa(rand.Int())
+	privKeyPath := path.Join(app.TmpDirName, privKeyPrefix+".private.key")
+
+	if err := os.WriteFile(privKeyPath, []byte(state.Private), 0600); err != nil {
+		return err
+	}
+
+	app.SSHPrivateKeys = []string{privKeyPath}
+
+	return nil
+}
+
 func (b *ClusterBootstrapper) Bootstrap() error {
+	configYAML := ""
+
+	if len(app.ConfigPaths) == 0 {
+		uiApp := ui.NewApp()
+		s, err := uiApp.Start()
+		if err != nil {
+			return err
+		}
+		configYAML = s.ConfigYAML
+		if err := initSSHFromUIState(s.SSHState); err != nil {
+			return err
+		}
+	}
+
+	sshClient := ssh.NewClientFromFlags()
+	if _, err := sshClient.Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+
+	b.SSHClient = sshClient
+
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -171,15 +225,24 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
+	// first, parse and check cluster config
+	var metaConfig *config.MetaConfig
+	var err error
+	if configYAML == "" {
+		metaConfig, err = config.LoadConfigFromFile(app.ConfigPaths)
+		if err != nil {
+			return err
+		}
+	} else {
+		metaConfig, err = config.ParseConfigFromData(configYAML)
+		if err != nil {
+			return err
+		}
+	}
+
 	if app.ResourcesPath != "" {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
-	}
-
-	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
-	if err != nil {
-		return err
 	}
 
 	// next init cache

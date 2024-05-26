@@ -191,9 +191,21 @@ func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 	return s.cache[*index]
 }
 
+func (s *SchemaStore) GetOrError(index *SchemaIndex) (*spec.Schema, error) {
+	if ss, ok := s.cache[*index]; ok {
+		return ss, nil
+	}
+
+	return nil, fmt.Errorf("Schema index not found in schema store")
+}
+
 func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
 	_, ok := s.moduleConfigsCache[name]
 	return ok
+}
+
+func (s *SchemaStore) ModuleConfigSchema(name string) *spec.Schema {
+	return s.moduleConfigsCache[name]
 }
 
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {

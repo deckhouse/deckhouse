@@ -90,7 +90,6 @@ func DefineConfigFlags(cmd *kingpin.CmdClause) {
 It can be go-template file (for only string keys!). Passed data contains next keys:
   cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
 `).
-		Required().
 		Envar(configEnvName("CONFIG")).
 		StringsVar(&ConfigPaths)
 }
