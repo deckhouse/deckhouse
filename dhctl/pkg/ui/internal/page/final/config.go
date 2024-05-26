@@ -26,6 +26,10 @@ func NewConfigPage(st configState) *ConfigPage {
 	}
 }
 
+func (c *ConfigPage) MouseEnabled() bool {
+	return true
+}
+
 func (c *ConfigPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	configYAML, err := template.RenderTemplate(c.st)
 	if err != nil {

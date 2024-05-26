@@ -39,6 +39,10 @@ func NewRegistryPage(st registryState, schema registrySchema) *RegistryPage {
 	}
 }
 
+func (p *RegistryPage) MouseEnabled() bool {
+	return true
+}
+
 func (p *RegistryPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30

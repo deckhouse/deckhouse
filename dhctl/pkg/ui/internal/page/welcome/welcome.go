@@ -11,6 +11,10 @@ func box() *tview.Box {
 type WelcomePage struct {
 }
 
+func (w *WelcomePage) MouseEnabled() bool {
+	return true
+}
+
 func (w *WelcomePage) Show(onStart, onBack func()) (tview.Primitive, []tview.Primitive) {
 	lbl1 := tview.NewTextView().SetText("Welcome to Deckhouse kubernetes platform bootstrap wizard!").SetTextAlign(tview.AlignCenter)
 	btn1 := tview.NewButton("Shall we begin?").SetSelectedFunc(onStart)

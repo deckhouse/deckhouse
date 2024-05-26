@@ -36,6 +36,10 @@ func NewStaticMasterPage(st staticMasterState) *MasterPage {
 	}
 }
 
+func (p *MasterPage) MouseEnabled() bool {
+	return true
+}
+
 func (p *MasterPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30

@@ -34,6 +34,10 @@ func NewClusterTypePage(st clusterTypeState, schema clusterTypesSchema) *Cluster
 	}
 }
 
+func (p *ClusterTypePage) MouseEnabled() bool {
+	return true
+}
+
 func (p *ClusterTypePage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30

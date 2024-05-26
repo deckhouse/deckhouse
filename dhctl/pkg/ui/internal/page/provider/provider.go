@@ -29,6 +29,10 @@ func NewProviderPage(st providerState, schema providerSchema) *ProviderPage {
 	}
 }
 
+func (p *ProviderPage) MouseEnabled() bool {
+	return true
+}
+
 func (p *ProviderPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const inputsWidth = 30
 

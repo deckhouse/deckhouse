@@ -34,6 +34,10 @@ func NewDeckhousePage(st modulesState, schema modulesSchema) *ModulesPage {
 	}
 }
 
+func (p *ModulesPage) MouseEnabled() bool {
+	return true
+}
+
 func (p *ModulesPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		constInputsWidth = 30

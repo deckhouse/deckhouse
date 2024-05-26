@@ -29,6 +29,10 @@ func NewInternalNetworkPage(st staticNetworkState) *InternalNetworkPage {
 	}
 }
 
+func (p *InternalNetworkPage) MouseEnabled() bool {
+	return true
+}
+
 func (p *InternalNetworkPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		internalNetworkLabel = "Internal network CIDR"

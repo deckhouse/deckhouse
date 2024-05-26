@@ -36,6 +36,10 @@ func NewCNIPage(st cniState, schema cniSchema) *CniPage {
 	}
 }
 
+func (c *CniPage) MouseEnabled() bool {
+	return true
+}
+
 func (c *CniPage) Show(onNext func(), onBack func()) (tview.Primitive, []tview.Primitive) {
 	const (
 		cniLabel         = "CNI"

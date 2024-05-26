@@ -80,6 +80,7 @@ var (
 
 type Page interface {
 	Show(onNext, onBack func()) (tview.Primitive, []tview.Primitive)
+	MouseEnabled() bool
 }
 
 type wizard struct {
@@ -132,6 +133,7 @@ func (w *wizard) Start() error {
 			back = nil
 		}
 
+		w.app.EnableMouse(page.MouseEnabled())
 		view, focusables := page.Show(onNext, back)
 		w.pagesView.AddPage(pageName, view, true, false)
 		w.addSwitchFocusEvent(focusables)
