@@ -286,6 +286,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9 h1:62uLwA3l2JMH84liO4ZhnjTH5PjFyCYxbHLgXPaJMtI=
 github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9/go.mod h1:MvMXoufZAtqExNexqi4cjrNYE9MefKddKylxjS+//n0=
+github.com/name212/tview-widgets v0.2.0 h1:usgnoaPJIQgTkpLddcYKH5NXtJ6NGoV/tD9y8W4hvt8=
+github.com/name212/tview-widgets v0.2.0/go.mod h1:QxzxsCv3Sl4Ot66yEUW7AllauZ9t1v7N8/TgTP5BVM4=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/onsi/ginkgo/v2 v2.13.0 h1:0jY9lJquiL8fcf3M4LAXN5aMlS/b2BV86HFFPCPMgE4=
 github.com/onsi/ginkgo/v2 v2.13.0/go.mod h1:TE309ZR8s5FsKKpuB1YAQYBzCaAfUgatB/xlT/ETL/o=
@@ -316,6 +318,8 @@ github.com/prometheus/procfs v0.11.1 h1:xRC8Iq1yyca5ypa9n1EZnWZkt7dwcoRPQwX/5gwa
 github.com/prometheus/procfs v0.11.1/go.mod h1:eesXgaPo1q7lBpVMoMy0ZOFTth9hBn4W/y0/p/ScXhY=
 github.com/rivo/tview v0.0.0-20240426173458-c766eefb3803 h1:26AUJmGMCp5z8kiJcB3m5vGyj4Pni8aIjy6Ua6Ind7c=
 github.com/rivo/tview v0.0.0-20240426173458-c766eefb3803/go.mod h1:02iFIz7K/A9jGCvrizLPvoqr4cEIx7q54RH5Qudkrss=
+github.com/rivo/tview v0.0.0-20240505185119-ed116790de0f h1:DAbaKhyPcZQp/TqlSdUd6Z445PkJb3bI0VccXg22oeg=
+github.com/rivo/tview v0.0.0-20240505185119-ed116790de0f/go.mod h1:02iFIz7K/A9jGCvrizLPvoqr4cEIx7q54RH5Qudkrss=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.3/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
