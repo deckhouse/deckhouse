@@ -19,34 +19,17 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 
-nft_support=$(cat /proc/modules | grep nf_tables)
 IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
-IPTABLES_NFT_RULE=$( (/opt/deckhouse/bin/xtables-nft-multi iptables-save -t mangle || true ) 2>/dev/null | grep -E ${kubeletChainsRegex} | wc -l )
+nft_support=$(cat /proc/modules | grep nf_tables)
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
-elif [[ ${IPTABLES_NFT_RULE} -ne 0 ]]; then
-  iptablesModeBin="xtables-nft-multi"
-elif [[ -n ${nft_support} ]]; then
-  # if iptables-save doesn't contain k8s rules and nf_tables already exist im kernel mods, we use nft as default
-  iptablesModeBin="xtables-nft-multi"
 else
-  # if kernel doesn't support nftables mod
-  iptablesModeBin="xtables-legacy-multi"
+  # use iptables-nft as default
+  iptablesModeBin="xtables-nft-multi"
 fi
 
 cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore"
 for cmd in $cmds; do
   ln -sf /opt/deckhouse/bin/${iptablesModeBin} /opt/deckhouse/bin/${cmd}
 done
-
-if command -v update-alternatives >/dev/null; then
-  update-alternatives \
-    --install /usr/sbin/iptables iptables /opt/deckhouse/bin/iptables 90 \
-    --slave /usr/sbin/iptables-restore iptables-restore /opt/deckhouse/bin/iptables \
-    --slave /usr/sbin/iptables-save iptables-save /opt/deckhouse/bin/iptables
-  update-alternatives \
-    --install /usr/sbin/ip6tables ip6tables /opt/deckhouse/bin/ip6tables 90 \
-    --slave /usr/sbin/ip6tables-restore ip6tables-restore /opt/deckhouse/bin/ip6tables \
-    --slave /usr/sbin/ip6tables-save ip6tables-save /opt/deckhouse/bin/ip6tables
-fi

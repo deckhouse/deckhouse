@@ -395,7 +395,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"netcat110481":             "imageHash-registrypackages-netcat110481",
 		"socat1734":                "imageHash-registrypackages-socat1734",
 		"tomlMerge01":              "imageHash-registrypackages-tomlMerge01",
-		"utilLinux2401":            "imageHash-registrypackages-utilLinux2401",
 		"virtWhat125":              "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":              "imageHash-registrypackages-xfsprogs670",
 	},

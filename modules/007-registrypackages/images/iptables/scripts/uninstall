@@ -14,12 +14,6 @@
 # limitations under the License.
 
 set -Eeo pipefail
-
-if command -v update-alternatives >/dev/null; then
-	update-alternatives --remove iptables /opt/deckhouse/bin/iptables
-	update-alternatives --remove ip6tables /opt/deckhouse/bin/ip6tables
-fi
-
 cmds="iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore xtables-legacy-multi xtables-nft-multi"
 for cmd in $cmds; do
   rm -f /opt/deckhouse/bin/$cmd
