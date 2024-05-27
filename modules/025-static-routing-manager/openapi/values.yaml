@@ -106,3 +106,5 @@ properties:
                         properties:
                           ipRoutingTableID:
                             type: integer
+                          routingTableName:
+                            type: string
