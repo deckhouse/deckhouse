@@ -300,6 +300,20 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		}
 	}
 
+	// checks if the modulerelease is overridden by modulepulloverride
+	mpo := new(v1alpha1.ModulePullOverride)
+	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, mpo)
+	// mpo has been found and mpo version must be used as the source of the documentation
+	if err == nil {
+		return ctrl.Result{}, nil
+	}
+
+	// some other error apart from IsNotFound
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	// mpo not found - update the docs from the module release version
 	modulePath := fmt.Sprintf("/%s/v%s", mr.GetModuleName(), mr.Spec.Version.String())
 	moduleVersion := "v" + mr.Spec.Version.String()
 	checksum := mr.Labels["release-checksum"]
@@ -313,6 +327,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		UID:        mr.GetUID(),
 		Controller: pointer.Bool(true),
 	}
+
 	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mr.GetModuleName(), moduleVersion, checksum, modulePath, mr.GetModuleSource(), ownerRef)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
