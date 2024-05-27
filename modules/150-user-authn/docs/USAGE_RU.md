@@ -263,7 +263,7 @@ data:
 Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
 ```shell
-echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
+echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
