@@ -307,7 +307,7 @@ The instrument (you can enable it for each `NodeGroup` individually) for unexpec
 
 ## Monitoring 
 
-Our `NodeGroup` implementation exports an availability metrics collected by Prometheus.
+DKP exports the group availability Prometheus metrics for each `NodeGroup`.
 
 ### What information does Prometheus collect, and in what form?
 
