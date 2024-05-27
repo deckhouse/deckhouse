@@ -43,7 +43,6 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 status:
-  ...
   ipRouteTableID: 10000 # если spec.ipRouteTableID не указан, он будет сгенерирован автоматически и размещён в status
   ...
 ```
