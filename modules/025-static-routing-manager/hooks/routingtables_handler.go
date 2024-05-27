@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-
 	"sort"
 	"strconv"
 	"strings"

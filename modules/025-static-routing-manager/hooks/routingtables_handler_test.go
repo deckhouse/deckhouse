@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -291,7 +292,7 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			nrt11Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).To(Equal(nrt11Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.ownerRTName").String()).To(Equal("testrt1"))
@@ -302,7 +303,7 @@ status:
 - destination: 192.168.0.0/24
   gateway: 192.168.0.1
 `))
-			nrt12Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-2")
+			nrt12Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".1.name").String()).To(Equal(nrt12Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".1.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".1.ownerRTName").String()).To(Equal("testrt1"))
@@ -313,7 +314,7 @@ status:
 - destination: 192.168.0.0/24
   gateway: 192.168.0.1
 `))
-			nrt21Name := "testrt2" + "-" + generateShortHash("testrt2"+"#"+"kube-worker-1")
+			nrt21Name := "testrt2" + "-" + lib.GenerateShortHash("testrt2"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".3.name").String()).To(Equal(nrt21Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".3.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".3.ownerRTName").String()).To(Equal("testrt2"))
@@ -322,7 +323,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt22Name := "testrt2" + "-" + generateShortHash("testrt2"+"#"+"kube-worker-2")
+			nrt22Name := "testrt2" + "-" + lib.GenerateShortHash("testrt2"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".2.name").String()).To(Equal(nrt22Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".2.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".2.ownerRTName").String()).To(Equal("testrt2"))
@@ -331,7 +332,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt31Name := "testrt3" + "-" + generateShortHash("testrt3"+"#"+"kube-worker-1")
+			nrt31Name := "testrt3" + "-" + lib.GenerateShortHash("testrt3"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".5.name").String()).To(Equal(nrt31Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".5.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".5.ownerRTName").String()).To(Equal("testrt3"))
@@ -340,7 +341,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt32Name := "testrt3" + "-" + generateShortHash("testrt3"+"#"+"kube-worker-2")
+			nrt32Name := "testrt3" + "-" + lib.GenerateShortHash("testrt3"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".4.name").String()).To(Equal(nrt32Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".4.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".4.ownerRTName").String()).To(Equal("testrt3"))
@@ -349,7 +350,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt41Name := "testrt4" + "-" + generateShortHash("testrt4"+"#"+"kube-worker-1")
+			nrt41Name := "testrt4" + "-" + lib.GenerateShortHash("testrt4"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".6.name").String()).To(Equal(nrt41Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".6.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".6.ownerRTName").String()).To(Equal("testrt4"))
@@ -358,7 +359,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt42Name := "testrt4" + "-" + generateShortHash("testrt4"+"#"+"kube-worker-2")
+			nrt42Name := "testrt4" + "-" + lib.GenerateShortHash("testrt4"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".7.name").String()).To(Equal(nrt42Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".7.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".7.ownerRTName").String()).To(Equal("testrt4"))
@@ -367,7 +368,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt51Name := "testrt5" + "-" + generateShortHash("testrt5"+"#"+"kube-worker-1")
+			nrt51Name := "testrt5" + "-" + lib.GenerateShortHash("testrt5"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".9.name").String()).To(Equal(nrt51Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".9.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".9.ownerRTName").String()).To(Equal("testrt5"))
@@ -376,7 +377,7 @@ status:
 - destination: 0.0.0.0/0
   gateway: 2.2.2.1
 `))
-			nrt52Name := "testrt5" + "-" + generateShortHash("testrt5"+"#"+"kube-worker-2")
+			nrt52Name := "testrt5" + "-" + lib.GenerateShortHash("testrt5"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".8.name").String()).To(Equal(nrt52Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".8.nodeName").String()).To(Equal("kube-worker-2"))
 			Expect(f.ValuesGet(nrtKeyPath + ".8.ownerRTName").String()).To(Equal("testrt5"))
@@ -396,7 +397,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			nrt11Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt11Name))
 		})
@@ -410,7 +411,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			nrt11Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt11Name))
 		})
@@ -424,7 +425,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			nrt11Name := "testrt1" + "-" + generateShortHash("testrt1"+"#"+"kube-worker-1")
+			nrt11Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).To(Equal(nrt11Name))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.ownerRTName").String()).To(Equal("testrt1"))

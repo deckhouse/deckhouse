@@ -22,6 +22,7 @@ import (
 
 const (
 	// API
+
 	Group        = "network.deckhouse.io"
 	Version      = "v1alpha1"
 	GroupVersion = Group + "/" + Version
@@ -29,11 +30,17 @@ const (
 	NRTKind      = "NodeRoutingTable"
 	IRSKind      = "IPRuleSet"
 	NIRSKind     = "NodeIPRuleSet"
-	//
+
+	// Labels, annotations, finalizers
+
 	Finalizer = "routing-tables-manager.network.deckhouse.io"
+
 	// Types
+
 	ReconciliationSucceedType = "Ready"
+
 	// Reasons
+
 	ReconciliationReasonSucceed = "ReconciliationSucceed"
 	ReconciliationReasonFailed  = "ReconciliationFailed"
 	ReconciliationReasonPending = "Pending"

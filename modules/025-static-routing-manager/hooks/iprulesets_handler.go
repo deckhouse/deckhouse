@@ -22,8 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -32,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
@@ -348,7 +347,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		input.PatchCollector.MergePatch(
 			statusPatch,
 			v1alpha1.GroupVersion,
-			v1alpha1.RTKind,
+			v1alpha1.IRSKind,
 			"",
 			irsName,
 			object_patch.WithSubresource("/status"),
