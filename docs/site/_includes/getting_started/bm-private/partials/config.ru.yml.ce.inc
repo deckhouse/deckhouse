@@ -16,7 +16,7 @@ kubernetesVersion: "Automatic"
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 # [<en>] Proxy server settings.
-# [<ru>] Настройки proxy-сервера.
+# [<ru>] Настройки proxy-сервера. В noProxy так же укажите укажите подсеть узлов кластера.
 proxy:
   httpProxy: <HTTP_PROXY_ADDRESS>
   httpsProxy: <HTTPS_PROXY_ADDRESS>
