@@ -33,15 +33,15 @@ func (client *Client) getHeaders() map[string]string {
 }
 
 func (client *Client) RequestMasterInfo() (*MasterInfoResponse, error) {
-	var response *MasterInfoResponse
-	err := RequestMasterInfo(client.client, client.getUrl(), client.getHeaders(), response)
-	return response, err
+	var response MasterInfoResponse
+	err := RequestMasterInfo(client.client, client.getUrl(), client.getHeaders(), &response)
+	return &response, err
 }
 
 func (client *Client) RequestCheckRegistry(request *CheckRegistryRequest) (*CheckRegistryResponse, error) {
-	var response *CheckRegistryResponse
-	err := RequestCheckRegistry(client.client, client.getUrl(), client.getHeaders(), request, response)
-	return response, err
+	var response CheckRegistryResponse
+	err := RequestCheckRegistry(client.client, client.getUrl(), client.getHeaders(), request, &response)
+	return &response, err
 }
 
 func (client *Client) RequestUpdateRegistry(request *UpdateRegistryRequest) error {
@@ -53,7 +53,7 @@ func (client *Client) RequestDeleteRegistry() error {
 }
 
 func (client *Client) RequestIsBusy(request *IsBusyRequest) (*IsBusyResponse, error) {
-	var response *IsBusyResponse
-	err := RequestIsBusy(client.client, client.getUrl(), client.getHeaders(), request, response)
-	return response, err
+	var response IsBusyResponse
+	err := RequestIsBusy(client.client, client.getUrl(), client.getHeaders(), request, &response)
+	return &response, err
 }

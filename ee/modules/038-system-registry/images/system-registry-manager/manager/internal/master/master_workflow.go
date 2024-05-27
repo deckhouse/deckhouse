@@ -25,12 +25,12 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 		case <-ctx.Done():
 			return
 		default:
+			time.Sleep(workInterval)
 			err := masterWorkflow(ctx, m)
 			if err != nil {
 				log.Error(err)
 				continue
 			}
-			time.Sleep(workInterval)
 		}
 	}
 }
