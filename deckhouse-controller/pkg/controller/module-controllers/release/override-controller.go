@@ -20,7 +20,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -46,9 +45,8 @@ import (
 
 // modulePullOverrideReconciler is the controller implementation for ModulePullOverride resources
 type modulePullOverrideReconciler struct {
-	client             client.Client
-	dc                 dependency.Container
-	preflightCountDown *sync.WaitGroup
+	client client.Client
+	dc     dependency.Container
 
 	logger logger.Logger
 
@@ -62,7 +60,6 @@ func NewModulePullOverrideController(
 	mgr manager.Manager,
 	dc dependency.Container,
 	moduleManager moduleManager,
-	preflightCountDown *sync.WaitGroup,
 ) error {
 	lg := log.WithField("component", "ModulePullOverrideController")
 
@@ -74,8 +71,6 @@ func NewModulePullOverrideController(
 		moduleManager:      moduleManager,
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-
-		preflightCountDown: preflightCountDown,
 	}
 
 	// Add Preflight Check
@@ -83,7 +78,6 @@ func NewModulePullOverrideController(
 	if err != nil {
 		return err
 	}
-	rc.preflightCountDown.Add(1)
 
 	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
@@ -101,12 +95,7 @@ func NewModulePullOverrideController(
 		Complete(ctr)
 }
 
-func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err error) {
-	defer func() {
-		if err == nil {
-			c.preflightCountDown.Done()
-		}
-	}()
+func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) error {
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
@@ -114,7 +103,7 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 			return deckhouseconfig.IsServiceInited(), nil
 		})
 
-	err = c.restoreAbsentModulesFromOverrides(ctx)
+	err := c.restoreAbsentModulesFromOverrides(ctx)
 	if err != nil {
 		return fmt.Errorf("modules restoration from overrides failed: %w", err)
 	}

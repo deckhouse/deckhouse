@@ -195,15 +195,14 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	// Init deckhouse-config service with ModuleManager instance.
 	d8config.InitService(operator.ModuleManager)
 
-	// Run preflight checks first (restore the modules' file system)
-	dController.Start(ctx)
-
 	err = operator.Start()
 	if err != nil {
 		return err
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
+
+	dController.Start(ctx)
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {
