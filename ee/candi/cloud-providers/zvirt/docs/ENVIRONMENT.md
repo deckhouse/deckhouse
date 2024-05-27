@@ -37,12 +37,6 @@ To create a virtual machine template, go to the “Compute -> Virtual Machines�
 
     ![ Network interfaces ](../../images/030-cloud-provider-zvirt/template/step_env_en_05.png)
 
-- Section _System_
-
-  Set the parameters “Memory Size”, “Maximum memory” and “Physical Memory Gauranteed” according to Deckhouse system requirements: at least 8192 MB.Parameter “Total Virtual CPUs” - at least 4 CPUs.
-
-  ![ System ](../../images/030-cloud-provider-zvirt/template/step_env_en_06.png)
-
 - Leave the rest of the parameters as default and create a virtual machine. When the VM creation process is finished, create a template based on it:
 
   - Select the created VM in the list and go to the window of creating a new template.

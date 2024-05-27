@@ -1,9 +1,9 @@
 {%- if page.platform_type == "cloud" %}
 {% alert level="warning" %}
 {%- if page.lang == "ru" %}
-Перед началом установки убедитесь в наличии {% if page.platform_code == "zvirt" %}ресурсов гипервизора{%- else %}квот облачного провайдера{% endif %}, необходимых для развертывания вашего кластера.{%- if page.platform_code == "aws" %} Проверьте наличие доступа к необходимым регионам.{%- endif %}{%- if page.platform_code == "gcp" %} Убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).{%- endif %}
+Перед началом установки убедитесь в наличии квот облачного провайдера, необходимых для развертывания вашего кластера.{%- if page.platform_code == "aws" %} Проверьте наличие доступа к необходимым регионам.{%- endif %}{%- if page.platform_code == "gcp" %} Убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).{%- endif %}
 {%- else %}
-Before starting the installation, ensure you have {% if page.platform_code == "zvirt" %}resources{%- else %}the cloud provider quotas{% endif %} required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}{%- if page.platform_code == "gcp" %} Ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.{%- endif %}
+Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}{%- if page.platform_code == "gcp" %} Ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.{%- endif %}
 {%- endif %}
 {% endalert %}
 {%- endif %}
