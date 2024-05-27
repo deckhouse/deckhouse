@@ -96,6 +96,9 @@ func discoverNodes(input *go_hook.HookInput) error {
 			continue
 		}
 		convertedAddress := address.(nodeTarget)
+		if convertedAddress.Address == "" {
+			continue
+		}
 		combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
 	}
 
