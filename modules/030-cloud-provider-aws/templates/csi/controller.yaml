@@ -38,6 +38,7 @@
 
 {{- $csiNodeConfig := dict }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
 {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "node_args" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "ebs.csi.aws.com" }}
 
