@@ -37,7 +37,7 @@ import (
 var (
 	ErrBadProxyConfig      = errors.New("Bad proxy config")
 	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
-	ErrAuthFailed          = errors.New("authentication failed")
+	ErrAuthRegistryFailed  = errors.New("authentication failed")
 
 	realmRe   = regexp.MustCompile(`realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"`)
 	serviceRe = regexp.MustCompile(`service="(.*?)"`)
@@ -78,7 +78,11 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 	defer tun.Stop()
 
-	registryURL := &url.URL{Scheme: pc.metaConfig.Registry.Scheme, Host: pc.metaConfig.Registry.Address, Path: "/v2/"}
+	registryURL := &url.URL{
+		Scheme: pc.metaConfig.Registry.Scheme,
+		Host:   pc.metaConfig.Registry.Address,
+		Path:   "/v2/",
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
@@ -170,7 +174,11 @@ func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, 
 
 	proxyAddr, proxyAddrIsString := proxyAddrClause.(string)
 	if !proxyAddrIsString {
-		return nil, nil, fmt.Errorf(`%w: malformed proxy address: "%v"`, ErrBadProxyConfig, proxyAddr)
+		return nil, nil, fmt.Errorf(
+			`%w: malformed proxy address: "%v"`,
+			ErrBadProxyConfig,
+			proxyAddr,
+		)
 	}
 
 	proxyUrl, err := url.Parse(proxyAddr)
@@ -237,14 +245,25 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	}
 
 	if authData == "" {
-		return fmt.Errorf("%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag", ErrAuthFailed)
+		return fmt.Errorf(
+			"%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag",
+			ErrAuthRegistryFailed,
+		)
 	}
 
 	return checkRegistryAuth(ctx, pc.metaConfig, authData)
 }
 
-func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
-	registryURL := &url.URL{Scheme: metaConfig.Registry.Scheme, Host: metaConfig.Registry.Address, Path: registryPath}
+func prepareRegistryRequest(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+) (*http.Request, error) {
+	registryURL := &url.URL{
+		Scheme: metaConfig.Registry.Scheme,
+		Host:   metaConfig.Registry.Address,
+		Path:   registryPath,
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
@@ -266,7 +285,10 @@ func prepareAuthRequest(
 ) (*http.Request, error) {
 	authURLValues := url.Values{}
 	authURLValues.Add("service", registryService)
-	authURLValues.Add("scope", fmt.Sprintf("repository:%s:pull", strings.TrimLeft(metaConfig.Registry.Path, "/")))
+	authURLValues.Add(
+		"scope",
+		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(metaConfig.Registry.Path, "/")),
+	)
 
 	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
@@ -308,7 +330,11 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 	return client, nil
 }
 
-func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, client *http.Client) (string, string, error) {
+func getAuthRealmAndService(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	client *http.Client,
+) (string, string, error) {
 	authURL := ""
 	registryService := ""
 
@@ -327,13 +353,16 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 		return authURL, registryService, fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
 				"Check if container registry address is correct",
-			ErrAuthFailed,
+			ErrAuthRegistryFailed,
 		)
 	}
 	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
 
 	if len(wwwAuthHeader) == 0 {
-		return authURL, registryService, fmt.Errorf("WWW-Authenticate header not found. %w", ErrAuthFailed)
+		return authURL, registryService, fmt.Errorf(
+			"WWW-Authenticate header not found. %w",
+			ErrAuthRegistryFailed,
+		)
 	}
 	// Bearer realm="https://registry.local:5001/auth",service="Docker registry"
 	log.DebugF("WWW-Authenticate: %s\n", wwwAuthHeader)
@@ -341,7 +370,11 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 	// realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"
 	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
 	if len(realmMatches) == 0 {
-		return authURL, registryService, fmt.Errorf("couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w", wwwAuthHeader, ErrAuthFailed)
+		return authURL, registryService, fmt.Errorf(
+			"couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w",
+			wwwAuthHeader,
+			ErrAuthRegistryFailed,
+		)
 	}
 	authURL = realmMatches[1]
 
@@ -356,11 +389,15 @@ func getAuthRealmAndService(ctx context.Context, metaConfig *config.MetaConfig, 
 
 func checkResponseError(resp *http.Response) error {
 	if resp.StatusCode == http.StatusUnauthorized {
-		return ErrAuthFailed
+		return ErrAuthRegistryFailed
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected response status code %d, %w", resp.StatusCode, ErrAuthFailed)
+		return fmt.Errorf(
+			"unexpected response status code %d, %w",
+			resp.StatusCode,
+			ErrAuthRegistryFailed,
+		)
 	}
 
 	return nil
@@ -386,7 +423,7 @@ func checkBasicRegistryAuth(
 		return fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
 				"Check if container registry address is correct",
-			ErrAuthFailed,
+			ErrAuthRegistryFailed,
 		)
 	}
 
@@ -431,7 +468,7 @@ func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authD
 		return nil
 	}
 
-	if !errors.Is(err, ErrAuthFailed) {
+	if !errors.Is(err, ErrAuthRegistryFailed) {
 		return err
 	}
 
