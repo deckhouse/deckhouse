@@ -198,7 +198,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	// Run preflight checks first (restore the modules' file system)
 	dController.Start(ctx)
 
-	err = operator.Start()
+	err = operator.Start(ctx)
 	if err != nil {
 		return err
 	}
