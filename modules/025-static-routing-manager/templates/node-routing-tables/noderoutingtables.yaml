@@ -8,7 +8,7 @@ metadata:
   {{ include "helm_lib_module_labels" (list $ (dict "routing-manager.network.deckhouse.io/node-name" $nrt.nodeName)) | nindent 2 }}
   name: {{ $nrt.name }}
   ownerReferences:
-    - apiVersion: NodeRoutingTable
+    - apiVersion: network.deckhouse.io/v1alpha1
       blockOwnerDeletion: true
       controller: true
       kind: RoutingTable

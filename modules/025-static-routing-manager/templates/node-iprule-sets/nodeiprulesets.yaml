@@ -8,12 +8,12 @@ metadata:
   {{ include "helm_lib_module_labels" (list $ (dict "routing-manager.network.deckhouse.io/node-name" $nirs.nodeName)) | nindent 2 }}
   name: {{ $nirs.name }}
   ownerReferences:
-    - apiVersion: NodeRoutingTable
+    - apiVersion: network.deckhouse.io/v1alpha1
       blockOwnerDeletion: true
       controller: true
       kind: IPRuleSet
-      name: {{ $nirs.ownerRTName }}
-      uid: {{ $nirs.ownerRTUID }}
+      name: {{ $nirs.ownerIRSName }}
+      uid: {{ $nirs.ownerIRSUID }}
 spec:
   nodeName: {{ $nirs.nodeName }}
   rules:
