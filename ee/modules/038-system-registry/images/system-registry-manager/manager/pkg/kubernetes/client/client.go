@@ -8,9 +8,6 @@ package client
 import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	// "k8s.io/client-go/tools/clientcmd"
-	// "os"
-	// "path/filepath"
 )
 
 func NewK8sClient() (*kubernetes.Clientset, error) {
@@ -21,15 +18,3 @@ func NewK8sClient() (*kubernetes.Clientset, error) {
 	k8sClient, err := kubernetes.NewForConfig(config)
 	return k8sClient, err
 }
-
-// func NewK8sClient() (*kubernetes.Clientset, error) {
-// 	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-
-// 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	clientset, err := kubernetes.NewForConfig(config)
-// 	return clientset, err
-// }
