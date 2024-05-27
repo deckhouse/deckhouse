@@ -11,10 +11,44 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 )
+
+type ActionStatus struct {
+	Name      string `json:"name"`
+	Priority  int    `json:"priority"`
+	Approved  bool   `json:"approved"`
+	Completed bool   `json:"completed"`
+}
+
+func (actSt *ActionStatus) toString() (string, error) {
+	jsonData, err := json.Marshal(actSt)
+	if err != nil {
+		return "", fmt.Errorf("json serialization error: %v", err)
+	}
+	return string(jsonData), nil
+}
+
+func fromStringToStat(strActSt string) (ActionStatus, error) {
+	actSt := ActionStatus{}
+	err := json.Unmarshal([]byte(strActSt), &actSt)
+	if err != nil {
+		return actSt, fmt.Errorf("json decoding error: %v", err)
+	}
+	return actSt, nil
+}
+
+func ActionStatusEqual(l, r *ActionStatus) bool {
+	if l == nil || r == nil {
+		return false
+	}
+	return l.Name == r.Name &&
+		l.Priority == r.Priority &&
+		l.Approved == r.Approved
+}
 
 type NodeStatus struct {
 	FromMe      ActionStatus
