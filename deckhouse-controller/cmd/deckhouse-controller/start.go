@@ -184,19 +184,17 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 
-	// Starts main event lop
-	err = dController.Setup(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
-	if err != nil {
-		return err
-	}
-
 	operator.ModuleManager.SetModuleLoader(dController)
 
 	// Init deckhouse-config service with ModuleManager instance.
 	d8config.InitService(operator.ModuleManager)
 
-	// Run preflight checks first (restore the modules' file system)
-	dController.Start(ctx)
+	// Runs preflight checks first (restore the modules' file system)
+	// Loads deckhouse modules from the fs and Starts main event lop
+	err = dController.Start(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
+	if err != nil {
+		return err
+	}
 
 	err = operator.Start(ctx)
 	if err != nil {

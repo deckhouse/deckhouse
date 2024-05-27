@@ -185,9 +185,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}, nil
 }
 
-// Setup runs preflight checks and load all deckhouse modules from the FS
-// it doesn't start controllers for ModuleSource/ModuleRelease objects
-func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
+func (dml *DeckhouseController) discoverDeckhouseModules(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	err := dml.searchAndLoadDeckhouseModules()
 	if err != nil {
 		return fmt.Errorf("search and load Deckhouse modules: %w", err)
@@ -247,11 +245,12 @@ func (dml *DeckhouseController) setupSourceModules(ctx context.Context) error {
 }
 
 // Start function starts all child controllers linked with Modules
-func (dml *DeckhouseController) Start(ctx context.Context) {
+func (dml *DeckhouseController) Start(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	if os.Getenv("EXTERNAL_MODULES_DIR") == "" {
-		return
+		return nil
 	}
 
+	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		err := dml.mgr.Start(ctx)
 		if err != nil {
@@ -262,6 +261,9 @@ func (dml *DeckhouseController) Start(ctx context.Context) {
 	log.Info("Waiting for the preflight checks to run")
 	dml.preflightCountDown.Wait()
 	log.Info("The preflight checks are done")
+
+	// discovers modules on the fs, runs modules events loop (register/delete/etc)
+	return dml.discoverDeckhouseModules(ctx, moduleEventC, deckhouseConfigC)
 }
 
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
