@@ -73,6 +73,8 @@ type moduleReleaseReconciler struct {
 
 	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
 
+	preflightCountDown *sync.WaitGroup
+
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
@@ -95,6 +97,7 @@ func NewModuleReleaseController(
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
+	preflightCountDown *sync.WaitGroup,
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
@@ -110,6 +113,8 @@ func NewModuleReleaseController(
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
+
+		preflightCountDown: preflightCountDown,
 	}
 
 	// Add Preflight Check
@@ -117,6 +122,7 @@ func NewModuleReleaseController(
 	if err != nil {
 		return err
 	}
+	c.preflightCountDown.Add(1)
 
 	ctr, err := controller.New("module-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
@@ -588,7 +594,12 @@ func (c *moduleReleaseReconciler) updateModuleReleaseStatusMessage(ctx context.C
 // PreflightCheck start a few checks and synchronize deckhouse filesystem with ModuleReleases
 //   - Download modules, which have status=deployed on ModuleRelease but have no files on Filesystem
 //   - Delete modules, that don't have ModuleRelease presented in the cluster
-func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
+func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error) {
+	defer func() {
+		if err == nil {
+			c.preflightCountDown.Done()
+		}
+	}()
 	if c.externalModulesDir == "" {
 		return nil
 	}
@@ -601,7 +612,7 @@ func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
 		})
 
 	go c.restartLoop(ctx)
-	err := c.restoreAbsentModulesFromReleases(ctx)
+	err = c.restoreAbsentModulesFromReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("modules restoration from releases failed: %w", err)
 	}
