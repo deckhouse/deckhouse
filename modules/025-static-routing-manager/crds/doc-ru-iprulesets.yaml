@@ -48,36 +48,15 @@ spec:
                           uidrange:
                             description: |
                               select the range of uid (UserID) values to match.
-                            properties:
-                              start:
-                                description: |
-                                  the beginning of the range.
-                              end:
-                                description: |
-                                  end of the range.
                           ipproto:
                             description: |
                               select the ip protocol value to match.
                           sport:
                             description: |
                               select the range of source ports to match.
-                            properties:
-                              start:
-                                description: |
-                                  the beginning of the range.
-                              end:
-                                description: |
-                                  end of the range.
                           dport:
                             description: |
                               select the range of destination ports to match.
-                            properties:
-                              start:
-                                description: |
-                                  the beginning of the range.
-                              end:
-                                description: |
-                                  end of the range.
                           tun_id:
                             description: |
                               select the virtual tunnel ID to match.

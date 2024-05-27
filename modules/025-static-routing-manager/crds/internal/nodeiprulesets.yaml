@@ -78,6 +78,7 @@ spec:
                       properties:
                         not:
                           type: boolean
+                          default: false
                           description: |
                             invert the selector match rule
                         from:
@@ -88,7 +89,7 @@ spec:
                             type: string
                             format: cidr
                             description: |
-                              select the source prefix to match.
+                              Select the source prefix to match.
                         to:
                           type: array
                           description: |
@@ -97,46 +98,49 @@ spec:
                             type: string
                             format: cidr
                             description: |
-                              select the destination prefix to match.
+                              Select the destination prefix to match.
                         tos:
-                          type: integer
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,2}$'
                           description: |
-                            select the TOS (or diffserv/dscp) value to match.
+                            Select the TOS (diffserv/dscp) value to match.
+                            Available values stored in the file /etc/iproute2/rt_dsfield.
                         fwmark:
-                          type: integer
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            select the fwmark value to match.
+                            Select the fwmark value to match.
                         iif:
                           type: string
                           description: |
-                            select the incoming device to match.
+                            Select the incoming device to match.
                         oif:
                           type: string
                           description: |
-                            select the outgoing device (interface) to match.
+                            Select the outgoing device (interface) to match.
                         uidrange:
                           description: |
-                            select the range of uid (UserID) values to match.
+                            Select the range of uid (UserID) values to match.
                           type: string
                           pattern: '^(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})-(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})$'
                         ipproto:
                           type: integer
                           description: |
-                            select the ip protocol value to match.
+                            Select the ip protocol value to match.
                         sport:
                           description: |
-                            select the range of source ports to match.
+                            Select the source port value to match. supports port range.
                           type: string
                           pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         dport:
                           description: |
-                            select the range of destination ports to match.
+                            Select the destination port value to match. supports port range.
                           type: string
                           pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         tun_id:
                           type: integer
                           description: |
-                            select the virtual tunnel ID to match.
+                            Select the virtual tunnel ID to match.
                     action:
                       type: object
                       required:
@@ -183,6 +187,7 @@ spec:
                       properties:
                         not:
                           type: boolean
+                          default: false
                           description: |
                             invert the selector match rule
                         from:
@@ -193,7 +198,7 @@ spec:
                             type: string
                             format: cidr
                             description: |
-                              select the source prefix to match.
+                              Select the source prefix to match.
                         to:
                           type: array
                           description: |
@@ -202,70 +207,49 @@ spec:
                             type: string
                             format: cidr
                             description: |
-                              select the destination prefix to match.
+                              Select the destination prefix to match.
                         tos:
-                          type: integer
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,2}$'
                           description: |
-                            select the TOS (or diffserv/dscp) value to match.
+                            Select the TOS (diffserv/dscp) value to match.
+                            Available values stored in the file /etc/iproute2/rt_dsfield.
                         fwmark:
-                          type: integer
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            select the fwmark value to match.
+                            Select the fwmark value to match.
                         iif:
                           type: string
                           description: |
-                            select the incoming device to match.
+                            Select the incoming device to match.
                         oif:
                           type: string
                           description: |
-                            select the outgoing device (interface) to match.
+                            Select the outgoing device (interface) to match.
                         uidrange:
                           description: |
-                            select the range of uid (UserID) values to match.
-                          type: object
-                          properties:
-                            start:
-                              type: integer
-                              description: |
-                                the beginning of the range.
-                            end:
-                              type: integer
-                              description: |
-                                end of the range.
+                            Select the range of uid (UserID) values to match.
+                          type: string
+                          pattern: '^(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})-(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})$'
                         ipproto:
                           type: integer
                           description: |
-                            select the ip protocol value to match.
+                            Select the ip protocol value to match.
                         sport:
                           description: |
-                            select the range of source ports to match.
-                          type: object
-                          properties:
-                            start:
-                              type: integer
-                              description: |
-                                the beginning of the range.
-                            end:
-                              type: integer
-                              description: |
-                                end of the range.
+                            Select the source port value to match. supports port range.
+                          type: string
+                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         dport:
                           description: |
-                            select the range of destination ports to match.
-                          type: object
-                          properties:
-                            start:
-                              type: integer
-                              description: |
-                                the beginning of the range.
-                            end:
-                              type: integer
-                              description: |
-                                end of the range.
+                            Select the destination port value to match. supports port range.
+                          type: string
+                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
                         tun_id:
                           type: integer
                           description: |
-                            select the virtual tunnel ID to match.
+                            Select the virtual tunnel ID to match.
                     action:
                       type: object
                       required:
