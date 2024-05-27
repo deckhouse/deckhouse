@@ -18,54 +18,54 @@ spec:
   nodeName: {{ $nirs.nodeName }}
   rules:
   {{- range $rule := $nirs.rules }}
-    - selector:
-    {{- if $rule.selector.not }}
-        not: {{ $rule.selector.not }}
+    - selectors:
+    {{- if $rule.selectors.not }}
+        not: {{ $rule.selectors.not }}
     {{- end }}
-    {{- if $rule.selector.from }}
+    {{- if $rule.selectors.from }}
         from:
-      {{- range $prefix := $rule.selector.from }}
+      {{- range $prefix := $rule.selectors.from }}
           - {{ $prefix | quote }}
       {{- end }}
     {{- end }}
-    {{- if $rule.selector.to }}
+    {{- if $rule.selectors.to }}
         to:
-      {{- range $prefix := $rule.selector.to }}
+      {{- range $prefix := $rule.selectors.to }}
           - {{ $prefix | quote }}
       {{- end }}
     {{- end }}
-    {{- if $rule.selector.iif }}
-        iif: {{ $rule.selector.iif | quote }}
+    {{- if $rule.selectors.iif }}
+        iif: {{ $rule.selectors.iif | quote }}
     {{- end }}
-    {{- if $rule.selector.oif }}
-        oif: {{ $rule.selector.oif | quote }}
+    {{- if $rule.selectors.oif }}
+        oif: {{ $rule.selectors.oif | quote }}
     {{- end }}
-    {{- if $rule.selector.uidrange }}
-        uidrange: {{ $rule.selector.uidrange | quote }}
+    {{- if $rule.selectors.uidrange }}
+        uidrange: {{ $rule.selectors.uidrange | quote }}
     {{- end }}
-    {{- if $rule.selector.ipproto }}
-        ipproto: {{ $rule.selector.ipproto }}
+    {{- if $rule.selectors.ipproto }}
+        ipproto: {{ $rule.selectors.ipproto }}
     {{- end }}
-    {{- if $rule.selector.tos }}
-        tos: {{ $rule.selector.tos | quote }}
+    {{- if $rule.selectors.tos }}
+        tos: {{ $rule.selectors.tos | quote }}
     {{- end }}
-    {{- if $rule.selector.fwmark }}
-        fwmark: {{ $rule.selector.fwmark | quote }}
+    {{- if $rule.selectors.fwmark }}
+        fwmark: {{ $rule.selectors.fwmark | quote }}
     {{- end }}
-    {{- if $rule.selector.sport }}
-        sport: {{ $rule.selector.sport | quote }}
+    {{- if $rule.selectors.sport }}
+        sport: {{ $rule.selectors.sport | quote }}
     {{- end }}
-    {{- if $rule.selector.dport }}
-        dport: {{ $rule.selector.dport | quote }}
+    {{- if $rule.selectors.dport }}
+        dport: {{ $rule.selectors.dport | quote }}
     {{- end }}
-    {{- if $rule.selector.tun_id }}
-        tun_id: {{ $rule.selector.tun_id }}
+    {{- if $rule.selectors.tun_id }}
+        tun_id: {{ $rule.selectors.tun_id }}
     {{- end }}
-      action:
-    {{- if $rule.action.lookup }}
+      actions:
+    {{- if $rule.actions.lookup }}
         lookup:
-      {{- if $rule.action.lookup.ipRouteTableID }}
-          ipRouteTableID: {{ $rule.action.lookup.ipRouteTableID }}
+      {{- if $rule.actions.lookup.ipRoutingTableID }}
+          ipRouteTableID: {{ $rule.actions.lookup.ipRoutingTableID }}
       {{- end }}
     {{- end }}
     {{- if $rule.priority }}

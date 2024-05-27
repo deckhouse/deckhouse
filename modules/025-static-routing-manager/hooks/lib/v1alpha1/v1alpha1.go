@@ -58,12 +58,12 @@ type Routes struct {
 }
 
 type IPRule struct {
-	Priority int            `json:"priority,omitempty"`
-	Selector IPRuleSelector `json:"selector"`
-	Action   IPRuleAction   `json:"action"`
+	Priority  int             `json:"priority,omitempty"`
+	Selectors IPRuleSelectors `json:"selectors"`
+	Actions   IPRuleActions   `json:"actions"`
 }
 
-type IPRuleSelector struct {
+type IPRuleSelectors struct {
 	Not      bool     `json:"priority,omitempty"`
 	From     []string `json:"from,omitempty"`
 	To       []string `json:"to,omitempty"`
@@ -78,11 +78,11 @@ type IPRuleSelector struct {
 	TunID    int      `json:"tun_id,omitempty"`
 }
 
-type IPRuleAction struct {
-	Lookup IPRuleActionLookup `json:"lookup,omitempty"`
+type IPRuleActions struct {
+	Lookup IPRuleActionsLookup `json:"lookup,omitempty"`
 }
 
-type IPRuleActionLookup struct {
+type IPRuleActionsLookup struct {
 	IPRoutingTableID int    `json:"ipRoutingTableID,omitempty"`
 	RoutingTableName string `json:"routingTableName,omitempty"`
 }

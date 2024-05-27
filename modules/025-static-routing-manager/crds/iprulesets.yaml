@@ -54,8 +54,8 @@ spec:
                 items:
                   type: object
                   required:
-                    - selector
-                    - action
+                    - selectors
+                    - actions
                   properties:
                     priority:
                       type: integer
@@ -63,7 +63,7 @@ spec:
                       maximum: 4294967295
                       description: |
                         priority of rule
-                    selector:
+                    selectors:
                       type: object
                       required:
                         - from
@@ -73,7 +73,7 @@ spec:
                           type: boolean
                           default: false
                           description: |
-                            invert the selector match rule
+                            invert the selectors match rule
                         from:
                           type: array
                           description: |
@@ -134,7 +134,7 @@ spec:
                           type: integer
                           description: |
                             Select the virtual tunnel ID to match.
-                    action:
+                    actions:
                       type: object
                       required:
                         - lookup
@@ -142,7 +142,7 @@ spec:
                         lookup:
                           type: object
                           description: |
-                            the routing table identifier to lookup if the rule selector matches.
+                            the routing table identifier to lookup if the rule selectors matches.
                           oneOf:
                           - required: [ipRoutingTableID]
                           - required: [routingTableName]

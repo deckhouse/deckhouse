@@ -16,11 +16,11 @@ spec:
                       priority:
                         description: |
                           priority of rule
-                      selector:
+                      selectors:
                         properties:
                           not:
                             description: |
-                              invert the selector match rule
+                              invert the selectors match rule
                           from:
                             description: |
                               Array of source prefixes
@@ -60,7 +60,7 @@ spec:
                           tun_id:
                             description: |
                               select the virtual tunnel ID to match.
-                      action:
+                      actions:
                         properties:
                           lookup:
                             description: |

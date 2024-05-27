@@ -229,18 +229,18 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 
 		// If IPRoutingTableID is empty in Rule then generate it (for each)
 		for i, iprule := range irsi.IPRules {
-			if iprule.Action.Lookup.IPRoutingTableID != 0 {
+			if iprule.Actions.Lookup.IPRoutingTableID != 0 {
 				continue
 			}
-			if iprule.Action.Lookup.RoutingTableName == "" {
+			if iprule.Actions.Lookup.RoutingTableName == "" {
 				errr := fmt.Sprintf("can't get RoutingTableID in IPRuleSet %v for rule %v", irsi.Name, irsi.IPRules)
 				input.LogEntry.Warnf(errr)
 				tmpDIRSStatus.localErrors = append(tmpDIRSStatus.localErrors, errr)
 				continue
 			}
-			rtName := iprule.Action.Lookup.RoutingTableName
+			rtName := iprule.Actions.Lookup.RoutingTableName
 			if _, ok := allRTs[rtName]; ok {
-				irsi.IPRules[i].Action.Lookup.IPRoutingTableID = allRTs[rtName]
+				irsi.IPRules[i].Actions.Lookup.IPRoutingTableID = allRTs[rtName]
 			} else {
 				errr := fmt.Sprintf("can't get RoutingTableID in IPRuleSet %v for rule %v", irsi.Name, irsi.IPRules)
 				input.LogEntry.Warnf(errr)
