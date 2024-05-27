@@ -44,7 +44,7 @@ $(document).ready(function () {
 
     if ((noProxyAddressList && noProxyAddressList.length > 0) || !(noProxyAddressList && noProxyAddressList.length > 0)) {
       noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
-      update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
+      update_parameter(noProxyAddressList, 'noProxy', '*!CHANGE_internalNetworkCIDRs*', null, '[config-yml]');
     }
 
   } else {
