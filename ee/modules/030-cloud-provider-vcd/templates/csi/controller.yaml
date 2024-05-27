@@ -61,7 +61,7 @@
 {{- end }}
 
 {{- define "csi_node_image_name" -}}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.version.apiVersion -}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
 vcdCsiPlugin
 {{- else -}}
 vcdCsiPluginLegacy
@@ -75,7 +75,7 @@ vcdCsiPluginLegacy
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
-  {{- $_ := set $csiControllerConfig "resizerEnabled" (semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.version.apiVersion) }}
+  {{- $_ := set $csiControllerConfig "resizerEnabled" (semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion) }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}

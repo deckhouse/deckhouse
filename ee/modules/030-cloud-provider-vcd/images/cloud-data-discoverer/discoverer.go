@@ -183,11 +183,17 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	storageProfiles = removeDuplicatesStorageProfiles(storageProfiles)
 	discoveryData.StorageProfiles = storageProfiles
 
-	vcdVersion, err := d.getVersion(vcdClient)
+	vcdVersion, err := vcdClient.Client.GetVcdShortVersion()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get VCD version: %v", err)
+		return nil, fmt.Errorf("could not get VCD version: %v", err)
 	}
-	discoveryData.Version = vcdVersion
+	discoveryData.VCDInstallationVersion = vcdVersion
+
+	vcdAPIVersion, err := vcdClient.Client.MaxSupportedVersion()
+	if err != nil {
+		return nil, fmt.Errorf("could not get VCD API version: %v", err)
+	}
+	discoveryData.VCDAPIVersion = vcdAPIVersion
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -263,19 +269,6 @@ func (d *Discoverer) getStorageProfiles(vcdClient *govcd.VCDClient) ([]v1alpha1.
 		})
 	}
 	return profiles, nil
-}
-
-func (d *Discoverer) getVersion(vcdClient *govcd.VCDClient) (v1alpha1.VCDVersion, error) {
-	vcdVersion, err := vcdClient.Client.GetVcdShortVersion()
-	if err != nil {
-		return v1alpha1.VCDVersion{}, fmt.Errorf("could not get VCD version: %v", err)
-	}
-	apiVersion, err := vcdClient.Client.MaxSupportedVersion()
-	if err != nil {
-		return v1alpha1.VCDVersion{}, fmt.Errorf("could not get VCD API version: %v", err)
-	}
-
-	return v1alpha1.VCDVersion{VCDVersion: vcdVersion, APIVersion: apiVersion}, nil
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {

@@ -360,19 +360,16 @@ properties:
                 isDefaultStorageProfile:
                   type: boolean
             description: List of storage classes.
-          version:
-            type: object
-            default: {}
-            description: VCD version and API version.
-            properties:
-              vcdVersion:
-                type: string
-                default: "10.3.3.4"
-                minLength: 1
-              apiVersion:
-                type: string
-                default: "36.0"
-                minLength: 1
+          vcdInstallationVersion:
+            type: string
+            description: VCD installation version.
+            default: "10.3.3.4"
+            minLength: 1
+          vcdAPIVersion:
+            type: string
+            description: VCD API version.
+            default: "36.0"
+            minLength: 1
       providerDiscoveryData:
         type: object
         additionalProperties: false
@@ -420,19 +417,16 @@ properties:
                 isDefaultStorageProfile:
                   type: boolean
             description: List of storage classes.
-          version:
-            type: object
-            default: {}
-            description: VCD version and API version.
-            properties:
-              vcdVersion:
-                type: string
-                default: "10.3.3.4"
-                minLength: 1
-              apiVersion:
-                type: string
-                default: "36.0"
-                minLength: 1
+          vcdInstallationVersion:
+            type: string
+            description: VCD installation version.
+            default: "10.3.3.4"
+            minLength: 1
+          vcdAPIVersion:
+            type: string
+            description: VCD API version.
+            default: "36.0"
+            minLength: 1
       storageClasses:
         type: array
         items:
