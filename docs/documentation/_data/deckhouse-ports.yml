@@ -151,6 +151,11 @@ groups:
     description:
       en: "*kube-router* metrics"
       ru: "Метрики *kube-router*"
+  - ports: "9695"
+    protocol: TCP
+    description:
+      en: "*sds-node-configurator* node agent metrics"
+      ru: "Метрики агента *sds-node-configurator*"
   - ports: "3367"
     protocol: TCP
     description:
