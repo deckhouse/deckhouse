@@ -63,6 +63,7 @@ function _enable_kubelet_service() {
 bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
 Type=forking
+Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 ExecStart=
 ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
