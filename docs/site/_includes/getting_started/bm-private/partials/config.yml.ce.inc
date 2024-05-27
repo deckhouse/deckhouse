@@ -15,8 +15,8 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
-# [<en>] Proxy server settings.
-# [<ru>] Настройки proxy-сервера.
+# [<en>] Proxy server settings. In no Proxy, also specify the subnet of the cluster nodes.
+# [<ru>] Настройки proxy-сервера. В noProxy так же укажите укажите подсеть узлов кластера.
 proxy:
   httpProxy: <HTTP_PROXY_ADDRESS>
   httpsProxy: <HTTPS_PROXY_ADDRESS>
