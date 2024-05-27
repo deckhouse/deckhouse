@@ -3,6 +3,6 @@ properties:
   logLevel:
     description: logLevel
   routingTableIDMin:
-    description: routingTableIDMin
+    description: Минимальное значение, которое можно выбрать в качестве iproute table ID для ресурсов `RoutingTable` без явного указания `spec.ipRoutingTableID`.
   RoutingTableIDMax:
-    description: routingTableIDMax
+    description: Максимальное значение, которое можно выбрать в качестве iproute table ID для ресурсов `RoutingTable` без явного указания `spec.ipRoutingTableID`.
