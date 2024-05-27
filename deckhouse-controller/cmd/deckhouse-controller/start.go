@@ -190,8 +190,12 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	d8config.InitService(operator.ModuleManager)
 
 	// Runs preflight checks first (restore the modules' file system)
+	if os.Getenv("EXTERNAL_MODULES_DIR") != "" {
+		dController.StartPluggableModulesControllers(ctx)
+	}
+
 	// Loads deckhouse modules from the fs and Starts main event lop
-	err = dController.Start(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
+	err = dController.DiscoverDeckhouseModules(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
 	}
