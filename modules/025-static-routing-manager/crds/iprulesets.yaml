@@ -70,7 +70,7 @@ spec:
                         - to
                       properties:
                         not:
-                          type: bool
+                          type: boolean
                           description: |
                             invert the selector match rule
                         from:
