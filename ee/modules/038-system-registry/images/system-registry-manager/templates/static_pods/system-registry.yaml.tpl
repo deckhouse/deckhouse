@@ -37,7 +37,7 @@ spec:
     image: "{{ .images.systemRegistry.seaweedfs }}"
     imagePullPolicy: IfNotPresent
     args:
-      - -config_dir="/config"
+      - -config_dir=/config
       - -logtostderr=true
       - -v=0
       - server
