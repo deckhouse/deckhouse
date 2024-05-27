@@ -67,8 +67,8 @@ type IPRuleSelector struct {
 	Not      bool     `json:"priority,omitempty"`
 	From     []string `json:"from,omitempty"`
 	To       []string `json:"to,omitempty"`
-	Tos      int      `json:"tos,omitempty"`
-	FWMark   int      `json:"fwmark,omitempty"`
+	Tos      string   `json:"tos,omitempty"`
+	FWMark   string   `json:"fwmark,omitempty"`
 	IIf      string   `json:"iif,omitempty"`
 	OIf      string   `json:"oif,omitempty"`
 	UIDRange string   `json:"uidrange,omitempty"`
@@ -197,6 +197,6 @@ type NodeIPRuleSetSpec struct {
 
 type NodeIPRuleSetStatus struct {
 	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
-	AppliedIPRules     int                 `json:"readyNodeIPRuleSets,omitempty"`
+	AppliedIPRules     []IPRule            `json:"appliedRules,omitempty"`
 	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
 }
