@@ -275,15 +275,10 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  groups:
-  - Everyone
-  - admins
   ttl: 24h
 ```
 
 {% endraw %}
-
-By default, the user is assigned the [role User](../140-user-authz/#default-access-list-for-each-role).
 
 ## Example of adding a static user to a group
 
