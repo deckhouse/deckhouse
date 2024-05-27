@@ -64,18 +64,18 @@ type IPRule struct {
 }
 
 type IPRuleSelector struct {
-	Not        bool     `json:"priority,omitempty"`
-	From       []string `json:"from,omitempty"`
-	To         []string `json:"to,omitempty"`
-	Tos        int      `json:"tos,omitempty"`
-	FWMark     int      `json:"fwmark,omitempty"`
-	IIf        string   `json:"iif,omitempty"`
-	OIf        string   `json:"oif,omitempty"`
-	UIDRange   string   `json:"uidrange,omitempty"`
-	IPProto    int      `json:"ipproto,omitempty"`
-	SPortRange string   `json:"sportrange,omitempty"`
-	DPortRange string   `json:"dportrange,omitempty"`
-	TunID      int      `json:"tun_id,omitempty"`
+	Not      bool     `json:"priority,omitempty"`
+	From     []string `json:"from,omitempty"`
+	To       []string `json:"to,omitempty"`
+	Tos      int      `json:"tos,omitempty"`
+	FWMark   int      `json:"fwmark,omitempty"`
+	IIf      string   `json:"iif,omitempty"`
+	OIf      string   `json:"oif,omitempty"`
+	UIDRange string   `json:"uidrange,omitempty"`
+	IPProto  int      `json:"ipproto,omitempty"`
+	SPort    string   `json:"sport,omitempty"`
+	DPort    string   `json:"dport,omitempty"`
+	TunID    int      `json:"tun_id,omitempty"`
 }
 
 type IPRuleAction struct {

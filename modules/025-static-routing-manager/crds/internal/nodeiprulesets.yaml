@@ -123,12 +123,12 @@ spec:
                           type: integer
                           description: |
                             select the ip protocol value to match.
-                        sportrange:
+                        sport:
                           description: |
                             select the range of source ports to match.
                           type: string
                           pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
-                        dportrange:
+                        dport:
                           description: |
                             select the range of destination ports to match.
                           type: string
@@ -236,7 +236,7 @@ spec:
                           type: integer
                           description: |
                             select the ip protocol value to match.
-                        sportrange:
+                        sport:
                           description: |
                             select the range of source ports to match.
                           type: object
@@ -249,7 +249,7 @@ spec:
                               type: integer
                               description: |
                                 end of the range.
-                        dportrange:
+                        dport:
                           description: |
                             select the range of destination ports to match.
                           type: object

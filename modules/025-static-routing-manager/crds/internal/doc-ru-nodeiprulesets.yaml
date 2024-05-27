@@ -61,7 +61,7 @@ spec:
                           ipproto:
                             description: |
                               select the ip protocol value to match.
-                          sportrange:
+                          sport:
                             description: |
                               select the range of source ports to match.
                             properties:
@@ -71,7 +71,7 @@ spec:
                               end:
                                 description: |
                                   end of the range.
-                          dportrange:
+                          dport:
                             description: |
                               select the range of destination ports to match.
                             properties:
