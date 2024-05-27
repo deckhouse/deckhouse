@@ -26,6 +26,7 @@ $ ip -4 route ls
 10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
 ...
 ```
+
 The `realm 216` instruction in the route is used as a marker to identify the route under module control (d8 hex = 216 dec).
 
 ## Создание маршрута в дополнительной таблице
