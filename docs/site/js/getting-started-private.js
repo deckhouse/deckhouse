@@ -42,10 +42,11 @@ $(document).ready(function () {
       }
     }
 
-    if (noProxyAddressList && noProxyAddressList.length > 0) {
+    if ((noProxyAddressList && noProxyAddressList.length > 0) || !(noProxyAddressList && noProxyAddressList.length > 0)) {
       noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
       update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
     }
+
   } else {
     // Delete proxy section
     $('code span.na').filter(function () {
