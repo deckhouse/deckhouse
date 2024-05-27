@@ -25,17 +25,12 @@ func StartLeaderElection(
 	ctx context.Context,
 	recorder record.EventRecorder,
 	callbacks leaderelection.LeaderCallbacks,
+	identity string,
 ) error {
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		return fmt.Errorf("failed to get hostname: %v", err)
-	}
 
 	cfg := pkg_cfg.GetConfig()
 
 	lockName := componentName
-	identity := componentName + "-" + hostname
 	namespace := cfg.LeaderElection.Namespace
 
 	rl, err := resourcelock.New(
@@ -73,4 +68,12 @@ func NewLeaderElectionRecorder(logEntry *log.Entry) record.EventRecorder {
 	broadcaster := record.NewBroadcaster()
 	broadcaster.StartLogging(logEntry.Infof)
 	return broadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: componentName})
+}
+
+func NewIdentityForLeaderElection() (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %v", err)
+	}
+	return componentName + "-" + hostname, nil
 }

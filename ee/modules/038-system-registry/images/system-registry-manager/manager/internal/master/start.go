@@ -36,27 +36,35 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Master {
 }
 
 func (m *Master) Start() {
+	defer m.log.Info("Master shutdown")
+
 	recorder := kube_actions.NewLeaderElectionRecorder(m.log)
+	identity, err := kube_actions.NewIdentityForLeaderElection()
+	if err != nil {
+		defer m.commonCfg.StopManager()
+		m.log.Errorf("Failed to start master election: %v", err)
+		return
+	}
 
 	leaderCallbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			func(ctx context.Context) {
-				m.log.Info("Master controller loop...")
-				select {}
-			}(m.rootCtx)
+			m.commonCfg.IsMasterUpdate(true)
+			m.commonCfg.CurrentMasterNameUpdate(identity)
+			defer m.commonCfg.IsMasterUpdate(false)
+			startMasterWorkflow(ctx, m)
 		},
 		OnStoppedLeading: func() {
+			m.commonCfg.IsMasterUpdate(false)
 			m.commonCfg.StopManager()
 		},
 		OnNewLeader: func(identity string) {
-
+			m.commonCfg.CurrentMasterNameUpdate(identity)
 		},
 	}
 
-	err := kube_actions.StartLeaderElection(m.rootCtx, recorder, leaderCallbacks)
+	err = kube_actions.StartLeaderElection(m.rootCtx, recorder, leaderCallbacks, identity)
 	if err != nil {
 		defer m.commonCfg.StopManager()
-		log.Errorf("Failed to start master election: %v", err)
+		m.log.Errorf("Failed to start master election: %v", err)
 	}
-	m.log.Info("Master shutdown")
 }
