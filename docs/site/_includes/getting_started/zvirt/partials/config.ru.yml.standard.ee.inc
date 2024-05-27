@@ -1,4 +1,4 @@
-можно получить путем запроса к zVirt API# [<en>] General cluster parameters.
+# [<en>] General cluster parameters.
 # [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
 # [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
