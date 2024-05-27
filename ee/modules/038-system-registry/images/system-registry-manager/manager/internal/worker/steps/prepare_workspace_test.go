@@ -18,16 +18,30 @@ func generateInputConfig() error {
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
-		LeaderElection: struct {
-			Namespace            string "mapstructure:\"namespace\""
-			LeaseDurationSeconds int    "mapstructure:\"leaseDurationSeconds\""
-			RenewDeadlineSeconds int    "mapstructure:\"renewDeadlineSeconds\""
-			RetryPeriodSeconds   int    "mapstructure:\"retryPeriodSeconds\""
+		Manager: struct {
+			Namespace      string "mapstructure:\"namespace\""
+			DaemonsetName  string "mapstructure:\"daemonsetName\""
+			ServiceName    string "mapstructure:\"serviceName\""
+			WorkerPort     int    "mapstructure:\"workerPort\""
+			LeaderElection struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			} "mapstructure:\"leaderElection\""
 		}{
-			Namespace:            "filenamespace",
-			LeaseDurationSeconds: 7200,
-			RenewDeadlineSeconds: 20,
-			RetryPeriodSeconds:   8,
+			Namespace:     "filenamespace",
+			DaemonsetName: "filedaemonsetname",
+			ServiceName:   "fileservicename",
+			WorkerPort:    123,
+			LeaderElection: struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			}{
+				LeaseDurationSeconds: 7200,
+				RenewDeadlineSeconds: 20,
+				RetryPeriodSeconds:   8,
+			},
 		},
 		// Add new fields
 		Etcd: struct {

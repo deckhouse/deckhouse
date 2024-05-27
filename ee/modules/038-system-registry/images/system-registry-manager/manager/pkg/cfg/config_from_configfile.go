@@ -7,7 +7,7 @@ package cfg
 
 import (
 	"log"
-	"strings"
+	// "strings"
 
 	"fmt"
 	"github.com/mitchellh/mapstructure"
@@ -15,15 +15,20 @@ import (
 )
 
 type FileConfig struct {
-	HostName       string `mapstructure:"hostName"`
-	HostIP         string `mapstructure:"hostIP"`
-	PodName        string `mapstructure:"podName"`
-	LeaderElection struct {
-		Namespace            string `mapstructure:"namespace"`
-		LeaseDurationSeconds int    `mapstructure:"leaseDurationSeconds"`
-		RenewDeadlineSeconds int    `mapstructure:"renewDeadlineSeconds"`
-		RetryPeriodSeconds   int    `mapstructure:"retryPeriodSeconds"`
-	} `mapstructure:"leaderElection"`
+	HostName string `mapstructure:"hostName"`
+	HostIP   string `mapstructure:"hostIP"`
+	PodName  string `mapstructure:"podName"`
+	Manager  struct {
+		Namespace      string `mapstructure:"namespace"`
+		DaemonsetName  string `mapstructure:"daemonsetName"`
+		ServiceName    string `mapstructure:"serviceName"`
+		WorkerPort     int    `mapstructure:"workerPort"`
+		LeaderElection struct {
+			LeaseDurationSeconds int `mapstructure:"leaseDurationSeconds"`
+			RenewDeadlineSeconds int `mapstructure:"renewDeadlineSeconds"`
+			RetryPeriodSeconds   int `mapstructure:"retryPeriodSeconds"`
+		} `mapstructure:"leaderElection"`
+	} `mapstructure:"manager"`
 	Etcd struct {
 		Addresses []string `mapstructure:"addresses"`
 	} `mapstructure:"etcd"`
@@ -62,17 +67,18 @@ func NewFileConfig() (*FileConfig, error) {
 		{Key: "HostName", Env: CreateEnv("HOSTNAME"), Default: nil},
 		{Key: "HostIP", Env: CreateEnv("HOST_IP"), Default: nil},
 		{Key: "PodName", Env: CreateEnv("POD_NAME"), Default: nil},
-		{Key: "LeaderElection.LeaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
-		{Key: "LeaderElection.RenewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
-		{Key: "LeaderElection.RetryPeriodSeconds", Env: nil, Default: CreateDefaultValue(2)},
+		{Key: "Manager.WorkerPort", Env: nil, Default: CreateDefaultValue(8097)},
+		{Key: "Manager.LeaderElection.LeaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
+		{Key: "Manager.LeaderElection.RenewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
+		{Key: "Manager.LeaderElection.RetryPeriodSeconds", Env: nil, Default: CreateDefaultValue(2)},
 	}
 
 	var cfg FileConfig
 	viper.SetConfigFile(GetConfigFilePath())
 	viper.SetConfigType("yaml")
-	viper.AutomaticEnv()
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
+	// viper.AutomaticEnv()
+	// replacer := strings.NewReplacer(".", "_")
+	// viper.SetEnvKeyReplacer(replacer)
 
 	for _, configVar := range configVars {
 		setDefault(&configVar)
