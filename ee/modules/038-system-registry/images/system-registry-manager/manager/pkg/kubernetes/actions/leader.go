@@ -31,7 +31,7 @@ func StartLeaderElection(
 	cfg := pkg_cfg.GetConfig()
 
 	lockName := componentName
-	namespace := cfg.LeaderElection.Namespace
+	namespace := cfg.Manager.Namespace
 
 	rl, err := resourcelock.New(
 		resourcelock.LeasesResourceLock,
@@ -50,9 +50,9 @@ func StartLeaderElection(
 
 	le, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:            rl,
-		LeaseDuration:   time.Duration(cfg.LeaderElection.LeaseDurationSeconds * int(time.Second)),
-		RenewDeadline:   time.Duration(cfg.LeaderElection.RenewDeadlineSeconds * int(time.Second)),
-		RetryPeriod:     time.Duration(cfg.LeaderElection.RetryPeriodSeconds * int(time.Second)),
+		LeaseDuration:   time.Duration(cfg.Manager.LeaderElection.LeaseDurationSeconds * int(time.Second)),
+		RenewDeadline:   time.Duration(cfg.Manager.LeaderElection.RenewDeadlineSeconds * int(time.Second)),
+		RetryPeriod:     time.Duration(cfg.Manager.LeaderElection.RetryPeriodSeconds * int(time.Second)),
 		ReleaseOnCancel: true,
 		Callbacks:       callbacks,
 	})

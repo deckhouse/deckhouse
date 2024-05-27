@@ -19,8 +19,13 @@ secrets:
 ######################################
 {{- define "registry-manager-config.yaml"  }}
 ---
-leaderElection:
+manager:
   namespace: d8-system
+  serviceName: system-registry-manager
+  daemonsetName: system-registry-manager
+  workerPort: 8097
+  leaderElection: {}
+
 etcd:
   addresses:
   {{- range $etcd_addresses := $.Values.systemRegistry.internal.etcd.addresses }}

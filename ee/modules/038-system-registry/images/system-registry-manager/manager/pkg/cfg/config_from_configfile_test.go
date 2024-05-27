@@ -22,11 +22,15 @@ func TestNewFileConfig_WithEnv(t *testing.T) {
 
 	// Write test data to the temp config file
 	_, err = io.WriteString(tmpFile, `
-leaderElection:
+manager:
   namespace: filenamespace
-  leaseDurationSeconds: 7200
-  renewDeadlineSeconds: 20
-  retryPeriodSeconds: 8
+  daemonsetName: filedaemonsetname
+  serviceName: fileservicename
+  workerPort: 123
+  leaderElection:
+    leaseDurationSeconds: 7200
+    renewDeadlineSeconds: 20
+    retryPeriodSeconds: 8
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
@@ -64,16 +68,30 @@ images:
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
-		LeaderElection: struct {
-			Namespace            string "mapstructure:\"namespace\""
-			LeaseDurationSeconds int    "mapstructure:\"leaseDurationSeconds\""
-			RenewDeadlineSeconds int    "mapstructure:\"renewDeadlineSeconds\""
-			RetryPeriodSeconds   int    "mapstructure:\"retryPeriodSeconds\""
+		Manager: struct {
+			Namespace      string "mapstructure:\"namespace\""
+			DaemonsetName  string "mapstructure:\"daemonsetName\""
+			ServiceName    string "mapstructure:\"serviceName\""
+			WorkerPort     int    "mapstructure:\"workerPort\""
+			LeaderElection struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			} "mapstructure:\"leaderElection\""
 		}{
-			Namespace:            "filenamespace",
-			LeaseDurationSeconds: 7200,
-			RenewDeadlineSeconds: 20,
-			RetryPeriodSeconds:   8,
+			Namespace:     "filenamespace",
+			DaemonsetName: "filedaemonsetname",
+			ServiceName:   "fileservicename",
+			WorkerPort:    123,
+			LeaderElection: struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			}{
+				LeaseDurationSeconds: 7200,
+				RenewDeadlineSeconds: 20,
+				RetryPeriodSeconds:   8,
+			},
 		},
 		Etcd: struct {
 			Addresses []string `mapstructure:"addresses"`
@@ -148,11 +166,15 @@ func TestNewFileConfig_WithFile(t *testing.T) {
 hostName: filehostname
 hostIP: filemyip
 podName: filepodname
-leaderElection:
+manager:
   namespace: filenamespace
-  leaseDurationSeconds: 7200
-  renewDeadlineSeconds: 20
-  retryPeriodSeconds: 8
+  daemonsetName: filedaemonsetname
+  serviceName: fileservicename
+  workerPort: 123
+  leaderElection:
+    leaseDurationSeconds: 7200
+    renewDeadlineSeconds: 20
+    retryPeriodSeconds: 8
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
@@ -178,16 +200,30 @@ images:
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
-		LeaderElection: struct {
-			Namespace            string "mapstructure:\"namespace\""
-			LeaseDurationSeconds int    "mapstructure:\"leaseDurationSeconds\""
-			RenewDeadlineSeconds int    "mapstructure:\"renewDeadlineSeconds\""
-			RetryPeriodSeconds   int    "mapstructure:\"retryPeriodSeconds\""
+		Manager: struct {
+			Namespace      string "mapstructure:\"namespace\""
+			DaemonsetName  string "mapstructure:\"daemonsetName\""
+			ServiceName    string "mapstructure:\"serviceName\""
+			WorkerPort     int    "mapstructure:\"workerPort\""
+			LeaderElection struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			} "mapstructure:\"leaderElection\""
 		}{
-			Namespace:            "filenamespace",
-			LeaseDurationSeconds: 7200,
-			RenewDeadlineSeconds: 20,
-			RetryPeriodSeconds:   8,
+			Namespace:     "filenamespace",
+			DaemonsetName: "filedaemonsetname",
+			ServiceName:   "fileservicename",
+			WorkerPort:    123,
+			LeaderElection: struct {
+				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
+				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
+				RetryPeriodSeconds   int "mapstructure:\"retryPeriodSeconds\""
+			}{
+				LeaseDurationSeconds: 7200,
+				RenewDeadlineSeconds: 20,
+				RetryPeriodSeconds:   8,
+			},
 		},
 		Etcd: struct {
 			Addresses []string `mapstructure:"addresses"`
