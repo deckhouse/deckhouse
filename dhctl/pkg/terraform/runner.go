@@ -488,7 +488,8 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 
 	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("can't get terraform output for %q\n%v", output, err)
@@ -653,7 +654,7 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
 		var ee *exec.ExitError
-		if ok := errors.As(err, &ee); ok {
+		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)

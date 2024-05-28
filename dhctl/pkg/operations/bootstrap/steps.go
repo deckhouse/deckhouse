@@ -125,7 +125,8 @@ func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 
 		_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
 		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
 				return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -369,7 +370,8 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
-				if ee, ok := err.(*exec.ExitError); ok {
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
 					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
 				}
 				return fmt.Errorf("detect_bundle.sh: %v", err)
