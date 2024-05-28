@@ -311,7 +311,7 @@ DKP exports the group availability Prometheus metrics for each `NodeGroup`.
 
 ### What information does Prometheus collect and in what form?
 
-Metrics have the prefix `d8_node_group_`.
+Metrics have the `d8_node_group_` prefix.
 
 All the collected metrics have a label that allow you to identify the node group: `node_group_name`.
 
