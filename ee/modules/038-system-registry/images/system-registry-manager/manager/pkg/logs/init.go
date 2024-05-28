@@ -30,7 +30,7 @@ func (f *DefaultFieldFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 func init() {
-	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetLevel(logrus.TraceLevel)
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	logrusLog := logrus.New()
