@@ -9,8 +9,33 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
+	pkg_utils "system-registry-manager/pkg/utils"
 	"testing"
 )
+
+func TestGetDefaultConfigVars(t *testing.T) {
+
+	var cfg FileConfig
+
+	allKeys := GetAllMapstructureKeys(cfg)
+	defaultVars := GetDefaultConfigVars()
+	keysFromDefaultVars := make([]string, 0, len(defaultVars))
+	for _, defaultVar := range defaultVars {
+		keysFromDefaultVars = append(keysFromDefaultVars, defaultVar.Key)
+	}
+
+	for _, key := range keysFromDefaultVars {
+		if !pkg_utils.IsStringInSlice(key, &allKeys) {
+			t.Errorf("Key %s from default config vars is not present in the configuration structure", key)
+		}
+	}
+
+	for _, key := range allKeys {
+		if !pkg_utils.IsStringInSlice(key, &keysFromDefaultVars) {
+			t.Errorf("Key %s from configuration structure is not present in the default config vars", key)
+		}
+	}
+}
 
 func TestNewFileConfig_WithEnv(t *testing.T) {
 	// Create a temporary config file

@@ -6,10 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cfg
 
 import (
-	"log"
-	// "strings"
-
 	"fmt"
+	"log"
+
+	"reflect"
+	pkg_utils "system-registry-manager/pkg/utils"
+
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
@@ -52,6 +54,36 @@ type FileConfig struct {
 	} `mapstructure:"images"`
 }
 
+func GetDefaultConfigVars() []ConfigVar {
+	defaultConfigVars := []ConfigVar{
+		{Key: "hostName", Env: CreateEnv("HOSTNAME"), Default: nil},
+		{Key: "hostIP", Env: CreateEnv("HOST_IP"), Default: nil},
+		{Key: "podName", Env: CreateEnv("POD_NAME"), Default: nil},
+		{Key: "manager.workerPort", Env: nil, Default: CreateDefaultValue(8097)},
+		{Key: "manager.leaderElection.leaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
+		{Key: "manager.leaderElection.renewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
+		{Key: "manager.leaderElection.retryPeriodSeconds", Env: nil, Default: CreateDefaultValue(2)},
+	}
+	{
+		defaultKeys := make([]string, 0, len(defaultConfigVars))
+		for _, defaultConfigVar := range defaultConfigVars {
+			defaultKeys = append(defaultKeys, defaultConfigVar.Key)
+		}
+
+		extraConfigVars := []ConfigVar{}
+		for _, key := range GetAllMapstructureKeys(FileConfig{}) {
+			if !pkg_utils.IsStringInSlice(key, &defaultKeys) {
+				extraConfigVars = append(
+					extraConfigVars,
+					ConfigVar{Key: key, Env: nil, Default: nil},
+				)
+			}
+		}
+		defaultConfigVars = append(defaultConfigVars, extraConfigVars...)
+	}
+	return defaultConfigVars
+}
+
 func (fcfg *FileConfig) DecodeToMapstructure() (map[string]interface{}, error) {
 	var configMap map[string]interface{}
 
@@ -63,22 +95,12 @@ func (fcfg *FileConfig) DecodeToMapstructure() (map[string]interface{}, error) {
 }
 
 func NewFileConfig() (*FileConfig, error) {
-	configVars := []ConfigVar{
-		{Key: "HostName", Env: CreateEnv("HOSTNAME"), Default: nil},
-		{Key: "HostIP", Env: CreateEnv("HOST_IP"), Default: nil},
-		{Key: "PodName", Env: CreateEnv("POD_NAME"), Default: nil},
-		{Key: "Manager.WorkerPort", Env: nil, Default: CreateDefaultValue(8097)},
-		{Key: "Manager.LeaderElection.LeaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
-		{Key: "Manager.LeaderElection.RenewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
-		{Key: "Manager.LeaderElection.RetryPeriodSeconds", Env: nil, Default: CreateDefaultValue(2)},
-	}
+	configVars := GetDefaultConfigVars()
 
 	var cfg FileConfig
+
 	viper.SetConfigFile(GetConfigFilePath())
 	viper.SetConfigType("yaml")
-	// viper.AutomaticEnv()
-	// replacer := strings.NewReplacer(".", "_")
-	// viper.SetEnvKeyReplacer(replacer)
 
 	for _, configVar := range configVars {
 		setDefault(&configVar)
@@ -125,7 +147,8 @@ func bindEnvAndValidate(configVar *ConfigVar) {
 		}
 	}
 	if configVar.Default == nil {
-		if !viper.IsSet(configVar.Key) || viper.GetString(configVar.Key) == "" {
+		value := viper.Get(configVar.Key)
+		if isZero(value) {
 			if configVar.Env == nil {
 				log.Fatalf("%s is not set or empty. Please configure it in the configuration file.", configVar.Key)
 			} else {
@@ -133,4 +156,52 @@ func bindEnvAndValidate(configVar *ConfigVar) {
 			}
 		}
 	}
+}
+
+func isZero(value interface{}) bool {
+	if value == nil {
+		return true
+	}
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.String, reflect.Array, reflect.Slice, reflect.Map, reflect.Chan:
+		return v.Len() == 0
+	case reflect.Ptr, reflect.Interface:
+		return v.IsNil()
+	}
+	return false
+}
+
+func GetAllMapstructureKeys(config interface{}) []string {
+	return getKeysFromStruct(reflect.TypeOf(config), "")
+}
+
+func getKeysFromStruct(t reflect.Type, prefix string) []string {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	var keys []string
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("mapstructure")
+		if tag == "" {
+			tag = field.Name
+		}
+		if prefix != "" {
+			tag = prefix + "." + tag
+		}
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			keys = append(keys, getKeysFromStruct(field.Type, tag)...)
+		case reflect.Slice, reflect.Array, reflect.Ptr:
+			if field.Type.Elem().Kind() == reflect.Struct {
+				keys = append(keys, getKeysFromStruct(field.Type.Elem(), tag)...)
+			} else {
+				keys = append(keys, tag)
+			}
+		default:
+			keys = append(keys, tag)
+		}
+	}
+	return keys
 }
