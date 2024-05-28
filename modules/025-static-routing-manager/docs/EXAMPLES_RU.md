@@ -10,7 +10,7 @@ kind: RoutingTable
 metadata:
   name: myrt-main
 spec:
-  ipRouteTableID: 254 # main routing table id is 254
+  ipRoutingTableID: 254 # main routing table id is 254
   routes:
   - destination: 10.0.0.0/8
     gateway: 192.168.0.1
@@ -43,7 +43,7 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 status:
-  ipRouteTableID: 10000 # если spec.ipRouteTableID не указан, он будет сгенерирован автоматически и размещён в status
+  ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
   ...
 ```
 
@@ -54,7 +54,7 @@ $ ip -4 route ls table 10000
 default via 192.168.0.1 dev eth0 realm 216
 ```
 
-## Настройка `ip rule`
+## Создание `ip rule`
 
 ```yaml
 

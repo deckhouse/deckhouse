@@ -10,7 +10,7 @@ kind: RoutingTable
 metadata:
   name: myrt-main
 spec:
-  ipRouteTableID: 254 # main routing table id is 254
+  ipRoutingTableID: 254 # main routing table id is 254
   routes:
   - destination: 10.0.0.0/8
     gateway: 192.168.0.1
@@ -29,7 +29,7 @@ $ ip -4 route ls
 
 The `realm 216` instruction in the route is used as a marker to identify the route under module control (d8 hex = 216 dec).
 
-## Создание маршрута в дополнительной таблице
+## Creating a route in additional routing table
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -43,7 +43,7 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 status:
-  ipRouteTableID: 10000 # if spec.ipRouteTableID is not specified, it will be generated automatically and placed in status
+  ipRoutingTableID: 10000 # if spec.ipRoutingTableID is not specified, it will be generated automatically and placed in status
   ...
 ```
 
@@ -54,7 +54,7 @@ $ ip -4 route ls table 10000
 default via 192.168.0.1 dev eth0 realm 216
 ```
 
-## Настройка `ip rule`
+## Creating an `ip rule`
 
 ```yaml
 
