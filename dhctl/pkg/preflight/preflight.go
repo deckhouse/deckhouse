@@ -88,9 +88,9 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 		{
-			fun:            pc.CheckSudoIsAllowedForUser,
-			successMessage: "sudo is allowed for user",
-			skipFlag:       app.SudoAllowedCheckArgName,
+			fun:            pc.CheckMasterHostname,
+			successMessage: "master hostname unique",
+			skipFlag:       app.MasterHostnameCheckArgName,
 		},
 	})
 }
