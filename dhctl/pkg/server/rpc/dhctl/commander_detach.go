@@ -27,41 +27,38 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
+func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.abortServerTransitions())
+	f := fsm.New("initial", s.CommanderDetachServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.AbortRequest)
-	sendCh := make(chan *pb.AbortResponse)
-	phaseSwitcher := &abortPhaseSwitcher{
-		sendCh: sendCh,
-		f:      f,
-		next:   make(chan error),
-	}
+	receiveCh := make(chan *pb.CommanderDetachRequest)
+	sendCh := make(chan *pb.CommanderDetachResponse)
 
-	s.startAborterReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startAborterSender(server, sendCh, internalErrCh)
+	s.startdetacherReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startdetacherSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -76,38 +73,20 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing AbortRequest",
+				"processing CommanderDetachRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.AbortRequest_Start:
+			case *pb.CommanderDetachRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startAbort(
-					ctx, message.Start, phaseSwitcher, &abortLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startCommanderDetach(
+					ctx, message.Start, &CommanderDetachLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
-
-			case *pb.AbortRequest_Continue:
-				err := f.Event("toNextPhase")
-				if err != nil {
-					logger.L(ctx).Error("got unprocessable message",
-						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue connectionProcessor
-				}
-				switch message.Continue.Continue {
-				case pb.Continue_CONTINUE_UNSPECIFIED:
-					phaseSwitcher.next <- errors.New("bad continue message")
-				case pb.Continue_CONTINUE_NEXT_PHASE:
-					phaseSwitcher.next <- nil
-				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
-				case pb.Continue_CONTINUE_ERROR:
-					phaseSwitcher.next <- errors.New(message.Continue.Err)
-				}
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -118,9 +97,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startAborterReceiver(
-	server pb.DHCTL_AbortServer,
-	receiveCh chan *pb.AbortRequest,
+func (s *Service) startdetacherReceiver(
+	server pb.DHCTL_CommanderDetachServer,
+	receiveCh chan *pb.CommanderDetachRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -140,9 +119,9 @@ func (s *Service) startAborterReceiver(
 	}()
 }
 
-func (s *Service) startAborterSender(
-	server pb.DHCTL_AbortServer,
-	sendCh chan *pb.AbortResponse,
+func (s *Service) startdetacherSender(
+	server pb.DHCTL_CommanderDetachServer,
+	sendCh chan *pb.CommanderDetachResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -159,29 +138,27 @@ func (s *Service) startAborterSender(
 	}()
 }
 
-func (s *Service) startAbort(
+func (s *Service) startCommanderDetach(
 	ctx context.Context,
-	request *pb.AbortStart,
-	phaseSwitcher *abortPhaseSwitcher,
-	logWriter *abortLogWriter,
-	sendCh chan *pb.AbortResponse,
+	request *pb.CommanderDetachStart,
+	logWriter *CommanderDetachLogWriter,
+	sendCh chan *pb.CommanderDetachResponse,
 ) {
 	go func() {
-		result := s.abort(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.AbortResponse{
-			Message: &pb.AbortResponse_Result{
+		result := s.CommanderDetachCluster(ctx, request, logWriter)
+		sendCh <- &pb.CommanderDetachResponse{
+			Message: &pb.CommanderDetachResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) abort(
-	_ context.Context,
-	request *pb.AbortStart,
-	phaseSwitcher *abortPhaseSwitcher,
+func (s *Service) CommanderDetachCluster(
+	ctx context.Context,
+	request *pb.CommanderDetachStart,
 	logWriter io.Writer,
-) *pb.AbortResult {
+) *pb.CommanderDetachResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -199,43 +176,43 @@ func (s *Service) abort(
 		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
-	var (
-		configPath    string
-		resourcesPath string
-	)
-	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
+	var metaConfig *config.MetaConfig
+	err = log.Process("default", "Parsing cluster config", func() error {
+		metaConfig, err = config.ParseConfigFromData(
+			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
 		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
+			return fmt.Errorf("parsing cluster meta config: %w", err)
 		}
-
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
-		return &pb.AbortResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	var initialState phases.DhctlState
 	err = log.Process("default", "Preparing DHCTL state", func() error {
+		cachePath := metaConfig.CachePath()
+		var initialState phases.DhctlState
 		if request.State != "" {
 			err = json.Unmarshal([]byte(request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+		err = cache.InitWithOptions(
+			cachePath,
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+		)
+		if err != nil {
+			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
+		}
 		return nil
 	})
 	if err != nil {
-		return &pb.AbortResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -258,7 +235,7 @@ func (s *Service) abort(
 		return nil
 	})
 	if err != nil {
-		return &pb.AbortResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
@@ -266,64 +243,70 @@ func (s *Service) abort(
 	if request.Options.CommanderUuid != "" {
 		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
 		if err != nil {
-			return &pb.AbortResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+			return &pb.CommanderDetachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
-	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:      []string{configPath},
-		ResourcesPath:    resourcesPath,
-		InitialState:     initialState,
-		SSHClient:        sshClient,
-		UseTfCache:       pointer.Bool(true),
-		AutoApprove:      pointer.Bool(true),
-		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
+	stateCache := cache.Global()
 
-		ResetInitialState: true,
-		OnPhaseFunc:       phaseSwitcher.switchPhase,
-		CommanderMode:     request.Options.CommanderMode,
-		CommanderUUID:     commanderUUID,
-		TerraformContext:  terraform.NewTerraformContext(),
+	checker := check.NewChecker(&check.Params{
+		SSHClient:     sshClient,
+		StateCache:    stateCache,
+		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: commanderUUID,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	abortErr := bootstrapper.Abort(false)
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(abortErr, marshalErr)
+	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
+		DetachResources: detach.DetachResources{
+			Template: request.ResourcesTemplate,
+			Values:   request.ResourcesValues.AsMap(),
+		},
+		OnCheckResult: onCheckResult,
+	})
 
-	return &pb.AbortResult{State: string(stateData), Err: errToString(err)}
+	var resErrs []error
+
+	resErrs = append(resErrs, detacher.Detach(ctx))
+
+	var resState string
+	state, err := phases.ExtractDhctlState(stateCache)
+	if err != nil {
+		resErrs = append(resErrs, fmt.Errorf("unable to extract dhctl state: %w", err))
+	} else {
+		data, err := json.Marshal(state)
+		if err != nil {
+			resErrs = append(resErrs, fmt.Errorf("unable to unmarshal dhctl state: %w", err))
+		}
+		resState = string(data)
+	}
+
+	return &pb.CommanderDetachResult{State: resState, Err: errToString(errors.Join(resErrs...))}
 }
 
-func (s *Service) abortServerTransitions() []fsm.Transition {
+func (s *Service) CommanderDetachServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
 			Sources:     []fsm.State{"initial"},
 			Destination: "running",
 		},
-		{
-			Event:       "wait",
-			Sources:     []fsm.State{"running"},
-			Destination: "waiting",
-		},
-		{
-			Event:       "toNextPhase",
-			Sources:     []fsm.State{"waiting"},
-			Destination: "running",
-		},
 	}
 }
 
-type abortLogWriter struct {
+type CommanderDetachLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.AbortResponse
+	sendCh chan *pb.CommanderDetachResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *abortLogWriter) Write(p []byte) (n int, err error) {
+func (w *CommanderDetachLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -346,46 +329,10 @@ func (w *abortLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.AbortResponse{
-			Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.CommanderDetachResponse{
+			Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 
 	return len(p), nil
-}
-
-type abortPhaseSwitcher struct {
-	sendCh chan *pb.AbortResponse
-	f      *fsm.FiniteStateMachine
-	next   chan error
-}
-
-func (b *abortPhaseSwitcher) switchPhase(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	_ interface{},
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) error {
-	err := b.f.Event("wait")
-	if err != nil {
-		return fmt.Errorf("changing state to waiting: %w", err)
-	}
-
-	b.sendCh <- &pb.AbortResponse{
-		Message: &pb.AbortResponse_PhaseEnd{
-			PhaseEnd: &pb.AbortPhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
-			},
-		},
-	}
-
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
-	}
-	return switchErr
 }
