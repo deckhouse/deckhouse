@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -262,11 +263,20 @@ func (s *Service) destroy(
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.DestroyResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
 		OnPhaseFunc:   phaseSwitcher.switchPhase,
 		CommanderMode: true,
+		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
