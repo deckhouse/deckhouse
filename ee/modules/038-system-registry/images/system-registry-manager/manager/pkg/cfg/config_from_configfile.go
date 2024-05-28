@@ -63,6 +63,7 @@ func GetDefaultConfigVars() []ConfigVar {
 		{Key: "manager.leaderElection.leaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
 		{Key: "manager.leaderElection.renewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
 		{Key: "manager.leaderElection.retryPeriodSeconds", Env: nil, Default: CreateDefaultValue(2)},
+		{Key: "registry.upstreamRegistry.upstreamRegistryCa", Env: nil, Default: CreateDefaultValue("")},
 	}
 	{
 		defaultKeys := make([]string, 0, len(defaultConfigVars))
