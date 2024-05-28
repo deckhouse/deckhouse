@@ -93,14 +93,14 @@ apiVersions:
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
-                    
+
                     If no placement policy is specified, default placement policy will be used to create the nodes.
                   type: string
                   example: Hypervisor1
                 sizingPolicy:
                   description: |
                     SizingPolicy is the sizing policy to be used on this machine.
-                    
+
                     If no sizing policy is specified, default sizing policy will be used to create the nodes.
                   type: string
                   example: 4Cpu8Memory
@@ -201,14 +201,14 @@ apiVersions:
                   placementPolicy:
                     description: |
                       PlacementPolicy is the placement policy to be used on this machine.
-                      
+
                       If no placement policy is specified, default placement policy will be used to create the nodes.
                     type: string
                     example: Hypervisor1
                   sizingPolicy:
                     description: |
                       SizingPolicy is the sizing policy to be used on this machine.
-                      
+
                       If no sizing policy is specified, default sizing policy will be used to create the nodes.
                     type: string
                     example: 4Cpu8Memory
@@ -284,6 +284,9 @@ apiVersions:
               type: string
               description: The login ID.
             password:
+              type: string
+              description: The user's password.
+            apiToken:
               type: string
               description: The user's password.
             insecure:
