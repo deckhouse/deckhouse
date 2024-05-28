@@ -192,6 +192,7 @@ func (i *Attacher) scan(
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
+		res.DeckhouseUUID = metaConfig.UUID
 
 		if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
 			return fmt.Errorf("unable to save cluster uuid to cache: %w", err)
