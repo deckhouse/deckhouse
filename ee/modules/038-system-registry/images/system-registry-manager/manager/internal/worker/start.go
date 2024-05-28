@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	serverAddr = fmt.Sprint("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort)
+	serverAddr = fmt.Sprintf("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort)
 )
 
 type Worker struct {
