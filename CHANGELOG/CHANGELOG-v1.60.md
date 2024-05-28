@@ -67,6 +67,7 @@
  - **[kube-proxy]** Start `kube-proxy` only if `cni-flannel` or `cni-simple-bridge` modules is enabled. [#8258](https://github.com/deckhouse/deckhouse/pull/8258)
  - **[metallb]** Switched to state-timeline plugin in MetalLB  Grafana dashboard. [#8389](https://github.com/deckhouse/deckhouse/pull/8389)
  - **[monitoring-applications]** Fix rabbitmq dashboard. [#7979](https://github.com/deckhouse/deckhouse/pull/7979)
+ - **[monitoring-ping]** Skip nodes without IP address. [#8440](https://github.com/deckhouse/deckhouse/pull/8440)
  - **[node-manager]** Errors when adding a NodeUser do not block bashible. [#8054](https://github.com/deckhouse/deckhouse/pull/8054)
  - **[okmeter]** Respect `nodeSelector` and `tolerations` configuration options from the `ModuleConfig`. [#8377](https://github.com/deckhouse/deckhouse/pull/8377)
  - **[okmeter]** Restart okagent pods on API token change. [#8343](https://github.com/deckhouse/deckhouse/pull/8343)
