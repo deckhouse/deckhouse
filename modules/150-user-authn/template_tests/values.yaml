@@ -6,7 +6,7 @@ userAuthn:
     dexAuthenticatorCRDs: []
     providers: []
   publishAPI:
-    enable: false
+    enabled: false
     https:
       mode: SelfSigned
   controlPlaneConfigurator:

@@ -44,7 +44,7 @@ var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
       "users"
     ]
   }
-}]}, "publishAPI": {"enable": true}}}`, "")
+}]}, "publishAPI": {"enabled": true}}}`, "")
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {

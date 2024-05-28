@@ -22,7 +22,7 @@ spec:
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
     publishAPI:
-      enable: true
+      enabled: true
 ```
 
 {% endraw %}
