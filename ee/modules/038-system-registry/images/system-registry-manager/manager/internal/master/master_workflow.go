@@ -54,7 +54,7 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 			resp.Data.RegistryFilesState.StaticPodsWaitToUpdate ||
 			resp.Data.RegistryFilesState.CertificatesWaitToCreate ||
 			resp.Data.RegistryFilesState.CertificatesWaitToUpdate) {
-			return nil
+			continue
 		}
 		err = worker.Client.RequestUpdateRegistry(&pkg_api.CheckRegistryRequest{})
 		if err != nil {
