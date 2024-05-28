@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
@@ -71,8 +72,9 @@ var (
 )
 
 type DeckhouseController struct {
-	ctx context.Context
-	mgr manager.Manager
+	ctx                context.Context
+	mgr                manager.Manager
+	preflightCountDown *sync.WaitGroup
 
 	dirs       []string
 	mm         *module_manager.ModuleManager // probably it's better to set it via the interface
@@ -151,12 +153,14 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
-	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage)
+	var preflightCountDown sync.WaitGroup
+
+	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, &preflightCountDown)
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModulePullOverrideController(mgr, dc, mm)
+	err = release.NewModulePullOverrideController(mgr, dc, mm, &preflightCountDown)
 	if err != nil {
 		return nil, err
 	}
@@ -167,11 +171,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	return &DeckhouseController{
-		ctx:        ctx,
-		kubeClient: mcClient,
-		dirs:       utils.SplitToPaths(mm.ModulesDir),
-		mm:         mm,
-		mgr:        mgr,
+		ctx:                ctx,
+		kubeClient:         mcClient,
+		dirs:               utils.SplitToPaths(mm.ModulesDir),
+		mm:                 mm,
+		mgr:                mgr,
+		preflightCountDown: &preflightCountDown,
 
 		deckhouseModules:        make(map[string]*models.DeckhouseModule),
 		sourceModules:           make(map[string]string),
@@ -180,9 +185,8 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}, nil
 }
 
-// Setup runs preflight checks and load all deckhouse modules from the FS
-// it doesn't start controllers for ModuleSource/ModuleRelease objects
-func (dml *DeckhouseController) Setup(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
+// discovers modules on the fs, runs modules events loop (register/delete/etc)
+func (dml *DeckhouseController) DiscoverDeckhouseModules(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	err := dml.searchAndLoadDeckhouseModules()
 	if err != nil {
 		return fmt.Errorf("search and load Deckhouse modules: %w", err)
@@ -242,16 +246,18 @@ func (dml *DeckhouseController) setupSourceModules(ctx context.Context) error {
 }
 
 // Start function starts all child controllers linked with Modules
-func (dml *DeckhouseController) Start(ctx context.Context) {
-	if os.Getenv("EXTERNAL_MODULES_DIR") == "" {
-		return
-	}
+func (dml *DeckhouseController) StartPluggableModulesControllers(ctx context.Context) {
+	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		err := dml.mgr.Start(ctx)
 		if err != nil {
 			log.Fatalf("Start controller manager failed: %s", err)
 		}
 	}()
+
+	log.Info("Waiting for the preflight checks to run")
+	dml.preflightCountDown.Wait()
+	log.Info("The preflight checks are done")
 }
 
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
