@@ -7,6 +7,7 @@ package master
 
 import (
 	"context"
+	"fmt"
 	"system-registry-manager/internal/master/worker"
 	pkg_api "system-registry-manager/pkg/api"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -36,15 +37,16 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 }
 
 func masterWorkflow(ctx context.Context, m *Master) error {
-	workersInfo := worker.NewWorkersInfo()
+	log := pkg_logs.GetLoggerFromContext(ctx)
+	workersInfo := worker.NewWorkersInfo(log)
 	workers, err := workersInfo.WaitWorkers()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting workers information: %v", err)
 	}
 	for _, worker := range workers {
 		resp, err := worker.Client.RequestCheckRegistry(&pkg_api.CheckRegistryRequest{})
 		if err != nil {
-			return err
+			return fmt.Errorf("error checking registry with worker %s: %v", worker.PodName, err)
 		}
 		if !(resp.Data.RegistryFilesState.ManifestsWaitToCreate ||
 			resp.Data.RegistryFilesState.ManifestsWaitToUpdate ||
@@ -56,7 +58,7 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		}
 		err = worker.Client.RequestUpdateRegistry(&pkg_api.CheckRegistryRequest{})
 		if err != nil {
-			return err
+			return fmt.Errorf("error updating registry with worker %s: %v", worker.PodName, err)
 		}
 	}
 	return nil

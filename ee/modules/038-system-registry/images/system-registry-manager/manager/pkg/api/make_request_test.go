@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package api
 
 import (
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -50,7 +51,7 @@ func TestMakeRequest(t *testing.T) {
 	client := &http.Client{}
 
 	// Make the request
-	err := makeRequestWithResponse(client, http.MethodPost, mockServer.URL+"/test", headers, requestBody, &responseBody)
+	err := makeRequestWithResponse(logrus.NewEntry(logrus.New()), client, http.MethodPost, mockServer.URL+"/test", headers, requestBody, &responseBody)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestMakeRequestWithoutResponse(t *testing.T) {
 	client := &http.Client{}
 
 	// Make the request
-	err := makeRequestWithoutResponse(client, http.MethodPost, mockServer.URL+"/test", headers, requestBody)
+	err := makeRequestWithoutResponse(logrus.NewEntry(logrus.New()), client, http.MethodPost, mockServer.URL+"/test", headers, requestBody)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

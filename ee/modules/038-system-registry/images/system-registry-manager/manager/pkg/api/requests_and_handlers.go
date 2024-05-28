@@ -7,6 +7,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -18,24 +19,24 @@ const (
 	IsBusyUrlPattern         = "/is_busy"
 )
 
-func RequestMasterInfo(client *http.Client, url string, headers map[string]string, response *MasterInfoResponse) error {
-	return makeRequestWithResponse(client, http.MethodPost, url+MasterInfoUrlPattern, headers, nil, response)
+func RequestMasterInfo(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, response *MasterInfoResponse) error {
+	return makeRequestWithResponse(logger, client, http.MethodPost, url+MasterInfoUrlPattern, headers, nil, response)
 }
 
-func RequestCheckRegistry(client *http.Client, url string, headers map[string]string, request *CheckRegistryRequest, response *CheckRegistryResponse) error {
-	return makeRequestWithResponse(client, http.MethodPost, url+CheckRegistryUrlPattern, headers, request, response)
+func RequestCheckRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *CheckRegistryRequest, response *CheckRegistryResponse) error {
+	return makeRequestWithResponse(logger, client, http.MethodPost, url+CheckRegistryUrlPattern, headers, request, response)
 }
 
-func RequestUpdateRegistry(client *http.Client, url string, headers map[string]string, request *UpdateRegistryRequest) error {
-	return makeRequestWithoutResponse(client, http.MethodPost, url+UpdateRegistryUrlPattern, headers, request)
+func RequestUpdateRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *UpdateRegistryRequest) error {
+	return makeRequestWithoutResponse(logger, client, http.MethodPost, url+UpdateRegistryUrlPattern, headers, request)
 }
 
-func RequestDeleteRegistry(client *http.Client, url string, headers map[string]string) error {
-	return makeRequestWithoutResponse(client, http.MethodPost, url+DeleteRegistryUrlPattern, headers, nil)
+func RequestDeleteRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string) error {
+	return makeRequestWithoutResponse(logger, client, http.MethodPost, url+DeleteRegistryUrlPattern, headers, nil)
 }
 
-func RequestIsBusy(client *http.Client, url string, headers map[string]string, request *IsBusyRequest, response *IsBusyResponse) error {
-	return makeRequestWithResponse(client, http.MethodPost, url+IsBusyUrlPattern, headers, request, response)
+func RequestIsBusy(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *IsBusyRequest, response *IsBusyResponse) error {
+	return makeRequestWithResponse(logger, client, http.MethodPost, url+IsBusyUrlPattern, headers, request, response)
 }
 
 func CreateMasterInfoHandlerFunc(f func() (*MasterInfoResponse, error)) http.HandlerFunc {

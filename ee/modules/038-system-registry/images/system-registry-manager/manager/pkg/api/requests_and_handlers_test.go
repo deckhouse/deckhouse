@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,7 +43,7 @@ func TestMasterInfoRequests(t *testing.T) {
 
 	// Make a request to the mock server
 	var response MasterInfoResponse
-	err := RequestMasterInfo(&http.Client{}, mockServer.URL, map[string]string{}, &response)
+	err := RequestMasterInfo(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &response)
 	assert.NoError(t, err)
 
 	// Compare received master info with expected
@@ -108,7 +109,7 @@ func TestCheckRegistryRequests(t *testing.T) {
 
 	// Make a request to the mock server
 	var response CheckRegistryResponse
-	err := RequestCheckRegistry(&http.Client{}, mockServer.URL, map[string]string{}, &mockRequest, &response)
+	err := RequestCheckRegistry(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &mockRequest, &response)
 	assert.NoError(t, err)
 
 	// Compare received response with expected
@@ -144,7 +145,7 @@ func TestUpdateRegistryRequests(t *testing.T) {
 	defer mockServer.Close()
 
 	// Make a request to the mock server
-	err := RequestUpdateRegistry(&http.Client{}, mockServer.URL, map[string]string{}, &mockRequest)
+	err := RequestUpdateRegistry(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &mockRequest)
 	assert.NoError(t, err)
 }
 
@@ -163,7 +164,7 @@ func TestDeleteRegistryRequests(t *testing.T) {
 	defer mockServer.Close()
 
 	// Make a request to the mock server
-	err := RequestDeleteRegistry(&http.Client{}, mockServer.URL, map[string]string{})
+	err := RequestDeleteRegistry(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{})
 	assert.NoError(t, err)
 }
 
@@ -191,7 +192,7 @@ func TestIsBusyRequests(t *testing.T) {
 
 	// Make a request to the mock server
 	var response IsBusyResponse
-	err := RequestIsBusy(&http.Client{}, mockServer.URL, map[string]string{}, &mockRequest, &response)
+	err := RequestIsBusy(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &mockRequest, &response)
 	assert.NoError(t, err)
 
 	// Compare received response with expected
