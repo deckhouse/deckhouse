@@ -75,7 +75,7 @@ func operationCtx(server grpc.ServerStream) context.Context {
 	case pb.DHCTL_AbortServer:
 		operation = "abort"
 	case pb.DHCTL_AttachCommanderServer:
-		operation = "import"
+		operation = "commander/attach"
 	default:
 		operation = "unknown"
 	}
