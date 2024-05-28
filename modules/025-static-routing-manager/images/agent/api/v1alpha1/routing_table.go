@@ -53,16 +53,11 @@ type RoutingTableSpec struct {
 }
 
 type RoutingTableStatus struct {
-	ObservedGeneration        int64                   `json:"observedGeneration,omitempty"`
-	IPRoutingTableID          int                     `json:"ipRoutingTableID,omitempty"`
-	ReadyNodeRoutingTables    int                     `json:"readyNodeRoutingTables,omitempty"`
-	AffectedNodeRoutingTables int                     `json:"affectedNodeRoutingTables,omitempty"`
-	Conditions                []RoutingTableCondition `json:"conditions,omitempty"`
-}
-
-type RoutingTableCondition struct {
-	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition  `json:",inline"`
+	ObservedGeneration        int64               `json:"observedGeneration,omitempty"`
+	IPRoutingTableID          int                 `json:"ipRoutingTableID,omitempty"`
+	ReadyNodeRoutingTables    int                 `json:"readyNodeRoutingTables,omitempty"`
+	AffectedNodeRoutingTables int                 `json:"affectedNodeRoutingTables,omitempty"`
+	Conditions                []ExtendedCondition `json:"conditions,omitempty"`
 }
 
 // CR NodeRoutingTable
@@ -87,21 +82,7 @@ type NodeRoutingTableSpec struct {
 }
 
 type NodeRoutingTableStatus struct {
-	ObservedGeneration int64                       `json:"observedGeneration,omitempty"`
-	AppliedRoutes      []Route                     `json:"appliedRoutes,omitempty"`
-	Conditions         []NodeRoutingTableCondition `json:"conditions,omitempty"`
+	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
+	AppliedRoutes      []Route             `json:"appliedRoutes,omitempty"`
+	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
 }
-
-type NodeRoutingTableCondition struct {
-	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
-	metav1.Condition  `json:",inline"`
-}
-
-const (
-	// Types
-	ReconciliationSucceedType = "Ready"
-	// Reasons
-	ReconciliationReasonSucceed = "ReconciliationSucceed"
-	ReconciliationReasonFailed  = "ReconciliationFailed"
-	ReconciliationReasonPending = "Pending"
-)

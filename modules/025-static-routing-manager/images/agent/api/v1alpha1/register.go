@@ -27,6 +27,8 @@ const (
 	APIVersion = "v1alpha1"
 	RTKind     = "RoutingTable"
 	NRTKind    = "NodeRoutingTable"
+	IRSKind    = "IPRuleSet"
+	NIRSKind   = "NodeIPRuleSet"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -46,6 +48,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RoutingTableList{},
 		&NodeRoutingTable{},
 		&NodeRoutingTableList{},
+		&IPRuleSet{},
+		&IPRuleSetList{},
+		&NodeIPRuleSet{},
+		&NodeIPRuleSetList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
