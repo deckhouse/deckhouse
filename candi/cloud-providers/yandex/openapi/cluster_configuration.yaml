@@ -132,7 +132,7 @@ apiVersions:
                   Yandex Compute Instance disk type.
                 example: network-ssd-io-m3
                 x-doc-default: network-ssd
-                enum: [ network-ssd, network-ssd-io-m3 ]
+                enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]
               etcdDiskSizeGb:
                 type: integer
                 description: |
