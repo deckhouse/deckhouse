@@ -6,6 +6,9 @@ KUBERNETES_DEPENDENCIES="conntrack-tools ebtables ethtool iproute iptables socat
 if bb-is-redos-version? 7.3; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python"
 fi
+if bb-is-redos-version? 8.0; then
+  SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils"
+fi
 
 bb-var BB_YUM_INSTALL_EXTRA_ARGS "--allowerasing"
 
