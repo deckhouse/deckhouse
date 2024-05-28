@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/google/uuid"
 	"os"
 	"strings"
 	"time"
@@ -427,6 +429,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return err
 			},
 		})
+	}
+
+	if cfg.CommanderMode && cfg.CommanderUUID != uuid.Nil {
+		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(cfg.CommanderUUID, kubeCl))
 	}
 
 	if cfg.KubeDNSAddress != "" {
