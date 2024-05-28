@@ -43,6 +43,7 @@ const labels = {
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
   'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
+  'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // Allow running workflows for external PRs.
