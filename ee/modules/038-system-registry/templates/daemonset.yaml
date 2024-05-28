@@ -64,6 +64,11 @@ spec:
   selector:
     matchLabels:
       app: system-registry-manager
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+      maxSurge: 0%
   template:
     metadata:
       labels:
