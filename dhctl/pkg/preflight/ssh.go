@@ -29,7 +29,7 @@ const (
 	DefaultTunnelRemotePort = 22322
 )
 
-var ErrAuthFailed = errors.New("authentication failed")
+var ErrAuthSSHFailed = errors.New("authentication failed")
 
 func (pc *Checker) CheckSSHTunnel() error {
 	if app.PreflightSkipSSHForword {
@@ -37,7 +37,11 @@ func (pc *Checker) CheckSSHTunnel() error {
 		return nil
 	}
 
-	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", DefaultTunnelRemotePort, DefaultTunnelLocalPort)
+	log.DebugF(
+		"Checking ssh tunnel with remote port %d and local port %d\n",
+		DefaultTunnelRemotePort,
+		DefaultTunnelLocalPort,
+	)
 
 	builder := strings.Builder{}
 	builder.WriteString(strconv.Itoa(DefaultTunnelLocalPort))
@@ -64,7 +68,10 @@ func (pc *Checker) CheckSSHCredential() error {
 	sshCheck := pc.sshClient.Check()
 	err := sshCheck.CheckAvailability()
 	if err != nil {
-		return fmt.Errorf("ssh %w. Please check ssh credential and try again", ErrAuthFailed)
+		return fmt.Errorf(
+			"ssh %w. Please check ssh credential and try again",
+			ErrAuthSSHFailed,
+		)
 	}
 	return nil
 }
