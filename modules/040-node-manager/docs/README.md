@@ -309,19 +309,19 @@ The instrument (you can enable it for each `NodeGroup` individually) for unexpec
 
 DKP exports the group availability Prometheus metrics for each `NodeGroup`.
 
-### What information does Prometheus collect, and in what form?
+### What information does Prometheus collect and in what form?
 
 Metrics have the prefix `d8_node_group_`.
 
 All the collected metrics have a label that allow you to identify the node group: `node_group_name`.
 
-Metrics collected for each node group:
-- `d8_node_group_ready` — the number of ready Kubernetes nodes in the group.
+The following metrics are collected for each node group:
+- `d8_node_group_ready` — the number of Kubernetes nodes in the group that are `Ready`.
 - `d8_node_group_nodes` — the number of Kubernetes nodes (in any state) in the group.
 - `d8_node_group_instances` — the number of instances (in any state) in the group.
 - `d8_node_group_desired` — the number of desired `Machines` in the group.
-- `d8_node_group_min` — the minimal amount of instances in the group.
-- `d8_node_group_max` — the maximum amount of instances in the group.
+- `d8_node_group_min` — the minimum number of instances in the group.
+- `d8_node_group_max` — the maximum number of instances in the group.
 - `d8_node_group_up_to_date` — the number of up-to-date nodes in the group.
-- `d8_node_group_standby` — the number of over provisioned instances (see [standby](cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter) in the group.
-- `d8_node_group_has_errors` — the boolean value equal to 1 if there are errors in the group.
+- `d8_node_group_standby` — the number of over provisioned instances (see the [standby](cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter) in the group.
+- `d8_node_group_has_errors` — equals to 1 if there are errors in the group.
