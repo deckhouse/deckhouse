@@ -7,12 +7,10 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	common "system-registry-manager/internal/common"
 	pkg_api "system-registry-manager/pkg/api"
-	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
 )
@@ -20,10 +18,6 @@ import (
 const (
 	processName     = "worker"
 	shutdownTimeout = 5 * time.Second
-)
-
-var (
-	serverAddr = fmt.Sprintf("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort)
 )
 
 type Worker struct {
