@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package worker
 
 import (
+	"fmt"
 	"net/http"
 	"system-registry-manager/internal/worker/steps"
 	pkg_api "system-registry-manager/pkg/api"
@@ -14,7 +15,7 @@ import (
 
 func createServer(workerData *WorkerData) *http.Server {
 	server := &http.Server{
-		Addr: serverAddr,
+		Addr: fmt.Sprintf("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort),
 	}
 
 	masterInfo := func() (*pkg_api.MasterInfoResponse, error) {
