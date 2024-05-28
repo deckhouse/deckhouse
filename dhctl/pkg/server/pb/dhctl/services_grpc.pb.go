@@ -38,7 +38,8 @@ const (
 	DHCTL_Destroy_FullMethodName         = "/dhctl.DHCTL/Destroy"
 	DHCTL_Abort_FullMethodName           = "/dhctl.DHCTL/Abort"
 	DHCTL_Converge_FullMethodName        = "/dhctl.DHCTL/Converge"
-	DHCTL_AttachCommander_FullMethodName = "/dhctl.DHCTL/AttachCommander"
+	DHCTL_CommanderAttach_FullMethodName = "/dhctl.DHCTL/CommanderAttach"
+	DHCTL_CommanderDetach_FullMethodName = "/dhctl.DHCTL/CommanderDetach"
 )
 
 // DHCTLClient is the client API for DHCTL service.
@@ -50,7 +51,8 @@ type DHCTLClient interface {
 	Destroy(ctx context.Context, opts ...grpc.CallOption) (DHCTL_DestroyClient, error)
 	Abort(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AbortClient, error)
 	Converge(ctx context.Context, opts ...grpc.CallOption) (DHCTL_ConvergeClient, error)
-	AttachCommander(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AttachCommanderClient, error)
+	CommanderAttach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderAttachClient, error)
+	CommanderDetach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderDetachClient, error)
 }
 
 type dHCTLClient struct {
@@ -216,31 +218,62 @@ func (x *dHCTLConvergeClient) Recv() (*ConvergeResponse, error) {
 	return m, nil
 }
 
-func (c *dHCTLClient) AttachCommander(ctx context.Context, opts ...grpc.CallOption) (DHCTL_AttachCommanderClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[5], DHCTL_AttachCommander_FullMethodName, opts...)
+func (c *dHCTLClient) CommanderAttach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderAttachClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[5], DHCTL_CommanderAttach_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &dHCTLAttachCommanderClient{stream}
+	x := &dHCTLCommanderAttachClient{stream}
 	return x, nil
 }
 
-type DHCTL_AttachCommanderClient interface {
-	Send(*AttachCommanderRequest) error
-	Recv() (*AttachCommanderResponse, error)
+type DHCTL_CommanderAttachClient interface {
+	Send(*CommanderAttachRequest) error
+	Recv() (*CommanderAttachResponse, error)
 	grpc.ClientStream
 }
 
-type dHCTLAttachCommanderClient struct {
+type dHCTLCommanderAttachClient struct {
 	grpc.ClientStream
 }
 
-func (x *dHCTLAttachCommanderClient) Send(m *AttachCommanderRequest) error {
+func (x *dHCTLCommanderAttachClient) Send(m *CommanderAttachRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *dHCTLAttachCommanderClient) Recv() (*AttachCommanderResponse, error) {
-	m := new(AttachCommanderResponse)
+func (x *dHCTLCommanderAttachClient) Recv() (*CommanderAttachResponse, error) {
+	m := new(CommanderAttachResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *dHCTLClient) CommanderDetach(ctx context.Context, opts ...grpc.CallOption) (DHCTL_CommanderDetachClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DHCTL_ServiceDesc.Streams[6], DHCTL_CommanderDetach_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dHCTLCommanderDetachClient{stream}
+	return x, nil
+}
+
+type DHCTL_CommanderDetachClient interface {
+	Send(*CommanderDetachRequest) error
+	Recv() (*CommanderDetachResponse, error)
+	grpc.ClientStream
+}
+
+type dHCTLCommanderDetachClient struct {
+	grpc.ClientStream
+}
+
+func (x *dHCTLCommanderDetachClient) Send(m *CommanderDetachRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dHCTLCommanderDetachClient) Recv() (*CommanderDetachResponse, error) {
+	m := new(CommanderDetachResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -256,7 +289,8 @@ type DHCTLServer interface {
 	Destroy(DHCTL_DestroyServer) error
 	Abort(DHCTL_AbortServer) error
 	Converge(DHCTL_ConvergeServer) error
-	AttachCommander(DHCTL_AttachCommanderServer) error
+	CommanderAttach(DHCTL_CommanderAttachServer) error
+	CommanderDetach(DHCTL_CommanderDetachServer) error
 	mustEmbedUnimplementedDHCTLServer()
 }
 
@@ -279,8 +313,11 @@ func (UnimplementedDHCTLServer) Abort(DHCTL_AbortServer) error {
 func (UnimplementedDHCTLServer) Converge(DHCTL_ConvergeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Converge not implemented")
 }
-func (UnimplementedDHCTLServer) AttachCommander(DHCTL_AttachCommanderServer) error {
-	return status.Errorf(codes.Unimplemented, "method AttachCommander not implemented")
+func (UnimplementedDHCTLServer) CommanderAttach(DHCTL_CommanderAttachServer) error {
+	return status.Errorf(codes.Unimplemented, "method CommanderAttach not implemented")
+}
+func (UnimplementedDHCTLServer) CommanderDetach(DHCTL_CommanderDetachServer) error {
+	return status.Errorf(codes.Unimplemented, "method CommanderDetach not implemented")
 }
 func (UnimplementedDHCTLServer) mustEmbedUnimplementedDHCTLServer() {}
 
@@ -425,26 +462,52 @@ func (x *dHCTLConvergeServer) Recv() (*ConvergeRequest, error) {
 	return m, nil
 }
 
-func _DHCTL_AttachCommander_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DHCTLServer).AttachCommander(&dHCTLAttachCommanderServer{stream})
+func _DHCTL_CommanderAttach_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).CommanderAttach(&dHCTLCommanderAttachServer{stream})
 }
 
-type DHCTL_AttachCommanderServer interface {
-	Send(*AttachCommanderResponse) error
-	Recv() (*AttachCommanderRequest, error)
+type DHCTL_CommanderAttachServer interface {
+	Send(*CommanderAttachResponse) error
+	Recv() (*CommanderAttachRequest, error)
 	grpc.ServerStream
 }
 
-type dHCTLAttachCommanderServer struct {
+type dHCTLCommanderAttachServer struct {
 	grpc.ServerStream
 }
 
-func (x *dHCTLAttachCommanderServer) Send(m *AttachCommanderResponse) error {
+func (x *dHCTLCommanderAttachServer) Send(m *CommanderAttachResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *dHCTLAttachCommanderServer) Recv() (*AttachCommanderRequest, error) {
-	m := new(AttachCommanderRequest)
+func (x *dHCTLCommanderAttachServer) Recv() (*CommanderAttachRequest, error) {
+	m := new(CommanderAttachRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _DHCTL_CommanderDetach_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DHCTLServer).CommanderDetach(&dHCTLCommanderDetachServer{stream})
+}
+
+type DHCTL_CommanderDetachServer interface {
+	Send(*CommanderDetachResponse) error
+	Recv() (*CommanderDetachRequest, error)
+	grpc.ServerStream
+}
+
+type dHCTLCommanderDetachServer struct {
+	grpc.ServerStream
+}
+
+func (x *dHCTLCommanderDetachServer) Send(m *CommanderDetachResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dHCTLCommanderDetachServer) Recv() (*CommanderDetachRequest, error) {
+	m := new(CommanderDetachRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -490,8 +553,14 @@ var DHCTL_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
-			StreamName:    "AttachCommander",
-			Handler:       _DHCTL_AttachCommander_Handler,
+			StreamName:    "CommanderAttach",
+			Handler:       _DHCTL_CommanderAttach_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "CommanderDetach",
+			Handler:       _DHCTL_CommanderDetach_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

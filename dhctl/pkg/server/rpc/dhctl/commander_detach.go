@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
@@ -44,20 +45,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func (s *Service) Check(server pb.DHCTL_CheckServer) error {
+func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.checkServerTransitions())
+	f := fsm.New("initial", s.CommanderDetachServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.CheckRequest)
-	sendCh := make(chan *pb.CheckResponse, 100)
+	receiveCh := make(chan *pb.CommanderDetachRequest)
+	sendCh := make(chan *pb.CommanderDetachResponse)
 
-	s.startCheckerReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startCheckerSender(server, sendCh, internalErrCh)
+	s.startdetacherReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startdetacherSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -72,19 +73,19 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing CheckRequest",
+				"processing CommanderDetachRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.CheckRequest_Start:
+			case *pb.CommanderDetachRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startChecker(
-					ctx, message.Start, &checkLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startCommanderDetach(
+					ctx, message.Start, &CommanderDetachLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
 			default:
@@ -96,9 +97,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startCheckerReceiver(
-	server pb.DHCTL_CheckServer,
-	receiveCh chan *pb.CheckRequest,
+func (s *Service) startdetacherReceiver(
+	server pb.DHCTL_CommanderDetachServer,
+	receiveCh chan *pb.CommanderDetachRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -118,9 +119,9 @@ func (s *Service) startCheckerReceiver(
 	}()
 }
 
-func (s *Service) startCheckerSender(
-	server pb.DHCTL_CheckServer,
-	sendCh chan *pb.CheckResponse,
+func (s *Service) startdetacherSender(
+	server pb.DHCTL_CommanderDetachServer,
+	sendCh chan *pb.CommanderDetachResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -137,27 +138,27 @@ func (s *Service) startCheckerSender(
 	}()
 }
 
-func (s *Service) startChecker(
+func (s *Service) startCommanderDetach(
 	ctx context.Context,
-	request *pb.CheckStart,
-	logWriter *checkLogWriter,
-	sendCh chan *pb.CheckResponse,
+	request *pb.CommanderDetachStart,
+	logWriter *CommanderDetachLogWriter,
+	sendCh chan *pb.CommanderDetachResponse,
 ) {
 	go func() {
-		result := s.check(ctx, request, logWriter)
-		sendCh <- &pb.CheckResponse{
-			Message: &pb.CheckResponse_Result{
+		result := s.CommanderDetachCluster(ctx, request, logWriter)
+		sendCh <- &pb.CommanderDetachResponse{
+			Message: &pb.CommanderDetachResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) check(
+func (s *Service) CommanderDetachCluster(
 	ctx context.Context,
-	request *pb.CheckStart,
+	request *pb.CommanderDetachStart,
 	logWriter io.Writer,
-) *pb.CheckResult {
+) *pb.CommanderDetachResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -189,7 +190,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
 	err = log.Process("default", "Preparing DHCTL state", func() error {
@@ -211,7 +212,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -234,7 +235,7 @@ func (s *Service) check(
 		return nil
 	})
 	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
+		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
@@ -242,13 +243,15 @@ func (s *Service) check(
 	if request.Options.CommanderUuid != "" {
 		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
 		if err != nil {
-			return &pb.CheckResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+			return &pb.CommanderDetachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
+	stateCache := cache.Global()
+
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
-		StateCache:    cache.Global(),
+		StateCache:    stateCache,
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
@@ -258,19 +261,34 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	result, checkErr := checker.Check(ctx)
-	resultData, marshalErr := json.Marshal(result)
-	err = errors.Join(checkErr, marshalErr)
+	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
+		DetachResources: detach.DetachResources{
+			Template: request.ResourcesTemplate,
+			Values:   request.ResourcesValues.AsMap(),
+		},
+		OnCheckResult: onCheckResult,
+	})
 
-	if result != nil {
-		// todo: move onCheckResult call to check.Check() func (as in converge)
-		_ = onCheckResult(result)
+	var resErrs []error
+
+	resErrs = append(resErrs, detacher.Detach(ctx))
+
+	var resState string
+	state, err := phases.ExtractDhctlState(stateCache)
+	if err != nil {
+		resErrs = append(resErrs, fmt.Errorf("unable to extract dhctl state: %w", err))
+	} else {
+		data, err := json.Marshal(state)
+		if err != nil {
+			resErrs = append(resErrs, fmt.Errorf("unable to unmarshal dhctl state: %w", err))
+		}
+		resState = string(data)
 	}
 
-	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
+	return &pb.CommanderDetachResult{State: resState, Err: errToString(errors.Join(resErrs...))}
 }
 
-func (s *Service) checkServerTransitions() []fsm.Transition {
+func (s *Service) CommanderDetachServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -280,15 +298,15 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 	}
 }
 
-type checkLogWriter struct {
+type CommanderDetachLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.CheckResponse
+	sendCh chan *pb.CommanderDetachResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *checkLogWriter) Write(p []byte) (n int, err error) {
+func (w *CommanderDetachLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -311,8 +329,8 @@ func (w *checkLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.CheckResponse{
-			Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.CommanderDetachResponse{
+			Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 

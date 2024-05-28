@@ -119,6 +119,10 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) StartPhase(phase Operati
 		return true, nil
 	}
 
+	if err := pec.setLastState(stateCache); err != nil {
+		return false, err
+	}
+
 	pec.currentPhase = phase
 	return pec.callOnPhase(pec.completedPhase, pec.lastState, pec.completedPhaseData, phase, isCritical, stateCache)
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 
 	"k8s.io/utils/pointer"
@@ -39,6 +40,7 @@ import (
 
 type Params struct {
 	CommanderMode    bool
+	CommanderUUID    uuid.UUID
 	SSHClient        *ssh.Client
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
@@ -61,6 +63,11 @@ func NewAttacher(params *Params) *Attacher {
 	if !params.CommanderMode {
 		panic("attach commander operation supported only in commander mode")
 	}
+
+	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+	//if params.CommanderUUID == uuid.Nil {
+	//	panic("CommanderUUID required for commander/attach operation!")
+	//}
 
 	return &Attacher{
 		Params:                 params,
@@ -178,15 +185,21 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 }
 
 func (i *Attacher) scan(
-	_ context.Context,
+	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 ) (*ScanResult, error) {
 	var res *ScanResult
 
-	err := log.Process("attach", "Scan cluster", func() error {
+	err := log.Process("commander/attach", "Scan cluster", func() error {
 		var err error
 		stateCache := cache.Global()
+
+		if _, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeClient, i.Params.CommanderUUID); err != nil {
+			return fmt.Errorf("uuid consistency check failed: %w", err)
+		}
+
+		res = &ScanResult{}
 
 		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeClient)
 		if err != nil {
@@ -201,22 +214,19 @@ func (i *Attacher) scan(
 		if err != nil {
 			return fmt.Errorf("unable to prepare cluster config yaml: %w", err)
 		}
+		res.ClusterConfiguration = string(clusterConfiguration)
 
 		providerConfiguration, err := metaConfig.ProviderClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("unable to prepare provider cluster config yaml: %w", err)
 		}
+		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
 		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys[0].Key)
 		if err != nil {
 			return fmt.Errorf("unable to read ssh private key: %w", err)
 		}
-
-		res = &ScanResult{
-			ClusterConfiguration:                 string(clusterConfiguration),
-			ProviderSpecificClusterConfiguration: string(providerConfiguration),
-			SSHPrivateKey:                        string(sshPrivateKey),
-		}
+		res.SSHPrivateKey = string(sshPrivateKey)
 
 		if metaConfig.ClusterType == config.StaticClusterType {
 			return nil
@@ -275,7 +285,7 @@ func (i *Attacher) capture(
 	_ context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
-	return log.Process("attach", "Capture cluster", func() error {
+	return log.Process("commander/attach", "Capture cluster", func() error {
 		attachResources, err := template.ParseResourcesContent(
 			i.Params.AttachResources.Template,
 			i.Params.AttachResources.Values,
@@ -305,7 +315,7 @@ func (i *Attacher) check(
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
 
-	err := log.Process("attach", "Check cluster", func() error {
+	err := log.Process("commander/attach", "Check cluster", func() error {
 		var err error
 
 		checker := check.NewChecker(&check.Params{

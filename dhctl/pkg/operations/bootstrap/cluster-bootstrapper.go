@@ -78,6 +78,7 @@ type Params struct {
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.DefaultOnPhaseFunc
 	CommanderMode              bool
+	CommanderUUID              uuid.UUID
 	TerraformContext           *terraform.TerraformContext
 
 	ConfigPaths             []string
@@ -218,6 +219,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err
+	}
+
+	if b.CommanderMode {
+		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+		//if b.CommanderUUID == uuid.Nil {
+		//	panic("CommanderUUID required for bootstrap operation in commander mode!")
+		//}
+		deckhouseInstallConfig.CommanderMode = b.CommanderMode
+		deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
 	}
 
 	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack

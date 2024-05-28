@@ -27,7 +27,11 @@ func MirrorOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(color.New(color.FgGreen, color.Bold))
 }
 
-func AttachOptions(opts types.LogProcessOptionsInterface) {
+func CommanderAttachOptions(opts types.LogProcessOptionsInterface) {
+	opts.Style(color.New(color.FgLightCyan, color.Bold))
+}
+
+func CommanderDetachOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(color.New(color.FgLightCyan, color.Bold))
 }
 

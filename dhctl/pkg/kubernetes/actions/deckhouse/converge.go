@@ -17,6 +17,8 @@ package deckhouse
 import (
 	"context"
 	"encoding/json"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/google/uuid"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +34,7 @@ import (
 // ConvergeDeckhouseConfiguration – reconciles deckhouse in-cluster configmaps and secrets.
 // This function used in commander-mode, which stores primary configuration in the storage outside of cluster,
 // and periodically reconciles configuration inside cluster to match configuration stored outside of cluster.
-func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID string, clusterConfig []byte, providerClusterConfig []byte) error {
+func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID, commanderUUID uuid.UUID, clusterConfig []byte, providerClusterConfig []byte) error {
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Secret "d8-cluster-configuration"`,
@@ -74,7 +76,7 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 		{
 			Name: `ConfigMap "d8-cluster-uuid"`,
 			Manifest: func() interface{} {
-				return manifests.ClusterUUIDConfigMap(clusterUUID)
+				return manifests.ClusterUUIDConfigMap(clusterUUID.String())
 			},
 			CreateFunc: func(manifest interface{}) error {
 				// NOTE: Uuid configmap uses "more careful" update task,
@@ -99,6 +101,10 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 				return err
 			},
 		},
+	}
+
+	if commanderUUID != uuid.Nil {
+		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(commanderUUID, kubeCl))
 	}
 
 	return log.Process("default", "Converge deckhouse configuration", func() error {

@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/pointer"
@@ -274,6 +275,7 @@ func (s *Service) abort(
 		ResetInitialState: true,
 		OnPhaseFunc:       phaseSwitcher.switchPhase,
 		CommanderMode:     request.Options.CommanderMode,
+		CommanderUUID:     uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
