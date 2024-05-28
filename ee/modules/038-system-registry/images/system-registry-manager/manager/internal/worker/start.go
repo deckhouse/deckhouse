@@ -7,18 +7,23 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	common "system-registry-manager/internal/common"
 	pkg_api "system-registry-manager/pkg/api"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
 )
 
 const (
 	processName     = "worker"
-	serverAddr      = "0.0.0.0:8097"
 	shutdownTimeout = 5 * time.Second
+)
+
+var (
+	serverAddr = fmt.Sprint("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort)
 )
 
 type Worker struct {
@@ -58,9 +63,13 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Worker {
 
 func (m *Worker) Start() {
 	m.log.Info("Worker starting...")
-	if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := m.server.ListenAndServe(); err != nil {
 		defer m.commonCfg.StopManager()
-		m.log.Errorf("error starting server: %v", err)
+		if err != http.ErrServerClosed {
+			m.log.Errorf("error starting server: %v", err)
+		} else {
+			m.log.Errorf("error, server stopped: %v", err)
+		}
 	}
 }
 
