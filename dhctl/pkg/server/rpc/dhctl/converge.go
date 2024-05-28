@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -265,10 +266,19 @@ func (s *Service) converge(
 
 	terraformContext := terraform.NewTerraformContext()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.ConvergeResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
@@ -282,6 +292,7 @@ func (s *Service) converge(
 		AutoApprove:            true,
 		AutoDismissDestructive: false,
 		CommanderMode:          true,
+		CommanderUUID:          uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
