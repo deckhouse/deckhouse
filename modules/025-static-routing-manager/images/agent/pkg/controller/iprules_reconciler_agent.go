@@ -422,6 +422,67 @@ func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
 	return PreparedIPRule, nil
 }
 
+func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
+	PreparedIPRule := IPRuleEntry{}
+
+	if nlRule.Priority > 0 {
+		PreparedIPRule.Priority = nlRule.Priority
+	}
+	if nlRule.Table > 0 {
+		PreparedIPRule.Table = nlRule.Table
+	}
+	if nlRule.Mark != -1 {
+		FWMark := fmt.Sprintf("0x%x", nlRule.Mark)
+		if nlRule.Mask != -1 {
+			FWMark = fmt.Sprintf("%s/0x%x", FWMark, nlRule.Mask)
+		}
+		PreparedIPRule.FWMark = FWMark
+	}
+	if nlRule.Tos > 0 {
+		PreparedIPRule.Tos = fmt.Sprintf("0x%x", nlRule.Tos)
+	}
+	if nlRule.TunID > 0 {
+		PreparedIPRule.TunID = int(nlRule.TunID)
+	}
+	if nlRule.Src != nil {
+		PreparedIPRule.Src = nlRule.Src.String()
+	}
+	if nlRule.Dst != nil {
+		PreparedIPRule.Dst = nlRule.Dst.String()
+	}
+	if nlRule.IifName != "" {
+		PreparedIPRule.IifName = nlRule.IifName
+	}
+	if nlRule.OifName != "" {
+		PreparedIPRule.OifName = nlRule.OifName
+	}
+	if nlRule.Invert == true {
+		PreparedIPRule.Invert = nlRule.Invert
+	}
+	if nlRule.Dport != nil {
+		if nlRule.Dport.Start == nlRule.Dport.End {
+			PreparedIPRule.DPort = fmt.Sprintf("%v", nlRule.Dport.Start)
+		} else {
+			PreparedIPRule.DPort = fmt.Sprintf("%v-%v", nlRule.Dport.Start, nlRule.Dport.End)
+		}
+	}
+	if nlRule.Sport != nil {
+		if nlRule.Sport.Start == nlRule.Sport.End {
+			PreparedIPRule.SPort = fmt.Sprintf("%v", nlRule.Sport.Start)
+		} else {
+			PreparedIPRule.SPort = fmt.Sprintf("%v-%v", nlRule.Sport.Start, nlRule.Sport.End)
+		}
+	}
+	if nlRule.IPProto > 0 {
+		PreparedIPRule.IPProto = nlRule.IPProto
+	}
+	if nlRule.UIDRange != nil {
+		PreparedIPRule.UIDRange = fmt.Sprintf("%v-%v", nlRule.UIDRange.Start, nlRule.UIDRange.End)
+	}
+
+	return PreparedIPRule
+}
+
 // IPRuleEntryMap: type, service functions and methods
 
 type IPRuleEntryMap map[string]IPRuleEntry
@@ -687,21 +748,17 @@ func delIPRuleFromNode(ipRule IPRuleEntry) error {
 }
 
 func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
-	iprules, err := netlink.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
+	nlRules, err := netlink.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed get IPRule from node, err: %w", err)
 	}
 	airem := make(IPRuleEntryMap)
 
-	for _, iprule := range iprules {
-		re := IPRuleEntry{
-			destination: iprule.Dst.String(),
-			gateway:     iprule.Gw.String(),
-			table:       iprule.Table,
-		}
-		airem.AppendIRE(re)
-	}
+	for _, nlRule := range nlRules {
+		ire := getIPRuleEntryFromNetlinkRule(nlRule)
 
+		airem.AppendIRE(ire)
+	}
 	return airem, nil
 }
 
