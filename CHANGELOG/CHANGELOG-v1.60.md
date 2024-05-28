@@ -1,5 +1,10 @@
 # Changelog v1.60
 
+## [MALFORMED]
+
+
+ - #8429 unknown section "l2-load-balancer"
+
 ## Know before update
 
 
@@ -8,7 +13,6 @@
  - Okagent will update from the Deckhouse Observability platform source and will start sending metrics to DOP for FE installations.
  - The method for configuring network interfaces and routes has changed in OpenStack instances.
  - You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
- - The experimental `l2-load-balancer` module is not available anymore. A renewed one is coming soon.
 
 ## Features
 
@@ -21,6 +25,7 @@
  - **[deckhouse]** Replace go-based conversions with jq-based. [#8193](https://github.com/deckhouse/deckhouse/pull/8193)
  - **[deckhouse]** Add validation webhook for `publicDomainTemplate`. [#8107](https://github.com/deckhouse/deckhouse/pull/8107)
  - **[deckhouse-controller]** Move validation logic to the module object. [#8218](https://github.com/deckhouse/deckhouse/pull/8218)
+ - **[deckhouse-controller]** replace insecure flag with scheme flag [#8076](https://github.com/deckhouse/deckhouse/pull/8076)
  - **[deckhouse-controller]** Reapply modules' registry settings after update their module source. [#8067](https://github.com/deckhouse/deckhouse/pull/8067)
  - **[deckhouse-controller]** Add a module release mechanism similar to the Deckhouse release mechanism. [#7348](https://github.com/deckhouse/deckhouse/pull/7348)
  - **[dhctl]** Add debug log file for all commands. [#8303](https://github.com/deckhouse/deckhouse/pull/8303)
@@ -44,15 +49,18 @@
 ## Fixes
 
 
+ - **[candi]** Fix incorrect condition for hostname discovery. [#8458](https://github.com/deckhouse/deckhouse/pull/8458)
  - **[candi]** Set the default `standard.bastion.instanceClass.rootDiskSize` property to 50 gigabytes in the `OpenStackClusterConfiguration` schema. [#8309](https://github.com/deckhouse/deckhouse/pull/8309)
  - **[cloud-provider-vsphere]** Update `govmomi` lib to fix discoverer for vSphere `8.0.2`. [#8204](https://github.com/deckhouse/deckhouse/pull/8204)
  - **[deckhouse]** Validate that registry address is always present in the DKP configuration. [#8242](https://github.com/deckhouse/deckhouse/pull/8242)
  - **[deckhouse]** Fix annotantions on ns `d8-cloud-intance-manager` to move to the another module. [#8196](https://github.com/deckhouse/deckhouse/pull/8196)
+ - **[deckhouse-controller]** Start addon-operator after controllers' preflight checks. [#8485](https://github.com/deckhouse/deckhouse/pull/8485)
  - **[deckhouse-controller]** Fix MPO _out of sync_ in HA mode. [#8370](https://github.com/deckhouse/deckhouse/pull/8370)
  - **[deckhouse-controller]** Fix updates to module loading statistics and an error related to concurrent requests for module documentation building. [#8235](https://github.com/deckhouse/deckhouse/pull/8235)
  - **[deckhouse-controller]** Repeated queries with a limited number of attempts to get CRDs and apply conversion strategies. [#7949](https://github.com/deckhouse/deckhouse/pull/7949)
  - **[dhctl]** Print invalid YAML documents. [#8296](https://github.com/deckhouse/deckhouse/pull/8296)
  - **[dhctl]** Fix preflight ports checking when static cluster is bootstrapping. [#7917](https://github.com/deckhouse/deckhouse/pull/7917)
+ - **[docs]** Add a guide for full etcd recovery in the cluster. [#8405](https://github.com/deckhouse/deckhouse/pull/8405)
  - **[docs]** Update kube-bench documentation to use `kubectl` and `jq` instead of `yq`. [#8439](https://github.com/deckhouse/deckhouse/pull/8439)
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#8413](https://github.com/deckhouse/deckhouse/pull/8413)
  - **[ingress-nginx]** Replace status with formatted status in logs. [#8385](https://github.com/deckhouse/deckhouse/pull/8385)
@@ -93,7 +101,6 @@
  - **[ingress-nginx]** Fix base image for the Ingress nginx controller v1.6. [#8183](https://github.com/deckhouse/deckhouse/pull/8183)
  - **[ingress-nginx]** Fix the way the number of ingress nginx replicas is counted. [#8155](https://github.com/deckhouse/deckhouse/pull/8155)
     Kruise-controller pod will be recreated.
- - **[l2-load-balancer]** The l2-load-balancer module is cancelled. [#8429](https://github.com/deckhouse/deckhouse/pull/8429)
  - **[prometheus]** Fix URLs to the documentation in the Grafana home panel. [#8072](https://github.com/deckhouse/deckhouse/pull/8072)
  - **[registrypackages]** Bump d8 CLI version to v0.1.0. [#8378](https://github.com/deckhouse/deckhouse/pull/8378)
 
