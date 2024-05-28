@@ -65,7 +65,7 @@ spec:
     {{- if $rule.actions.lookup }}
         lookup:
       {{- if $rule.actions.lookup.ipRoutingTableID }}
-          ipRouteTableID: {{ $rule.actions.lookup.ipRoutingTableID }}
+          ipRoutingTableID: {{ $rule.actions.lookup.ipRoutingTableID }}
       {{- end }}
     {{- end }}
     {{- if $rule.priority }}
