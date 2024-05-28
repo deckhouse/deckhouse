@@ -7,11 +7,11 @@ description: "Configuring zVirt for Deckhouse cloud provider operation."
 
 ### Prepare an operating system image
 
-Operating system vendors typically provide special cloud builds of their operating systems for use in virtualization environments. These builds typically contain virtual hardware drivers, cloud-init, virtualization guest agents, and are distributed as .img or .qcow2 disk images. We recommend that you use these cloud images as the OS on the nodes in your clusters.
+Operating system vendors typically provide special cloud builds of their operating systems for use in virtualization environments. These builds typically contain virtual hardware drivers, cloud-init, virtualization guest agents, and are distributed as IMG or QCOW2 disk images. We recommend that you use these cloud images as the OS on the nodes in your clusters.
 The cloud image of the operating system must be placed in the zVirt disk storage. Follow these steps to upload the OS image to the storage:
 
-1. Go to the administration portal zVirt -> Storage -> Disks
-2. Upload the cloud image of the OS to the repository
+1. Go to the administration portal to the section _zVirt -> Storage -> Disks_.
+2. Upload the cloud image of the OS to the repository.
 
    ![ Start loading the cloud-image of the OS into the repository ](../../images/030-cloud-provider-zvirt/template/step_env_en_01.png)
 
@@ -23,9 +23,9 @@ The cloud image of the operating system must be placed in the zVirt disk storage
 
 ### Prepare a virtual machine template
 
-To create a virtual machine template, go to the “Compute -> Virtual Machines” section of the zVirt Administration Portal and create a new virtual machine with the following parameters:
+To create a virtual machine template, go to the _Compute -> Virtual Machines_ section of the zVirt Administration Portal and create a new virtual machine with the following parameters:
 
-- Section _General_
+- Section _General_:
   - **Template:** `Blank`
   - **Operating system:** depending on the OS in the cloud image.
   - **Optimized for:** High Performance.
