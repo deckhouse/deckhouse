@@ -23,30 +23,48 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: EgressGatewayInstance is the Schema for the egressgatewayinstances
-            API
+          description: EgressGatewayInstance is the Schema for the egressgatewayinstances API.
           properties:
             spec:
               type: object
-              description: EgressGatewayInstanceSpec defines the desired state of EgressGatewayInstance
+              description: EgressGatewayInstanceSpec defines the desired state of EgressGatewayInstance.
               properties:
                 nodeName:
                   type: string
+                  description: Name of the active node.
                 sourceIP:
                   properties:
                     mode:
                       type: string
+                      description: |-
+                        Method of determining the source IP address that will be assigned to outgoing requests through this gateway. Possible options:
+                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the IP address. Features:
+                          * When the active node fails and a new one is assigned, the sender's IP address in network packets will change.
+                          * The network subsystem must be configured in advance on all egress nodes:
+                            * "public" interfaces must have the same name (e.g., eth1),
+                            * all necessary routes must be configured to access all external public services.
+                        * `VirtualIPAddress` — explicit indication of the source IP address. Features:
+                          * When the active node fails, the sender's IP address in network packets will not change.
+                          * The network subsystem must be configured in advance on all egress nodes:
+                            * all necessary routes must be configured to access all external public services,
+                            * the "public" interface must be prepared for automatic configuration of the "virtual" IP as a secondary IP address (when assigning an egress node as active, the address will not be displayed in the list of IPs on the "public" interface, but the node will emulate its presence using ARP responses).
                     primaryIPFromEgressGatewayNodeInterface:
                       properties:
                         interfaceName:
+                          description: |
+                            Name of the "public" network interface.
                           type: string
                       type: object
                     virtualIPAddress:
                       properties:
                         ip:
                           type: string
+                          description: |-
+                            "Virtual" IP address that will be assigned to outgoing requests through the egress gateway.
                         routingTableName:
                           type: string
+                          description: |-
+                            Name of the routing table.
                       type: object
                   required:
                     - mode
