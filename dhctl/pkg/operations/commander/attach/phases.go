@@ -12,28 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package _import
+package attach
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-type ImportStatus string
+type (
+	PhaseData struct {
+		ScanResult  *ScanResult
+		CheckResult *check.CheckResult
+	}
+	OnPhaseFunc = phases.OnPhaseFunc[PhaseData]
+)
 
 const (
-	ImportStatusScanned  ImportStatus = "Scanned"
-	ImportStatusImported ImportStatus = "Imported"
+	ScanPhase    phases.OperationPhase = "Scan"
+	CapturePhase phases.OperationPhase = "Capture"
+	CheckPhase   phases.OperationPhase = "Check"
 )
-
-type ScanResult struct {
-	ClusterConfiguration                 string `json:"cluster_configuration"`
-	ProviderSpecificClusterConfiguration string `json:"provider_specific_cluster_configuration"`
-	SSHPrivateKey                        string `json:"ssh_private_key"`
-	SSHPublicKey                         string `json:"ssh_public_key"`
-}
-
-type ImportResult struct {
-	Status      ImportStatus       `json:"status"`
-	ScanResult  *ScanResult        `json:"scan_result"`
-	CheckResult *check.CheckResult `json:"check_result,omitempty"`
-}
