@@ -54,10 +54,10 @@ func (pc *Checker) CheckMasterHostname() error {
 				err,
 			)
 		}
-		hostname := string(out)
+		hostname := strings.Trim(string(out), "\n")
 		log.DebugF("Master: %s hostname: %s\n", pc.sshClient.Settings.Host(), hostname)
 		if _, ok := masterHostnames[hostname]; ok {
-			log.ErrorF("Master with hostname %s already exist!\n", strings.Trim(hostname, "\n"))
+			log.ErrorF("Master with hostname %s already exist!\n", hostname)
 			masterWithError[pc.sshClient.Settings.Host()] = hostname
 			pc.sshClient.Settings.ChoiceNewHost()
 			continue
