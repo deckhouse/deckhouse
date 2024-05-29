@@ -51,6 +51,7 @@ The following resource minimums are recommended for infrastructure nodes, depend
   - 2 CPU, 4 RAM, 50 GB of disk space — if there are dedicated monitoring nodes in the cluster;
   - 4 CPU, 8 RAM, 50 GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
 - **Worker nodes** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the nodes.
+
 Estimates of the resources required for the clusters to run:
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 24 CPUs and 48GB RAM** along with fast 400+ IOPS disks for the master nodes.
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 28 CPUs and 64GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
