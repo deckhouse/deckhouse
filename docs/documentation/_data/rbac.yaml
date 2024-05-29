@@ -1,0 +1,2812 @@
+scopes:
+    deckhouse:
+        modules:
+            - flant-integration
+            - deckhouse
+        namespaces:
+            - d8-flant-integration
+            - d8-system
+    infrastructure:
+        modules:
+            - cloud-provider-openstack
+            - cloud-provider-vcd
+            - cloud-provider-vsphere
+            - cloud-provider-zvirt
+            - cloud-provider-aws
+            - cloud-provider-azure
+            - cloud-provider-gcp
+            - cloud-provider-yandex
+            - ceph-csi
+            - local-path-provisioner
+            - node-manager
+            - terraform-manager
+            - snapshot-controller
+            - istio
+            - vertical-pod-autoscaler
+            - pod-reloader
+        namespaces:
+            - d8-ceph-csi
+            - d8-cloud-instance-manager
+            - d8-cloud-provider-aws
+            - d8-cloud-provider-azure
+            - d8-cloud-provider-gcp
+            - d8-cloud-provider-openstack
+            - d8-cloud-provider-vcd
+            - d8-cloud-provider-vsphere
+            - d8-cloud-provider-yandex
+            - d8-cloud-provider-zvirt
+            - d8-istio
+            - d8-local-path-provisioner
+            - d8-pod-reloader
+            - d8-snapshot-controller
+            - d8-system
+            - kube-system
+    kubernetes:
+        modules:
+            - priority-class
+            - flow-schema
+            - kube-proxy
+            - control-plane-manager
+            - kube-dns
+        namespaces:
+            - kube-system
+    networking:
+        modules:
+            - node-local-dns
+            - network-gateway
+            - metallb
+            - flow-schema
+            - cni-cilium
+            - cni-flannel
+            - cni-simple-bridge
+            - kube-proxy
+            - kube-dns
+            - network-policy-engine
+            - istio
+            - ingress-nginx
+            - cilium-hubble
+            - openvpn
+        namespaces:
+            - d8-cni-cilium
+            - d8-cni-flannel
+            - d8-cni-simple-bridge
+            - d8-ingress-nginx
+            - d8-istio
+            - d8-metallb
+            - d8-network-gateway
+            - d8-openvpn
+            - d8-system
+            - kube-system
+    observability:
+        modules:
+            - monitoring-applications
+            - operator-prometheus
+            - prometheus
+            - prometheus-metrics-adapter
+            - prometheus-pushgateway
+            - extended-monitoring
+            - monitoring-custom
+            - monitoring-deckhouse
+            - monitoring-kubernetes
+            - monitoring-kubernetes-control-plane
+            - monitoring-ping
+            - log-shipper
+            - okmeter
+            - upmeter
+        namespaces:
+            - d8-log-shipper
+            - d8-monitoring
+            - d8-okmeter
+            - d8-operator-prometheus
+            - d8-upmeter
+            - kube-prometheus-pushgateway
+    others:
+        modules:
+            - multitenancy-manager
+            - keepalived
+            - descheduler
+            - loki
+            - chrony
+            - dashboard
+        namespaces:
+            - d8-chrony
+            - d8-dashboard
+            - d8-descheduler
+            - d8-keepalived
+            - d8-monitoring
+            - d8-multitenancy-manager
+    security:
+        modules:
+            - operator-trivy
+            - runtime-audit-engine
+            - admission-policy-engine
+            - cert-manager
+            - user-authz
+            - user-authn
+            - secret-copier
+        namespaces:
+            - d8-admission-policy-engine
+            - d8-cert-manager
+            - d8-operator-trivy
+            - d8-runtime-audit-engine
+            - d8-user-authn
+            - d8-user-authz
+    storage:
+        modules:
+            - ceph-csi
+            - snapshot-controller
+        namespaces:
+            - d8-ceph-csi
+            - d8-snapshot-controller
+modules:
+    admission-policy-engine:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:admission-policy-engine:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - operationpolicies
+                        - securitypolicies
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - templates.gatekeeper.sh
+                      resources:
+                        - constrainttemplates
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - admission-policy-engine
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:admission-policy-engine:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - operationpolicies
+                        - securitypolicies
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - templates.gatekeeper.sh
+                      resources:
+                        - constrainttemplates
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - admission-policy-engine
+                      nonresourceurls: []
+            use: []
+        namespace: d8-admission-policy-engine
+    ceph-csi:
+        scopes:
+            - storage
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:ceph-csi:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - cephcsidriver
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - ceph-csi
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:ceph-csi:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - cephcsidriver
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - ceph-csi
+                      nonresourceurls: []
+            use: []
+        namespace: d8-ceph-csi
+    cert-manager:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cert-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - cert-manager.io
+                      resources:
+                        - clusterissuers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cert-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cert-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - cert-manager.io
+                      resources:
+                        - clusterissuers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cert-manager
+                      nonresourceurls: []
+            use:
+                - name: d8:use:capability:module:cert-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - cert-manager.io
+                      resources:
+                        - certificaterequests
+                        - certificates
+                        - issuers
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:use:capability:module:cert-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - cert-manager.io
+                      resources:
+                        - certificaterequests
+                        - certificates
+                        - issuers
+                      resourcenames: []
+                      nonresourceurls: []
+        namespace: d8-cert-manager
+    chrony:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:chrony:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - chrony
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:chrony:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - chrony
+                      nonresourceurls: []
+            use: []
+        namespace: d8-chrony
+    cilium-hubble:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cilium-hubble:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cilium-hubble
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cilium-hubble:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cilium-hubble
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cni-cilium
+    cloud-provider-aws:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-aws:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-aws
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-aws:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-aws
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-aws
+    cloud-provider-azure:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-azure:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-azure
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-azure:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-azure
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-azure
+    cloud-provider-gcp:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-gcp:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-gcp
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-gcp:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-gcp
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-gcp
+    cloud-provider-openstack:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-openstack:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-openstack
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-openstack:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-openstack
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-openstack
+    cloud-provider-vcd:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-vcd:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-vcd
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-vcd:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-vcd
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-vcd
+    cloud-provider-vsphere:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-vsphere:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-vsphere
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-vsphere:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-vsphere
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-vsphere
+    cloud-provider-yandex:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-yandex:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-yandex
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-yandex:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-yandex
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-yandex
+    cloud-provider-zvirt:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cloud-provider-zvirt:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-zvirt
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cloud-provider-zvirt:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cloud-provider-zvirt
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-provider-zvirt
+    cni-cilium:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cni-cilium:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-cilium
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cni-cilium:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-cilium
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cni-cilium
+    cni-flannel:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cni-flannel:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-flannel
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cni-flannel:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-flannel
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cni-flannel
+    cni-simple-bridge:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:cni-simple-bridge:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-simple-bridge
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:cni-simple-bridge:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - cni-simple-bridge
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cni-simple-bridge
+    control-plane-manager:
+        scopes:
+            - kubernetes
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:control-plane-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - control-plane-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:control-plane-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - control-plane-manager
+                      nonresourceurls: []
+            use: []
+        namespace: kube-system
+    dashboard:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:dashboard:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - dashboard
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:dashboard:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - dashboard
+                      nonresourceurls: []
+            use: []
+        namespace: d8-dashboard
+    deckhouse:
+        scopes:
+            - deckhouse
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:deckhouse:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - deckhousereleases
+                        - moduleconfigs
+                        - moduledocumentations
+                        - modulepulloverrides
+                        - modulereleases
+                        - modulesources
+                        - moduleupdatepolicies
+                        - modules
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:deckhouse:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - deckhousereleases
+                        - moduleconfigs
+                        - moduledocumentations
+                        - modulepulloverrides
+                        - modulereleases
+                        - modulesources
+                        - moduleupdatepolicies
+                        - modules
+                      resourcenames: []
+                      nonresourceurls: []
+            use: []
+        namespace: d8-system
+    descheduler:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:descheduler:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - deschedulers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - descheduler
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:descheduler:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - deschedulers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - descheduler
+                      nonresourceurls: []
+            use: []
+        namespace: d8-descheduler
+    extended-monitoring:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:extended-monitoring:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - extended-monitoring
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:extended-monitoring:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - extended-monitoring
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    flant-integration:
+        scopes:
+            - deckhouse
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:flant-integration:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - flant-integration
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:flant-integration:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - flant-integration
+                      nonresourceurls: []
+            use: []
+        namespace: d8-flant-integration
+    flow-schema:
+        scopes:
+            - kubernetes
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:flow-schema:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - flow-schema
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:flow-schema:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - flow-schema
+                      nonresourceurls: []
+            use: []
+        namespace: none
+    ingress-nginx:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:ingress-nginx:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - ingressnginxcontrollers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - ingress-nginx
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:ingress-nginx:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - ingressnginxcontrollers
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - ingress-nginx
+                      nonresourceurls: []
+            use: []
+        namespace: d8-ingress-nginx
+    istio:
+        scopes:
+            - infrastructure
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:istio:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - ingressistiocontrollers
+                        - istiofederations
+                        - istiomulticlusters
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - istio
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:istio:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - ingressistiocontrollers
+                        - istiofederations
+                        - istiomulticlusters
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - istio
+                      nonresourceurls: []
+            use: []
+        namespace: d8-istio
+    keepalived:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:keepalived:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - keepalivedinstances
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - keepalived
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:keepalived:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - keepalivedinstances
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - keepalived
+                      nonresourceurls: []
+            use: []
+        namespace: d8-keepalived
+    kube-dns:
+        scopes:
+            - kubernetes
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:kube-dns:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - kube-dns
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:kube-dns:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - kube-dns
+                      nonresourceurls: []
+            use: []
+        namespace: kube-system
+    kube-proxy:
+        scopes:
+            - kubernetes
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:kube-proxy:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - kube-proxy
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:kube-proxy:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - kube-proxy
+                      nonresourceurls: []
+            use: []
+        namespace: kube-system
+    local-path-provisioner:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:local-path-provisioner:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - localpathprovisioners
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - local-path-provisioner
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:local-path-provisioner:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - localpathprovisioners
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - local-path-provisioner
+                      nonresourceurls: []
+            use: []
+        namespace: d8-local-path-provisioner
+    log-shipper:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:log-shipper:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - clusterlogdestinations
+                        - clusterloggingconfigs
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - log-shipper
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:log-shipper:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - clusterlogdestinations
+                        - clusterloggingconfigs
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - log-shipper
+                      nonresourceurls: []
+            use:
+                - name: d8:use:capability:module:log-shipper:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - podloggingconfigs
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:use:capability:module:log-shipper:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - podloggingconfigs
+                      resourcenames: []
+                      nonresourceurls: []
+        namespace: d8-log-shipper
+    loki:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:loki:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - loki
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:loki:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - loki
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    metallb:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:metallb:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - metallb
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:metallb:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - metallb
+                      nonresourceurls: []
+            use: []
+        namespace: d8-metallb
+    monitoring-applications:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-applications:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-applications
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-applications:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-applications
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    monitoring-custom:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-custom:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-custom
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-custom:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-custom
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    monitoring-deckhouse:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-deckhouse:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-deckhouse
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-deckhouse:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-deckhouse
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    monitoring-kubernetes:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-kubernetes:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-kubernetes
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-kubernetes:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-kubernetes
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    monitoring-kubernetes-control-plane:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-kubernetes-control-plane:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-kubernetes-control-plane
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-kubernetes-control-plane:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-kubernetes-control-plane
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    monitoring-ping:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:monitoring-ping:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-ping
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:monitoring-ping:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - monitoring-ping
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    multitenancy-manager:
+        scopes:
+            - others
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:multitenancy-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - projects
+                        - projecttemplates
+                        - projecttypes
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - multitenancy-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:multitenancy-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - projects
+                        - projecttemplates
+                        - projecttypes
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - multitenancy-manager
+                      nonresourceurls: []
+            use: []
+        namespace: d8-multitenancy-manager
+    network-gateway:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:network-gateway:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - network-gateway
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:network-gateway:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - network-gateway
+                      nonresourceurls: []
+            use: []
+        namespace: d8-network-gateway
+    network-policy-engine:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:network-policy-engine:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - network-policy-engine
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:network-policy-engine:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - network-policy-engine
+                      nonresourceurls: []
+            use: []
+        namespace: d8-system
+    node-local-dns:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:node-local-dns:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - node-local-dns
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:node-local-dns:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - node-local-dns
+                      nonresourceurls: []
+            use: []
+        namespace: kube-system
+    node-manager:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:node-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - instances
+                        - nodegroupconfigurations
+                        - nodeusers
+                        - sshcredentials
+                        - staticinstances
+                        - nodegroups
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - node-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:node-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - instances
+                        - nodegroupconfigurations
+                        - nodeusers
+                        - sshcredentials
+                        - staticinstances
+                        - nodegroups
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - node-manager
+                      nonresourceurls: []
+            use: []
+        namespace: d8-cloud-instance-manager
+    okmeter:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:okmeter:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - okmeter
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:okmeter:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - okmeter
+                      nonresourceurls: []
+            use: []
+        namespace: d8-okmeter
+    openvpn:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:openvpn:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - openvpn
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:openvpn:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - openvpn
+                      nonresourceurls: []
+            use: []
+        namespace: d8-openvpn
+    operator-prometheus:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:operator-prometheus:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - operator-prometheus
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:operator-prometheus:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - operator-prometheus
+                      nonresourceurls: []
+            use: []
+        namespace: d8-operator-prometheus
+    operator-trivy:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:operator-trivy:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - aquasecurity.github.io
+                      resources:
+                        - clustercompliancereports
+                        - clusterconfigauditreports
+                        - clusterinfraassessmentreports
+                        - clusterrbacassessmentreports
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - operator-trivy
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:operator-trivy:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - aquasecurity.github.io
+                      resources:
+                        - clustercompliancereports
+                        - clusterconfigauditreports
+                        - clusterinfraassessmentreports
+                        - clusterrbacassessmentreports
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - operator-trivy
+                      nonresourceurls: []
+            use:
+                - name: d8:use:capability:module:operator-trivy:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - aquasecurity.github.io
+                      resources:
+                        - configauditreports
+                        - exposedsecretreports
+                        - infraassessmentreports
+                        - rbacassessmentreports
+                        - sbomreports
+                        - vulnerabilityreports
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:use:capability:module:operator-trivy:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - aquasecurity.github.io
+                      resources:
+                        - configauditreports
+                        - exposedsecretreports
+                        - infraassessmentreports
+                        - rbacassessmentreports
+                        - sbomreports
+                        - vulnerabilityreports
+                      resourcenames: []
+                      nonresourceurls: []
+        namespace: d8-operator-trivy
+    pod-reloader:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:pod-reloader:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - pod-reloader
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:pod-reloader:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - pod-reloader
+                      nonresourceurls: []
+            use: []
+        namespace: d8-pod-reloader
+    priority-class:
+        scopes:
+            - kubernetes
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:priority-class:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - priority-class
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:priority-class:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - priority-class
+                      nonresourceurls: []
+            use: []
+        namespace: none
+    prometheus:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:prometheus:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - customalertmanagers
+                        - grafanaadditionaldatasources
+                        - grafanaalertschannels
+                        - grafanadashboarddefinitions
+                        - clusteralerts
+                        - customprometheusrules
+                        - prometheusremotewrites
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:prometheus:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - customalertmanagers
+                        - grafanaadditionaldatasources
+                        - grafanaalertschannels
+                        - grafanadashboarddefinitions
+                        - clusteralerts
+                        - customprometheusrules
+                        - prometheusremotewrites
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus
+                      nonresourceurls: []
+            use: []
+        namespace: d8-monitoring
+    prometheus-metrics-adapter:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:prometheus-metrics-adapter:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - clusterdaemonsetmetrics
+                        - clusterdeploymentmetrics
+                        - clusteringressmetrics
+                        - clusterpodmetrics
+                        - clusterservicemetrics
+                        - clusterstatefulsetmetrics
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus-metrics-adapter
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:prometheus-metrics-adapter:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - clusterdaemonsetmetrics
+                        - clusterdeploymentmetrics
+                        - clusteringressmetrics
+                        - clusterpodmetrics
+                        - clusterservicemetrics
+                        - clusterstatefulsetmetrics
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus-metrics-adapter
+                      nonresourceurls: []
+            use:
+                - name: d8:use:capability:module:prometheus-metrics-adapter:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - daemonsetmetrics
+                        - deploymentmetrics
+                        - ingressmetrics
+                        - namespacemetrics
+                        - podmetrics
+                        - servicemetrics
+                        - statefulsetmetrics
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:use:capability:module:prometheus-metrics-adapter:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - daemonsetmetrics
+                        - deploymentmetrics
+                        - ingressmetrics
+                        - namespacemetrics
+                        - podmetrics
+                        - servicemetrics
+                        - statefulsetmetrics
+                      resourcenames: []
+                      nonresourceurls: []
+        namespace: d8-monitoring
+    prometheus-pushgateway:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:prometheus-pushgateway:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus-pushgateway
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:prometheus-pushgateway:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - prometheus-pushgateway
+                      nonresourceurls: []
+            use: []
+        namespace: kube-prometheus-pushgateway
+    runtime-audit-engine:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:runtime-audit-engine:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - falcoauditrules
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - runtime-audit-engine
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:runtime-audit-engine:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - falcoauditrules
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - runtime-audit-engine
+                      nonresourceurls: []
+            use: []
+        namespace: d8-runtime-audit-engine
+    secret-copier:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:secret-copier:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - secret-copier
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:secret-copier:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - secret-copier
+                      nonresourceurls: []
+            use: []
+        namespace: none
+    snapshot-controller:
+        scopes:
+            - storage
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:snapshot-controller:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - snapshot-controller
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:snapshot-controller:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - snapshot-controller
+                      nonresourceurls: []
+            use: []
+        namespace: d8-snapshot-controller
+    terraform-manager:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:terraform-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - terraform-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:terraform-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - terraform-manager
+                      nonresourceurls: []
+            use: []
+        namespace: d8-system
+    upmeter:
+        scopes:
+            - observability
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:upmeter:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - downtimes
+                        - upmeterhookprobes
+                        - upmeterremotewrites
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - upmeter
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:upmeter:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - downtimes
+                        - upmeterhookprobes
+                        - upmeterremotewrites
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - upmeter
+                      nonresourceurls: []
+            use: []
+        namespace: d8-upmeter
+    user-authn:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:user-authn:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - dexproviders
+                        - groups
+                        - users
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - user-authn
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:user-authn:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - dexproviders
+                        - groups
+                        - users
+                      resourcenames: []
+                      nonresourceurls: []
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - user-authn
+                      nonresourceurls: []
+            use:
+                - name: d8:use:capability:module:user-authn:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - dexauthenticators
+                        - dexclients
+                      resourcenames: []
+                      nonresourceurls: []
+                - name: d8:use:capability:module:user-authn:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                        - deletecollection
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - dexauthenticators
+                        - dexclients
+                      resourcenames: []
+                      nonresourceurls: []
+        namespace: d8-user-authn
+    user-authz:
+        scopes:
+            - security
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:user-authz:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - user-authz
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:user-authz:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - user-authz
+                      nonresourceurls: []
+            use: []
+        namespace: d8-user-authz
+    vertical-pod-autoscaler:
+        scopes:
+            - infrastructure
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:vertical-pod-autoscaler:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - vertical-pod-autoscaler
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:vertical-pod-autoscaler:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - vertical-pod-autoscaler
+                      nonresourceurls: []
+            use: []
+        namespace: kube-system

@@ -1,0 +1,5 @@
+module: descheduler
+scopes:
+  - others
+crds:
+  - modules/400-descheduler/crds/*.yaml

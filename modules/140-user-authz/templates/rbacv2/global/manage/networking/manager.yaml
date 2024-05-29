@@ -1,0 +1,19 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:manage:networking:manager
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: scope
+    rbac.deckhouse.io/scope: networking
+    rbac.deckhouse.io/aggregate-to-role: admin
+    rbac.deckhouse.io/aggregate-to-networking: "true"
+    rbac.deckhouse.io/aggregate-to-all-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-networking: "true"
+        rbac.deckhouse.io/aggregate-to-role: manager
+rules: []
