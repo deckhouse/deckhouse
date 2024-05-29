@@ -42,10 +42,13 @@ $(document).ready(function () {
       }
     }
 
-    if ((noProxyAddressList && noProxyAddressList.length > 0) || !(noProxyAddressList && noProxyAddressList.length > 0)) {
-      noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
-      update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
-    }
+    if (noProxyAddressList && noProxyAddressList.length > 0) {
+      noProxyAddressList = '["' + noProxyAddressList.split(',').join('", "') + '"]';
+      noProxyAddressList = noProxyAddressList.replaceAll('""', '"');
+    } else {
+      noProxyAddressList = '<NO_PROXY_LIST_WITH_INTERNAL_NETWORK_CIDRS>';
+      }
+    update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
 
   } else {
     // Delete proxy section
