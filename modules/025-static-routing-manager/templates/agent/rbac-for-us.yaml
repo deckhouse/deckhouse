@@ -16,6 +16,8 @@ rules:
   resources:
   - iprulesets
   - iprulesets/status
+  - nodeiprulesets
+  - nodeiprulesets/status
   - routingtables
   - routingtables/status
   - noderoutingtables
