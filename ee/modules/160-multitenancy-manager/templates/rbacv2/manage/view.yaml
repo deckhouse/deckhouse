@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/aggregate-to-others: "true"
+    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-multitenancy-manager
+  name: d8:manage:capability:module:multitenancy-manager:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projects
+  - projecttemplates
+  - projecttypes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - multitenancy-manager
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
