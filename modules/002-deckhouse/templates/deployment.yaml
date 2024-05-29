@@ -56,7 +56,11 @@ metadata:
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 spec:
+{{- if .Values.global.clusterIsBootstrapped }}
   {{- include "helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha" (list . (dict "strategy" "Recreate")) | nindent 2 }}
+{{- else }}
+  replicas: 1
+{{- end }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -68,7 +72,7 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
     spec:
-{{- if (include "helm_lib_ha_enabled" .) }}
+{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
