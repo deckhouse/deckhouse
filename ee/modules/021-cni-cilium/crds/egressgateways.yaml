@@ -52,12 +52,12 @@ spec:
                         A method for determining the source IP address to be assigned to requests through this gateway.
 
                         Possible options:
-                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the source IP address.
+                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the _public_ network interface of the node will be used as the source IP address.
 
                           Particularities:
                           * When the active node goes down and a new node is assigned, the outgoing IP address will change.
                           * The network subsystem on all egress nodes must be configured in advance:
-                            * the "public" interfaces must have the same name (eth1, for example),
+                            * the _public_ interfaces must have the same name (eth1, for example),
                             * all necessary routes for access to all external public services must be configured.
                         * `VirtualIPAddress` — explicitly specify the outgoing IP address.
 
@@ -65,7 +65,7 @@ spec:
                           * If the active node goes down, the outgoing IP address will not change.
                           * The network subsystem on all egress nodes must be configured in advance:
                             * all necessary routes for access to all external public services must be configured,
-                            * the "public" interface must be prepared to automatically configure a "virtual" IP as a secondary IP address (if an egress node is designated as active, the address will not appear in the IP list on the "public" interface, but the node will emulate it with ARP-responses)
+                            * the _public_ interface must be prepared to automatically configure a _virtual_ IP as a secondary IP address (if an egress node is designated as active, the address will not appear in the IP list on the _public_ interface, but the node will emulate it with ARP-responses)
                       enum:
                         - VirtualIPAddress
                         - PrimaryIPFromEgressGatewayNodeInterface
@@ -74,7 +74,7 @@ spec:
                       properties:
                         ip:
                           x-doc-d8Revision: ee
-                          description: The "virtual" source IP address to be assigned to outgoing requests through the egress gateway.
+                          description: The _virtual_ source IP address to be assigned to outgoing requests through the egress gateway.
                           type: string
                       type: object
                     primaryIPFromEgressGatewayNodeInterface:
