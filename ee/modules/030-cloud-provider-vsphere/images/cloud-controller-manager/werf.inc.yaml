@@ -13,11 +13,13 @@ docker:
   ENTRYPOINT: ["/bin/vsphere-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare "=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
     {{- end }}
 git:
@@ -36,7 +38,7 @@ shell:
   - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
   - git checkout {{ $value.ccm.vsphere }}
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
+  - find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
   - make build VERSION={{ $value.ccm.vsphere }}
   - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64

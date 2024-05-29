@@ -5,7 +5,9 @@
   {{- $full_version := printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}

@@ -14,10 +14,19 @@ docker:
   ENTRYPOINT: ["/csi-attacher"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- end }}
 shell:
   beforeInstall:
+    {{- if semverCompare ">=1.30" $version }}
+    - git clone {{ $.SOURCE_REPO }}/kubernetes-csi/external-attacher.git /src
+    - cd /src && git reset --hard {{ $value.csi.attacher }}
+    {{- else }}
     - git clone --depth 1 --branch {{ $value.csi.attacher }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-attacher.git /src
+    {{- end }}
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src

@@ -1,0 +1,23 @@
+diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
+index 28802c9a8..3362f01b5 100644
+--- a/cluster-autoscaler/utils/drain/drain.go
++++ b/cluster-autoscaler/utils/drain/drain.go
+@@ -110,6 +110,18 @@ func GetPodsForDeletionOnNodeDrain(
+ 		safeToEvict := hasSafeToEvictAnnotation(pod)
+ 		terminal := isPodTerminal(pod)
+ 
++		if strings.HasPrefix(pod.Namespace, "d8-") {
++			evictionEnabled := func(pod *apiv1.Pod) bool {
++				if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; ok && val == "true" {
++					return true
++				}
++				return false
++			}(pod)
++			if !evictionEnabled {
++				continue
++			}
++		}
++
+ 		if skipNodesWithCustomControllerPods {
+ 			// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
+ 			replicated, isDaemonSetPod, blockingPod, err = legacyCheckForReplicatedPods(listers, pod, minReplica)

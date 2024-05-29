@@ -14,11 +14,13 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+    {{- else if semverCompare "=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- end }}
 git:
@@ -37,7 +39,7 @@ shell:
     - mkdir /src
     - cd /src
     - wget https://github.com/kubernetes-sigs/cloud-provider-azure/archive/{{ $value.ccm.azure }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+    - test -d /patches/{{ $version }} && find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
     - hack/pkg-config.sh > .pkg_config
     - export VERSION={{ $value.ccm.azure }}
     - make bin/azure-cloud-controller-manager

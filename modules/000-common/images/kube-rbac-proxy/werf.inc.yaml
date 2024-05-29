@@ -26,7 +26,7 @@ shell:
   - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy.git /src
   install:
   - cd /src
-  - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod edit -go 1.20
   - go get golang.org/x/net@v0.17.0
