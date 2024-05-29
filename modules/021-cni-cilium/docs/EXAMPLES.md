@@ -38,9 +38,10 @@ spec:
   sourceIP:
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
-      interfaceName: eth1 # The "public" interface must have the same name on all nodes that matching the nodeSelector.
-                          # If the active node fails, traffic will be redirected through the backup node and
-                          # the source IP address of the network packets will change.
+      # The "public" interface must have the same name on all nodes that matching the nodeSelector.
+      # If the active node fails, traffic will be redirected through the backup node and
+      # the source IP address of the network packets will change.
+      interfaceName: eth1 
 ```
 
 #### EgressGateway in VirtualIPAddress mode
@@ -56,10 +57,11 @@ spec:
   sourceIP:
     mode: VirtualIPAddress
     virtualIPAddress:
-      ip: 172.18.18.242 # Each node must have all necessary routes configured for access to all external public services,
-                        # the "public" interface must be ready to accept a "virtual" IP as a secondary IP address.
-                        # In case of failure of the active node, traffic will be redirected through the backup node and
-                        # the source IP address of the network packets will not change.
+      # Each node must have all necessary routes configured for access to all external public services,
+      # the "public" interface must be ready to accept a "virtual" IP as a secondary IP address.
+      # In case of failure of the active node, traffic will be redirected through the backup node and
+      # the source IP address of the network packets will not change.
+      ip: 172.18.18.242
 ```
 
 #### EgressGatewayPolicy
