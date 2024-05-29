@@ -6,8 +6,9 @@
   rocky:
     '8':
     '9':
-  '_redos':
+  redos:
     '7.3':
+    '8.0':
   altlinux:
     'p10':
     '10.0':
