@@ -21,47 +21,48 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
+func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.bootstrapServerTransitions())
+	f := fsm.New("initial", s.convergeServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.BootstrapRequest)
-	sendCh := make(chan *pb.BootstrapResponse)
-	phaseSwitcher := &bootstrapPhaseSwitcher{
+	receiveCh := make(chan *pb.ConvergeRequest)
+	sendCh := make(chan *pb.ConvergeResponse)
+	phaseSwitcher := &convergePhaseSwitcher{
 		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
 	}
 
-	s.startBootstrapperReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startBootstrapperSender(server, sendCh, internalErrCh)
+	s.startConvergerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startConvergerSender(server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -76,22 +77,22 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing BootstrapRequest",
+				"processing ConvergeRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.BootstrapRequest_Start:
+			case *pb.ConvergeRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startBootstrap(
-					ctx, message.Start, phaseSwitcher, &bootstrapLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startConverge(
+					ctx, message.Start, phaseSwitcher, &convergeLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
-			case *pb.BootstrapRequest_Continue:
+			case *pb.ConvergeRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
@@ -118,9 +119,9 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startBootstrapperReceiver(
-	server pb.DHCTL_BootstrapServer,
-	receiveCh chan *pb.BootstrapRequest,
+func (s *Service) startConvergerReceiver(
+	server pb.DHCTL_ConvergeServer,
+	receiveCh chan *pb.ConvergeRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -140,9 +141,9 @@ func (s *Service) startBootstrapperReceiver(
 	}()
 }
 
-func (s *Service) startBootstrapperSender(
-	server pb.DHCTL_BootstrapServer,
-	sendCh chan *pb.BootstrapResponse,
+func (s *Service) startConvergerSender(
+	server pb.DHCTL_ConvergeServer,
+	sendCh chan *pb.ConvergeResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -159,29 +160,29 @@ func (s *Service) startBootstrapperSender(
 	}()
 }
 
-func (s *Service) startBootstrap(
+func (s *Service) startConverge(
 	ctx context.Context,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
-	logWriter *bootstrapLogWriter,
-	sendCh chan *pb.BootstrapResponse,
+	request *pb.ConvergeStart,
+	phaseSwitcher *convergePhaseSwitcher,
+	logWriter *convergeLogWriter,
+	sendCh chan *pb.ConvergeResponse,
 ) {
 	go func() {
-		result := s.bootstrap(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.BootstrapResponse{
-			Message: &pb.BootstrapResponse_Result{
+		result := s.converge(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.ConvergeResponse{
+			Message: &pb.ConvergeResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) bootstrap(
-	_ context.Context,
-	request *pb.BootstrapStart,
-	phaseSwitcher *bootstrapPhaseSwitcher,
+func (s *Service) converge(
+	ctx context.Context,
+	request *pb.ConvergeStart,
+	phaseSwitcher *convergePhaseSwitcher,
 	logWriter io.Writer,
-) *pb.BootstrapResult {
+) *pb.ConvergeResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -190,8 +191,8 @@ func (s *Service) bootstrap(
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.PreflightSkipDeckhouseVersionCheck = true
-	app.PreflightSkipAll = true
+	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
@@ -199,57 +200,43 @@ func (s *Service) bootstrap(
 		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
 	}()
 
-	var (
-		configPath              string
-		resourcesPath           string
-		postBootstrapScriptPath string
-	)
-	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
+	var metaConfig *config.MetaConfig
+	err = log.Process("default", "Parsing cluster config", func() error {
+		metaConfig, err = config.ParseConfigFromData(
+			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
 		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
+			return fmt.Errorf("parsing cluster meta config: %w", err)
 		}
-
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
-		}
-
-		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
-		if err != nil {
-			return fmt.Errorf("failed to write post bootstrap script: %w", err)
-		}
-		postBootstrapScript, err := os.Open(postBootstrapScriptPath)
-		if err != nil {
-			return fmt.Errorf("failed to open post bootstrap script: %w", err)
-		}
-		err = postBootstrapScript.Chmod(0555)
-		if err != nil {
-			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	var initialState phases.DhctlState
 	err = log.Process("default", "Preparing DHCTL state", func() error {
+		cachePath := metaConfig.CachePath()
+		var initialState phases.DhctlState
 		if request.State != "" {
 			err = json.Unmarshal([]byte(request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+		err = cache.InitWithOptions(
+			cachePath,
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+		)
+		if err != nil {
+			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
+		}
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
 	var sshClient *ssh.Client
@@ -272,37 +259,49 @@ func (s *Service) bootstrap(
 		return nil
 	})
 	if err != nil {
-		return &pb.BootstrapResult{Err: err.Error()}
+		return &pb.ConvergeResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		SSHClient:                  sshClient,
-		InitialState:               initialState,
-		ResetInitialState:          true,
-		DisableBootstrapClearCache: true,
-		OnPhaseFunc:                phaseSwitcher.switchPhase,
-		CommanderMode:              request.Options.CommanderMode,
-		TerraformContext:           terraform.NewTerraformContext(),
-		ConfigPaths:                []string{configPath},
-		ResourcesPath:              resourcesPath,
-		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 pointer.Bool(true),
-		AutoApprove:                pointer.Bool(true),
-		KubernetesInitParams:       nil,
+	terraformContext := terraform.NewTerraformContext()
+
+	checker := check.NewChecker(&check.Params{
+		SSHClient:     sshClient,
+		StateCache:    cache.Global(),
+		CommanderMode: request.Options.CommanderMode,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(bootstrapErr, marshalErr)
+	converger := converge.NewConverger(&converge.Params{
+		SSHClient:              sshClient,
+		OnPhaseFunc:            phaseSwitcher.switchPhase,
+		AutoApprove:            true,
+		AutoDismissDestructive: false,
+		CommanderMode:          true,
+		CommanderModeParams: commander.NewCommanderModeParams(
+			[]byte(request.ClusterConfig),
+			[]byte(request.ProviderSpecificClusterConfig),
+		),
+		TerraformContext:           terraformContext,
+		Checker:                    checker,
+		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
+		OnCheckResult:              onCheckResult,
+	})
 
-	return &pb.BootstrapResult{State: string(stateData), Err: errToString(err)}
+	result, convergeErr := converger.Converge(ctx)
+	state := converger.GetLastState()
+	stateData, marshalStateErr := json.Marshal(state)
+	resultString, marshalResultErr := json.Marshal(result)
+	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
+
+	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
 }
 
-func (s *Service) bootstrapServerTransitions() []fsm.Transition {
+func (s *Service) convergeServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -322,15 +321,15 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 	}
 }
 
-type bootstrapLogWriter struct {
+type convergeLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.BootstrapResponse
+	sendCh chan *pb.ConvergeResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *bootstrapLogWriter) Write(p []byte) (n int, err error) {
+func (w *convergeLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -353,21 +352,21 @@ func (w *bootstrapLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.BootstrapResponse{
-			Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.ConvergeResponse{
+			Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 
 	return len(p), nil
 }
 
-type bootstrapPhaseSwitcher struct {
-	sendCh chan *pb.BootstrapResponse
+type convergePhaseSwitcher struct {
+	sendCh chan *pb.ConvergeResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *bootstrapPhaseSwitcher) switchPhase(
+func (b *convergePhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	_ interface{},
@@ -379,9 +378,9 @@ func (b *bootstrapPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	b.sendCh <- &pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_PhaseEnd{
-			PhaseEnd: &pb.BootstrapPhaseEnd{
+	b.sendCh <- &pb.ConvergeResponse{
+		Message: &pb.ConvergeResponse_PhaseEnd{
+			PhaseEnd: &pb.ConvergePhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				NextPhase:           string(nextPhase),

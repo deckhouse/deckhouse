@@ -36,8 +36,8 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -47,7 +47,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl)
+	log := logger.NewLogger(lvl).With(slog.String("component", "proxy"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -77,14 +77,16 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptors.Logger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryParallelTasksLimiter(sem, log),
+			interceptors.UnaryLogger(log),
+			logging.UnaryServerInterceptor(interceptors.Logger()),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.UnaryParallelTasksLimiter(sem),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptors.Logger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamParallelTasksLimiter(sem, log),
+			interceptors.StreamLogger(log),
+			logging.StreamServerInterceptor(interceptors.Logger()),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.StreamParallelTasksLimiter(sem),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.new())),
 	)
@@ -135,13 +137,10 @@ func (d *streamDirector) new() proxy.StreamDirector {
 		md, _ := metadata.FromIncomingContext(ctx)
 		outCtx := metadata.NewOutgoingContext(ctx, md.Copy())
 
-		sockUUID, err := uuid.NewUUID()
+		address, err := socketPath()
 		if err != nil {
-			return outCtx, nil, fmt.Errorf("creating uuid for socket path")
+			return outCtx, nil, err
 		}
-		address := filepath.Join(os.TempDir(), "dhctl", sockUUID.String())
-
-		d.log.Info("starting new dhctl instance", "addr", address)
 
 		cmd := exec.Command(
 			os.Args[0],
@@ -150,6 +149,7 @@ func (d *streamDirector) new() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
+		// todo: handle logs from parallel server instances
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -157,6 +157,14 @@ func (d *streamDirector) new() proxy.StreamDirector {
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
+
+		logger.L(ctx).Info("started new dhctl instance", slog.String("addr", address))
+
+		go func() {
+			exitErr := cmd.Wait()
+			logger.L(ctx).
+				Info("stopped dhctl instance", slog.String("addr", address), logger.Err(exitErr))
+		}()
 
 		conn, err := grpc.NewClient(
 			"unix://"+address,
@@ -188,4 +196,14 @@ func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error 
 		}
 		return nil
 	})
+}
+
+func socketPath() (string, error) {
+	sockUUID, err := uuid.NewUUID()
+	if err != nil {
+		return "", fmt.Errorf("creating uuid for socket path")
+	}
+
+	address := filepath.Join("/var/run/dhctl", sockUUID.String()+".sock")
+	return address, nil
 }
