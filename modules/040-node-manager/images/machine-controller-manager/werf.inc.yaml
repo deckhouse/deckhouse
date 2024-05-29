@@ -20,7 +20,7 @@ shell:
   - apk add git
   setup:
   - mkdir /src && cd /src
-  - git clone --depth 1 --branch removing-from-balancing-after-delay {{ $.SOURCE_REPO }}/deckhouse/mcm.git .
+  - git clone --depth 1 --branch removing-from-balancing-after-delay https://github.com/deckhouse/mcm.git .
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
   - chown 64535:64535 machine-controller-manager
   - chmod 0700 machine-controller-manager
