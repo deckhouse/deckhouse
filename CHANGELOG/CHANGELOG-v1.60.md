@@ -49,6 +49,7 @@
 
  - **[candi]** Fix incorrect condition for hostname discovery. [#8458](https://github.com/deckhouse/deckhouse/pull/8458)
  - **[candi]** Set the default `standard.bastion.instanceClass.rootDiskSize` property to 50 gigabytes in the `OpenStackClusterConfiguration` schema. [#8309](https://github.com/deckhouse/deckhouse/pull/8309)
+ - **[cloud-provider-vcd]** Remove required from discoveryData property. [#8541](https://github.com/deckhouse/deckhouse/pull/8541)
  - **[cloud-provider-vsphere]** Update `govmomi` lib to fix discoverer for vSphere `8.0.2`. [#8204](https://github.com/deckhouse/deckhouse/pull/8204)
  - **[deckhouse]** Validate that registry address is always present in the DKP configuration. [#8242](https://github.com/deckhouse/deckhouse/pull/8242)
  - **[deckhouse]** Fix annotantions on ns `d8-cloud-intance-manager` to move to the another module. [#8196](https://github.com/deckhouse/deckhouse/pull/8196)
@@ -74,6 +75,7 @@
  - **[operator-trivy]** Fix incorrect reports links. [#7997](https://github.com/deckhouse/deckhouse/pull/7997)
  - **[prometheus]** Change `ignore_error` value from `true` to `false` in the aggregation proxy config to prevent caching empty results. [#8415](https://github.com/deckhouse/deckhouse/pull/8415)
  - **[prometheus]** Drop the metrics named `memcached_slab_*` from memcached. [#8342](https://github.com/deckhouse/deckhouse/pull/8342)
+ - **[registry-packages-proxy]** Don't replace the system CA certificates if a custom CA is used. [#8537](https://github.com/deckhouse/deckhouse/pull/8537)
  - **[registry-packages-proxy]** Fix panic when using custom CA. [#8276](https://github.com/deckhouse/deckhouse/pull/8276)
  - **[upmeter]** Fix agent error "cannot add series for probe <probename>: limit reached". [#8304](https://github.com/deckhouse/deckhouse/pull/8304)
  - **[user-authn]** Fix boundary value when `idTokenTTL` is too large. [#7903](https://github.com/deckhouse/deckhouse/pull/7903)
