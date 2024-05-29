@@ -15,8 +15,10 @@
 package destroy
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"os/exec"
 	"time"
 
@@ -47,6 +49,7 @@ type Params struct {
 	SkipResources bool
 
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
 	TerraformContext *tf.TerraformContext
@@ -65,6 +68,9 @@ type ClusterDestroyer struct {
 	staticDestroyer *StaticMastersDestroyer
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+
+	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
@@ -80,7 +86,12 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader terraform.StateLoader
+
 	if params.CommanderMode {
+		if params.CommanderUUID == uuid.Nil {
+			panic("CommanderUUID required for destroy operation in commander mode!")
+		}
+
 		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
@@ -102,11 +113,12 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		d8Destroyer:       d8Destroyer,
 		cloudClusterInfra: clusterInfra,
 
-		skipResources: params.SkipResources,
+		skipResources:   params.SkipResources,
+		staticDestroyer: staticDestroyer,
 
 		PhasedExecutionContext: pec,
-
-		staticDestroyer: staticDestroyer,
+		CommanderMode:          params.CommanderMode,
+		CommanderUUID:          params.CommanderUUID,
 	}, nil
 }
 
@@ -117,6 +129,18 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		return err
 	}
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
+
+	if d.CommanderMode {
+		kubeCl, err := d.d8Destroyer.GetKubeClient()
+		if err != nil {
+			return err
+		}
+
+		_, err = commander.CheckShouldUpdateCommanderUUID(context.TODO(), kubeCl, d.CommanderUUID)
+		if err != nil {
+			return fmt.Errorf("uuid consistency check failed: %w", err)
+		}
+	}
 
 	// populate cluster state in cache
 	metaConfig, err := d.terrStateLoader.PopulateMetaConfig()
