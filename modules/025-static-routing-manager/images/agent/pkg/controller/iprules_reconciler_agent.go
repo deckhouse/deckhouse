@@ -163,7 +163,7 @@ func runEventIPRuleReconcile(
 		return true, err
 	}
 	if len(actualIPRulesOnNode) == 0 {
-		log.Debug(fmt.Sprintf("[NIRSReconciler] There are no IPRules with Realm=" + strconv.Itoa(d8Realm)))
+		log.Debug(fmt.Sprintf("[NIRSReconciler] There are no IPRules with Realm=" + strconv.Itoa(v1alpha1.D8Realm)))
 	}
 
 	for _, nirs := range nirsList.Items {
@@ -710,6 +710,7 @@ func addIPRuleToNode(ipRule IPRuleEntry) error {
 			err,
 		)
 	}
+	PreparedIPRule.Flow = v1alpha1.D8Realm
 	err = netlink.RuleAdd(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to add IPRule %v, err: %w",
@@ -728,6 +729,7 @@ func delIPRuleFromNode(ipRule IPRuleEntry) error {
 			err,
 		)
 	}
+	PreparedIPRule.Flow = v1alpha1.D8Realm
 	err = netlink.RuleDel(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to del IPRule %v, err: %w",
@@ -746,8 +748,10 @@ func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
 	airem := make(IPRuleEntryMap)
 
 	for _, nlRule := range nlRules {
+		if nlRule.Flow != v1alpha1.D8Realm {
+			continue
+		}
 		ire := getIPRuleEntryFromNetlinkRule(nlRule)
-
 		airem.AppendIRE(ire)
 	}
 	return airem, nil

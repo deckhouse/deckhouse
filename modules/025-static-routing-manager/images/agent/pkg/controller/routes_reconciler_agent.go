@@ -43,8 +43,7 @@ import (
 )
 
 const (
-	CtrlName = "routing-tables-controller"
-	d8Realm  = 216 // d8 hex = 216 dec
+	routeCtrlName = "routing-tables-controller"
 )
 
 // Main
@@ -56,7 +55,7 @@ func RunRoutesReconcilerAgentController(
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
 
-	c, err := controller.New(CtrlName, mgr, controller.Options{
+	c, err := controller.New(routeCtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Debug(fmt.Sprintf("[NRTReconciler] Received a reconcile.Request for CR %v", request.Name))
 
@@ -163,7 +162,7 @@ func runEventRouteReconcile(
 		return true, err
 	}
 	if len(actualRoutesOnNode) == 0 {
-		log.Debug(fmt.Sprintf("[NRTReconciler] There are no routes with Realm=" + strconv.Itoa(d8Realm)))
+		log.Debug(fmt.Sprintf("[NRTReconciler] There are no routes with Realm=" + strconv.Itoa(v1alpha1.D8Realm)))
 	}
 
 	for _, nrt := range nrtList.Items {
@@ -448,7 +447,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 // netlink service functions
 
 func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
-	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: d8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
@@ -486,7 +485,7 @@ func addRouteToNode(route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 	err = netlink.RouteAdd(&netlink.Route{
-		Realm: d8Realm,
+		Realm: v1alpha1.D8Realm,
 		Table: route.table,
 		Dst:   dstnetIPNet,
 		Gw:    gwNetIP,
@@ -522,7 +521,7 @@ func delRouteFromNode(route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 	err = netlink.RouteDel(&netlink.Route{
-		Realm: d8Realm,
+		Realm: v1alpha1.D8Realm,
 		Table: route.table,
 		Dst:   dstnetIPNet,
 		Gw:    gwNetIP,

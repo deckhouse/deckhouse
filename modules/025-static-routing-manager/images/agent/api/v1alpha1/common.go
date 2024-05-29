@@ -19,6 +19,8 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
+	D8Realm = 216 // d8 hex = 216 dec
+
 	// Labels, annotations, finalizers
 
 	NodeNameLabel = "routing-manager.network.deckhouse.io/node-name"
