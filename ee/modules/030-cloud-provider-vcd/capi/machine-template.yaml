@@ -1,3 +1,12 @@
+{{- $catalog := ""}}
+{{- $template := .nodeGroup.instanceClass.template }}
+
+{{- $templatesParts := regexSplit "/" .nodeGroup.instanceClass.template -1 }}
+{{- if eq (len $templatesParts) 2 }}
+  {{- $catalog = $templatesParts | first }}
+  {{- $template = $templatesParts | last }}
+{{- end }}
+
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: VCDMachineTemplate
 metadata:
@@ -22,4 +31,7 @@ spec:
       placementPolicy: {{ .nodeGroup.instanceClass.placementPolicy | quote }}
     {{- end }}
       storageProfile: {{ .nodeGroup.instanceClass.storageProfile | quote }}
-      template: {{ .nodeGroup.instanceClass.template | quote }}
+      template: {{ $template | quote }}
+    {{- if $catalog }}
+      catalog: {{ $catalog | quote }}
+    {{- end }}
