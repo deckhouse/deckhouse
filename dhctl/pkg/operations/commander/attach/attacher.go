@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 
 	"k8s.io/utils/pointer"
@@ -39,6 +40,7 @@ import (
 
 type Params struct {
 	CommanderMode    bool
+	CommanderUUID    uuid.UUID
 	SSHClient        *ssh.Client
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
@@ -60,6 +62,10 @@ type Attacher struct {
 func NewAttacher(params *Params) *Attacher {
 	if !params.CommanderMode {
 		panic("attach commander operation supported only in commander mode")
+	}
+
+	if params.CommanderUUID == uuid.Nil {
+		panic("CommanderUUID required for commander/attach operation!")
 	}
 
 	return &Attacher{
@@ -178,7 +184,7 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 }
 
 func (i *Attacher) scan(
-	_ context.Context,
+	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 ) (*ScanResult, error) {
@@ -187,6 +193,10 @@ func (i *Attacher) scan(
 	err := log.Process("attach", "Scan cluster", func() error {
 		var err error
 		stateCache := cache.Global()
+
+		if _, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeClient, i.Params.CommanderUUID); err != nil {
+			return fmt.Errorf("uuid consistency check failed: %w", err)
+		}
 
 		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeClient)
 		if err != nil {

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
@@ -33,6 +34,7 @@ type Params struct {
 	SSHClient     *ssh.Client
 	StateCache    dhctlstate.Cache
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
 	TerraformContext *terraform.TerraformContext
@@ -47,6 +49,10 @@ type Checker struct {
 func NewChecker(params *Params) *Checker {
 	if !params.CommanderMode {
 		panic("check operation currently supported only in commander mode")
+	}
+
+	if params.CommanderUUID == uuid.Nil {
+		panic("CommanderUUID required for check operation in commander mode!")
 	}
 
 	return &Checker{
@@ -67,6 +73,16 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 
 	res := &CheckResult{
 		Status: CheckStatusInSync,
+	}
+
+	if c.CommanderMode {
+		shouldUpdate, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, c.CommanderUUID)
+		if err != nil {
+			return nil, fmt.Errorf("uuid consistency check failed: %w", err)
+		}
+		if shouldUpdate {
+			res.Status = res.Status.CombineStatus(CheckStatusOutOfSync)
+		}
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -96,7 +112,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	return res, nil
 }
 
-func (c *Checker) checkConfiguration(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
+func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
 	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
