@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:manage:all:viewer
+  name: d8:manage:others:viewer
   labels:
     heritage: deckhouse
     rbac.deckhouse.io/kind: manage

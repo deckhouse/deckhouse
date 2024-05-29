@@ -6,4 +6,14 @@ metadata:
     heritage: deckhouse
     rbac.deckhouse.io/kind: use
     rbac.deckhouse.io/aggregate-to-role: superadmin
-rules: []
+rules:
+  - apiGroups:
+      - *
+    resources:
+      - *
+    verbs:
+      - *
+  - nonResourceURLs:
+      - *
+    verbs:
+      - *
