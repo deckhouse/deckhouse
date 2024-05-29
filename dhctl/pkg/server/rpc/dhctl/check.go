@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
+	"time"
 
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -32,162 +33,210 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
+	ctx := operationCtx(server)
 
-	gr, ctx := errgroup.WithContext(ctx)
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.checkServerTransitions())
 
-	gr.Go(func() error {
-		for {
-			request, err := server.Recv()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return nil
-				}
-				return status.Errorf(codes.Internal, "receiving message: %s", err)
-			}
+	doneCh := make(chan struct{})
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.CheckRequest)
+	sendCh := make(chan *pb.CheckResponse, 100)
 
+	s.startCheckerReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startCheckerSender(server, sendCh, internalErrCh)
+
+connectionProcessor:
+	for {
+		select {
+		case <-doneCh:
+			logger.L(ctx).Info("finished")
+			return nil
+
+		case err := <-internalErrCh:
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
+			return status.Errorf(codes.Internal, "%s", err)
+
+		case request := <-receiveCh:
+			logger.L(ctx).Info(
+				"processing CheckRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.CheckRequest_Start:
-				err = f.Event("start")
+				err := f.Event("start")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
+					continue connectionProcessor
 				}
-				err = s.startCheck(ctx, gr, server, message.Start)
-
-			case *pb.CheckRequest_Stop:
-				err = f.Event("stop")
-				if err != nil {
-					s.log.Error("got unprocessable message",
-						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
-				}
-				err = s.stopCheck(cancel, message.Stop)
+				s.startChecker(
+					ctx, message.Start, &checkLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				)
 
 			default:
-				s.log.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
-				continue
+				continue connectionProcessor
 			}
 		}
-	})
-
-	return gr.Wait()
+	}
 }
 
-func (s *Service) startCheck(
-	ctx context.Context,
-	gr *errgroup.Group,
+func (s *Service) startCheckerReceiver(
 	server pb.DHCTL_CheckServer,
-	request *pb.CheckStart,
-) error {
-	gr.Go(func() error {
-		result, err := s.check(ctx, request, &checkLogWriter{server: server})
-		if err != nil {
-			return err
+	receiveCh chan *pb.CheckRequest,
+	doneCh chan struct{},
+	internalErrCh chan error,
+) {
+	go func() {
+		for {
+			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
+			if err != nil {
+				internalErrCh <- fmt.Errorf("receiving message: %w", err)
+				return
+			}
+			receiveCh <- request
 		}
+	}()
+}
 
-		err = server.Send(&pb.CheckResponse{
+func (s *Service) startCheckerSender(
+	server pb.DHCTL_CheckServer,
+	sendCh chan *pb.CheckResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
+		}
+	}()
+}
+
+func (s *Service) startChecker(
+	ctx context.Context,
+	request *pb.CheckStart,
+	logWriter *checkLogWriter,
+	sendCh chan *pb.CheckResponse,
+) {
+	go func() {
+		result := s.check(ctx, request, logWriter)
+		sendCh <- &pb.CheckResponse{
 			Message: &pb.CheckResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "sending message: %s", err)
 		}
-		return nil
-	})
-
-	return nil
-}
-
-func (s *Service) stopCheck(
-	cancel context.CancelFunc,
-	_ *pb.CheckStop,
-) error {
-	cancel()
-	return nil
+	}()
 }
 
 func (s *Service) check(
 	ctx context.Context,
 	request *pb.CheckStart,
 	logWriter io.Writer,
-) (*pb.CheckResult, error) {
-	// set global variables from options
+) *pb.CheckResult {
+	var err error
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	defer func() {
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
+	}()
 
-	// parse connection config
-	connectionConfig, err := config.ParseConnectionConfig(
-		request.ConnectionConfig,
-		config.NewSchemaStore(),
-		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-	)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "parsing connection config: %s", err)
-	}
-
-	// parse meta config
-	metaConfig, err := config.ParseConfigFromData(
-		input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-	)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "parsing meta config: %s", err)
-	}
-
-	// init dhctl cache
-	cachePath := metaConfig.CachePath()
-	var initialState phases.DhctlState
-	if request.State != "" {
-		err = json.Unmarshal([]byte(request.State), &initialState)
+	var metaConfig *config.MetaConfig
+	err = log.Process("default", "Parsing cluster config", func() error {
+		metaConfig, err = config.ParseConfigFromData(
+			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "unmarshalling dhctl state: %s", err)
+			return fmt.Errorf("parsing cluster meta config: %w", err)
 		}
-	}
-	err = cache.InitWithOptions(
-		cachePath,
-		cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
-	)
+		return nil
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "initializing cache at %s: %s", cachePath, err)
+		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	// preparse ssh client
-	sshClient, err := prepareSSHClient(connectionConfig)
+	err = log.Process("default", "Preparing DHCTL state", func() error {
+		cachePath := metaConfig.CachePath()
+		var initialState phases.DhctlState
+		if request.State != "" {
+			err = json.Unmarshal([]byte(request.State), &initialState)
+			if err != nil {
+				return fmt.Errorf("unmarshalling dhctl state: %w", err)
+			}
+		}
+		err = cache.InitWithOptions(
+			cachePath,
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+		)
+		if err != nil {
+			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return &pb.CheckResult{Err: err.Error()}
+	}
+
+	var sshClient *ssh.Client
+	err = log.Process("default", "Preparing SSH client", func() error {
+		connectionConfig, err := config.ParseConnectionConfig(
+			request.ConnectionConfig,
+			config.NewSchemaStore(),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
+		if err != nil {
+			return fmt.Errorf("parsing connection config: %w", err)
+		}
+
+		sshClient, err = prepareSSHClient(connectionConfig)
+		if err != nil {
+			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return &pb.CheckResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	// check cluster state
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
@@ -199,35 +248,16 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	})
 
-	result, err := checker.Check(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "checking cluster state: %s", err)
+	result, checkErr := checker.Check(ctx)
+	resultData, marshalErr := json.Marshal(result)
+	err = errors.Join(checkErr, marshalErr)
+
+	if result != nil {
+		// todo: move onCheckResult call to check.Check() func (as in converge)
+		_ = onCheckResult(result)
 	}
 
-	resultString, err := json.Marshal(result)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "marshalling check result: %s", err)
-	}
-
-	return &pb.CheckResult{Result: string(resultString)}, nil
-}
-
-type checkLogWriter struct {
-	server pb.DHCTL_CheckServer
-}
-
-func (w *checkLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.CheckResponse{
-		Message: &pb.CheckResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
-	}
-	return len(p), nil
+	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {
@@ -237,10 +267,44 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 			Sources:     []fsm.State{"initial"},
 			Destination: "running",
 		},
-		{
-			Event:       "stop",
-			Sources:     []fsm.State{"running"},
-			Destination: "stopped",
-		},
 	}
+}
+
+type checkLogWriter struct {
+	l      *slog.Logger
+	sendCh chan *pb.CheckResponse
+
+	m    sync.Mutex
+	prev []byte
+}
+
+func (w *checkLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
+	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.CheckResponse{
+			Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
+	return len(p), nil
 }

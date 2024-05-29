@@ -15,34 +15,79 @@
 package dhctl
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 
+	"google.golang.org/grpc"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func New(podName, cacheDir string, log *slog.Logger) *Service {
-	return &Service{
-		podName:  podName,
-		cacheDir: cacheDir,
-		log:      log,
-	}
-}
+var logTypeDHCTL = slog.String("type", "dhctl")
 
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
 	podName  string
 	cacheDir string
-	log      *slog.Logger
+}
+
+func New(podName, cacheDir string) *Service {
+	return &Service{
+		podName:  podName,
+		cacheDir: cacheDir,
+	}
+}
+
+func (s *Service) shutdown(done <-chan struct{}) {
+	go func() {
+		<-done
+		tomb.Shutdown(0)
+	}()
+}
+
+func operationCtx(server grpc.ServerStream) context.Context {
+	ctx := server.Context()
+
+	var operation string
+	switch server.(type) {
+	case pb.DHCTL_CheckServer:
+		operation = "check"
+	case pb.DHCTL_BootstrapServer:
+		operation = "bootstrap"
+	case pb.DHCTL_ConvergeServer:
+		operation = "converge"
+	case pb.DHCTL_DestroyServer:
+		operation = "destroy"
+	case pb.DHCTL_AbortServer:
+		operation = "abort"
+	case pb.DHCTL_ImportServer:
+		operation = "import"
+	default:
+		operation = "unknown"
+	}
+	go func() {
+		<-ctx.Done()
+		tomb.Shutdown(0)
+	}()
+	return logger.ToContext(
+		ctx,
+		logger.L(ctx).With(slog.String("operation", operation)),
+	)
 }
 
 func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
@@ -120,9 +165,33 @@ func writeTempFile(data []byte) (string, error) {
 	return f.Name(), nil
 }
 
+func onCheckResult(checkRes *check.CheckResult) error {
+	printableCheckRes := *checkRes
+	printableCheckRes.StatusDetails.TerraformPlan = nil
+
+	printableCheckResDump, err := json.MarshalIndent(printableCheckRes, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to encode check result json: %w", err)
+	}
+
+	_ = log.Process("default", "Check result", func() error {
+		log.InfoF("%s\n", printableCheckResDump)
+		return nil
+	})
+
+	return nil
+}
+
 func portToString(p *int32) string {
 	if p == nil {
 		return ""
 	}
 	return strconv.Itoa(int(*p))
+}
+
+func errToString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
 }

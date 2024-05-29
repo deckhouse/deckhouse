@@ -21,12 +21,10 @@ package dhctl;
 import "google/protobuf/duration.proto";
 import "common.proto";
 
-
 message BootstrapRequest {
   oneof message {
     BootstrapStart start = 1;
-    BootstrapStop stop = 2;
-    BootstrapContinue continue = 3;
+    BootstrapContinue continue = 2;
   }
 }
 
@@ -50,8 +48,6 @@ message BootstrapStart {
   BootstrapStartOptions options = 9;
 }
 
-message BootstrapStop {}
-
 message BootstrapPhaseEnd {
   string completed_phase = 1;
   map<string, bytes> completed_phase_state = 2;
@@ -60,17 +56,18 @@ message BootstrapPhaseEnd {
 }
 
 message BootstrapContinue {
-  string error = 1;
+  Continue continue = 1;
+  string err = 2;
 }
 
 message BootstrapStartOptions {
   bool commander_mode = 1;
-  bool sanity_check = 2;
-  int32 log_width = 3;
-  google.protobuf.Duration resources_timeout = 4;
-  google.protobuf.Duration deckhouse_timeout = 5;
+  int32 log_width = 2;
+  google.protobuf.Duration resources_timeout = 3;
+  google.protobuf.Duration deckhouse_timeout = 4;
 }
 
 message BootstrapResult {
   string state = 1;
+  string err = 2;
 }
