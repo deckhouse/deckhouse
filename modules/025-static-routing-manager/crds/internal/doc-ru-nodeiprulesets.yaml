@@ -60,9 +60,6 @@ spec:
                           dport:
                             description: |
                               select the range of destination ports to match.
-                          tun_id:
-                            description: |
-                              select the virtual tunnel ID to match.
                       actions:
                         required:
                           - lookup

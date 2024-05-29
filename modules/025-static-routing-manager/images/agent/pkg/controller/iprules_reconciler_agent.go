@@ -238,7 +238,6 @@ type IPRuleEntry struct {
 	IifName  string
 	OifName  string
 	UIDRange string
-	TunID    int
 	Table    int
 }
 
@@ -256,7 +255,6 @@ func (ire *IPRuleEntry) getHash() string {
 	hashRaw = append(hashRaw, ire.IifName)
 	hashRaw = append(hashRaw, ire.OifName)
 	hashRaw = append(hashRaw, ire.UIDRange)
-	hashRaw = append(hashRaw, strconv.Itoa(ire.TunID))
 	hashRaw = append(hashRaw, strconv.Itoa(ire.Table))
 	return strings.Join(hashRaw, "#")
 }
@@ -264,7 +262,7 @@ func (ire *IPRuleEntry) getHash() string {
 func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
 	// Prepare rule for netlink
 
-	PreparedIPRule := &netlink.Rule{}
+	PreparedIPRule := netlink.NewRule()
 
 	if ire.Priority > 0 {
 		PreparedIPRule.Priority = ire.Priority
@@ -307,9 +305,6 @@ func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
 			)
 		}
 		PreparedIPRule.Tos = uint(tos)
-	}
-	if ire.TunID > 0 {
-		PreparedIPRule.TunID = uint(ire.TunID)
 	}
 	if ire.Src != "" {
 		ip, src, err := net.ParseCIDR(ire.Src)
@@ -441,9 +436,6 @@ func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
 	if nlRule.Tos > 0 {
 		PreparedIPRule.Tos = fmt.Sprintf("0x%x", nlRule.Tos)
 	}
-	if nlRule.TunID > 0 {
-		PreparedIPRule.TunID = int(nlRule.TunID)
-	}
 	if nlRule.Src != nil {
 		PreparedIPRule.Src = nlRule.Src.String()
 	}
@@ -514,7 +506,6 @@ func (irem *IPRuleEntryMap) AppendIR(ipRule v1alpha1.IPRule) {
 				IifName:  ipRule.Selectors.IIf,
 				OifName:  ipRule.Selectors.OIf,
 				UIDRange: ipRule.Selectors.UIDRange,
-				TunID:    ipRule.Selectors.TunID,
 				Table:    ipRule.Actions.Lookup.IPRoutingTableID,
 			}
 			(*irem)[ire.getHash()] = ire

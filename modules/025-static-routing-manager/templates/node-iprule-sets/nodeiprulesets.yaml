@@ -58,9 +58,6 @@ spec:
     {{- if $rule.selectors.dport }}
         dport: {{ $rule.selectors.dport | quote }}
     {{- end }}
-    {{- if $rule.selectors.tun_id }}
-        tun_id: {{ $rule.selectors.tun_id }}
-    {{- end }}
       actions:
     {{- if $rule.actions.lookup }}
         lookup:

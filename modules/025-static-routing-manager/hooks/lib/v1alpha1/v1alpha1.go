@@ -75,7 +75,6 @@ type IPRuleSelectors struct {
 	IPProto  int      `json:"ipproto,omitempty"`
 	SPort    string   `json:"sport,omitempty"`
 	DPort    string   `json:"dport,omitempty"`
-	TunID    int      `json:"tun_id,omitempty"`
 }
 
 type IPRuleActions struct {
