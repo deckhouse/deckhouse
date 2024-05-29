@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -41,10 +42,11 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if config.CA != "" {
-		certPool, _ := x509.SystemCertPool()
-		if certPool == nil {
-			certPool = x509.NewCertPool()
+		certPool, err := x509.SystemCertPool()
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to load system cert pool: %w", err)
 		}
+
 		certPool.AppendCertsFromPEM([]byte(config.CA))
 
 		httpTransport.TLSClientConfig = &tls.Config{
