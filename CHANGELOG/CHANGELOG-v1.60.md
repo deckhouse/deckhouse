@@ -15,6 +15,7 @@
 
  - **[admission-policy-engine]** Add a separate queue and throttling for bootstrap hook. [#8028](https://github.com/deckhouse/deckhouse/pull/8028)
  - **[candi]** Forbid to use Debian 9. [#7710](https://github.com/deckhouse/deckhouse/pull/7710)
+ - **[cloud-provider-vcd]** Support multiple VCD API versions. [#8451](https://github.com/deckhouse/deckhouse/pull/8451)
  - **[cloud-provider-yandex]** Add option to create nodes with SSD IO root disks. [#8382](https://github.com/deckhouse/deckhouse/pull/8382)
  - **[cloud-provider-yandex]** Add custom target group node annotation. [#8171](https://github.com/deckhouse/deckhouse/pull/8171)
     Yandex CCM should be restarted.
@@ -24,6 +25,7 @@
  - **[deckhouse-controller]** replace insecure flag with scheme flag [#8076](https://github.com/deckhouse/deckhouse/pull/8076)
  - **[deckhouse-controller]** Reapply modules' registry settings after update their module source. [#8067](https://github.com/deckhouse/deckhouse/pull/8067)
  - **[deckhouse-controller]** Add a module release mechanism similar to the Deckhouse release mechanism. [#7348](https://github.com/deckhouse/deckhouse/pull/7348)
+ - **[dhctl]** Add bootstrap, converge, destroy, abort, import gRPC services. [#8455](https://github.com/deckhouse/deckhouse/pull/8455)
  - **[dhctl]** Add debug log file for all commands. [#8303](https://github.com/deckhouse/deckhouse/pull/8303)
  - **[dhctl]** One flag for resources and configs in bootstrap command. [#8277](https://github.com/deckhouse/deckhouse/pull/8277)
     You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
@@ -58,8 +60,10 @@
  - **[dhctl]** Fix preflight ports checking when static cluster is bootstrapping. [#7917](https://github.com/deckhouse/deckhouse/pull/7917)
  - **[docs]** Add a guide for full etcd recovery in the cluster. [#8405](https://github.com/deckhouse/deckhouse/pull/8405)
  - **[docs]** Update kube-bench documentation to use `kubectl` and `jq` instead of `yq`. [#8439](https://github.com/deckhouse/deckhouse/pull/8439)
+ - **[documentation]** Fix search. Fix version badge. [#8520](https://github.com/deckhouse/deckhouse/pull/8520)
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#8413](https://github.com/deckhouse/deckhouse/pull/8413)
  - **[ingress-nginx]** Replace status with formatted status in logs. [#8385](https://github.com/deckhouse/deckhouse/pull/8385)
+ - **[kube-dns]** Fix empty array error in domain alias validation webhook. [#8503](https://github.com/deckhouse/deckhouse/pull/8503)
  - **[kube-proxy]** Start `kube-proxy` only if `cni-flannel` or `cni-simple-bridge` modules is enabled. [#8258](https://github.com/deckhouse/deckhouse/pull/8258)
  - **[metallb]** Switched to state-timeline plugin in MetalLB  Grafana dashboard. [#8389](https://github.com/deckhouse/deckhouse/pull/8389)
  - **[monitoring-applications]** Fix rabbitmq dashboard. [#7979](https://github.com/deckhouse/deckhouse/pull/7979)
