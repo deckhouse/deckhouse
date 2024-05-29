@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -30,8 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
-type DefaultClient struct {
-}
+type DefaultClient struct{}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
 	repository, err := name.NewRepository(config.Repository)
@@ -42,7 +42,11 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if config.CA != "" {
-		certPool := x509.NewCertPool()
+		certPool, err := x509.SystemCertPool()
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to load system cert pool: %w", err)
+		}
+
 		certPool.AppendCertsFromPEM([]byte(config.CA))
 
 		httpTransport.TLSClientConfig = &tls.Config{
