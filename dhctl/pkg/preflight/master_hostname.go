@@ -54,7 +54,7 @@ func (pc *Checker) CheckMasterHostname() error {
 	}
 
 	if len(masterWithError) > 0 {
-		servers := []string{}
+		servers := make([]string, 0, len(masterWithError))
 		for k := range masterWithError {
 			servers = append(servers, k)
 		}
