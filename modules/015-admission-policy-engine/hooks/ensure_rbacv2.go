@@ -16,8 +16,11 @@ limitations under the License.
 
 package hooks
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
-)
+import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("log-shipper", "others", []string{"/deckhouse/modules/460-log-shipper/crds/*.yaml"})
+var crdsDirs = []string{
+	"/deckhouse/modules/015-admission-policy-engine/crds/*.yaml",
+	"/deckhouse/modules/015-admission-policy-engine/crds/native/*.yaml",
+}
+
+var _ = ensure_rbacv2.RegisterHook("admission-policy-engine", "others", crdsDirs)

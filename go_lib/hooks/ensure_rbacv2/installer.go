@@ -20,26 +20,28 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
-	"github.com/hashicorp/go-multierror"
 	"io"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+
+	"github.com/hashicorp/go-multierror"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/util/retry"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 // installer simultaneously installs rbacv2 from specified directory
 type installer struct {
-	client k8s.Client
-	crds   []string
-	buffer []byte
+	client   k8s.Client
+	crdsDirs [][]string
+	buffer   []byte
 
 	moduleName  string
 	moduleScope string
@@ -50,15 +52,18 @@ type installer struct {
 
 // newInstaller creates new installer for CRDs
 // pathToCRDs example: "/deckhouse/modules/002-deckhouse/crds/*.yaml"
-func newInstaller(moduleName, moduleScope string, client k8s.Client, pathToCRDs string) (*installer, error) {
-	crds, err := filepath.Glob(pathToCRDs)
-	if err != nil {
-		return nil, err
+func newInstaller(moduleName, moduleScope string, client k8s.Client, pathsToCRDs []string) (*installer, error) {
+	var crdsDirs [][]string
+	for _, dir := range pathsToCRDs {
+		crds, err := filepath.Glob(dir)
+		if err != nil {
+			return nil, err
+		}
+		crdsDirs = append(crdsDirs, crds)
 	}
-
 	return &installer{
-		client: client,
-		crds:   crds,
+		client:   client,
+		crdsDirs: crdsDirs,
 
 		moduleName:  moduleName,
 		moduleScope: moduleScope,
@@ -80,15 +85,17 @@ func (i *installer) Run(ctx context.Context) *multierror.Error {
 
 func (i *installer) parseCRDs(_ context.Context) ([]*v1.CustomResourceDefinition, error) {
 	var crds []*v1.CustomResourceDefinition
-	for _, pathToCRD := range i.crds {
-		if match := strings.HasPrefix(filepath.Base(pathToCRD), "doc-"); match {
-			continue
+	for _, dir := range i.crdsDirs {
+		for _, pathToCRD := range dir {
+			if match := strings.HasPrefix(filepath.Base(pathToCRD), "doc-"); match {
+				continue
+			}
+			crd, err := i.parseCRD(pathToCRD)
+			if err != nil {
+				return nil, err
+			}
+			crds = append(crds, crd)
 		}
-		crd, err := i.parseCRD(pathToCRD)
-		if err != nil {
-			return nil, err
-		}
-		crds = append(crds, crd)
 	}
 	return crds, nil
 }
@@ -200,14 +207,23 @@ func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) (*rbacv1.C
 	if namespacedEditRules != nil {
 		namespacedEditClusterRole = i.clusterRolesFromRules("manager", "use", "edit", namespacedEditRules)
 	}
-	var viewClusterRole *rbacv1.ClusterRole
-	if viewRules != nil {
-		viewClusterRole = i.clusterRolesFromRules("viewer", "manage", "view", viewRules)
-	}
-	var editClusterRole *rbacv1.ClusterRole
-	if editRules != nil {
-		editClusterRole = i.clusterRolesFromRules("manager", "manage", "edit", editRules)
-	}
+
+	viewRules = append(viewRules, rbacv1.PolicyRule{
+		APIGroups:     []string{"deckhouse.io"},
+		Resources:     []string{"moduleconfigs"},
+		ResourceNames: []string{i.moduleName},
+		Verbs:         []string{"get", "list", "watch"},
+	})
+	editRules = append(editRules, rbacv1.PolicyRule{
+		APIGroups:     []string{"deckhouse.io"},
+		Resources:     []string{"moduleconfigs"},
+		ResourceNames: []string{i.moduleName},
+		Verbs:         []string{"create", "update", "patch", "delete"},
+	})
+
+	viewClusterRole := i.clusterRolesFromRules("viewer", "manage", "view", viewRules)
+	editClusterRole := i.clusterRolesFromRules("manager", "manage", "edit", editRules)
+
 	return namespacedViewClusterRole, namespacedEditClusterRole, viewClusterRole, editClusterRole
 }
 func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {

@@ -18,28 +18,30 @@ package ensure_rbacv2
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-func RegisterHook(moduleName, moduleScope, pathToCRDs string) bool {
+func RegisterHook(moduleName, moduleScope string, pathsToCRDs []string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnStartup: &go_hook.OrderedConfig{Order: 10},
-	}, dependency.WithExternalDependencies(ensureHandler(moduleName, moduleScope, pathToCRDs)))
+	}, dependency.WithExternalDependencies(ensureHandler(moduleName, moduleScope, pathsToCRDs)))
 }
 
-func ensureHandler(moduleName, moduleScope, pathToCRDs string) func(input *go_hook.HookInput, dc dependency.Container) error {
+func ensureHandler(moduleName, moduleScope string, pathsToCRDs []string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		result := ensure(moduleName, moduleScope, pathToCRDs, dc)
+		result := ensure(moduleName, moduleScope, pathsToCRDs, dc)
 		if result.ErrorOrNil() != nil {
 			input.LogEntry.WithError(result).Error("ensure_rbacv2 failed")
 		}
 		return result.ErrorOrNil()
 	}
 }
-func ensure(moduleName, moduleScope, pathToCRDs string, dc dependency.Container) *multierror.Error {
+func ensure(moduleName, moduleScope string, pathsToCRDs []string, dc dependency.Container) *multierror.Error {
 	result := new(multierror.Error)
 
 	client, err := dc.GetK8sClient()
@@ -48,7 +50,7 @@ func ensure(moduleName, moduleScope, pathToCRDs string, dc dependency.Container)
 		return result
 	}
 
-	inst, err := newInstaller(moduleName, moduleScope, client, pathToCRDs)
+	inst, err := newInstaller(moduleName, moduleScope, client, pathsToCRDs)
 	if err != nil {
 		result = multierror.Append(result, err)
 		return result
