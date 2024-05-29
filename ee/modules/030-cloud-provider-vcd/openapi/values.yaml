@@ -313,7 +313,6 @@ properties:
         type: object
         default: {}
         additionalProperties: false
-        required: [ apiVersion, kind ]
         x-examples:
         - apiVersion: deckhouse.io/v1
           kind: VCDCloudProviderDiscoveryData
