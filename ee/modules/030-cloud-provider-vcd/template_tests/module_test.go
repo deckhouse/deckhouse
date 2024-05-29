@@ -58,6 +58,11 @@ const moduleValuesA = `
         apiVersion: deckhouse.io/v1
         zones:
         - default
+      discoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.2"
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
