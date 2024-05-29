@@ -64,7 +64,7 @@ type IPRule struct {
 }
 
 type IPRuleSelectors struct {
-	Not      bool     `json:"priority,omitempty"`
+	Not      bool     `json:"not,omitempty"`
 	From     []string `json:"from,omitempty"`
 	To       []string `json:"to,omitempty"`
 	Tos      string   `json:"tos,omitempty"`

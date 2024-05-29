@@ -31,7 +31,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("StatisRouteMgr hooks :: noderoutingtables_handler ::", func() {
+var _ = Describe("StatisRouteMgr hooks :: routingtables_handler ::", func() {
 
 	const (
 		initValuesString       = `{"staticRoutingManager":{"internal": {}}}`
