@@ -8,12 +8,12 @@ metadata:
     rbac.deckhouse.io/aggregate-to-role: superadmin
 rules:
   - apiGroups:
-      - *
+      - '*'
     resources:
-      - *
+      - '*'
     verbs:
-      - *
+      - '*'
   - nonResourceURLs:
-      - *
+      - '*'
     verbs:
-      - *
+      - '*'
