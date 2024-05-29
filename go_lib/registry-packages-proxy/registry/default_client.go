@@ -30,8 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
-type DefaultClient struct {
-}
+type DefaultClient struct{}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
 	repository, err := name.NewRepository(config.Repository)
@@ -42,7 +41,10 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if config.CA != "" {
-		certPool := x509.NewCertPool()
+		certPool, _ := x509.SystemCertPool()
+		if certPool == nil {
+			certPool = x509.NewCertPool()
+		}
 		certPool.AppendCertsFromPEM([]byte(config.CA))
 
 		httpTransport.TLSClientConfig = &tls.Config{
