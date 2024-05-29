@@ -23,7 +23,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |-
-            Interface for configuring a fault-tolerant egress gateway based on a group of nodes. The configured egress gateways can be used in EgressGatewayPolicy interface to configure egress gateway for application Pods.
+            Interface for configuring a fault-tolerant egress gateway based on a group of nodes.
+
+            The configured egress gateways can be used in EgressGatewayPolicy interface to configure egress gateway for application Pods.
           x-doc-d8Revision: ee
           properties:
             spec:
@@ -47,13 +49,19 @@ spec:
                     mode:
                       x-doc-d8Revision: ee
                       description: |-
-                        A method for determining the source IP address to be assigned to requests through this gateway. Options:
-                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the source IP address. Particularities:
+                        A method for determining the source IP address to be assigned to requests through this gateway.
+
+                        Possible options:
+                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the source IP address.
+
+                          Particularities:
                           * When the active node goes down and a new node is assigned, the outgoing IP address will change.
                           * The network subsystem on all egress nodes must be configured in advance:
                             * the "public" interfaces must have the same name (eth1, for example),
                             * all necessary routes for access to all external public services must be configured.
-                        * `VirtualIPAddress` — explicitly specify the outgoing IP address. Particularities:
+                        * `VirtualIPAddress` — explicitly specify the outgoing IP address.
+
+                          Particularities:
                           * If the active node goes down, the outgoing IP address will not change.
                           * The network subsystem on all egress nodes must be configured in advance:
                             * all necessary routes for access to all external public services must be configured,
