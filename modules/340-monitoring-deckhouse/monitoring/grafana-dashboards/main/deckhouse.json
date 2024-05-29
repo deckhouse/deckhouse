@@ -539,7 +539,7 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 24,
             "x": 0,
             "y": 18
           },
@@ -591,124 +591,6 @@
                 },
                 "renameByName": {
                   "Value": "Quantity",
-                  "binding": "Binding",
-                  "hook": "Hook"
-                }
-              }
-            }
-          ],
-          "type": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "displayMode": "color-text"
-              },
-              "mappings": [],
-              "max": 100000000,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "#EAB839",
-                    "value": 10000
-                  },
-                  {
-                    "color": "red",
-                    "value": 10000000
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Hook"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 356
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Binding"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 235
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 18
-          },
-          "id": 34,
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "desc": true,
-                "displayName": "Size"
-              }
-            ]
-          },
-          "pluginVersion": "7.0.6",
-          "targets": [
-            {
-              "expr": "sum by (hook, binding) (deckhouse_kube_snapshot_bytes)",
-              "format": "table",
-              "instant": true,
-              "interval": "",
-              "legendFormat": "{{ hook }} - {{ binding }}",
-              "refId": "A"
-            }
-          ],
-          "title": "Snapshots size",
-          "transformations": [
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {
-                  "names": [
-                    "binding",
-                    "hook",
-                    "Value"
-                  ]
-                }
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "excludeByName": {},
-                "indexByName": {
-                  "Value": 2,
-                  "binding": 1,
-                  "hook": 0
-                },
-                "renameByName": {
-                  "Value": "Size",
                   "binding": "Binding",
                   "hook": "Hook"
                 }
@@ -1767,7 +1649,7 @@
           "fillGradient": 1,
           "gridPos": {
             "h": 7,
-            "w": 12,
+            "w": 24,
             "x": 0,
             "y": 33
           },
@@ -1837,96 +1719,6 @@
               "format": "ops",
               "logBase": 1,
               "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
-          "fill": 1,
-          "fillGradient": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 33
-          },
-          "hiddenSeries": false,
-          "id": 42,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": true,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "sort": "max",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 1,
-          "nullPointMode": "null as zero",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 0.5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "ceil(sum by (module) (increase(deckhouse_kubernetes_client_request_result_total[$__rate_interval]))) > 0",
-              "interval": "",
-              "legendFormat": "{{ module }}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Kubernetes client requests frequency",
-          "tooltip": {
-            "shared": true,
-            "sort": 1,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
             }
           ],
           "yaxis": {
