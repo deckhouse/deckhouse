@@ -72,8 +72,17 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
     spec:
-{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
       affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                - key: node.deckhouse.io/deckhouse-ready
+                  operator: In
+                  values:
+                  - "true"
+              weight: 100
+{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - podAffinityTerm:
