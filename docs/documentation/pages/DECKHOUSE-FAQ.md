@@ -557,7 +557,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -572,17 +572,18 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl exec  -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
-  * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run:
+  * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --help
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
+
     Example output:
+
     ```shell
-    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
     
     Change registry for deckhouse images.
@@ -698,7 +699,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -710,7 +711,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -720,7 +721,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse EE to CE?
@@ -740,7 +741,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Run the following command:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -758,20 +759,20 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Wait for Deckhouse to restart and to complete all tasks in the queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Example of output when there are still jobs in the queue (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Example of output when the queue is empty (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -819,7 +820,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -837,20 +838,20 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Wait for Deckhouse to restart and to complete all tasks in the queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Example of output when there are still jobs in the queue (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Example of output when the queue is empty (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -890,7 +891,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.
