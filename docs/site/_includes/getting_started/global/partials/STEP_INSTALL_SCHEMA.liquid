@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' %}
 
 The minimal preset will be used during the installation:
 {%- assign preset=site.data.getting_started.data.presets.minimal %}
@@ -86,8 +86,18 @@ Scheme of Deckhouse installation in a private environment:<br />
   <p>The Kubernetes versions and OS of cluster nodes should be on <a href="../../documentation/v1/supported_versions.html">the list of supported</a>.</p>
   <p>During the installation, the Deckhouse installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse.</p>
   <p><strong>Note</strong> that master node-based installation is not currently supported.</p>
-{%- elsif page.platform_type == 'cloud' %}
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
   <p><strong>Cloud Provider Resources.</strong></p>
+   {% offtopic title="Minimum recommended resources..." %}
+   - 8 CPU cores
+   - 16 GB of RAM
+   - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_code == 'zvirt' %}
+  <p><strong>Hypervisor Resources.</strong></p>
    {% offtopic title="Minimum recommended resources..." %}
    - 8 CPU cores
    - 16 GB of RAM

@@ -139,6 +139,20 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
+- add: /ee/candi/cloud-providers/zvirt/openapi
+  to: /src/ee/modules/030-cloud-provider-zvirt/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/zvirt/openapi
+  to: /src/ee/modules/030-cloud-provider-zvirt/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
 {{- end }}
 {{- if or (eq .Env "FE") (eq .Env "development")  }}
 - add: /ee/fe/modules
@@ -229,6 +243,13 @@
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/vcd/docs
   to: /src/ee/modules/030-cloud-provider-vcd/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/zvirt/docs
+  to: /src/ee/modules/030-cloud-provider-zvirt/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']

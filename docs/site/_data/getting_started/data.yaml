@@ -538,3 +538,43 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+  zvirt:
+    iconPath: images/icons/platforms/zvirt.png
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Zvirt"
+      ru: "Deckhouse Kubernetes Platform на Zvirt"
+    type: cloud
+    # Например, это надписи на плитке
+    name:
+      en: zVirt
+      ru: zVirt
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
