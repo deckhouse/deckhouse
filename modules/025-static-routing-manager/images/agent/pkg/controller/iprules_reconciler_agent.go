@@ -249,16 +249,22 @@ func (ire *IPRuleEntry) getHash() string {
 	hashRaw = append(hashRaw, ire.Src)
 	hashRaw = append(hashRaw, ire.Dst)
 	hashRaw = append(hashRaw, strconv.Itoa(ire.IPProto))
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.Start), 10))
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.End), 10))
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.Start), 10))
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.End), 10))
+	if ire.SPortRange != nil {
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.Start), 10))
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.End), 10))
+	}
+	if ire.DPortRange != nil {
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.Start), 10))
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.End), 10))
+	}
 	hashRaw = append(hashRaw, ire.Tos)
 	hashRaw = append(hashRaw, ire.FWMark)
 	hashRaw = append(hashRaw, ire.IifName)
 	hashRaw = append(hashRaw, ire.OifName)
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.Start), 10))
-	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.End), 10))
+	if ire.UIDRange != nil {
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.Start), 10))
+		hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.End), 10))
+	}
 	hashRaw = append(hashRaw, strconv.Itoa(ire.Table))
 	return strings.Join(hashRaw, "#")
 }
