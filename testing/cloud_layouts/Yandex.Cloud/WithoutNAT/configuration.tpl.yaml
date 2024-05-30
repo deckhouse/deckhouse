@@ -28,7 +28,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: 'fd8b8v0jaap618cordiu' #RED OS 8.0.0
+    imageID: 'fd86ciomm61qk3o1rta5' #RED OS 8.0.0
     diskSizeGB: 50
     externalIPAddresses:
     - Auto
