@@ -201,7 +201,7 @@ replace (
 	github.com/deckhouse/deckhouse => ../
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
-	github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib => ../modules/021-cni-cilium/go_lib
+	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/modules/021-cni-cilium/images/egress-gateway-agent
 )
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0

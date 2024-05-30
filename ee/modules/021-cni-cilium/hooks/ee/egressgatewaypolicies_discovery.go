@@ -10,7 +10,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	eeCrd "github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib/apis/v1alpha1"
+	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

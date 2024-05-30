@@ -22,7 +22,7 @@ import (
 	"egress-gateway-agent/internal/controller"
 	"egress-gateway-agent/internal/layer2"
 
-	networkv1alpha1 "github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib/apis/v1alpha1"
+	networkv1alpha1 "egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 var (

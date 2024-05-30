@@ -21,7 +21,7 @@ import (
 	k8type "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/strings/slices"
 
-	eeCrd "github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib/apis/v1alpha1"
+	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 const (

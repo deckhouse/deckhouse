@@ -23,7 +23,7 @@ import (
 
 	"egress-gateway-agent/internal/layer2"
 
-	eeCrd "github.com/deckhouse/deckhouse/modules/021-cni-cilium/go_lib/apis/v1alpha1"
+	eeCrd "egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 const (
