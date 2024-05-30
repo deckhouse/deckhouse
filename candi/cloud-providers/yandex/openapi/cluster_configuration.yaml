@@ -124,8 +124,15 @@ apiVersions:
                 type: integer
                 description: |
                   Yandex Compute Instance disk size in gibibytes.
-                example: 20
+                example: network-ssd
                 x-doc-default: 50
+              diskType: &instanceClassDiskType
+                type: string
+                description: |
+                  Yandex Compute Instance disk type.
+                example: network-ssd-io-m3
+                x-doc-default: network-ssd
+                enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]
               etcdDiskSizeGb:
                 type: integer
                 description: |
@@ -271,6 +278,7 @@ apiVersions:
                 memory: *instanceClassMemory
                 imageID: *instanceClassImageID
                 diskSizeGB: *instanceClassDiskSizeGB
+                diskType: *instanceClassDiskType
                 externalIPAddresses: *instanceClassExternalIPAddresses
                 externalSubnetID: *instanceClassExternalSubnetID
                 externalSubnetIDs: *instanceClassExternalSubnetIDs
