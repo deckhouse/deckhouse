@@ -64,7 +64,10 @@ func (c *Command) OnCommandStart(fn func()) *Command {
 
 func (c *Command) Sudo() *Command {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
-	sudoCmdLine := fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`, cmdLine)
+	sudoCmdLine := fmt.Sprintf(
+		`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
+		cmdLine,
+	)
 
 	var args []string
 	args = append(args, c.SSHArgs...)
@@ -132,7 +135,7 @@ func (c *Command) Output() ([]byte, []byte, error) {
 
 	output, err := c.cmd.Output()
 	if err != nil {
-		return output, nil, fmt.Errorf("execute command '%s': %v", c.Name, err)
+		return output, nil, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
 	return output, nil, nil
 }
@@ -148,7 +151,7 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 
 	output, err := c.cmd.CombinedOutput()
 	if err != nil {
-		return output, fmt.Errorf("execute command '%s': %v", c.Name, err)
+		return output, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
 	return output, nil
 }
