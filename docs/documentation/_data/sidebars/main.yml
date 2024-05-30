@@ -335,6 +335,42 @@ entries:
                   url: /modules/030-cloud-provider-vcd/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vcd/faq.html
+            - title: zVirt
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/030-cloud-provider-zvirt/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/030-cloud-provider-zvirt/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/030-cloud-provider-zvirt/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/030-cloud-provider-zvirt/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/030-cloud-provider-zvirt/configuration.html
+                    - title: Custom Resources
+                      url: /modules/030-cloud-provider-zvirt/cr.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-zvirt/faq.html
             - title: Yandex Cloud
               folders:
                 - title:
