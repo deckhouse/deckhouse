@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' %}
 
 Для развертывания будет использован минимальный набор узлов:
 {%- assign preset=site.data.getting_started.data.presets.minimal %}
@@ -88,8 +88,18 @@
   <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="../../documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
   <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (см. п.1), подключится к кластеру и развернет Deckhouse.</p>
   <p><strong>Обратите внимание</strong>, что установка непосредственно с master-узла не поддерживается.</p>
-{%- elsif page.platform_type == 'cloud' %}
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
   <p><strong>Ресурсы облачного провайдера.</strong></p>
+   {% offtopic title="Минимальные рекомендованные ресурсы..." %}
+   - 8 ядер CPU;
+   - 16 ГБ RAM;
+   - 100 ГБ дискового пространства
+   {%- if page.platform_code == 'aws' %};
+   - ядро Linux версии `5.7` или новее.
+   {%- else %}.{%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_code == 'zvirt' %}
+  <p><strong>Минимальные ресурсы для работы zVirt.</strong></p>
    {% offtopic title="Минимальные рекомендованные ресурсы..." %}
    - 8 ядер CPU;
    - 16 ГБ RAM;

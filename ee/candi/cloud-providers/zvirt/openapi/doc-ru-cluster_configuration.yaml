@@ -23,7 +23,7 @@ apiVersions:
       clusterID:
         type: string
         description: |
-          ID кластера с общими доменами хранения и ЦП одного типа для создания виртуальны машин
+          ID кластера с общими доменами хранения и ЦП одного типа для создания виртуальны машин.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -35,7 +35,7 @@ apiVersions:
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+              Частичное содержимое полей [ZvirtInstanceClass](cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties_ru
               numCPUs:
                 description: |
