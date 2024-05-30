@@ -73,10 +73,7 @@ spec:
                         priority of rule
                     selectors:
                       type: object
-                      oneOf:
-                        - required: [ not ]
-                          minProperties: 2
-                        - minProperties: 1
+                      minProperties: 1
                       properties:
                         not:
                           type: boolean
