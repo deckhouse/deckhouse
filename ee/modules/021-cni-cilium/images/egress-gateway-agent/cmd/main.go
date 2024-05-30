@@ -19,12 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"egress-gateway-agent/internal/controller"
-	"egress-gateway-agent/internal/layer2"
+	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/controller"
+	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
 
-	networkv1alpha1 "egress-gateway-agent/pkg/apis/v1alpha1"
+	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 
-	internalv1alpha1 "egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
 var (

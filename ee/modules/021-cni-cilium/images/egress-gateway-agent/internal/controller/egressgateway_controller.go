@@ -21,11 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"egress-gateway-agent/internal/layer2"
+	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
 
-	eeCommon "egress-gateway-agent/pkg/apis/common"
+	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 
-	eeInternalCrd "egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
+	eeInternalCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
 const (

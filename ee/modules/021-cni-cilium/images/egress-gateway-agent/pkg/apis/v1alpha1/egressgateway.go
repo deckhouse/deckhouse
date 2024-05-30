@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "egress-gateway-agent/pkg/apis/common"
+	common "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,16 +28,16 @@ type EgressGatewaySpec struct {
 }
 
 type EgressGatewaySourceIP struct {
-	Mode                                    SourceIPMode                                `json:"mode"`
-	VirtualIPAddress                        VirtualIPAddressSpec                        `json:"virtualIPAddress,omitempty"`
-	PrimaryIPFromEgressGatewayNodeInterface PrimaryIPFromEgressGatewayNodeInterfaceSpec `json:"primaryIPFromEgressGatewayNodeInterface,omitempty"`
+	Mode                                    common.SourceIPMode                                `json:"mode"`
+	VirtualIPAddress                        common.VirtualIPAddressSpec                        `json:"virtualIPAddress,omitempty"`
+	PrimaryIPFromEgressGatewayNodeInterface common.PrimaryIPFromEgressGatewayNodeInterfaceSpec `json:"primaryIPFromEgressGatewayNodeInterface,omitempty"`
 }
 
 type EgressGatewayStatus struct {
-	ReadyNodes         int64               `json:"readyNodes,omitempty"`
-	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
-	ActiveNodeName     string              `json:"activeNodeName,omitempty"`
-	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
+	ReadyNodes         int64                      `json:"readyNodes,omitempty"`
+	ObservedGeneration int64                      `json:"observedGeneration,omitempty"`
+	ActiveNodeName     string                     `json:"activeNodeName,omitempty"`
+	Conditions         []common.ExtendedCondition `json:"conditions,omitempty"`
 }
 
 type EgressGateway struct {

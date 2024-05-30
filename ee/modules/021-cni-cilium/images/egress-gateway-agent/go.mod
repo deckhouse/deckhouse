@@ -1,4 +1,4 @@
-module egress-gateway-agent
+module github.com/deckhouse/deckhouse/egress-gateway-agent
 
 go 1.22
 
