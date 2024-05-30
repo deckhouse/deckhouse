@@ -20,11 +20,11 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetes:
-  - name: clusterRoles
-    apiVersion: rbac.authorization.k8s.io
+  - name: roles
+    apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     queue: authorization
-    group: authorization
+    group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
@@ -36,8 +36,8 @@ kubernetes:
         "name": .metadata.name
       }
 kubernetesValidating:
-- name: rbac-use-validating.deckhouse.io
-  group: authorization
+- name: role-validating.deckhouse.io
+  group: main
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
@@ -49,10 +49,12 @@ EOF
 
 function __main__() {
   clusterRoleName=$(context::jq -r '.review.request.object.roleRef.name')
-  if foundName="$(context::jq -er --arg roleName "$clusterRoleName" '[.snapshots.clusterRoles[] | select(.name == $roleName) | .name] | first' 2>&1)"; then
+  result=$(context::jq -r --arg role "$clusterRoleName" '.snapshots.roles[].filterResult | select(.name == $role)')
+  if [[ "$result" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Role \"$foundName\" cannot be used in ClusterRoleBinding.}
+{"allowed":false, "message":"Role \"$clusterRoleName cannot be used in ClusterRoleBinding.}
 EOF
+  return 0;
   fi
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
