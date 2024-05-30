@@ -401,20 +401,26 @@ func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
 	if nlRule.Invert == true {
 		PreparedIPRule.Invert = nlRule.Invert
 	}
-	if nlRule.Dport != nil {
-		PreparedIPRule.DPortRange.Start = nlRule.Dport.Start
-		PreparedIPRule.DPortRange.End = nlRule.Dport.End
-	}
-	if nlRule.Sport != nil {
-		PreparedIPRule.SPortRange.Start = nlRule.Sport.Start
-		PreparedIPRule.SPortRange.End = nlRule.Sport.End
-	}
 	if nlRule.IPProto > 0 {
 		PreparedIPRule.IPProto = nlRule.IPProto
 	}
+	if nlRule.Dport != nil {
+		PreparedIPRule.DPortRange = &v1alpha1.PortRange{
+			Start: nlRule.Dport.Start,
+			End:   nlRule.Dport.End,
+		}
+	}
+	if nlRule.Sport != nil {
+		PreparedIPRule.SPortRange = &v1alpha1.PortRange{
+			Start: nlRule.Sport.Start,
+			End:   nlRule.Sport.End,
+		}
+	}
 	if nlRule.UIDRange != nil {
-		PreparedIPRule.UIDRange.Start = nlRule.UIDRange.Start
-		PreparedIPRule.UIDRange.End = nlRule.UIDRange.End
+		PreparedIPRule.UIDRange = &v1alpha1.UIDRange{
+			Start: nlRule.UIDRange.Start,
+			End:   nlRule.UIDRange.End,
+		}
 	}
 
 	return PreparedIPRule
