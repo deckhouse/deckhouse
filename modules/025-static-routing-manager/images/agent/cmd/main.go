@@ -67,6 +67,7 @@ func main() {
 	log.Info("[main] CfgParams has been successfully created")
 	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
 	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
+	log.Info(fmt.Sprintf("[main] %s = %d", config.PeriodicReconciliationIntervalENV, cfgParams.PeriodicReconciliationInterval))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.MetricsAddressPortENV, cfgParams.MetricsAddressPort))
 	log.Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))

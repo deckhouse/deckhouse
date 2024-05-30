@@ -130,7 +130,7 @@ func RunRoutesReconcilerAgentController(
 
 	// trigger reconcile every 30 sec
 	ctx := context.Background()
-	go periodicalRunEventReconcile(ctx, cl, log, cfg.NodeName)
+	go periodicalRunEventReconcile(ctx, cfg, cl, log, cfg.NodeName)
 
 	return c, nil
 }
@@ -199,11 +199,12 @@ func runEventRouteReconcile(
 
 func periodicalRunEventReconcile(
 	ctx context.Context,
+	cfg config.Options,
 	cl client.Client,
 	log logger.Logger,
 	nodeName string,
 ) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(cfg.PeriodicReconciliationInterval * time.Second)
 	defer ticker.Stop()
 
 	for {

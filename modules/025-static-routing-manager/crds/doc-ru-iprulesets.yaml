@@ -36,27 +36,49 @@ spec:
                           tos:
                             description: |
                               select the TOS (or diffserv/dscp) value to match.
-                          fwmark:
+                          fwMark:
                             description: |
-                              select the fwmark value to match.
+                              select the fwMark value to match.
                           iif:
                             description: |
                               select the incoming device to match.
                           oif:
                             description: |
                               select the outgoing device (interface) to match.
-                          uidrange:
+                          ipProto:
                             description: |
-                              select the range of uid (UserID) values to match.
-                          ipproto:
+                              Select the ip protocol value to match.
+                              Available values stored in the file /etc/protocols.
+                          sportRange:
                             description: |
-                              select the ip protocol value to match.
-                          sport:
+                              Select the source port range to match. If there is only one port, fill in only the "start" field.
+                            properties:
+                              start:
+                                description: |
+                                  the beginning of the range.
+                              end:
+                                description: |
+                                  the end of the range.
+                          dportRange:
                             description: |
-                              select the range of source ports to match.
-                          dport:
+                              Select the destination port range to match. If there is only one port, fill in only the "start" field.
+                            properties:
+                              start:
+                                description: |
+                                  the beginning of the range.
+                              end:
+                                description: |
+                                  the end of the range.
+                          uidRange:
                             description: |
-                              select the range of destination ports to match.
+                              Select the range of uid (UserID) values to match.  If there is only one uid, fill in only the "start" field.
+                            properties:
+                              start:
+                                description: |
+                                  the beginning of the range.
+                              end:
+                                description: |
+                                  the end of the range.
                       actions:
                         properties:
                           lookup:

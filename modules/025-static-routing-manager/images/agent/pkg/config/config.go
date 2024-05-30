@@ -22,23 +22,26 @@ import (
 )
 
 const (
-	LogLevelENV            = "LOG_LEVEL"
-	RequeueIntervalENV     = "REQUEUE_INTERVAL"
-	ProbeAddressPortENV    = "PROBE_ADDRESS_PORT"
-	MetricsAddressPortENV  = "METRICS_ADDRESS_PORT"
-	ControllerNamespaceEnv = "CONTROLLER_NAMESPACE"
-	NodeNameENV            = "NODE_NAME"
-	ControllerName         = "static-routing-manager-agent"
-	defaultRequeueInterval = 10
+	LogLevelENV                           = "LOG_LEVEL"
+	RequeueIntervalENV                    = "REQUEUE_INTERVAL"
+	ProbeAddressPortENV                   = "PROBE_ADDRESS_PORT"
+	MetricsAddressPortENV                 = "METRICS_ADDRESS_PORT"
+	ControllerNamespaceEnv                = "CONTROLLER_NAMESPACE"
+	NodeNameENV                           = "NODE_NAME"
+	PeriodicReconciliationIntervalENV     = "PERIODIC_RECONCILE_INTERVAL"
+	ControllerName                        = "static-routing-manager-agent"
+	defaultRequeueInterval                = 10
+	defaultPeriodicReconciliationInterval = 30
 )
 
 type Options struct {
-	Loglevel            logger.Verbosity
-	ProbeAddressPort    string
-	MetricsAddressPort  string
-	ControllerNamespace string
-	RequeueInterval     time.Duration
-	NodeName            string
+	Loglevel                       logger.Verbosity
+	ProbeAddressPort               string
+	MetricsAddressPort             string
+	ControllerNamespace            string
+	RequeueInterval                time.Duration
+	PeriodicReconciliationInterval time.Duration
+	NodeName                       string
 }
 
 func NewConfig() (*Options, error) {
@@ -85,7 +88,18 @@ func NewConfig() (*Options, error) {
 		opts.RequeueInterval = time.Duration(defaultRequeueInterval)
 	}
 
-	// opts.RequeueInterval = 10
+	periodicReconciliationInterval := os.Getenv(PeriodicReconciliationIntervalENV)
+	if periodicReconciliationInterval != "" {
+		// ri, err := strconv.ParseInt(requeueInterval, 10, 64)
+		pri, err := strconv.Atoi(periodicReconciliationInterval)
+		if err != nil {
+			opts.PeriodicReconciliationInterval = time.Duration(pri)
+		} else {
+			opts.PeriodicReconciliationInterval = time.Duration(defaultPeriodicReconciliationInterval)
+		}
+	} else {
+		opts.PeriodicReconciliationInterval = time.Duration(defaultPeriodicReconciliationInterval)
+	}
 
 	nodeName := os.Getenv(NodeNameENV)
 	if nodeName != "" {

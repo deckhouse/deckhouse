@@ -28,18 +28,28 @@ type IPRule struct {
 	Actions   IPRuleActions   `json:"actions"`
 }
 
+type UIDRange struct {
+	Start uint32 `json:"start,omitempty"`
+	End   uint32 `json:"end,omitempty"`
+}
+
+type PortRange struct {
+	Start uint16 `json:"start,omitempty"`
+	End   uint16 `json:"end,omitempty"`
+}
+
 type IPRuleSelectors struct {
-	Not      bool     `json:"not,omitempty"`
-	From     []string `json:"from,omitempty"`
-	To       []string `json:"to,omitempty"`
-	Tos      string   `json:"tos,omitempty"`
-	FWMark   string   `json:"fwmark,omitempty"`
-	IIf      string   `json:"iif,omitempty"`
-	OIf      string   `json:"oif,omitempty"`
-	UIDRange string   `json:"uidrange,omitempty"`
-	IPProto  int      `json:"ipproto,omitempty"`
-	SPort    string   `json:"sport,omitempty"`
-	DPort    string   `json:"dport,omitempty"`
+	Not        bool      `json:"not,omitempty"`
+	From       []string  `json:"from,omitempty"`
+	To         []string  `json:"to,omitempty"`
+	Tos        string    `json:"tos,omitempty"`
+	FWMark     string    `json:"fwMark,omitempty"`
+	IIf        string    `json:"iif,omitempty"`
+	OIf        string    `json:"oif,omitempty"`
+	UIDRange   UIDRange  `json:"uidRange,omitempty"`
+	IPProto    int       `json:"ipProto,omitempty"`
+	SPortRange PortRange `json:"sportRange,omitempty"`
+	DPortRange PortRange `json:"dportRange,omitempty"`
 }
 
 type IPRuleActions struct {

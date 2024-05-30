@@ -76,14 +76,20 @@ spec:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
   nodeSelector:
     node-role: testrole1
 `
@@ -104,14 +110,20 @@ spec:
       - 192.168.111.0/24
       to:
       - 3.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
   nodeSelector:
     node-role: testrole1
 `
@@ -134,14 +146,81 @@ spec:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
+  nodeSelector:
+    node-role: testrole1
+`
+		irs3YAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: IPRuleSet
+metadata:
+  name: testirs3
+spec:
+  rules:
+  - actions:
+      lookup:
+        routingTableName: testrt1
+    selectors:
+      not: true
+      from:
+      - 192.168.111.0/24
+      - 192.168.222.0/24
+      to:
+      - 3.0.0.0/8
+      - 4.0.0.0/8
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
+      iif: eth1
+      oif: cilium_net
+      fwMark: 0x42/0xff
+      tos: "0x10"
+      uidRange:
+        start: 1001
+        end: 2000
+  - actions:
+      lookup:
+        ipRoutingTableID: 300
+    selectors:
+      not: true
+      from:
+      - 192.168.11.0/24
+      - 192.168.22.0/24
+      to:
+      - 3.3.0.0/16
+      - 4.4.0.0/16
+      ipProto: 17
+      dportRange:
+        start: 1300
+        end: 1400
+      sportRange:
+        start: 1100
+        end: 1200
+      iif: eth2
+      oif: cilium_net
+      fwMark: 0x52/0xff
+      tos: "0x20"
+      uidRange:
+        start: 4001
+        end: 5000
   nodeSelector:
     node-role: testrole1
 `
@@ -176,14 +255,20 @@ spec:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
 `
 		node1YAML = `
 ---
@@ -223,27 +308,33 @@ spec:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
   nodeSelector:
     node-role: testrole1
 status:
-  affectedNodeIPRuleSets: 2
+  affectedNodeIPRuleSets: 1
   conditions:
   - lastHeartbeatTime: "2024-05-29T18:42:03Z"
     lastTransitionTime: "2024-05-29T18:35:23Z"
     message: ""
-    reason: ReconciliationSucceed
-    status: "True"
+    reason: Pending
+    status: "False"
     type: Ready
   observedGeneration: 4
-  readyNodeIPRuleSets: 2
+  readyNodeIPRuleSets: 0
 `
 		nirs666YAML = `
 ---
@@ -255,7 +346,7 @@ metadata:
   generation: 4
   labels:
     routing-manager.network.deckhouse.io/node-name: kube-worker-1
-  name: testirs666-4795340ecf
+  name: testirs666-56829a352c
   ownerReferences:
   - apiVersion: network.deckhouse.io/v1alpha1
     blockOwnerDeletion: true
@@ -276,14 +367,20 @@ spec:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
 status:
   appliedRoutes:
   - actions:
@@ -297,14 +394,20 @@ status:
       to:
       - 3.0.0.0/8
       - 4.0.0.0/8
-      ipproto: 6
-      dport: 300-400
-      sport: 100-200
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
       iif: eth1
       oif: cilium_net
-      fwmark: 0x42/0xff
+      fwMark: 0x42/0xff
       tos: "0x10"
-      uidrange: 1001-2000
+      uidRange:
+        start: 1001
+        end: 2000
   conditions:
   - lastHeartbeatTime: "2024-05-29T18:55:16Z"
     lastTransitionTime: "2024-05-29T18:35:23Z"
@@ -334,6 +437,7 @@ status:
 		}
 		irs1u   *unstructured.Unstructured
 		irs2u   *unstructured.Unstructured
+		irs3u   *unstructured.Unstructured
 		nirs11u *unstructured.Unstructured
 		node1   *v1.Node
 		node2   *v1.Node
@@ -341,12 +445,13 @@ status:
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(irs1YAML), &irs1u)
 		_ = yaml.Unmarshal([]byte(irs2YAML), &irs2u)
+		_ = yaml.Unmarshal([]byte(irs3YAML), &irs3u)
 		_ = yaml.Unmarshal([]byte(nirs11YAML), &nirs11u)
 		_ = yaml.Unmarshal([]byte(node1YAML), &node1)
 		_ = yaml.Unmarshal([]byte(node2YAML), &node2)
 	})
 
-	f := HookExecutionConfigInit(initValuesString, "")
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD(irsGVK.Group, irsGVK.Version, irsGVK.Kind, false)
 	f.RegisterCRD(nirsGVK.Group, nirsGVK.Version, nirsGVK.Kind, false)
 	f.RegisterCRD(rtGVK.Group, rtGVK.Version, rtGVK.Kind, false)
@@ -363,7 +468,7 @@ status:
 		})
 	})
 
-	Context("Checking the creation operation of a CR NodeRoutingTable", func() {
+	Context("Checking the operation of creation a CR NodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(irs1YAML + irs2YAML + node1YAML + node2YAML + rt1YAML))
 			f.RunHook()
@@ -389,14 +494,20 @@ status:
     to:
     - 3.0.0.0/8
     - 4.0.0.0/8
-    ipproto: 6
-    dport: 300-400
-    sport: 100-200
+    ipProto: 6
+    dportRange:
+      start: 300
+      end: 400
+    sportRange:
+      start: 100
+      end: 200
     iif: eth1
     oif: cilium_net
-    fwmark: 0x42/0xff
+    fwMark: 0x42/0xff
     tos: "0x10"
-    uidrange: 1001-2000
+    uidRange:
+      start: 1001
+      end: 2000
 `))
 			nirs12Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).To(Equal(nirs12Name))
@@ -415,14 +526,20 @@ status:
     to:
     - 3.0.0.0/8
     - 4.0.0.0/8
-    ipproto: 6
-    dport: 300-400
-    sport: 100-200
+    ipProto: 6
+    dportRange:
+      start: 300
+      end: 400
+    sportRange:
+      start: 100
+      end: 200
     iif: eth1
     oif: cilium_net
-    fwmark: 0x42/0xff
+    fwMark: 0x42/0xff
     tos: "0x10"
-    uidrange: 1001-2000
+    uidRange:
+      start: 1001
+      end: 2000
 `))
 			nirs21Name := "testirs2" + "-" + lib.GenerateShortHash("testirs2"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath + ".3.name").String()).To(Equal(nirs21Name))
@@ -440,14 +557,20 @@ status:
     to:
     - 3.0.0.0/8
     - 4.0.0.0/8
-    ipproto: 6
-    dport: 300-400
-    sport: 100-200
+    ipProto: 6
+    dportRange:
+      start: 300
+      end: 400
+    sportRange:
+      start: 100
+      end: 200
     iif: eth1
     oif: cilium_net
-    fwmark: 0x42/0xff
+    fwMark: 0x42/0xff
     tos: "0x10"
-    uidrange: 1001-2000
+    uidRange:
+      start: 1001
+      end: 2000
 `))
 			nirs22Name := "testirs2" + "-" + lib.GenerateShortHash("testirs2"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nirsKeyPath + ".2.name").String()).To(Equal(nirs22Name))
@@ -465,20 +588,26 @@ status:
     to:
     - 3.0.0.0/8
     - 4.0.0.0/8
-    ipproto: 6
-    dport: 300-400
-    sport: 100-200
+    ipProto: 6
+    dportRange:
+      start: 300
+      end: 400
+    sportRange:
+      start: 100
+      end: 200
     iif: eth1
     oif: cilium_net
-    fwmark: 0x42/0xff
+    fwMark: 0x42/0xff
     tos: "0x10"
-    uidrange: 1001-2000
+    uidRange:
+      start: 1001
+      end: 2000
 `))
 
 		})
 	})
 
-	Context("Checking the creation operation of a CR IPRuleSet with not exists RoutingTable", func() {
+	Context("Checking the operation of creating an CR IPRuleSet consisting of only one rule in which the RoutingTable field is empty.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(irs1YAML + node1YAML))
 			f.RunHook()
@@ -486,13 +615,80 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).NotTo(HaveLen(0))
 			nirs11Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).NotTo(Equal(nirs11Name))
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs1").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs1").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs1").Field("status").String()
+			Expect(irsstatusraw).NotTo(Equal(""))
+			var irsstatus *v1alpha1.IPRuleSetStatus
+			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)
+			Expect(irsstatus.Conditions[0].Type).To(Equal(v1alpha1.ReconciliationSucceedType))
+			Expect(irsstatus.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(irsstatus.Conditions[0].Reason).To(Equal(v1alpha1.ReconciliationReasonFailed))
+			Expect(irsstatus.Conditions[0].Message).NotTo(Equal(""))
+
 		})
 	})
 
-	Context("Checking the deletion operation of a CR NodeRoutingTable", func() {
+	Context("Checking the operation of creating a CR IPRuleSet consisting of two rules, one of which has the RoutingTable field empty.", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(irs3YAML + node1YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).NotTo(HaveLen(0))
+			nirs31Name := "testirs3" + "-" + lib.GenerateShortHash("testirs3"+"#"+"kube-worker-1")
+			Expect(f.ValuesGet(nirsKeyPath).String()).NotTo(Equal("[]"))
+			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).To(Equal(nirs31Name))
+			Expect(f.ValuesGet(nirsKeyPath + ".0.nodeName").String()).To(Equal("kube-worker-1"))
+			Expect(f.ValuesGet(nirsKeyPath + ".0.ownerIRSName").String()).To(Equal("testirs3"))
+			Expect(f.ValuesGet(nirsKeyPath + ".0.rules").String()).To(MatchYAML(`
+- actions:
+    lookup:
+      ipRoutingTableID: 300
+  selectors:
+    not: true
+    from:
+    - 192.168.11.0/24
+    - 192.168.22.0/24
+    to:
+    - 3.3.0.0/16
+    - 4.4.0.0/16
+    ipProto: 17
+    dportRange:
+      start: 1300
+      end: 1400
+    sportRange:
+      start: 1100
+      end: 1200
+    iif: eth2
+    oif: cilium_net
+    fwMark: 0x52/0xff
+    tos: "0x20"
+    uidRange:
+      start: 4001
+      end: 5000
+`))
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs3").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs3").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs3").Field("status").String()
+			Expect(irsstatusraw).NotTo(Equal(""))
+			var irsstatus *v1alpha1.IPRuleSetStatus
+			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)
+			Expect(irsstatus.Conditions[0].Type).To(Equal(v1alpha1.ReconciliationSucceedType))
+			Expect(irsstatus.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(irsstatus.Conditions[0].Reason).To(Equal(v1alpha1.ReconciliationReasonFailed))
+			Expect(irsstatus.Conditions[0].Message).NotTo(Equal(""))
+
+		})
+	})
+
+	Context("Checking the deletion operation of a CR NodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + nirs11YAML))
 			f.RunHook()
@@ -520,7 +716,7 @@ status:
 		})
 	})
 
-	Context("Checking the updating operation of a CR NodeRoutingTable", func() {
+	Context("Checking the updating operation of a CR NodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + irs1upYAML + nirs11YAML))
 			f.RunHook()
@@ -532,12 +728,31 @@ status:
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).To(Equal(nirs11Name))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.nodeName").String()).To(Equal("kube-worker-1"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.ownerIRSName").String()).To(Equal("testirs1"))
-			Expect(f.ValuesGet(nirsKeyPath + ".0.ipRoutingTableID").String()).To(Equal("500"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.rules").String()).To(MatchYAML(`
-- destination: 0.0.0.0/0
-  gateway: 1.2.3.4
-- destination: 192.168.1.0/24
-  gateway: 192.168.2.1
+- actions:
+    lookup:
+      ipRoutingTableID: 500
+      routingTableName: testrt1
+  selectors:
+    not: true
+    from:
+    - 192.168.111.0/24
+    to:
+    - 3.0.0.0/8
+    ipProto: 6
+    dportRange:
+      start: 300
+      end: 400
+    sportRange:
+      start: 100
+      end: 200
+    iif: eth1
+    oif: cilium_net
+    fwMark: 0x42/0xff
+    tos: "0x10"
+    uidRange:
+      start: 1001
+      end: 2000
 `))
 		})
 	})
@@ -551,22 +766,21 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testirs666").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testirs666").Field("status").Exists()).To(BeTrue())
-			rtstatusraw := f.KubernetesGlobalResource("RoutingTable", "testirs666").Field("status").String()
-			Expect(rtstatusraw).NotTo(Equal(""))
-			var rtstatus *v1alpha1.RoutingTableStatus
-			_ = json.Unmarshal([]byte(rtstatusraw), &rtstatus)
-			Expect(rtstatus.AffectedNodeRoutingTables).To(Equal(1))
-			Expect(rtstatus.ReadyNodeRoutingTables).To(Equal(1))
-			Expect(rtstatus.IPRoutingTableID).To(Equal(500))
-			Expect(rtstatus.ObservedGeneration).To(Equal(int64(1)))
-			Expect(rtstatus.Conditions[0].Type).To(Equal(v1alpha1.ReconciliationSucceedType))
-			Expect(rtstatus.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(rtstatus.Conditions[0].Reason).To(Equal(v1alpha1.ReconciliationReasonSucceed))
-			Expect(rtstatus.Conditions[0].Message).To(Equal(""))
-			Expect(rtstatus.Conditions[0].LastHeartbeatTime).NotTo(Equal(nil))
-			Expect(rtstatus.Conditions[0].LastTransitionTime).NotTo(Equal(nil))
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs666").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs666").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs666").Field("status").String()
+			Expect(irsstatusraw).NotTo(Equal(""))
+			var irsstatus *v1alpha1.IPRuleSetStatus
+			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)
+			Expect(irsstatus.AffectedNodeIPRuleSets).To(Equal(1))
+			Expect(irsstatus.ReadyNodeIPRuleSets).To(Equal(1))
+			Expect(irsstatus.ObservedGeneration).To(Equal(int64(4)))
+			Expect(irsstatus.Conditions[0].Type).To(Equal(v1alpha1.ReconciliationSucceedType))
+			Expect(irsstatus.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(irsstatus.Conditions[0].Reason).To(Equal(v1alpha1.ReconciliationReasonSucceed))
+			Expect(irsstatus.Conditions[0].Message).To(Equal(""))
+			Expect(irsstatus.Conditions[0].LastHeartbeatTime).NotTo(Equal(nil))
+			Expect(irsstatus.Conditions[0].LastTransitionTime).NotTo(Equal(nil))
 
 		})
 	})

@@ -131,7 +131,7 @@ func RunIPRulesReconcilerAgentController(
 
 	// trigger reconcile every 30 sec
 	ctx := context.Background()
-	go periodicalRunEventIPRuleReconcile(ctx, cl, log, cfg.NodeName)
+	go periodicalRunEventIPRuleReconcile(ctx, cfg, cl, log, cfg.NodeName)
 
 	return c, nil
 }
@@ -200,11 +200,12 @@ func runEventIPRuleReconcile(
 
 func periodicalRunEventIPRuleReconcile(
 	ctx context.Context,
+	cfg config.Options,
 	cl client.Client,
 	log logger.Logger,
 	nodeName string,
 ) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(cfg.PeriodicReconciliationInterval * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -226,19 +227,19 @@ func periodicalRunEventIPRuleReconcile(
 // IPRuleEntry: type, service functions and methods
 
 type IPRuleEntry struct {
-	Priority int
-	Invert   bool
-	Src      string
-	Dst      string
-	IPProto  int
-	SPort    string
-	DPort    string
-	Tos      string
-	FWMark   string
-	IifName  string
-	OifName  string
-	UIDRange string
-	Table    int
+	Priority   int
+	Invert     bool
+	Src        string
+	Dst        string
+	IPProto    int
+	SPortRange *v1alpha1.PortRange
+	DPortRange *v1alpha1.PortRange
+	Tos        string
+	FWMark     string
+	IifName    string
+	OifName    string
+	UIDRange   *v1alpha1.UIDRange
+	Table      int
 }
 
 func (ire *IPRuleEntry) getHash() string {
@@ -248,13 +249,16 @@ func (ire *IPRuleEntry) getHash() string {
 	hashRaw = append(hashRaw, ire.Src)
 	hashRaw = append(hashRaw, ire.Dst)
 	hashRaw = append(hashRaw, strconv.Itoa(ire.IPProto))
-	hashRaw = append(hashRaw, ire.SPort)
-	hashRaw = append(hashRaw, ire.DPort)
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.Start), 10))
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.SPortRange.End), 10))
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.Start), 10))
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.DPortRange.End), 10))
 	hashRaw = append(hashRaw, ire.Tos)
 	hashRaw = append(hashRaw, ire.FWMark)
 	hashRaw = append(hashRaw, ire.IifName)
 	hashRaw = append(hashRaw, ire.OifName)
-	hashRaw = append(hashRaw, ire.UIDRange)
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.Start), 10))
+	hashRaw = append(hashRaw, strconv.FormatUint(uint64(ire.UIDRange.End), 10))
 	hashRaw = append(hashRaw, strconv.Itoa(ire.Table))
 	return strings.Join(hashRaw, "#")
 }
@@ -347,71 +351,17 @@ func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
 	if ire.Invert == true {
 		PreparedIPRule.Invert = ire.Invert
 	}
-	if ire.DPort != "" {
-		dPortRaw := strings.Split(ire.DPort, "-")
-		dPortStart, err := strconv.ParseInt(dPortRaw[0], 10, 16)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse filed DPORT in rule %v, err: %w",
-				*ire,
-				err,
-			)
-		}
-		dPortEnd := dPortStart
-		if len(dPortRaw) > 1 {
-			dPortEnd, err = strconv.ParseInt(dPortRaw[1], 10, 16)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse filed DPORT in rule %v, err: %w",
-					*ire,
-					err,
-				)
-			}
-		}
-		PreparedIPRule.Dport = netlink.NewRulePortRange(uint16(dPortStart), uint16(dPortEnd))
-	}
-	if ire.SPort != "" {
-		sPortRaw := strings.Split(ire.SPort, "-")
-		sPortStart, err := strconv.ParseInt(sPortRaw[0], 10, 16)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse filed SPORT in rule %v, err: %w",
-				*ire,
-				err,
-			)
-		}
-		sPortEnd := sPortStart
-		if len(sPortRaw) > 1 {
-			sPortEnd, err = strconv.ParseInt(sPortRaw[1], 10, 16)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse filed SPORT in rule %v, err: %w",
-					ire,
-					err,
-				)
-			}
-		}
-		PreparedIPRule.Sport = netlink.NewRulePortRange(uint16(sPortStart), uint16(sPortEnd))
-	}
 	if ire.IPProto > 0 {
 		PreparedIPRule.IPProto = ire.IPProto
 	}
-	if ire.UIDRange != "" {
-		UIDRangeRaw := strings.Split(ire.UIDRange, "-")
-		UIDRangeStart, err := strconv.ParseInt(UIDRangeRaw[0], 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse filed UIDRange in rule %v, err: %w",
-				*ire,
-				err,
-			)
-		}
-		UIDRangeEnd := UIDRangeStart
-		if len(UIDRangeRaw) > 1 {
-			UIDRangeEnd, err = strconv.ParseInt(UIDRangeRaw[1], 10, 16)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse filed UIDRange in rule %v, err: %w",
-					*ire,
-					err,
-				)
-			}
-		}
-		PreparedIPRule.UIDRange = netlink.NewRuleUIDRange(uint32(UIDRangeStart), uint32(UIDRangeEnd))
+	if ire.SPortRange != nil {
+		PreparedIPRule.Sport = netlink.NewRulePortRange(ire.SPortRange.Start, ire.SPortRange.End)
+	}
+	if ire.DPortRange != nil {
+		PreparedIPRule.Dport = netlink.NewRulePortRange(ire.DPortRange.Start, ire.DPortRange.End)
+	}
+	if ire.UIDRange != nil {
+		PreparedIPRule.UIDRange = netlink.NewRuleUIDRange(ire.UIDRange.Start, ire.UIDRange.End)
 	}
 
 	return PreparedIPRule, nil
@@ -452,24 +402,19 @@ func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
 		PreparedIPRule.Invert = nlRule.Invert
 	}
 	if nlRule.Dport != nil {
-		if nlRule.Dport.Start == nlRule.Dport.End {
-			PreparedIPRule.DPort = fmt.Sprintf("%v", nlRule.Dport.Start)
-		} else {
-			PreparedIPRule.DPort = fmt.Sprintf("%v-%v", nlRule.Dport.Start, nlRule.Dport.End)
-		}
+		PreparedIPRule.DPortRange.Start = nlRule.Dport.Start
+		PreparedIPRule.DPortRange.End = nlRule.Dport.End
 	}
 	if nlRule.Sport != nil {
-		if nlRule.Sport.Start == nlRule.Sport.End {
-			PreparedIPRule.SPort = fmt.Sprintf("%v", nlRule.Sport.Start)
-		} else {
-			PreparedIPRule.SPort = fmt.Sprintf("%v-%v", nlRule.Sport.Start, nlRule.Sport.End)
-		}
+		PreparedIPRule.SPortRange.Start = nlRule.Sport.Start
+		PreparedIPRule.SPortRange.End = nlRule.Sport.End
 	}
 	if nlRule.IPProto > 0 {
 		PreparedIPRule.IPProto = nlRule.IPProto
 	}
 	if nlRule.UIDRange != nil {
-		PreparedIPRule.UIDRange = fmt.Sprintf("%v-%v", nlRule.UIDRange.Start, nlRule.UIDRange.End)
+		PreparedIPRule.UIDRange.Start = nlRule.UIDRange.Start
+		PreparedIPRule.UIDRange.End = nlRule.UIDRange.End
 	}
 
 	return PreparedIPRule
@@ -496,18 +441,41 @@ func (irem *IPRuleEntryMap) AppendIR(ipRule v1alpha1.IPRule) {
 			ire := IPRuleEntry{
 				Priority: ipRule.Priority,
 				Invert:   ipRule.Selectors.Not,
-				Src:      from,
-				Dst:      to,
 				IPProto:  ipRule.Selectors.IPProto,
-				SPort:    ipRule.Selectors.SPort,
-				DPort:    ipRule.Selectors.DPort,
 				Tos:      ipRule.Selectors.Tos,
 				FWMark:   ipRule.Selectors.FWMark,
 				IifName:  ipRule.Selectors.IIf,
 				OifName:  ipRule.Selectors.OIf,
-				UIDRange: ipRule.Selectors.UIDRange,
 				Table:    ipRule.Actions.Lookup.IPRoutingTableID,
 			}
+
+			ire.SPortRange.Start = ipRule.Selectors.SPortRange.Start
+			if ipRule.Selectors.SPortRange.End == 0 &&
+				ipRule.Selectors.SPortRange.End != ipRule.Selectors.SPortRange.Start {
+				ire.SPortRange.End = ipRule.Selectors.SPortRange.Start
+			} else {
+				ire.SPortRange.End = ipRule.Selectors.SPortRange.End
+			}
+
+			ire.DPortRange.Start = ipRule.Selectors.DPortRange.Start
+			if ipRule.Selectors.DPortRange.End == 0 &&
+				ipRule.Selectors.DPortRange.End != ipRule.Selectors.DPortRange.Start {
+				ire.DPortRange.End = ipRule.Selectors.DPortRange.Start
+			} else {
+				ire.DPortRange.End = ipRule.Selectors.DPortRange.End
+			}
+
+			ire.UIDRange.Start = ipRule.Selectors.UIDRange.Start
+			if ipRule.Selectors.UIDRange.End == 0 &&
+				ipRule.Selectors.UIDRange.End != ipRule.Selectors.UIDRange.Start {
+				ire.UIDRange.End = ipRule.Selectors.UIDRange.Start
+			} else {
+				ire.UIDRange.End = ipRule.Selectors.UIDRange.End
+			}
+
+			ire.Src = from
+			ire.Dst = to
+
 			(*irem)[ire.getHash()] = ire
 		}
 	}

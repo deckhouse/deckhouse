@@ -63,6 +63,7 @@ spec:
                   required:
                     - selectors
                     - actions
+                    - priority
                   properties:
                     priority:
                       type: integer
@@ -72,9 +73,10 @@ spec:
                         priority of rule
                     selectors:
                       type: object
-                      required:
-                        - from
-                        - to
+                      oneOf:
+                        - required: [ not ]
+                          minProperties: 2
+                        - minProperties: 1
                       properties:
                         not:
                           type: boolean
@@ -105,11 +107,11 @@ spec:
                           description: |
                             Select the TOS (diffserv/dscp) value to match.
                             Available values stored in the file /etc/iproute2/rt_dsfield.
-                        fwmark:
+                        fwMark:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            Select the fwmark value to match.
+                            Select the fwMark value to match.
                         iif:
                           type: string
                           description: |
@@ -118,25 +120,77 @@ spec:
                           type: string
                           description: |
                             Select the outgoing device (interface) to match.
-                        uidrange:
-                          description: |
-                            Select the range of uid (UserID) values to match.
-                          type: string
-                          pattern: '^(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})-(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})$'
-                        ipproto:
+                        ipProto:
                           type: integer
                           description: |
                             Select the ip protocol value to match.
-                        sport:
+                            Available values stored in the file /etc/protocols.
+                        sportRange:
+                          type: object
                           description: |
-                            Select the source port value to match. supports port range.
-                          type: string
-                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
-                        dport:
+                            Select the source port range to match. If there is only one port, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the end of the range.
+                        dportRange:
+                          type: object
                           description: |
-                            Select the destination port value to match. supports port range.
-                          type: string
-                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
+                            Select the destination port range to match. If there is only one port, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the end of the range.
+                        uidRange:
+                          type: object
+                          description: |
+                            Select the range of uid (UserID) values to match.  If there is only one uid, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end should be greater than or equal to start."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                the end of the range.
                     actions:
                       type: object
                       required:
@@ -144,6 +198,7 @@ spec:
                       properties:
                         lookup:
                           type: object
+                          required: [ipRoutingTableID]
                           description: |
                             the routing table identifier to lookup if the rule selectors matches.
                           properties:
@@ -168,6 +223,7 @@ spec:
                   required:
                     - selectors
                     - actions
+                    - priority
                   properties:
                     priority:
                       type: integer
@@ -177,9 +233,10 @@ spec:
                         priority of rule
                     selectors:
                       type: object
-                      required:
-                        - from
-                        - to
+                      oneOf:
+                        - required: [ not ]
+                          minProperties: 2
+                        - minProperties: 1
                       properties:
                         not:
                           type: boolean
@@ -210,11 +267,11 @@ spec:
                           description: |
                             Select the TOS (diffserv/dscp) value to match.
                             Available values stored in the file /etc/iproute2/rt_dsfield.
-                        fwmark:
+                        fwMark:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            Select the fwmark value to match.
+                            Select the fwMark value to match.
                         iif:
                           type: string
                           description: |
@@ -223,25 +280,77 @@ spec:
                           type: string
                           description: |
                             Select the outgoing device (interface) to match.
-                        uidrange:
-                          description: |
-                            Select the range of uid (UserID) values to match.
-                          type: string
-                          pattern: '^(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})-(429496729[0-5]|42949672[0-8][0-9]|4294967[0-1][0-9]{2}|429496[0-6][0-9]{3}|42949[0-5][0-9]{4}|4294[0-8][0-9]{5}|429[0-3][0-9]{6}|42[0-8][0-9]{7}|4[0-1][0-9]{8}|[0-3][0-9]{9}|[0-9]{1,9})$'
-                        ipproto:
+                        ipProto:
                           type: integer
                           description: |
                             Select the ip protocol value to match.
-                        sport:
+                            Available values stored in the file /etc/protocols.
+                        sportRange:
+                          type: object
                           description: |
-                            Select the source port value to match. supports port range.
-                          type: string
-                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
-                        dport:
+                            Select the source port range to match. If there is only one port, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the end of the range.
+                        dportRange:
+                          type: object
                           description: |
-                            Select the destination port value to match. supports port range.
-                          type: string
-                          pattern: '^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$|^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})-(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[0-9]{1,4})$'
+                            Select the destination port range to match. If there is only one port, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                the end of the range.
+                        uidRange:
+                          type: object
+                          description: |
+                            Select the range of uid (UserID) values to match.  If there is only one uid, fill in only the "start" field.
+                          required:
+                            - start
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end should be greater than or equal to start."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                the beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                the end of the range.
                     actions:
                       type: object
                       required:
@@ -249,6 +358,7 @@ spec:
                       properties:
                         lookup:
                           type: object
+                          required: [ipRoutingTableID]
                           description: |
                             the routing table identifier to lookup if the rule selectors matches.
                           properties:

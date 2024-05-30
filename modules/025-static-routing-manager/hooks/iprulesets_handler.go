@@ -227,7 +227,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		// Generate desired ObservedGeneration
 		tmpDIRSStatus.ObservedGeneration = irsi.Generation
 
-		// If IPRoutingTableID is empty in Rule then generate it (for each)
+		// If IPRoutingTableID is empty in Rule then get it from RoutingTable (for each)
 		for i, iprule := range irsi.IPRules {
 			if iprule.Actions.Lookup.IPRoutingTableID != 0 {
 				continue
@@ -321,8 +321,17 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 			tmpNIRSSpec.NodeName = nodeName
 			tmpNIRSSpec.OwnerIRSName = irsi.Name
 			tmpNIRSSpec.OwnerIRSUID = irsi.UID
-			tmpNIRSSpec.IPRules = irsi.IPRules
-			desiredNodeIPRuleSets = append(desiredNodeIPRuleSets, tmpNIRSSpec)
+
+			tmpNIRSSpec.IPRules = make([]v1alpha1.IPRule, 0)
+			for _, iprule := range irsi.IPRules {
+				if iprule.Actions.Lookup.IPRoutingTableID != 0 {
+					tmpNIRSSpec.IPRules = append(tmpNIRSSpec.IPRules, iprule)
+				}
+			}
+
+			if len(tmpNIRSSpec.IPRules) > 0 {
+				desiredNodeIPRuleSets = append(desiredNodeIPRuleSets, tmpNIRSSpec)
+			}
 		}
 	}
 	// Sort desiredNodeIPRuleSets to prevent helm flapping

@@ -40,23 +40,41 @@ spec:
     {{- if $rule.selectors.oif }}
         oif: {{ $rule.selectors.oif | quote }}
     {{- end }}
-    {{- if $rule.selectors.uidrange }}
-        uidrange: {{ $rule.selectors.uidrange | quote }}
-    {{- end }}
-    {{- if $rule.selectors.ipproto }}
-        ipproto: {{ $rule.selectors.ipproto }}
-    {{- end }}
     {{- if $rule.selectors.tos }}
         tos: {{ $rule.selectors.tos | quote }}
     {{- end }}
-    {{- if $rule.selectors.fwmark }}
-        fwmark: {{ $rule.selectors.fwmark | quote }}
+    {{- if $rule.selectors.fwMark }}
+        fwMark: {{ $rule.selectors.fwMark | quote }}
     {{- end }}
-    {{- if $rule.selectors.sport }}
-        sport: {{ $rule.selectors.sport | quote }}
+    {{- if $rule.selectors.ipProto }}
+        ipProto: {{ $rule.selectors.ipProto }}
     {{- end }}
-    {{- if $rule.selectors.dport }}
-        dport: {{ $rule.selectors.dport | quote }}
+    {{- if $rule.selectors.sportRange }}
+        sportRange:
+      {{- if $rule.selectors.sportRange.start }}
+          start: {{ $rule.selectors.sportRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.sportRange.end }}
+          end: {{ $rule.selectors.sportRange.end }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.dportRange }}
+        dportRange:
+      {{- if $rule.selectors.dportRange.start }}
+          start: {{ $rule.selectors.dportRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.dportRange.end }}
+          end: {{ $rule.selectors.dportRange.end }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.uidRange }}
+        uidRange:
+      {{- if $rule.selectors.uidRange.start }}
+          start: {{ $rule.selectors.uidRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.uidRange.end }}
+          end: {{ $rule.selectors.uidRange.end }}
+      {{- end }}
     {{- end }}
       actions:
     {{- if $rule.actions.lookup }}
