@@ -52,7 +52,7 @@ function __main__() {
   result=$(context::jq -r --arg role "$clusterRoleName" '.snapshots.roles[].filterResult | select(.name == $role)')
   if [[ "$result" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Role \"$clusterRoleName cannot be used in ClusterRoleBinding.}
+{"allowed":false, "message":"Role '$clusterRoleName' cannot be used in ClusterRoleBinding."}
 EOF
   return 0;
   fi
