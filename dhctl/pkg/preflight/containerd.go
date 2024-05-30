@@ -15,7 +15,6 @@
 package preflight
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -45,8 +44,7 @@ func (pc *Checker) CheckContainerdExist() error {
 		scriptCmd := sshClient.UploadScript(file)
 		out, err = scriptCmd.Execute()
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if _, ok := err.(*exec.ExitError); ok {
 				serversWithError = append(serversWithError, sshClient.Settings.Host())
 				return nil
 			}
