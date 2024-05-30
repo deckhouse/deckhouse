@@ -575,6 +575,35 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
+  * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --help
+    ```
+    Example output:
+    ```shell
+    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
+    
+    Change registry for deckhouse images.
+    
+    Flags:
+    --help               Show context-sensitive help (also try --help-long and --help-man).
+    --user=USER          User with pull access to registry.
+    --password=PASSWORD  Password/token for registry user.
+    --ca-file=CA-FILE    Path to registry CA.
+    --insecure           Use HTTP while connecting to new registry.
+    --dry-run            Don't change deckhouse resources, only print them.
+    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+    New tag that will be used for deckhouse deployment image (by default
+    current tag from deckhouse deployment will be used).
+    
+    Args:
+    <new-registry>  Registry that will be used for deckhouse images (example:
+    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+    http - provide '--insecure' flag
+    ```
+
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.

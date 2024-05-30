@@ -576,6 +576,35 @@ Deckhouse поддерживает работу только с Bearer token-с�
     )
     $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
+  
+  * Просмотреть список доступных ключей команды `deckhouse-controller helper change-registry` можно, выполнив:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --help
+    ```
+    Пример вывода:
+    ```shell
+    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
+    
+    Change registry for deckhouse images.
+    
+    Flags:
+    --help               Show context-sensitive help (also try --help-long and --help-man).
+    --user=USER          User with pull access to registry.
+    --password=PASSWORD  Password/token for registry user.
+    --ca-file=CA-FILE    Path to registry CA.
+    --insecure           Use HTTP while connecting to new registry.
+    --dry-run            Don't change deckhouse resources, only print them.
+    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+    New tag that will be used for deckhouse deployment image (by default
+    current tag from deckhouse deployment will be used).
+    
+    Args:
+    <new-registry>  Registry that will be used for deckhouse images (example:
+    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+    http - provide '--insecure' flag
+    ```
 
 * Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
