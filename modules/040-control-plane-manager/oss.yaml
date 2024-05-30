@@ -1,7 +1,7 @@
 - name: Kubernetes
   link: https://github.com/kubernetes/kubernetes
   description: An open source system for managing containerized applications across multiple hosts.
-  logo: https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png
+  logo: /images/logos/kubernetes.png
   licence: Apache License 2.0
 
 - name: Etcd
