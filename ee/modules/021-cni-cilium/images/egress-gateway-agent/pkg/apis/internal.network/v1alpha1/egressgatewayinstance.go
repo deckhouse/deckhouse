@@ -22,39 +22,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type EgressGatewaySpec struct {
-	NodeSelector map[string]string     `json:"nodeSelector,omitempty"`
-	SourceIP     EgressGatewaySourceIP `json:"sourceIP"`
-}
-
-type EgressGatewaySourceIP struct {
+type SDNInternalEgressGatewaySourceIP struct {
 	Mode                                    SourceIPMode                                `json:"mode"`
 	VirtualIPAddress                        VirtualIPAddressSpec                        `json:"virtualIPAddress,omitempty"`
 	PrimaryIPFromEgressGatewayNodeInterface PrimaryIPFromEgressGatewayNodeInterfaceSpec `json:"primaryIPFromEgressGatewayNodeInterface,omitempty"`
 }
 
-type EgressGatewayStatus struct {
-	ReadyNodes         int64               `json:"readyNodes,omitempty"`
+// SDNInternalEgressGatewayInstanceSpec defines the desired state of SDNInternalEgressGatewayInstance
+type SDNInternalEgressGatewayInstanceSpec struct {
+	NodeName string                           `json:"nodeName,omitempty"`
+	SourceIP SDNInternalEgressGatewaySourceIP `json:"sourceIP,omitempty"`
+}
+
+// SDNInternalEgressGatewayInstanceStatus defines the observed state of SDNInternalEgressGatewayInstance
+type SDNInternalEgressGatewayInstanceStatus struct {
 	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
-	ActiveNodeName     string              `json:"activeNodeName,omitempty"`
 	Conditions         []ExtendedCondition `json:"conditions,omitempty"`
 }
 
-type EgressGateway struct {
+// SDNInternalEgressGatewayInstance is the Schema for the egressgatewayinstances API
+type SDNInternalEgressGatewayInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EgressGatewaySpec   `json:"spec,omitempty"`
-	Status EgressGatewayStatus `json:"status,omitempty"`
+	Spec   SDNInternalEgressGatewayInstanceSpec   `json:"spec,omitempty"`
+	Status SDNInternalEgressGatewayInstanceStatus `json:"status,omitempty"`
 }
 
-// EgressGatewayList contains a list of EgressGateway
-type EgressGatewayList struct {
+// SDNInternalEgressGatewayInstanceList contains a list of SDNInternalEgressGatewayInstance
+type SDNInternalEgressGatewayInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []EgressGateway `json:"items"`
+	Items           []SDNInternalEgressGatewayInstance `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&EgressGateway{}, &EgressGatewayList{})
+	SchemeBuilder.Register(&SDNInternalEgressGatewayInstance{}, &SDNInternalEgressGatewayInstanceList{})
 }

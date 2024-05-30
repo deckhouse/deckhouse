@@ -23,7 +23,9 @@ import (
 
 	"egress-gateway-agent/internal/layer2"
 
-	eeCrd "egress-gateway-agent/pkg/apis/v1alpha1"
+	eeCommon "egress-gateway-agent/pkg/apis/common"
+
+	eeInternalCrd "egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
 const (
@@ -42,7 +44,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	logger := log.FromContext(ctx)
 
 	// Get resource
-	var egressGatewayInstance eeCrd.EgressGatewayInstance
+	var egressGatewayInstance eeInternalCrd.SDNInternalEgressGatewayInstance
 	if err := r.Get(ctx, req.NamespacedName, &egressGatewayInstance); err != nil {
 		logger.Error(err, "unable to fetch egress gateway instance", "name", req.NamespacedName)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -61,14 +63,14 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	desiredVirtualIPsToAnnounce := make(map[string]struct{})
 
 	// Get list of EG by label
-	var egressGatewayInstanceList eeCrd.EgressGatewayInstanceList
+	var egressGatewayInstanceList eeInternalCrd.SDNInternalEgressGatewayInstanceList
 	if err := r.Client.List(ctx, &egressGatewayInstanceList, client.MatchingLabels{activeNodeLabelKey: r.NodeName}); err != nil {
 		logger.Error(err, "failed to list egress gateways")
 		return ctrl.Result{}, err
 	}
 
 	for _, egressGatewayInstance := range egressGatewayInstanceList.Items {
-		if egressGatewayInstance.Spec.SourceIP.Mode != eeCrd.VirtualIPAddress {
+		if egressGatewayInstance.Spec.SourceIP.Mode != eeCommon.VirtualIPAddress {
 			continue
 		}
 		desiredVirtualIPsToAnnounce[egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP] = struct{}{}
@@ -106,7 +108,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		logger.Info("deleted virtual IP", "ip", ip)
 	}
 
-	condition := eeCrd.ExtendedCondition{
+	condition := eeCommon.ExtendedCondition{
 		Condition: metav1.Condition{
 			Type:    "Ready",
 			Status:  metav1.ConditionTrue,
@@ -130,7 +132,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 func (r *EgressGatewayInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&eeCrd.EgressGatewayInstance{}).
+		For(&eeInternalCrd.SDNInternalEgressGatewayInstance{}).
 		WithEventFilter(predicate.NewPredicateFuncs(func(object client.Object) bool {
 			nodeName, ok := object.GetLabels()[activeNodeLabelKey]
 			return ok && nodeName == r.NodeName
@@ -138,9 +140,9 @@ func (r *EgressGatewayInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx context.Context, logger logr.Logger, egressGatewayInstance *eeCrd.EgressGatewayInstance) error {
+func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx context.Context, logger logr.Logger, egressGatewayInstance *eeInternalCrd.SDNInternalEgressGatewayInstance) error {
 	if controllerutil.ContainsFinalizer(egressGatewayInstance, finalizerKey) {
-		if egressGatewayInstance.Spec.SourceIP.Mode == eeCrd.VirtualIPAddress {
+		if egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
 			r.VirtualIPAnnounces.DeleteBalancer(egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP)
 		}
 
@@ -153,7 +155,7 @@ func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx conte
 	return nil
 }
 
-func setStatusCondition(conditions *[]eeCrd.ExtendedCondition, newCondition eeCrd.ExtendedCondition) (changed bool) {
+func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition eeCommon.ExtendedCondition) (changed bool) {
 	if conditions == nil {
 		return false
 	}
@@ -196,7 +198,7 @@ func setStatusCondition(conditions *[]eeCrd.ExtendedCondition, newCondition eeCr
 }
 
 // FindStatusCondition finds the conditionType in conditions.
-func findStatusCondition(conditions []eeCrd.ExtendedCondition, conditionType string) *eeCrd.ExtendedCondition {
+func findStatusCondition(conditions []eeCommon.ExtendedCondition, conditionType string) *eeCommon.ExtendedCondition {
 	for i := range conditions {
 		if conditions[i].Type == conditionType {
 			return &conditions[i]

@@ -12,9 +12,9 @@ metadata:
   {{ include "helm_lib_module_labels" (list . (dict "app" "egress-gateway-agent")) | nindent 2 }}
 rules:
 - apiGroups:
-  - network.deckhouse.io
+  - internal.network.deckhouse.io
   resources:
-  - egressgatewayinstances
+  - sdninternalegressgatewayinstances
   verbs:
   - list
   - watch
@@ -22,9 +22,9 @@ rules:
   - update
   - patch
 - apiGroups:
-    - network.deckhouse.io
+    - internal.network.deckhouse.io
   resources:
-    - egressgatewayinstances/status
+    - sdninternalegressgatewayinstances/status
   verbs:
   - patch
   - update

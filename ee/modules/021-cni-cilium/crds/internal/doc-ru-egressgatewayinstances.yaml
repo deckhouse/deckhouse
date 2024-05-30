@@ -6,7 +6,7 @@ spec:
           description: Автоматический создаваемый ресурс для отслеживания состояния EgressGateway в режиме VirtualIP.
           properties:
             spec:
-              description: Описывает желаемое состояние объекта EgressGatewayInstance.
+              description: Описывает желаемое состояние объекта SDNInternalEgressGatewayInstance.
               properties:
                 nodeName:
                   description: Имя активного узла.

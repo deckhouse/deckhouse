@@ -21,6 +21,8 @@ import (
 	k8type "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/strings/slices"
 
+	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
+	eeInternal "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
@@ -48,8 +50,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "egressgatewayinstances",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "EgressGatewayInstance",
+			ApiVersion: "internal.network.deckhouse.io/v1alpha1",
+			Kind:       "SDNInternalEgressGatewayInstance",
 			FilterFunc: applyEgressGatewayInstanceFilter,
 		},
 		{
@@ -121,7 +123,7 @@ func applyEgressGatewayFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var egi eeCrd.EgressGatewayInstance
+	var egi eeInternal.SDNInternalEgressGatewayInstance
 
 	err := sdk.FromUnstructured(obj, &egi)
 	if err != nil {
@@ -310,7 +312,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	// Evaluate desired nodes
 	egressInternalMap := egressGatewayMapFromSnapshots(input.Snapshots["egressgateways"])
 	for egName, egState := range EgressGatewayStates {
-		if egState.Mode == string(eeCrd.VirtualIPAddress) {
+		if egState.Mode == string(eeCommon.VirtualIPAddress) {
 			// for VirtualIP ready node is one with cilium agent and egress gateway agent
 			egState.ReadyNodes = egState.HealthyNodesWithEgressAgent
 		} else {
@@ -375,8 +377,8 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 
 		input.PatchCollector.MergePatch(deleteFinalizersPatch,
-			"network.deckhouse.io/v1alpha1",
-			"EgressGatewayInstance",
+			"internal.network.deckhouse.io/v1alpha1",
+			"SDNInternalEgressGatewayInstance",
 			"",
 			egi.Name,
 			object_patch.IgnoreMissingObject(),
@@ -420,7 +422,7 @@ func makeEGStatusPatchForState(egState egressGatewayState, egInstances []EgressG
 			WithDesiredNodeCheck(egState)
 	}
 
-	cond := eeCrd.ExtendedCondition{
+	cond := eeCommon.ExtendedCondition{
 		Condition: metav1.Condition{
 			Type:               "Ready",
 			LastTransitionTime: metav1.Time{Time: time.Now()},
@@ -436,7 +438,7 @@ func makeEGStatusPatchForState(egState egressGatewayState, egInstances []EgressG
 			"readyNodes":         len(egState.ReadyNodes),
 			"observedGeneration": egState.Generation,
 			"activeNodeName":     egState.DesiredActiveNode,
-			"conditions":         []eeCrd.ExtendedCondition{cond},
+			"conditions":         []eeCommon.ExtendedCondition{cond},
 		},
 	}
 	return patch
@@ -569,7 +571,7 @@ type EgressGatewayInstanceInfo struct {
 	Name            string
 	NodeName        string
 	OwnerReferences []metav1.OwnerReference
-	Conditions      []eeCrd.ExtendedCondition
+	Conditions      []eeCommon.ExtendedCondition
 }
 
 type EgressGatewaySourceIP struct {

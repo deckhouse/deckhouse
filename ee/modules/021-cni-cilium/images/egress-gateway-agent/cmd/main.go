@@ -23,6 +23,8 @@ import (
 	"egress-gateway-agent/internal/layer2"
 
 	networkv1alpha1 "egress-gateway-agent/pkg/apis/v1alpha1"
+
+	internalv1alpha1 "egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
 var (
@@ -34,7 +36,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(networkv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	utilruntime.Must(internalv1alpha1.AddToScheme(scheme))
 }
 
 func main() {

@@ -2,17 +2,17 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: egressgatewayinstances.network.deckhouse.io
+  name: sdninternalegressgatewayinstances.network.deckhouse.io
   labels:
     heritage: deckhouse
     module: cni-cilium
 spec:
-  group: network.deckhouse.io
+  group: internal.network.deckhouse.io
   names:
-    kind: EgressGatewayInstance
-    listKind: EgressGatewayInstanceList
-    plural: egressgatewayinstances
-    singular: egressgatewayinstance
+    kind: SDNInternalEgressGatewayInstance
+    listKind: SDNInternalEgressGatewayInstanceList
+    plural: sdninternalegressgatewayinstances
+    singular: sdninternalegressgatewayinstance
   scope: Cluster
   versions:
     - name: v1alpha1
@@ -23,11 +23,11 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: EgressGatewayInstance is the Schema for the egressgatewayinstances API.
+          description: EgressGatewayInstance is the Schema for the sdninternalegressgatewayinstances API.
           properties:
             spec:
               type: object
-              description: EgressGatewayInstanceSpec defines the desired state of EgressGatewayInstance.
+              description: EgressGatewayInstanceSpec defines the desired state of SDNInternalEgressGatewayInstance.
               properties:
                 nodeName:
                   type: string
@@ -77,7 +77,7 @@ spec:
             status:
               type: object
               description: EgressGatewayInstanceStatus defines the observed state of
-                EgressGatewayInstance
+                SDNInternalEgressGatewayInstance
               properties:
                 conditions:
                   items:

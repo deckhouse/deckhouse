@@ -1,8 +1,8 @@
 {{- range $egName, $egConf := $.Values.cniCilium.internal.egressGatewaysMap }}
   {{- if eq $egConf.sourceIP.mode "VirtualIPAddress" }}
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: EgressGatewayInstance
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalEgressGatewayInstance
 metadata:
   {{ include "helm_lib_module_labels" (list $ (dict "egress-gateway.network.deckhouse.io/node-name" $egConf.desiredNode)) | nindent 2 }}
   finalizers:

@@ -15,7 +15,7 @@ import (
 var _ = Describe("cni-cilium :: hooks :: egress_discovery ::", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal": {"egressGatewaysMap": {}}}}`, "")
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGateway", false)
-	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGatewayInstance", false)
+	f.RegisterCRD("internal.network.deckhouse.io", "v1alpha1", "SDNInternalEgressGatewayInstance", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -1063,8 +1063,8 @@ status:
     status: "True"
     type: Ready
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: EgressGatewayInstance
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalEgressGatewayInstance
 metadata:
   annotations:
     meta.helm.sh/release-name: cni-cilium
@@ -1178,8 +1178,8 @@ status:
     status: "True"
     type: Ready
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: EgressGatewayInstance
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalEgressGatewayInstance
 metadata:
   annotations:
     meta.helm.sh/release-name: cni-cilium
