@@ -23,10 +23,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"k8s.io/kubectl/pkg/util/podutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/kubectl/pkg/util/podutils"
 	"k8s.io/utils/pointer"
 )
 
@@ -122,10 +122,6 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 
 func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
 	pods := input.Snapshots["control-plane-pods"]
-	if len(pods) == 0 {
-		return nil
-	}
-
 	nodes := input.Snapshots["control-plane-nodes"]
 	if len(nodes) == 0 {
 		return nil
