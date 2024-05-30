@@ -493,8 +493,6 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
-    - modules/021-cni-cilium/go_lib/go.mod
-    - modules/021-cni-cilium/go_lib/go.sum
     - go_lib/**/go.mod
     - go_lib/**/go.sum
     - go.mod

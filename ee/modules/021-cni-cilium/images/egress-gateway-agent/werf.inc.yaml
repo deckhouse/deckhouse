@@ -36,19 +36,6 @@ git:
         - go.sum
       setup:
         - "**/*.go"
-  - add: /modules/021-cni-cilium/go_lib
-    to: /deckhouse/modules/021-cni-cilium/go_lib
-    excludePaths:
-      - "**/*.md"
-      - "**/*.yaml"
-      - hack
-      - {{ $discovererRelPath }}
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-      setup:
-        - "**/*.go"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
