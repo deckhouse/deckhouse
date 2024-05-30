@@ -1,0 +1,7 @@
+ARG DISTRO
+FROM $DISTRO
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends apt-transport-https aptitude autoconf automake autotools-dev binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu build-essential ca-certificates ceph-common coreutils curl fakeroot gcc gdb git gnupg gnupg1 gnupg2 jq lcov libbz2-dev libelf1 libffi-dev libfontconfig libgdbm-compat-dev libgdbm-dev liblzma-dev libncurses5-dev libpcre3-dev libreadline6-dev libsqlite3-dev libssl-dev libxml2-dev libxslt1-dev lzma lzma-dev musl musl-tools openssl patch pbuilder pkg-config software-properties-common tar unzip uuid-dev wget zlib1g-dev &&\
+    add-apt-repository ppa:longsleep/golang-backports &&\
+    apt-get update &&\
+    apt-get install -y --no-install-recommends golang-1.17-go
