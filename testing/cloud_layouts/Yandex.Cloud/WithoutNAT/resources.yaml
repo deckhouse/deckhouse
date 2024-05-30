@@ -16,6 +16,11 @@ spec:
     - ru-central1-a
   disruptions:
     approvalMode: Manual
+  kubelet:
+    resourceReservation:
+      mode: Auto
+    topologyManager:
+      enabled: true
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
