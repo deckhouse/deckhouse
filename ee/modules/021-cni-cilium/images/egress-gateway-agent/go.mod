@@ -24,9 +24,6 @@ require (
 require (
 	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.3.0
-	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
-	github.com/mdlayher/ethernet v0.0.0-20220221185849-529eae5b6118
-	github.com/mdlayher/ndp v1.1.0
 	github.com/prometheus/client_golang v1.19.0
 	sigs.k8s.io/controller-runtime v0.16.3
 )
@@ -50,6 +47,8 @@ require (
 	github.com/josharian/native v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mdlayher/arp v0.0.0-20220221190821-c37aaafac7f9 // indirect
+	github.com/mdlayher/ethernet v0.0.0-20220221185849-529eae5b6118 // indirect
 	github.com/mdlayher/packet v1.0.0 // indirect
 	github.com/mdlayher/socket v0.2.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
