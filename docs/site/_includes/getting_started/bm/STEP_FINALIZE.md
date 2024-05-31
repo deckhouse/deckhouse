@@ -151,7 +151,6 @@ useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/caps/.ssh
-chown -R caps:caps /home/caps
 echo $KEY >> /home/caps/.ssh/authorized_keys
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
