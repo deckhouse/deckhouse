@@ -103,7 +103,7 @@ properties:
                     interfaceName:
                       type: string
       egressGatewayPolicies:
-        type: array
+        type: ['null', array]
         default: []
         items:
           type: object
