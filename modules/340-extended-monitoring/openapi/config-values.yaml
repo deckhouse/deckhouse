@@ -50,7 +50,7 @@ properties:
       mirrors:
         type: array
         description: |
-          List of mirror repositories for container registries.
+          List of mirrors for container registries.
         x-examples:
         - - original: docker.io
             mirror: mirror.gcr.io
