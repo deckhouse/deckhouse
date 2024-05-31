@@ -105,9 +105,13 @@ In this case, Deckhouse does not check for updates and even doesn't apply patch 
 It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
 {% endalert %}
 
-### How do I apply an update without having to wait for the update window?
+### How do I apply an update withou having to wait for the update windows, canary-release and manual update mode?
 
-To apply an update immediately without having to wait for the update window, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
+To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
+
+{% alert level="info" %}
+**Caution!** In this case, the update windows, settings [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
+{% endalert %}
 
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
 
