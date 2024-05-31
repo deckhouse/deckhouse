@@ -292,8 +292,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
-github.com/vadimartynov/seaweedfs v1.0.0 h1:QnPi2DlD5XnqhgrkQSoXAAQ2zSObhkxRnYHYmEZ9F4k=
-github.com/vadimartynov/seaweedfs v1.0.0/go.mod h1:Q35eJKO7mV9/RE2Q8H+wGrniLFSM+wuIOBomrfRJzMA=
+github.com/vadimartynov/seaweedfs v1.0.1 h1:jWwaKNqdIFv15vtWvdeg6mIpGOf1aOUOVRw2iQsOECA=
+github.com/vadimartynov/seaweedfs v1.0.1/go.mod h1:Q35eJKO7mV9/RE2Q8H+wGrniLFSM+wuIOBomrfRJzMA=
 github.com/viant/assertly v0.9.0 h1:uB3jO+qmWQcrSCHQRxA2kk88eXAdaklUUDxxCU5wBHQ=
 github.com/viant/assertly v0.9.0/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/ptrie v1.0.1 h1:3fFC8XqCSchf11sCSS5sbb8eGDNEP2g2Hj96lNdHlZY=
