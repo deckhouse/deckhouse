@@ -24,6 +24,7 @@ import "destroy.proto";
 import "abort.proto";
 import "converge.proto";
 import "attach_commander.proto";
+import "validation.proto";
 
 service DHCTL {
   rpc Check (stream CheckRequest) returns (stream CheckResponse) {}
@@ -32,4 +33,14 @@ service DHCTL {
   rpc Abort (stream AbortRequest) returns (stream AbortResponse) {}
   rpc Converge (stream ConvergeRequest) returns (stream ConvergeResponse) {}
   rpc AttachCommander (stream AttachCommanderRequest) returns (stream AttachCommanderResponse) {}
+}
+
+service Validation {
+  rpc ValidateResources (ValidateResourcesRequest) returns (ValidateResourcesResponse) {}
+  rpc ValidateInitConfig (ValidateInitConfigRequest) returns (ValidateInitConfigResponse) {}
+  rpc ValidateClusterConfig (ValidateClusterConfigRequest) returns (ValidateClusterConfigResponse) {}
+  rpc ValidateStaticClusterConfig (ValidateStaticClusterConfigRequest) returns (ValidateStaticClusterConfigResponse) {}
+  rpc ValidateProviderSpecificClusterConfig (ValidateProviderSpecificClusterConfigRequest) returns (ValidateProviderSpecificClusterConfigResponse) {}
+  rpc ValidateChanges (ValidateChangesRequest) returns (ValidateChangesResponse) {}
+  rpc ParseConnectionConfig (ParseConnectionConfigRequest) returns (ParseConnectionConfigResponse) {}
 }

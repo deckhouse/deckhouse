@@ -12,130 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package proxy
+package server
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/mwitkow/grpc-proxy/proxy"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// Serve starts GRPC server
-func Serve(network, address string, parallelTasksLimit int) error {
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
-	lvl := &slog.LevelVar{}
-	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl).With(slog.String("component", "proxy"))
-
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	defer close(done)
-	sem := make(chan struct{}, parallelTasksLimit)
-
-	director := streamDirector{
-		log: log,
-	}
-
-	log.Info(
-		"starting grpc server proxy",
-		slog.String("network", network),
-		slog.String("address", address),
-	)
-	tomb.RegisterOnShutdown("server", func() {
-		log.Info("stopping grpc server proxy")
-		cancel()
-		<-done
-		log.Info("grpc server stopped")
-	})
-
-	listener, err := net.Listen(network, address)
-	if err != nil {
-		log.Error("failed to listen", logger.Err(err))
-		return err
-	}
-	s := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			interceptors.UnaryLogger(log),
-			logging.UnaryServerInterceptor(interceptors.Logger()),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.UnaryParallelTasksLimiter(sem),
-		),
-		grpc.ChainStreamInterceptor(
-			interceptors.StreamLogger(log),
-			logging.StreamServerInterceptor(interceptors.Logger()),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.StreamParallelTasksLimiter(sem),
-		),
-		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.new())),
-	)
-
-	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
-	healthService := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(s, healthService)
-
-	// grpcurl -plaintext host:port describe
-	reflection.Register(s)
-
-	go func() {
-		<-ctx.Done()
-
-		gracefulStop(s, time.Second*10)
-	}()
-
-	if err = s.Serve(listener); err != nil {
-		log.Error("failed to serve", logger.Err(err))
-		return err
-	}
-	return nil
+type StreamDirector struct {
+	methodsPrefix string
+	log           *slog.Logger
 }
 
-func gracefulStop(s *grpc.Server, timeout time.Duration) {
-	stopped := make(chan struct{})
-	go func() {
-		s.GracefulStop()
-		close(stopped)
-	}()
-
-	t := time.NewTimer(timeout)
-	select {
-	case <-t.C:
-		s.Stop()
-	case <-stopped:
-		t.Stop()
+func NewStreamDirector(log *slog.Logger, methodsPrefix string) *StreamDirector {
+	return &StreamDirector{
+		methodsPrefix: methodsPrefix,
+		log:           log,
 	}
 }
 
-type streamDirector struct {
-	log *slog.Logger
-}
-
-func (d *streamDirector) new() proxy.StreamDirector {
+func (d *StreamDirector) Director() proxy.StreamDirector {
 	return func(ctx context.Context, fullMethodName string) (context.Context, *grpc.ClientConn, error) {
 		// Copy the inbound metadata explicitly.
 		md, _ := metadata.FromIncomingContext(ctx)
 		outCtx := metadata.NewOutgoingContext(ctx, md.Copy())
+
+		if !strings.HasPrefix(fullMethodName, d.methodsPrefix) {
+			return outCtx, nil, status.Errorf(codes.Unimplemented, "Unknown method")
+		}
 
 		address, err := socketPath()
 		if err != nil {
