@@ -187,6 +187,9 @@ func runEventIPRuleReconcile(
 	// Actions: delete IPRules and finalizers
 	nirsMap.deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actualIPRulesOnNode, log)
 
+	// Actions: Deleting orphan IPRules (with realm 216) that are not mentioned in any NIRS
+	deleteOrphanIPRules(globalDesiredIPRulesForNode, actualIPRulesOnNode, log)
+
 	// Generate new condition for each processed nirs
 	log.Debug(fmt.Sprintf("[NIRSReconciler] Starting generate new conditions"))
 	shouldRequeue := nirsMap.generateNewCondition()
@@ -762,6 +765,20 @@ func deleteIPRuleEntriesFromNode(delIREM, gdIREM, actIREM IPRuleEntryMap, status
 		}
 	}
 	return status
+}
+
+func deleteOrphanIPRules(gdIREM, actIREM IPRuleEntryMap, log logger.Logger) {
+	log.Debug(fmt.Sprintf("[NIRSReconciler] Starting to find and delete orphan IPRules (with realm %v) from node.", v1alpha1.D8Realm))
+	for hash, ipRule := range actIREM {
+		if _, ok := (gdIREM)[hash]; ok {
+			continue
+		}
+		log.Debug(fmt.Sprintf("ipRule %v should be deleted.", ipRule))
+		err := delIPRuleFromNode(ipRule)
+		if err != nil {
+			log.Debug(fmt.Sprintf("Unable to delete ipRule %v,err: %v", ipRule, err))
+		}
+	}
 }
 
 func removeFinalizerFromNIRS(nirs *v1alpha1.NodeIPRuleSet) {

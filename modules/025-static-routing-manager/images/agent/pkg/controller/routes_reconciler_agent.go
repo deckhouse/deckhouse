@@ -183,8 +183,11 @@ func runEventRouteReconcile(
 		(*nrtMap)[nrt.Name] = nrtSummary
 	}
 
-	// Actions: delete routes and finalizers
+	// Actions: delete routes and finalizers (based on each NRT)
 	nrtMap.deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode, log)
+
+	// Actions: Deleting orphan routes (with realm 216) that are not mentioned in any NRT
+	deleteOrphanRoutes(globalDesiredRoutesForNode, actualRoutesOnNode, log)
 
 	// Generate new condition for each processed nrt
 	log.Debug(fmt.Sprintf("[NRTReconciler] Starting generate new conditions"))
@@ -558,6 +561,20 @@ func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status util
 		}
 	}
 	return status
+}
+
+func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logger.Logger) {
+	log.Debug(fmt.Sprintf("[NRTReconciler] Starting to find and delete orphan routes (with realm %v) from node.", v1alpha1.D8Realm))
+	for hash, route := range actREM {
+		if _, ok := (gdREM)[hash]; ok {
+			continue
+		}
+		log.Debug(fmt.Sprintf("Route %v should be deleted.", route))
+		err := delRouteFromNode(route)
+		if err != nil {
+			log.Debug(fmt.Sprintf("Unable to delete route %v,err: %v", route, err))
+		}
+	}
 }
 
 func removeFinalizerFromNRT(nrt *v1alpha1.NodeRoutingTable) {
