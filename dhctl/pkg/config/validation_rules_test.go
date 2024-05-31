@@ -171,7 +171,7 @@ clusterType: Static
 masterNodeGroup:
   replicas: 1`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: the new .masterNodeGroup.replicas value (1) cannot be less that than 2 (3)`,
+			errContains: `ChangesValidationFailed: validation rule failed: can't reduce the number of master nodegroup replicas to 1, functionality will be available in future versions`,
 		},
 		"unsafe rule, ok: deleteZones": {
 			phase: phases.FinalizationPhase,
@@ -210,7 +210,7 @@ masterNodeGroup:
 			schema:      testSchemaStore(t),
 			errContains: `ChangesValidationFailed: validation rule failed: can't delete zone if .masterNodeGroup.replicas < 3 (1)`,
 		},
-		"unsafe rule, ok: updateMasterImage": {
+		"unsafe rule, failed: updateMasterImage 1": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -226,30 +226,31 @@ kind: ClusterConfiguration
 clusterType: Cloud
 masterNodeGroup:
   replicas: 3
-  instanceClass:
-    imageID: bar`,
-			schema: testSchemaStore(t),
-		},
-		"unsafe rule, failed: updateMasterImage": {
-			phase: phases.FinalizationPhase,
-			oldConfig: `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    imageID: foo`,
-			newConfig: `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-masterNodeGroup:
-  replicas: 1
   instanceClass:
     imageID: bar`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.imageID if .masterNodeGroup.replicas == 1`,
+			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.imageID in multi-master cluster, functionality will be available in future versions`,
+		},
+		"unsafe rule, failed: updateMasterImage 2": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    urn: foo`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    urn: bar`,
+			schema:      testSchemaStore(t),
+			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.urn in single-master cluster, functionality will be available in future versions`,
 		},
 		"change number of docs": {
 			phase: phases.FinalizationPhase,
