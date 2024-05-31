@@ -15,11 +15,11 @@
 package commands
 
 import (
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/proxy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
 func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
@@ -27,7 +27,7 @@ func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return proxy.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit)
+		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit)
 	})
 	return cmd
 }
@@ -37,7 +37,7 @@ func DefineSingleThreadedServerCommand(parent *kingpin.Application) *kingpin.Cmd
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve(app.ServerNetwork, app.ServerAddress)
+		return singlethreaded.Serve(app.ServerNetwork, app.ServerAddress)
 	})
 	return cmd
 }
