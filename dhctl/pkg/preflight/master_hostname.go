@@ -41,39 +41,40 @@ func (pc *Checker) CheckMasterHostname() error {
 		return err
 	}
 
-	masterHostnames := make(map[string]struct{})
-	masterWithError := make([]string, 0)
+	serverHostnames := make(map[string]struct{})
+	serversWithError := make([]string, 0)
 
 	err = pc.sshClient.Loop(func(sshClient *ssh.Client) error {
-		log.DebugF("Get hostname from master %s\n", sshClient.Settings.Host())
+		var out []byte
+		log.DebugF("Get hostname from server %s\n", sshClient.Settings.Host())
 		scriptCmd := sshClient.UploadScript(file)
-		out, err := scriptCmd.Execute()
+		out, err = scriptCmd.Execute()
 		if err != nil {
 			log.ErrorLn(strings.Trim(string(out), "\n"))
 			return fmt.Errorf(
-				"could not execute a script to get master hostname: %w",
+				"could not execute a script to get server hostname: %w",
 				err,
 			)
 		}
 		hostname := strings.Trim(string(out), "\n")
-		log.DebugF("Master: %s hostname: %s\n", sshClient.Settings.Host(), hostname)
-		if _, ok := masterHostnames[hostname]; ok {
-			log.ErrorF("Master with hostname %s already exist!\n", hostname)
-			masterWithError = append(masterWithError, sshClient.Settings.Host())
+		log.DebugF("Server: %s hostname: %s\n", sshClient.Settings.Host(), hostname)
+		if _, ok := serverHostnames[hostname]; ok {
+			log.ErrorF("Server with hostname %s already exist!\n", hostname)
+			serversWithError = append(serversWithError, sshClient.Settings.Host())
 			return nil
 		}
 
-		masterHostnames[hostname] = struct{}{}
+		serverHostnames[hostname] = struct{}{}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	if len(masterWithError) > 0 {
+	if len(serversWithError) > 0 {
 		return fmt.Errorf(
-			"please set unique hostname on the servers %s and re-install the installation again",
-			strings.Join(masterWithError, ","),
+			"please set unique hostname on the servers %s and try again",
+			strings.Join(serversWithError, ","),
 		)
 	}
 
