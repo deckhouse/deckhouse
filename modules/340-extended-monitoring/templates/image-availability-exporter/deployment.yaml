@@ -88,6 +88,11 @@ spec:
         {{- if .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers }}
         - '--force-check-disabled-controllers={{ .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers | join "," | replace "All" "*" }}'
         {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.mirrors }}
+        {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrors }}
+        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
+        {{- end }}
+        {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         resources:
