@@ -106,12 +106,12 @@ spec:
 Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
 {% endalert %}
 
-### Как применить обновление минуя окна обновлений, canary-release и ручной режим обновлений (manual)?
+### Как применить обновление минуя окна обновлений, canary-release и ручной режим обновлений?
 
 Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 {% alert level="info" %}
-**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и [ручное обновление кластера](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
+**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
 {% endalert %}
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
