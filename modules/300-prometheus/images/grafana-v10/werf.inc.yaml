@@ -5,19 +5,11 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
 shell:
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
   - rm -rf .yarn
   - mv /grafana-deps/.yarn .
