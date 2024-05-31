@@ -8,7 +8,8 @@ metadata:
 spec:
   registry:
     {{- if $.Values.global.modulesImages.registry.CA }}
-    ca: {{ $.Values.global.modulesImages.registry.CA | nindent 6 }}
+    ca: |
+      {{ $.Values.global.modulesImages.registry.CA | nindent 6 }}
     {{- end }}
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
     repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
