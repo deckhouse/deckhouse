@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"log/slog"
 	"sync"
@@ -241,6 +242,7 @@ func (s *Service) check(
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
