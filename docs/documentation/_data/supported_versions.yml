@@ -21,7 +21,7 @@ osDistributions:
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
-  '_redos'::
+  '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
     ru_support: 'true'
