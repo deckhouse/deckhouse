@@ -52,9 +52,10 @@ properties:
         description: |
           List of mirror repositories for container registries.
         x-examples:
-          - mirrors:
-            - original: docker.io
-              mirror: mirror.gcr.io
+        - - original: docker.io
+            mirror: mirror.gcr.io
+          - original: internal-registry.com
+            mirror: mirror.internal-registry.com
         items:
           type: object
           required:
