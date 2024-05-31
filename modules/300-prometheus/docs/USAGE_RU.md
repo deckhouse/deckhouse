@@ -115,7 +115,7 @@ metadata:
   namespace: d8-monitoring
 type: Opaque
 data:
-  # Basic-auth-строка хешируется с помощью htpasswd.
+  # Строка basic-auth хешируется с помощью htpasswd.
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 
