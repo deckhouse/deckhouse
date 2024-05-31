@@ -30,7 +30,7 @@ git:
       - '**/*'
 shell:
   setup:
-    - git clone -b v1.47.0 --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git src
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git src
     - cd /src
     - CFLAGS='-static' LDFLAGS="-static" ./configure
     - make
