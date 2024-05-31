@@ -34,7 +34,6 @@ func (pc *Checker) CheckMasterHostname() error {
 		log.DebugLn("Master hostname preflight check was skipped")
 		return nil
 	}
-	log.DebugLn("Checking if localhost domain resolves correctly")
 
 	file, err := template.RenderAndSavePreflightCheckScript("get_hostname.sh", nil)
 	if err != nil {
