@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metrics_server "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -121,6 +122,10 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		Scheme: scheme,
 		BaseContext: func() context.Context {
 			return ctx
+		},
+		// disable manager's metrics for awhile
+		Metrics: metrics_server.Options{
+			BindAddress: "0",
 		},
 		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
 		Cache: cache.Options{
