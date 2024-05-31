@@ -52,7 +52,7 @@ func (t *ReverseTunnel) Up() error {
 
 	err := t.sshCmd.Start()
 	if err != nil {
-		return fmt.Errorf("tunnel up: %v", err)
+		return fmt.Errorf("tunnel up: %w", err)
 	}
 
 	go func() {
@@ -74,7 +74,7 @@ func (t *ReverseTunnel) Up() error {
 func (t *ReverseTunnel) Stop() error {
 	err := t.sshCmd.Process.Kill()
 	if err != nil {
-		return fmt.Errorf("stop tunnel '%s': %v", t.String(), err)
+		return fmt.Errorf("stop tunnel '%s': %w", t.String(), err)
 	}
 
 	return nil

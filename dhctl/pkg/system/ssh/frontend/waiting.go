@@ -82,7 +82,7 @@ func (c *Check) ExpectAvailable() ([]byte, error) {
 		return nil, nil
 	}
 
-	return output, fmt.Errorf("SSH command output should contain \"SUCCESS\", error: %v", err)
+	return output, fmt.Errorf("SSH command output should contain \"SUCCESS\", error: %w", err)
 }
 
 func (c *Check) String() string {

@@ -39,13 +39,19 @@ type checkStep struct {
 	fun            func() error
 }
 
-func NewChecker(sshClient *ssh.Client, config *config.DeckhouseInstaller, metaConfig *config.MetaConfig) Checker {
+func NewChecker(
+	sshClient *ssh.Client,
+	config *config.DeckhouseInstaller,
+	metaConfig *config.MetaConfig,
+) Checker {
 	return Checker{
 		sshClient:               sshClient,
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		imageDescriptorProvider: remoteDescriptorProvider{},
-		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
+		buildDigestProvider: &dhctlBuildDigestProvider{
+			DigestFilePath: app.DeckhouseImageDigestFile,
+		},
 	}
 }
 
@@ -75,6 +81,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckContainerdExist,
+			successMessage: "contanerd not exist",
+			skipFlag:       app.ContainerdExistCheckArgName,
 		},
 	})
 }
@@ -106,7 +117,11 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 		}
 
 		for _, check := range checks {
-			loop := retry.NewLoop(fmt.Sprintf("Checking %s", check.successMessage), 1, 10*time.Second)
+			loop := retry.NewLoop(
+				fmt.Sprintf("Checking %s", check.successMessage),
+				1,
+				10*time.Second,
+			)
 			if err := loop.Run(check.fun); err != nil {
 				return fmt.Errorf("Installation aborted: %w\n"+
 					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
