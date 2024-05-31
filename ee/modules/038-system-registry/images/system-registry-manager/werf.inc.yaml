@@ -4,6 +4,7 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
+fromCacheVersion: 2024053101
 import:
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
