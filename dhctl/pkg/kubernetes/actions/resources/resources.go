@@ -149,25 +149,7 @@ func (c *Creator) TryToCreate() error {
 }
 
 func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, error) {
-	lists, err := c.kubeCl.APIResourceList(gvk.GroupVersion().String())
-	if err != nil && len(lists) == 0 {
-		// apiVersion is defined and there is a ServerResourcesForGroupVersion error
-		return false, err
-	}
-
-	namespaced := false
-	for _, list := range lists {
-		for _, resource := range list.APIResources {
-			if len(resource.Verbs) == 0 {
-				continue
-			}
-			if resource.Name == name {
-				namespaced = resource.Namespaced
-				break
-			}
-		}
-	}
-	return namespaced, nil
+	return isNamespaced(c.kubeCl, gvk, name)
 }
 
 func (c *Creator) createSingleResource(resource *template.Resource) error {
@@ -257,4 +239,53 @@ func getUnstructuredName(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s %s", obj.GetKind(), obj.GetName())
 	}
 	return fmt.Sprintf("%s %s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+}
+
+func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources) error {
+	for _, res := range resources {
+		namespace := res.Object.GetNamespace()
+		gvk := res.GVK
+
+		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
+		if err != nil {
+			return fmt.Errorf("bad group version resource %s: %w", res.GVK.String(), err)
+		}
+		name := gvr.Resource
+
+		namespaced, err := isNamespaced(kubeCl, gvk, name)
+		if err != nil {
+			return fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
+		}
+		if namespace == metav1.NamespaceNone && namespaced {
+			namespace = metav1.NamespaceDefault
+		}
+
+		if err := kubeCl.Dynamic().Resource(gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("unable to remove %s: %w", gvr.String(), err)
+		}
+	}
+
+	return nil
+}
+
+func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, name string) (bool, error) {
+	lists, err := kubeCl.APIResourceList(gvk.GroupVersion().String())
+	if err != nil && len(lists) == 0 {
+		// apiVersion is defined and there is a ServerResourcesForGroupVersion error
+		return false, err
+	}
+
+	namespaced := false
+	for _, list := range lists {
+		for _, resource := range list.APIResources {
+			if len(resource.Verbs) == 0 {
+				continue
+			}
+			if resource.Name == name {
+				namespaced = resource.Namespaced
+				break
+			}
+		}
+	}
+	return namespaced, nil
 }

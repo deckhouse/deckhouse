@@ -6,10 +6,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
@@ -72,4 +74,14 @@ func ConstructManagedByCommanderConfigMapTask(commanderUUID uuid.UUID, kubeCl *c
 			return nil
 		},
 	}
+}
+
+func DeleteManagedByCommanderConfigMap(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete commander-uuid ConfigMap", 20, 5*time.Second).WithShowError(false).Run(func() error {
+		err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Delete(ctx, manifests.CommanderUUIDCm, metav1.DeleteOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	})
 }

@@ -61,7 +61,7 @@ func NewChecker(params *Params) *Checker {
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := c.kubeClient()
+	kubeCl, err := c.GetKubeClient()
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func resolveStatisticsStatus(status string) CheckStatus {
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
 
-func (c *Checker) kubeClient() (*client.KubernetesClient, error) {
+func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
 	if c.KubeClient != nil {
 		return c.KubeClient, nil
 	}
