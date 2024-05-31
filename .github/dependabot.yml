@@ -79,6 +79,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/021-cni-cilium/images/egress-gateway-agent"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
