@@ -3,7 +3,8 @@ kind: ClusterRole
 metadata:
   name: d8:manage:all:admin
   labels:
-    {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+    heritage: deckhouse
+    module: user-authz
     rbac.deckhouse.io/kind: manage
 aggregationRule:
   clusterRoleSelectors:

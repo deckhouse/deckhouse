@@ -4,6 +4,7 @@ metadata:
   name: d8:use:role:guest
   labels:
     heritage: deckhouse
+    module: user-authz
     rbac.deckhouse.io/kind: use
 aggregationRule:
   clusterRoleSelectors:

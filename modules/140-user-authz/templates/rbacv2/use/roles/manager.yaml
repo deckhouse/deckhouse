@@ -4,6 +4,7 @@ metadata:
   name: d8:use:role:manager
   labels:
     heritage: deckhouse
+    module: user-authz
     rbac.deckhouse.io/kind: use
     rbac.deckhouse.io/aggregate-to-role: admin
     rbac.deckhouse.io/aggregate-to-all-role: manager
