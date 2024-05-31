@@ -52,7 +52,7 @@ type RoutingTableInfo struct {
 	Status           v1alpha1.RoutingTableStatus
 }
 
-type NodeRoutingTableInfo struct {
+type SDNInternalNodeRoutingTableInfo struct {
 	Name      string
 	IsDeleted bool
 	NodeName  string
@@ -98,14 +98,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "routingtables",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "RoutingTable",
+			ApiVersion: v1alpha1.GroupVersion,
+			Kind:       v1alpha1.RTKind,
 			FilterFunc: applyRoutingTablesFilter,
 		},
 		{
 			Name:       "noderoutingtables",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "NodeRoutingTable",
+			ApiVersion: v1alpha1.InternalGroupVersion,
+			Kind:       v1alpha1.NRTKind,
 			FilterFunc: applyNodeRoutingTablesFilter,
 		},
 		{
@@ -154,8 +154,8 @@ func applyRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 func applyNodeRoutingTablesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
-		nrt    v1alpha1.NodeRoutingTable
-		result NodeRoutingTableInfo
+		nrt    v1alpha1.SDNInternalNodeRoutingTable
+		result SDNInternalNodeRoutingTableInfo
 	)
 	err := sdk.FromUnstructured(obj, &nrt)
 	if err != nil {
@@ -195,7 +195,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		IDSlider:    routingTableIDMin,
 		MaxID:       routingTableIDMax,
 	}
-	actualNodeRoutingTables := make(map[string]NodeRoutingTableInfo)
+	actualNodeRoutingTables := make(map[string]SDNInternalNodeRoutingTableInfo)
 	allNodes := make(map[string]struct{})
 	affectedNodes := make(map[string][]RoutingTableInfo)
 	desiredRTStatus := make(map[string]rtStatusPlus)
@@ -209,13 +209,13 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 
 	// Filling actualNodeRoutingTables and delete finalizers from orphan NRTs
 	for _, nrtRaw := range input.Snapshots["noderoutingtables"] {
-		nrtis := nrtRaw.(NodeRoutingTableInfo)
+		nrtis := nrtRaw.(SDNInternalNodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
 			lib.DeleteFinalizer(
 				input,
 				nrtis.Name,
-				v1alpha1.GroupVersion,
+				v1alpha1.InternalGroupVersion,
 				v1alpha1.NRTKind,
 				v1alpha1.Finalizer,
 			)

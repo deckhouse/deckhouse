@@ -23,12 +23,13 @@ import (
 )
 
 const (
-	APIGroup   = "network.deckhouse.io"
-	APIVersion = "v1alpha1"
-	RTKind     = "RoutingTable"
-	NRTKind    = "NodeRoutingTable"
-	IRSKind    = "IPRuleSet"
-	NIRSKind   = "NodeIPRuleSet"
+	APIGroup         = "network.deckhouse.io"
+	InternalAPIGroup = "internal.network.deckhouse.io"
+	APIVersion       = "v1alpha1"
+	RTKind           = "RoutingTable"
+	NRTKind          = "SDNInternalNodeRoutingTable"
+	IRSKind          = "IPRuleSet"
+	NIRSKind         = "SDNInternalNodeIPRuleSet"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -39,6 +40,9 @@ var (
 	}
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme   = SchemeBuilder.AddToScheme
+
+	InternalSchemeBuilder = runtime.NewSchemeBuilder(addKnownInternalTypes)
+	AddInternalToScheme   = InternalSchemeBuilder.AddToScheme
 )
 
 // Adds the list of known types to Scheme.
@@ -46,12 +50,20 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&RoutingTable{},
 		&RoutingTableList{},
-		&NodeRoutingTable{},
-		&NodeRoutingTableList{},
 		&IPRuleSet{},
 		&IPRuleSetList{},
-		&NodeIPRuleSet{},
-		&NodeIPRuleSetList{},
+	)
+	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+	return nil
+}
+
+// Adds the list of known Internal types to Scheme.
+func addKnownInternalTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(SchemeGroupVersion,
+		&SDNInternalNodeRoutingTable{},
+		&SDNInternalNodeRoutingTableList{},
+		&SDNInternalNodeIPRuleSet{},
+		&SDNInternalNodeIPRuleSetList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

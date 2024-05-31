@@ -226,8 +226,8 @@ spec:
 `
 		nirs11YAML = `
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeIPRuleSet
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeIPRuleSet
 metadata:
   finalizers:
   - routing-tables-manager.network.deckhouse.io
@@ -338,8 +338,8 @@ status:
 `
 		nirs666YAML = `
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeIPRuleSet
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeIPRuleSet
 metadata:
   finalizers:
   - routing-tables-manager.network.deckhouse.io
@@ -421,19 +421,19 @@ status:
 
 	var (
 		rtGVK = schema.GroupVersionKind{
-			Group:   "network.deckhouse.io",
-			Version: "v1alpha1",
-			Kind:    "RoutingTable",
+			Group:   v1alpha1.Group,
+			Version: v1alpha1.Version,
+			Kind:    v1alpha1.RTKind,
 		}
 		irsGVK = schema.GroupVersionKind{
-			Group:   "network.deckhouse.io",
-			Version: "v1alpha1",
-			Kind:    "IPRuleSet",
+			Group:   v1alpha1.Group,
+			Version: v1alpha1.Version,
+			Kind:    v1alpha1.IRSKind,
 		}
 		nirsGVK = schema.GroupVersionKind{
-			Group:   "network.deckhouse.io",
-			Version: "v1alpha1",
-			Kind:    "NodeIPRuleSet",
+			Group:   v1alpha1.InternalGroup,
+			Version: v1alpha1.Version,
+			Kind:    v1alpha1.NIRSKind,
 		}
 		irs1u   *unstructured.Unstructured
 		irs2u   *unstructured.Unstructured
@@ -468,7 +468,7 @@ status:
 		})
 	})
 
-	Context("Checking the operation of creation a CR NodeIPRuleSet", func() {
+	Context("Checking the operation of creation a CR SDNInternalNodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(irs1YAML + irs2YAML + node1YAML + node2YAML + rt1YAML))
 			f.RunHook()
@@ -619,9 +619,9 @@ status:
 			nirs11Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).NotTo(Equal(nirs11Name))
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs1").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs1").Field("status").Exists()).To(BeTrue())
-			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs1").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs1").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs1").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs1").Field("status").String()
 			Expect(irsstatusraw).NotTo(Equal(""))
 			var irsstatus *v1alpha1.IPRuleSetStatus
 			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)
@@ -674,9 +674,9 @@ status:
       start: 4001
       end: 5000
 `))
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs3").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs3").Field("status").Exists()).To(BeTrue())
-			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs3").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs3").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs3").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs3").Field("status").String()
 			Expect(irsstatusraw).NotTo(Equal(""))
 			var irsstatus *v1alpha1.IPRuleSetStatus
 			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)
@@ -688,7 +688,7 @@ status:
 		})
 	})
 
-	Context("Checking the deletion operation of a CR NodeIPRuleSet", func() {
+	Context("Checking the deletion operation of a CR SDNInternalNodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + nirs11YAML))
 			f.RunHook()
@@ -716,7 +716,7 @@ status:
 		})
 	})
 
-	Context("Checking the updating operation of a CR NodeIPRuleSet", func() {
+	Context("Checking the updating operation of a CR SDNInternalNodeIPRuleSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1YAML + irs1upYAML + nirs11YAML))
 			f.RunHook()
@@ -766,9 +766,9 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs666").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("IPRuleSet", "testirs666").Field("status").Exists()).To(BeTrue())
-			irsstatusraw := f.KubernetesGlobalResource("IPRuleSet", "testirs666").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Field("status").Exists()).To(BeTrue())
+			irsstatusraw := f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Field("status").String()
 			Expect(irsstatusraw).NotTo(Equal(""))
 			var irsstatus *v1alpha1.IPRuleSetStatus
 			_ = json.Unmarshal([]byte(irsstatusraw), &irsstatus)

@@ -12,11 +12,19 @@ rules:
   resources:
   - iprulesets
   - routingtables
-  - noderoutingtables
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+    - internal.network.deckhouse.io
+  resources:
+    - sdninternalnodeiprulesets
+    - sdninternalnoderoutingtables
+  verbs:
+    - get
+    - list
+    - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -31,10 +39,20 @@ rules:
   resources:
   - iprulesets
   - routingtables
-  - noderoutingtables
   verbs:
   - create
   - delete
   - deletecollection
   - patch
   - update
+- apiGroups:
+    - internal.network.deckhouse.io
+  resources:
+    - sdninternaliprulesets
+    - sdninternalnoderoutingtables
+  verbs:
+    - create
+    - delete
+    - deletecollection
+    - patch
+    - update

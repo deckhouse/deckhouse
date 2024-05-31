@@ -135,8 +135,8 @@ status:
 `
 		nrt11YAML = `
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeRoutingTable
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeRoutingTable
 metadata:
   name: testrt1-29c8b10d14
 spec:
@@ -196,8 +196,8 @@ status:
 `
 		nrt666YAML = `
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeRoutingTable
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeRoutingTable
 metadata:
   finalizers:
   - routing-tables-manager.network.deckhouse.io
@@ -206,7 +206,7 @@ metadata:
     routing-manager.network.deckhouse.io/node-name: kube-worker-1
   name: testrt666-4795340ecf
   ownerReferences:
-  - apiVersion: NodeRoutingTable
+  - apiVersion: SDNInternalNodeRoutingTable
     blockOwnerDeletion: true
     controller: true
     kind: RoutingTable
@@ -238,14 +238,14 @@ status:
 
 	var (
 		rtGVK = schema.GroupVersionKind{
-			Group:   "network.deckhouse.io",
-			Version: "v1alpha1",
-			Kind:    "RoutingTable",
+			Group:   v1alpha1.Group,
+			Version: v1alpha1.Version,
+			Kind:    v1alpha1.RTKind,
 		}
 		nrtGVK = schema.GroupVersionKind{
-			Group:   "network.deckhouse.io",
-			Version: "v1alpha1",
-			Kind:    "NodeRoutingTable",
+			Group:   v1alpha1.InternalGroup,
+			Version: v1alpha1.Version,
+			Kind:    v1alpha1.NRTKind,
 		}
 		rt1u  *unstructured.Unstructured
 		rt2u  *unstructured.Unstructured
@@ -283,7 +283,7 @@ status:
 		})
 	})
 
-	Context("Checking the creation operation of a CR NodeRoutingTable", func() {
+	Context("Checking the creation operation of a CR SDNInternalNodeRoutingTable", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + rt2YAML + rt3YAML + rt4YAML + rt5YAML + node1YAML + node2YAML))
 			f.RunHook()
@@ -389,7 +389,7 @@ status:
 		})
 	})
 
-	Context("Checking the deletion operation of a CR NodeRoutingTable", func() {
+	Context("Checking the deletion operation of a CR SDNInternalNodeRoutingTable", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + nrt11YAML))
 			f.RunHook()
@@ -417,7 +417,7 @@ status:
 		})
 	})
 
-	Context("Checking the updating operation of a CR NodeRoutingTable", func() {
+	Context("Checking the updating operation of a CR SDNInternalNodeRoutingTable", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1YAML + rt1upYAML + nrt11YAML))
 			f.RunHook()
@@ -447,11 +447,11 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt3").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
-			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt3").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt3").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt3").Field("status").String()
 			Expect(rtstatus).NotTo(Equal(""))
-			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt3").Field("status.ipRoutingTableID").String()
+			rtstatusid := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt3").Field("status.ipRoutingTableID").String()
 			Expect(rtstatusid).To(MatchYAML(`300`))
 		})
 	})
@@ -464,11 +464,11 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt4").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
-			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt4").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt4").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt4").Field("status").String()
 			Expect(rtstatus).NotTo(Equal(""))
-			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt4").Field("status.ipRoutingTableID").String()
+			rtstatusid := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt4").Field("status.ipRoutingTableID").String()
 			Expect(rtstatusid).To(MatchYAML(`20000`))
 		})
 	})
@@ -481,11 +481,11 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt5").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
-			rtstatus := f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt5").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt5").Field("status.ipRoutingTableID").Exists()).To(BeTrue())
+			rtstatus := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt5").Field("status").String()
 			Expect(rtstatus).NotTo(Equal(""))
-			rtstatusid := f.KubernetesGlobalResource("RoutingTable", "testrt5").Field("status.ipRoutingTableID").String()
+			rtstatusid := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt5").Field("status.ipRoutingTableID").String()
 			Expect(rtstatusid).To(MatchYAML(`300`))
 		})
 	})
@@ -499,9 +499,9 @@ status:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt666").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("RoutingTable", "testrt666").Field("status").Exists()).To(BeTrue())
-			rtstatusraw := f.KubernetesGlobalResource("RoutingTable", "testrt666").Field("status").String()
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Field("status").Exists()).To(BeTrue())
+			rtstatusraw := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Field("status").String()
 			Expect(rtstatusraw).NotTo(Equal(""))
 			var rtstatus *v1alpha1.RoutingTableStatus
 			_ = json.Unmarshal([]byte(rtstatusraw), &rtstatus)

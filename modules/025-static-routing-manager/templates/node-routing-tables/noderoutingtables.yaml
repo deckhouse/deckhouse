@@ -1,7 +1,7 @@
 {{- range $nrt := .Values.staticRoutingManager.internal.nodeRoutingTables }}
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeRoutingTable
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeRoutingTable
 metadata:
   finalizers:
     - routing-tables-manager.network.deckhouse.io

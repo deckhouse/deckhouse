@@ -59,14 +59,14 @@ func RunRoutesReconcilerAgentController(
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Debug(fmt.Sprintf("[NRTReconciler] Received a reconcile.Request for CR %v", request.Name))
 
-			nrt := &v1alpha1.NodeRoutingTable{}
+			nrt := &v1alpha1.SDNInternalNodeRoutingTable{}
 			err := cl.Get(ctx, request.NamespacedName, nrt)
 			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to get NodeRoutingTable, name: %s", request.Name))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to get SDNInternalNodeRoutingTable, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
 			if nrt.Name == "" {
-				log.Info(fmt.Sprintf("[NRTReconciler] Seems like the NodeRoutingTable for the request %s was deleted. Reconcile retrying will stop.", request.Name))
+				log.Info(fmt.Sprintf("[NRTReconciler] Seems like the SDNInternalNodeRoutingTable for the request %s was deleted. Reconcile retrying will stop.", request.Name))
 				return reconcile.Result{}, nil
 			}
 			labelSelectorSet := map[string]string{v1alpha1.NodeNameLabel: cfg.NodeName}
@@ -87,8 +87,8 @@ func RunRoutesReconcilerAgentController(
 					return reconcile.Result{}, nil
 				}
 			}
-			log.Debug(fmt.Sprintf("[NRTReconciler] NodeRoutingTable %v needs to be reconciled. Set status to Pending", nrt.Name))
-			tmpNRT := new(v1alpha1.NodeRoutingTable)
+			log.Debug(fmt.Sprintf("[NRTReconciler] SDNInternalNodeRoutingTable %v needs to be reconciled. Set status to Pending", nrt.Name))
+			tmpNRT := new(v1alpha1.SDNInternalNodeRoutingTable)
 			*tmpNRT = *nrt
 
 			if nrt.Generation != nrt.Status.ObservedGeneration {
@@ -122,7 +122,7 @@ func RunRoutesReconcilerAgentController(
 		return nil, err
 	}
 
-	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.NodeRoutingTable{}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.SDNInternalNodeRoutingTable{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		log.Error(err, "[RunRoutesReconcilerAgentController] unable to watch the events")
 		return nil, err
@@ -146,11 +146,11 @@ func runEventRouteReconcile(
 	actualRoutesOnNode := make(RouteEntryMap)
 	nrtMap := nrtMapInit()
 
-	// Getting all the NodeRoutingTable associated with our node
-	nrtList := &v1alpha1.NodeRoutingTableList{}
+	// Getting all the SDNInternalNodeRoutingTable associated with our node
+	nrtList := &v1alpha1.SDNInternalNodeRoutingTableList{}
 	err = cl.List(ctx, nrtList, client.MatchingLabels{v1alpha1.NodeNameLabel: nodeName})
 	if err != nil && !errors2.IsNotFound(err) {
-		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to list NodeRoutingTable for node %s", nodeName))
+		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to list SDNInternalNodeRoutingTable for node %s", nodeName))
 		return true, err
 	}
 
@@ -264,7 +264,7 @@ func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
 // nrtSummary: type, service functions and methods
 
 type nrtSummary struct {
-	k8sResources            *v1alpha1.NodeRoutingTable
+	k8sResources            *v1alpha1.SDNInternalNodeRoutingTable
 	newReconciliationStatus utils.ReconciliationStatus
 	desiredRoutesByNRT      RouteEntryMap
 	lastAppliedRoutesByNRT  RouteEntryMap
@@ -276,7 +276,7 @@ type nrtSummary struct {
 
 func nrtSummaryInit() *nrtSummary {
 	return &nrtSummary{
-		k8sResources:            new(v1alpha1.NodeRoutingTable),
+		k8sResources:            new(v1alpha1.SDNInternalNodeRoutingTable),
 		newReconciliationStatus: utils.ReconciliationStatus{},
 		desiredRoutesByNRT:      RouteEntryMap{},
 		lastAppliedRoutesByNRT:  RouteEntryMap{},
@@ -287,7 +287,7 @@ func nrtSummaryInit() *nrtSummary {
 	}
 }
 
-func (ns *nrtSummary) discoverFacts(nrt v1alpha1.NodeRoutingTable, globalDesiredRoutesForNode, actualRoutesOnNode *RouteEntryMap, log logger.Logger) bool {
+func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, globalDesiredRoutesForNode, actualRoutesOnNode *RouteEntryMap, log logger.Logger) bool {
 	// Filling nrtK8sResourcesMap[nrt.Name] and nrtReconciliationStatusMap[nrt.Name]
 	tmpNrt := nrt
 	tmpNrt.Status.ObservedGeneration = nrt.Generation
@@ -436,14 +436,14 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 			log.Debug(fmt.Sprintf("Update of NRT: %v", nrtName))
 			err = cl.Update(ctx, ns.k8sResources)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to update CR NodeRoutingTable %v, err: %v", nrtName, err))
+				log.Error(err, fmt.Sprintf("unable to update CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
 			}
 		}
 		// Update status every time
 		log.Debug(fmt.Sprintf("Update status of NRT: %v", nrtName))
 		err = cl.Status().Update(ctx, ns.k8sResources)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrtName, err))
+			log.Error(err, fmt.Sprintf("unable to update status for CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
 		}
 	}
 }
@@ -577,7 +577,7 @@ func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logger.Logger) {
 	}
 }
 
-func removeFinalizerFromNRT(nrt *v1alpha1.NodeRoutingTable) {
+func removeFinalizerFromNRT(nrt *v1alpha1.SDNInternalNodeRoutingTable) {
 	// tmpNrt.Finalizers = []string{}
 	var tmpNRTFinalizers []string
 	tmpNRTFinalizers = []string{}

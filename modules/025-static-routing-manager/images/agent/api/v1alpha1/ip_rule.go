@@ -90,25 +90,25 @@ type IPRuleSetStatus struct {
 
 // CR NodeIPRuleSet
 
-type NodeIPRuleSet struct {
+type SDNInternalNodeIPRuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeIPRuleSetSpec   `json:"spec"`
-	Status            NodeIPRuleSetStatus `json:"status,omitempty"`
+	Spec              SDNInternalNodeIPRuleSetSpec   `json:"spec"`
+	Status            SDNInternalNodeIPRuleSetStatus `json:"status,omitempty"`
 }
 
-type NodeIPRuleSetList struct {
+type SDNInternalNodeIPRuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []NodeIPRuleSet `json:"items"`
+	Items           []SDNInternalNodeIPRuleSet `json:"items"`
 }
 
-type NodeIPRuleSetSpec struct {
+type SDNInternalNodeIPRuleSetSpec struct {
 	NodeName string   `json:"nodeName"`
 	IPRules  []IPRule `json:"rules"`
 }
 
-type NodeIPRuleSetStatus struct {
+type SDNInternalNodeIPRuleSetStatus struct {
 	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
 	AppliedIPRules     []IPRule            `json:"appliedRules,omitempty"`
 	Conditions         []ExtendedCondition `json:"conditions,omitempty"`

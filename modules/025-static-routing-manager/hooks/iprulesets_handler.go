@@ -48,7 +48,7 @@ type IPRuleSetInfo struct {
 	Status       v1alpha1.IPRuleSetStatus
 }
 
-type NodeIPRuleSetInfo struct {
+type SDNInternalNodeIPRuleSetInfo struct {
 	Name      string
 	IsDeleted bool
 	NodeName  string
@@ -80,14 +80,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "iprulesets",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "IPRuleSet",
+			ApiVersion: v1alpha1.GroupVersion,
+			Kind:       v1alpha1.IRSKind,
 			FilterFunc: applyIPRuleSetFilter,
 		},
 		{
 			Name:       "nodeiprulesets",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "NodeIPRuleSet",
+			ApiVersion: v1alpha1.InternalGroupVersion,
+			Kind:       v1alpha1.NIRSKind,
 			FilterFunc: applyNodeIPRuleSetFilter,
 		},
 		{
@@ -98,8 +98,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "routingtables",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "RoutingTable",
+			ApiVersion: v1alpha1.GroupVersion,
+			Kind:       v1alpha1.RTKind,
 			FilterFunc: applyRTLiteFilter,
 		},
 	},
@@ -131,8 +131,8 @@ func applyIPRuleSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 func applyNodeIPRuleSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
-		nirs   v1alpha1.NodeIPRuleSet
-		result NodeIPRuleSetInfo
+		nirs   v1alpha1.SDNInternalNodeIPRuleSet
+		result SDNInternalNodeIPRuleSetInfo
 	)
 	err := sdk.FromUnstructured(obj, &nirs)
 	if err != nil {
@@ -177,7 +177,7 @@ func applyRTLiteFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 func ipRuleSetsHandler(input *go_hook.HookInput) error {
 	// Init vars
 
-	actualNodeIPRuleSets := make(map[string]NodeIPRuleSetInfo)
+	actualNodeIPRuleSets := make(map[string]SDNInternalNodeIPRuleSetInfo)
 	allNodes := make(map[string]struct{})
 	allRTs := make(map[string]int)
 	affectedNodes := make(map[string][]IPRuleSetInfo)
@@ -200,12 +200,12 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 
 	// Filling actualNodeIPRuleSets and delete finalizers from orphan NIRSs
 	for _, nirsRaw := range input.Snapshots["nodeiprulesets"] {
-		nirs := nirsRaw.(NodeIPRuleSetInfo)
+		nirs := nirsRaw.(SDNInternalNodeIPRuleSetInfo)
 		actualNodeIPRuleSets[nirs.Name] = nirs
 		if _, ok := allNodes[nirs.NodeName]; !ok && nirs.IsDeleted {
 			lib.DeleteFinalizer(input,
 				nirs.Name,
-				v1alpha1.GroupVersion,
+				v1alpha1.InternalGroupVersion,
 				v1alpha1.NIRSKind,
 				v1alpha1.Finalizer)
 		}

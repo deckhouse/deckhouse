@@ -41,6 +41,7 @@ import (
 var (
 	resourcesSchemeFuncs = []func(*apiruntime.Scheme) error{
 		v1alpha1.AddToScheme,
+		v1alpha1.AddInternalToScheme,
 		clientgoscheme.AddToScheme,
 		extv1.AddToScheme,
 		v1.AddToScheme,

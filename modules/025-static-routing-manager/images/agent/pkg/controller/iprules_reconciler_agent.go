@@ -60,14 +60,14 @@ func RunIPRulesReconcilerAgentController(
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 			log.Debug(fmt.Sprintf("[NIRSReconciler] Received a reconcile.Request for CR %v", request.Name))
 
-			nirs := &v1alpha1.NodeIPRuleSet{}
+			nirs := &v1alpha1.SDNInternalNodeIPRuleSet{}
 			err := cl.Get(ctx, request.NamespacedName, nirs)
 			if err != nil && !errors2.IsNotFound(err) {
-				log.Error(err, fmt.Sprintf("[NIRSReconciler] Unable to get NodeIPRuleSet, name: %s", request.Name))
+				log.Error(err, fmt.Sprintf("[NIRSReconciler] Unable to get SDNInternalNodeIPRuleSet, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
 			if nirs.Name == "" {
-				log.Info(fmt.Sprintf("[NIRSReconciler] Seems like the NodeIPRuleSet for the request %s was deleted. Reconcile retrying will stop.", request.Name))
+				log.Info(fmt.Sprintf("[NIRSReconciler] Seems like the SDNInternalNodeIPRuleSet for the request %s was deleted. Reconcile retrying will stop.", request.Name))
 				return reconcile.Result{}, nil
 			}
 			labelSelectorSet := map[string]string{v1alpha1.NodeNameLabel: cfg.NodeName}
@@ -88,8 +88,8 @@ func RunIPRulesReconcilerAgentController(
 					return reconcile.Result{}, nil
 				}
 			}
-			log.Debug(fmt.Sprintf("[NIRSReconciler] NodeIPRuleSet %v needs to be reconciled. Set status to Pending", nirs.Name))
-			tmpNIRS := new(v1alpha1.NodeIPRuleSet)
+			log.Debug(fmt.Sprintf("[NIRSReconciler] SDNInternalNodeIPRuleSet %v needs to be reconciled. Set status to Pending", nirs.Name))
+			tmpNIRS := new(v1alpha1.SDNInternalNodeIPRuleSet)
 			*tmpNIRS = *nirs
 
 			if nirs.Generation != nirs.Status.ObservedGeneration {
@@ -123,7 +123,7 @@ func RunIPRulesReconcilerAgentController(
 		return nil, err
 	}
 
-	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.NodeIPRuleSet{}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &v1alpha1.SDNInternalNodeIPRuleSet{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		log.Error(err, "[RunIPRulesReconcilerAgentController] unable to watch the events")
 		return nil, err
@@ -147,8 +147,8 @@ func runEventIPRuleReconcile(
 	actualIPRulesOnNode := make(IPRuleEntryMap)
 	nirsMap := nirsMapInit()
 
-	// Getting all the NodeIPRuleSet associated with our node
-	nirsList := &v1alpha1.NodeIPRuleSetList{}
+	// Getting all the SDNInternalNodeIPRuleSet associated with our node
+	nirsList := &v1alpha1.SDNInternalNodeIPRuleSetList{}
 	err = cl.List(ctx, nirsList, client.MatchingLabels{v1alpha1.NodeNameLabel: nodeName})
 	if err != nil && !errors2.IsNotFound(err) {
 		log.Error(err, fmt.Sprintf("[NIRSReconciler] unable to list NodeIPRuleSet for node %s", nodeName))
@@ -504,7 +504,7 @@ func (irem *IPRuleEntryMap) AppendIR(ipRule v1alpha1.IPRule) {
 // nirsSummary: type, service functions and methods
 
 type nirsSummary struct {
-	k8sResources              *v1alpha1.NodeIPRuleSet
+	k8sResources              *v1alpha1.SDNInternalNodeIPRuleSet
 	newReconciliationStatus   utils.ReconciliationStatus
 	desiredIPRulesByNIRS      IPRuleEntryMap
 	lastAppliedIPRulesByNIRS  IPRuleEntryMap
@@ -516,7 +516,7 @@ type nirsSummary struct {
 
 func nirsSummaryInit() *nirsSummary {
 	return &nirsSummary{
-		k8sResources:              new(v1alpha1.NodeIPRuleSet),
+		k8sResources:              new(v1alpha1.SDNInternalNodeIPRuleSet),
 		newReconciliationStatus:   utils.ReconciliationStatus{},
 		desiredIPRulesByNIRS:      IPRuleEntryMap{},
 		lastAppliedIPRulesByNIRS:  IPRuleEntryMap{},
@@ -527,7 +527,7 @@ func nirsSummaryInit() *nirsSummary {
 	}
 }
 
-func (ns *nirsSummary) discoverFacts(nirs v1alpha1.NodeIPRuleSet, globalDesiredIPRulesForNode, actualIPRulesOnNode *IPRuleEntryMap, log logger.Logger) bool {
+func (ns *nirsSummary) discoverFacts(nirs v1alpha1.SDNInternalNodeIPRuleSet, globalDesiredIPRulesForNode, actualIPRulesOnNode *IPRuleEntryMap, log logger.Logger) bool {
 	// Filling nirsK8sResourcesMap[nirs.Name] and nirsReconciliationStatusMap[nirs.Name]
 	tmpNIRS := nirs
 	tmpNIRS.Status.ObservedGeneration = nirs.Generation
@@ -676,14 +676,14 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 			log.Debug(fmt.Sprintf("Update of NIRS: %v", nirsName))
 			err = cl.Update(ctx, ns.k8sResources)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to update CR NodeIPRuleSet %v, err: %v", nirsName, err))
+				log.Error(err, fmt.Sprintf("unable to update CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
 			}
 		}
 		// Update status every time
 		log.Debug(fmt.Sprintf("Update status of NIRS: %v", nirsName))
 		err = cl.Status().Update(ctx, ns.k8sResources)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to update status for CR NodeIPRuleSet %v, err: %v", nirsName, err))
+			log.Error(err, fmt.Sprintf("unable to update status for CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
 		}
 	}
 }
@@ -781,7 +781,7 @@ func deleteOrphanIPRules(gdIREM, actIREM IPRuleEntryMap, log logger.Logger) {
 	}
 }
 
-func removeFinalizerFromNIRS(nirs *v1alpha1.NodeIPRuleSet) {
+func removeFinalizerFromNIRS(nirs *v1alpha1.SDNInternalNodeIPRuleSet) {
 	var tmpNIRSFinalizers []string
 	tmpNIRSFinalizers = []string{}
 	for _, fnlzr := range nirs.Finalizers {

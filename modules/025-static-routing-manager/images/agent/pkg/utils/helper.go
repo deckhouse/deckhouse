@@ -120,7 +120,7 @@ func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log 
 	return nil
 }
 
-func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log logger.Logger, nrt *v1alpha1.NodeRoutingTable) error {
+func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log logger.Logger, nrt *v1alpha1.SDNInternalNodeRoutingTable) error {
 	t := metav1.NewTime(time.Now())
 	nrt.Status.ObservedGeneration = nrt.Generation
 
@@ -135,7 +135,7 @@ func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log l
 
 	err := cl.Status().Update(ctx, nrt)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("unable to update status for CR NodeRoutingTable %v, err: %v", nrt.Name, err))
+		log.Error(err, fmt.Sprintf("unable to update status for CR SDNInternalNodeRoutingTable %v, err: %v", nrt.Name, err))
 		return err
 	}
 	return nil

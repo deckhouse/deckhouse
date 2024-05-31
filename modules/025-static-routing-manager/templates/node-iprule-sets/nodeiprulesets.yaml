@@ -1,7 +1,7 @@
 {{- range $nirs := .Values.staticRoutingManager.internal.nodeIPRuleSets }}
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: NodeIPRuleSet
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeIPRuleSet
 metadata:
   finalizers:
     - routing-tables-manager.network.deckhouse.io

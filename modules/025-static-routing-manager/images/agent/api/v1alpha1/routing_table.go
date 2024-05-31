@@ -60,28 +60,28 @@ type RoutingTableStatus struct {
 	Conditions                []ExtendedCondition `json:"conditions,omitempty"`
 }
 
-// CR NodeRoutingTable
+// CR SDNInternalNodeRoutingTable
 
-type NodeRoutingTable struct {
+type SDNInternalNodeRoutingTable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeRoutingTableSpec   `json:"spec"`
-	Status            NodeRoutingTableStatus `json:"status,omitempty"`
+	Spec              SDNInternalNodeRoutingTableSpec   `json:"spec"`
+	Status            SDNInternalNodeRoutingTableStatus `json:"status,omitempty"`
 }
 
-type NodeRoutingTableList struct {
+type SDNInternalNodeRoutingTableList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []NodeRoutingTable `json:"items"`
+	Items           []SDNInternalNodeRoutingTable `json:"items"`
 }
 
-type NodeRoutingTableSpec struct {
+type SDNInternalNodeRoutingTableSpec struct {
 	NodeName         string  `json:"nodeName"`
 	IPRoutingTableID int     `json:"ipRoutingTableID"`
 	Routes           []Route `json:"routes"`
 }
 
-type NodeRoutingTableStatus struct {
+type SDNInternalNodeRoutingTableStatus struct {
 	ObservedGeneration int64               `json:"observedGeneration,omitempty"`
 	AppliedRoutes      []Route             `json:"appliedRoutes,omitempty"`
 	Conditions         []ExtendedCondition `json:"conditions,omitempty"`

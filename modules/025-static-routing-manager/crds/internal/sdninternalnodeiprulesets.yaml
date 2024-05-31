@@ -1,17 +1,17 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: nodeiprulesets.network.deckhouse.io
+  name: sdninternalnodeiprulesets.internal.network.deckhouse.io
   labels:
     heritage: deckhouse
     module: static-routing-manager
 spec:
-  group: network.deckhouse.io
+  group: internal.network.deckhouse.io
   scope: Cluster
   names:
-    plural: nodeiprulesets
-    singular: nodeipruleset
-    kind: NodeIPRuleSet
+    plural: sdninternalnodeiprulesets
+    singular: sdninternalnodeipruleset
+    kind: SDNInternalNodeIPRuleSet
   preserveUnknownFields: false
   versions:
   - name: v1alpha1

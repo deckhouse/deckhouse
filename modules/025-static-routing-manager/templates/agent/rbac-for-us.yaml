@@ -16,12 +16,8 @@ rules:
   resources:
   - iprulesets
   - iprulesets/status
-  - nodeiprulesets
-  - nodeiprulesets/status
   - routingtables
   - routingtables/status
-  - noderoutingtables
-  - noderoutingtables/status
   verbs:
   - get
   - list
@@ -31,6 +27,22 @@ rules:
   - create
   - delete
   - deletecollection
+- apiGroups:
+    - internal.network.deckhouse.io
+  resources:
+    - sdninternalnodeiprulesets
+    - sdninternalnodeiprulesets/status
+    - sdninternalnoderoutingtables
+    - sdninternalnoderoutingtables/status
+  verbs:
+    - get
+    - list
+    - watch
+    - patch
+    - update
+    - create
+    - delete
+    - deletecollection
 - apiGroups:
   - ""
   resources:
