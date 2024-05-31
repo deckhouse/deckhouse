@@ -153,6 +153,7 @@ controllerManager:
   extraArgs:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
+    cluster-signing-duration: "180s"
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
