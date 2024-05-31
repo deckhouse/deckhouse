@@ -26,6 +26,10 @@ properties:
               ca:
                 description: |
                   Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      mirrors:
+        type: array
+        description: |
+          Список зеркал для container registry
       forceCheckDisabledControllers:
         description: |
           Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).

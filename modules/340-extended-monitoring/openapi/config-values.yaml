@@ -47,6 +47,24 @@ properties:
                 type: string
                 description: |
                   Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
+      mirrors:
+        type: array
+        description: |
+          List of mirror repositories for container registries.
+        x-examples:
+          mirrors:
+          - original: docker.io
+            mirror: mirror.gcr.io
+        items:
+          type: object
+          required:
+          - original
+          - mirror
+          properties:
+            original:
+              type: string
+            mirror:
+              type: string
       forceCheckDisabledControllers:
         type: array
         x-examples:
