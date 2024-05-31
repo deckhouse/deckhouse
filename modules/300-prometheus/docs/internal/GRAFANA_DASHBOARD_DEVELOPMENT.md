@@ -22,35 +22,25 @@ search: making Grafana graphs
 
 ## How do I quickly optimize a third-party Dashboard?
 
-1. Find all ranges and replace them with `$__interval_sx4`:
-
-   ```shell
-   for dashboard in *.json; do
-     for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
-       sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
-     done
-   done
-   ```
-
-2. Replace `irate` with `rate`:
+1. Replace `irate` with `rate`:
 
    ```shell
    sed 's/irate(/rate(/g' -i *.json
    ```
 
-3. Replace `Resolution` with `1/1`:
+2. Replace `Resolution` with `1/1`:
 
    ```shell
    sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
    ```
 
-4. Get rid of `Min Step`:
+3. Get rid of `Min Step`:
 
    ```shell
    sed '/"interval":/d' -i *.json
    ```
 
-5. Replace all graphs with `Staircase` (you will need to edit `Stack` + `Percent` graphs manually - switch them to `Bars`):
+4. Replace all graphs with `Staircase` (you will need to edit `Stack` + `Percent` graphs manually - switch them to `Bars`):
 
    ```shell
    sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
@@ -105,60 +95,10 @@ In addition, it is better to use typical units of measurement such as:
 
 Granted, in some cases, the level of detail makes it difficult to track global trends. However, the opposite is true much more often — due to insufficient detail, part of the data required for analysis is not displayed. To preserve the accuracy of data:
 1. **always use the `rate` function instead of `irate`**;
-2. **use `$__interval_sx4` as the range for the range vectors**;
+2. **use `$__rate_interval` as the range for the range vectors**;
 3. **use Resolution 1/1 in al cases**;
 4. **never set the Min step**;
-5. **use `$__interval_sx3` as the range for the range vectors in the avg/max/min_over_time functions**;
-
-![Data accuracy and granularity](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
-
-{% offtopic title="Reasons and details" %}
-  <ul dir="auto">
-    <li>You can specify <code>step</code> in the Prometheus's API request. Suppose we have three hours of data and set a <code>step</code> of 30 seconds. In this case, we will get 360 data points (3 hours *60 minutes* 2 points per minute), and they can easily fit on the graph. Now suppose we have data for 24 hours. In this case, the 30-second step does not make any sense since you cannot fit 2880 data points on a screen (unless, of course, you have a 4K monitor - but still, each data point will have the size of a pixel, and the human eye cannot discern so much tightly packed information). To solve this problem, Grafana implements a tricky mechanism to auto-determine the step size. It works as follows:
-    <ul>
-      <li>Grafana uses the size of the graph (whether it occupies the entire screen, 1/2, 1/4 of the screen, etc.), the size of the browser window, and the screen resolution to calculate how many points can be shown on the screen.</li>
-      <li>Next, Grafana divides the selected browsing period by the number of points that can be shown to get the "minimum viable step". Thus, for the screen that can fit 800 data points, it gets the following ratios:
-        <ul>
-          <li>30 minutes — 2.25 seconds,</li>
-          <li>3 hours — 13.5 seconds,</li>
-          <li>24 hours — 108 seconds,</li>
-          <li>7 days — 756 seconds.</li>
-        </ul>
-      </li>
-      <li>Next, Grafana turns to the <code>Min step</code> parameter and makes the minimum data point <code>step</code> equal to the <code>Min step</code> (if specified). Note that the <code>Min step</code> parameter can be specified globally (in the data source settings) and for each query in the panel. In our case, the <code>Min step</code>  is set globally. It corresponds to the <code>scrape_interval</code> for Prometheus (the <code>scrape_interval</code> for the main one is 30 seconds). In the end, Grafana gets the following values (taking into account the above restriction):
-        <ul>
-          <li>30 minutes — 30 seconds (instead of 2.25),</li>
-          <li>3 hours — 30 seconds (instead of 13.5 seconds),</li>
-          <li>24 hours — 108 seconds,</li>
-          <li>7 days — 756 seconds.</li>
-        </ul>
-      </li>
-      <li>Next, Grafana rounds the resulting values (to 5/15/30 seconds, 1/5/15 minutes, etc.) and gets the following:
-        <ul>
-          <li>30 minutes — 30 seconds,</li>
-          <li>3 hours — 30 seconds,</li>
-          <li>24 hours — 2 minutes,</li>
-          <li>7 days — 10 minutes.</li>
-        </ul>
-      </li>
-      <li>Next, Grafana refers to the Resolution parameter of the panel (it can be set to 1/1, 1/2, ..., 1/10) and increases the step according to it (twice for 1/2, in ten times for 1/10).</li>
-    </ul>
-  </li>
-  <li>Most of the Prometheus data are stored in counters (not gauges), so you need to use the <code>rate</code> or <code>irate</code> function to get the current value. And that is where the problem begins.
-    <ul>
-      <li>The <code>rate</code> and <code>irate</code> functions use range vectors, but which range to pass? Grafana has a built-in (and ready-to-use) <code>$__interval</code> variable that stores the step that will be passed to Prometheus.</li>
-      <li>But there must be al least two points in the range vector for the <code>rate</code> and <code>irate</code> functions to work (which is logical). However, a range vector for 30 seconds with a <code>scrape_interval</code> set to 30 seconds will contain only one point, and <code>rate</code>/<code>irate</code> will be useless in this case. And at this point, you may opt for any of the following WRONG approaches:
-        <ul>
-          <li>Set the Resolution to 1/2 for all queries so that the <code>$__interval</code> variable equals 2 x <code>Min step</code> for any interval. It helps — the graphs work as expected. The downside is that they are always half as detailed as they could otherwise have been.</li>
-          <li>Set the Min step equal to two <code>scrape_intervals</code> This approach is somewhat better but has the same downsides.</li>
-          <li>Use the <code>irate</code> function and pass a range vector for 1h (or any other value known to be larger than the period). This approach is the most deceptive. In this case, graphs are displayed accurately as long as the <code>step</code> is less or equal to the <code>scrape_interval</code>. However, if the  <code>step</code> is bigger than the <code>scrape_interval</code> (as is the case with 24h and 7d periods), the graph becomes utterly misleading: instead of displaying the rate for the entire step, it shows the rate for the last <code>scrape_interval</code> at each point. In other words, when browsing data for the 7 days, you see the CPU usage over the last 30 seconds of each 10-minute interval instead of the average usage for a (<code>step</code>) (10 minutes). Thus, you have no idea of what has happened to the CPU usage in the remaining 9 minutes and 30 seconds!</li>
-        </ul>
-      </li>
-      <li>To solve this problem, we have added the <code>$__interval_sx4</code> (rv = range vector) variable to Grafana. This variable equals <code>max($__interval, scrape_interval * 2)</code>. It is similar to <code>$__interval</code> while its minimum value cannot be less than the period containing at least two points in the range vector (<a href="https://github.com/grafana/grafana/issues/11451" rel="nofollow noreferrer noopener" target="_blank">here is the corresponding Grafana issue</a>). And that completely solves the problem!</li>
-    </ul>
-  </li>
-</ul>
-{% endofftopic %}
+5. **use `$__range` as the range for the range vectors in the avg/max/min_over_time functions**;
 
 #### The absence of data must be obvious
 
