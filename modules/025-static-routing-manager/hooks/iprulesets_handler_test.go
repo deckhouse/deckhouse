@@ -270,6 +270,55 @@ spec:
         start: 1001
         end: 2000
 `
+		orphannirs11YAML = `
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeIPRuleSet
+metadata:
+  finalizers:
+  - routing-tables-manager.network.deckhouse.io
+  - yet-another-finalizer
+  generation: 4
+  deletionGracePeriodSeconds: 0
+  deletionTimestamp: "2024-05-30T08:29:20Z"
+  labels:
+    routing-manager.network.deckhouse.io/node-name: kube-worker-1
+  name: testirs1-dcf11d50a1
+  ownerReferences:
+  - apiVersion: network.deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: IPRuleSet
+    name: testirs666
+spec:
+  nodeName: kube-worker-1
+  rules:
+  - actions:
+      lookup:
+        ipRoutingTableID: 500
+    selectors:
+      not: true
+      from:
+      - 192.168.111.0/24
+      - 192.168.222.0/24
+      to:
+      - 3.0.0.0/8
+      - 4.0.0.0/8
+      ipProto: 6
+      dportRange:
+        start: 300
+        end: 400
+      sportRange:
+        start: 100
+        end: 200
+      iif: eth1
+      oif: cilium_net
+      fwMark: 0x42/0xff
+      tos: "0x10"
+      uidRange:
+        start: 1001
+        end: 2000
+`
 		node1YAML = `
 ---
 apiVersion: v1
@@ -704,17 +753,21 @@ status:
 
 	Context("Checking case when node was deleted", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + irs1YAML + nirs11YAML))
+			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + irs1YAML + orphannirs11YAML))
 			f.RunHook()
 		})
 
-		FIt("Hook must execute successfully", func() {
+		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			//testirs1-dcf11d50a1
 			nirs11Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).NotTo(Equal(nirs11Name))
 			Expect(f.KubernetesGlobalResource(v1alpha1.NIRSKind, "testirs1-dcf11d50a1").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.NIRSKind, "testirs1-dcf11d50a1").Field("metadata.finalizers").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.NIRSKind, "testirs1-dcf11d50a1").Field("metadata.finalizers").String()).To(MatchYAML(`
+- yet-another-finalizer
+`))
+			Expect(f.KubernetesGlobalResource(v1alpha1.NIRSKind, "testirs1-dcf11d50a1").Field("metadata.deletionTimestamp").Exists()).To(BeTrue())
 		})
 	})
 

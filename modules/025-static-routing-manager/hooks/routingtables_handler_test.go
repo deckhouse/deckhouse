@@ -148,6 +148,35 @@ spec:
   - destination: 192.168.0.0/24
     gateway: 192.168.0.1
 `
+		orphannrt11YAML = `
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeRoutingTable
+metadata:
+  finalizers:
+  - routing-tables-manager.network.deckhouse.io
+  - yet-another-finalizer
+  generation: 1
+  deletionGracePeriodSeconds: 0
+  deletionTimestamp: "2024-05-30T08:29:20Z"
+  labels:
+    routing-manager.network.deckhouse.io/node-name: kube-worker-1
+  name: testrt1-29c8b10d14
+  ownerReferences:
+  - apiVersion: SDNInternalNodeRoutingTable
+    blockOwnerDeletion: true
+    controller: true
+    kind: RoutingTable
+    name: testrt1
+spec:
+  nodeName: kube-worker-1
+  ipRoutingTableID: 500
+  routes:
+  - destination: 0.0.0.0/0
+    gateway: 1.2.3.4
+  - destination: 192.168.0.0/24
+    gateway: 192.168.0.1
+`
 		node1YAML = `
 ---
 apiVersion: v1
@@ -405,7 +434,7 @@ status:
 
 	Context("Checking case when node was deleted", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + nrt11YAML))
+			f.BindingContexts.Set(f.KubeStateSet(rt1YAML + orphannrt11YAML))
 			f.RunHook()
 		})
 
@@ -414,6 +443,13 @@ status:
 			nrt11Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nrtKeyPath + ".0.name").String()).NotTo(Equal(nrt11Name))
+			Expect(f.KubernetesGlobalResource(v1alpha1.NRTKind, nrt11Name).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.NRTKind, nrt11Name).Field("metadata.finalizers").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource(v1alpha1.NRTKind, nrt11Name).Field("metadata.finalizers").String()).To(MatchYAML(`
+- yet-another-finalizer
+`))
+			Expect(f.KubernetesGlobalResource(v1alpha1.NRTKind, nrt11Name).Field("metadata.deletionTimestamp").Exists()).To(BeTrue())
+
 		})
 	})
 

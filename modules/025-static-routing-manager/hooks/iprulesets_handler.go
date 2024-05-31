@@ -203,11 +203,14 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		nirs := nirsRaw.(SDNInternalNodeIPRuleSetInfo)
 		actualNodeIPRuleSets[nirs.Name] = nirs
 		if _, ok := allNodes[nirs.NodeName]; !ok && nirs.IsDeleted {
-			lib.DeleteFinalizer(input,
+			input.LogEntry.Infof("An orphan NIRS %v was found. It will be deleted", nirs.Name)
+			lib.DeleteFinalizer(
+				input,
 				nirs.Name,
 				v1alpha1.InternalGroupVersion,
 				v1alpha1.NIRSKind,
-				v1alpha1.Finalizer)
+				v1alpha1.Finalizer,
+			)
 		}
 	}
 

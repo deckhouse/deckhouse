@@ -212,6 +212,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		nrtis := nrtRaw.(SDNInternalNodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
+			input.LogEntry.Infof("An orphan NRT %v was found. It will be deleted", nrtis.Name)
 			lib.DeleteFinalizer(
 				input,
 				nrtis.Name,

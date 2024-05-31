@@ -121,15 +121,16 @@ func FindStatusCondition(conditions []v1alpha1.ExtendedCondition, conditionType 
 func DeleteFinalizer(input *go_hook.HookInput, crName, crAPIVersion, crKind, finalizerToMatch string) {
 	input.PatchCollector.Filter(
 		func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-			crFinalizers := obj.GetFinalizers()
+			objCopy := obj.DeepCopy()
+			crFinalizers := objCopy.GetFinalizers()
 			tmpFinalizers := make([]string, 0)
 			for _, fnlzr := range crFinalizers {
 				if fnlzr != finalizerToMatch {
 					tmpFinalizers = append(tmpFinalizers, fnlzr)
 				}
 			}
-			obj.SetFinalizers(tmpFinalizers)
-			return obj, nil
+			objCopy.SetFinalizers(tmpFinalizers)
+			return objCopy, nil
 		},
 		crAPIVersion,
 		crKind,
