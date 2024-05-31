@@ -17,14 +17,14 @@ func NewClusterRaftRemoveArgs(serverId string) *clusterRaftRemoveArgs {
 	return &clusterRaftAddArgs
 }
 
-func clusterRaftRemove(args *clusterRaftRemoveArgs, commandEnv *commandEnv) (*master_pb.RaftRemoveServerResponse, error) {
+func clusterRaftRemove(args *clusterRaftRemoveArgs, cm *commandEnv) (*master_pb.RaftRemoveServerResponse, error) {
 	var result *master_pb.RaftRemoveServerResponse
 
 	if args.serverId == "" {
 		return nil, fmt.Errorf("empty server id")
 	}
 
-	err := commandEnv.MasterClient.WithClient(context.Background(), false, func(client master_pb.SeaweedClient) error {
+	err := cm.MasterClient.WithClientCustomGetMaster(cm.getMasterAddress, false, func(client master_pb.SeaweedClient) error {
 		var err error
 		result, err = client.RaftRemoveServer(context.Background(), &master_pb.RaftRemoveServerRequest{
 			Id:    args.serverId,
