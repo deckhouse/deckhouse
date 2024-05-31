@@ -31,14 +31,14 @@ func NewClusterRaftAddArgs(serverId, serverAddress *string, serverVoter *bool) *
 	return &clusterRaftAddArgs
 }
 
-func clusterRaftAdd(args *clusterRaftAddArgs, commandEnv *commandEnv) (*master_pb.RaftAddServerResponse, error) {
+func clusterRaftAdd(args *clusterRaftAddArgs, cm *commandEnv) (*master_pb.RaftAddServerResponse, error) {
 	var result *master_pb.RaftAddServerResponse
 
 	if args.serverId == "" || args.serverAddress == "" {
 		return nil, fmt.Errorf("empty server id or address")
 	}
 
-	err := commandEnv.MasterClient.WithClient(context.Background(), false, func(client master_pb.SeaweedClient) error {
+	err := cm.MasterClient.WithClientCustomGetMaster(cm.getMasterAddress, false, func(client master_pb.SeaweedClient) error {
 		var err error
 		result, err = client.RaftAddServer(context.Background(), &master_pb.RaftAddServerRequest{
 			Id:      args.serverId,

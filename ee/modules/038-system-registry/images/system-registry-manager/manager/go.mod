@@ -103,4 +103,5 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
-replace github.com/seaweedfs/seaweedfs => github.com/vadimartynov/seaweedfs v1.0.0
+
+replace github.com/seaweedfs/seaweedfs => github.com/vadimartynov/seaweedfs v1.0.1

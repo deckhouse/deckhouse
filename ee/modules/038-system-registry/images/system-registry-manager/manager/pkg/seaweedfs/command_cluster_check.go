@@ -43,26 +43,26 @@ type ClusterCheckResult struct {
 	}
 }
 
-func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
+func clusterCheck(cm *commandEnv) (*ClusterCheckResult, error) {
 	result := &ClusterCheckResult{}
 	var err error
 
 	// collect filers
-	filers, err := getFilerAddress(commandEnv)
+	filers, err := cm.getFilerAddress()
 	if err != nil {
 		return result, err
 	}
 	result.FilersAddress = filers
 
 	// collect all masters
-	masters, err := getMastersAddress(commandEnv)
+	masters, err := cm.getMastersAddress()
 	if err != nil {
 		return result, err
 	}
 	result.MastersAddress = masters
 
 	// collect volume servers
-	volumeServers, topologyInfo, err := getVolumeAddressAndTopologyInfo(commandEnv)
+	volumeServers, topologyInfo, err := cm.getVolumeAddressAndTopologyInfo()
 	if err != nil {
 		return result, err
 	}
@@ -75,7 +75,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 			if sourceMaster == targetMaster {
 				continue
 			}
-			_ = pb.WithMasterClient(false, sourceMaster, commandEnv.option.GrpcDialOption, false, func(client master_pb.SeaweedClient) error {
+			_ = pb.WithMasterClient(false, sourceMaster, cm.option.GrpcDialOption, false, func(client master_pb.SeaweedClient) error {
 				_, err := client.Ping(context.Background(), &master_pb.PingRequest{
 					Target:     string(targetMaster),
 					TargetType: cluster.MasterType,
@@ -102,7 +102,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 			if sourceVolumeServer == targetVolumeServer {
 				continue
 			}
-			_ = pb.WithVolumeServerClient(false, sourceVolumeServer, commandEnv.option.GrpcDialOption, func(client volume_server_pb.VolumeServerClient) error {
+			_ = pb.WithVolumeServerClient(false, sourceVolumeServer, cm.option.GrpcDialOption, func(client volume_server_pb.VolumeServerClient) error {
 				_, err := client.Ping(context.Background(), &volume_server_pb.PingRequest{
 					Target:     string(targetVolumeServer),
 					TargetType: cluster.VolumeServerType,
@@ -126,7 +126,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 	// check between filers, and need to connect to itself
 	for _, sourceFiler := range filers {
 		for _, targetFiler := range filers {
-			_ = pb.WithFilerClient(false, 0, sourceFiler, commandEnv.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
+			_ = pb.WithFilerClient(false, 0, sourceFiler, cm.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
 				_, err := client.Ping(context.Background(), &filer_pb.PingRequest{
 					Target:     string(targetFiler),
 					TargetType: cluster.FilerType,
@@ -150,7 +150,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 	// check from master to volume servers
 	for _, master := range masters {
 		for _, volumeServer := range volumeServers {
-			_ = pb.WithMasterClient(false, master, commandEnv.option.GrpcDialOption, false, func(client master_pb.SeaweedClient) error {
+			_ = pb.WithMasterClient(false, master, cm.option.GrpcDialOption, false, func(client master_pb.SeaweedClient) error {
 				_, err := client.Ping(context.Background(), &master_pb.PingRequest{
 					Target:     string(volumeServer),
 					TargetType: cluster.VolumeServerType,
@@ -174,7 +174,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 	// check from volume servers to masters
 	for _, volumeServer := range volumeServers {
 		for _, master := range masters {
-			_ = pb.WithVolumeServerClient(false, volumeServer, commandEnv.option.GrpcDialOption, func(client volume_server_pb.VolumeServerClient) error {
+			_ = pb.WithVolumeServerClient(false, volumeServer, cm.option.GrpcDialOption, func(client volume_server_pb.VolumeServerClient) error {
 				_, err := client.Ping(context.Background(), &volume_server_pb.PingRequest{
 					Target:     string(master),
 					TargetType: cluster.MasterType,
@@ -198,7 +198,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 	// check from filers to masters
 	for _, filer := range filers {
 		for _, master := range masters {
-			_ = pb.WithFilerClient(false, 0, filer, commandEnv.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
+			_ = pb.WithFilerClient(false, 0, filer, cm.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
 				_, err := client.Ping(context.Background(), &filer_pb.PingRequest{
 					Target:     string(master),
 					TargetType: cluster.MasterType,
@@ -222,7 +222,7 @@ func clusterCheck(commandEnv *commandEnv) (*ClusterCheckResult, error) {
 	// check from filers to volume servers
 	for _, filer := range filers {
 		for _, volumeServer := range volumeServers {
-			_ = pb.WithFilerClient(false, 0, filer, commandEnv.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
+			_ = pb.WithFilerClient(false, 0, filer, cm.option.GrpcDialOption, func(client filer_pb.SeaweedFilerClient) error {
 				_, err := client.Ping(context.Background(), &filer_pb.PingRequest{
 					Target:     string(volumeServer),
 					TargetType: cluster.VolumeServerType,
