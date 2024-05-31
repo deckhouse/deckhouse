@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"log/slog"
 	"os"
@@ -283,6 +284,7 @@ func (s *Service) bootstrap(
 		DisableBootstrapClearCache: true,
 		OnPhaseFunc:                phaseSwitcher.switchPhase,
 		CommanderMode:              request.Options.CommanderMode,
+		CommanderUUID:              uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
 		TerraformContext:           terraform.NewTerraformContext(),
 		ConfigPaths:                []string{configPath},
 		ResourcesPath:              resourcesPath,

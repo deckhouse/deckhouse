@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
+	"github.com/google/uuid"
 	"io"
 	"log/slog"
 	"sync"
@@ -223,6 +224,7 @@ func (s *Service) attachCommanderCluster(
 
 	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:    request.Options.CommanderMode,
+		CommanderUUID:    uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
 		SSHClient:        sshClient,
 		OnCheckResult:    onCheckResult,
 		TerraformContext: terraform.NewTerraformContext(),
