@@ -99,7 +99,7 @@ func FindStatusCondition(conditions []v1alpha1.ExtendedCondition, conditionType 
 
 //
 
-func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log logger.Logger, nirs *v1alpha1.NodeIPRuleSet) error {
+func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log logger.Logger, nirs *v1alpha1.SDNInternalNodeIPRuleSet) error {
 	t := metav1.NewTime(time.Now())
 	nirs.Status.ObservedGeneration = nirs.Generation
 
