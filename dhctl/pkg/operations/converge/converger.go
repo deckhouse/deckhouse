@@ -17,6 +17,7 @@ package converge
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -41,6 +42,7 @@ type Params struct {
 	*client.KubernetesInitParams
 
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 	Checker                    *check.Checker
 	OnCheckResult              func(*check.CheckResult) error
@@ -58,6 +60,12 @@ type Converger struct {
 }
 
 func NewConverger(params *Params) *Converger {
+	if params.CommanderMode {
+		if params.CommanderUUID == uuid.Nil {
+			panic("CommanderUUID required for bootstrap operation in commander mode!")
+		}
+	}
+
 	return &Converger{
 		Params:                 params,
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
@@ -173,6 +181,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, c.Params.TerraformContext).
 		WithPhasedExecutionContext(c.PhasedExecutionContext).
 		WithCommanderMode(c.Params.CommanderMode).
+		WithCommanderUUID(c.Params.CommanderUUID).
 		WithCommanderModeParams(c.Params.CommanderModeParams).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: c.AutoDismissDestructive,

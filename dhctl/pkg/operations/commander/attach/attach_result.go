@@ -30,6 +30,7 @@ type ScanResult struct {
 	ProviderSpecificClusterConfiguration string `json:"provider_specific_cluster_configuration"`
 	SSHPrivateKey                        string `json:"ssh_private_key"`
 	SSHPublicKey                         string `json:"ssh_public_key"`
+	DeckhouseUUID                        string `json:"deckhouse_uuid"`
 }
 
 type AttachResult struct {

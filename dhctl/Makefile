@@ -91,14 +91,15 @@ bin/protoc:
 .PHONY: protoc
 protoc:
 	bin/protoc -I pkg/server/api/dhctl --go_out=pkg/server --go-grpc_out=pkg/server \
-	pkg/server/api/dhctl/dhctl.proto \
 	pkg/server/api/dhctl/common.proto \
 	pkg/server/api/dhctl/check.proto \
 	pkg/server/api/dhctl/bootstrap.proto \
 	pkg/server/api/dhctl/destroy.proto \
 	pkg/server/api/dhctl/abort.proto \
 	pkg/server/api/dhctl/converge.proto \
-	pkg/server/api/dhctl/attach_commander.proto
+	pkg/server/api/dhctl/attach_commander.proto \
+	pkg/server/api/dhctl/validation.proto \
+	pkg/server/api/dhctl/services.proto
 
 generate: protoc
 	go generate ./...

@@ -23,6 +23,12 @@ import (
 )
 
 const (
+	multiMasterToSingleMasterDoc = "https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master"
+	multiMasterChangeImageIDDoc  = "https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster"
+	singleMasterChangeImageIDDoc = "https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-i-switch-to-a-different-os-image-in-a-single-master-cluster"
+)
+
+const (
 	xUnsafeExtension      = "x-unsafe"
 	xUnsafeRulesExtension = "x-unsafe-rules"
 	xRulesExtension       = "x-rules"
@@ -64,10 +70,10 @@ func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 		return fmt.Errorf("%w: got unacceptable .masterNodeGroup.replicas zero value", ErrValidationRuleFailed)
 	}
 
-	if newValue < oldValue && newValue < 2 {
+	if newValue < oldValue && newValue == 1 {
 		return fmt.Errorf(
-			"%w: the new .masterNodeGroup.replicas value (%d) cannot be less that than 2 (%d)",
-			ErrValidationRuleFailed, newValue, oldValue,
+			"%w: can't reduce the number of master nodegroup replicas to 1, refer to instructions: %s",
+			ErrValidationRuleFailed, multiMasterToSingleMasterDoc,
 		)
 	}
 
@@ -136,10 +142,6 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 		return err
 	}
 
-	if oldConfig.Replicas > 1 && newConfig.Replicas > 1 {
-		return nil
-	}
-
 	for _, images := range []struct {
 		old   string
 		new   string
@@ -153,10 +155,16 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 		{old: oldConfig.InstanceClass.Template, new: newConfig.InstanceClass.Template, field: "template"},
 	} {
 		if images.new != "" && images.old != images.new {
+			if oldConfig.Replicas > 1 && newConfig.Replicas > 1 {
+				return fmt.Errorf(
+					"%w: can't update .masterNodeGroup.%s in multi master cluster, refer to instructions: %s",
+					ErrValidationRuleFailed, images.field, multiMasterChangeImageIDDoc,
+				)
+			}
+
 			return fmt.Errorf(
-				"%w: can't update .masterNodeGroup.%s if .masterNodeGroup.replicas == 1",
-				ErrValidationRuleFailed,
-				images.field,
+				"%w: can't update .masterNodeGroup.%s in single master cluster, refer to instructions: %s",
+				ErrValidationRuleFailed, images.field, singleMasterChangeImageIDDoc,
 			)
 		}
 	}

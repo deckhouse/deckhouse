@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 	"strings"
 
@@ -101,6 +102,9 @@ type DeckhouseInstaller struct {
 
 	ReleaseChannel   string
 	InstallerVersion string
+
+	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
