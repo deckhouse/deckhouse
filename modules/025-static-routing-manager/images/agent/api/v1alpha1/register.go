@@ -41,6 +41,10 @@ var (
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme   = SchemeBuilder.AddToScheme
 
+	InternalSchemeGroupVersion = schema.GroupVersion{
+		Group:   InternalAPIGroup,
+		Version: APIVersion,
+	}
 	InternalSchemeBuilder = runtime.NewSchemeBuilder(addKnownInternalTypes)
 	AddInternalToScheme   = InternalSchemeBuilder.AddToScheme
 )
@@ -59,12 +63,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 
 // Adds the list of known Internal types to Scheme.
 func addKnownInternalTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(SchemeGroupVersion,
+	scheme.AddKnownTypes(InternalSchemeGroupVersion,
 		&SDNInternalNodeRoutingTable{},
 		&SDNInternalNodeRoutingTableList{},
 		&SDNInternalNodeIPRuleSet{},
 		&SDNInternalNodeIPRuleSetList{},
 	)
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+	metav1.AddToGroupVersion(scheme, InternalSchemeGroupVersion)
 	return nil
 }

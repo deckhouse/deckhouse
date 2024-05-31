@@ -234,7 +234,7 @@ metadata:
   generation: 4
   labels:
     routing-manager.network.deckhouse.io/node-name: kube-worker-1
-  name: testirs1-29c8b10d14
+  name: testirs1-dcf11d50a1
   ownerReferences:
   - apiVersion: network.deckhouse.io/v1alpha1
     blockOwnerDeletion: true
@@ -708,11 +708,13 @@ status:
 			f.RunHook()
 		})
 
-		It("Hook must execute successfully", func() {
+		FIt("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			//testirs1-dcf11d50a1
 			nirs11Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).NotTo(Equal(nirs11Name))
+			Expect(f.KubernetesGlobalResource(v1alpha1.NIRSKind, "testirs1-dcf11d50a1").Exists()).To(BeTrue())
 		})
 	})
 
