@@ -235,6 +235,8 @@ func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, r
 		ObjectMeta: apimachineryv1.ObjectMeta{
 			Name: fmt.Sprintf("d8:%s:capability:module:%s:%s", rbacKind, i.moduleName, rbacVerb),
 			Labels: map[string]string{
+				"heritage":                            "deckhouse",
+				"module":                              i.moduleName,
 				"rbac.deckhouse.io/kind":              rbacKind,
 				"rbac.deckhouse.io/aggregate-to-role": rbacRole,
 			},

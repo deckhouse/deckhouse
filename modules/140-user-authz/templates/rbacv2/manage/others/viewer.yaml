@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: d8:manage:others:viewer
   labels:
-    heritage: deckhouse
+    {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/aggregate-to-scope: others
     rbac.deckhouse.io/aggregate-to-role: manager
