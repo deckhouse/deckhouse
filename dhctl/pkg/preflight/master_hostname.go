@@ -20,6 +20,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -41,11 +42,11 @@ func (pc *Checker) CheckMasterHostname() error {
 	}
 
 	masterHostnames := make(map[string]struct{})
-	masterWithError := make(map[string]string)
+	masterWithError := make([]string, 0)
 
-	for range pc.sshClient.Settings.AvailableHosts() {
-		log.DebugF("Get hostname from master %s\n", pc.sshClient.Settings.Host())
-		scriptCmd := pc.sshClient.UploadScript(file)
+	err = pc.sshClient.Loop(func(sshClient *ssh.Client) error {
+		log.DebugF("Get hostname from master %s\n", sshClient.Settings.Host())
+		scriptCmd := sshClient.UploadScript(file)
 		out, err := scriptCmd.Execute()
 		if err != nil {
 			log.ErrorLn(strings.Trim(string(out), "\n"))
@@ -55,26 +56,24 @@ func (pc *Checker) CheckMasterHostname() error {
 			)
 		}
 		hostname := strings.Trim(string(out), "\n")
-		log.DebugF("Master: %s hostname: %s\n", pc.sshClient.Settings.Host(), hostname)
+		log.DebugF("Master: %s hostname: %s\n", sshClient.Settings.Host(), hostname)
 		if _, ok := masterHostnames[hostname]; ok {
 			log.ErrorF("Master with hostname %s already exist!\n", hostname)
-			masterWithError[pc.sshClient.Settings.Host()] = hostname
-			pc.sshClient.Settings.ChoiceNewHost()
-			continue
+			masterWithError = append(masterWithError, sshClient.Settings.Host())
+			return nil
 		}
 
 		masterHostnames[hostname] = struct{}{}
-		pc.sshClient.Settings.ChoiceNewHost()
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	if len(masterWithError) > 0 {
-		servers := make([]string, 0, len(masterWithError))
-		for k := range masterWithError {
-			servers = append(servers, k)
-		}
 		return fmt.Errorf(
 			"please set unique hostname on the servers %s and re-install the installation again",
-			strings.Join(servers, ","),
+			strings.Join(masterWithError, ","),
 		)
 	}
 
