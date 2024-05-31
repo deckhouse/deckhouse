@@ -480,7 +480,7 @@ function bootstrap_static() {
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
        apt-get update
        apt-get install -y docker.io
-       docker run -d --name='tinyproxy' -p 8888:8888 monokal/tinyproxy:latest ANY
+       docker run -d --name='tinyproxy' -p 8888:8888 mirror.gcr.io/monokal/tinyproxy:latest ANY
 ENDSSH
       initial_setup_failed=""
       break
