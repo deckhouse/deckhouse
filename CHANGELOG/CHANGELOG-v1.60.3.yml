@@ -1,0 +1,19 @@
+deckhouse:
+  fixes:
+    - summary: Fix the number of deckhouse replicas for not bootstrapped clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8526
+deckhouse-controller:
+  fixes:
+    - summary: Fix default module source template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8567
+    - summary: Disable manager's internal metrics server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8558
+dhctl:
+  features:
+    - summary: Improve config validation error messages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8453
+extended-monitoring:
+  fixes:
+    - summary: Add support of mirrors for container registries for `image_availability_exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8568
+
