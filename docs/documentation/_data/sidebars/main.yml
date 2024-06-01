@@ -66,19 +66,13 @@ entries:
                     ru: Описание
                   url: /modules/002-deckhouse/
                 - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/002-deckhouse/configuration.html
+                - title:
                     en: Usage
                     ru: Примеры
                   url: /modules/002-deckhouse/usage.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/002-deckhouse/configuration.html
-                    - title: Custom Resources
-                      url: /modules/002-deckhouse/cr.html
                 - title: FAQ
                   url: /modules/002-deckhouse/faq.html
             - title: documentation
