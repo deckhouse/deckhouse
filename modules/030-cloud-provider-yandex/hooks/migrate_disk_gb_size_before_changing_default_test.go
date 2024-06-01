@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -72,25 +73,104 @@ data:
 `, base64.StdEncoding.EncodeToString([]byte(pcc)), stateCloudDiscoveryData)
 	}
 
-	installCM161 := `
+	installCM162 := `
 apiVersion: v1
 data:
-  version: v1.61.4
+  version: v1.62.0
 kind: ConfigMap
 metadata:
   name: install-data
   namespace: d8-system
 	`
 
-	installCM160 := `
+	installCM161 := `
 apiVersion: v1
 data:
-  version: v1.60.1
+  version: v1.61.1
 kind: ConfigMap
 metadata:
   name: install-data
   namespace: d8-system
 `
+	installCMDev := `
+apiVersion: v1
+data:
+  version: dev
+kind: ConfigMap
+metadata:
+  name: install-data
+  namespace: d8-system
+`
+
+	assertSetOldDiskSizeForMasterNG := func(f *HookExecutionConfig) {
+		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+		Expect(s.Exists()).To(BeTrue())
+
+		clusterConfig := s.Field("data.cloud-provider-cluster-configuration\\.yaml").String()
+		config, err := base64.StdEncoding.DecodeString(clusterConfig)
+		Expect(err).Should(BeNil())
+
+		type ic struct {
+			DiskSizeGB int `json:"diskSizeGB"`
+		}
+
+		type masterNg struct {
+			InstanceClass ic `json:"instanceClass"`
+		}
+
+		type conf struct {
+			MasterNodeGroup masterNg `json:"masterNodeGroup"`
+		}
+
+		var p conf
+		err = yaml.Unmarshal(config, &p)
+		Expect(err).Should(BeNil())
+
+		Expect(p.MasterNodeGroup.InstanceClass.DiskSizeGB).Should(Equal(20))
+	}
+
+	assertDiskSizeForOtherNG := func(f *HookExecutionConfig, ngs map[string]int) {
+		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+		Expect(s.Exists()).To(BeTrue())
+
+		clusterConfig := s.Field("data.cloud-provider-cluster-configuration\\.yaml").String()
+		config, err := base64.StdEncoding.DecodeString(clusterConfig)
+		Expect(err).Should(BeNil())
+
+		type ic struct {
+			DiskSizeGB int `json:"diskSizeGB"`
+		}
+
+		type ng struct {
+			InstanceClass ic     `json:"instanceClass"`
+			Name          string `json:"name"`
+		}
+
+		type conf struct {
+			NGS []ng `json:"nodeGroups"`
+		}
+
+		var p conf
+		err = yaml.Unmarshal(config, &p)
+		Expect(err).Should(BeNil())
+
+		expectedNgs := make(map[string]int)
+		for _, ng := range p.NGS {
+			expectedNgs[ng.Name] = ng.InstanceClass.DiskSizeGB
+		}
+
+		for ng, size := range ngs {
+			Expect(expectedNgs).To(HaveKey(ng))
+			Expect(expectedNgs[ng]).To(Equal(size))
+		}
+	}
+
+	assertNoChangeSecret := func(f *HookExecutionConfig, pccs string) {
+		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+
+		Expect(s.Exists()).To(BeTrue())
+		Expect(s.ToYaml()).To(MatchYAML(pccs))
+	}
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
 	Context("Cluster has empty state", func() {
@@ -135,7 +215,23 @@ withNATInstance:
 nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
-		Context("Cluster has install data config with version >= 1.61", func() {
+		Context("Cluster has install data config with version >= 1.62", func() {
+			var pccs = generateProviderSecret(pcc)
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(pccs + "\n---\n" + installCM162))
+				f.RunHook()
+			})
+
+			It("Hook should execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Hook should not change provider configuration secret", func() {
+				assertNoChangeSecret(f, pccs)
+			})
+		})
+
+		Context("Cluster has install data config with version < 1.62", func() {
 			var pccs = generateProviderSecret(pcc)
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(pccs + "\n---\n" + installCM161))
@@ -146,18 +242,15 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("Hook should not change provider configuration secret", func() {
-				s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
-
-				Expect(s.Exists()).To(BeTrue())
-				Expect(s.ToYaml()).To(MatchYAML(pccs))
+			It("Hook should set diskSizeGB for old default 20", func() {
+				assertSetOldDiskSizeForMasterNG(f)
 			})
 		})
 
-		FContext("Cluster has install data config with version < 1.60", func() {
+		Context("Cluster has install data config with 'dev' version", func() {
 			var pccs = generateProviderSecret(pcc)
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(pccs + "\n---\n" + installCM160))
+				f.BindingContexts.Set(f.KubeStateSet(pccs + "\n---\n" + installCMDev))
 				f.RunHook()
 			})
 
@@ -165,11 +258,378 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("Hook should not change provider configuration secret", func() {
-				s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+			It("Hook should set diskSizeGB for old default 20", func() {
+				assertSetOldDiskSizeForMasterNG(f)
+			})
+		})
+	})
 
-				Expect(s.Exists()).To(BeTrue())
-				Expect(s.ToYaml()).To(MatchYAML(pccs))
+	Context("Cluster has provider cluster configuration secret with diskSizeGB in master nodegroup", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+    diskSizeGB: 35
+  replicas: 1
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should not change secret", func() {
+			assertNoChangeSecret(f, pccs)
+		})
+	})
+	Context("Cluster has provider cluster configuration secret with diskSizeGB another node group", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+    diskSizeGB: 35
+  replicas: 1
+nodeGroups:
+- name: khm
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+    diskSizeGB: 35
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should not change secret", func() {
+			assertNoChangeSecret(f, pccs)
+		})
+	})
+
+	Context("Cluster has provider cluster configuration secret without diskSizeGB in others node group", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+    diskSizeGB: 35
+  replicas: 1
+nodeGroups:
+- name: khm
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+- name: mhk
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should old default size 20 for all nodegroup", func() {
+			assertDiskSizeForOtherNG(f, map[string]int{
+				"khm": 20,
+				"mhk": 20,
+			})
+		})
+	})
+
+	Context("Cluster has provider cluster configuration secret with and without diskSizeGB in others node group", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+    diskSizeGB: 35
+  replicas: 1
+nodeGroups:
+- name: khm
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+    diskSizeGB: 35
+- name: mhk
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should old default size 20 for nodegroup without diskSize and not change with diskSize", func() {
+			assertDiskSizeForOtherNG(f, map[string]int{
+				"khm": 35,
+				"mhk": 20,
+			})
+		})
+	})
+
+	Context("Cluster has provider cluster configuration secret with diskSizeGB in others node group", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+    diskSizeGB: 35
+  replicas: 1
+nodeGroups:
+- name: khm
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+    diskSizeGB: 35
+- name: mhk
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+    diskSizeGB: 45
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should old default size 20 for nodegroup without diskSize and not change with diskSize", func() {
+			assertNoChangeSecret(f, pccs)
+		})
+	})
+
+	Context("Cluster has provider cluster configuration secret without diskSizeGB in others node group and master ng both", func() {
+		const pcc = `
+apiVersion: deckhouse.io/v1
+existingNetworkID: enpma5uvcfbkuac1i1jb
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+masterNodeGroup:
+  instanceClass:
+    cores: 2
+    etcdDiskSizeGb: 10
+    imageID: test
+    memory: 4096
+    platform: standard-v2
+  replicas: 1
+nodeGroups:
+- name: khm
+  replicas: 0
+  instanceClass:
+    externalIPAddresses:
+    - Auto
+    cores: 2
+    memory: 4096
+    imageID: fd8vqk0bcfhn31stn2ts
+    coreFraction: 50
+provider:
+  cloudID: test
+  folderID: test
+  serviceAccountJSON: |-
+    {
+      "id": "test"
+    }
+withNATInstance:
+  internalSubnetID: test
+  natInstanceExternalAddress: 84.201.160.148
+  exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
+`
+		var pccs = generateProviderSecret(pcc)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pccs))
+			f.RunHook()
+		})
+
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should old default size 20 for nodegroup and master nodegroup", func() {
+			assertSetOldDiskSizeForMasterNG(f)
+			assertDiskSizeForOtherNG(f, map[string]int{
+				"khm": 20,
 			})
 		})
 	})

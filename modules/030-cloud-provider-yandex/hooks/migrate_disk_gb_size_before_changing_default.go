@@ -165,6 +165,15 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	return err
 }
 
+func hasDiskSizeGB(rawConfig map[string]interface{}, fields []string) (bool, error) {
+	_, found, err := unstructured.NestedFieldNoCopy(rawConfig, fields...)
+	if err != nil {
+		return false, err
+	}
+
+	return found, nil
+}
+
 func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool, error) {
 	nodeGroups, found, err := unstructured.NestedSlice(rawConfig, "nodeGroups")
 	if err != nil {
@@ -184,16 +193,17 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool,
 
 	for _, rawNG := range nodeGroups {
 		ng := rawNG.(map[string]interface{})
-		_, found, err := unstructured.NestedInt64(ng, fieldForNG...)
+		found, err := hasDiskSizeGB(ng, fieldForNG)
 		if err != nil {
 			return false, err
 		}
 
 		if found {
+			resultNgs = append(resultNgs, rawNG)
 			continue
 		}
 
-		err = unstructured.SetNestedField(ng, 20, fieldForNG...)
+		err = unstructured.SetNestedField(ng, int64(20), fieldForNG...)
 		if err != nil {
 			return false, err
 		}
@@ -217,7 +227,7 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool,
 func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, error) {
 	fieldForMaster := []string{"masterNodeGroup", "instanceClass", "diskSizeGB"}
 
-	_, found, err := unstructured.NestedInt64(rawConfig, fieldForMaster...)
+	found, err := hasDiskSizeGB(rawConfig, fieldForMaster)
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +236,7 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, err
 		return false, nil
 	}
 
-	err = unstructured.SetNestedField(rawConfig, 20, fieldForMaster...)
+	err = unstructured.SetNestedField(rawConfig, int64(20), fieldForMaster...)
 	if err != nil {
 		return false, err
 	}
@@ -234,7 +244,7 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, err
 	return true, nil
 }
 
-// check install version. if version > 1.61 we do not need migration because right default was set
+// check install version. if version > 1.62 we do not need migration because right default was set
 func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error) {
 	is := snaps["install_version"]
 	if len(is) == 0 {
@@ -245,6 +255,7 @@ func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error
 	}
 
 	versionStr := is[0].(string)
+	// for dev build migrate always
 	if versionStr == "dev" {
 		// for dev branches always run migration for testing purposes
 		return true, nil
@@ -255,7 +266,7 @@ func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error
 		return false, err
 	}
 
-	if version.GreaterThan(semver.MustParse("1.61.0")) {
+	if version.Compare(semver.MustParse("1.62.0")) >= 0 {
 		return false, nil
 	}
 
