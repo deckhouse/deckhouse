@@ -144,6 +144,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 
 	backupSecret.Name = backupSecret.Name + `-bkp-disk-gb`
+	backupSecret.ResourceVersion = ""
 	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
 
 	data, err := yaml.Marshal(rawConfig)
