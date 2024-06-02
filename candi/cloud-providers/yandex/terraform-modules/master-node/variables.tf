@@ -49,7 +49,7 @@ locals {
   platform              = lookup(local.master_instance_class, "platform", "standard-v2")
   cores                 = local.master_instance_class.cores
   memory                = local.master_instance_class.memory / 1024
-  disk_size_gb          = lookup(local.master_instance_class, "diskSizeGB", 20)
+  disk_size_gb          = lookup(local.master_instance_class, "diskSizeGB", 50)
   disk_type             = lookup(local.master_instance_class, "diskType", "network-ssd")
   etcd_disk_size_gb     = local.master_instance_class.etcdDiskSizeGb
   image_id              = local.master_instance_class.imageID
