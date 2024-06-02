@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -165,6 +166,29 @@ metadata:
 		}
 	}
 
+	assertSaveBackupBeforeMigrate := func(f *HookExecutionConfig, pccs string) {
+		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration-bkp-disk-gb")
+
+		if pccs != "" {
+			Expect(s.Exists()).To(BeTrue())
+
+			var secret v1.Secret
+
+			err := yaml.Unmarshal([]byte(pccs), &secret)
+			Expect(err).Should(BeNil())
+
+			clusterConfig := s.Field("data.cloud-provider-cluster-configuration\\.yaml").String()
+			data := s.Field("data.cloud-provider-discovery-data\\.json").String()
+
+			Expect(clusterConfig).To(Equal(base64.StdEncoding.EncodeToString(secret.Data["cloud-provider-cluster-configuration.yaml"])))
+			Expect(data).To(Equal(base64.StdEncoding.EncodeToString(secret.Data["cloud-provider-discovery-data.json"])))
+
+			return
+		}
+
+		Expect(s.Exists()).To(BeFalse())
+	}
+
 	assertNoChangeSecret := func(f *HookExecutionConfig, pccs string) {
 		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 
@@ -228,6 +252,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 			It("Hook should not change provider configuration secret", func() {
 				assertNoChangeSecret(f, pccs)
+				assertSaveBackupBeforeMigrate(f, "")
 			})
 		})
 
@@ -244,6 +269,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 			It("Hook should set diskSizeGB for old default 20", func() {
 				assertSetOldDiskSizeForMasterNG(f)
+				assertSaveBackupBeforeMigrate(f, pccs)
 			})
 		})
 
@@ -260,6 +286,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 			It("Hook should set diskSizeGB for old default 20", func() {
 				assertSetOldDiskSizeForMasterNG(f)
+				assertSaveBackupBeforeMigrate(f, pccs)
 			})
 		})
 	})
@@ -308,6 +335,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 		It("Hook should not change secret", func() {
 			assertNoChangeSecret(f, pccs)
+			assertSaveBackupBeforeMigrate(f, "")
 		})
 	})
 	Context("Cluster has provider cluster configuration secret with diskSizeGB another node group", func() {
@@ -365,6 +393,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 		It("Hook should not change secret", func() {
 			assertNoChangeSecret(f, pccs)
+			assertSaveBackupBeforeMigrate(f, "")
 		})
 	})
 
@@ -434,6 +463,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 				"khm": 20,
 				"mhk": 20,
 			})
+			assertSaveBackupBeforeMigrate(f, pccs)
 		})
 	})
 
@@ -504,6 +534,8 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 				"khm": 35,
 				"mhk": 20,
 			})
+
+			assertSaveBackupBeforeMigrate(f, pccs)
 		})
 	})
 
@@ -572,6 +604,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 
 		It("Hook should old default size 20 for nodegroup without diskSize and not change with diskSize", func() {
 			assertNoChangeSecret(f, pccs)
+			assertSaveBackupBeforeMigrate(f, "")
 		})
 	})
 
@@ -631,6 +664,7 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 			assertDiskSizeForOtherNG(f, map[string]int{
 				"khm": 20,
 			})
+			assertSaveBackupBeforeMigrate(f, pccs)
 		})
 	})
 })

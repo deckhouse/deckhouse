@@ -124,9 +124,6 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	providerConfigSecret := providerConfigSecretSnap[0].(*corev1.Secret)
 
 	backupSecret := providerConfigSecret.DeepCopy()
-	backupSecret.Name = backupSecret.Name + `-bkp-disk-gb`
-
-	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
 
 	var rawConfig map[string]interface{}
 	err = yaml.Unmarshal(providerConfigSecret.Data[providerConfigKey], &rawConfig)
@@ -148,6 +145,9 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 		input.LogEntry.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
 		return nil
 	}
+
+	backupSecret.Name = backupSecret.Name + `-bkp-disk-gb`
+	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
 
 	data, err := yaml.Marshal(rawConfig)
 	if err != nil {
