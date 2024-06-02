@@ -158,7 +158,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
+	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-provider-cluster-configuration")
 
 	return err
 }

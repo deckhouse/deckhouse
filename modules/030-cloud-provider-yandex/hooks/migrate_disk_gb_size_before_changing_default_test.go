@@ -66,7 +66,7 @@ cloudProviderYandex:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cluster-configuration
+  name: d8-provider-cluster-configuration
   namespace: kube-system
 data:
   "cloud-provider-cluster-configuration.yaml": %s
@@ -104,7 +104,7 @@ metadata:
 `
 
 	assertSetOldDiskSizeForMasterNG := func(f *HookExecutionConfig) {
-		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+		s := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
 		Expect(s.Exists()).To(BeTrue())
 
 		clusterConfig := s.Field("data.cloud-provider-cluster-configuration\\.yaml").String()
@@ -131,7 +131,7 @@ metadata:
 	}
 
 	assertDiskSizeForOtherNG := func(f *HookExecutionConfig, ngs map[string]int) {
-		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+		s := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
 		Expect(s.Exists()).To(BeTrue())
 
 		clusterConfig := s.Field("data.cloud-provider-cluster-configuration\\.yaml").String()
@@ -167,7 +167,7 @@ metadata:
 	}
 
 	assertSaveBackupBeforeMigrate := func(f *HookExecutionConfig, pccs string) {
-		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration-bkp-disk-gb")
+		s := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration-bkp-disk-gb")
 
 		if pccs != "" {
 			Expect(s.Exists()).To(BeTrue())
@@ -190,7 +190,7 @@ metadata:
 	}
 
 	assertNoChangeSecret := func(f *HookExecutionConfig, pccs string) {
-		s := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+		s := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
 
 		Expect(s.Exists()).To(BeTrue())
 		Expect(s.ToYaml()).To(MatchYAML(pccs))
