@@ -19,15 +19,12 @@ package hooks
 import (
 	"k8s.io/utils/pointer"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
