@@ -3,17 +3,32 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if include "is_basic_auth_enabled_in_any_crowd" . }}
-  {{- $crowd_config := false }}
+{{- if include "is_basic_auth_enabled" . }}
+
+  {{- $type := "" }}
+  {{- $config := false }}
+
   {{- range $provider := .Values.userAuthn.internal.providers }}
-  {{- if eq $provider.type "Crowd" }}
-    {{- if $provider.crowd.enableBasicAuth }}
-      {{- if $crowd_config }}
-        {{- fail "enableBasicAuth option must be enabled ONLY in one Atlassian Crowd provider" }}
+    {{- if eq $provider.type "Crowd" }}
+      {{- if $provider.crowd.enableBasicAuth }}
+        {{- if $config }}
+          {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+        {{- end }}
+        {{- $config = $provider.crowd }}
+        {{- $type = "Crowd" }}
       {{- end }}
-      {{- $crowd_config = $provider.crowd }}
     {{- end }}
-  {{- end }}
+
+    {{- if eq $provider.type "OIDC" }}
+      {{- if $provider.oidc.enableBasicAuth }}
+        {{- if $config }}
+          {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+        {{- end }}
+        {{- $config = $provider.oidc }}
+        {{- $type = "OIDC" }}
+      {{- end }}
+    {{- end }}
+
   {{- end }}
 
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -21,14 +36,14 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: crowd-basic-auth-proxy
+  name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: crowd-basic-auth-proxy
+    name: basic-auth-proxy
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -44,56 +59,76 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: crowd-basic-auth-proxy
+  name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: crowd-basic-auth-proxy
+      app: basic-auth-proxy
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: crowd-basic-auth-proxy
+  name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
-      app: crowd-basic-auth-proxy
+      app: basic-auth-proxy
   template:
     metadata:
       labels:
-        app: crowd-basic-auth-proxy
+        app: basic-auth-proxy
       annotations:
-        checksum/certs: {{ include (print $.Template.BasePath "/crowd-basic-auth-proxy/secret.yaml") . | sha256sum }}
+        checksum/certs: {{ include (print $.Template.BasePath "/basic-auth-proxy/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "basic-auth-proxy")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "crowdBasicAuthProxy") }}
+        image: {{ include "helm_lib_module_image" (list . "basicAuthProxy") }}
         args:
         - --listen=$(POD_IP):7332
         - --cert-path=/etc/certs
         - --api-server-url=https://kubernetes.default
-        - --crowd-application-login={{ $crowd_config.clientID }}
-        - --crowd-application-password={{ $crowd_config.clientSecret }}
-        - --crowd-base-url={{ $crowd_config.baseURL }}
-  {{- if $crowd_config.groups }}
-    {{- range $group := $crowd_config.groups }}
+        {{- if eq $type "Crowd" }}
+        - --crowd-application-login={{ $config.clientID }}
+        - --crowd-application-password={{ $config.clientSecret }}
+        - --crowd-base-url={{ $config.baseURL }}
+        {{- if $config.groups }}
+          {{- range $group := $config.groups }}
         - --crowd-allowed-group={{ $group }}
-    {{- end }}
-  {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $type "OIDC" }}
+        - --oidc-base-url={{ $config.issuer }}
+        - --oidc-client-id={{ $config.clientID }}
+        - --oidc-client-secret={{ $config.clientSecret }}
+        - --oidc-get-user-info={{ $config.getUserInfo }}
+        - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
+        {{- if $config.scopes }}
+          {{- range $scope := $config.scopes }}
+        - --oidc-scope={{ $scope }}
+          {{- end }}
+        {{- else }}
+        - --oidc-scope=openid
+        - --oidc-scope=profile
+        - --oidc-scope=email
+        - --oidc-scope=groups
+        - --oidc-scope=offline_access
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 7332
         env:
@@ -133,17 +168,17 @@ spec:
       volumes:
       - name: client-certs
         secret:
-          secretName: crowd-basic-auth-cert
+          secretName: basic-auth-cert
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: crowd-basic-auth-proxy
+  name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   selector:
-    app: crowd-basic-auth-proxy
+    app: basic-auth-proxy
   type: ClusterIP
   clusterIP: None
   ports:

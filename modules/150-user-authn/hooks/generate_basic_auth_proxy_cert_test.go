@@ -30,7 +30,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
+var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {"providers": [{
   "type": "Crowd",
   "displayName": "Crowd",
@@ -56,7 +56,7 @@ var _ = Describe("User Authn hooks :: generate crowd auth proxy ::", func() {
 		})
 
 		It("Certificate should be generated", func() {
-			Expect(f.ValuesGet("userAuthn.internal.crowdProxyCert").String()).To(BeEquivalentTo(testingCert))
+			Expect(f.ValuesGet("userAuthn.internal.basicAuthProxyCert").String()).To(BeEquivalentTo(testingCert))
 		})
 
 		It("Should generate job with a valid image", func() {
@@ -81,7 +81,7 @@ data:
   client.crt: %s
   client.key: %s
 metadata:
-  name: crowd-basic-auth-cert
+  name: basic-auth-cert
   namespace: d8-user-authn
 `, existingCert, existingKey))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -89,8 +89,8 @@ metadata:
 		})
 
 		It("Should keep previous certificate and key", func() {
-			Expect(f.ValuesGet("userAuthn.internal.crowdProxyCert").String()).To(BeEquivalentTo(existingCert))
-			Expect(f.ValuesGet("userAuthn.internal.crowdProxyKey").String()).To(BeEquivalentTo(existingKey))
+			Expect(f.ValuesGet("userAuthn.internal.basicAuthProxyCert").String()).To(BeEquivalentTo(existingCert))
+			Expect(f.ValuesGet("userAuthn.internal.basicAuthProxyKey").String()).To(BeEquivalentTo(existingKey))
 		})
 	})
 
@@ -104,7 +104,7 @@ data:
   client.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJZRENDQVFxZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREFkTVJzd0dRWURWUVFLRXhKbWNtOXUKZEMxd2NtOTRlUzFqYkdsbGJuUXdIaGNOTURreE1URXdNak13TURBd1doY05NRGt4TVRFd01qTXdNREF4V2pBZApNUnN3R1FZRFZRUUtFeEptY205dWRDMXdjbTk0ZVMxamJHbGxiblF3WERBTkJna3Foa2lHOXcwQkFRRUZBQU5MCkFEQklBa0VBdlZSQkZRbVhCQVNBanhwanQxZjFoRCtNam9jSm16R3pUU1B0b055ZG5iVDBwTTNyazBqSHdlTmgKemdQMUdQRVRoN1pqcWVTbzdHSEZSbU92bk1BbGlRSURBUUFCb3pVd016QU9CZ05WSFE4QkFmOEVCQU1DQmFBdwpFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUhBd0V3REFZRFZSMFRBUUgvQkFJd0FEQU5CZ2txaGtpRzl3MEJBUXNGCkFBTkJBRllKWk5SU01jVVlhYnhBdFZTUWNxWVZCTnpuemEzKzhLV1o3RmpUOURsbXFsM0FWR29YcWcyT3pjWVcKU2V6WnFtaEQwTzR3ZUkyb0orOHRQMU5qQ1hrPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
   client.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlCT1FJQkFBSkJBTDFVUVJVSmx3UUVnSThhWTdkWDlZUS9qSTZIQ1pzeHMwMGo3YURjbloyMDlLVE42NU5JCng4SGpZYzREOVJqeEU0ZTJZNm5rcU94aHhVWmpyNXpBSllrQ0F3RUFBUUpBQmlPT1BLMWo3U2hzTnJlblZoR1AKRDJ1MEZnY0E0N3hYMFArQ08vNExTa3ErYUh3RE5xcFp5WDVFQlMwWm00emd6dTVHQm9weE4vNllmSUw3YXg4VQpkUUloQVBjM1ErYjRKTTdyTE1xWGVzNFBTYllTcVYvU2RyQzRCRHg2QXBZOHNpVkxBaUVBeEE1djZZbjNPUkYvCkhNTDlic0tFZ1lBK3AzYUR6YjhNcEFNRU9ZZEVuL3NDSUJDaW5XVWJhWTZxOEphcFh0QWk0empuUkpKNEhSaUQKS1hYUVdBQTRFVnpGQWlBOWttTW5Md01MVXlsZWVRWnFrSUJZdzFQcDk5aHc5ejBiRFM5NGViamRuUUlnTDBjbQp6dFhxRFVrUWRIbGxtRlB2Y05IZWlWYXVGaG5qVGUzMjE5TmRmSkU9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
 metadata:
-  name: crowd-basic-auth-cert
+  name: basic-auth-cert
   namespace: d8-user-authn
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -113,7 +113,7 @@ metadata:
 		})
 
 		It("New cert should be generated", func() {
-			Expect(f.ValuesGet("userAuthn.internal.crowdProxyCert").String()).To(BeEquivalentTo(testingCert))
+			Expect(f.ValuesGet("userAuthn.internal.basicAuthProxyCert").String()).To(BeEquivalentTo(testingCert))
 		})
 	})
 })
@@ -128,7 +128,7 @@ func testCreateJobPod() {
 			Name:      "testpod",
 			Namespace: "d8-system",
 			Labels: map[string]string{
-				"job-name": "crowd-proxy-cert-generate-job",
+				"job-name": proxyJobName,
 			},
 		},
 	}, v1.CreateOptions{})

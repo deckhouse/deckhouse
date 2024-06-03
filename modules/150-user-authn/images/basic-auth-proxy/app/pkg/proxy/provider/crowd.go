@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package proxy
+package provider
 
 import (
 	"bytes"
@@ -22,23 +22,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 )
 
-type CrowdClient struct {
-	apiURL   string
-	login    string
-	password string
-
-	allowedGroups map[string]struct{}
-	httpClient    *http.Client
+type Crowd struct {
+	client *crowdClient
 }
 
-func NewCrowdClient(apiURL, login, password string, allowedGroups []string) *CrowdClient {
+func NewCrowd(apiURL, login, password string, allowedGroups []string) Provider {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -60,16 +54,49 @@ func NewCrowdClient(apiURL, login, password string, allowedGroups []string) *Cro
 		groups[group] = struct{}{}
 	}
 
-	return &CrowdClient{
-		apiURL:        strings.TrimSuffix(apiURL, "/"),
-		login:         login,
-		password:      password,
-		allowedGroups: groups,
-		httpClient:    client,
+	return &Crowd{
+		client: &crowdClient{
+			apiURL:        strings.TrimSuffix(apiURL, "/"),
+			login:         login,
+			password:      password,
+			allowedGroups: groups,
+			httpClient:    client,
+		},
 	}
 }
 
-func (c *CrowdClient) MakeRequest(url, method string, jsonPayload interface{}) (string, error) {
+func (p *Crowd) ValidateCredentials(login, password string) ([]string, error) {
+	_, err := p.client.MakeRequest("/session", http.MethodPost, struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}{Username: login, Password: password})
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.client.MakeRequest("/user/group/nested?username="+login, http.MethodGet, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	crowdGroups, err := p.client.GetGroups(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return crowdGroups, nil
+}
+
+type crowdClient struct {
+	apiURL   string
+	login    string
+	password string
+
+	allowedGroups map[string]struct{}
+	httpClient    *http.Client
+}
+
+func (c *crowdClient) MakeRequest(url, method string, jsonPayload interface{}) (string, error) {
 	var body io.Reader
 	if jsonPayload != nil {
 		jsonData, err := json.Marshal(jsonPayload)
@@ -94,7 +121,7 @@ func (c *CrowdClient) MakeRequest(url, method string, jsonPayload interface{}) (
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("crowd request error: %v", err)
 	}
@@ -106,7 +133,7 @@ func (c *CrowdClient) MakeRequest(url, method string, jsonPayload interface{}) (
 	return string(responseBody), nil
 }
 
-func (c *CrowdClient) GetGroups(body string) ([]string, error) {
+func (c *crowdClient) GetGroups(body string) ([]string, error) {
 	var crowdGroups struct {
 		Groups []struct{ Name string } `json:"groups"`
 	}

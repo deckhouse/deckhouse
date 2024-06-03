@@ -425,7 +425,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"webui":     "imageHash-upmeter-webui",
 	},
 	"userAuthn": map[string]interface{}{
-		"crowdBasicAuthProxy": "imageHash-userAuthn-crowdBasicAuthProxy",
+		"basicAuthProxy":      "imageHash-userAuthn-basicAuthProxy",
 		"dex":                 "imageHash-userAuthn-dex",
 		"dexAuthenticator":    "imageHash-userAuthn-dexAuthenticator",
 		"kubeconfigGenerator": "imageHash-userAuthn-kubeconfigGenerator",
