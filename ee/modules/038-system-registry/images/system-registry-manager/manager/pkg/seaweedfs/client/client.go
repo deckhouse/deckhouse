@@ -8,7 +8,7 @@ import (
 )
 
 func NewClient(mastersHosts *string, filer *string, retryOptions *retryOptions) (*Client, error) {
-	retry := NewRetryOptions(&retryOptions.timeout)
+	retry := NewRetryOptions(retryOptions)
 	options := newShellOptions(mastersHosts, filer)
 	cm := newCommandEnv(options, retry)
 	client := &Client{

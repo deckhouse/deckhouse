@@ -25,10 +25,6 @@ func GetPodsInfoByLabels(labelSelector []string) (*corev1.PodList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error getting PodList: %v", err)
 	}
-
-	for _, pod := range pods.Items {
-		fmt.Println(pod)
-	}
 	return pods, nil
 }
 
