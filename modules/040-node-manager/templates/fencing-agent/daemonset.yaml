@@ -70,7 +70,7 @@ spec:
               - SYS_ADMIN
             drop:
               - ALL
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: LOG_LEVEL
               value: info
