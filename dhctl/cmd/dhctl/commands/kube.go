@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -32,7 +33,7 @@ import (
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("kubernetes-api-connection", "Test connection to kubernetes api via ssh or directly.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -75,7 +76,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 
 func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 

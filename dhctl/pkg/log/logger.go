@@ -60,6 +60,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		defaultLogger = NewSimpleLogger(opts)
 	case "json":
 		defaultLogger = NewJSONLogger(opts)
+	case "silent":
+		defaultLogger = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
@@ -139,6 +141,7 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
+			"attach":    {"📦 ~ Attach: %s", AttachOptions},
 			"default":   {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,

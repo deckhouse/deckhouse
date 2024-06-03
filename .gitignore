@@ -47,6 +47,7 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+include/
 
 # Python dev environment
 __pycache__/

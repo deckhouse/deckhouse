@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 // limitations under the License.
 
 package check
+
+import "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 
 type CheckStatus string
 
@@ -36,4 +38,15 @@ func (status CheckStatus) CombineStatus(anotherStatus CheckStatus) CheckStatus {
 	case CheckStatusDestructiveOutOfSync:
 	}
 	return status
+}
+
+type StatusDetails struct {
+	ConfigurationStatus CheckStatus `json:"configuration_status"`
+	converge.Statistics `json:",inline"`
+}
+
+type CheckResult struct {
+	Status              CheckStatus   `json:"status"`
+	StatusDetails       StatusDetails `json:"status_details"`
+	DestructiveChangeID string        `json:"destructive_change_id,omitempty"`
 }

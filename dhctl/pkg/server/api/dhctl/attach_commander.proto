@@ -1,0 +1,72 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "common.proto";
+
+message AttachCommanderRequest {
+  oneof message {
+    AttachCommanderStart start = 1;
+    AttachCommanderContinue continue = 2;
+  }
+}
+
+message AttachCommanderResponse {
+  oneof message {
+    AttachCommanderResult result = 1;
+    AttachCommanderPhaseEnd phase_end = 2;
+    Logs logs = 3;
+  }
+}
+
+message AttachCommanderStart {
+  string connection_config = 1;
+  optional bool scan_only = 2;
+  string resources_template = 3;
+  google.protobuf.Struct resources_values = 4;
+  AttachCommanderStartOptions options = 5;
+}
+
+message AttachCommanderPhaseEnd {
+  string completed_phase = 1;
+  map<string, bytes> completed_phase_state = 2;
+  string completed_phase_data = 3;
+  string next_phase = 4;
+  bool next_phase_critical = 5;
+}
+
+message AttachCommanderContinue {
+  Continue continue = 1;
+  string err = 2;
+}
+
+message AttachCommanderStartOptions {
+  bool commander_mode = 1;
+  int32 log_width = 2;
+  google.protobuf.Duration resources_timeout = 3;
+  google.protobuf.Duration deckhouse_timeout = 4;
+}
+
+message AttachCommanderResult {
+  string state = 1;
+  string result = 2;
+  string err = 3;
+}

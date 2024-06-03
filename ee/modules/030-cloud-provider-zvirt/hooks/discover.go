@@ -115,7 +115,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, "/deckhouse/ee/candi/cloud-providers/zvirt/openapi")
+	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/zvirt/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}

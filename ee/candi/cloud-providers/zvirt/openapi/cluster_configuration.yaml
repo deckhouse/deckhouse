@@ -68,6 +68,7 @@ apiVersions:
           The definition of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             type: integer

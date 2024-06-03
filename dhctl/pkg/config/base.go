@@ -17,7 +17,6 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -45,8 +44,8 @@ const (
 	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
-func LoadConfigFromFile(path string) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(path)
+func LoadConfigFromFile(path string, opts ...ValidateOption) (*MetaConfig, error) {
+	metaConfig, err := ParseConfig(path, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +87,13 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(path string) (*MetaConfig, error) {
+func ParseConfig(path string, opts ...ValidateOption) (*MetaConfig, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("loading config file: %v", err)
+		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
-	return ParseConfigFromData(string(fileContent))
+	return ParseConfigFromData(string(fileContent), opts...)
 }
 
 func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
@@ -176,7 +175,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig.Prepare()
 }
 
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) error {
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
 		return nil
@@ -197,23 +196,23 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 			return err
 		}
 
-		_, err = schemaStore.Validate(&docData)
+		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
-			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
 		return nil
 	}
 
-	_, err = schemaStore.Validate(&docData)
+	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
-		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return fmt.Errorf("config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return fmt.Errorf("config unmarshal: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	switch {
@@ -230,7 +229,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 	return nil
 }
 
-func ParseConfigFromData(configData string) (*MetaConfig, error) {
+func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -238,7 +237,7 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, opts...); err != nil {
 			return nil, err
 		}
 	}
@@ -250,37 +249,10 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		if err := parseDocument(doc, &metaConfig, schemaStore, opts...); err != nil {
 			return nil, err
 		}
 	}
 
 	return metaConfig.Prepare()
-}
-
-// ValidateClusterSettings parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-func ValidateClusterSettings(configData string) error {
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

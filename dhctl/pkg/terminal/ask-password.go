@@ -48,3 +48,21 @@ func AskBecomePassword() (err error) {
 	app.BecomePass = string(data)
 	return nil
 }
+
+func AskPassword(prompt string) ([]byte, error) {
+	fd := int(os.Stdin.Fd())
+
+	if !terminal.IsTerminal(fd) {
+		return nil, fmt.Errorf("stdin is not a terminal, error reading password")
+	}
+
+	log.InfoF(prompt)
+	data, err := terminal.ReadPassword(fd)
+	log.InfoLn()
+
+	if err != nil {
+		return nil, fmt.Errorf("read secret: %w", err)
+	}
+
+	return data, nil
+}
