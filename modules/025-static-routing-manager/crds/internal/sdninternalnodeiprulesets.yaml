@@ -143,8 +143,6 @@ spec:
                           description: |
                             The range of source ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                            - start
                           x-kubernetes-validations:
                             - rule: "has(self.end) && self.start <= self.end"
                               message: "end port should be greater than or equal to start port."
@@ -166,9 +164,6 @@ spec:
                           description: |
                             The range of destination ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                          required:
-                            - start
                           x-kubernetes-validations:
                             - rule: "has(self.end) && self.start <= self.end"
                               message: "end port should be greater than or equal to start port."
@@ -190,8 +185,6 @@ spec:
                           description: |
                             The range of UIDS(UserID) of applications that transmitting traffic.
                             If there is only one UID, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                            - start
                           x-kubernetes-validations:
                             - rule: "has(self.end) && self.start <= self.end"
                               message: "end should be greater than or equal to start."
@@ -324,11 +317,6 @@ spec:
                           description: |
                             The range of source ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                            - start
-                          x-kubernetes-validations:
-                            - rule: "has(self.end) && self.start <= self.end"
-                              message: "end port should be greater than or equal to start port."
                           properties:
                             start:
                               type: integer
@@ -347,11 +335,6 @@ spec:
                           description: |
                             The range of destination ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                            - start
-                          x-kubernetes-validations:
-                            - rule: "has(self.end) && self.start <= self.end"
-                              message: "end port should be greater than or equal to start port."
                           properties:
                             start:
                               type: integer
@@ -370,11 +353,6 @@ spec:
                           description: |
                             The range of UIDS(UserID) of applications that transmitting traffic.
                             If there is only one UID, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
-                          required:
-                            - start
-                          x-kubernetes-validations:
-                            - rule: "has(self.end) && self.start <= self.end"
-                              message: "end should be greater than or equal to start."
                           properties:
                             start:
                               type: integer
