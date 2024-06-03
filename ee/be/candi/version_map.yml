@@ -1,6 +1,7 @@
 bashible:
   redos: &redos
     '7.3':
+    '8.0':
   astra: &astra
     '1.7':
   altlinux:

@@ -17,6 +17,6 @@
 cat > /usr/local/bin/is-instance-bootstrapped << EOF
 #!/bin/bash
 set -Eeo pipefail
-cat /etc/redos-release | grep -q "MUROM (7.3.4)"
+cat /etc/redos-release | grep -q "RED OS release (8.0) MINIMAL"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
