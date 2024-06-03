@@ -321,6 +321,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler128":     "imageHash-nodeManager-clusterAutoscaler128",
 		"clusterAutoscaler129":     "imageHash-nodeManager-clusterAutoscaler129",
 		"earlyOom":                 "imageHash-nodeManager-earlyOom",
+		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
 	"openvpn": map[string]interface{}{

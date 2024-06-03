@@ -21,6 +21,9 @@ if [ -x /opt/deckhouse/bin/sysctl-tuner ]; then
   /opt/deckhouse/bin/sysctl-tuner
 fi
 
+# Hack, which is necessary for correct start of kubelet service. Since for the enabled fencing feature the value 0 is required, which can be set with sysctl-tuner
+sysctl -w kernel.panic=10
+
 $@ &
 CHILDREN_PID="$!"
 
@@ -41,5 +44,10 @@ until ss -nltp4 | grep -qE "127.0.0.1:10248.*pid=$CHILDREN_PID" && curl -s -f ht
   echo "d8-kubelet-forker [INFO] Waiting for HTTP 200 response from /healthz endpoing of kubelet with PID $CHILDREN_PID (attempt $attempt of $max_attempts)..."
   sleep 1
 done
+
+{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  sysctl -w kernel.panic=0
+{{- end }}
+
 EOF
 chmod +x /opt/deckhouse/bin/d8-kubelet-forker

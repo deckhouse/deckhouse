@@ -1,0 +1,107 @@
+{{- define "fencing_agent_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
+{{ $ctx := . }}
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{ $mode := dig "fencing" "mode" "" $ng }}
+  {{ if eq $mode "Watchdog" }}
+      {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: fencing-agent-{{ $ng.name }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Daemonset
+    name: fencing-agent-{{ $ng.name }}
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "fencing-agent"
+        minAllowed:
+        {{- include "fencing_agent_resources" $ctx | nindent 10 }}
+        maxAllowed:
+          cpu: 20m
+          memory: 70Mi
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fencing-agent-{{ $ng.name }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: fencing-agent
+      node-group-name: {{ $ng.name }}
+  template:
+    metadata:
+      labels:
+        app: fencing-agent
+        node-group-name: {{ $ng.name }}
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/fencing-agent: "unconfined"
+    spec:
+      {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      nodeSelector:
+        node.deckhouse.io/group: {{ $ng.name }}
+      serviceAccountName: fencing-agent
+      containers:
+        - name: fencing-agent
+          securityContext:
+            privileged: true
+            readOnlyRootFilesystem: true
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
+          capabilities:
+            add:
+              - SYS_ADMIN
+            drop:
+              - ALL
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_LEVEL
+              value: info
+            - name: WATCHDOG_DEVICE
+              value: /dev/watchdog
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          image: {{ include "helm_lib_module_image" (list $ctx "fencingAgent") }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port:  8081
+            initialDelaySeconds:  15
+            periodSeconds:  20
+            failureThreshold:  3
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
+        {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "fencing_agent_resources" $ctx | nindent 14 }}
+        {{- end }}
+          volumeMounts:
+            - name: watchdog
+              mountPath: /dev/watchdog
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: watchdog
+          hostPath:
+            path: /dev/watchdog
+            type: CharDevice
+  {{- end }}
+{{- end }}
