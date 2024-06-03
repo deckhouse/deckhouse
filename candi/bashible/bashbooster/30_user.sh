@@ -25,9 +25,13 @@ bb-create_user_and_group() {
 
     if id "$username" &>/dev/null; then
         if [ "$(id -u "$username")" -eq "$userid" ] && [ "$(id -g "$username")" -eq "$groupid" ]; then
+            bb-log-warning "User $username with UID $userid and GID $groupid already exists. No changes needed."
             return
+        fi
     fi
-    
+
+    bb-log-info "Creating user $username with UID $userid and GID $groupid"
+
     # Check if user already exists
     if getent passwd "$username" > /dev/null 2>&1; then
         bb-log-warning "User $username already exists"
