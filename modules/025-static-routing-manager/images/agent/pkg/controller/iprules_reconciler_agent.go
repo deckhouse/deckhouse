@@ -633,7 +633,7 @@ func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actua
 		ns.newReconciliationStatus = deleteIPRuleEntriesFromNode(
 			ns.desiredIPRulesToDelByNIRS,
 			globalDesiredIPRulesForNode,
-			actualIPRulesOnNode,
+			&actualIPRulesOnNode,
 			status,
 			log,
 		)
@@ -797,19 +797,21 @@ func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
 
 // other service functions
 
-func deleteIPRuleEntriesFromNode(delIREM, gdIREM, actIREM IPRuleEntryMap, status utils.ReconciliationStatus, log logger.Logger) utils.ReconciliationStatus {
+func deleteIPRuleEntriesFromNode(delIREM, gdIREM IPRuleEntryMap, actIREM *IPRuleEntryMap, status utils.ReconciliationStatus, log logger.Logger) utils.ReconciliationStatus {
 	for hash, ipRule := range delIREM {
 		log.Debug(fmt.Sprintf("IPRule %v should be deleted", ipRule))
 		if _, ok := (gdIREM)[hash]; ok {
 			log.Debug(fmt.Sprintf("but it is present in other NIRS"))
 			continue
 		}
-		if _, ok := (actIREM)[hash]; !ok {
+		if _, ok := (*actIREM)[hash]; !ok {
 			log.Debug(fmt.Sprintf("but it is not present on Node"))
 			continue
 		}
 		err := delIPRuleFromNode(ipRule)
-		if err != nil {
+		if err == nil {
+			delete(*actIREM, hash)
+		} else {
 			log.Debug(fmt.Sprintf("err: %v", err))
 			status.AppendError(err)
 		}
