@@ -80,7 +80,7 @@ spec:
                       type: string
                       format: cidr
                       description: |
-                        Description network.
+                        Destination network.
                     gateway:
                       type: string
                       format: ipv4

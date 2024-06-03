@@ -4,7 +4,7 @@ spec:
     schema: &schema
       openAPIV3Schema:
         description: |
-          describe routingtables and routes on node.
+          Ресурс, описывающий желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
         properties:
           spec:
             properties:
@@ -14,7 +14,7 @@ spec:
               ipRoutingTableID:
                 description: |
                   ID желаемой таблицы маршрутизации.
-                  
+
                   Если значение не указано явно, то оно сгенерируется автоматически и будет добавлено в поле status.
 
                   После создания ресурса изменить ID таблицы маршрутизации можно только пересоздав ресурс.

@@ -39,7 +39,7 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          describe routingtables and routes on node
+          A resource describing the desired routing table and the routes it contains on specific node.
         required:
         - spec
         properties:
@@ -85,7 +85,7 @@ spec:
                       type: string
                       format: cidr
                       description: |
-                        Description network.
+                        Destination network.
                     gateway:
                       type: string
                       format: ipv4
