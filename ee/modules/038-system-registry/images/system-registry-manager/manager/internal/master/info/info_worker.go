@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package worker
+package info
 
 import (
 	"fmt"
@@ -51,7 +51,7 @@ func NewWorkerInfo(logger *logrus.Entry, uID, ip, podName string, nodeName *stri
 	}
 }
 
-func (w *WorkersInfo) WaitWorkers() ([]WorkerInfo, error) {
+func (w *WorkersInfo) WorkersWaitAll() ([]WorkerInfo, error) {
 	w.logger.Debugf("Waiting for workers information...")
 
 	var numberOfNode int
@@ -86,6 +86,33 @@ func (w *WorkersInfo) WaitWorkers() ([]WorkerInfo, error) {
 	}
 	if len(endpoints.Subsets[0].Addresses) != numberOfNode {
 		return nil, fmt.Errorf("Error len(ep.Subsets[0].Addresses) != numberOfNode")
+	}
+
+	workers := make([]WorkerInfo, 0, len(endpoints.Subsets[0].Addresses))
+	for _, address := range endpoints.Subsets[0].Addresses {
+		workers = append(
+			workers,
+			NewWorkerInfo(
+				w.logger,
+				string(address.TargetRef.UID),
+				address.IP,
+				address.TargetRef.Name,
+				address.NodeName,
+			),
+		)
+		w.logger.Tracef("Found '%s' worker with address '%s'", address.TargetRef.Name, address.IP)
+	}
+	return workers, nil
+}
+
+func (w *WorkersInfo) WorkersGet() ([]WorkerInfo, error) {
+	var endpoints corev1.Endpoints
+	{
+		ep, err := kube_actions.GetEndpointInfo(w.nsName, w.svName)
+		if err != nil {
+			return nil, err
+		}
+		endpoints = *ep
 	}
 
 	workers := make([]WorkerInfo, 0, len(endpoints.Subsets[0].Addresses))

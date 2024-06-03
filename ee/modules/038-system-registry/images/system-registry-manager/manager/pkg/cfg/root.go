@@ -10,10 +10,8 @@ import (
 )
 
 const (
-	AnnotationFromMe      = `system-registry-manager.deckhouse.io/manager`
-	AnnotationFromHandler = `system-registry-manager.deckhouse.io/handler`
-	MaxRetries            = 120
-	CertExparationTime    = 30 * 24 * time.Hour
+	MaxRetries         = 120
+	CertExparationTime = 30 * 24 * time.Hour
 )
 
 var (

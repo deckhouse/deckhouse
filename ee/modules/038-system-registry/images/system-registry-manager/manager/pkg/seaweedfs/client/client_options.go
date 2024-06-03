@@ -1,4 +1,4 @@
-package seaweedfs
+package client
 
 import (
 	"time"
