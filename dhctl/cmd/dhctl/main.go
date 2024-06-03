@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	stcache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -158,32 +157,23 @@ func runApplication(kpApp *kingpin.Application) {
 			return nil
 		}
 
-		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+		logPath := app.DebugLogFilePath
 
-		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+		if logPath == "" {
+			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+			logPath = path.Join(app.TmpDirName, logFile)
+		}
 
-		logPath := path.Join(app.TmpDirName, logFile)
 		err := log.WrapWithTeeLogger(logPath, 1024)
 		if err != nil {
 			return err
 		}
 
+		log.InfoF("Debug log file: %s\n", logPath)
+
 		tomb.RegisterOnShutdown("Finalize logger", func() {
 			if err := log.FlushAndClose(); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-				return
-			}
-
-			if logPath == "" || logFile == "" {
-				return
-			}
-
-			pathInCache := stcache.Global().GetPath(logFile)
-			if pathInCache == "" {
-				return
-			}
-
-			if err := os.Rename(logPath, pathInCache); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
 				return
 			}

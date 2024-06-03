@@ -32,4 +32,6 @@ type Cache interface {
 	InCache(string) (bool, error)
 
 	NeedIntermediateSave() bool
+
+	Dir() string
 }

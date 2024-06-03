@@ -54,18 +54,18 @@ func NewStateCache(dir string) (*StateCache, error) {
 // NewStateCacheWithInitialState creates new cache instance in specified directory with initial state
 func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (*StateCache, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("can't create cache directory: %w", err)
+		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
 	// prepare dir to be fresh for given initial state
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("error reading directory %s: %w", dir, err)
+		return nil, fmt.Errorf("Error reading cache directory %s: %w", dir, err)
 	}
 	for _, entry := range entries {
 		p := filepath.Join(dir, entry.Name())
 		if err := os.RemoveAll(p); err != nil {
-			return nil, fmt.Errorf("unable to remove %s: %w", p, err)
+			return nil, fmt.Errorf("Unable to remove %s state from cache: %w", p, err)
 		}
 	}
 
@@ -203,6 +203,11 @@ func (s *StateCache) NeedIntermediateSave() bool {
 	return false
 }
 
+func (s *StateCache) Dir() string {
+	// cache use one file with terraform
+	return s.dir
+}
+
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
@@ -217,3 +222,4 @@ func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) GetPath(n string) string                  { return "" }
 func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }
 func (d *DummyCache) NeedIntermediateSave() bool               { return false }
+func (d *DummyCache) Dir() string                              { return "" }

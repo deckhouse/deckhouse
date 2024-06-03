@@ -166,6 +166,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	masterAddressesForSSH := make(map[string]string)
 
 	if app.PostBootstrapScriptPath != "" {
+		log.DebugF("Have post bootstrap script: %s\n", app.PostBootstrapScriptPath)
 		if err := ValidateScriptFile(app.PostBootstrapScriptPath); err != nil {
 			return err
 		}
@@ -182,6 +183,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	log.DebugLn("MetaConfig was loaded")
+
 	// next init cache
 	cachePath := metaConfig.CachePath()
 	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
@@ -190,9 +193,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	stateCache := cache.Global()
+
+	log.InfoF("State directory: %s\n", stateCache.Dir())
+
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)
+		log.DebugLn("Cache was dropped")
 	}
 
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
@@ -254,6 +261,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				return err
 			}
 
+			log.DebugLn("Base infrastructure was created")
+
 			var cloudDiscoveryData map[string]interface{}
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
 			if err != nil {
@@ -278,6 +287,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if err != nil {
 				return err
 			}
+
+			log.DebugLn("First control-plane node was created")
 
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState

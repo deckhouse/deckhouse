@@ -17,6 +17,7 @@ package cache
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -45,6 +46,11 @@ func ClearTemporaryDirs() {
 			if path != app.TmpDirName {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+
+		// skip log files
+		if strings.HasSuffix(path, ".log") {
 			return nil
 		}
 
