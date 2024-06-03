@@ -36,7 +36,7 @@ shell:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
   - chown 64535:64535 /src/aws-cloud-controller-manager
