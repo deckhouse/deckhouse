@@ -7,4 +7,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("operator-trivy", "others", []string{"/deckhouse/modules/500-operator-trivy/crds/native/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("operator-trivy", "security", []string{"/deckhouse/modules/500-operator-trivy/crds/native/*.yaml"})
