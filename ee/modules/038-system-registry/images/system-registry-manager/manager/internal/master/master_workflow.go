@@ -8,7 +8,7 @@ package master
 import (
 	"context"
 	"fmt"
-	"system-registry-manager/internal/master/worker"
+	"system-registry-manager/internal/master/info"
 	pkg_api "system-registry-manager/pkg/api"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
@@ -38,8 +38,8 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 
 func masterWorkflow(ctx context.Context, m *Master) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	workersInfo := worker.NewWorkersInfo(log)
-	workers, err := workersInfo.WaitWorkers()
+	info := info.NewInfo(log)
+	workers, err := info.WorkersInfoWaitAll()
 	if err != nil {
 		return fmt.Errorf("error getting workers information: %v", err)
 	}
@@ -60,6 +60,41 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		if err != nil {
 			return fmt.Errorf("error updating registry with worker %s: %v", worker.PodName, err)
 		}
+	}
+
+	allInfo, err := info.AllInfoGet()
+	if err != nil {
+		return err
+	}
+	for node_name, node_info := range allInfo {
+		log.Infof("Node: %s", node_name)
+		log.Info("Node info:")
+		log.Info(node_info)
+
+		if node_info.SeaweedfsPod != nil {
+			log.Info("Seaweedfs not exist")
+			continue
+		}
+
+		log.Info("Seaweedfs exist")
+		client, err := node_info.SeaweedfsPod.CreateClient()
+		defer client.ClientClose()
+		if err != nil {
+			log.Fatal(err)
+			continue
+		}
+		responseClusterCheck, err := client.ClusterCheck()
+		if err != nil {
+			log.Fatal(err)
+			continue
+		}
+		log.Info(responseClusterCheck)
+		responseClusterRaftPs, err := client.ClusterRaftPs()
+		if err != nil {
+			log.Fatal(err)
+			continue
+		}
+		log.Info(responseClusterRaftPs)
 	}
 	return nil
 }

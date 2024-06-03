@@ -1,4 +1,4 @@
-package seaweedfs
+package client
 
 import (
 	"context"
@@ -8,8 +8,9 @@ import (
 )
 
 func NewClient(mastersHosts *string, filer *string, retryOptions *retryOptions) (*Client, error) {
+	retry := NewRetryOptions(&retryOptions.timeout)
 	options := newShellOptions(mastersHosts, filer)
-	cm := newCommandEnv(options, retryOptions)
+	cm := newCommandEnv(options, retry)
 	client := &Client{
 		cm:                    cm,
 		keepConnectedToMaster: NewKeepConnectedToMaster(cm),
