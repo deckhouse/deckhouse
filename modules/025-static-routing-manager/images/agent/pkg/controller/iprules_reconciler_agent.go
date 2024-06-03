@@ -463,34 +463,38 @@ func (irem *IPRuleEntryMap) AppendIR(ipRule v1alpha1.IPRule) {
 				OifName:  ipRule.Selectors.OIf,
 				Table:    ipRule.Actions.Lookup.IPRoutingTableID,
 			}
-			ire.SPortRange = &v1alpha1.PortRange{
-				Start: ipRule.Selectors.SPortRange.Start,
-			}
-			if ipRule.Selectors.SPortRange.End == 0 &&
-				ipRule.Selectors.SPortRange.End != ipRule.Selectors.SPortRange.Start {
-				ire.SPortRange.End = ipRule.Selectors.SPortRange.Start
-			} else {
-				ire.SPortRange.End = ipRule.Selectors.SPortRange.End
+
+			if ipRule.Selectors.SPortRange.Start != 0 {
+				ire.SPortRange = &v1alpha1.PortRange{
+					Start: ipRule.Selectors.SPortRange.Start,
+				}
+				if ipRule.Selectors.SPortRange.End != 0 {
+					ire.SPortRange.End = ipRule.Selectors.SPortRange.End
+				} else {
+					ire.SPortRange.End = ipRule.Selectors.SPortRange.Start
+				}
 			}
 
-			ire.DPortRange = &v1alpha1.PortRange{
-				Start: ipRule.Selectors.DPortRange.Start,
-			}
-			if ipRule.Selectors.DPortRange.End == 0 &&
-				ipRule.Selectors.DPortRange.End != ipRule.Selectors.DPortRange.Start {
-				ire.DPortRange.End = ipRule.Selectors.DPortRange.Start
-			} else {
-				ire.DPortRange.End = ipRule.Selectors.DPortRange.End
+			if ipRule.Selectors.DPortRange.Start != 0 {
+				ire.DPortRange = &v1alpha1.PortRange{
+					Start: ipRule.Selectors.DPortRange.Start,
+				}
+				if ipRule.Selectors.DPortRange.End != 0 {
+					ire.DPortRange.End = ipRule.Selectors.DPortRange.End
+				} else {
+					ire.DPortRange.End = ipRule.Selectors.DPortRange.Start
+				}
 			}
 
-			ire.UIDRange = &v1alpha1.UIDRange{
-				Start: ipRule.Selectors.UIDRange.Start,
-			}
-			if ipRule.Selectors.UIDRange.End == 0 &&
-				ipRule.Selectors.UIDRange.End != ipRule.Selectors.UIDRange.Start {
-				ire.UIDRange.End = ipRule.Selectors.UIDRange.Start
-			} else {
-				ire.UIDRange.End = ipRule.Selectors.UIDRange.End
+			if ipRule.Selectors.UIDRange.Start != 0 {
+				ire.UIDRange = &v1alpha1.UIDRange{
+					Start: ipRule.Selectors.UIDRange.Start,
+				}
+				if ipRule.Selectors.UIDRange.End != 0 {
+					ire.UIDRange.End = ipRule.Selectors.UIDRange.End
+				} else {
+					ire.UIDRange.End = ipRule.Selectors.UIDRange.Start
+				}
 			}
 
 			ire.Src = from
