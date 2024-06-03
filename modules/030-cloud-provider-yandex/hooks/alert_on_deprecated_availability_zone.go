@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -67,6 +68,10 @@ func filterYandexDeprecatedZoneNodes(obj *unstructured.Unstructured) (go_hook.Fi
 
 func alertOnNodesInDeprecatedAvailabilityZones(input *go_hook.HookInput) error {
 	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.Snapshots[yandexDeprecatedZoneNodesKey])
+
+	if len(nodeGroupsWithDeprecatedZones) > 0 {
+		requirements.SaveValue(yandexDeprecatedZoneKey, true)
+	}
 
 	for _, nodeGroupName := range nodeGroupsWithDeprecatedZones.Slice() {
 		input.MetricsCollector.Set("d8_node_group_node_with_deprecated_availability_zone", 1, map[string]string{

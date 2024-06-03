@@ -22,11 +22,18 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: alert_on_deprecated_availability_zone ::", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	const initValuesString = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+`
+	f := HookExecutionConfigInit(initValuesString, `{}`)
 
 	initialKubeState := `
 apiVersion: v1
@@ -82,6 +89,8 @@ spec:
 			collectedMetrics := f.MetricsCollector.CollectedMetrics()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(collectedMetrics).To(ContainElement(expectedMetric))
+			_, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			Expect(exists).To(BeTrue())
 			Expect(len(collectedMetrics)).Should(Equal(1))
 		})
 	})
