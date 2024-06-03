@@ -55,6 +55,9 @@ spec:
 
 		It("Should succeed with no collected metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInNodesKey)
+			Expect(exists).To(BeTrue())
+			Expect(hasDeprecatedZone).To(BeFalse())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(BeEmpty())
 		})
 	})
@@ -89,8 +92,9 @@ spec:
 			collectedMetrics := f.MetricsCollector.CollectedMetrics()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(collectedMetrics).To(ContainElement(expectedMetric))
-			_, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInNodesKey)
 			Expect(exists).To(BeTrue())
+			Expect(hasDeprecatedZone).To(BeTrue())
 			Expect(len(collectedMetrics)).Should(Equal(1))
 		})
 	})

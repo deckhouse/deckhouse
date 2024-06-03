@@ -26,16 +26,28 @@ import (
 )
 
 func TestKubernetesVersionRequirement(t *testing.T) {
-	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue(yandexDeprecatedZoneKey, false)
-		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneRequirementsKey, "")
+	t.Run("in-config requirement met", func(t *testing.T) {
+		requirements.SaveValue(yandexDeprecatedZoneInConfigKey, false)
+		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneInConfigRequirementsKey, "")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+	t.Run("in-nodes requirement met", func(t *testing.T) {
+		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, false)
+		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneInNodesRequirementsKey, "")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
-	t.Run("requirement failed", func(t *testing.T) {
-		requirements.SaveValue(yandexDeprecatedZoneKey, true)
-		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneRequirementsKey, "")
+	t.Run("in-config requirement failed", func(t *testing.T) {
+		requirements.SaveValue(yandexDeprecatedZoneInConfigKey, true)
+		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneInConfigRequirementsKey, "")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+	t.Run("in-nodes requirement failed", func(t *testing.T) {
+		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, true)
+		ok, err := requirements.CheckRequirement(yandexDeprecatedZoneInNodesRequirementsKey, "")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

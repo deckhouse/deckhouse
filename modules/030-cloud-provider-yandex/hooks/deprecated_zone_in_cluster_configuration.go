@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	yandexDeprecatedZoneKey = "yandex:deprecatedZoneInUse"
+	yandexDeprecatedZoneInConfigKey = "yandex:hasDeprecatedZoneInConfig"
 )
 
 type NodeGroupZones struct {
@@ -109,7 +109,7 @@ func setDeprecatedZoneInUseFlag(input *go_hook.HookInput) error {
 		}
 	}
 
-	requirements.SaveValue(yandexDeprecatedZoneKey, hasDeprecatedZone)
+	requirements.SaveValue(yandexDeprecatedZoneInConfigKey, hasDeprecatedZone)
 
 	return nil
 }

@@ -30,7 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-const yandexDeprecatedZoneNodesKey = "node_groups_with_deprecated_region"
+const (
+	yandexDeprecatedZoneNodesKey   = "node_groups_with_deprecated_region"
+	yandexDeprecatedZoneInNodesKey = "yandex:hasDeprecatedZoneInNodes"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
@@ -70,7 +73,9 @@ func alertOnNodesInDeprecatedAvailabilityZones(input *go_hook.HookInput) error {
 	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.Snapshots[yandexDeprecatedZoneNodesKey])
 
 	if len(nodeGroupsWithDeprecatedZones) > 0 {
-		requirements.SaveValue(yandexDeprecatedZoneKey, true)
+		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, true)
+	} else {
+		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, false)
 	}
 
 	for _, nodeGroupName := range nodeGroupsWithDeprecatedZones.Slice() {

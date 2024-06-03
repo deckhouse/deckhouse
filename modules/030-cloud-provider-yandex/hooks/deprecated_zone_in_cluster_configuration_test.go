@@ -291,8 +291,8 @@ data:
 
 		It("Should set deprecatedZoneInUse to true", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			requirements.GetValue(yandexDeprecatedZoneKey)
-			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			requirements.GetValue(yandexDeprecatedZoneInConfigKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInConfigKey)
 			Expect(exists).To(BeTrue())
 			Expect(hasDeprecatedZone).To(BeTrue())
 		})
@@ -308,7 +308,7 @@ data:
 		It("Should set deprecatedZoneInUse to false", func() {
 			Expect(c).To(ExecuteSuccessfully())
 
-			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInConfigKey)
 			Expect(exists).To(BeTrue())
 			Expect(hasDeprecatedZone).To(BeFalse())
 		})
@@ -324,7 +324,7 @@ data:
 		It("Should set deprecatedZoneInUse to false", func() {
 			Expect(d).To(ExecuteSuccessfully())
 
-			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInConfigKey)
 			Expect(exists).To(BeTrue())
 			Expect(hasDeprecatedZone).To(BeFalse())
 		})
@@ -339,8 +339,8 @@ data:
 
 		It("Should set deprecatedZoneInUse to true", func() {
 			Expect(e).To(ExecuteSuccessfully())
-			requirements.GetValue(yandexDeprecatedZoneKey)
-			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			requirements.GetValue(yandexDeprecatedZoneInConfigKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInConfigKey)
 			Expect(exists).To(BeTrue())
 			Expect(hasDeprecatedZone).To(BeTrue())
 		})
@@ -354,8 +354,8 @@ data:
 
 		It("Should set deprecatedZoneInUse to true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			requirements.GetValue(yandexDeprecatedZoneKey)
-			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneKey)
+			requirements.GetValue(yandexDeprecatedZoneInConfigKey)
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInConfigKey)
 			Expect(exists).To(BeTrue())
 			Expect(hasDeprecatedZone).To(BeTrue())
 		})

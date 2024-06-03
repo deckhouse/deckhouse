@@ -23,21 +23,34 @@ import (
 )
 
 const (
-	yandexDeprecatedZoneKey             = "yandex:deprecatedZoneInUse"
-	yandexDeprecatedZoneRequirementsKey = "yandexDeprecatedZoneInUse"
+	yandexDeprecatedZoneInConfigKey             = "yandex:hasDeprecatedZoneInConfig"
+	yandexDeprecatedZoneInNodesKey              = "yandex:hasDeprecatedZoneInNodes"
+	yandexDeprecatedZoneInConfigRequirementsKey = "yandexHasDeprecatedZoneInConfig"
+	yandexDeprecatedZoneInNodesRequirementsKey  = "yandexHasDeprecatedZoneInNodes"
 )
 
 func init() {
-	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		hasDepracatedZone, exists := getter.Get(yandexDeprecatedZoneKey)
+	checkRequirementInConfigFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		hasDeprecatedZone, exists := getter.Get(yandexDeprecatedZoneInConfigKey)
 		if exists {
-			if hasDepracatedZone.(bool) {
-				return false, errors.New("cluster use deprecated zone \"ru-central1-c\". Remove it from provider-cluster-config and nodes")
+			if hasDeprecatedZone.(bool) {
+				return false, errors.New("cluster use deprecated zone \"ru-central1-c\". Remove it from provider-cluster-config")
+			}
+		}
+
+		return true, nil
+	}
+	checkRequirementInZonesFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		hasDeprecatedZone, exists := getter.Get(yandexDeprecatedZoneInNodesKey)
+		if exists {
+			if hasDeprecatedZone.(bool) {
+				return false, errors.New("cluster use deprecated zone \"ru-central1-c\". Remove it from NodeGroups and check nodes")
 			}
 		}
 
 		return true, nil
 	}
 
-	requirements.RegisterCheck(yandexDeprecatedZoneRequirementsKey, f)
+	requirements.RegisterCheck(yandexDeprecatedZoneInConfigRequirementsKey, checkRequirementInConfigFunc)
+	requirements.RegisterCheck(yandexDeprecatedZoneInNodesRequirementsKey, checkRequirementInZonesFunc)
 }
