@@ -18,8 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var crdsDirs = []string{
-	"/deckhouse/modules/402-ingress-nginx/crds/*.yaml",
-}
-
-var _ = ensure_rbacv2.RegisterHook("ingress-nginx", "networking", crdsDirs)
+var _ = ensure_rbacv2.RegisterHook("ingress-nginx", "networking", []string{"/deckhouse/modules/402-ingress-nginx/crds/*.yaml"})

@@ -18,8 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var crdsDirs = []string{
-	"/deckhouse/modules/015-admission-policy-engine/crds/*.yaml",
-}
-
-var _ = ensure_rbacv2.RegisterHook("admission-policy-engine", "security", crdsDirs)
+var _ = ensure_rbacv2.RegisterHook("admission-policy-engine", "security", []string{"/deckhouse/modules/015-admission-policy-engine/crds/*.yaml"})

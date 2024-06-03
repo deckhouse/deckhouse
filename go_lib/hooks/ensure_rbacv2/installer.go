@@ -17,10 +17,8 @@ limitations under the License.
 package ensure_rbacv2
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,8 +29,8 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
@@ -94,47 +92,29 @@ func (i *installer) parseCRDs(_ context.Context) ([]*v1.CustomResourceDefinition
 			if err != nil {
 				return nil, err
 			}
-			if crd.Spec.Group != "deckhouse.io" {
-				continue
+			if crd != nil {
+				crds = append(crds, crd)
 			}
-			crds = append(crds, crd)
 		}
 	}
 	return crds, nil
 }
 func (i *installer) parseCRD(path string) (*v1.CustomResourceDefinition, error) {
-	var crd *v1.CustomResourceDefinition
-	fileReader, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer fileReader.Close()
-	reader := apimachineryYaml.NewDocumentDecoder(fileReader)
-	for {
-		bufferSize, err := reader.Read(i.buffer)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		data := i.buffer[:bufferSize]
-		if len(data) == 0 {
-			// some empty yaml document, or empty string before separator
-			continue
-		}
-		if err = apimachineryYaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), bufferSize).Decode(&crd); err != nil {
-			return nil, err
-		}
-		// it could be a comment or some other peace of yaml file, skip it
-		if crd == nil {
-			return nil, nil
-		}
-		if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
-			return nil, fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
-		}
+	var crd v1.CustomResourceDefinition
+	if err = yaml.Unmarshal(data, &crd); err != nil {
+		return nil, err
 	}
-	return crd, nil
+	if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
+		return nil, fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
+	}
+	if crd.Spec.Group == "deckhouse.io" {
+		return nil, nil
+	}
+	return &crd, nil
 }
 
 func (i *installer) ensureRoles(ctx context.Context, crds []*v1.CustomResourceDefinition) *multierror.Error {
