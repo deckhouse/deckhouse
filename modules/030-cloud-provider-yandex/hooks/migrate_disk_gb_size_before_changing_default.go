@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"k8s.io/utils/pointer"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -26,6 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 )
 
@@ -143,7 +142,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	backupSecret.Name = backupSecret.Name + `-bkp-disk-gb`
+	backupSecret.Name += `-bkp-disk-gb`
 	backupSecret.ResourceVersion = ""
 	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
 
