@@ -88,28 +88,29 @@ func setDeprecatedZoneInUseFlag(input *go_hook.HookInput) error {
 		return fmt.Errorf("Failed to unmarshall d8-provider-cluster-configuration from the secret: %v", err)
 	}
 
-	hasDeprecatedZone := false
 	for _, zone := range pcc.Zones {
 		if zone == "ru-central1-c" {
-			hasDeprecatedZone = true
+			requirements.SaveValue(yandexDeprecatedZoneInConfigKey, true)
+			return nil
 		}
 	}
 
 	for _, zone := range pcc.MasterNodeGroup.Zones {
 		if zone == "ru-central1-c" {
-			hasDeprecatedZone = true
+			requirements.SaveValue(yandexDeprecatedZoneInConfigKey, true)
+			return nil
 		}
 	}
 
 	for _, ng := range pcc.NodeGroups {
 		for _, zone := range ng.Zones {
 			if zone == "ru-central1-c" {
-				hasDeprecatedZone = true
+				requirements.SaveValue(yandexDeprecatedZoneInConfigKey, true)
+				return nil
 			}
 		}
 	}
 
-	requirements.SaveValue(yandexDeprecatedZoneInConfigKey, hasDeprecatedZone)
-
+	requirements.SaveValue(yandexDeprecatedZoneInConfigKey, false)
 	return nil
 }

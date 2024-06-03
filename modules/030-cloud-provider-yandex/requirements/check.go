@@ -30,7 +30,7 @@ const (
 )
 
 func init() {
-	checkRequirementInConfigFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkRequirementInConfigFunc := func(_ string, getter requirements.ValueGetter) (bool, error) {
 		hasDeprecatedZone, exists := getter.Get(yandexDeprecatedZoneInConfigKey)
 		if exists {
 			if hasDeprecatedZone.(bool) {
@@ -40,7 +40,7 @@ func init() {
 
 		return true, nil
 	}
-	checkRequirementInZonesFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkRequirementInZonesFunc := func(_ string, getter requirements.ValueGetter) (bool, error) {
 		hasDeprecatedZone, exists := getter.Get(yandexDeprecatedZoneInNodesKey)
 		if exists {
 			if hasDeprecatedZone.(bool) {
