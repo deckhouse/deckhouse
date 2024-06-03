@@ -17,8 +17,10 @@ limitations under the License.
 package ensure_rbacv2
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -29,8 +31,8 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
@@ -81,32 +83,64 @@ func (i *installer) Run(ctx context.Context) *multierror.Error {
 	return i.ensureRoles(ctx, crds)
 }
 
-func (i *installer) parseCRDs(_ context.Context) ([]*v1.CustomResourceDefinition, error) {
+func (i *installer) parseCRDs(ctx context.Context) ([]*v1.CustomResourceDefinition, error) {
 	var crds []*v1.CustomResourceDefinition
 	for _, dir := range i.crdsDirs {
 		for _, pathToCRD := range dir {
 			if match := strings.HasPrefix(filepath.Base(pathToCRD), "doc-"); match {
 				continue
 			}
-			crd, err := i.parseCRD(pathToCRD)
+			parsed, err := i.processFile(ctx, pathToCRD)
 			if err != nil {
 				return nil, err
 			}
-			if crd != nil {
-				crds = append(crds, crd)
+			if len(parsed) != 0 {
+				crds = append(crds, parsed...)
 			}
 		}
 	}
 	return crds, nil
 }
-func (i *installer) parseCRD(path string) (*v1.CustomResourceDefinition, error) {
-	data, err := os.ReadFile(path)
+func (i *installer) processFile(ctx context.Context, path string) ([]*v1.CustomResourceDefinition, error) {
+	fileReader, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	var crd v1.CustomResourceDefinition
-	if err = yaml.Unmarshal(data, &crd); err != nil {
+	defer fileReader.Close()
+	var crds []*v1.CustomResourceDefinition
+	reader := apimachineryYaml.NewDocumentDecoder(fileReader)
+	for {
+		n, err := reader.Read(i.buffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		data := i.buffer[:n]
+		if len(data) == 0 {
+			// some empty yaml document, or empty string before separator
+			continue
+		}
+		crd, err := i.parseCRD(ctx, bytes.NewReader(data), n)
+		if err != nil {
+			return nil, err
+		}
+		if crd != nil {
+			crds = append(crds, crd)
+		}
+	}
+	return crds, nil
+}
+func (i *installer) parseCRD(_ context.Context, reader io.Reader, bufferSize int) (*v1.CustomResourceDefinition, error) {
+	var crd *v1.CustomResourceDefinition
+	if err := apimachineryYaml.NewYAMLOrJSONDecoder(reader, bufferSize).Decode(&crd); err != nil {
 		return nil, err
+	}
+	// it could be a comment or some other peace of yaml file, skip it
+	if crd == nil {
+		return nil, nil
 	}
 	if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
 		return nil, fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
@@ -114,7 +148,7 @@ func (i *installer) parseCRD(path string) (*v1.CustomResourceDefinition, error) 
 	if crd.Spec.Group == "deckhouse.io" {
 		return nil, nil
 	}
-	return &crd, nil
+	return crd, nil
 }
 
 func (i *installer) ensureRoles(ctx context.Context, crds []*v1.CustomResourceDefinition) *multierror.Error {
