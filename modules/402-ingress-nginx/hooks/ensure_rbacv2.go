@@ -23,4 +23,4 @@ var crdsDirs = []string{
 	"/deckhouse/modules/402-ingress-nginx/crds/kruise/*.yaml",
 }
 
-var _ = ensure_rbacv2.RegisterHook("ingress-nginx", "others", crdsDirs)
+var _ = ensure_rbacv2.RegisterHook("ingress-nginx", "networking", crdsDirs)
