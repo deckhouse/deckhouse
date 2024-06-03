@@ -82,11 +82,6 @@ func (pc *Checker) Static() error {
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
-		{
-			fun:            pc.CheckContainerdExist,
-			successMessage: "contanerd not exist",
-			skipFlag:       app.ContainerdExistCheckArgName,
-		},
 	})
 }
 
