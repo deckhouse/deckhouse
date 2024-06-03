@@ -692,8 +692,9 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
 			log.Debug(fmt.Sprintf("Wipe finalizer on NIRS: %v", nirsName))
 
-			var tmpNIRSFinalizers []string
-			tmpNIRSFinalizers = []string{}
+			// var tmpNIRSFinalizers []string
+			// tmpNIRSFinalizers = []string{}
+			tmpNIRSFinalizers := make([]string, 0)
 
 			for _, fnlzr := range ns.k8sResources.Finalizers {
 				if fnlzr != v1alpha1.Finalizer {
@@ -701,7 +702,13 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 				}
 			}
 
-			patch, err := json.Marshal(tmpNIRSFinalizers)
+			patchRaw := map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"finalizers": tmpNIRSFinalizers,
+				},
+			}
+
+			patch, err := json.Marshal(patchRaw)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNIRSFinalizers, err))
 			}
