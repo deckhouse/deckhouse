@@ -8,6 +8,7 @@ package master
 import (
 	"context"
 	"fmt"
+	"github.com/alecthomas/repr"
 	"system-registry-manager/internal/master/info"
 	pkg_api "system-registry-manager/pkg/api"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -68,33 +69,32 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 	}
 	for node_name, node_info := range allInfo {
 		log.Infof("Node: %s", node_name)
-		log.Info("Node info:")
-		log.Info(node_info)
+		log.Infof("Seaweedfs: %v", node_info.SeaweedfsPod != nil)
+		log.Infof("Worker: %v", node_info.Worker != nil)
+		log.Infof("Master Node: %v", node_info.MasterNode != nil)
 
-		if node_info.SeaweedfsPod != nil {
-			log.Info("Seaweedfs not exist")
+		if node_info.SeaweedfsPod == nil {
 			continue
 		}
 
-		log.Info("Seaweedfs exist")
 		client, err := node_info.SeaweedfsPod.CreateClient()
 		defer client.ClientClose()
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 			continue
 		}
-		responseClusterCheck, err := client.ClusterCheck()
-		if err != nil {
-			log.Fatal(err)
+		if resp, err := client.ClusterCheck(); err != nil {
+			log.Error(err)
 			continue
+		} else {
+			repr.Print(resp)
 		}
-		log.Info(responseClusterCheck)
-		responseClusterRaftPs, err := client.ClusterRaftPs()
-		if err != nil {
-			log.Fatal(err)
+		if resp, err := client.ClusterRaftPs(); err != nil {
+			log.Error(err)
 			continue
+		} else {
+			repr.Print(resp)
 		}
-		log.Info(responseClusterRaftPs)
 	}
 	return nil
 }

@@ -29,10 +29,6 @@ func GetNodesInfoByLabels(labelSelector string) (*corev1.NodeList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error getting NodeList: %v", err)
 	}
-
-	for _, node := range nodes.Items {
-		fmt.Println(node)
-	}
 	return nodes, nil
 }
 

@@ -6,6 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/alecthomas/repr v0.4.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
 	github.com/mitchellh/mapstructure v1.5.0

@@ -22,14 +22,13 @@ var (
 	lockerAndClientName                   = "system-registry-manager"
 )
 
-func NewRetryOptions(timeout *time.Duration) *retryOptions {
-	retryOptions := retryOptions{
+func NewRetryOptions(inputRetryOptions *retryOptions) *retryOptions {
+	if inputRetryOptions != nil {
+		return inputRetryOptions
+	}
+	return &retryOptions{
 		timeout: DefaultTimeout,
 	}
-	if timeout != nil {
-		retryOptions.timeout = *timeout
-	}
-	return &retryOptions
 }
 
 func newShellOptions(mastersHosts *string, filer *string) *shellOptions {
