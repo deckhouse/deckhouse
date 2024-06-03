@@ -22,10 +22,13 @@ configVersion: v1
 kubernetesValidating:
 - name: system-roles.deckhouse.io
   group: main
+  labelSelector:
+    matchLabels:
+      heritage: deckhouse
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
+    operations:  ["CREATE", "DELETE"]
     resources:   ["clusterroles"]
     scope:       "Cluster"
 EOF
@@ -35,10 +38,9 @@ function __main__() {
   operation=$(context::jq -r '.review.request.operation')
   user=$(context::jq -r '.review.request.userInfo.username')
 
-if [ "$operation" = "CREATE" ] || [ "$operation" = "UPDATE" ]; then
-  labelExists=$(context::jq -r '.review.request.object.metadata.labels | .heritage == "deckhouse"')
+if [ "$operation" = "CREATE" ]; then
   clusterRoleName=$(context::jq -r '.review.request.object.metadata.name')
-  if $labelExists && [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
+  if [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ClusterRole \"$clusterRoleName\" has forbidden label \"heritage:deckhouse\"" }
 EOF
@@ -47,9 +49,8 @@ EOF
 fi
 
 if [ "$operation" = "DELETE" ]; then
-  labelExists=$(context::jq -r '.review.request.oldObject.metadata.labels | .heritage == "deckhouse"')
   clusterRoleName=$(context::jq -r '.review.request.oldObject.metadata.name')
-  if $labelExists && [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
+  if [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ClusterRole \"$clusterRoleName\" cannot be deleted, it is reserved system role" }
 EOF

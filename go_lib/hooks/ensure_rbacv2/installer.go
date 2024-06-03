@@ -94,6 +94,9 @@ func (i *installer) parseCRDs(_ context.Context) ([]*v1.CustomResourceDefinition
 			if err != nil {
 				return nil, err
 			}
+			if crd.Spec.Group != "deckhouse.io" {
+				continue
+			}
 			crds = append(crds, crd)
 		}
 	}
