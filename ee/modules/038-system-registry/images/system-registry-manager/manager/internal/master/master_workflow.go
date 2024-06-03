@@ -8,7 +8,6 @@ package master
 import (
 	"context"
 	"fmt"
-	"github.com/alecthomas/repr"
 	"system-registry-manager/internal/master/info"
 	pkg_api "system-registry-manager/pkg/api"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -87,13 +86,13 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 			log.Error(err)
 			continue
 		} else {
-			repr.Print(resp)
+			log.Info(resp)
 		}
 		if resp, err := client.ClusterRaftPs(); err != nil {
 			log.Error(err)
 			continue
 		} else {
-			repr.Print(resp)
+			log.Info(resp)
 		}
 	}
 	return nil
