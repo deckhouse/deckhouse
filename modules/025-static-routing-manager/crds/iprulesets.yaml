@@ -36,7 +36,7 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          describe iprulesets
+          This resource describes a set of rules (`ip rule`) that will be created on nodes with the appropriate labels.
         required:
         - spec
         properties:
@@ -50,7 +50,7 @@ spec:
                 type: array
                 minItems: 1
                 description: |
-                  ip rules declaration
+                  The desired set of rules (`ip rule').
                 items:
                   type: object
                   required:
@@ -63,9 +63,16 @@ spec:
                       minimum: 0
                       maximum: 4294967295
                       description: |
-                        priority of rule
+                        The priority of the rule (the order of application depends on it).
+                        When choosing a number, it is worth considering several nuances:
+                        - All rules are sorted in order of priority (from lesser to greater) until a match is found.
+                        - If the packet falls under some rule, and the corresponding action has been successfully performed, then the search for rules termitated.
+                        - The default rule for searching the `main` routing table is 32766. In this case, if you specify a higher value, the rule will never be processed.
                     selectors:
                       type: object
+                      description: |
+                        A set of package attributes.
+                        If the package has the attributes described in the `selectors` section, then actions from the `actions` section will be applied to it.
                       oneOf:
                         - required: [ not ]
                           minProperties: 2
@@ -77,53 +84,58 @@ spec:
                           type: boolean
                           default: false
                           description: |
-                            invert the selectors match rule
+                            If this flag is specified, the rule will be inverted, that is, all packets that do not have the specified attributes will fall under it.
                         from:
                           type: array
                           description: |
-                            Array of source prefixes
+                            An array of subnets of the source.
                           items:
                             type: string
                             format: cidr
                             description: |
-                              Select the source prefix to match.
+                              The subnet of the source.
                         to:
                           type: array
                           description: |
-                            Array of destination prefixes
+                            An array of subnets of the destination.
                           items:
                             type: string
                             format: cidr
                             description: |
-                              Select the destination prefix to match.
+                              The subnet of the destination.
                         tos:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,2}$'
                           description: |
-                            Select the TOS (diffserv/dscp) value to match.
+                            QOS traffic label (TOS/diffserv/dscp) transmitted over the network in the IP headers of the packet.
                             Available values stored in the file /etc/iproute2/rt_dsfield.
                         fwMark:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            Select the fwMark value to match.
+                            The traffic label exists only inside the linux network subsystem on the node.
                         iif:
                           type: string
                           description: |
-                            Select the incoming device to match.
+                            The name of the incoming interface for the packet.
                         oif:
                           type: string
                           description: |
-                            Select the outgoing device (interface) to match.
+                            The name of the outgoing interface for the packet.
                         ipProto:
                           type: integer
                           description: |
-                            Select the ip protocol value to match.
-                            Available values stored in the file /etc/protocols.
+                            The number of the L4 protocol that is encapsulated in the IP in packet.
+                            The numbers of the most popular protocols are:
+                            - `ICMP` - 1
+                            - `TCP` - 6
+                            - `UDP` - 17
+                            All available values can be found [at the link] (https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
                         sportRange:
                           type: object
                           description: |
-                            Select the source port range to match. If there is only one port, fill in only the "start" field.
+                            The range of source ports.
+                            If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
                           required:
                           - start
                           x-kubernetes-validations:
@@ -135,17 +147,18 @@ spec:
                               minimum: 0
                               maximum: 65535
                               description: |
-                                the beginning of the range.
+                                The beginning of the range.
                             end:
                               type: integer
                               minimum: 0
                               maximum: 65535
                               description: |
-                                the end of the range.
+                                The end of the range.
                         dportRange:
                           type: object
                           description: |
-                            Select the destination port range to match. If there is only one port, fill in only the "start" field.
+                            The range of destination ports.
+                            If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
                           required:
                           - start
                           x-kubernetes-validations:
@@ -157,17 +170,18 @@ spec:
                               minimum: 0
                               maximum: 65535
                               description: |
-                                the beginning of the range.
+                                The beginning of the range.
                             end:
                               type: integer
                               minimum: 0
                               maximum: 65535
                               description: |
-                                the end of the range.
+                                The end of the range.
                         uidRange:
                           type: object
                           description: |
-                            Select the range of uid (UserID) values to match.  If there is only one uid, fill in only the "start" field.
+                            The range of UIDS(UserID) of applications that transmitting traffic.
+                            If there is only one UID, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
                           required:
                             - start
                           x-kubernetes-validations:
@@ -179,22 +193,24 @@ spec:
                               minimum: 0
                               maximum: 4294967295
                               description: |
-                                the beginning of the range.
+                                The beginning of the range.
                             end:
                               type: integer
                               minimum: 0
                               maximum: 4294967295
                               description: |
-                                the end of the range.
+                                The end of the range.
                     actions:
                       type: object
+                      description: |
+                        A set of actions that must be performed with a packet that has the attributes described in the `selectors' section.
                       required:
                         - lookup
                       properties:
                         lookup:
                           type: object
                           description: |
-                            the routing table identifier to lookup if the rule selectors matches.
+                            Define the routing table in which the gateway address will be searched.
                           oneOf:
                           - required: [ipRoutingTableID]
                           - required: [routingTableName]
@@ -204,15 +220,15 @@ spec:
                               minimum: 1
                               maximum: 4294967295
                               description: |
-                                ID of routing table on node
+                                ID of the routing table on the node
                             routingTableName:
                               type: string
                               description: |
-                                Name of CR RoutingTable
+                                The name of kubernetes resource RoutingTable in which the routing table ID will be searched.
               nodeSelector:
                 type: object
                 description: |
-                  nodeSelector of node on which inject iprule
+                  A set of labels that define the nodes on which these rules must be applied.
                 additionalProperties:
                   type: string
           status:

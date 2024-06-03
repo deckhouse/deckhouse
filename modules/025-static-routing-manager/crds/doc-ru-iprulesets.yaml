@@ -4,93 +4,109 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            describe iprulesets
+            Данный ресурс описывает набор правил (`ip rule`), которые будут созданы на нодах с соответствующими лейблами.
           properties:
             spec:
               properties:
                 rules:
                   description: |
-                    ip rules declaration
+                    Желаемый набор правил (`ip rule`).
                   items:
                     properties:
                       priority:
                         description: |
-                          priority of rule
+                          Приоритет правила (от него зависит очередность применения).
+                          При выборе стоит учитывать несколько нюансов:
+                          - Все правила перебираются в порядке приоритета (от меньшего к большему) пока не будет найдено совпадение.
+                          - В случае если пакет подпал под какое то правило, и соответствующее действие было успешно выполнено, то перебор правил прекращается.
+                          - Правило для поиска в таблице маршрутизации `main` по-умолчанию имеет значение 32766. При указании большего значения - правило ни когда не будет обработано.
                       selectors:
+                        description: |
+                          Набор признаков пакета.
+                          Если пакет имеет признаки описанные в секции `selectors`, то к нему будут применены действия из секции `actions`.
                         properties:
                           not:
                             description: |
-                              invert the selectors match rule
+                              Если указан данный флаг, то правило будет инвертировано, то есть под него будут попадать все пакеты не имеющие указанных признаков.
                           from:
                             description: |
-                              Array of source prefixes
+                              Массив подсетей источника.
                             items:
                               description: |
-                                select the source prefix to match.
+                                Подсеть источника.
                           to:
                             description: |
-                              Array of destination prefixes
+                              Массив подсетей назначения.
                             items:
                               description: |
-                                select the destination prefix to match.
+                                Подсеть назначения.
                           tos:
                             description: |
-                              select the TOS (or diffserv/dscp) value to match.
+                              QOS метка трафика (TOS/diffserv/dscp) передаваемая по сети в IP-заголовках пакета.
                           fwMark:
                             description: |
-                              select the fwMark value to match.
+                              Метка трафика существующая только внутри сетевой подсистемы linux на ноде.
                           iif:
                             description: |
-                              select the incoming device to match.
+                              Имя интерфейса, через который пакет "вошел" на ноду.
                           oif:
                             description: |
-                              select the outgoing device (interface) to match.
+                              Имя интерфейса, через который пакет должен был бы "выйти" с ноды.
                           ipProto:
                             description: |
-                              Select the ip protocol value to match.
-                              Available values stored in the file /etc/protocols.
+                              Номер L4 протокола, который инкапсулирован в IP в данном пакете.
+                              Номера наиболее популярных протоколов:
+                              - `ICMP` - 1
+                              - `TCP` - 6
+                              - `UDP` - 17
+                              Все доступные значения можно найти [по ссылке](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml), или в файле /etc/protocols на ноде.
                           sportRange:
                             description: |
-                              Select the source port range to match. If there is only one port, fill in only the "start" field.
+                              Диапазон портов источника.
+                              Если порт только один, то можно заполнить либо только поле `start`, либо в полях `start` и `end` указать одно и то же значение.
                             properties:
                               start:
                                 description: |
-                                  the beginning of the range.
+                                  Начало диапазона.
                               end:
                                 description: |
-                                  the end of the range.
+                                  Конец диапазона.
                           dportRange:
                             description: |
-                              Select the destination port range to match. If there is only one port, fill in only the "start" field.
+                              Диапазон портов назначения.
+                              Если порт только один, то можно заполнить либо только поле `start`, либо в полях `start` и `end` указать одно и то же значение.
                             properties:
                               start:
                                 description: |
-                                  the beginning of the range.
+                                  Начало диапазона.
                               end:
                                 description: |
-                                  the end of the range.
+                                  Конец диапазона.
                           uidRange:
                             description: |
-                              Select the range of uid (UserID) values to match.  If there is only one uid, fill in only the "start" field.
+                              Диапазон UID(UserID) пользователей, под которыми запускались приложения передающие трафик.
+                              Если UID только один, то можно заполнить либо только поле `start`, либо в полях `start` и `end` указать одно и то же значение.
                             properties:
                               start:
                                 description: |
-                                  the beginning of the range.
+                                  Начало диапазона.
                               end:
                                 description: |
-                                  the end of the range.
+                                  Конец диапазона.
                       actions:
+                        description: |
+                          Набор действий, которые необходимо совершить с пакетом, имеющим признаки описанные в секции `selectors`.
                         properties:
                           lookup:
                             description: |
-                              the routing table identifier to lookup if the rule selector matches.
+                              Определить таблицу маршрутизации, в какой необходимо искать адрес шлюза.
                             properties:
                               ipRoutingTableID:
                                 description: |
-                                  ID of routing table on node
+                                  ID таблицы маршрутизации на ноде.
                               routingTableName:
                                 description: |
-                                  Name of CR RoutingTable
+                                  Имя kubernetes-ресурса RoutingTable, в котором необходимо искать ID таблицы маршрутизации.
                 nodeSelector:
                   description: |
-                    nodeSelector of node on which inject iprule
+                    Набор лейблов, которые определяют ноды, на которых необходимо применить данные правила.
