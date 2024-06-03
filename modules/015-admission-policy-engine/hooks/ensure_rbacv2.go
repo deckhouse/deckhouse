@@ -23,4 +23,4 @@ var crdsDirs = []string{
 	"/deckhouse/modules/015-admission-policy-engine/crds/native/*.yaml",
 }
 
-var _ = ensure_rbacv2.RegisterHook("admission-policy-engine", "others", crdsDirs)
+var _ = ensure_rbacv2.RegisterHook("admission-policy-engine", "security", crdsDirs)
