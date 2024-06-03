@@ -566,6 +566,34 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
+func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.ContainerPort, hostNetworkUsed bool) bool {
+	// The 123 port is standard one, which is configured on external clients.
+	if o.Unstructured.GetKind() == "DaemonSet" && strings.HasPrefix(o.Unstructured.GetName(), "chrony") &&
+		o.Unstructured.GetNamespace() == "d8-chrony" && c.Name == "chrony" {
+		if (hostNetworkUsed && p.ContainerPort == 123) || p.HostPort == 123 {
+			return true
+		}
+	}
+
+	// The 5416 port is standard one which is already configured on client's side.
+	if o.Unstructured.GetKind() == "StatefulSet" && o.Unstructured.GetName() == "openvpn" &&
+		o.Unstructured.GetNamespace() == "d8-openvpn" && c.Name == "openvpn-tcp" {
+		if (hostNetworkUsed && p.ContainerPort == 5416) || p.HostPort == 5416 {
+			return true
+		}
+	}
+
+	// The node-local-dns module with flannel enabled need 53 port to intercept requests.
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetName() == "node-local-dns" &&
+		o.Unstructured.GetNamespace() == "kube-system" && c.Name == "coredns" {
+		if (hostNetworkUsed && p.ContainerPort == 53) || p.HostPort == 53 {
+			return true
+		}
+	}
+
+	return false
+}
+
 func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 	switch object.Unstructured.GetKind() {
 	case "Deployment", "DaemonSet", "StatefulSet", "Pod", "Job", "CronJob":
@@ -582,9 +610,6 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("IsHostNetwork failed: %v", err),
 		)
 	}
-	if !hostNetworkUsed {
-		return errors.EmptyRuleError
-	}
 
 	containers, err := object.GetContainers()
 	if err != nil {
@@ -595,23 +620,36 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("GetInitContainers failed: %v", err),
+		)
+	}
+	containers = append(containers, initContainers...)
 
 	for _, c := range containers {
 		for _, p := range c.Ports {
-			if hostNetworkUsed && p.ContainerPort >= 10500 {
+			if skipHostNetworkPorts(&object, &c, &p, hostNetworkUsed) {
+				continue
+			}
+			if hostNetworkUsed && (p.ContainerPort < 4200 || p.ContainerPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
-					object.Identity()+"; container = "+c.Name,
+					object.Identity()+" ; container = "+c.Name,
 					p.ContainerPort,
-					"Pod running in hostNetwork and it's container uses port >= 10500",
+					"Pod running in hostNetwork and it's container port doesn't fit the range [4200,4299]",
 				)
 			}
-			if p.HostPort >= 10500 {
+			if p.HostPort != 0 && (p.HostPort < 4200 || p.HostPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
-					object.Identity()+"; container = "+c.Name,
+					object.Identity()+" ; container = "+c.Name,
 					p.HostPort,
-					"Container uses hostPort >= 10500",
+					"Container uses hostPort that doesn't fit the range [4200,4299]",
 				)
 			}
 		}

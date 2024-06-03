@@ -104,7 +104,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9255"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4210"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
@@ -127,7 +127,7 @@ spec:
                     subresource: prometheus-metrics
                     name: d8-kube-proxy
         ports:
-          - containerPort: 9255
+          - containerPort: 4210
             name: https-metrics
         resources:
           requests:

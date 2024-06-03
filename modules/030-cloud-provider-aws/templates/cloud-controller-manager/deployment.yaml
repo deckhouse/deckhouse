@@ -85,7 +85,7 @@ spec:
           - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
           - --cloud-provider=aws
           - --bind-address=$(HOST_IP)
-          - --secure-port=10471
+          - --secure-port=0
           - --v=2
           env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
@@ -113,9 +113,6 @@ spec:
                 name: cloud-controller-manager
                 key: aws-secret-access-key
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
-          ports:
-          - name: https
-            containerPort: 10471
           livenessProbe:
             httpGet:
               path: /healthz

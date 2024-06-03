@@ -74,6 +74,8 @@ spec:
                   fieldPath: status.podIP
             - name: METALLB_ML_LABELS
               value: app=speaker
+            - name: METALLB_ML_BIND_PORT
+              value: "4218"
             - name: METALLB_ML_SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -84,9 +86,9 @@ spec:
           name: speaker
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 10 }}
           ports:
-            - containerPort: 7946
+            - containerPort: 4218
               name: memberlist-tcp
-            - containerPort: 7946
+            - containerPort: 4218
               name: memberlist-udp
               protocol: UDP
           livenessProbe:
@@ -119,12 +121,12 @@ spec:
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
           args:
-            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7473"
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4220"
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
           ports:
-            - containerPort: 7473
+            - containerPort: 4220
               name: https-metrics
           env:
             - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS

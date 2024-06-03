@@ -82,18 +82,20 @@ spec:
         - /capi-controller-manager
         args:
         - --leader-elect
-        - --metrics-bind-addr=127.0.0.1:8083
+        - --metrics-bind-addr=127.0.0.1:4211
         - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
-        - --health-addr=$(HOST_IP):9442
-        - --webhook-port=9443
+        - --health-addr=127.0.0.1:9442
+        - --webhook-port=4200
         livenessProbe:
           httpGet:
             path: /healthz
-            port: healthz
+            host: 127.0.0.1
+            port: 9442
         readinessProbe:
           httpGet:
             path: /readyz
-            port: healthz
+            host: 127.0.0.1
+            port: 9442
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -120,10 +122,7 @@ spec:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 9442
-          name: healthz
-          protocol: TCP
-        - containerPort: 9443
+        - containerPort: 4200
           name: webhook-server
           protocol: TCP
         volumeMounts:
@@ -134,7 +133,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8083"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4211"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -149,7 +148,7 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:8083/
+            - upstream: http://127.0.0.1:4211/
               path: /
               authorization:
                 resourceAttributes:
@@ -160,17 +159,17 @@ spec:
                   subresource: prometheus-metrics
                   name: capi-controller-manager
         ports:
-        - containerPort: 8083
+        - containerPort: 4211
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8083
+            port: 4211
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8083
+            port: 4211
             scheme: HTTPS
         resources:
           requests:

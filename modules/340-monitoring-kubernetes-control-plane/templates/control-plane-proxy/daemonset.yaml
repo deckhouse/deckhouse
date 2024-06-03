@@ -56,18 +56,18 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8008"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4209"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
           - "--livez-path=/livez"
         ports:
-        - containerPort: 8008
+        - containerPort: 4209
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8008
+            port: 4209
             scheme: HTTPS
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS

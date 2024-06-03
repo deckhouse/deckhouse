@@ -262,13 +262,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: "/ready",
-					Port: intstr.FromInt(9650),
+					Port: intstr.FromInt(4222),
 				},
 			},
 		},
 		Ports: []apiv1.ContainerPort{
-			{Name: "self", ContainerPort: 9650},
-			{Name: "custom", ContainerPort: 9651},
+			{Name: "self", ContainerPort: 4222},
+			{Name: "custom", ContainerPort: 4223},
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -321,6 +321,14 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HOST",
 			Value: "127.0.0.1:44434",
+		},
+		{
+			Name:  "ADDON_OPERATOR_LISTEN_PORT",
+			Value: "4222",
+		},
+		{
+			Name:  "ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT",
+			Value: "4223",
 		},
 		{
 			Name:  "HELM3LIB",

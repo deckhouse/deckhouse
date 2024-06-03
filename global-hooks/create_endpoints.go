@@ -96,12 +96,12 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 				Ports: []v1.EndpointPort{
 					{
 						Name:     "self",
-						Port:     9650,
+						Port:     4222,
 						Protocol: v1.ProtocolTCP,
 					},
 					{
 						Name:     "webhook",
-						Port:     9651,
+						Port:     4223,
 						Protocol: v1.ProtocolTCP,
 					},
 					{
@@ -154,11 +154,11 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		Ports: []discv1.EndpointPort{
 			{
 				Name: pointer.String("self"),
-				Port: pointer.Int32(9650),
+				Port: pointer.Int32(4222),
 			},
 			{
 				Name: pointer.String("webhook"),
-				Port: pointer.Int32(9651),
+				Port: pointer.Int32(4223),
 			},
 			{
 				Name: pointer.String("debug-server"),

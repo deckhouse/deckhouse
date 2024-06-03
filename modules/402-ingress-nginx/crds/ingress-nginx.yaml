@@ -57,7 +57,7 @@ spec:
 
                       **Caution!** There can be only one controller with this inlet type on a host.
 
-                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 10354, 10355.
+                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
 
                       **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
@@ -612,7 +612,7 @@ spec:
 
                       **Caution!** There can be only one controller with this inlet type on a host.
 
-                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 10354, 10355.
+                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string

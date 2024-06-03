@@ -76,10 +76,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         name: operator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        ports:
-        - containerPort: 9094
-          name: prometheus
-          protocol: TCP
         livenessProbe:
           httpGet:
             host: '127.0.0.1'
@@ -105,7 +101,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9735"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4242"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -128,7 +124,7 @@ spec:
                   subresource: prometheus-metrics
                   name: operator
         ports:
-        - containerPort: 9735
+        - containerPort: 4242
           name: https-metrics
         resources:
           requests:

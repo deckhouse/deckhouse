@@ -118,7 +118,7 @@ spec:
         name: iptables-loop
         resources:
           requests:
-           {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             memory: 20Mi
             cpu: 10m
         securityContext:
@@ -154,7 +154,7 @@ spec:
       - name: kube-rbac-proxy
         image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10355"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -177,7 +177,7 @@ spec:
                   subresource: prometheus-metrics
                   name: proxy-failover
         ports:
-        - containerPort: 10355
+        - containerPort: 4208
           name: https-metrics
         resources:
           requests:
