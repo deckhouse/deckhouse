@@ -702,13 +702,13 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 				}
 			}
 
-			patchRaw := map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"finalizers": tmpNIRSFinalizers,
+			patch, err := json.Marshal(
+				map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"finalizers": tmpNIRSFinalizers,
+					},
 				},
-			}
-
-			patch, err := json.Marshal(patchRaw)
+			)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNIRSFinalizers, err))
 			}
@@ -721,9 +721,19 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 
 		// Update status every time
 		log.Debug(fmt.Sprintf("Update status of NIRS: %v", nirsName))
-		err = cl.Status().Update(ctx, ns.k8sResources)
+
+		patch, err := json.Marshal(
+			map[string]interface{}{
+				"status": ns.k8sResources.Status,
+			},
+		)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to update status for CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
+			log.Error(err, fmt.Sprintf("unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
+		}
+
+		err = cl.Status().Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
+		if err != nil {
+			log.Error(err, fmt.Sprintf("unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
 		}
 	}
 }
