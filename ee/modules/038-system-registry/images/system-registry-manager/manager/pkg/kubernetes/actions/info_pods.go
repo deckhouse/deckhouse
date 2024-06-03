@@ -16,10 +16,10 @@ import (
 	pkg_cfg "system-registry-manager/pkg/cfg"
 )
 
-func GetPodsInfoByLabels(labelSelector []string) (*corev1.PodList, error) {
+func GetPodsInfoByLabels(namespace string, labelSelector []string) (*corev1.PodList, error) {
 	cfg := pkg_cfg.GetConfig()
 
-	pods, err := cfg.K8sClient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+	pods, err := cfg.K8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: strings.Join(labelSelector, ","),
 	})
 	if err != nil {
@@ -28,10 +28,10 @@ func GetPodsInfoByLabels(labelSelector []string) (*corev1.PodList, error) {
 	return pods, nil
 }
 
-func WaitAppPodsInfo(labelsSelector []string, cmpFunc func(pods *corev1.PodList) bool) (*corev1.PodList, bool, error) {
+func WaitAppPodsInfo(namespace string, labelsSelector []string, cmpFunc func(pods *corev1.PodList) bool) (*corev1.PodList, bool, error) {
 	for i := 0; i < pkg_cfg.MaxRetries; i++ {
 
-		podList, err := GetPodsInfoByLabels(labelsSelector)
+		podList, err := GetPodsInfoByLabels(namespace, labelsSelector)
 		if err != nil {
 			return nil, false, err
 		}

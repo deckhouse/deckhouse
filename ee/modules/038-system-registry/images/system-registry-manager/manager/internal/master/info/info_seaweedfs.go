@@ -39,17 +39,20 @@ func NewSeaweedNodeInfo(logger *logrus.Entry, pod corev1.Pod) SeaweedfsNodeInfo 
 type SeaweedfsInfo struct {
 	logger    *logrus.Entry
 	appLabels []string
+	namespace string
 }
 
 func NewSeaweedfsInfo(logger *logrus.Entry) SeaweedfsInfo {
+	cfg := pkg_cfg.GetConfig()
 	return SeaweedfsInfo{
 		logger:    logger,
 		appLabels: pkg_cfg.SeaweedfsStaticPodLabelsSelector,
+		namespace: cfg.Manager.Namespace,
 	}
 }
 
 func (s *SeaweedfsInfo) SeaweedfsInfoWaitByFunc(cmpFunc func(pods *corev1.PodList) bool) ([]SeaweedfsNodeInfo, error) {
-	pods, isReady, err := kube_actions.WaitAppPodsInfo(s.appLabels, cmpFunc)
+	pods, isReady, err := kube_actions.WaitAppPodsInfo(s.namespace, s.appLabels, cmpFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +77,7 @@ func (s *SeaweedfsInfo) SeaweedfsInfoWaitByFunc(cmpFunc func(pods *corev1.PodLis
 }
 
 func (s *SeaweedfsInfo) SeaweedfsInfoGet() ([]SeaweedfsNodeInfo, error) {
-	pods, err := kube_actions.GetPodsInfoByLabels(s.appLabels)
+	pods, err := kube_actions.GetPodsInfoByLabels(s.namespace, s.appLabels)
 
 	if err != nil {
 		return nil, err
