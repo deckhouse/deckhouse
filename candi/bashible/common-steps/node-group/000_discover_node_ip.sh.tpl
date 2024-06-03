@@ -67,17 +67,10 @@ function is_ip_in_cidr() {
   test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
 }
 
-supported_lts_versions="24.04 22.04 20.04 18.04"
-
-for version in $supported_lts_versions; do
-  if bb-is-ubuntu-version? $version; then
-    ip_in_system=$(ip -f inet -br -j addr | jq -r '.[].addr_info[].local')
-    break
-  fi
-done
-
-if [ -z "$ip_in_system" ]; then
-  ip_in_system=$(ip -f inet -br addr | awk '{print $3}' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}')
+if bb-is-ubuntu-version? 24.04 || bb-is-ubuntu-version? 22.04 || bb-is-ubuntu-version? 20.04 || bb-is-ubuntu-version? 18.04; then
+  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
+else
+  ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
 fi
 
 for cidr in $internal_network_cidrs; do
