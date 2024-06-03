@@ -27,6 +27,14 @@ function pause-the-test() {
   done
 }
 
+function check_deckhouse_user() {
+  if id -u deckhouse &>/dev/null && id -g deckhouse &>/dev/null; then
+    [[ "$(id -u deckhouse)" -eq 64535 && "$(id -g deckhouse)" -eq 64535 ]]
+  else
+    return 1
+  fi
+}
+
 trap pause-the-test EXIT
 
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
@@ -153,6 +161,9 @@ EOF
     exit 0
   fi
 done
+
+deckhouse_user_status=$([ $(check_deckhouse_user; echo $?) -eq 0 ] && echo "success" || echo "failure")
+echo "Deckhouse user check: $deckhouse_user_status"
 
 >&2 echo 'Timeout waiting for checks to succeed'
 exit 1
