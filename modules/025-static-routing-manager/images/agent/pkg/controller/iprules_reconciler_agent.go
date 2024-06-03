@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"static-routing-manager-agent/api/v1alpha1"
@@ -29,6 +30,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -516,6 +518,7 @@ type nirsSummary struct {
 	desiredIPRulesToDelByNIRS IPRuleEntryMap
 	nirsWasDeleted            bool
 	specNeedToUpdate          bool
+	needToWipeFinalizer       bool
 }
 
 func nirsSummaryInit() *nirsSummary {
@@ -528,6 +531,7 @@ func nirsSummaryInit() *nirsSummary {
 		desiredIPRulesToDelByNIRS: IPRuleEntryMap{},
 		nirsWasDeleted:            false,
 		specNeedToUpdate:          false,
+		needToWipeFinalizer:       false,
 	}
 }
 
@@ -538,6 +542,7 @@ func (ns *nirsSummary) discoverFacts(nirs v1alpha1.SDNInternalNodeIPRuleSet, glo
 	ns.k8sResources = &tmpNIRS
 	ns.newReconciliationStatus = utils.ReconciliationStatus{IsSuccess: true}
 	ns.specNeedToUpdate = false
+	ns.needToWipeFinalizer = false
 
 	// If NIRS was deleted filling map desiredIPRulesToDelByNIRS and set flag nirsWasDeleted
 	if nirs.DeletionTimestamp != nil {
@@ -634,8 +639,8 @@ func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actua
 		)
 		if ns.nirsWasDeleted && ns.newReconciliationStatus.IsSuccess {
 			log.Debug(fmt.Sprintf("[NIRSReconciler] NIRS %v has been deleted and its IPRules has been successfully deleted too. Clearing the finalizer in NIRS", nirsName))
-			removeFinalizerFromNIRS(ns.k8sResources)
-			ns.specNeedToUpdate = true
+			// removeFinalizerFromNIRS(ns.k8sResources)
+			ns.needToWipeFinalizer = true
 		}
 	}
 }
@@ -683,6 +688,30 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 				log.Error(err, fmt.Sprintf("unable to update CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
 			}
 		}
+
+		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
+			log.Debug(fmt.Sprintf("Wipe finalizer on NIRS: %v", nirsName))
+
+			var tmpNIRSFinalizers []string
+			tmpNIRSFinalizers = []string{}
+
+			for _, fnlzr := range ns.k8sResources.Finalizers {
+				if fnlzr != v1alpha1.Finalizer {
+					tmpNIRSFinalizers = append(tmpNIRSFinalizers, fnlzr)
+				}
+			}
+
+			patch, err := json.Marshal(tmpNIRSFinalizers)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNIRSFinalizers, err))
+			}
+
+			err = cl.Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
+			if err != nil {
+				log.Error(err, fmt.Sprintf("unable to patch CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
+			}
+		}
+
 		// Update status every time
 		log.Debug(fmt.Sprintf("Update status of NIRS: %v", nirsName))
 		err = cl.Status().Update(ctx, ns.k8sResources)
