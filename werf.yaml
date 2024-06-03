@@ -287,6 +287,9 @@ fromImage: common-base
 git:
 - add: /
   to: /deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
   includePaths:
   - candi
   - modules
