@@ -26,6 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+// RegisterHook ensures the use and manage capabilities ClusterRoles for the module,
+// and adds labels to aggregate to specified scopes. If a scope does not exist, it ensures this scope.
 func RegisterHook(moduleName string, moduleScopes []string, pathsToCRDs []string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnStartup: &go_hook.OrderedConfig{Order: 10},

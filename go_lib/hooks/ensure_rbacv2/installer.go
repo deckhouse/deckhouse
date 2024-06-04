@@ -82,6 +82,7 @@ func (i *installer) Run(ctx context.Context) *multierror.Error {
 	if err != nil {
 		return multierror.Append(&multierror.Error{}, err)
 	}
+	// check that module scopes exist, if they do not, ensure them
 	if errs := i.ensureScopes(ctx); errs != nil {
 		return errs
 	}
