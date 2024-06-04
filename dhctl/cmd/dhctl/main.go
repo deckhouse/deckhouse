@@ -43,6 +43,7 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println(os.Environ())
 	// set relative path to config and template files
 	pwd, err := os.Getwd()
 	if err != nil {
