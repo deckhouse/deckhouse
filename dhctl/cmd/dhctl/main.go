@@ -51,6 +51,8 @@ func main() {
 		panic(err)
 	}
 	config.DeckhouseDir = pwd + config.DeckhouseDir
+	commands.DeckhouseDir = pwd + config.DeckhouseDir
+	app.DeckhouseDir = pwd + app.DeckhouseDir
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())

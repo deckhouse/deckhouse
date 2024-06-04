@@ -25,10 +25,7 @@ import (
 )
 
 const (
-	AppName                  = "dhctl"
-	VersionFile              = "./deckhouse/version"
-	DeckhouseImageDigestFile = "./deckhouse/image_digest"
-
+	AppName = "dhctl"
 	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
 
@@ -36,6 +33,12 @@ const (
 	DeckhouseNodeTmpPath = NodeDeckhouseDirectoryPath + "/tmp"
 	// DeckhouseNodeBinPath deckhouse directory for binary files.
 	DeckhouseNodeBinPath = NodeDeckhouseDirectoryPath + "/bin"
+)
+
+var (
+	DeckhouseDir             = "/deckhouse"
+	VersionFile              = DeckhouseDir + "/version"
+	DeckhouseImageDigestFile = DeckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
