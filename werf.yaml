@@ -700,11 +700,10 @@ shell:
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
 
 ---
-image: dev/install-standalone
+artifact: install-standalone-builder
 from: {{ .Images.BASE_SCRATCH }}
 git:
 - add: /
@@ -727,10 +726,6 @@ import:
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
   to: /bin/terraform
-  before: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /root/.terraformrc
-  to: /etc/terraformrc
   before: setup
   {{- range $_, $edition := $.Editions }}
     {{- if $edition.terraformProviders }}
@@ -770,6 +765,17 @@ import:
 shell:
   setup:
   - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+  - tar -cxf dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz /bin /deckhouse /usr ./dhctl
+
+---
+image: dev/install-standalone
+from: {{ .Images.BASE_SCRATCH }}
+import:
+  - artifact: install-standalone-builder
+    add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
+    to: /
+    after: setup
+
 ---
 image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE_DEV }}
