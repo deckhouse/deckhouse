@@ -607,14 +607,6 @@ spec:
         checks:
           - id: AVD-KCV-0087
         severity: HIGH
-      - id: 4.2.10
-        name: Ensure that the --tls-cert-file and --tls-private-key-file arguments are
-          set as appropriate
-        description: Setup TLS connection on the Kubelets
-        checks:
-          - id: AVD-KCV-0088
-          - id: AVD-KCV-0089
-        severity: CRITICAL
       - id: 4.2.11
         name: Ensure that the --rotate-certificates argument is not set to false
         description: Enable kubelet client certificate rotation
