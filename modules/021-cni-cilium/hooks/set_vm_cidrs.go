@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/pkg/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, applyVMCIDRs)
 
 func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	mc := &v1alpha1.ModuleConfig{}
+	mc := &d8v1alpha1.ModuleConfig{}
 	err := sdk.FromUnstructured(obj, mc)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
