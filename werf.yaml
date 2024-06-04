@@ -715,7 +715,7 @@ git:
 import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
-  to: /usr/bin/dhctl
+  to: /dhctl
   after: setup
 - image: dev-prebuild
   add: /deckhouse
@@ -760,7 +760,7 @@ import:
   to: /deckhouse/image_digest
   after: setup
 - artifact: ssh-static
-  add: /ssh
+  add: /ssh/bin
   to: /bin
   before: setup
   includePaths:
