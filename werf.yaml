@@ -589,10 +589,11 @@ artifact: ssh-static
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
   install:
-    - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable /src
-    - cd /src
-    - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
-    - make install
+  - mkdir /src
+  - cd /src
+  - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable .
+  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
+  - make install
 
 ---
 image: dev/install
