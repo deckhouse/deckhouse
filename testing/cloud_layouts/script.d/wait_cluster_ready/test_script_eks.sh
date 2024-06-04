@@ -110,6 +110,10 @@ for i in $(seq $attempts); do
 Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
 EOF
 
+deckhouse_user_status=$([ $(check_deckhouse_user; echo $?) -eq 0 ] && echo "success" || echo "failure")
+echo "Deckhouse user check: $deckhouse_user_status"
+
+
   if [[ -n "$ingress_inlet" ]]; then
     case "$ingress_inlet" in
       LoadBalancer)
@@ -161,9 +165,6 @@ EOF
     exit 0
   fi
 done
-
-deckhouse_user_status=$([ $(check_deckhouse_user; echo $?) -eq 0 ] && echo "success" || echo "failure")
-echo "Deckhouse user check: $deckhouse_user_status"
 
 >&2 echo 'Timeout waiting for checks to succeed'
 exit 1
