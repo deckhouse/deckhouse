@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-# https://github.com/cilium/cilium/releases/tag/v1.11.12
-FROM quay.io/cilium/hubble-relay:v1.11.12@sha256:db78c879e19708239c83f028def0fecd6a543abaaf2a58bd17a14d8582628448 as artifact
+# https://github.com/cilium/cilium/releases/tag/v1.14.3
+FROM quay.io/cilium/hubble-relay:v1.14.3@sha256:777c6a94e6c6764eaf5077f03977fd874cc660bf49f34e1642071b87ce614995 as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /usr/bin/hubble-relay /usr/local/bin/hubble-relay

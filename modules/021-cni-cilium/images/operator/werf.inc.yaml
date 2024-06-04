@@ -1,5 +1,7 @@
+{{- $ciliumVersion := "1.14.5" }}
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: quay.io/cilium/operator:v1.12.8@sha256:1d3f32b112034dc0a7b83cde55850f00cf3adca9ae7f51aff42f2f8228998c8b
+from: quay.io/cilium/operator:v{{- $ciliumVersion }}@sha256:56cc1822109c4b34d192784a3106150cfb645252ce0b34aab67e9c820ac41bab
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}

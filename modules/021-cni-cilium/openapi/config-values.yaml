@@ -28,6 +28,8 @@ properties:
       Tunnel mode.
 
       > Note! After changing the parameter, it is necessary to restart all nodes, otherwise, there may be problems with the availability of Pods!
+
+      > Note! VXLAN mode is not compatible with following bpfLBMode modes: Hybrid, DSR. bpfLBMode will be overriden to SNAT if the tunnelMode is VXLAN.
   svcSourceRangeCheck:
     type: boolean
     default: false
@@ -39,7 +41,7 @@ properties:
     type: boolean
     default: false
     description: |
-      Do not enforce any Network Policy. Only log allowed/disallowed connections.
+      Do not enforce any Network Policy. Just log allowed/disallowed connections.
   bpfLBMode:
     type: string
     default: "Hybrid"
