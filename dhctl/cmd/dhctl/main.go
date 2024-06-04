@@ -38,17 +38,20 @@ import (
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
 
-	// set path to ssh and terraform binaries
-	if err := os.Setenv("PATH", "$PWD/bin:$PATH"); err != nil {
-		panic(err)
-	}
-
-	fmt.Println(os.Environ())
-	// set relative path to config and template files
+	// get current path
 	pwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
+
+	// set path to ssh and terraform binaries
+	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+		panic(err)
+	}
+
+	fmt.Println(os.Environ())
+
+	// set relative path to config and template files
 	config.DeckhouseDir = pwd + config.DeckhouseDir
 	commands.DeckhouseDir = pwd + config.DeckhouseDir
 	app.DeckhouseDir = pwd + app.DeckhouseDir
