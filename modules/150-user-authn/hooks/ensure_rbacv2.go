@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,4 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("flow-schema", []string{"kubernetes", "networking"}, nil)
+var _ = ensure_rbacv2.RegisterHook("user-authn", []string{"security"}, nil)
