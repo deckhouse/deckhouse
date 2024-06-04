@@ -7,6 +7,7 @@ Add the oportunity to request specific IP-address using annotation:
     cni.cilium.io/ipAddress: 10.10.10.10
 
 Upstream <https://github.com/cilium/cilium/pull/24098>
+Possible feature for refactoring <https://docs.cilium.io/en/v1.14/network/concepts/ipam/multi-pool/>
 
 ## 002-stable-mac.patch
 
@@ -19,9 +20,3 @@ Upstream <https://github.com/cilium/cilium/pull/24100>
 Set correct MTU value for veth interfaces
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
-
-## 004-fib.patch
-
-Perform routing lookup for custom tables
-
-Upstream <https://github.com/cilium/cilium/pull/24271>
