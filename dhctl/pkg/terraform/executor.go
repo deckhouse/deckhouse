@@ -42,8 +42,11 @@ type Executor interface {
 func terraformCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command("terraform", args...)
 	cmd.Env = append(
-		cmd.Env,
-		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
+		os.Environ(),
+		"PATH=$PWD/bin:$PATH",
+		"TF_IN_AUTOMATION=yes",
+		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
+		"TF_PLUGIN_CACHE_DIR=$PWD/plugins",
 	)
 
 	// always use dug log for write its to debug log file

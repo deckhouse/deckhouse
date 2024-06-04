@@ -762,11 +762,12 @@ import:
     - ssh
     - ssh-add
     - ssh-agent
+    - scp
 shell:
   setup:
   - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /image/deckhouse/version
   - cd /image
-  - tar -cxf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
+  - tar -czf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
 
 ---
 image: dev/install-standalone

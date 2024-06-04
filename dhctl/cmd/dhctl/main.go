@@ -39,6 +39,10 @@ import (
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
 
+	if err := os.Setenv("PATH", "$PWD/bin:$PATH"); err != nil {
+		panic(err)
+	}
+
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
 	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
