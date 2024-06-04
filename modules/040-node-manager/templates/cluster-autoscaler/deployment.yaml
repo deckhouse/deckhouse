@@ -110,12 +110,12 @@ spec:
         - --skip-nodes-with-local-storage=false
         - --min-replica-count=1
         - --expendable-pods-priority-cutoff=-10
-        - --scale-down-unneeded-time=1m
-        - --scale-down-unready-time=1m
-        - --scale-down-delay-after-failure=1m
+        - --scale-down-unneeded-time=2m
+        - --scale-down-unready-time=2m
+        - --scale-down-delay-after-failure=2m
         - --scale-down-utilization-threshold=0.6
         - --unremovable-node-recheck-timeout=30s
-        - --scale-down-delay-after-add=1m
+        - --scale-down-delay-after-add=2m
         - --address=127.0.0.1:8085
         - --balance-similar-node-groups=true
         - --expander=priority,least-waste
