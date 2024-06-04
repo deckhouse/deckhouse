@@ -73,7 +73,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          installDataCMFilter,
 		},
 	},
-}, createFirstDeschedulerCR)
+}, migrateDiskGBHandler)
 
 func providerConfigurationSecretFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret corev1.Secret
@@ -101,7 +101,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 	return "", nil
 }
 
-func createFirstDeschedulerCR(input *go_hook.HookInput) error {
+func migrateDiskGBHandler(input *go_hook.HookInput) error {
 	providerConfigSecretSnap := input.Snapshots["provider_configuration"]
 	if len(providerConfigSecretSnap) == 0 {
 		return nil
