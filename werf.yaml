@@ -617,6 +617,59 @@ import:
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $.TF $tfProvider }}
 
+---
+artifact: ssh-static
+from: {{ .Images.BASE_ALPINE_DEV }}
+shell:
+  install:
+    - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable /src
+    - cd /src
+    - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
+    - make install
+---
+image: dev/install-static
+from: {{ .Images.SCRATCH }}
+git:
+  - add: /
+    to: /deckhouse
+    includePaths:
+      - candi
+  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+import:
+  - artifact: dhctl
+    add: /dhctl/bin/dhctl
+    to: /usr/bin/dhctl
+    after: setup
+  - artifact: ssh-static
+    add: /ssh
+    to: /bin
+    includePaths:
+      - ssh
+      - ssh-add
+      - ssh-agent
+    add: /dhctl/bin/dhctl
+    to: /usr/bin/dhctl
+    after: setup
+  - image: dev-prebuild
+    add: /deckhouse
+    to: /deckhouse
+    includePaths:
+      - modules/*/openapi/config-values.yaml
+      - global-hooks/openapi/config-values.yaml
+    after: setup
+  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /terraform/terraform
+    to: /bin/terraform
+    before: setup
+  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /root/.terraformrc
+    to: /etc/terraformrc
+    before: setup
+  {{- range $_, $edition := $.Editions }}
+  {{- if $edition.terraformProviders }}
+  {{- range $_, $tfProvider := $edition.terraformProviders }}
+  {{- $tf := index $.TF $tfProvider }}
+
 - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
