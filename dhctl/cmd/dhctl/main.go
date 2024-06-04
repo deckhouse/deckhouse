@@ -165,7 +165,12 @@ func runApplication(kpApp *kingpin.Application) {
 			logPath = path.Join(app.TmpDirName, logFile)
 		}
 
-		err := log.WrapWithTeeLogger(logPath, 1024)
+		outFile, err := os.Create(logPath)
+		if err != nil {
+			return err
+		}
+
+		err = log.WrapWithTeeLogger(outFile, 1024)
 		if err != nil {
 			return err
 		}
@@ -201,6 +206,7 @@ func runApplication(kpApp *kingpin.Application) {
 }
 
 func isRunningInContainer() (bool, error) {
+	return true, nil
 	_, err := os.Stat(app.VersionFile)
 	_, inClusterEnvExists := os.LookupEnv("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER")
 	switch {
