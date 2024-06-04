@@ -6,9 +6,9 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/aggregate-to-all-role: admin
+    rbac.deckhouse.io/aggregate-to-all-as: admin
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-all-role: manager
+        rbac.deckhouse.io/aggregate-to-all-as: manager
 rules: []

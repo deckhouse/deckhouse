@@ -9,5 +9,5 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-      rbac.deckhouse.io/aggregate-to-all-role: admin
+      rbac.deckhouse.io/aggregate-to-all-as: admin
 rules: []

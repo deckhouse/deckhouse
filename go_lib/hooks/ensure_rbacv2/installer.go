@@ -37,6 +37,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
+var scopeTemplate = "rbac.deckhouse.io/aggregate-to-%s"
+
 // installer simultaneously installs rbacv2 from specified directory
 type installer struct {
 	client   k8s.Client
@@ -83,7 +85,7 @@ func (i *installer) Run(ctx context.Context) *multierror.Error {
 	if errs := i.ensureScopes(ctx); errs != nil {
 		return errs
 	}
-	return i.ensureRoles(ctx, i.clusterRoles(crds))
+	return i.ensureRoles(ctx, i.capabilitiesClusterRoles(crds))
 }
 
 func (i *installer) parseCRDs(ctx context.Context) ([]*v1.CustomResourceDefinition, error) {
@@ -154,7 +156,7 @@ func (i *installer) parseCRD(_ context.Context, reader io.Reader, bufferSize int
 	return crd, nil
 }
 
-func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) []*rbacv1.ClusterRole {
+func (i *installer) capabilitiesClusterRoles(crds []*v1.CustomResourceDefinition) []*rbacv1.ClusterRole {
 	var namespacedViewRules, namespacedEditRules, viewRules, editRules []rbacv1.PolicyRule
 	for _, crd := range crds {
 		viewRule := rbacv1.PolicyRule{
@@ -175,15 +177,6 @@ func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) []*rbacv1.
 			namespacedEditRules = append(namespacedEditRules, editRule)
 		}
 	}
-	var namespacedViewClusterRole *rbacv1.ClusterRole
-	if namespacedViewRules != nil {
-		namespacedViewClusterRole = i.clusterRolesFromRules("viewer", "use", "view", namespacedViewRules)
-	}
-	var namespacedEditClusterRole *rbacv1.ClusterRole
-	if namespacedEditRules != nil {
-		namespacedEditClusterRole = i.clusterRolesFromRules("manager", "use", "edit", namespacedEditRules)
-	}
-
 	viewRules = append(viewRules, rbacv1.PolicyRule{
 		APIGroups:     []string{"deckhouse.io"},
 		Resources:     []string{"moduleconfigs"},
@@ -196,22 +189,19 @@ func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) []*rbacv1.
 		ResourceNames: []string{i.moduleName},
 		Verbs:         []string{"create", "update", "patch", "delete"},
 	})
-
-	viewClusterRole := i.clusterRolesFromRules("viewer", "manage", "view", viewRules)
-	editClusterRole := i.clusterRolesFromRules("manager", "manage", "edit", editRules)
-
-	var roles []*rbacv1.ClusterRole
-	if namespacedViewClusterRole != nil {
-		roles = append(roles, namespacedViewClusterRole)
+	var roles = []*rbacv1.ClusterRole{
+		i.capabilityClusterRoleFromRules("viewer", "manage", "view", viewRules),
+		i.capabilityClusterRoleFromRules("manager", "manage", "edit", editRules),
 	}
-	if namespacedEditClusterRole != nil {
-		roles = append(roles, namespacedEditClusterRole)
+	if namespacedViewRules != nil {
+		roles = append(roles, i.capabilityClusterRoleFromRules("viewer", "use", "view", namespacedViewRules))
 	}
-	roles = append(roles, viewClusterRole)
-	roles = append(roles, editClusterRole)
+	if namespacedEditRules != nil {
+		roles = append(roles, i.capabilityClusterRoleFromRules("manager", "use", "edit", namespacedEditRules))
+	}
 	return roles
 }
-func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
+func (i *installer) capabilityClusterRoleFromRules(rbacRole, rbacKind, rbacVerb string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
 	role := &rbacv1.ClusterRole{
 		TypeMeta: apimachineryv1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -230,7 +220,7 @@ func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, r
 	}
 	if rbacKind == "manage" {
 		for _, scope := range i.moduleScopes {
-			role.ObjectMeta.Labels["rbac.deckhouse.io/aggregate-to-scope"] = scope
+			role.ObjectMeta.Labels[fmt.Sprintf(scopeTemplate, scope)] = "true"
 		}
 	}
 	return role
@@ -253,18 +243,18 @@ func (i *installer) scopeClusterRole(scope, role string) *rbacv1.ClusterRole {
 		ObjectMeta: apimachineryv1.ObjectMeta{
 			Name: fmt.Sprintf("d8:manage:%s:%s", scope, role),
 			Labels: map[string]string{
-				"heritage":               "deckhouse",
-				"rbac.deckhouse.io/kind": "manage",
-				"rbac.deckhouse.io/aggregate-to-all-role": role,
+				"heritage":                              "deckhouse",
+				"rbac.deckhouse.io/kind":                "manage",
+				"rbac.deckhouse.io/aggregate-to-all-as": role,
 			},
 		},
 		AggregationRule: &rbacv1.AggregationRule{
 			ClusterRoleSelectors: []apimachineryv1.LabelSelector{
 				{
 					MatchLabels: map[string]string{
-						"rbac.deckhouse.io/kind":               "manage",
-						"rbac.deckhouse.io/aggregate-to-scope": scope,
-						"rbac.deckhouse.io/aggregate-to-role":  role,
+						"rbac.deckhouse.io/kind":              "manage",
+						fmt.Sprintf(scopeTemplate, scope):     "true",
+						"rbac.deckhouse.io/aggregate-to-role": role,
 					},
 				},
 			},
@@ -272,6 +262,7 @@ func (i *installer) scopeClusterRole(scope, role string) *rbacv1.ClusterRole {
 	}
 	if role == "viewer" {
 		cr.ObjectMeta.Labels["rbac.deckhouse.io/aggregate-to-role"] = "manager"
+		cr.ObjectMeta.Labels[fmt.Sprintf(scopeTemplate, scope)] = "true"
 	}
 	return cr
 }
