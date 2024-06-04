@@ -10,6 +10,8 @@ data:
   cluster-name: default # make sense only for cluster mesh
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
+  pprof: "true"
+  pprof-address: "127.0.0.1"
 
   metrics: "+cilium_bpf_map_pressure"
 
@@ -31,12 +33,14 @@ data:
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
-  tunnel: "vxlan"
+  tunnel-protocol: "vxlan"
+  routing-mode: "tunnel"
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
-  tunnel: "disabled"
+  routing-mode: "native"
   auto-direct-node-routes: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
-  tunnel: "disabled"
+  routing-mode: "native"
+  auto-direct-node-routes: "false"
   {{- else }}
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
@@ -76,11 +80,18 @@ data:
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
   bpf-lb-sock: "true"
+  # required for service meshes (istio, linkerd, ...) to force opening sockets to original Service IPs
   bpf-lb-sock-hostns-only: "true"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
+
+  # The older ciilum versions did it automatically. We will reconcider our ModuleConfig api.
+  {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
+  bpf-lb-mode: "snat"
+  {{- else }}
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
+  {{- end }}
   bpf-lb-algorithm: "random"
   bpf-lb-map-max: "512000"
   bpf-lb-external-clusterip: "true"
@@ -95,6 +106,8 @@ data:
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
   policy-audit-mode: {{ .Values.cniCilium.policyAuditMode | quote }}
+
+  enable-pmtu-discovery: "true"
 
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
@@ -131,3 +144,8 @@ data:
   disable-cnp-status-updates: "true"
 
   procfs: "/host/proc"
+
+  write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
+  cni-exclusive: "true"
+
+  skip-crd-creation: "true"
