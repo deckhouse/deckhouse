@@ -15,9 +15,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"runtime/trace"
@@ -71,19 +69,8 @@ func main() {
 		return nil
 	})
 
-	runningInContainer, err := isRunningInContainer()
-	if err != nil {
-		log.ErrorLn(err.Error())
-		return
-	}
-
 	commands.DefineMirrorCommand(kpApp)
 	commands.DefineMirrorModulesCommand(kpApp)
-	if !runningInContainer {
-		// We only allow mirror functions to be used outside of container environments.
-		runApplication(kpApp)
-		return
-	}
 
 	commands.DefineServerCommand(kpApp)
 	commands.DefineSingleThreadedServerCommand(kpApp)
@@ -213,21 +200,6 @@ func runApplication(kpApp *kingpin.Application) {
 	// Block "main" function until teardown callbacks are finished.
 	exitCode := tomb.WaitShutdown()
 	os.Exit(exitCode)
-}
-
-func isRunningInContainer() (bool, error) {
-	_, err := os.Stat(app.VersionFile)
-	_, inClusterEnvExists := os.LookupEnv("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER")
-	switch {
-	case inClusterEnvExists:
-		return true, nil
-	case errors.Is(err, fs.ErrNotExist):
-		return false, nil
-	case err != nil:
-		return false, err
-	default:
-		return true, nil
-	}
 }
 
 func EnableTrace() func() {
