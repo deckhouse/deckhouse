@@ -23,6 +23,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  - pwd
   - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy.git /src
   install:
   - cd /src
