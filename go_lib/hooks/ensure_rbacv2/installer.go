@@ -151,7 +151,7 @@ func (i *installer) parseCRD(_ context.Context, reader io.Reader, bufferSize int
 	if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
 		return nil, fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
 	}
-	if crd.Spec.Group == "deckhouse.io" {
+	if crd.Spec.Group != "deckhouse.io" {
 		return nil, nil
 	}
 	return crd, nil
