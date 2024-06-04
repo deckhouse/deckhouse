@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	kubeadmTemplateOpenAPI = "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
+	kubeadmTemplateOpenAPI = "./deckhouse/candi/control-plane-kubeadm/openapi.yaml"
 )
 
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {

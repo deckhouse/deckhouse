@@ -26,8 +26,8 @@ import (
 
 const (
 	AppName                  = "dhctl"
-	VersionFile              = "/deckhouse/version"
-	DeckhouseImageDigestFile = "/deckhouse/image_digest"
+	VersionFile              = "./deckhouse/version"
+	DeckhouseImageDigestFile = "./deckhouse/image_digest"
 
 	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"

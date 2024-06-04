@@ -33,16 +33,16 @@ import (
 )
 
 const (
-	candiDir          = "/deckhouse/candi"
-	modulesDir        = "/deckhouse/modules"
-	globalHooksModule = "/deckhouse/global-hooks"
+	candiDir          = "./deckhouse/candi"
+	modulesDir        = "./deckhouse/modules"
+	globalHooksModule = "./deckhouse/global-hooks"
 	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
 	DefaultKubernetesVersion = "1.27"
 )
 
 const (
-	versionMap        = "/deckhouse/candi/version_map.yml"
-	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
+	versionMap        = "./deckhouse/candi/version_map.yml"
+	imagesDigestsJSON = "./deckhouse/candi/images_digests.json"
 )
 
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
