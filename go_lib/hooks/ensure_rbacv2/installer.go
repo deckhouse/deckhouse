@@ -43,8 +43,8 @@ type installer struct {
 	crdsDirs [][]string
 	buffer   []byte
 
-	moduleName  string
-	moduleScope string
+	moduleName   string
+	moduleScopes []string
 
 	// concurrent tasks to create resource in a k8s cluster
 	tasks *multierror.Group
@@ -52,7 +52,7 @@ type installer struct {
 
 // newInstaller creates new installer for CRDs
 // pathToCRDs example: "/deckhouse/modules/002-deckhouse/crds/*.yaml"
-func newInstaller(moduleName, moduleScope string, client k8s.Client, pathsToCRDs []string) (*installer, error) {
+func newInstaller(moduleName string, moduleScopes []string, client k8s.Client, pathsToCRDs []string) (*installer, error) {
 	var crdsDirs [][]string
 	for _, dir := range pathsToCRDs {
 		crds, err := filepath.Glob(dir)
@@ -65,8 +65,8 @@ func newInstaller(moduleName, moduleScope string, client k8s.Client, pathsToCRDs
 		client:   client,
 		crdsDirs: crdsDirs,
 
-		moduleName:  moduleName,
-		moduleScope: moduleScope,
+		moduleName:   moduleName,
+		moduleScopes: moduleScopes,
 		// 1Mb - maximum size of kubernetes object
 		// if we take less, we have to handle io.ErrShortBuffer error and increase the buffer
 		// take more does not make any sense due to kubernetes limitations
@@ -80,7 +80,10 @@ func (i *installer) Run(ctx context.Context) *multierror.Error {
 	if err != nil {
 		return multierror.Append(&multierror.Error{}, err)
 	}
-	return i.ensureRoles(ctx, crds)
+	if errs := i.ensureScopes(ctx); errs != nil {
+		return errs
+	}
+	return i.ensureRoles(ctx, i.clusterRoles(crds))
 }
 
 func (i *installer) parseCRDs(ctx context.Context) ([]*v1.CustomResourceDefinition, error) {
@@ -151,51 +154,7 @@ func (i *installer) parseCRD(_ context.Context, reader io.Reader, bufferSize int
 	return crd, nil
 }
 
-func (i *installer) ensureRoles(ctx context.Context, crds []*v1.CustomResourceDefinition) *multierror.Error {
-	namespacedView, namespacedEdit, view, edit := i.clusterRoles(crds)
-	if namespacedView != nil {
-		i.tasks.Go(func() error {
-			return i.ensureRole(ctx, namespacedView)
-		})
-	}
-	if namespacedEdit != nil {
-		i.tasks.Go(func() error {
-			return i.ensureRole(ctx, namespacedEdit)
-		})
-	}
-	if view != nil {
-		i.tasks.Go(func() error {
-			return i.ensureRole(ctx, view)
-		})
-	}
-	if edit != nil {
-		i.tasks.Go(func() error {
-			return i.ensureRole(ctx, edit)
-		})
-	}
-	if errs := i.tasks.Wait(); errs.ErrorOrNil() != nil {
-		return multierror.Append(&multierror.Error{}, errs.Errors...)
-	}
-	return nil
-}
-func (i *installer) ensureRole(ctx context.Context, role *rbacv1.ClusterRole) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		found, err := i.client.RbacV1().ClusterRoles().Get(ctx, role.Name, apimachineryv1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				_, err = i.client.RbacV1().ClusterRoles().Create(ctx, role, apimachineryv1.CreateOptions{})
-			}
-			return err
-		}
-		if reflect.DeepEqual(role.Rules, found.Rules) {
-			return nil
-		}
-		_, err = i.client.RbacV1().ClusterRoles().Update(ctx, role, apimachineryv1.UpdateOptions{})
-		return err
-	})
-}
-
-func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) (*rbacv1.ClusterRole, *rbacv1.ClusterRole, *rbacv1.ClusterRole, *rbacv1.ClusterRole) {
+func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) []*rbacv1.ClusterRole {
 	var namespacedViewRules, namespacedEditRules, viewRules, editRules []rbacv1.PolicyRule
 	for _, crd := range crds {
 		viewRule := rbacv1.PolicyRule{
@@ -241,7 +200,16 @@ func (i *installer) clusterRoles(crds []*v1.CustomResourceDefinition) (*rbacv1.C
 	viewClusterRole := i.clusterRolesFromRules("viewer", "manage", "view", viewRules)
 	editClusterRole := i.clusterRolesFromRules("manager", "manage", "edit", editRules)
 
-	return namespacedViewClusterRole, namespacedEditClusterRole, viewClusterRole, editClusterRole
+	var roles []*rbacv1.ClusterRole
+	if namespacedViewClusterRole != nil {
+		roles = append(roles, namespacedViewClusterRole)
+	}
+	if namespacedEditClusterRole != nil {
+		roles = append(roles, namespacedEditClusterRole)
+	}
+	roles = append(roles, viewClusterRole)
+	roles = append(roles, editClusterRole)
+	return roles
 }
 func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
 	role := &rbacv1.ClusterRole{
@@ -261,7 +229,77 @@ func (i *installer) clusterRolesFromRules(rbacRole, rbacKind, rbacVerb string, r
 		Rules: rules,
 	}
 	if rbacKind == "manage" {
-		role.ObjectMeta.Labels["rbac.deckhouse.io/aggregate-to-scope"] = i.moduleScope
+		for _, scope := range i.moduleScopes {
+			role.ObjectMeta.Labels["rbac.deckhouse.io/aggregate-to-scope"] = scope
+		}
 	}
 	return role
+}
+
+func (i *installer) ensureScopes(ctx context.Context) *multierror.Error {
+	var roles []*rbacv1.ClusterRole
+	for _, scope := range i.moduleScopes {
+		roles = append(roles, i.scopeClusterRole(scope, "viewer"))
+		roles = append(roles, i.scopeClusterRole(scope, "manager"))
+	}
+	return i.ensureRoles(ctx, roles)
+}
+func (i *installer) scopeClusterRole(scope, role string) *rbacv1.ClusterRole {
+	cr := &rbacv1.ClusterRole{
+		TypeMeta: apimachineryv1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: apimachineryv1.ObjectMeta{
+			Name: fmt.Sprintf("d8:manage:%s:%s", scope, role),
+			Labels: map[string]string{
+				"heritage":               "deckhouse",
+				"rbac.deckhouse.io/kind": "manage",
+				"rbac.deckhouse.io/aggregate-to-all-role": role,
+			},
+		},
+		AggregationRule: &rbacv1.AggregationRule{
+			ClusterRoleSelectors: []apimachineryv1.LabelSelector{
+				{
+					MatchLabels: map[string]string{
+						"rbac.deckhouse.io/kind":               "manage",
+						"rbac.deckhouse.io/aggregate-to-scope": scope,
+						"rbac.deckhouse.io/aggregate-to-role":  role,
+					},
+				},
+			},
+		},
+	}
+	if role == "viewer" {
+		cr.ObjectMeta.Labels["rbac.deckhouse.io/aggregate-to-role"] = "manager"
+	}
+	return cr
+}
+
+func (i *installer) ensureRoles(ctx context.Context, roles []*rbacv1.ClusterRole) *multierror.Error {
+	for _, role := range roles {
+		i.tasks.Go(func() error {
+			return i.ensureRole(ctx, role)
+		})
+	}
+	if errs := i.tasks.Wait(); errs.ErrorOrNil() != nil {
+		return multierror.Append(&multierror.Error{}, errs.Errors...)
+	}
+	return nil
+}
+func (i *installer) ensureRole(ctx context.Context, role *rbacv1.ClusterRole) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		found, err := i.client.RbacV1().ClusterRoles().Get(ctx, role.Name, apimachineryv1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				_, err = i.client.RbacV1().ClusterRoles().Create(ctx, role, apimachineryv1.CreateOptions{})
+			}
+			return err
+		}
+		if reflect.DeepEqual(role.Rules, found.Rules) && reflect.DeepEqual(role.GetLabels(), found.GetLabels()) {
+			return nil
+		}
+		_, err = i.client.RbacV1().ClusterRoles().Update(ctx, role, apimachineryv1.UpdateOptions{})
+		return err
+	})
 }

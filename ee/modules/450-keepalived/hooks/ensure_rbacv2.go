@@ -7,4 +7,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("keepalived", "others", []string{"/deckhouse/modules/450-keepalived/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("keepalived", []string{"others"}, []string{"/deckhouse/modules/450-keepalived/crds/*.yaml"})

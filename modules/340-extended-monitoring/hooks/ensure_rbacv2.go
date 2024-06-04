@@ -18,4 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("extended-monitoring", "observability", nil)
+var _ = ensure_rbacv2.RegisterHook("extended-monitoring", []string{"observability"}, nil)

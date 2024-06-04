@@ -7,4 +7,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("operator-trivy", []string{"security"}, nil)
+var _ = ensure_rbacv2.RegisterHook("runtime-audit-engine", []string{"security"}, []string{
+	"/deckhouse/modules/650-runtime-audit-engine/crds/*.yaml"})

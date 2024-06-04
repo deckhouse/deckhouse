@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("chrony", []string{"others"}, nil)
+var _ = ensure_rbacv2.RegisterHook("cni-cilium", []string{"networking", "infrastructure"}, []string{
+	"/deckhouse/modules/021-cni-cilium/crds/*.yaml"})

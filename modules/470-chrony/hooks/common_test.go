@@ -16,6 +16,14 @@ limitations under the License.
 
 package hooks
 
-import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
+import (
+	"testing"
 
-var _ = ensure_rbacv2.RegisterHook("chrony", []string{"others"}, nil)
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+func Test(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "")
+}

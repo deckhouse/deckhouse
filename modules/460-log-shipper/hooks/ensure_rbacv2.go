@@ -20,4 +20,5 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 )
 
-var _ = ensure_rbacv2.RegisterHook("log-shipper", "observability", []string{"/deckhouse/modules/460-log-shipper/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("log-shipper", []string{"observability"}, []string{
+	"/deckhouse/modules/460-log-shipper/crds/*.yaml"})

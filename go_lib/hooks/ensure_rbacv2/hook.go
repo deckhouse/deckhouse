@@ -26,22 +26,22 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-func RegisterHook(moduleName, moduleScope string, pathsToCRDs []string) bool {
+func RegisterHook(moduleName string, moduleScopes []string, pathsToCRDs []string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnStartup: &go_hook.OrderedConfig{Order: 10},
-	}, dependency.WithExternalDependencies(ensureHandler(moduleName, moduleScope, pathsToCRDs)))
+	}, dependency.WithExternalDependencies(ensureHandler(moduleName, moduleScopes, pathsToCRDs)))
 }
 
-func ensureHandler(moduleName, moduleScope string, pathsToCRDs []string) func(input *go_hook.HookInput, dc dependency.Container) error {
+func ensureHandler(moduleName string, moduleScopes []string, pathsToCRDs []string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		result := ensure(moduleName, moduleScope, pathsToCRDs, dc)
+		result := ensure(moduleName, moduleScopes, pathsToCRDs, dc)
 		if result.ErrorOrNil() != nil {
 			input.LogEntry.WithError(result).Error("ensure_rbacv2 failed")
 		}
 		return result.ErrorOrNil()
 	}
 }
-func ensure(moduleName, moduleScope string, pathsToCRDs []string, dc dependency.Container) *multierror.Error {
+func ensure(moduleName string, moduleScopes []string, pathsToCRDs []string, dc dependency.Container) *multierror.Error {
 	result := new(multierror.Error)
 
 	client, err := dc.GetK8sClient()
@@ -50,7 +50,7 @@ func ensure(moduleName, moduleScope string, pathsToCRDs []string, dc dependency.
 		return result
 	}
 
-	inst, err := newInstaller(moduleName, moduleScope, client, pathsToCRDs)
+	inst, err := newInstaller(moduleName, moduleScopes, client, pathsToCRDs)
 	if err != nil {
 		result = multierror.Append(result, err)
 		return result

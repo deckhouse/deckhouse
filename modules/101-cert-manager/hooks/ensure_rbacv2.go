@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("cert-manager", "others", []string{"/deckhouse/modules/101-cert-manager/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("cert-manager", []string{"security"}, []string{
+	"/deckhouse/modules/101-cert-manager/crds/*.yaml"})

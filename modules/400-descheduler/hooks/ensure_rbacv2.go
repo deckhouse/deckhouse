@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("descheduler", "others", []string{"/deckhouse/modules/400-descheduler/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("descheduler", []string{"others"}, []string{
+	"/deckhouse/modules/400-descheduler/crds/*.yaml"})

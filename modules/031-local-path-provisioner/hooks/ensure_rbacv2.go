@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("chrony", []string{"others"}, nil)
+var _ = ensure_rbacv2.RegisterHook("local-path-provisioner", []string{"infrastructure"}, []string{
+	"/deckhouse/modules/031-local-path-provisioner/crds/*.yaml"})

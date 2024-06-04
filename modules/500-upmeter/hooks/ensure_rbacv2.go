@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("upmeter", "others", []string{"/deckhouse/modules/500-upmeter/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("upmeter", []string{"others"}, []string{
+	"/deckhouse/modules/500-upmeter/crds/*.yaml"})
