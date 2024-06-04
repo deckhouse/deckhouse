@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"static-routing-manager-agent/api/v1alpha1"
@@ -26,6 +27,8 @@ import (
 	"static-routing-manager-agent/pkg/utils"
 	"strconv"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -271,7 +274,7 @@ type nrtSummary struct {
 	desiredRoutesToAddByNRT []RouteEntry
 	desiredRoutesToDelByNRT RouteEntryMap
 	nrtWasDeleted           bool
-	specNeedToUpdate        bool
+	needToWipeFinalizer     bool
 }
 
 func nrtSummaryInit() *nrtSummary {
@@ -283,7 +286,7 @@ func nrtSummaryInit() *nrtSummary {
 		desiredRoutesToAddByNRT: make([]RouteEntry, 0),
 		desiredRoutesToDelByNRT: RouteEntryMap{},
 		nrtWasDeleted:           false,
-		specNeedToUpdate:        false,
+		needToWipeFinalizer:     false,
 	}
 }
 
@@ -293,7 +296,7 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 	tmpNrt.Status.ObservedGeneration = nrt.Generation
 	ns.k8sResources = &tmpNrt
 	ns.newReconciliationStatus = utils.ReconciliationStatus{IsSuccess: true}
-	ns.specNeedToUpdate = false
+	ns.needToWipeFinalizer = false
 
 	// If NRT was deleted filling map desiredRoutesToDelByNRT and set flag nrtWasDeleted
 	if nrt.DeletionTimestamp != nil {
@@ -384,14 +387,13 @@ func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRo
 		ns.newReconciliationStatus = deleteRouteEntriesFromNode(
 			ns.desiredRoutesToDelByNRT,
 			globalDesiredRoutesForNode,
-			actualRoutesOnNode,
+			&actualRoutesOnNode,
 			status,
 			log,
 		)
 		if ns.nrtWasDeleted && ns.newReconciliationStatus.IsSuccess {
-			log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v has been deleted and its routes has been successfully deleted too. Clearing the finalizer in NRT", nrtName))
-			removeFinalizerFromNRT(ns.k8sResources)
-			ns.specNeedToUpdate = true
+			log.Debug(fmt.Sprintf("[NRTReconciler] NRT %v has been deleted and its routes has been successfully deleted too. The finalizer will be wiped", nrtName))
+			ns.needToWipeFinalizer = true
 		}
 	}
 }
@@ -429,21 +431,50 @@ func (nm *nrtMap) generateNewCondition() bool {
 }
 
 func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log logger.Logger) {
-	var err error
 	for nrtName, ns := range *nm {
-		if ns.specNeedToUpdate && ns.k8sResources.DeletionTimestamp != nil {
-			// Update spec if we need to remove the finalizer
-			log.Debug(fmt.Sprintf("Update of NRT: %v", nrtName))
-			err = cl.Update(ctx, ns.k8sResources)
+		// Wipe the finalizer if necessary
+		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
+			log.Debug(fmt.Sprintf("Wipe finalizer on NRT: %v", nrtName))
+
+			tmpNRTFinalizers := make([]string, 0)
+			for _, fnlzr := range ns.k8sResources.Finalizers {
+				if fnlzr != v1alpha1.Finalizer {
+					tmpNRTFinalizers = append(tmpNRTFinalizers, fnlzr)
+				}
+			}
+
+			patch, err := json.Marshal(
+				map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"finalizers": tmpNRTFinalizers,
+					},
+				},
+			)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to update CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
+				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNRTFinalizers, err))
+			}
+
+			err = cl.Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
+			if err != nil {
+				log.Error(err, fmt.Sprintf("unable to patch CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
 			}
 		}
-		// Update status every time
+
+		// Update(patch) status every time
 		log.Debug(fmt.Sprintf("Update status of NRT: %v", nrtName))
-		err = cl.Status().Update(ctx, ns.k8sResources)
+
+		patch, err := json.Marshal(
+			map[string]interface{}{
+				"status": ns.k8sResources.Status,
+			},
+		)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to update status for CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
+			log.Error(err, fmt.Sprintf("unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
+		}
+
+		err = cl.Status().Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
+		if err != nil {
+			log.Error(err, fmt.Sprintf("unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nrtName, err))
 		}
 	}
 }
@@ -543,19 +574,21 @@ func delRouteFromNode(route RouteEntry) error {
 
 // other service functions
 
-func deleteRouteEntriesFromNode(delREM, gdREM, actREM RouteEntryMap, status utils.ReconciliationStatus, log logger.Logger) utils.ReconciliationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, log logger.Logger) utils.ReconciliationStatus {
 	for hash, route := range delREM {
 		log.Debug(fmt.Sprintf("Route %v should be deleted", route))
 		if _, ok := (gdREM)[hash]; ok {
 			log.Debug(fmt.Sprintf("but it is present in other NRT"))
 			continue
 		}
-		if _, ok := (actREM)[hash]; !ok {
+		if _, ok := (*actREM)[hash]; !ok {
 			log.Debug(fmt.Sprintf("but it is not present on Node"))
 			continue
 		}
 		err := delRouteFromNode(route)
-		if err != nil {
+		if err == nil {
+			delete(*actREM, hash)
+		} else {
 			log.Debug(fmt.Sprintf("err: %v", err))
 			status.AppendError(err)
 		}
@@ -575,16 +608,4 @@ func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logger.Logger) {
 			log.Debug(fmt.Sprintf("Unable to delete route %v,err: %v", route, err))
 		}
 	}
-}
-
-func removeFinalizerFromNRT(nrt *v1alpha1.SDNInternalNodeRoutingTable) {
-	// tmpNrt.Finalizers = []string{}
-	var tmpNRTFinalizers []string
-	tmpNRTFinalizers = []string{}
-	for _, fnlzr := range nrt.Finalizers {
-		if fnlzr != v1alpha1.Finalizer {
-			tmpNRTFinalizers = append(tmpNRTFinalizers, fnlzr)
-		}
-	}
-	nrt.Finalizers = tmpNRTFinalizers
 }

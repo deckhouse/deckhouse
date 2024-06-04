@@ -517,7 +517,6 @@ type nirsSummary struct {
 	desiredIPRulesToAddByNIRS []IPRuleEntry
 	desiredIPRulesToDelByNIRS IPRuleEntryMap
 	nirsWasDeleted            bool
-	specNeedToUpdate          bool
 	needToWipeFinalizer       bool
 }
 
@@ -530,7 +529,6 @@ func nirsSummaryInit() *nirsSummary {
 		desiredIPRulesToAddByNIRS: make([]IPRuleEntry, 0),
 		desiredIPRulesToDelByNIRS: IPRuleEntryMap{},
 		nirsWasDeleted:            false,
-		specNeedToUpdate:          false,
 		needToWipeFinalizer:       false,
 	}
 }
@@ -541,7 +539,6 @@ func (ns *nirsSummary) discoverFacts(nirs v1alpha1.SDNInternalNodeIPRuleSet, glo
 	tmpNIRS.Status.ObservedGeneration = nirs.Generation
 	ns.k8sResources = &tmpNIRS
 	ns.newReconciliationStatus = utils.ReconciliationStatus{IsSuccess: true}
-	ns.specNeedToUpdate = false
 	ns.needToWipeFinalizer = false
 
 	// If NIRS was deleted filling map desiredIPRulesToDelByNIRS and set flag nirsWasDeleted
@@ -638,8 +635,7 @@ func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actua
 			log,
 		)
 		if ns.nirsWasDeleted && ns.newReconciliationStatus.IsSuccess {
-			log.Debug(fmt.Sprintf("[NIRSReconciler] NIRS %v has been deleted and its IPRules has been successfully deleted too. Clearing the finalizer in NIRS", nirsName))
-			// removeFinalizerFromNIRS(ns.k8sResources)
+			log.Debug(fmt.Sprintf("[NIRSReconciler] NIRS %v has been deleted and its IPRules has been successfully deleted too. The finalizer will be wiped", nirsName))
 			ns.needToWipeFinalizer = true
 		}
 	}
@@ -678,24 +674,12 @@ func (nm *nirsMap) generateNewCondition() bool {
 }
 
 func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log logger.Logger) {
-	var err error
 	for nirsName, ns := range *nm {
-		if ns.specNeedToUpdate && ns.k8sResources.DeletionTimestamp != nil {
-			// Update spec if we need to remove the finalizer
-			log.Debug(fmt.Sprintf("Update of NIRS: %v", nirsName))
-			err = cl.Update(ctx, ns.k8sResources)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to update CR SDNInternalNodeIPRuleSet %v, err: %v", nirsName, err))
-			}
-		}
-
+		// Wipe the finalizer if necessary
 		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
 			log.Debug(fmt.Sprintf("Wipe finalizer on NIRS: %v", nirsName))
 
-			// var tmpNIRSFinalizers []string
-			// tmpNIRSFinalizers = []string{}
 			tmpNIRSFinalizers := make([]string, 0)
-
 			for _, fnlzr := range ns.k8sResources.Finalizers {
 				if fnlzr != v1alpha1.Finalizer {
 					tmpNIRSFinalizers = append(tmpNIRSFinalizers, fnlzr)
@@ -831,15 +815,4 @@ func deleteOrphanIPRules(gdIREM, actIREM IPRuleEntryMap, log logger.Logger) {
 			log.Debug(fmt.Sprintf("Unable to delete ipRule %v,err: %v", ipRule, err))
 		}
 	}
-}
-
-func removeFinalizerFromNIRS(nirs *v1alpha1.SDNInternalNodeIPRuleSet) {
-	var tmpNIRSFinalizers []string
-	tmpNIRSFinalizers = []string{}
-	for _, fnlzr := range nirs.Finalizers {
-		if fnlzr != v1alpha1.Finalizer {
-			tmpNIRSFinalizers = append(tmpNIRSFinalizers, fnlzr)
-		}
-	}
-	nirs.Finalizers = tmpNIRSFinalizers
 }
