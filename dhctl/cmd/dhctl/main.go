@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -39,9 +40,17 @@ import (
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
 
+	// set path to ssh and terraform binaries
 	if err := os.Setenv("PATH", "$PWD/bin:$PATH"); err != nil {
 		panic(err)
 	}
+
+	// set relative path to config and template files
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	config.DeckhouseDir = pwd + config.DeckhouseDir
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
