@@ -592,6 +592,7 @@ shell:
   - mkdir /src
   - cd /src
   - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable .
+  - autoreconf
   - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
   - make install
 
