@@ -18,4 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("user-authn", []string{"security"}, nil)
+var _ = ensure_rbacv2.RegisterHook("user-authn", []string{"security"}, []string{
+	"/deckhouse/modules/010-user-authn-crd/crds/*.yaml"})
