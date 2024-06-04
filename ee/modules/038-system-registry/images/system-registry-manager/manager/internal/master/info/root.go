@@ -82,43 +82,45 @@ func (i *Info) WorkersInfoWaitAll() ([]WorkerInfo, error) {
 	return workers, err
 }
 
-func (i *Info) AllInfoGet() (map[string]MergeInfo, error) {
+func (i *Info) AllInfoGet() (map[string]MergeInfo, map[string]MergeInfo, error) {
 	if _, err := i.MasterNodesInfoGet(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if _, err := i.SeaweedfsPodsInfoGet(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if _, err := i.WorkersInfoGet(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return i.mergeByNode(), nil
+	maerged, unknown := i.mergeByNode()
+	return maerged, unknown, nil
 }
 
-func (i *Info) mergeByNode() map[string]MergeInfo {
-	m := map[string]MergeInfo{}
+func (i *Info) mergeByNode() (map[string]MergeInfo, map[string]MergeInfo) {
+	maerged := map[string]MergeInfo{}
+	unknown := map[string]MergeInfo{}
 
 	for _, node := range i.masterNodes {
-		if mergeInfo, ok := m[node.Name]; ok {
+		if mergeInfo, ok := maerged[node.Name]; ok {
 			mergeInfo.MasterNode = &node
-			m[node.Name] = mergeInfo
+			maerged[node.Name] = mergeInfo
 		} else {
 			mergeInfo := MergeInfo{
 				MasterNode: &node,
 			}
-			m[node.Name] = mergeInfo
+			maerged[node.Name] = mergeInfo
 		}
 	}
 
 	for _, seaweedfsPod := range i.seaweedfsPods {
-		if mergeInfo, ok := m[seaweedfsPod.Pod.Spec.NodeName]; ok {
+		if mergeInfo, ok := maerged[seaweedfsPod.Pod.Spec.NodeName]; ok {
 			mergeInfo.SeaweedfsPod = &seaweedfsPod
-			m[seaweedfsPod.Pod.Spec.NodeName] = mergeInfo
+			maerged[seaweedfsPod.Pod.Spec.NodeName] = mergeInfo
 		} else {
 			mergeInfo := MergeInfo{
 				SeaweedfsPod: &seaweedfsPod,
 			}
-			m[seaweedfsPod.Pod.Spec.NodeName] = mergeInfo
+			unknown[seaweedfsPod.Pod.Spec.NodeName] = mergeInfo
 		}
 	}
 
@@ -127,15 +129,15 @@ func (i *Info) mergeByNode() map[string]MergeInfo {
 			continue
 		}
 
-		if mergeInfo, ok := m[*worker.NodeName]; ok {
+		if mergeInfo, ok := maerged[*worker.NodeName]; ok {
 			mergeInfo.Worker = &worker
-			m[*worker.NodeName] = mergeInfo
+			maerged[*worker.NodeName] = mergeInfo
 		} else {
 			mergeInfo := MergeInfo{
 				Worker: &worker,
 			}
-			m[*worker.NodeName] = mergeInfo
+			unknown[*worker.NodeName] = mergeInfo
 		}
 	}
-	return m
+	return maerged, unknown
 }

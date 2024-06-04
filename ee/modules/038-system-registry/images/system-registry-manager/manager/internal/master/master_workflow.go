@@ -62,7 +62,7 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		}
 	}
 
-	allInfo, err := info.AllInfoGet()
+	allInfo, _, err := info.AllInfoGet()
 	if err != nil {
 		return err
 	}
