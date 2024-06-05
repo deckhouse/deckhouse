@@ -8,7 +8,7 @@ shell:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
     - export "GOARCH=amd64"
-    - git clone --depth 1 --branch {{ $branch }} {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
+    - git clone --branch {{ $branch }} {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
     - cd kruise-state-metrics
     - git checkout {{ $commit }}
     - GOPROXY={{ $.GOPROXY }} go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
