@@ -51,6 +51,7 @@ func main() {
 
 	// set relative path to config and template files
 	config.DeckhouseDir = pwd + config.DeckhouseDir
+	fmt.Println(config.DeckhouseDir)
 	commands.DeckhouseDir = config.DeckhouseDir
 	app.DeckhouseDir = config.DeckhouseDir
 
