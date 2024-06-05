@@ -78,13 +78,17 @@ func newInstaller(moduleName string, moduleScopes []string, client k8s.Client, p
 }
 
 func (i *installer) Run(ctx context.Context) *multierror.Error {
-	crds, err := i.parseCRDs(ctx)
-	if err != nil {
-		return multierror.Append(&multierror.Error{}, err)
-	}
 	// check that module scopes exist, if they do not, ensure them
 	if errs := i.ensureScopes(ctx); errs != nil {
 		return errs
+	}
+	// if moduleName is not set, ensure only scopes
+	if i.moduleName == "" {
+		return nil
+	}
+	crds, err := i.parseCRDs(ctx)
+	if err != nil {
+		return multierror.Append(&multierror.Error{}, err)
 	}
 	return i.ensureRoles(ctx, i.capabilitiesClusterRoles(crds))
 }

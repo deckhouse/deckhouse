@@ -28,7 +28,7 @@ kubernetesValidating:
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "DELETE"]
+    operations:  ["CREATE"]
     resources:   ["clusterroles"]
     scope:       "Cluster"
 EOF
@@ -47,17 +47,6 @@ EOF
     return 0
   fi
 fi
-
-if [ "$operation" = "DELETE" ]; then
-  clusterRoleName=$(context::jq -r '.review.request.oldObject.metadata.name')
-  if [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"ClusterRole \"$clusterRoleName\" cannot be deleted, it is reserved system role" }
-EOF
-    return 0
-  fi
-fi
-
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF

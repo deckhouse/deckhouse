@@ -19,3 +19,16 @@ package hooks
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
 var _ = ensure_rbacv2.RegisterHook("user-authz", []string{"security"}, nil)
+
+// ensure scopes, it needs for file-based roles(e.g. deckhouse)
+var _ = ensure_rbacv2.RegisterHook("", []string{
+	"security",
+	"infrastructure",
+	"deckhouse",
+	"kubernetes",
+	"storage",
+	"security",
+	"observability",
+	"networking",
+	"others",
+}, nil)
