@@ -1,19 +1,19 @@
 diff --git a/pkg/ipam/hostscope.go b/pkg/ipam/hostscope.go
-index 7bf0c014a45b..c43420e19b75 100644
+index 6d58007461..d5446b8df7 100644
 --- a/pkg/ipam/hostscope.go
 +++ b/pkg/ipam/hostscope.go
-@@ -8,6 +8,10 @@ import (
+@@ -5,8 +5,10 @@ package ipam
+ 
+ import (
+ 	"fmt"
++	"github.com/cilium/cilium/pkg/k8s/watchers"
  	"math/big"
  	"net"
- 
 +	"strings"
-+
-+	"github.com/cilium/cilium/pkg/k8s/watchers"
-+
- 	"github.com/cilium/ipam/service/ipallocator"
  
  	"github.com/cilium/cilium/pkg/ip"
-@@ -16,9 +20,12 @@ import (
+ 	"github.com/cilium/cilium/pkg/ipam/service/ipallocator"
+@@ -15,9 +17,12 @@ import (
  type hostScopeAllocator struct {
  	allocCIDR *net.IPNet
  	allocator *ipallocator.Range
@@ -27,7 +27,7 @@ index 7bf0c014a45b..c43420e19b75 100644
  	cidrRange, err := ipallocator.NewCIDRRange(n)
  	if err != nil {
  		panic(err)
-@@ -27,6 +34,7 @@ func newHostScopeAllocator(n *net.IPNet) Allocator {
+@@ -26,6 +31,7 @@ func newHostScopeAllocator(n *net.IPNet) Allocator {
  		allocCIDR: n,
  		allocator: cidrRange,
  	}
@@ -35,10 +35,10 @@ index 7bf0c014a45b..c43420e19b75 100644
  
  	return a
  }
-@@ -52,12 +60,34 @@ func (h *hostScopeAllocator) Release(ip net.IP) error {
+@@ -52,12 +58,35 @@ func (h *hostScopeAllocator) Release(ip net.IP, pool Pool) error {
  }
  
- func (h *hostScopeAllocator) AllocateNext(owner string) (*AllocationResult, error) {
+ func (h *hostScopeAllocator) AllocateNext(owner string, pool Pool) (*AllocationResult, error) {
 -	ip, err := h.allocator.AllocateNext()
 +	var result AllocationResult
 +	var err error
@@ -67,17 +67,17 @@ index 7bf0c014a45b..c43420e19b75 100644
  	if err != nil {
  		return nil, err
  	}
--
+ 
 -	return &AllocationResult{IP: ip}, nil
 +	return &result, nil
  }
  
- func (h *hostScopeAllocator) AllocateNextWithoutSyncUpstream(owner string) (*AllocationResult, error) {
+ func (h *hostScopeAllocator) AllocateNextWithoutSyncUpstream(owner string, pool Pool) (*AllocationResult, error) {
 diff --git a/pkg/ipam/ipam.go b/pkg/ipam/ipam.go
-index 3418929baa85..d6d99d287b85 100644
+index 938fc46916..857680d2b1 100644
 --- a/pkg/ipam/ipam.go
 +++ b/pkg/ipam/ipam.go
-@@ -120,11 +120,11 @@ func NewIPAM(nodeAddressing types.NodeAddressing, c Configuration, owner Owner,
+@@ -124,11 +124,11 @@ func NewIPAM(nodeAddressing types.NodeAddressing, c Configuration, owner Owner,
  		}).Infof("Initializing %s IPAM", c.IPAMMode())
  
  		if c.IPv6Enabled() {
@@ -90,27 +90,12 @@ index 3418929baa85..d6d99d287b85 100644
 +			ipam.IPv4Allocator = newHostScopeAllocator(nodeAddressing.IPv4().AllocationCIDR().IPNet, k8sEventReg)
  		}
  	case ipamOption.IPAMClusterPoolV2:
- 		log.Info("Initializing ClusterPool v2 IPAM")
-diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
-index 66175b7cfaf2..57ff748bca86 100644
---- a/pkg/ipam/types.go
-+++ b/pkg/ipam/types.go
-@@ -13,6 +13,10 @@ import (
- 	"github.com/cilium/cilium/pkg/lock"
- )
- 
-+const (
-+	customPodIpAddr = "cni.cilium.io/ipAddress"
-+)
-+
- // AllocationResult is the result of an allocation
- type AllocationResult struct {
- 	// IP is the allocated IP
-diff --git a/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go b/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
-index f08e883d5a87..453b3a2a3c45 100644
---- a/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
-+++ b/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
-@@ -129,18 +129,11 @@ func (r *Range) CIDR() net.IPNet {
+ 		log.
+diff --git a/pkg/ipam/service/ipallocator/allocator.go b/pkg/ipam/service/ipallocator/allocator.go
+index 5e81cf4ee3..782e1e476d 100644
+--- a/pkg/ipam/service/ipallocator/allocator.go
++++ b/pkg/ipam/service/ipallocator/allocator.go
+@@ -114,18 +114,11 @@ func (r *Range) CIDR() net.IPNet {
  // or has already been reserved.  ErrFull will be returned if there
  // are no addresses left.
  func (r *Range) Allocate(ip net.IP) error {
@@ -131,3 +116,18 @@ index f08e883d5a87..453b3a2a3c45 100644
  	return nil
  }
  
+diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
+index 1e63d38393..95a6e2a58b 100644
+--- a/pkg/ipam/types.go
++++ b/pkg/ipam/types.go
+@@ -14,6 +14,10 @@ import (
+ 	"github.com/cilium/cilium/pkg/lock"
+ )
+ 
++const (
++	customPodIpAddr = "cni.cilium.io/ipAddress"
++)
++
+ // AllocationResult is the result of an allocation
+ type AllocationResult struct {
+ 	// IP is the allocated IP

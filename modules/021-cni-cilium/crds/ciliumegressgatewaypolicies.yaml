@@ -4,10 +4,11 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.11.4
+  creationTimestamp: null
   labels:
     heritage: deckhouse
-    module: deckhouse
+    module: cni-cilium
   name: ciliumegressgatewaypolicies.cilium.io
 spec:
   group: cilium.io
@@ -137,6 +138,15 @@ spec:
                 required:
                 - nodeSelector
                 type: object
+              excludedCIDRs:
+                description: ExcludedCIDRs is a list of destination CIDRs that will
+                  be excluded from the egress gateway redirection and SNAT logic.
+                  Should be a subset of destinationCIDRs otherwise it will not have
+                  any effect.
+                items:
+                  pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[1-2][0-9]|3[0-2])$
+                  type: string
+                type: array
               selectors:
                 description: Egress represents a list of rules by which egress traffic
                   is filtered from the source pods.

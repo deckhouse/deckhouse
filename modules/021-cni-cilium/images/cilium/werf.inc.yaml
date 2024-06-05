@@ -1,17 +1,12 @@
-{{- $ciliumVersion := "1.12.8" }}
-{{- range $type := list "standard" "virtualization" }}
+{{- $ciliumVersion := "1.14.5" }}
 ---
-  {{- if eq $type "virtualization" }}
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-virt-builder-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
-  {{- else }}
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-  {{- end }}
 fromImage: {{ $.ModuleName }}/builder-artifact
 mount:
 - fromPath: ~/go-pkg-cache
@@ -21,27 +16,18 @@ shell:
   - mkdir /tmp/cilium-repo
   - curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v{{ $ciliumVersion }}.tar.gz | tar xvz -C /tmp/cilium-repo
   install:
+  - export PATH=$PATH:/usr/local/go/bin
   - cd /tmp/cilium-repo/cilium-{{ $ciliumVersion }}
-  {{- if eq $type "virtualization" }}
   - find /patches -name '*.patch' -exec git apply {} \;
-  {{- end }}
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
-  - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/cni-install.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
 ---
-  {{- if eq $type "virtualization" }}
-image: {{ $.ModuleName }}/virt-{{ $.ImageName }}
-  {{- else }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-  {{- end }}
 fromImage: {{ $.ModuleName }}/builder-runtime-artifact
 import:
-  {{- if eq $type "virtualization" }}
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-virt-builder-artifact
-  {{- else }}
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
-  {{- end }}
   add: /tmp/install
   to: /
   before: install
@@ -69,4 +55,3 @@ docker:
     HUBBLE_COMPAT: legacy-json-output
   WORKDIR: "/home/cilium"
   CMD: ["/usr/bin/cilium"]
-{{- end }}
