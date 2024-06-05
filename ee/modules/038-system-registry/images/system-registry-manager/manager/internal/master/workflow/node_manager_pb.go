@@ -5,11 +5,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package workflow
 
-type SeaweedfsNodeManager interface {
+type NodeManager interface {
 	// Info
 	GetNodeClusterStatus() (*SeaweedfsNodeClusterStatus, error)
 	GetNodeRunningStatus() (*SeaweedfsNodeRunningStatus, error)
-	GetNodeIP() string
+	GetNodeIP() (string, error)
 
 	// Cluster actions
 	AddNodeToCluster(newNodeIP string) error
