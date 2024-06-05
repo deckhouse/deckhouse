@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-
-mkdir -p /opt/deckhouse/bin
-cp -f kubelet /opt/deckhouse/bin
-cp -f kubelet.service /lib/systemd/system
-chmod 600 /lib/systemd/system/kubelet.service
-systemctl daemon-reload
-systemctl enable kubelet.service
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1470 }}" "netcat:{{ .images.registrypackages.netcat110481 }}" "iptables:{{ .images.registrypackages.iptables1810 }}"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,5 @@
 # limitations under the License.
 
 set -Eeo pipefail
-
 mkdir -p /opt/deckhouse/bin
-cp -f kubelet /opt/deckhouse/bin
-cp -f kubelet.service /lib/systemd/system
-chmod 600 /lib/systemd/system/kubelet.service
-systemctl daemon-reload
-systemctl enable kubelet.service
+cp -f nc /opt/deckhouse/bin
