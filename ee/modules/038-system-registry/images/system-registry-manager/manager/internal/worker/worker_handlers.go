@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"system-registry-manager/internal/worker/steps"
-	pkg_api "system-registry-manager/pkg/api"
 	pkg_cfg "system-registry-manager/pkg/cfg"
+	worker_client "system-registry-manager/pkg/worker/client"
 )
 
 func createServer(workerData *WorkerData) *http.Server {
@@ -18,15 +18,15 @@ func createServer(workerData *WorkerData) *http.Server {
 		Addr: fmt.Sprintf("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.WorkerPort),
 	}
 
-	masterInfo := func() (*pkg_api.MasterInfoResponse, error) {
+	masterInfo := func() (*worker_client.MasterInfoResponse, error) {
 		return masterInfoHandlerFunc(workerData)
 	}
 
-	checkRegistry := func(requestBody *pkg_api.CheckRegistryRequest) (*pkg_api.CheckRegistryResponse, error) {
+	checkRegistry := func(requestBody *worker_client.CheckRegistryRequest) (*worker_client.CheckRegistryResponse, error) {
 		return checkRegistryHandlerFunc(workerData, requestBody)
 	}
 
-	updateRegistry := func(requestBody *pkg_api.UpdateRegistryRequest) error {
+	updateRegistry := func(requestBody *worker_client.UpdateRegistryRequest) error {
 		return updateRegistryHandlerFunc(workerData, requestBody)
 	}
 
@@ -36,11 +36,11 @@ func createServer(workerData *WorkerData) *http.Server {
 
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
-	http.HandleFunc(pkg_api.MasterInfoUrlPattern, pkg_api.CreateMasterInfoHandlerFunc(masterInfo))
-	http.HandleFunc(pkg_api.IsBusyUrlPattern, pkg_api.CreateIsBusyHandlerFunc(workerData.singleRequestCfg))
-	http.Handle(pkg_api.CheckRegistryUrlPattern, pkg_api.CreateCheckRegistryHandler(checkRegistry, workerData.singleRequestCfg))
-	http.Handle(pkg_api.UpdateRegistryUrlPattern, pkg_api.CreateUpdateRegistryHandler(updateRegistry, workerData.singleRequestCfg))
-	http.Handle(pkg_api.DeleteRegistryUrlPattern, pkg_api.CreateDeleteRegistryHandler(deleteRegistry, workerData.singleRequestCfg))
+	http.HandleFunc(worker_client.MasterInfoUrlPattern, worker_client.CreateMasterInfoHandlerFunc(masterInfo))
+	http.HandleFunc(worker_client.IsBusyUrlPattern, worker_client.CreateIsBusyHandlerFunc(workerData.singleRequestCfg))
+	http.Handle(worker_client.CheckRegistryUrlPattern, worker_client.CreateCheckRegistryHandler(checkRegistry, workerData.singleRequestCfg))
+	http.Handle(worker_client.UpdateRegistryUrlPattern, worker_client.CreateUpdateRegistryHandler(updateRegistry, workerData.singleRequestCfg))
+	http.Handle(worker_client.DeleteRegistryUrlPattern, worker_client.CreateDeleteRegistryHandler(deleteRegistry, workerData.singleRequestCfg))
 	return server
 }
 
@@ -52,8 +52,8 @@ func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func masterInfoHandlerFunc(workerData *WorkerData) (*pkg_api.MasterInfoResponse, error) {
-	masterInfo := pkg_api.MasterInfoResponse{
+func masterInfoHandlerFunc(workerData *WorkerData) (*worker_client.MasterInfoResponse, error) {
+	masterInfo := worker_client.MasterInfoResponse{
 		Data: struct {
 			IsMaster          bool   "json:\"isMaster\""
 			MasterName        string "json:\"masterName\""
@@ -67,7 +67,7 @@ func masterInfoHandlerFunc(workerData *WorkerData) (*pkg_api.MasterInfoResponse,
 	return &masterInfo, nil
 }
 
-func checkRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRequest) (*pkg_api.CheckRegistryResponse, error) {
+func checkRegistryHandlerFunc(workerData *WorkerData, _ *worker_client.CheckRegistryRequest) (*worker_client.CheckRegistryResponse, error) {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
@@ -84,9 +84,9 @@ func checkRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRe
 		return nil, err
 	}
 	if !manifestsSpec.NeedChange() {
-		return &pkg_api.CheckRegistryResponse{}, nil
+		return &worker_client.CheckRegistryResponse{}, nil
 	}
-	return &pkg_api.CheckRegistryResponse{
+	return &worker_client.CheckRegistryResponse{
 		Data: struct {
 			RegistryFilesState struct {
 				ManifestsWaitToCreate    bool "json:\"manifestsWaitToCreate\""
@@ -116,7 +116,7 @@ func checkRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRe
 	}, nil
 }
 
-func updateRegistryHandlerFunc(workerData *WorkerData, _ *pkg_api.CheckRegistryRequest) error {
+func updateRegistryHandlerFunc(workerData *WorkerData, _ *worker_client.CheckRegistryRequest) error {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
