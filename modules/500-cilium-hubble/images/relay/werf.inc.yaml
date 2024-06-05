@@ -4,13 +4,11 @@
 # Based on https://github.com/cilium/cilium/blob/v1.15.5/images/hubble-relay/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.15.5/images/hubble-relay/download-grpc-health-probe.sh
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}

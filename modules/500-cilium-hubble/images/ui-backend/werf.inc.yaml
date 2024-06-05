@@ -1,14 +1,13 @@
-{{- $hubbleUIVersion := "0.12.1" }}
+# Version is getting from https://github.com/cilium/cilium/blob/v1.15.5/install/kubernetes/cilium/values.yaml#L1476
+{{- $hubbleUIVersion := "0.13.0" }}
 ---
-# Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/backend/Dockerfile
+# Based on https://github.com/cilium/hubble-ui/blob/v0.13.0/backend/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache git bash make
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
