@@ -32,15 +32,18 @@ func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []NodeManager, 
 
 func (w *SeaweedfsScaleWorkflow) Start() error {
 	expectedNodeCount := GetExpectedNodeCount(w.ExpectedNodeCount)
+	w.log.Infof("Starting scale workflow with expected node count: %d", expectedNodeCount)
 
 	if expectedNodeCount > len(w.NodeManagers) {
 		return fmt.Errorf("expectedNodeCount > len(w.NodeManagers)")
 	}
 
 	if expectedNodeCount == 0 {
+		w.log.Info("Expected node count is 0, deleting all nodes.")
 		return w.delete(w.NodeManagers)
 	}
 
+	w.log.Infof("Sorting nodes by status")
 	sortedNodes, err := SortByStatus(w.NodeManagers)
 	if err != nil {
 		return err
@@ -52,23 +55,28 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		return err
 	}
 
+	w.log.Infof("Deleting nodes: %s", GetNodeNames(deleteNodes))
 	return w.delete(deleteNodes)
 }
 
 func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) error {
+	w.log.Infof("Ensuring cluster for nodes: %s", GetNodeNames(clusterNodes))
 	currentNodes, other, err := SelectByRunningStatus(clusterNodes, CmpSelectIsRunning)
 	if err != nil {
 		return err
 	}
 
 	if len(currentNodes) == 0 {
+		w.log.Info("No current running nodes, creating new cluster")
 		return w.create(currentNodes)
 	}
 
+	w.log.Infof("Scaling existing cluster")
 	return w.scale(currentNodes, other)
 }
 
 func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []NodeManager) error {
+	w.log.Infof("Scaling cluster with current nodes: %s and new nodes: %s", GetNodeNames(currentNodes), GetNodeNames(newNodes))
 	oldIPs := []string{}
 	newIPs := make([]string, 0, len(currentNodes)+len(newNodes))
 
@@ -87,6 +95,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		newIPs = append(newIPs, nodeIp)
 	}
 
+	w.log.Infof("Creating request with new IPs: %v", newIPs)
 	createRequest := SeaweedfsCreateNodeRequest{
 		CreateManifestsData: struct{ MasterPeers []string }{newIPs},
 	}
@@ -98,7 +107,6 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		UpdateManifestsData: struct{ MasterPeers []string }{newIPs},
 	}
 
-	// Check is one cluster
 	masters, err := GetMasters(currentNodes)
 	if err != nil {
 		return err
@@ -109,27 +117,26 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 
 	master := masters[0]
 
-	// Get old cluster IPs
 	if masterInfo, err := master.GetNodeClusterStatus(); err != nil {
 		return err
 	} else {
 		oldIPs = append(oldIPs, masterInfo.ClusterNodesIPs...)
 	}
 
-	// Add new nodes to cluster and create
 	for _, newNode := range newNodes {
 		nodeIp, err := newNode.GetNodeIP()
 		if err != nil {
 			return err
 		}
 		master.AddNodeToCluster(nodeIp)
+		w.log.Infof("Adding node %s to cluster", newNode.GetNodeName())
 		if err := master.CreateNodeManifests(&createRequest); err != nil {
 			return err
 		}
 	}
 
-	// Update old nodes
 	for _, currentNode := range currentNodes {
+		w.log.Infof("Updating manifests for node %s", currentNode.GetNodeName())
 		if err := currentNode.UpdateNodeManifests(&updateRequest); err != nil {
 			return err
 		}
@@ -137,6 +144,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 
 	for _, oldIP := range oldIPs {
 		if !pkg_utils.IsStringInSlice(oldIP, &newIPs) {
+			w.log.Infof("Removing old node %s from cluster", oldIP)
 			if err := master.RemoveNodeFromCluster(oldIP); err != nil {
 				return err
 			}
@@ -146,6 +154,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 }
 
 func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
+	w.log.Infof("Creating new cluster with nodes: %s", GetNodeNames(clusterNodes))
 	createRequest := SeaweedfsCreateNodeRequest{
 		CreateManifestsData: struct{ MasterPeers []string }{make([]string, 0, len(clusterNodes))},
 	}
@@ -159,6 +168,7 @@ func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
 	}
 
 	for _, node := range clusterNodes {
+		w.log.Infof("Creating manifests for node %s", node.GetNodeName())
 		err := node.CreateNodeManifests(&createRequest)
 		if err != nil {
 			return err
@@ -168,8 +178,12 @@ func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
 }
 
 func (w *SeaweedfsScaleWorkflow) delete(nodes []NodeManager) error {
+	w.log.Infof("Deleting nodes %s", GetNodeNames(nodes))
 	for _, node := range nodes {
-		return node.DeleteNodeManifests()
+		w.log.Infof("Deleting manifests for node %s", node.GetNodeName())
+		if err := node.DeleteNodeManifests(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

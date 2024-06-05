@@ -5,6 +5,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package workflow
 
+import (
+	"fmt"
+	"strings"
+)
+
 func CmpSelectIsNeedUpdateCaCerts(status *SeaweedfsNodeRunningStatus) bool {
 	if status == nil {
 		return false
@@ -65,6 +70,14 @@ func SelectByRunningStatus(nodes []NodeManager, cmpFuncs ...func(status *Seaweed
 		}
 	}
 	return selected, other, nil
+}
+
+func GetNodeNames(nodes []NodeManager) string {
+	names := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		names = append(names, node.GetNodeName())
+	}
+	return fmt.Sprintf("[%s]", strings.Join(names, ","))
 }
 
 func SortByStatus(nodes []NodeManager) ([]NodeManager, error) {
