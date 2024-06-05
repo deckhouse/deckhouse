@@ -51,6 +51,8 @@ func main() {
 
 	// set relative path to config and template files
 	config.DeckhouseDir = pwd + config.DeckhouseDir
+	commands.DeckhouseDir = config.DeckhouseDir
+	app.DeckhouseDir = config.DeckhouseDir
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())

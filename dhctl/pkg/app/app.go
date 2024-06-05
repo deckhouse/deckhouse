@@ -22,8 +22,6 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 const (
@@ -38,8 +36,9 @@ const (
 )
 
 var (
-	VersionFile              = config.DeckhouseDir + "/version"
-	DeckhouseImageDigestFile = config.DeckhouseDir + "/image_digest"
+	DeckhouseDir             = "/deckhouse"
+	VersionFile              = DeckhouseDir + "/version"
+	DeckhouseImageDigestFile = DeckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
