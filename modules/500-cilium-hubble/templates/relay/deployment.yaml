@@ -65,11 +65,19 @@ spec:
             - name: grpc
               containerPort: 4245
           readinessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: 4222
+            timeoutSeconds: 3
           livenessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: 4222
+            timeoutSeconds: 3
+          startupProbe:
+            grpc:
+              port: 4222
+            timeoutSeconds: 3
+            failureThreshold: 20
+            periodSeconds: 3
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}

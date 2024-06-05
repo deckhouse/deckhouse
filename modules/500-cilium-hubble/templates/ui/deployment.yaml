@@ -77,6 +77,14 @@ spec:
         ports:
         - name: http
           containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
         lifecycle:
           preStop:
             exec:
@@ -118,6 +126,14 @@ spec:
         ports:
         - name: grpc
           containerPort: 8090
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8090
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8090
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

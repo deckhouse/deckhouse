@@ -1,8 +1,10 @@
-{{- $ciliumVersion := "1.14.5" }}
+{{- $ciliumVersion := "1.15.5" }}
+{{- $grpcHealthProbeVersion := "0.4.26" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/hubble-relay/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.15.5/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.15.5/images/hubble-relay/download-grpc-health-probe.sh
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -10,6 +12,18 @@ shell:
   beforeInstall:
   - apk add --no-cache make git bash
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64
+  - mkdir -p /go/src/github.com/grpc-ecosystem/grpc-health-probe
+  - git clone --depth 1 --branch v{{ $grpcHealthProbeVersion }} {{ $.SOURCE_REPO }}/grpc-ecosystem/grpc-health-probe.git /go/src/github.com/grpc-ecosystem/grpc-health-probe
+  - cd /go/src/github.com/grpc-ecosystem/grpc-health-probe
+  - go mod download
+  - CGO_ENABLED=0 go build -a -tags netgo -ldflags="-w -X main.versionTag={{ $grpcHealthProbeVersion }}" -o grpc_health_probe
+  - strip /go/src/github.com/grpc-ecosystem/grpc-health-probe/grpc_health_probe
+  - chown 64535:64535 /go/src/github.com/grpc-ecosystem/grpc-health-probe/grpc_health_probe
+  - chmod 0700 /go/src/github.com/grpc-ecosystem/grpc-health-probe/grpc_health_probe
+  setup:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64
@@ -25,6 +39,10 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /go/src/github.com/grpc-ecosystem/grpc-health-probe/grpc_health_probe
+  to: /bin/grpc_health_probe
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
   to: /usr/local/bin/hubble-relay
