@@ -18,7 +18,7 @@ import (
 
 func GenerateCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting certificate generation...")
+	log.Debug("Starting certificate generation...")
 
 	for _, certSpec := range manifestsSpec.GeneratedCertificates {
 		err := generateCertToWorkspace(ctx, &certSpec)
@@ -27,7 +27,7 @@ func GenerateCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) er
 		}
 	}
 
-	log.Info("Certificate generation completed successfully.")
+	log.Debug("Certificate generation completed successfully.")
 	return nil
 }
 

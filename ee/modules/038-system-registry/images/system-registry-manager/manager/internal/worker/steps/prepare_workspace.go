@@ -15,7 +15,7 @@ import (
 
 func PrepareWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting workspace preparation...")
+	log.Debug("Starting workspace preparation...")
 
 	if err := checkInputCertificatesExist(ctx, manifestsSpec); err != nil {
 		log.Errorf("Error checking input certificates: %v", err)
@@ -34,13 +34,13 @@ func PrepareWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec)
 		return err
 	}
 
-	log.Info("Workspace preparation completed successfully.")
+	log.Debug("Workspace preparation completed successfully.")
 	return nil
 }
 
 func checkInputCertificatesExist(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Checking existence of input certificates...")
+	log.Debug("Checking existence of input certificates...")
 
 	var inputFiles []string
 
@@ -55,13 +55,13 @@ func checkInputCertificatesExist(ctx context.Context, manifestsSpec *pkg_cfg.Man
 		}
 	}
 
-	log.Info("Input certificates check completed successfully.")
+	log.Debug("Input certificates check completed successfully.")
 	return nil
 }
 
 func checkInputManifestsExist(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Checking existence of input manifests...")
+	log.Debug("Checking existence of input manifests...")
 
 	for _, manifest := range manifestsSpec.Manifests {
 		if !pkg_files.IsPathExists(manifest.InputPath) {
@@ -69,13 +69,13 @@ func checkInputManifestsExist(ctx context.Context, manifestsSpec *pkg_cfg.Manife
 		}
 	}
 
-	log.Info("Input manifests check completed successfully.")
+	log.Debug("Input manifests check completed successfully.")
 	return nil
 }
 
 func copyCertificatesToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Copying certificates to workspace...")
+	log.Debug("Copying certificates to workspace...")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 		log.Debugf("Copying CA key from %s to %s", cert.CAKey.InputPath, cert.CAKey.TmpPath)
@@ -89,13 +89,13 @@ func copyCertificatesToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.Man
 		}
 	}
 
-	log.Info("Certificate copying to workspace completed successfully.")
+	log.Debug("Certificate copying to workspace completed successfully.")
 	return nil
 }
 
 func copyManifestsToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Copying manifests to workspace...")
+	log.Debug("Copying manifests to workspace...")
 
 	renderData, err := pkg_cfg.GetDataForManifestRendering()
 
@@ -114,6 +114,6 @@ func copyManifestsToWorkspace(ctx context.Context, manifestsSpec *pkg_cfg.Manife
 		}
 	}
 
-	log.Info("Manifest copying to workspace completed successfully.")
+	log.Debug("Manifest copying to workspace completed successfully.")
 	return nil
 }

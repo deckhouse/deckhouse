@@ -15,7 +15,7 @@ import (
 
 func DeleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting delete step")
+	log.Debug("Starting delete step")
 
 	if err := deleteCerts(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to delete certificates: %v", err)
@@ -25,13 +25,13 @@ func DeleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 		log.Errorf("Failed to delete manifests: %v", err)
 		return err
 	}
-	log.Info("Delete step completed successfully")
+	log.Debug("Delete step completed successfully")
 	return nil
 }
 
 func deleteCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting to delete certificates")
+	log.Debug("Starting to delete certificates")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 
@@ -48,13 +48,13 @@ func deleteCerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) erro
 		}
 	}
 
-	log.Info("Certificates deleted successfully")
+	log.Debug("Certificates deleted successfully")
 	return nil
 }
 
 func deleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting to delete manifests")
+	log.Debug("Starting to delete manifests")
 
 	for _, manifest := range manifestsSpec.Manifests {
 
@@ -65,6 +65,6 @@ func deleteManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 		}
 	}
 
-	log.Info("Manifests deleted successfully")
+	log.Debug("Manifests deleted successfully")
 	return nil
 }
