@@ -29,6 +29,7 @@ type NodeManager struct {
 
 func NewNodeManager(logger *logrus.Entry, nodeName string, commonHandler *handler.CommonHandler) *NodeManager {
 	nodeManager := &NodeManager{
+		logger:        logger,
 		nodeName:      nodeName,
 		commonHandler: commonHandler,
 	}
@@ -176,11 +177,7 @@ func (m *NodeManager) DeleteNodeManifests() error {
 }
 
 func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_client.Client) error) error {
-	m.updateData()
-	if m.nodeInfo == nil {
-		return fmt.Errorf("m.nodeInfo == nil")
-	}
-
+	// update data and get api
 	nodeInternalIP, err := m.getNodeInternalIP()
 	if err != nil {
 		return err
@@ -199,11 +196,7 @@ func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_clie
 }
 
 func (m *NodeManager) makeRequestToWorker(request func(client *pkg_api.Client) error) error {
-	m.updateData()
-	if m.nodeInfo == nil {
-		return fmt.Errorf("m.nodeInfo == nil")
-	}
-
+	// update data and get api
 	workerIp, err := m.getWorkerIP()
 	if err != nil {
 		return err
@@ -218,6 +211,8 @@ func (m *NodeManager) updateData() {
 }
 
 func (m *NodeManager) getNodeInternalIP() (string, error) {
+	m.updateData()
+
 	if m.nodeInfo == nil {
 		return "", fmt.Errorf("m.nodeInfo == nil")
 	}
@@ -230,8 +225,10 @@ func (m *NodeManager) getNodeInternalIP() (string, error) {
 }
 
 func (m *NodeManager) getWorkerIP() (string, error) {
+	m.updateData()
+
 	if m.nodeInfo == nil {
 		return "", fmt.Errorf("m.nodeInfo == nil")
 	}
-	return m.nodeInfo.SeaweedfsPod.Status.PodIP, nil
+	return m.nodeInfo.Worker.IP, nil
 }
