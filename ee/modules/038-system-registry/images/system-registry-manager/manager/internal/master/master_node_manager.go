@@ -41,6 +41,10 @@ func NewNodeManager(ctx context.Context, nodeName string, k8sHandler *k8s_handle
 	return nodeManager
 }
 
+func (m *NodeManager) GetNodeName() string {
+	return m.nodeName
+}
+
 // Info
 func (m *NodeManager) GetNodeClusterStatus() (*master_workflow.SeaweedfsNodeClusterStatus, error) {
 	nodeInternalIP, err := m.getNodeInternalIP()

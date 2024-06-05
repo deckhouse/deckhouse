@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package workflow
 
 type NodeManager interface {
+	GetNodeName() string
+
 	// Info
 	GetNodeClusterStatus() (*SeaweedfsNodeClusterStatus, error)
 	GetNodeRunningStatus() (*SeaweedfsNodeRunningStatus, error)
