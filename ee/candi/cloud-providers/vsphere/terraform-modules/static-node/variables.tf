@@ -37,11 +37,6 @@ variable "nodeGroupName" {
   type = string
 }
 
-variable "wait_for_guest_net_routable" {
-  type = bool
-  default = false
-}
-
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
 
