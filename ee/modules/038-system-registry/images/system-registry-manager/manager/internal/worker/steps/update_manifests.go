@@ -15,7 +15,7 @@ import (
 
 func UpdateManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting UpdateManifests")
+	log.Debug("Starting UpdateManifests")
 
 	if err := copyCertsToDest(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to copy certificates: %v", err)
@@ -25,13 +25,13 @@ func UpdateManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 		log.Errorf("Failed to copy manifests: %v", err)
 		return err
 	}
-	log.Info("UpdateManifests completed successfully")
+	log.Debug("UpdateManifests completed successfully")
 	return nil
 }
 
 func copyCertsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting to copy certificates to destination")
+	log.Debug("Starting to copy certificates to destination")
 
 	for _, cert := range manifestsSpec.GeneratedCertificates {
 		if !cert.NeedChangeFileBy.NeedChange() {
@@ -52,13 +52,13 @@ func copyCertsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) 
 		}
 	}
 
-	log.Info("Certificates copied to destination successfully")
+	log.Debug("Certificates copied to destination successfully")
 	return nil
 }
 
 func copyManifestsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting to copy manifests to destination")
+	log.Debug("Starting to copy manifests to destination")
 
 	for _, manifest := range manifestsSpec.Manifests {
 		if !manifest.NeedChangeFileBy.NeedChange() {
@@ -73,6 +73,6 @@ func copyManifestsToDest(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSp
 		}
 	}
 
-	log.Info("Manifests copied to destination successfully")
+	log.Debug("Manifests copied to destination successfully")
 	return nil
 }
