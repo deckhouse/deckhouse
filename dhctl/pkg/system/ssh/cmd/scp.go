@@ -90,7 +90,7 @@ func (s *SCP) SCP() *SCP {
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
-		// set path to the ssh binary
+		// set absolute path to the ssh binary, because scp contains predefined absolute path to ssh binary (/ssh/bin/ssh) as we set in the building process of the static ssh utils
 		"-S", fmt.Sprintf("%s/bin/ssh", os.Getenv("PWD")),
 	}
 
