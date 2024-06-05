@@ -11,11 +11,15 @@ import (
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
 type CommonHandler struct {
+	ctx                     context.Context
+	log                     *logrus.Entry
 	MasterNodesResource     *MasterNodesResource
 	SeaweedfsPodsResource   *SeaweedfsPodsResource
 	WorkerDaemonsetResource *WorkerDaemonsetResource
@@ -25,9 +29,11 @@ type CommonHandler struct {
 }
 
 func NewCommonHandler(ctx context.Context) (*CommonHandler, error) {
+	log := pkg_logs.GetLoggerFromContext(ctx)
+
 	cfg := pkg_cfg.GetConfig()
 
-	commonHandler := CommonHandler{}
+	commonHandler := CommonHandler{ctx: ctx, log: log}
 
 	commonHandler.KubernetesResourcesHandler = NewKubernetesResourcesHandler(
 		ctx,
@@ -37,16 +43,16 @@ func NewCommonHandler(ctx context.Context) (*CommonHandler, error) {
 	)
 
 	var err error
-	commonHandler.MasterNodesResource, err = NewMasterNodesResource()
+	commonHandler.MasterNodesResource, err = NewMasterNodesResource(log)
 	if err != nil {
 		return nil, err
 	}
-	commonHandler.SeaweedfsPodsResource, err = NewSeaweedfsPodsResource(pkg_cfg.SeaweedfsStaticPodLabelsSelector)
+	commonHandler.SeaweedfsPodsResource, err = NewSeaweedfsPodsResource(log, pkg_cfg.SeaweedfsStaticPodLabelsSelector)
 	if err != nil {
 		return nil, err
 	}
-	commonHandler.WorkerDaemonsetResource = NewWorkerDaemonsetResource(cfg.Manager.DaemonsetName)
-	commonHandler.WorkerEndpointResource = NewWorkerEndpointResource(cfg.Manager.ServiceName)
+	commonHandler.WorkerDaemonsetResource = NewWorkerDaemonsetResource(log, cfg.Manager.DaemonsetName)
+	commonHandler.WorkerEndpointResource = NewWorkerEndpointResource(log, cfg.Manager.ServiceName)
 
 	commonHandler.KubernetesResourcesHandler.Subscribe(commonHandler.MasterNodesResource)
 	commonHandler.KubernetesResourcesHandler.Subscribe(commonHandler.SeaweedfsPodsResource)
@@ -71,7 +77,7 @@ func (c *CommonHandler) GetMasterNodeNameList() []string {
 	}
 
 	nodes := make([]string, 0, len(data))
-	for nodeName, _ := range data {
+	for nodeName := range data {
 		nodes = append(nodes, nodeName)
 	}
 	return nodes
@@ -129,7 +135,7 @@ func (c *CommonHandler) WaitWorkerDaemonset() (*appsv1.DaemonSet, error) {
 			return dsInfo, nil
 		}
 	}
-	return nil, fmt.Errorf("Error WaitDaemonsetPods")
+	return nil, fmt.Errorf("error WaitDaemonsetPods")
 }
 
 func (c *CommonHandler) WaitWorkerEndpoints() (*corev1.Endpoints, error) {
@@ -148,7 +154,7 @@ func (c *CommonHandler) WaitWorkerEndpoints() (*corev1.Endpoints, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("Error WaitWorkerEndpoints")
+	return nil, fmt.Errorf("error WaitWorkerEndpoints")
 }
 
 func (c *CommonHandler) WaitAllWorkers() (int, error) {
@@ -165,10 +171,10 @@ func (c *CommonHandler) WaitAllWorkers() (int, error) {
 	numberOfNode := dsInfo.Status.DesiredNumberScheduled
 
 	if len(ep.Subsets) == 0 {
-		return 0, fmt.Errorf("Error len(ep.Subsets) == 0")
+		return 0, fmt.Errorf("error len(ep.Subsets) == 0")
 	}
 	if len(ep.Subsets[0].Addresses) != int(numberOfNode) {
-		return 0, fmt.Errorf("Error len(ep.Subsets[0].Addresses) != numberOfNode")
+		return 0, fmt.Errorf("error len(ep.Subsets[0].Addresses) != numberOfNode")
 	}
 
 	return int(numberOfNode), nil

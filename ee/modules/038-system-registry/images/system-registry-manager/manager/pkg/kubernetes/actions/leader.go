@@ -8,7 +8,7 @@ package actions
 import (
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
@@ -64,7 +64,7 @@ func StartLeaderElection(
 	return nil
 }
 
-func NewLeaderElectionRecorder(logEntry *log.Entry) record.EventRecorder {
+func NewLeaderElectionRecorder(logEntry *logrus.Entry) record.EventRecorder {
 	broadcaster := record.NewBroadcaster()
 	broadcaster.StartLogging(logEntry.Infof)
 	return broadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: componentName})

@@ -7,7 +7,7 @@ package worker
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	common "system-registry-manager/internal/common"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -28,7 +28,7 @@ type Worker struct {
 type WorkerData struct {
 	commonCfg        *common.RuntimeConfig
 	rootCtx          context.Context
-	log              *log.Entry
+	log              *logrus.Entry
 	singleRequestCfg *worker_client.SingleRequestConfig
 }
 type WorkerServer struct {
