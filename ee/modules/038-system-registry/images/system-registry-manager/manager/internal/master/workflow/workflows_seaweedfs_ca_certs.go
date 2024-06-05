@@ -29,10 +29,15 @@ func NewSeaweedfsCaCertsWorkflow(ctx context.Context, nodeManagers []NodeManager
 }
 
 func (w *SeaweedfsCertsWorkflow) Start() error {
+	w.log.Info("Starting SeaweedfsCertsWorkflow")
+
+	w.log.Info("Selecting nodes that exist and need CA certificates update")
 	existAndNeedUpdateCA, _, err := SelectByRunningStatus(w.NodeManagers, CmpSelectIsExist, CmpSelectIsNeedUpdateCaCerts)
 	if err != nil {
 		return err
 	}
+
+	w.log.Infof("Found %s nodes that need CA certificates update", GetNodeNames(existAndNeedUpdateCA))
 
 	updateRequest := SeaweedfsUpdateNodeRequest{
 		UpdateCert:      true,
@@ -41,9 +46,12 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 	}
 
 	for _, node := range existAndNeedUpdateCA {
+		w.log.Infof("Updating CA certificates for node: %s", node.GetNodeName())
 		if err := node.UpdateNodeManifests(&updateRequest); err != nil {
 			return err
 		}
 	}
+
+	w.log.Info("SeaweedfsCertsWorkflow completed successfully")
 	return nil
 }
