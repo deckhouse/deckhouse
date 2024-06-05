@@ -1,5 +1,5 @@
 diff --git a/cluster-autoscaler/utils/daemonset/daemonset.go b/cluster-autoscaler/utils/daemonset/daemonset.go
-index 193ea07f6..e24692008 100644
+index 193ea07f6..b658b599a 100644
 --- a/cluster-autoscaler/utils/daemonset/daemonset.go
 +++ b/cluster-autoscaler/utils/daemonset/daemonset.go
 @@ -19,6 +19,7 @@ package daemonset
@@ -10,46 +10,31 @@ index 193ea07f6..e24692008 100644
  
  	appsv1 "k8s.io/api/apps/v1"
  	apiv1 "k8s.io/api/core/v1"
-@@ -49,6 +50,19 @@ func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets [
+@@ -46,14 +47,22 @@ func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets [
+ 	return result, nil
+ }
+ 
++func shouldEvictDsPod(pod *apiv1.Pod, evictByDefault bool) bool {
++	if strings.HasPrefix(pod.Namespace, "d8-") {
++		if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; !ok || val != "true" {
++			return false
++		}
++	}
++	if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
++		return a == "true"
++	}
++	return evictByDefault
++}
++
  // PodsToEvict returns a list of DaemonSet pods that should be evicted during scale down.
  func PodsToEvict(pods []*apiv1.Pod, evictByDefault bool) (evictable []*apiv1.Pod) {
  	for _, pod := range pods {
-+
-+		if strings.HasPrefix(pod.Namespace, "d8-") {
-+			evictionEnabled := func(pod *apiv1.Pod) bool {
-+				if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; ok && val == "true" {
-+					return true
-+				}
-+				return false
-+			}(pod)
-+			if !evictionEnabled {
-+				continue
-+			}
-+		}
-+
- 		if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
- 			if a == "true" {
- 				evictable = append(evictable, pod)
-diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
-index 02ddb7a12..6ba40eeb6 100644
---- a/cluster-autoscaler/utils/drain/drain.go
-+++ b/cluster-autoscaler/utils/drain/drain.go
-@@ -114,6 +114,18 @@ func GetPodsForDeletionOnNodeDrain(
- 		safeToEvict := hasSafeToEvictAnnotation(pod)
- 		terminal := isPodTerminal(pod)
- 
-+		if strings.HasPrefix(pod.Namespace, "d8-") {
-+			evictionEnabled := func(pod *apiv1.Pod) bool {
-+				if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; ok && val == "true" {
-+					return true
-+				}
-+				return false
-+			}(pod)
-+			if !evictionEnabled {
-+				continue
-+			}
-+		}
-+
- 		if skipNodesWithCustomControllerPods {
- 			// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
- 			replicated, isDaemonSetPod, blockingPod, err = legacyCheckForReplicatedPods(listers, pod, minReplica)
+-		if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
+-			if a == "true" {
+-				evictable = append(evictable, pod)
+-			}
+-		} else if evictByDefault {
++		if shouldEvictDsPod(pod, evictByDefault) {
+ 			evictable = append(evictable, pod)
+ 		}
+ 	}
