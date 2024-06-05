@@ -56,13 +56,13 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		nodeManagers = append(nodeManagers, NewNodeManager(log, master, m.commonHandler))
 	}
 
-	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(nodeManagers, 3)
+	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(nodeManagers, len(nodeManagers))
 	err = seaweedfsCaCertsWorkflow.Start()
 	if err != nil {
 		return err
 	}
 
-	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(nodeManagers, 3)
+	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(nodeManagers, len(nodeManagers))
 	err = seaweedfsScaleWorkflow.Start()
 	if err != nil {
 		return err
