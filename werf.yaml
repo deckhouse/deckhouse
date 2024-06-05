@@ -635,7 +635,10 @@ import:
     {{- break -}}
   {{- end }}
 {{- end }}
-
+- artifact: dev-alt-artifact
+  add: /relocate
+  to: /
+  before: setup
 - artifact: ssh-static
   add: /ssh/bin
   to: /image/bin
