@@ -1,5 +1,5 @@
 ---
-title: "Сборка и публикация"
+title: "Build and publish"
 permalink: en/module-development/build/
 ---
 

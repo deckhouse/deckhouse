@@ -133,7 +133,7 @@ lang: ru
 
 Пример подключения модуля `hello-world-module` в кластере Deckhouse Kubernetes Platform.
 
-1. Создайте токен доступа в репозитории GitHub с правами для работы с Github Packages
+1. Создайте токен доступа в репозитории GitHub с правами для работы с GitHub Packages
 1. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
 
    ```shell
