@@ -67,6 +67,9 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 		}
 
 		err := log.Process("bootstrap", fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), func() error {
+			if err := sshClient.Command("mkdir", "-p", "-m", "0750", app.NodeDeckhouseDirectoryPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 0750 %s: %w", app.NodeDeckhouseDirectoryPath, err)
+			}
 			if err := sshClient.Command("mkdir", "-p", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s: %w", app.DeckhouseNodeBinPath, err)
 			}
