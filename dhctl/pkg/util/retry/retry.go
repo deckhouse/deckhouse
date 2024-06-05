@@ -108,7 +108,7 @@ func (l *Loop) Run(task func() error) error {
 		for i := 1; i <= l.attemptsQuantity; i++ {
 			// Check if process is interrupted.
 			if l.interruptable && tomb.IsInterrupted() {
-				return fmt.Errorf("loop was canceled: graceful shutdown")
+				return fmt.Errorf("Loop was canceled: graceful shutdown")
 			}
 
 			// Run task and return if everything is ok.
@@ -136,7 +136,7 @@ func (l *Loop) Run(task func() error) error {
 			}
 		}
 
-		return fmt.Errorf("timeout while %q: last error: %v", l.name, err)
+		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)

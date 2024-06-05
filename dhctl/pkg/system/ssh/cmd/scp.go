@@ -93,6 +93,9 @@ func (s *SCP) SCP() *SCP {
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
+		"-o", "ServerAliveInterval=10",
+		"-o", "ServerAliveCountMax=3",
+		"-o", "ConnectTimeout=15",
 	}
 
 	if app.IsDebug {

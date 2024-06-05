@@ -66,25 +66,33 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
-		err := log.Process("bootstrap", fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), func() error {
-			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.NodeDeckhouseDirectoryPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p -m 0755 %s: %w", app.NodeDeckhouseDirectoryPath, err)
+		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
+			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
 			}
-			if err := sshClient.Command("mkdir", "-p", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p %s: %w", app.DeckhouseNodeBinPath, err)
-			}
+
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
+		}
+
+		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
 			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
 			}
+
 			return nil
 		})
+
 		if err != nil {
 			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
 		}
 
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
-			err := log.Process("default", bootstrapScript, func() error {
+			err := retry.NewLoop(bootstrapScript, 30, 10*time.Second).Run(func() error {
 				if _, err := os.Stat(scriptPath); err != nil {
 					if os.IsNotExist(err) {
 						log.InfoF("Script %s wasn't found\n", scriptPath)
@@ -106,6 +114,7 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 				}
 				return nil
 			})
+
 			if err != nil {
 				return err
 			}
@@ -120,22 +129,31 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
-	return log.Process("bootstrap", "Execute Bashible Bundle", func() error {
-		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
-		parentDir := tmpDir + "/var/lib"
-		bundleDir := "bashible"
+var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
-		_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
-		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
+	return retry.NewLoop("Execute Bashible Bundle", 30, 10*time.Second).
+		BreakIf(func(err error) bool {
+			return errors.Is(err, ErrBashibleTimeout)
+		}).
+		Run(func() error {
+			bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
+			parentDir := tmpDir + "/var/lib"
+			bundleDir := "bashible"
+
+			_, err, isBashibleTimeout := bundleCmd.ExecuteBundle(parentDir, bundleDir)
+			if isBashibleTimeout {
+				return ErrBashibleTimeout
 			}
-			return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
-		}
-		return nil
-	})
+			if err != nil {
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
+					return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+				}
+				return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+			}
+			return nil
+		})
 }
 
 const (
@@ -325,10 +343,6 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		return err
 	}
 
-	if ok := CheckBashibleBundle(sshClient); ok {
-		return nil
-	}
-
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}
@@ -338,7 +352,13 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
-	return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+	return retry.NewSilentLoop("exec bundle", 30, 10*time.Second).Run(func() error {
+		if ok := CheckBashibleBundle(sshClient); ok {
+			return nil
+		}
+
+		return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+	})
 }
 
 const dependencyCmd = "type"
@@ -349,12 +369,19 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 			"mkdir", "cp", "join"}
 
 		for _, args := range dependencyArgs {
-			log.InfoF("Check dependency %s\n", args)
-			output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
+			err := retry.NewLoop(fmt.Sprintf("Check dependency %s", args), 30, 10*time.Second).Run(func() error {
+				output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("bashible dependency error: %s",
+						string(output),
+					)
+				}
+
+				return nil
+			})
+
 			if err != nil {
-				return fmt.Errorf("bashible dependency error: %s",
-					string(output),
-				)
+				return err
 			}
 		}
 		log.InfoLn("OK!")
@@ -370,7 +397,7 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 			return err
 		}
 
-		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
+		return retry.NewSilentLoop("Get bundle", 30, 10*time.Second).Run(func() error {
 			// run detect bundle type
 			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
