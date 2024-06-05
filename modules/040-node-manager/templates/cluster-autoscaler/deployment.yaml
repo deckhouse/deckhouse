@@ -110,7 +110,7 @@ spec:
         - --skip-nodes-with-local-storage=false
         - --min-replica-count=1
         - --expendable-pods-priority-cutoff=-10
-        - --scale-down-unneeded-time=2m
+        - --scale-down-unneeded-time=2m # TODO rollback to value from main branch before merge
         - --scale-down-unready-time=2m
         - --scale-down-delay-after-failure=2m
         - --scale-down-utilization-threshold=0.6
