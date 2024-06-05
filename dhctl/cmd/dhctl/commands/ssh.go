@@ -187,7 +187,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd := sshClient.UploadScript(ScriptName).Sudo()
 		parentDir := path.Dir(BundleDir)
 		bundleDir := path.Base(BundleDir)
-		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)
+		stdout, err, _ := cmd.ExecuteBundle(parentDir, bundleDir)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {

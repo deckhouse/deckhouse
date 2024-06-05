@@ -138,7 +138,7 @@ func (u *UploadScript) pathWithEnv(path string) string {
 	return fmt.Sprintf("%s %s", envs, path)
 }
 
-func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
+func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error, timeout bool) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
@@ -146,7 +146,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	tarCmd := exec.Command("tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
 	err = tarCmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("tar bundle: %v", err)
+		return nil, fmt.Errorf("tar bundle: %v", err), false
 	}
 
 	tomb.RegisterOnShutdown(
@@ -157,7 +157,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	// upload to node's deckhouse tmp directory
 	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
-		return nil, fmt.Errorf("upload: %v", err)
+		return nil, fmt.Errorf("upload: %v", err), false
 	}
 
 	// sudo:
@@ -175,10 +175,11 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	// Buffers to implement output handler logic
 	lastStep := ""
 	failsCounter := 0
+	isBashibleTimeout := false
 
 	processLogger := log.GetProcessLogger()
 
-	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter)
+	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
 	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).CaptureStderr(nil).Run()
 	if err != nil {
 		if lastStep != "" {
@@ -197,7 +198,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	} else {
 		processLogger.LogProcessEnd()
 	}
-	return bundleCmd.StdoutBytes(), err
+	return bundleCmd.StdoutBytes(), err, isBashibleTimeout
 }
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
@@ -207,6 +208,7 @@ func bundleOutputHandler(
 	processLogger log.ProcessLogger,
 	lastStep *string,
 	failsCounter *int,
+	isBashibleTimeout *bool,
 ) func(string) {
 	stepLogs := make([]string, 0)
 	return func(l string) {
@@ -221,6 +223,7 @@ func bundleOutputHandler(
 				log.ErrorF(strings.Join(stepLogs, "\n"))
 				*failsCounter++
 				if *failsCounter > 10 {
+					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
 						_ = cmd.cmd.Process.Kill()
