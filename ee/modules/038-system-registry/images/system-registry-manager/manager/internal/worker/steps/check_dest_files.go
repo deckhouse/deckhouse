@@ -15,7 +15,7 @@ import (
 
 func CheckDestFiles(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Starting check of destination files...")
+	log.Debug("Starting check of destination files...")
 
 	if err := checkDestManifests(ctx, manifestsSpec); err != nil {
 		log.Errorf("Failed to check destination manifest files: %v", err)
@@ -27,13 +27,13 @@ func CheckDestFiles(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) e
 		return err
 	}
 
-	log.Info("Destination files check completed successfully.")
+	log.Debug("Destination files check completed successfully.")
 	return nil
 }
 
 func checkDestManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Checking destination manifest files...")
+	log.Debug("Checking destination manifest files...")
 
 	for i, manifest := range manifestsSpec.Manifests {
 		if !pkg_files.IsPathExists(manifest.DestPath) {
@@ -53,13 +53,13 @@ func checkDestManifests(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpe
 			manifestsSpec.Manifests[i].NeedChangeFileBy.NeedChangeFileByCheckSum = &NeedChangeFileByCheckSum
 		}
 	}
-	log.Info("Completed checking destination manifest files.")
+	log.Debug("Completed checking destination manifest files.")
 	return nil
 }
 
 func checkDestSerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	log.Info("Checking destination certificate files...")
+	log.Debug("Checking destination certificate files...")
 
 	for i, cert := range manifestsSpec.GeneratedCertificates {
 		if !pkg_files.IsPathExists(cert.Cert.DestPath) {
@@ -76,6 +76,6 @@ func checkDestSerts(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec) e
 
 		// Additional checks can be added here.
 	}
-	log.Info("Completed checking destination certificate files.")
+	log.Debug("Completed checking destination certificate files.")
 	return nil
 }

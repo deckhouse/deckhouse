@@ -133,7 +133,7 @@ func updateRegistryHandlerFunc(workerData *WorkerData, _ *worker_client.CheckReg
 		return err
 	}
 	if !manifestsSpec.NeedChange() {
-		log.Info("No changes")
+		log.Debug("No changes")
 		return nil
 	}
 	if err := steps.UpdateManifests(workerData.rootCtx, manifestsSpec); err != nil {
