@@ -1,8 +1,8 @@
 diff --git a/cluster-autoscaler/utils/daemonset/daemonset.go b/cluster-autoscaler/utils/daemonset/daemonset.go
-index 193ea07f6..b658b599a 100644
+index 193ea07f6..9537ddd81 100644
 --- a/cluster-autoscaler/utils/daemonset/daemonset.go
 +++ b/cluster-autoscaler/utils/daemonset/daemonset.go
-@@ -19,6 +19,7 @@ package daemonset
+@@ -19,9 +19,11 @@ package daemonset
  import (
  	"fmt"
  	"math/rand"
@@ -10,20 +10,38 @@ index 193ea07f6..b658b599a 100644
  
  	appsv1 "k8s.io/api/apps/v1"
  	apiv1 "k8s.io/api/core/v1"
-@@ -46,14 +47,22 @@ func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets [
++	"k8s.io/klog/v2"
+ 	"k8s.io/kubernetes/pkg/controller/daemon"
+ 	schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
+ )
+@@ -46,14 +48,36 @@ func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets [
  	return result, nil
  }
  
 +func shouldEvictDsPod(pod *apiv1.Pod, evictByDefault bool) bool {
 +	if strings.HasPrefix(pod.Namespace, "d8-") {
-+		if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; !ok || val != "true" {
++		if val, ok := pod.Annotations[EnableDsEvictionKey]; !ok || val != "true" {
++			klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: namespace starts with 'd8-' and eviction not enabled", pod.Namespace, pod.Name)
 +			return false
 +		}
 +	}
++
 +	if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
-+		return a == "true"
++		if a == "true" {
++			klog.Infof("DaemonSet Pod %s/%s eligible for eviction: annotation %s=true", pod.Namespace, pod.Name, EnableDsEvictionKey)
++			return true
++		}
++		klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: annotation %s=false", pod.Namespace, pod.Name, EnableDsEvictionKey)
++		return false
 +	}
-+	return evictByDefault
++
++	if evictByDefault {
++		klog.Infof("DaemonSet Pod %s/%s eligible for eviction: no annotation %s but evictByDefault is true", pod.Namespace, pod.Name, EnableDsEvictionKey)
++		return true
++	}
++
++	klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: no annotation %s and evictByDefault is false", pod.Namespace, pod.Name, EnableDsEvictionKey)
++	return false
 +}
 +
  // PodsToEvict returns a list of DaemonSet pods that should be evicted during scale down.
