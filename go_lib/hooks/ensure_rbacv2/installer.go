@@ -78,17 +78,13 @@ func newInstaller(moduleName string, moduleScopes []string, client k8s.Client, p
 }
 
 func (i *installer) Run(ctx context.Context) *multierror.Error {
-	// check that module scopes exist, if they do not, ensure them
-	if errs := i.ensureScopes(ctx); errs != nil {
-		return errs
-	}
-	// if moduleName is not set, ensure only scopes
-	if i.moduleName == "" {
-		return nil
-	}
 	crds, err := i.parseCRDs(ctx)
 	if err != nil {
 		return multierror.Append(&multierror.Error{}, err)
+	}
+	// check that module scopes exist, if they do not, ensure them
+	if errs := i.ensureScopes(ctx); errs != nil {
+		return errs
 	}
 	return i.ensureRoles(ctx, i.capabilitiesClusterRoles(crds))
 }
@@ -182,18 +178,21 @@ func (i *installer) capabilitiesClusterRoles(crds []*v1.CustomResourceDefinition
 			namespacedEditRules = append(namespacedEditRules, editRule)
 		}
 	}
-	viewRules = append(viewRules, rbacv1.PolicyRule{
-		APIGroups:     []string{"deckhouse.io"},
-		Resources:     []string{"moduleconfigs"},
-		ResourceNames: []string{i.moduleName},
-		Verbs:         []string{"get", "list", "watch"},
-	})
-	editRules = append(editRules, rbacv1.PolicyRule{
-		APIGroups:     []string{"deckhouse.io"},
-		Resources:     []string{"moduleconfigs"},
-		ResourceNames: []string{i.moduleName},
-		Verbs:         []string{"create", "update", "patch", "delete"},
-	})
+	//deckhouse can manage all module configs
+	if i.moduleName != "deckhouse" {
+		viewRules = append(viewRules, rbacv1.PolicyRule{
+			APIGroups:     []string{"deckhouse.io"},
+			Resources:     []string{"moduleconfigs"},
+			ResourceNames: []string{i.moduleName},
+			Verbs:         []string{"get", "list", "watch"},
+		})
+		editRules = append(editRules, rbacv1.PolicyRule{
+			APIGroups:     []string{"deckhouse.io"},
+			Resources:     []string{"moduleconfigs"},
+			ResourceNames: []string{i.moduleName},
+			Verbs:         []string{"create", "update", "patch", "delete"},
+		})
+	}
 	var roles = []*rbacv1.ClusterRole{
 		i.capabilityClusterRoleFromRules("viewer", "manage", "view", viewRules),
 		i.capabilityClusterRoleFromRules("manager", "manage", "edit", editRules),
