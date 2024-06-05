@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -264,4 +265,5 @@ func initGlobalVars() {
 	app.InitGlobalVars(pwd)
 	terraform.InitGlobalVars(pwd)
 	manifests.InitGlobalVars(pwd)
+	template.InitGlobalVars(pwd)
 }

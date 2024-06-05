@@ -90,6 +90,8 @@ func (s *SCP) SCP() *SCP {
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
+		// set path to the ssh binary
+		"-S", fmt.Sprintf("%s/bin/ssh", os.Getenv("PWD")),
 	}
 
 	if app.IsDebug {
