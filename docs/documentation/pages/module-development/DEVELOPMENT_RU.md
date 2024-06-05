@@ -6,7 +6,7 @@ lang: ru
 
 {% raw %}
 
-При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс *ModulePullOverride*.
+При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
 Пример:
 
@@ -43,13 +43,13 @@ kubectl annotate mop <name> renew=""
 При разработке этого ресурса, указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
 
 Вместо этого, модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
-При этом, в статусе объекта *ModuleSource* этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс *ModulePullOverride*.
+При этом, в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
-После удаления *ModulePullOverride*, модуль продолжит функционировать, но если для него применена политика *ModuleUpdatePolicy*, то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
+После удаления *ModulePullOverride*, модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
 
 ### Пример
 
-1. В *ModuleSource* присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
+1. В [ModuleSource](../../cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -71,7 +71,7 @@ kubectl annotate mop <name> renew=""
      modulesCount: 2
    ```
 
-1. Создайте *ModulePullOverride* для модуля `echo`:
+1. Создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -83,56 +83,56 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
-    Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag).
+   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag).
 
 1. При каждом обновлении статус этого ресурса будет меняться:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModulePullOverride
-    metadata:
-      name: echo
-    spec:
-      imageTag: main-patch-03354
-      scanInterval: 15s
-      source: test
-    status:
-      imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
-      message: ""
-      updatedAt: "2023-12-07T08:41:21Z"
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModulePullOverride
+   metadata:
+     name: echo
+   spec:
+     imageTag: main-patch-03354
+     scanInterval: 15s
+     source: test
+   status:
+     imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
+     message: ""
+     updatedAt: "2023-12-07T08:41:21Z"
+   ```
 
-    где:
-    - **imageDigest** – уникальный идентификатор образа контейнера, который был загружен.
-    - **lastUpdated** – время последней загрузки образа.
+   где:
+   - **imageDigest** – уникальный идентификатор образа контейнера, который был загружен.
+   - **lastUpdated** – время последней загрузки образа.
 
 1. При этом *ModuleSource* приобретет вид:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleSource
-    metadata:
-      name: test
-    spec:
-      registry:
-        ca: ""
-        dockerCfg: someBase64String==
-        repo: registry.example.com/deckhouse/modules
-        scheme: HTTPS
-    status:
-      modules:
-      - name: echo
-        overridden: true
-      - name: hello-world
-        policy: test-alpha
-      modulesCount: 2
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: test
+   spec:
+     registry:
+       ca: ""
+       dockerCfg: someBase64String==
+       repo: registry.example.com/deckhouse/modules
+       scheme: HTTPS
+   status:
+     modules:
+     - name: echo
+       overridden: true
+     - name: hello-world
+       policy: test-alpha
+     modulesCount: 2
+   ```
 
 {% endraw %}
 
 ## Артефакты модуля в container registry
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../cr.html#modulesource).
+После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../../cr.html#modulesource).
 
 Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
 
@@ -165,7 +165,7 @@ registry.example.io
 Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом в разделе [требования](module-development/#требования).  
 {% endalert %}
 
-Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь brew.
+Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь `brew`.
 
 ### Вывод списка модулей в источнике модулей
 
