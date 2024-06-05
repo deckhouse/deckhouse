@@ -19,10 +19,6 @@ function get_bundle() {
   done
 }
 
-function basic_bootstrap_{{ .bundle }} {
-  {{- tpl (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) . }}
-}
-
 set -Eeuo pipefail
 shopt -s failglob
 
@@ -58,9 +54,6 @@ export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}
 export D8_NODE_HOSTNAME=$(hostname)
 {{- end }}
-
-# Install necessary packages.
-basic_bootstrap_${BUNDLE}
 
 {{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
@@ -115,7 +108,6 @@ while [ "$patch_pending" = true ] ; do
 done
 {{- end }}
 
-# IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
 export PATH="/opt/deckhouse/bin:$PATH"
 # Get bashible script from secret
 get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh

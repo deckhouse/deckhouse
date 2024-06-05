@@ -34,6 +34,74 @@ function check_python() {
   return 1
 }
 
+bb-package-install() {
+  local PACKAGE_WITH_DIGEST
+  for PACKAGE_WITH_DIGEST in "$@"; do
+    local PACKAGE=""
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+    bb-package-fetch "${PACKAGE_WITH_DIGEST}"
+    local TMP_DIR=""
+    TMP_DIR="$(mktemp -d)"
+    tar -xf "${BB_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
+
+    # shellcheck disable=SC2164
+    pushd "${TMP_DIR}" >/dev/null
+    ./install
+    popd >/dev/null
+    mkdir -p "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    echo "${DIGEST}" > "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
+    cp "${TMP_DIR}/install" "${TMP_DIR}/uninstall" "${BB_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+  done
+}
+
+bb-package-fetch() {
+  mkdir -p "${BB_FETCHED_PACKAGES_STORE}"
+  declare -A PACKAGES_MAP
+  local PACKAGE_WITH_DIGEST
+  for PACKAGE_WITH_DIGEST in "$@"; do
+    local PACKAGE=""
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
+    PACKAGES_MAP[$DIGEST]="${PACKAGE}"
+  done
+  bb-package-fetch-blobs PACKAGES_MAP
+}
+
+bb-package-fetch-blobs() {
+  local PACKAGE_DIGEST
+  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    mkdir -p "${PACKAGE_DIR}"
+    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+  done
+}
+
+bb-package-fetch-blob() {
+  check_python
+
+  cat - <<EOF | $python_binary
+import random
+import ssl
+try:
+    from urllib.request import urlopen, Request
+except ImportError as e:
+    from urllib2 import urlopen, Request
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+endpoint = random.choice(endpoints)
+ssl._create_default_https_context = ssl._create_unverified_context
+url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
+request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
+response = urlopen(request, timeout=300)
+with open('$2', 'wb') as f:
+    f.write(response.read())
+EOF
+}
+
 function load_phase2_script() {
   cat - <<EOF
 import sys
@@ -55,7 +123,6 @@ EOF
 
 
 function get_phase2() {
-  check_python
   bootstrap_bundle_name="${BUNDLE}.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   while true; do
@@ -70,23 +137,47 @@ function get_phase2() {
   done
 }
 
+function prepary_base_d8_binaries() {
+  export PATH="/opt/deckhouse/bin:$PATH"
+  export LANG=C
+  export REPOSITORY=""
+  export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
+  export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
+{{- with $context.Values.global.clusterConfiguration }}
+{{- if .proxy }}
+    {{- if .proxy.httpProxy }}
+  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+  export http_proxy=${HTTP_PROXY}
+    {{- end }}
+    {{- if .proxy.httpsProxy }}
+  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+  export https_proxy=${HTTPS_PROXY}
+    {{- end }}
+    {{- if .proxy.noProxy }}
+  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+  export no_proxy=${NO_PROXY}
+    {{- end }}
+  {{- else }}
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
+  {{- if $context.Values.nodeManager.internal.packagesProxy }}
+  export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ $context.Values.nodeManager.internal.packagesProxy.token }}"
+  {{- end }}
+{{- with $context.Values.global.modulesImages.digests.registrypackages }}
+  bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
+{{- end }}
+{{- end }}
+}
+
   {{- if not (hasKey $ng "staticInstances") }}
-function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-    {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
+function run_cloud_network_setup() {
+    {{- if $bootstrap_script_common := $context.Files.Get "candi/bashible/bootstrap-networks.sh.tpl" }}
   cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
       {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
 EOF
   chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
-    {{- else }}
-      {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
-        {{- $bundle := (dir $path | base) }}
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh <<"EOF"
-        {{ tpl ($context.Files.Get $path) $tpl_context | nindent 0 }}
-EOF
-  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
-      {{- end }}
-    {{- end }}
   {{- end }}
   {{- /*
   # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
@@ -97,13 +188,9 @@ EOF
       >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
       sleep 10
     done
-  elif [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh ]] ; then
-    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks-${BUNDLE}.sh; do
-      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-      sleep 10
-    done
   fi
 }
+  {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
@@ -116,13 +203,16 @@ function run_log_output() {
   fi
 }
  {{- end }}
-BUNDLE="$(detect_bundle)"
   {{- if not (hasKey $ng "staticInstances") }}
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
 run_cloud_network_setup
+  {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
+prepary_base_d8_binaries
+BUNDLE="$(detect_bundle)"
 get_phase2 | bash
 
   {{- /*
