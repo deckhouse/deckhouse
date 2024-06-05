@@ -621,17 +621,13 @@ import:
   add: /terraform/terraform
   to: /bin/terraform
   before: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /root/.terraformrc
-  to: /etc/terraformrc
-  before: setup
 {{- range $_, $edition := $.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $.TF $tfProvider }}
 - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
     {{- end }}
   {{- end }}
@@ -672,7 +668,6 @@ import:
 docker:
   ENV:
     EDITOR: vim
-    TF_CLI_CONFIG_FILE: /etc/terraformrc
 shell:
   setup:
   - |

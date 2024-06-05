@@ -14,10 +14,6 @@ import:
   add: /terraform/terraform
   to: /root/terraform
   before: setup
-- artifact: terraform
-  add: /root/.terraformrc
-  to: /root/.terraformrc
-  before: setup
 git:
 - add: /{{ .ModulePath }}
   to: /deckhouse
@@ -42,12 +38,3 @@ shell:
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
     - chmod 755 /terraform/terraform
-    - |
-      cat << EOD > /root/.terraformrc
-      provider_installation {
-        filesystem_mirror {
-          path    = "/usr/local/share/terraform/plugins"
-          include = ["*/*/*"]
-        }
-      }
-      EOD
