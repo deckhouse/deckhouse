@@ -75,3 +75,10 @@ func (pc *Checker) CheckSSHCredential() error {
 	}
 	return nil
 }
+
+func (pc *Checker) CheckSingleSSHHostForStatic() error {
+	if len(pc.sshClient.Settings.AvailableHosts()) > 1 {
+		return fmt.Errorf("")
+	}
+	return nil
+}
