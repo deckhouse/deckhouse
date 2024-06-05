@@ -7,7 +7,7 @@ package master
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
 	common "system-registry-manager/internal/common"
 	k8s_handler "system-registry-manager/internal/master/k8s_handler"
@@ -23,7 +23,7 @@ type Master struct {
 	k8sHandler *k8s_handler.CommonHandler
 	commonCfg  *common.RuntimeConfig
 	rootCtx    context.Context
-	log        *log.Entry
+	log        *logrus.Entry
 }
 
 func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {

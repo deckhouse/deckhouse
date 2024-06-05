@@ -8,7 +8,7 @@ package k8shandler
 import (
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -23,13 +23,14 @@ const (
 )
 
 type MasterNodesResource struct {
+	log                       *logrus.Entry
 	data                      map[string]corev1.Node
 	masterNodeLabelSelector   labels.Selector
 	controlPlaneLabelSelector labels.Selector
 	mu                        sync.Mutex
 }
 
-func NewMasterNodesResource() (*MasterNodesResource, error) {
+func NewMasterNodesResource(log *logrus.Entry) (*MasterNodesResource, error) {
 	masterNodeLabelSelector, err := labels.Parse(masterNodeLabel)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (r *MasterNodesResource) OnAdd(obj interface{}, isInInitialList bool) {
 	if node, ok := obj.(*corev1.Node); ok {
 		r.data[node.Name] = *node
 	} else {
-		log.Error("Pars node error")
+		r.log.Error("Pars node error")
 	}
 }
 func (r *MasterNodesResource) OnUpdate(oldObj, newObj interface{}) {
@@ -67,7 +68,7 @@ func (r *MasterNodesResource) OnUpdate(oldObj, newObj interface{}) {
 	if node, ok := newObj.(*corev1.Node); ok {
 		r.data[node.Name] = *node
 	} else {
-		log.Error("Pars node error")
+		r.log.Error("Pars node error")
 	}
 }
 func (r *MasterNodesResource) OnDelete(obj interface{}) {
@@ -76,7 +77,7 @@ func (r *MasterNodesResource) OnDelete(obj interface{}) {
 	if node, ok := obj.(*corev1.Node); ok {
 		delete(r.data, node.Name)
 	} else {
-		log.Error("Pars node error")
+		r.log.Error("Pars node error")
 	}
 }
 
