@@ -242,8 +242,8 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 				continue
 			}
 			rtName := iprule.Actions.Lookup.RoutingTableName
-			if _, ok := allRTs[rtName]; ok {
-				irsi.IPRules[i].Actions.Lookup.IPRoutingTableID = allRTs[rtName]
+			if rtID, ok := allRTs[rtName]; ok {
+				irsi.IPRules[i].Actions.Lookup.IPRoutingTableID = rtID
 			} else {
 				errr := fmt.Sprintf("can't get RoutingTableID in IPRuleSet %v for rule %v", irsi.Name, irsi.IPRules)
 				input.LogEntry.Warnf(errr)
@@ -368,5 +368,3 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 
 	return nil
 }
-
-// service functions

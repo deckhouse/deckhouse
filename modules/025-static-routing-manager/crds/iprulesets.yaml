@@ -65,7 +65,7 @@ spec:
                       description: |
                         The priority of the rule (the order of application depends on it).
                         When choosing a number, it is worth considering several nuances:
-                        - All rules are sorted in order of priority (from lesser to greater) until a match is found.
+                        - All rules are sorted by node's linux network subsystem in order of priority (from lesser to greater) until a match is found.
                         - If the packet falls under some rule, and the corresponding action has been successfully performed, then the search for rules termitated.
                         - The default rule for searching the `main` routing table is 32766. In this case, if you specify a higher value, the rule will never be processed.
                     selectors:

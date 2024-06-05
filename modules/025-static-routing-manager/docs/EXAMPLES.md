@@ -83,7 +83,6 @@ spec:
     priority: 50
   nodeSelector:
     node-role.deckhouse.io: load-balancer
-
 ```
 
 According to this resource, an ip rule will be created on the nodes falling under `nodeSelector`:
@@ -96,5 +95,4 @@ $ ip rule list
 50: from 192.168.222.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 50: from 192.168.111.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 ...
-
 ```
