@@ -269,7 +269,7 @@ artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-  - /binary_replace.sh -i "/usr/bin/ssh /usr/bin/ssh-agent /usr/bin/ssh-add /usr/bin/scp /usr/bin/envsubst" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
@@ -670,10 +670,6 @@ import:
   - etc/bashrc.d/bash_completion.sh
   - usr/share/bash-completion
   - usr/bin/vim-console
-- artifact: dev-alt-artifact
-  add: /relocate
-  to: /
-  before: setup
 docker:
   ENV:
     EDITOR: vim

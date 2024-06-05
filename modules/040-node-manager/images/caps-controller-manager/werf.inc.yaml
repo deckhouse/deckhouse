@@ -8,12 +8,12 @@ import:
   add: /caps-controller-manager
   to: /caps-controller-manager
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
+- artifact: ssh-static
+  add: /ssh/bin
+  to: /bin
   before: setup
   includePaths:
-    - '**/*'
+    - ssh
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
@@ -45,10 +45,3 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go
     - chown 64535:64535 /caps-controller-manager
     - chmod 0700 /caps-controller-manager
----
-{{- $csiBinaries := "/usr/bin/ssh /lib64/libnss_*" }}
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_DEV }}
-shell:
-  setup:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
