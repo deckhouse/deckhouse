@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -262,4 +263,5 @@ func initGlobalVars() {
 	commands.InitGlobalVars(pwd)
 	app.InitGlobalVars(pwd)
 	terraform.InitGlobalVars(pwd)
+	manifests.InitGlobalVars(pwd)
 }
