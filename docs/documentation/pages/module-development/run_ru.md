@@ -10,7 +10,7 @@ lang: ru
 
 - [Определить источник модулей](#источник-модулей) (ресурс [ModuleSource](../../cr.html#modulesource)).
 - _(не обязательно)_ Определить [политику обновления модуля](#политика-обновления-модуля) (ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy)).
-- [Включить модуль в кластере]() (ресурс [ModuleConfig](../../cr.html#moduleconfig)).
+- [Включить модуль в кластере](#включение-модуля-в-кластере) (ресурс [ModuleConfig](../../cr.html#moduleconfig)).
 
 ## Источник модулей
 
@@ -123,7 +123,7 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
    Проверьте `UPDATE POLICY` для релизов модуля.
 
-2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или *labelSelector*, используемый политикой, больше не соответствует вашему модулю):
+2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или _labelSelector_, используемый политикой, больше не соответствует вашему модулю):
 
    ```shell
    kubectl delete mup <POLICY_NAME>
@@ -131,9 +131,9 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 3. Создайте новый [ресурс ModuleSource](#источник-модулей).
 
-4. Создайте новый [ресурс ModuleUpdatePolicy](#политика-обновления-модуля) с указанием правильных меток (source) для нового *ModuleSource*.
+4. Создайте новый [ресурс ModuleUpdatePolicy](#политика-обновления-модуля) с указанием правильных меток (source) для нового _ModuleSource_.
 
-5. Проверьте, что новые *ModuleRelease* для модуля создаются из нового *ModuleSource* в соответствии с политикой обновления.
+5. Проверьте, что новые _ModuleRelease_ для модуля создаются из нового _ModuleSource_ в соответствии с политикой обновления.
 
    ```shell
    kubectl get mr
@@ -182,7 +182,7 @@ spec:
 
 ### Примеры moduleReleaseSelector
 
-- Применить политику ко всем модулям *ModuleSource* `deckhouse`:
+- Применить политику ко всем модулям _ModuleSource_ `deckhouse`:
 
   ```yaml
   moduleReleaseSelector:
@@ -191,7 +191,7 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику к модулю `deckhouse-admin` независимо от *ModuleSource*:
+- Применить политику к модулю `deckhouse-admin` независимо от _ModuleSource_:
 
   ```yaml
   moduleReleaseSelector:
@@ -200,7 +200,7 @@ spec:
         module: deckhouse-admin
   ```
 
-- Применить политику к модулю `deckhouse-admin` из *ModuleSource* `deckhouse`:
+- Применить политику к модулю `deckhouse-admin` из _ModuleSource_ `deckhouse`:
 
   ```yaml
   moduleReleaseSelector:
@@ -210,7 +210,7 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в *ModuleSource* `deckhouse`:
+- Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в _ModuleSource_ `deckhouse`:
 
   ```yaml
   moduleReleaseSelector:
@@ -225,7 +225,7 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику ко всем модулям *ModuleSource* `deckhouse`, кроме `deckhouse-admin`:
+- Применить политику ко всем модулям _ModuleSource_ `deckhouse`, кроме `deckhouse-admin`:
 
   ```yaml
   moduleReleaseSelector:
@@ -247,7 +247,7 @@ spec:
 kubectl get modules
 ```
 
-Модуль должен быть в списке. 
+Модуль должен быть в списке.
 
 Пример вывода:
 

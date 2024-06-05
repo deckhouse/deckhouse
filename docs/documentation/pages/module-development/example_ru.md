@@ -108,9 +108,9 @@ lang: ru
 1. Убедитесь, что сборка модуля выполнилась успешно.
 
    Перейдите в раздел *Actions* репозитория модуля и слева, в списке workflow, выберите *Build*. Workflow, запущенный после того, как вы выполнили команду `git push` на предыдущем шаге, должен выполниться успешно.
-     
+
    Пример:
-     
+
    ![Пример workflow сборки модуля](../../images/module-development/build.png)
 
 ## Публикация модуля на канале обновлений
@@ -121,7 +121,7 @@ lang: ru
 
 1. Перейдите в раздел *Actions* репозитория модуля и слева, в списке workflow, выберите *Deploy*.
 
-1. В правой части страницы нажмите на выпадающий список *Run workflow* и выберите `alpha`. Укажите тэг `v0.0.1` в поле ввода тэга. Нажмите кнопку *Run workflow*. 
+1. В правой части страницы нажмите на выпадающий список *Run workflow* и выберите `alpha`. Укажите тэг `v0.0.1` в поле ввода тэга. Нажмите кнопку *Run workflow*.
 
    ![Пример запуска workflow публикации модуля](../../images/module-development/deploy.png)
 
@@ -134,7 +134,7 @@ lang: ru
 Пример подключения модуля `hello-world-module` в кластере Deckhouse Kubernetes Platform.
 
 1. Создайте токен доступа в репозитории GitHub с правами для работы с Github Packages
-2. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
+1. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
 
    ```shell
    base64 -w0 <<EOF
@@ -228,7 +228,7 @@ lang: ru
    kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
    ```
 
-   Через некоторое время объекты модуля появятся в кластере. 
+   Через некоторое время объекты модуля появятся в кластере.
 
    Если при запуске модуля возникли ошибки, посмотрите журнал DKP:
 
@@ -237,7 +237,9 @@ lang: ru
    ```
 
    Или проверьте состояние очереди DKP:
+
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
    ```
+
 {% endraw %}
