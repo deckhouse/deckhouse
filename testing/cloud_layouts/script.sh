@@ -144,7 +144,7 @@ function abort_bootstrap() {
   return $?
 }
 
-function destroy_cluster() {
+function destroy_cluster()
   >&2 echo "Run destroy_cluster"
   dhctl --do-not-write-debug-log-file destroy \
     --ssh-agent-private-keys "$ssh_private_key_path" \
@@ -354,6 +354,8 @@ function prepare_environment() {
 
   >&2 echo "Use configuration in directory '$cwd':"
   >&2 ls -la $cwd
+  # switch to the / folder to dhctl proper work
+  cd /
 }
 
 function write_deckhouse_logs() {
@@ -409,10 +411,8 @@ function run-test() {
 
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
-  pushd "$cwd"
-  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-  popd
 
   if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
