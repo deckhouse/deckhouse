@@ -35,7 +35,7 @@ shell:
   - mkdir -p /src
   - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
   - cd /src
-  - find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
+  - find /patches/{{ $version }} -name '*.patch' | sort | xargs git apply --verbose
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $value.ccm.vcd }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
   {{- end }}
 {{- end }}

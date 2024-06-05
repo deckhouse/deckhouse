@@ -39,7 +39,7 @@ shell:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.ccm.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
+  - find /patches/{{ $version }} -name '*.patch' | sort | xargs git apply --verbose
   - make VERSION={{ $value.ccm.openstack }} GIT_VERSION={{ $value.ccm.openstack }} openstack-cloud-controller-manager
   {{- if semverCompare "<1.27" $version }}
   - mv /src/openstack-cloud-controller-manager-amd64 /src/openstack-cloud-controller-manager
