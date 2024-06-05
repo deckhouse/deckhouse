@@ -7,7 +7,7 @@ package k8shandler
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,13 +17,15 @@ import (
 )
 
 type WorkerDaemonsetResource struct {
+	log           *logrus.Entry
 	data          *appsv1.DaemonSet
 	daemonsetName string
 	mu            sync.Mutex
 }
 
-func NewWorkerDaemonsetResource(daemonsetName string) *WorkerDaemonsetResource {
+func NewWorkerDaemonsetResource(log *logrus.Entry, daemonsetName string) *WorkerDaemonsetResource {
 	return &WorkerDaemonsetResource{
+		log:           log,
 		daemonsetName: daemonsetName,
 	}
 }
@@ -41,7 +43,7 @@ func (r *WorkerDaemonsetResource) OnAdd(obj interface{}, isInInitialList bool) {
 	if daemonset, ok := obj.(*appsv1.DaemonSet); ok {
 		r.data = daemonset
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars daemonSet error")
 	}
 }
 func (r *WorkerDaemonsetResource) OnUpdate(oldObj, newObj interface{}) {
@@ -50,7 +52,7 @@ func (r *WorkerDaemonsetResource) OnUpdate(oldObj, newObj interface{}) {
 	if daemonset, ok := newObj.(*appsv1.DaemonSet); ok {
 		r.data = daemonset
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars daemonSet error")
 	}
 }
 func (r *WorkerDaemonsetResource) OnDelete(obj interface{}) {
@@ -59,7 +61,7 @@ func (r *WorkerDaemonsetResource) OnDelete(obj interface{}) {
 	if _, ok := obj.(*appsv1.DaemonSet); ok {
 		r.data = nil
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars daemonSet error")
 	}
 }
 
@@ -78,13 +80,15 @@ func (r *WorkerDaemonsetResource) GetData() *appsv1.DaemonSet {
 }
 
 type WorkerEndpointResource struct {
+	log          *logrus.Entry
 	data         *corev1.Endpoints
 	endpointName string
 	mu           sync.Mutex
 }
 
-func NewWorkerEndpointResource(endpointName string) *WorkerEndpointResource {
+func NewWorkerEndpointResource(log *logrus.Entry, endpointName string) *WorkerEndpointResource {
 	return &WorkerEndpointResource{
+		log:          log,
 		endpointName: endpointName,
 	}
 }
@@ -102,7 +106,7 @@ func (r *WorkerEndpointResource) OnAdd(obj interface{}, isInInitialList bool) {
 	if endpoints, ok := obj.(*corev1.Endpoints); ok {
 		r.data = endpoints
 	} else {
-		log.Error("Pars endpoints error")
+		r.log.Error("Pars endpoints error")
 	}
 }
 func (r *WorkerEndpointResource) OnUpdate(oldObj, newObj interface{}) {
@@ -111,7 +115,7 @@ func (r *WorkerEndpointResource) OnUpdate(oldObj, newObj interface{}) {
 	if endpoints, ok := newObj.(*corev1.Endpoints); ok {
 		r.data = endpoints
 	} else {
-		log.Error("Pars endpoints error")
+		r.log.Error("Pars endpoints error")
 	}
 }
 func (r *WorkerEndpointResource) OnDelete(obj interface{}) {
@@ -120,15 +124,15 @@ func (r *WorkerEndpointResource) OnDelete(obj interface{}) {
 	if _, ok := obj.(*corev1.Endpoints); ok {
 		r.data = nil
 	} else {
-		log.Error("Pars endpoints error")
+		r.log.Error("Pars endpoints error")
 	}
 }
 
 func (r *WorkerEndpointResource) Update(clientSet *kubernetes.Clientset, namespace string) {
-	log.Info("Update WorkerEndpointResource")
+	r.log.Info("Update WorkerEndpointResource")
 	data, err := clientSet.CoreV1().Endpoints(namespace).Get(context.TODO(), r.endpointName, metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("error getting Endpoint: %s", err)
+		r.log.Errorf("error getting Endpoint: %s", err)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()

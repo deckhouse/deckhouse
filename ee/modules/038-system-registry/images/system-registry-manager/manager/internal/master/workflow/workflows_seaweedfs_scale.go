@@ -6,17 +6,25 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package workflow
 
 import (
+	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	pkg_logs "system-registry-manager/pkg/logs"
 	pkg_utils "system-registry-manager/pkg/utils"
 )
 
 type SeaweedfsScaleWorkflow struct {
+	log               *logrus.Entry
+	ctx               context.Context
 	ExpectedNodeCount int
 	NodeManagers      []NodeManager
 }
 
-func NewSeaweedfsScaleWorkflow(nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
+func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
+	log := pkg_logs.GetLoggerFromContext(ctx)
 	return &SeaweedfsScaleWorkflow{
+		log:               log,
+		ctx:               ctx,
 		ExpectedNodeCount: expectedNodeCount,
 		NodeManagers:      nodeManagers,
 	}

@@ -6,29 +6,34 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package master
 
 import (
+	"context"
 	"fmt"
+	"github.com/seaweedfs/seaweedfs/weed/pb/master_pb"
 	k8s_handler "system-registry-manager/internal/master/k8s_handler"
 	master_workflow "system-registry-manager/internal/master/workflow"
 	pkg_cfg "system-registry-manager/pkg/cfg"
+	pkg_logs "system-registry-manager/pkg/logs"
 	seaweedfs_client "system-registry-manager/pkg/seaweedfs/client"
 	worker_client "system-registry-manager/pkg/worker/client"
-
-	"github.com/seaweedfs/seaweedfs/weed/pb/master_pb"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type NodeManager struct {
-	logger     *logrus.Entry
+	ctx        context.Context
+	log        *logrus.Entry
 	nodeName   string
 	nodeInfo   *k8s_handler.MergeInfo
 	k8sHandler *k8s_handler.CommonHandler
 }
 
-func NewNodeManager(logger *logrus.Entry, nodeName string, k8sHandler *k8s_handler.CommonHandler) *NodeManager {
+func NewNodeManager(ctx context.Context, nodeName string, k8sHandler *k8s_handler.CommonHandler) *NodeManager {
+	log := pkg_logs.GetLoggerFromContext(ctx)
+
 	nodeManager := &NodeManager{
-		logger:     logger,
+		ctx:        ctx,
+		log:        log,
 		nodeName:   nodeName,
 		k8sHandler: k8sHandler,
 	}
@@ -201,7 +206,7 @@ func (m *NodeManager) makeRequestToWorker(request func(client *worker_client.Cli
 		return err
 	}
 
-	client := worker_client.NewClient(m.logger, workerIp, pkg_cfg.GetConfig().Manager.WorkerPort)
+	client := worker_client.NewClient(m.log, workerIp, pkg_cfg.GetConfig().Manager.WorkerPort)
 	return request(client)
 }
 

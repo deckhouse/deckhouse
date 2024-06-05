@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package k8shandler
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,17 +15,19 @@ import (
 )
 
 type SeaweedfsPodsResource struct {
+	log           *logrus.Entry
 	data          map[string]corev1.Pod
 	labelSelector labels.Selector
 	mu            sync.Mutex
 }
 
-func NewSeaweedfsPodsResource(labelSelector []string) (*SeaweedfsPodsResource, error) {
+func NewSeaweedfsPodsResource(log *logrus.Entry, labelSelector []string) (*SeaweedfsPodsResource, error) {
 	selector, err := labels.Parse(strings.Join(labelSelector, ","))
 	if err != nil {
 		return nil, err
 	}
 	return &SeaweedfsPodsResource{
+		log:           log,
 		data:          make(map[string]corev1.Pod),
 		labelSelector: selector,
 	}, nil
@@ -44,7 +46,7 @@ func (r *SeaweedfsPodsResource) OnAdd(obj interface{}, isInInitialList bool) {
 	if pod, ok := obj.(*corev1.Pod); ok {
 		r.data[pod.Name] = *pod
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars pod error")
 	}
 }
 func (r *SeaweedfsPodsResource) OnUpdate(oldObj, newObj interface{}) {
@@ -53,7 +55,7 @@ func (r *SeaweedfsPodsResource) OnUpdate(oldObj, newObj interface{}) {
 	if pod, ok := newObj.(*corev1.Pod); ok {
 		r.data[pod.Name] = *pod
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars pod error")
 	}
 }
 func (r *SeaweedfsPodsResource) OnDelete(obj interface{}) {
@@ -62,7 +64,7 @@ func (r *SeaweedfsPodsResource) OnDelete(obj interface{}) {
 	if pod, ok := obj.(*corev1.Pod); ok {
 		delete(r.data, pod.Name)
 	} else {
-		log.Error("Pars pod error")
+		r.log.Error("Pars pod error")
 	}
 }
 

@@ -38,7 +38,7 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 }
 
 func masterWorkflow(ctx context.Context, m *Master) error {
-	log := pkg_logs.GetLoggerFromContext(ctx)
+	// log := pkg_logs.GetLoggerFromContext(ctx)
 
 	workerCount, err := m.k8sHandler.WaitAllWorkers()
 	if err != nil {
@@ -53,16 +53,16 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 	nodeManagers := make([]workflow.NodeManager, 0, len(masters))
 
 	for _, master := range masters {
-		nodeManagers = append(nodeManagers, NewNodeManager(log, master, m.k8sHandler))
+		nodeManagers = append(nodeManagers, NewNodeManager(ctx, master, m.k8sHandler))
 	}
 
-	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(nodeManagers, len(nodeManagers))
+	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(ctx, nodeManagers, len(nodeManagers))
 	err = seaweedfsCaCertsWorkflow.Start()
 	if err != nil {
 		return err
 	}
 
-	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(nodeManagers, len(nodeManagers))
+	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(ctx, nodeManagers, len(nodeManagers))
 	err = seaweedfsScaleWorkflow.Start()
 	if err != nil {
 		return err
