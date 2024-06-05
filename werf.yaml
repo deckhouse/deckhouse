@@ -636,6 +636,15 @@ import:
   {{- end }}
 {{- end }}
 
+- artifact: ssh-static
+  add: /ssh/bin
+  to: /image/bin
+  before: setup
+  includePaths:
+  - ssh
+  - ssh-add
+  - ssh-agent
+  - scp
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json
