@@ -29,8 +29,8 @@ import (
 )
 
 var (
-	DeckhouseDir           = "/deckhouse"
-	kubeadmTemplateOpenAPI = DeckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
+	deckhouseDir           = "/deckhouse"
+	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 )
 
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -212,4 +212,9 @@ func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd 
 	})
 
 	return parseCmd
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 }

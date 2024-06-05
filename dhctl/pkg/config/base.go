@@ -33,17 +33,15 @@ import (
 )
 
 var (
-	DeckhouseDir      = "/deckhouse"
-	candiDir          = DeckhouseDir + "/candi"
-	modulesDir        = DeckhouseDir + "/modules"
-	globalHooksModule = DeckhouseDir + "/global-hooks"
-	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
-	DefaultKubernetesVersion = "1.27"
-)
-
-var (
+	deckhouseDir      = "/deckhouse"
+	candiDir          = deckhouseDir + "/candi"
+	modulesDir        = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap        = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
+
+	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
+	DefaultKubernetesVersion = "1.27"
 )
 
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
@@ -304,4 +302,13 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	candiDir = deckhouseDir + "/candi"
+	modulesDir = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
 }

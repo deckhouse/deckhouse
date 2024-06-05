@@ -36,9 +36,9 @@ const (
 )
 
 var (
-	DeckhouseDir             = "/deckhouse"
-	VersionFile              = DeckhouseDir + "/version"
-	DeckhouseImageDigestFile = DeckhouseDir + "/image_digest"
+	deckhouseDir             = "/deckhouse"
+	VersionFile              = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -111,4 +111,10 @@ func DefineSanityFlags(cmd *kingpin.CmdClause) {
 
 func configEnvName(name string) string {
 	return "DHCTL_CLI_" + name
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	VersionFile = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 }

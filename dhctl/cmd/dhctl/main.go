@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -38,22 +39,7 @@ import (
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
 
-	// get current path
-	pwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	// set path to ssh and terraform binaries
-	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
-		panic(err)
-	}
-
-	// set relative path to config and template files
-	config.DeckhouseDir = pwd + config.DeckhouseDir
-	fmt.Println(config.DeckhouseDir)
-	commands.DeckhouseDir = config.DeckhouseDir
-	app.DeckhouseDir = config.DeckhouseDir
+	initGlobalVars()
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
@@ -257,4 +243,23 @@ func restoreTerminal() func() {
 	}
 
 	return func() { _ = terminal.Restore(fd, state) }
+}
+
+func initGlobalVars() {
+	// get current path
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// set path to ssh and terraform binaries
+	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+		panic(err)
+	}
+
+	// set relative path to config and template files
+	config.InitGlobalVars(pwd)
+	commands.InitGlobalVars(pwd)
+	app.InitGlobalVars(pwd)
+	terraform.InitGlobalVars(pwd)
 }
