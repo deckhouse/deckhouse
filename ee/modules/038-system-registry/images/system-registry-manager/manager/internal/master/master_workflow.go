@@ -19,8 +19,8 @@ const (
 
 func startMasterWorkflow(ctx context.Context, m *Master) {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	m.commonHandler.Start()
-	defer m.commonHandler.Stop()
+	m.k8sHandler.Start()
+	defer m.k8sHandler.Stop()
 
 	for {
 		select {
@@ -40,12 +40,12 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 func masterWorkflow(ctx context.Context, m *Master) error {
 	log := pkg_logs.GetLoggerFromContext(ctx)
 
-	workerCount, err := m.commonHandler.WaitAllWorkers()
+	workerCount, err := m.k8sHandler.WaitAllWorkers()
 	if err != nil {
 		return err
 	}
 
-	masters := m.commonHandler.GetMasterNodeNameList()
+	masters := m.k8sHandler.GetMasterNodeNameList()
 	if len(masters) != workerCount {
 		return fmt.Errorf("len(masters) != workerCount")
 	}
@@ -53,7 +53,7 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 	nodeManagers := make([]workflow.NodeManager, 0, len(masters))
 
 	for _, master := range masters {
-		nodeManagers = append(nodeManagers, NewNodeManager(log, master, m.commonHandler))
+		nodeManagers = append(nodeManagers, NewNodeManager(log, master, m.k8sHandler))
 	}
 
 	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(nodeManagers, len(nodeManagers))

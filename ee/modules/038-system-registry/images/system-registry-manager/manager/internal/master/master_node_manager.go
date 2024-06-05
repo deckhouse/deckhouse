@@ -7,12 +7,11 @@ package master
 
 import (
 	"fmt"
-	"system-registry-manager/internal/master/handler"
+	k8s_handler "system-registry-manager/internal/master/k8s_handler"
 	master_workflow "system-registry-manager/internal/master/workflow"
-	"system-registry-manager/pkg/api"
-	pkg_api "system-registry-manager/pkg/api"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	seaweedfs_client "system-registry-manager/pkg/seaweedfs/client"
+	worker_client "system-registry-manager/pkg/worker/client"
 
 	"github.com/seaweedfs/seaweedfs/weed/pb/master_pb"
 
@@ -21,17 +20,17 @@ import (
 )
 
 type NodeManager struct {
-	logger        *logrus.Entry
-	nodeName      string
-	nodeInfo      *handler.MergeInfo
-	commonHandler *handler.CommonHandler
+	logger     *logrus.Entry
+	nodeName   string
+	nodeInfo   *k8s_handler.MergeInfo
+	k8sHandler *k8s_handler.CommonHandler
 }
 
-func NewNodeManager(logger *logrus.Entry, nodeName string, commonHandler *handler.CommonHandler) *NodeManager {
+func NewNodeManager(logger *logrus.Entry, nodeName string, k8sHandler *k8s_handler.CommonHandler) *NodeManager {
 	nodeManager := &NodeManager{
-		logger:        logger,
-		nodeName:      nodeName,
-		commonHandler: commonHandler,
+		logger:     logger,
+		nodeName:   nodeName,
+		k8sHandler: k8sHandler,
 	}
 	nodeManager.updateData()
 	return nodeManager
@@ -75,11 +74,11 @@ func (m *NodeManager) GetNodeClusterStatus() (*master_workflow.SeaweedfsNodeClus
 }
 
 func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunningStatus, error) {
-	var resp *api.CheckRegistryResponse
+	var resp *worker_client.CheckRegistryResponse
 
-	f := func(client *api.Client) error {
+	f := func(client *worker_client.Client) error {
 		var err error
-		resp, err = client.RequestCheckRegistry(&pkg_api.CheckRegistryRequest{})
+		resp, err = client.RequestCheckRegistry(&worker_client.CheckRegistryRequest{})
 		return err
 	}
 	err := m.makeRequestToWorker(f)
@@ -141,13 +140,13 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 // Runtime actions
 func (m *NodeManager) CreateNodeManifests(request *master_workflow.SeaweedfsCreateNodeRequest) error {
 	// TODO
-	createRequest := pkg_api.UpdateRegistryRequest{
+	createRequest := worker_client.UpdateRegistryRequest{
 		Seaweedfs: struct {
 			MasterPeers []string "json:\"masterPeers\""
 		}{MasterPeers: request.CreateManifestsData.MasterPeers},
 	}
 
-	f := func(client *pkg_api.Client) error {
+	f := func(client *worker_client.Client) error {
 		return client.RequestUpdateRegistry(&createRequest)
 	}
 
@@ -156,20 +155,20 @@ func (m *NodeManager) CreateNodeManifests(request *master_workflow.SeaweedfsCrea
 
 func (m *NodeManager) UpdateNodeManifests(request *master_workflow.SeaweedfsUpdateNodeRequest) error {
 	// TODO
-	createRequest := pkg_api.UpdateRegistryRequest{
+	createRequest := worker_client.UpdateRegistryRequest{
 		Seaweedfs: struct {
 			MasterPeers []string "json:\"masterPeers\""
 		}{MasterPeers: request.UpdateManifestsData.MasterPeers},
 	}
 
-	f := func(client *pkg_api.Client) error {
+	f := func(client *worker_client.Client) error {
 		return client.RequestUpdateRegistry(&createRequest)
 	}
 	return m.makeRequestToWorker(f)
 }
 
 func (m *NodeManager) DeleteNodeManifests() error {
-	f := func(client *pkg_api.Client) error {
+	f := func(client *worker_client.Client) error {
 		return client.RequestDeleteRegistry()
 	}
 
@@ -195,19 +194,19 @@ func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_clie
 	return request(client)
 }
 
-func (m *NodeManager) makeRequestToWorker(request func(client *pkg_api.Client) error) error {
+func (m *NodeManager) makeRequestToWorker(request func(client *worker_client.Client) error) error {
 	// update data and get api
 	workerIp, err := m.getWorkerIP()
 	if err != nil {
 		return err
 	}
 
-	client := pkg_api.NewClient(m.logger, workerIp, pkg_cfg.GetConfig().Manager.WorkerPort)
+	client := worker_client.NewClient(m.logger, workerIp, pkg_cfg.GetConfig().Manager.WorkerPort)
 	return request(client)
 }
 
 func (m *NodeManager) updateData() {
-	m.nodeInfo = m.commonHandler.GetAllDataByNodeName(m.nodeName)
+	m.nodeInfo = m.k8sHandler.GetAllDataByNodeName(m.nodeName)
 }
 
 func (m *NodeManager) getNodeInternalIP() (string, error) {
