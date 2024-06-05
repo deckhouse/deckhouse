@@ -641,7 +641,7 @@ import:
   before: setup
 - artifact: ssh-static
   add: /ssh/bin
-  to: /image/bin
+  to: /bin
   before: setup
   includePaths:
   - ssh
