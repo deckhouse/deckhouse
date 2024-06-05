@@ -40,16 +40,16 @@ func CmpSelectIsRunning(status *SeaweedfsNodeRunningStatus) bool {
 	return status.IsRunning
 }
 
-func SelectByRunningStatus(nodes []*SeaweedfsNodeManager, cmpFuncs ...func(status *SeaweedfsNodeRunningStatus) bool) ([]*SeaweedfsNodeManager, []*SeaweedfsNodeManager, error) {
+func SelectByRunningStatus(nodes []NodeManager, cmpFuncs ...func(status *SeaweedfsNodeRunningStatus) bool) ([]NodeManager, []NodeManager, error) {
 	if nodes == nil {
 		return nil, nil, nil
 	}
 
-	selected := []*SeaweedfsNodeManager{}
-	other := []*SeaweedfsNodeManager{}
+	selected := []NodeManager{}
+	other := []NodeManager{}
 
 	for _, node := range nodes {
-		status, err := (*node).GetNodeRunningStatus()
+		status, err := node.GetNodeRunningStatus()
 		cmpResult := true
 
 		if err != nil {
@@ -67,17 +67,17 @@ func SelectByRunningStatus(nodes []*SeaweedfsNodeManager, cmpFuncs ...func(statu
 	return selected, other, nil
 }
 
-func SortByStatus(nodes []*SeaweedfsNodeManager) ([]*SeaweedfsNodeManager, error) {
+func SortByStatus(nodes []NodeManager) ([]NodeManager, error) {
 	if nodes == nil {
 		return nil, nil
 	}
 
-	isRunning := make([]*SeaweedfsNodeManager, 0, len(nodes))
-	isExist := []*SeaweedfsNodeManager{}
-	other := []*SeaweedfsNodeManager{}
+	isRunning := make([]NodeManager, 0, len(nodes))
+	isExist := []NodeManager{}
+	other := []NodeManager{}
 
 	for _, node := range nodes {
-		nodeRunningStatus, err := (*node).GetNodeRunningStatus()
+		nodeRunningStatus, err := node.GetNodeRunningStatus()
 		if err != nil {
 			return nil, err
 		}
@@ -95,18 +95,21 @@ func SortByStatus(nodes []*SeaweedfsNodeManager) ([]*SeaweedfsNodeManager, error
 	return isRunning, nil
 }
 
-func GetMasters(nodes []*SeaweedfsNodeManager) ([]*SeaweedfsNodeManager, error) {
+func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 	visited := make(map[string]bool)
 	nodeMap := make(map[string][]string)
 
 	// Заполнение карты связей между узлами
 	for _, node := range nodes {
-		nodeInfo, err := (*node).GetNodeClusterStatus()
+		nodeInfo, err := node.GetNodeClusterStatus()
 		if err != nil {
 			return nil, err
 		}
 
-		nodeIP := (*node).GetNodeIP()
+		nodeIP, err := node.GetNodeIP()
+		if err != nil {
+			return nil, err
+		}
 
 		nodeMap[nodeIP] = nodeInfo.ClusterNodesIPs
 		for _, ip := range nodeInfo.ClusterNodesIPs {
@@ -138,9 +141,12 @@ func GetMasters(nodes []*SeaweedfsNodeManager) ([]*SeaweedfsNodeManager, error) 
 		}
 	}
 
-	masters := []*SeaweedfsNodeManager{}
+	masters := []NodeManager{}
 	for _, cluster := range clusters {
-		master := GetFirstNodeByIPs(nodes, cluster)
+		master, err := GetFirstNodeByIPs(nodes, cluster)
+		if err != nil {
+			return nil, err
+		}
 		if master != nil {
 			masters = append(masters, master)
 		}
@@ -148,22 +154,30 @@ func GetMasters(nodes []*SeaweedfsNodeManager) ([]*SeaweedfsNodeManager, error) 
 	return masters, nil
 }
 
-func GetFirstNodeByIPs(nodes []*SeaweedfsNodeManager, ips []string) *SeaweedfsNodeManager {
+func GetFirstNodeByIPs(nodes []NodeManager, ips []string) (NodeManager, error) {
 	for _, ip := range ips {
-		if node := GetNodeByIP(nodes, ip); node != nil {
-			return node
+		node, err := GetNodeByIP(nodes, ip)
+		if err != nil {
+			return nil, err
+		}
+		if node != nil {
+			return node, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-func GetNodeByIP(nodes []*SeaweedfsNodeManager, ip string) *SeaweedfsNodeManager {
+func GetNodeByIP(nodes []NodeManager, ip string) (NodeManager, error) {
 	for _, node := range nodes {
-		if (*node).GetNodeIP() == ip {
-			return node
+		nodeIp, err := node.GetNodeIP()
+		if err != nil {
+			return nil, err
+		}
+		if nodeIp == ip {
+			return node, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func GetExpectedNodeCount(expectedNodeCount int) int {

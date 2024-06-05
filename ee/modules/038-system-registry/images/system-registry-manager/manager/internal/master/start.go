@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
 	common "system-registry-manager/internal/common"
+	"system-registry-manager/internal/master/handler"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 	pkg_logs "system-registry-manager/pkg/logs"
 )
@@ -19,20 +20,25 @@ const (
 )
 
 type Master struct {
-	commonCfg *common.RuntimeConfig
-	rootCtx   context.Context
-	log       *log.Entry
+	commonHandler *handler.CommonHandler
+	commonCfg     *common.RuntimeConfig
+	rootCtx       context.Context
+	log           *log.Entry
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Master {
+func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
-	return &Master{
+	master := &Master{
 		commonCfg: rCfg,
 		rootCtx:   rootCtx,
 		log:       log,
 	}
+
+	var err error
+	master.commonHandler, err = handler.NewCommonHandler(rootCtx)
+	return master, err
 }
 
 func (m *Master) Start() {

@@ -7,10 +7,10 @@ package workflow
 
 type SeaweedfsCertsWorkflow struct {
 	ExpectedNodeCount int
-	NodeManagers      []*SeaweedfsNodeManager
+	NodeManagers      []NodeManager
 }
 
-func NewSeaweedfsCaCertsWorkflow(nodeManagers []*SeaweedfsNodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
+func NewSeaweedfsCaCertsWorkflow(nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
 	return &SeaweedfsScaleWorkflow{
 		ExpectedNodeCount: expectedNodeCount,
 		NodeManagers:      nodeManagers,
@@ -30,7 +30,7 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 	}
 
 	for _, node := range existAndNeedUpdateCA {
-		if err := (*node).UpdateNodeManifests(&updateRequest); err != nil {
+		if err := node.UpdateNodeManifests(&updateRequest); err != nil {
 			return err
 		}
 	}
