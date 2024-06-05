@@ -133,6 +133,8 @@ spec:
                             All available values can be found [at the link] (https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
                         sportRange:
                           type: object
+                          required:
+                            - start
                           description: |
                             The range of source ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
@@ -154,6 +156,8 @@ spec:
                                 The end of the range.
                         dportRange:
                           type: object
+                          required:
+                            - start
                           description: |
                             The range of destination ports.
                             If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
@@ -175,6 +179,8 @@ spec:
                                 The end of the range.
                         uidRange:
                           type: object
+                          required:
+                            - start
                           description: |
                             The range of UIDS(UserID) of applications that transmitting traffic.
                             If there is only one UID, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
