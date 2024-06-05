@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if not (eq .nodeGroup.nodeType "Static") }}
+{{- if eq .nodeGroup.nodeType "Static" }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME >/dev/null 2>&1 ; then
     bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
