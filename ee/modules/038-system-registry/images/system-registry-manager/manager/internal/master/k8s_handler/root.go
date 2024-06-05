@@ -127,7 +127,7 @@ func (c *CommonHandler) WaitWorkerDaemonset() (*appsv1.DaemonSet, error) {
 	for i := 0; i < pkg_cfg.MaxRetries; i++ {
 		defer time.Sleep(1 * time.Second)
 
-		dsInfo := c.WorkerDaemonsetResource.data
+		dsInfo := c.WorkerDaemonsetResource.GetData()
 		if dsInfo == nil {
 			continue
 		}
@@ -142,7 +142,7 @@ func (c *CommonHandler) WaitWorkerEndpoints() (*corev1.Endpoints, error) {
 	for i := 0; i < pkg_cfg.MaxRetries; i++ {
 		defer time.Sleep(1 * time.Second)
 
-		ep := c.WorkerEndpointResource.data
+		ep := c.WorkerEndpointResource.GetData()
 
 		if ep == nil {
 			continue
