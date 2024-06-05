@@ -7,5 +7,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("delivery", []string{"others"}, []string{
-	"/deckhouse/modules/502-delivery/crds/*.yaml"})
+var _ = ensure_rbacv2.RegisterHook("monitoring-application", []string{"observability"}, nil)

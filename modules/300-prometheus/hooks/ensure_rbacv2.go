@@ -18,5 +18,5 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("node-manager", []string{"infrastructure"}, []string{
-	"/deckhouse/modules/040-node-manager/crds/*.yaml", "/deckhouse/modules/040-node-manager/candi/openapi/node_group.yaml"})
+var _ = ensure_rbacv2.RegisterHook("prometheus", []string{"observability"}, []string{
+	"/deckhouse/modules/300-prometheus/crds/*.yaml", "/deckhouse/modules/010-prometheus-crd/crds/*.yaml"})

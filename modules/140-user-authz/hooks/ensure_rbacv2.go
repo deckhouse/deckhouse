@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,5 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
-var _ = ensure_rbacv2.RegisterHook("node-manager", []string{"infrastructure"}, []string{
-	"/deckhouse/modules/040-node-manager/crds/*.yaml", "/deckhouse/modules/040-node-manager/candi/openapi/node_group.yaml"})
+var _ = ensure_rbacv2.RegisterHook("user-authz", []string{"security"}, nil)
