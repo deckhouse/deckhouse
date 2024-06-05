@@ -200,7 +200,7 @@ func GetExpectedNodeCount(expectedNodeCount int) int {
 	if expectedNodeCount < 0 {
 		return 0
 	}
-	if expectedNodeCount%2 != 0 {
+	if expectedNodeCount%2 == 0 {
 		// если четное - взять (ExpectedNodeCount - 1), чтобы получилось нечетное
 		return expectedNodeCount - 1
 	}
