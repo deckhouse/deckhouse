@@ -22,6 +22,11 @@ func generateInputConfigForTest() error {
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
+		Cluster: struct {
+			Size int "mapstructure:\"size\""
+		}{
+			Size: 1,
+		},
 		Manager: struct {
 			Namespace      string "mapstructure:\"namespace\""
 			DaemonsetName  string "mapstructure:\"daemonsetName\""
