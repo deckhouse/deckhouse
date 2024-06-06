@@ -13,13 +13,14 @@ import (
 
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_files "system-registry-manager/pkg/files"
+	pkg_k8s_manifests "system-registry-manager/pkg/kubernetes/manifests"
 	pkg_utils "system-registry-manager/pkg/utils"
 )
 
 const (
-	certsCheckSumAnnotation      = "/metadata/annotations/certschecksum"
-	manifestsCheckSumAnnotation  = "/metadata/annotations/manifestschecksum"
-	staticPodsCheckSumAnnotation = "/metadata/annotations/staticpodschecksum"
+	certsCheckSumAnnotation      = "certschecksum"
+	manifestsCheckSumAnnotation  = "manifestschecksum"
+	staticPodsCheckSumAnnotation = "staticpodschecksum"
 	masterPeersLineContent       = "master.peers"
 )
 
@@ -69,6 +70,10 @@ func CheckStaticPodDest(ctx context.Context, staticPodBundle *StaticPodBundle, p
 	if err != nil {
 		return fmt.Errorf("error preparing destination static pod manifest for comparison: %v", err)
 	}
+	if pkg_utils.EqualYaml([]byte(preparedSourceFileContent), []byte(preparedDestFileContent)) {
+		staticPodBundle.Check.NeedUpdate = false
+		return nil
+	}
 
 	checkSumEq, err := pkg_files.CompareChecksumByFileContent(preparedSourceFileContent, preparedDestFileContent)
 	if err != nil {
@@ -112,26 +117,26 @@ func PatchStaticPodDestForRestart(ctx context.Context, filesBundle *FilesBundle,
 		}
 	}
 
-	patches := []pkg_utils.PatchOperation{}
+	annotations := map[string]string{}
 	if needChangeCerts {
-		patches = append(patches, pkg_utils.NewPatchReplace(certsCheckSumAnnotation, pkg_utils.GenerateHash()))
+		annotations[certsCheckSumAnnotation] = pkg_utils.GenerateHash()
 	}
 	if needChangeManifests {
-		patches = append(patches, pkg_utils.NewPatchReplace(manifestsCheckSumAnnotation, pkg_utils.GenerateHash()))
+		annotations[manifestsCheckSumAnnotation] = pkg_utils.GenerateHash()
 	}
 	if needChangeStaticPods {
-		patches = append(patches, pkg_utils.NewPatchReplace(staticPodsCheckSumAnnotation, pkg_utils.GenerateHash()))
+		annotations[staticPodsCheckSumAnnotation] = pkg_utils.GenerateHash()
 	}
 
-	if len(patches) != 0 {
+	if len(annotations) != 0 {
 		content, err := os.ReadFile(staticPodBundle.File.DestPath)
 		if err != nil {
 			return fmt.Errorf("error reading static pod manifest: %v", err)
 		}
 
-		newContent, err := pkg_utils.ApplyPatchForYaml(string(content), patches)
+		newContent, err := pkg_k8s_manifests.ChangePodAnnotations(content, annotations)
 		if err != nil {
-			return fmt.Errorf("error applying patches to static pod manifest: %v", err)
+			return fmt.Errorf("error changing pod annotations to static pod manifest: %v", err)
 		}
 
 		if err := pkg_files.WriteFile(staticPodBundle.File.DestPath, []byte(newContent), pkg_cfg.DefaultFileMode); err != nil {
@@ -155,16 +160,16 @@ func prepareStaticPodsBeforeCompare(content string, params *InputParams) (string
 		content = removeLineByParams(content, []string{masterPeersLineContent})
 	}
 
-	patches := []pkg_utils.PatchOperation{
-		pkg_utils.NewPatchRemove(certsCheckSumAnnotation),
-		pkg_utils.NewPatchRemove(manifestsCheckSumAnnotation),
-		pkg_utils.NewPatchRemove(staticPodsCheckSumAnnotation),
+	annotations := map[string]string{
+		certsCheckSumAnnotation:      "",
+		manifestsCheckSumAnnotation:  "",
+		staticPodsCheckSumAnnotation: "",
 	}
-	newContent, err := pkg_utils.ApplyPatchForYaml(content, patches)
+	newContent, err := pkg_k8s_manifests.ChangePodAnnotations([]byte(content), annotations)
 	if err != nil {
-		return "", fmt.Errorf("error applying patches for static pod manifest: %v", err)
+		return "", fmt.Errorf("error changing pod annotations for static pod manifest: %v", err)
 	}
-	return newContent, nil
+	return string(newContent), nil
 }
 
 // removeLineByParams removes lines from the manifest that contain any of the specified parameters.
