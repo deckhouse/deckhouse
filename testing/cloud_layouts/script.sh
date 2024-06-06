@@ -368,7 +368,6 @@ END_SCRIPT
   getDeckhouseLogsAttempts=5
   attempt=0
   for ((i=1; i<=$getDeckhouseLogsAttempts; i++)); do
-  ls -l /bin
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"; then
       return 0
     else
@@ -572,10 +571,9 @@ ENDSSH
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
-  ls -l /bin/ssh
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl --preflight-skip-all-checks --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  --config "$cwd/configuration.yaml" --config "$cwd/resources.yaml" --preflight-skip-all-checks | tee -a "$bootstrap_log" || return $?
 
   >&2 echo "==============================================================
 
