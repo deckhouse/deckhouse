@@ -53,4 +53,5 @@ message CheckStartOptions {
 message CheckResult {
   string result = 1;
   string err = 2;
+  string state = 3;
 }

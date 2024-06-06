@@ -260,14 +260,21 @@ func (s *Service) check(
 
 	result, checkErr := checker.Check(ctx)
 	resultData, marshalErr := json.Marshal(result)
-	err = errors.Join(checkErr, marshalErr)
+	state, extractStateErr := phases.ExtractDhctlState(cache.Global())
+	stateData, marshalStateErr := json.Marshal(state)
+
+	err = errors.Join(checkErr, marshalErr, extractStateErr, marshalStateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
 		_ = onCheckResult(result)
 	}
 
-	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
+	return &pb.CheckResult{
+		Result: string(resultData),
+		Err:    errToString(err),
+		State:  string(stateData),
+	}
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {
