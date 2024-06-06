@@ -207,7 +207,7 @@ func (w *SeaweedfsScaleWorkflow) delete(nodes []NodeManager) error {
 	w.log.Infof("Deleting nodes %s", GetNodeNames(nodes))
 	for _, node := range nodes {
 		status, err := node.GetNodeRunningStatus()
-		if err != nil && status.IsExist {
+		if err != nil && !status.IsExist {
 			w.log.Infof("Node %s has already been deleted", node.GetNodeName())
 			return nil
 		}
