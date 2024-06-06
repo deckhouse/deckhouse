@@ -45,22 +45,25 @@ func CreateBundle(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec, par
 }
 
 func CheckDest(ctx context.Context, bundle *FilesBundle, params *InputParams) error {
-	for _, cert := range bundle.Certs {
+	for i, cert := range bundle.Certs {
 		err := CheckCertDest(ctx, &cert, params)
+		bundle.Certs[i] = cert
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, manifest := range bundle.Manifests {
+	for i, manifest := range bundle.Manifests {
 		err := CheckManifestDest(ctx, &manifest, params)
+		bundle.Manifests[i] = manifest
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, staticPod := range bundle.StaticPods {
+	for i, staticPod := range bundle.StaticPods {
 		err := CheckStaticPodDest(ctx, &staticPod, params)
+		bundle.StaticPods[i] = staticPod
 		if err != nil {
 			return err
 		}
@@ -69,22 +72,25 @@ func CheckDest(ctx context.Context, bundle *FilesBundle, params *InputParams) er
 }
 
 func Update(ctx context.Context, bundle *FilesBundle) error {
-	for _, cert := range bundle.Certs {
+	for i, cert := range bundle.Certs {
 		err := UpdateCertDest(ctx, &cert)
+		bundle.Certs[i] = cert
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, manifest := range bundle.Manifests {
+	for i, manifest := range bundle.Manifests {
 		err := UpdateManifestDest(ctx, &manifest)
+		bundle.Manifests[i] = manifest
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, staticPod := range bundle.StaticPods {
+	for i, staticPod := range bundle.StaticPods {
 		err := UpdateStaticPodDest(ctx, &staticPod)
+		bundle.StaticPods[i] = staticPod
 		if err != nil {
 			return err
 		}
@@ -93,8 +99,9 @@ func Update(ctx context.Context, bundle *FilesBundle) error {
 }
 
 func PatchStaticPodsDestForRestart(ctx context.Context, bundle *FilesBundle) error {
-	for _, staticPod := range bundle.StaticPods {
+	for i, staticPod := range bundle.StaticPods {
 		err := PatchStaticPodDestForRestart(ctx, bundle, &staticPod)
+		bundle.StaticPods[i] = staticPod
 		if err != nil {
 			return err
 		}
