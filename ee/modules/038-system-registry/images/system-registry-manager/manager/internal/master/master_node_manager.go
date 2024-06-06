@@ -70,7 +70,11 @@ func (m *NodeManager) GetNodeClusterStatus() (*master_workflow.SeaweedfsNodeClus
 	isMaster := false
 	address := make([]string, 0, len(resp.ClusterServers))
 	for _, server := range resp.ClusterServers {
-		address = append(address, server.Address)
+		ip, err := seaweedfs_client.FromIdToIp(server.Id)
+		if err != nil {
+			return nil, err
+		}
+		address = append(address, ip)
 		if server.Address == nodeInternalIP {
 			isMaster = server.IsLeader
 		}
@@ -147,7 +151,7 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftRemove(
 			seaweedfs_client.NewClusterRaftRemoveArgs(
-				seaweedfs_client.FromIpToId(removeNodeIP),
+				seaweedfs_client.FromIpToId(seaweedfs_client.FromIpToId(removeNodeIP)),
 			),
 		)
 		return err
