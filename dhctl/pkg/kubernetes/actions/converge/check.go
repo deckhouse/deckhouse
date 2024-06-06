@@ -21,6 +21,8 @@ import (
 	"sort"
 
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/mitchellh/copystructure"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -62,6 +64,40 @@ type Statistics struct {
 	NodeTemplates []NodeGroupCheckResult    `json:"node_templates,omitempty"`
 	Cluster       ClusterCheckResult        `json:"cluster,omitempty"`
 	TerraformPlan []terraform.TerraformPlan `json:"terraform_plan,omitempty"`
+}
+
+// Format data according to the specified format ("json"|"yaml") and
+// hides raw terraform plan and destructive changes from result
+func (s Statistics) Format(outputFormat string) ([]byte, error) {
+	copied, err := copystructure.Copy(s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to copy check statistics")
+	}
+
+	printableStatistics := copied.(Statistics)
+	printableStatistics.TerraformPlan = nil
+	printableStatistics.Cluster.DestructiveChanges = nil
+	for i := range printableStatistics.Node {
+		printableStatistics.Node[i].DestructiveChanges = nil
+	}
+
+	var data []byte
+	switch outputFormat {
+	case "yaml":
+		data, err = yaml.Marshal(printableStatistics)
+		if err != nil {
+			return nil, err
+		}
+	case "json":
+		data, err = json.Marshal(printableStatistics)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown output format %s", outputFormat)
+	}
+
+	return data, nil
 }
 
 func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
