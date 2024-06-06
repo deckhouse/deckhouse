@@ -56,6 +56,8 @@ manager:
     leaseDurationSeconds: 7200
     renewDeadlineSeconds: 20
     retryPeriodSeconds: 8
+cluster:
+  size: 1
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
@@ -93,6 +95,11 @@ images:
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
+		Cluster: struct {
+			Size int "mapstructure:\"size\""
+		}{
+			Size: 1,
+		},
 		Manager: struct {
 			Namespace      string "mapstructure:\"namespace\""
 			DaemonsetName  string "mapstructure:\"daemonsetName\""
@@ -200,6 +207,8 @@ manager:
     leaseDurationSeconds: 7200
     renewDeadlineSeconds: 20
     retryPeriodSeconds: 8
+cluster:
+  size: 1
 etcd:
   addresses: ["etcd1.example.com", "etcd2.example.com"]
 registry:
@@ -225,6 +234,11 @@ images:
 		HostName: "filehostname",
 		HostIP:   "filemyip",
 		PodName:  "filepodname",
+		Cluster: struct {
+			Size int "mapstructure:\"size\""
+		}{
+			Size: 1,
+		},
 		Manager: struct {
 			Namespace      string "mapstructure:\"namespace\""
 			DaemonsetName  string "mapstructure:\"daemonsetName\""

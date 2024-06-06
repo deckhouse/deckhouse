@@ -47,6 +47,7 @@ spec:
       - -volume.port=8081
       - -volume.max=0
       - -master.volumeSizeLimitMB=1024
+      - -master.raftHashicorp
       - -metricsPort=9324
       - -volume.readMode=redirect
       - -s3.allowDeleteBucketNotEmpty=true
