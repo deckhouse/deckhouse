@@ -1,5 +1,18 @@
 type: object
 properties:
+  cluster:
+    type: object
+    default: {}
+    description: |
+      Seaweedfs cluster's settings
+    properties:
+      size:
+        type: integer
+        description: |
+          The number of nodes
+        x-examples:
+          - 1
+          - 3
   environment:
     type: string
     enum:
