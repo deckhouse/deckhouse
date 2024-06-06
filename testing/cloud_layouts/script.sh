@@ -205,8 +205,7 @@ function cleanup() {
 }
 
 function prepare_environment() {
-  echo "PWD: "$(pwd)
-  root_wd="$(pwd)/testing/cloud_layouts"
+  root_wd="/deckhouse/testing/cloud_layouts"
 
   if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
     >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
@@ -355,8 +354,6 @@ function prepare_environment() {
 
   >&2 echo "Use configuration in directory '$cwd':"
   >&2 ls -la $cwd
-  # switch to the / folder to dhctl proper work
-  cd /
 }
 
 function write_deckhouse_logs() {
@@ -805,12 +802,10 @@ function parse_master_ip_from_log() {
 function chmod_dirs_for_cleanup() {
   if [ -n "$USER_RUNNER_ID" ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(pwd)/testing" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
@@ -819,6 +814,8 @@ function chmod_dirs_for_cleanup() {
 
 function main() {
   >&2 echo "Start cloud test script"
+  # switch to the / folder to dhctl proper work
+  cd /
   if ! prepare_environment ; then
     exit 2
   fi
