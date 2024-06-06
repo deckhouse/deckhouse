@@ -28,7 +28,7 @@ spec:
 
 * Параметр *ModuleSource* **spec.source** выдает данные для авторизации в registry.
 
-Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию, задан интервал в 15 секунд.
+Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд.
 
 Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
 
@@ -83,7 +83,7 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
-   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag).
+   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
 1. При каждом обновлении статус этого ресурса будет меняться:
 
@@ -162,7 +162,7 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
-Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом в разделе [требования](module-development/#требования).  
+Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](module-development/#требования).  
 {% endalert %}
 
 Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь `brew`.

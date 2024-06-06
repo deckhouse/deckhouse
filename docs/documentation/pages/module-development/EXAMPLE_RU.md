@@ -34,13 +34,13 @@ lang: ru
    sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
    ```
 
-1. Склонируйте исходный код чарта [hello-world](https://github.com/giantswarm/hello-world-app) во временную папку.
+1. Склонируйте исходный код чарта [hello-world](https://github.com/giantswarm/hello-world-app) во временную директорию.
 
    ```shell
    git clone https://github.com/giantswarm/hello-world-app .tmp-chart
    ```
 
-1. Скопируйте шаблоны чарта в папку `templates` модуля, предварительно очистив ее.
+1. Скопируйте шаблоны чарта в директорию `templates` модуля, предварительно очистив ее.
 
    ```shell
    rm -rf templates/*
@@ -57,7 +57,7 @@ lang: ru
 
 1. Добавьте OpenAPI-схему настроек модуля.
 
-   Параметры модуля указываются в OpenAPI-схеме, в папке [openapi](structure/#openapi). Выполните следующую команду, чтобы преобразовать JSON-схему параметров чарта в OpenAPI-схему модуля:
+   Параметры модуля указываются в OpenAPI-схеме в директории [openapi](structure/#openapi). Выполните следующую команду, чтобы преобразовать JSON-схему параметров чарта в OpenAPI-схему модуля:
 
    ```shell
    yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
@@ -65,7 +65,7 @@ lang: ru
 
 1. Опишите правило сборки образа контейнера приложения.
 
-   Правила сборки образов контейнеров приложений должны находиться в подпапке папки [images](structure/#images) модуля. Выполните следующую команду, чтобы создать папку образа приложения и Dockerfile с правилами сборки образа.
+   Правила сборки образов контейнеров приложений должны находиться в подкаталоге директории [images](structure/#images) модуля. Выполните следующую команду, чтобы создать директорию образа приложения и Dockerfile с правилами сборки образа.
 
    ```shell
    rm -rf images/*
@@ -91,13 +91,13 @@ lang: ru
 
 1. Настройте CI/CD.
 
-   В шаблоне проекта в папке `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](../../cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
+   В шаблоне проекта в директории `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](../../cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
 
    Выполните следующие настройки в свойствах вашего проекта на GitHub, чтобы workflow модуля работал корректно:
    - Откройте страницу *Settings -> Actions -> General*.
    - Установите параметр *Read and write permissions* в разделе *Workflow permissions*.
 
-1. Зафиксируйте изменения в репозитории (укажите адрес git-репозитория модуля).
+1. Зафиксируйте изменения в репозитории (укажите адрес Git-репозитория модуля).
 
    ```shell
    git add .
@@ -216,13 +216,13 @@ lang: ru
    hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
    ```
 
-1. В случае успешной установки релизов, дождитесь перезапуска пода Deckhouse Kubernetes Platform.
+1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
 
    ```shell
    kubectl -n d8-system get pod -l app=deckhouse
    ```
 
-1. Включите модуль, выполним следующую команду:
+1. Включите модуль, выполнив следующую команду:
 
    ```shell
    kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
