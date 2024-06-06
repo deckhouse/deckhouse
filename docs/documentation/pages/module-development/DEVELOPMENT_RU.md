@@ -165,7 +165,7 @@ registry.example.io
 Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом в разделе [требования](module-development/#требования).  
 {% endalert %}
 
-Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее по [инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь `brew`.
+Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для MacOS воспользуйтесь `brew`.
 
 ### Вывод списка модулей в источнике модулей
 
