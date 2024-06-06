@@ -410,9 +410,11 @@ function run-test() {
 }
 
 function bootstrap_static() {
+  pushd $cwd
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  popd
 
   if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
