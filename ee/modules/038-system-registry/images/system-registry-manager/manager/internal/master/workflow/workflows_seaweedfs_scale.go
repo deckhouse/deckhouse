@@ -132,13 +132,10 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		oldIPs = append(oldIPs, masterInfo.ClusterNodesIPs...)
 	}
 
+	// Add node to cluster, create manifests and wait
 	for _, newNode := range newNodes {
 		nodeIp, err := newNode.GetNodeIP()
 		if err != nil {
-			return err
-		}
-		w.log.Infof("Creating manifests for node %s", newNode.GetNodeName())
-		if err := newNode.CreateNodeManifests(&createRequest); err != nil {
 			return err
 		}
 		w.log.Infof("Adding node %s to cluster", newNode.GetNodeName())
@@ -147,6 +144,21 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		}
 	}
 
+	for _, newNode := range newNodes {
+		w.log.Infof("Creating manifests for node %s", newNode.GetNodeName())
+		if err := newNode.CreateNodeManifests(&createRequest); err != nil {
+			return err
+		}
+	}
+
+	for _, newNode := range newNodes {
+		w.log.Infof("Waiting nodes %s", newNode.GetNodeName())
+		if !WaitNode(w.log, newNode, cmpFuncIsRunning) {
+			return fmt.Errorf("error waitig node %s", newNode.GetNodeName())
+		}
+	}
+
+	// Update old nodes
 	for _, currentNode := range currentNodes {
 		w.log.Infof("Updating manifests for node %s", currentNode.GetNodeName())
 		if err := currentNode.UpdateNodeManifests(&updateRequest); err != nil {

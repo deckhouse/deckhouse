@@ -7,7 +7,10 @@ package workflow
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"strings"
+	pkg_cfg "system-registry-manager/pkg/cfg"
+	"time"
 )
 
 func CmpSelectIsNeedUpdateCerts(status *SeaweedfsNodeRunningStatus) bool {
@@ -203,4 +206,23 @@ func GetExpectedNodeCount(expectedNodeCount int) int {
 		return expectedNodeCount - 1
 	}
 	return expectedNodeCount
+}
+
+func cmpFuncIsRunning(nodeManager NodeManager) bool {
+	status, err := nodeManager.GetNodeRunningStatus()
+	if err != nil {
+		return false
+	}
+	return status.IsRunning
+}
+
+func WaitNode(log *logrus.Entry, nodeManager NodeManager, cmpFunc func(nodeManager NodeManager) bool) bool {
+	for i := 0; i < pkg_cfg.MaxRetries; i++ {
+		log.Infof("wait node retry count %d/%d", i, pkg_cfg.MaxRetries)
+		if cmpFunc(nodeManager) {
+			return true
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return false
 }
