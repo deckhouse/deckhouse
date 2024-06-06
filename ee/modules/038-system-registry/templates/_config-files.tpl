@@ -26,6 +26,8 @@ manager:
   workerPort: 8097
   leaderElection: {}
 
+cluster:
+  size: {{- $.Values.systemRegistry.internal.cluster.size | default 1 -}}
 etcd:
   addresses:
   {{- range $etcd_addresses := $.Values.systemRegistry.internal.etcd.addresses }}
