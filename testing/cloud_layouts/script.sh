@@ -370,7 +370,7 @@ END_SCRIPT
   getDeckhouseLogsAttempts=5
   attempt=0
   for ((i=1; i<=$getDeckhouseLogsAttempts; i++)); do
-  ls -l $ssh_command
+  ls -l /bin
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"; then
       return 0
     else
@@ -804,12 +804,12 @@ function parse_master_ip_from_log() {
 function chmod_dirs_for_cleanup() {
   if [ -n "$USER_RUNNER_ID" ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(cwd)/testing" || true
+    chown -R $USER_RUNNER_ID "$cwd/testing" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(cwd)/testing" || true
+    chmod -f -R 777 "$cwd/testing" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
